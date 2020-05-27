@@ -39,8 +39,6 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val baseArrivalsActor: ActorRef = system.actorOf(Props(new TestForecastBaseArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
   override val forecastArrivalsActor: ActorRef = system.actorOf(Props(new TestForecastPortArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
   override val liveArrivalsActor: ActorRef = system.actorOf(Props(new TestLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
-  override val liveCrunchStateActor: ActorRef = system.actorOf(Props(new TestCrunchStateActor("crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots)), name = "crunch-live-state-actor")
-  override val forecastCrunchStateActor: ActorRef = system.actorOf(Props(new TestCrunchStateActor("forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots)), name = "crunch-forecast-state-actor")
   override val voyageManifestsActor: ActorRef = system.actorOf(Props(new TestVoyageManifestsActor(now, expireAfterMillis, params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   override val shiftsActor: ActorRef = system.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))))
   override val fixedPointsActor: ActorRef = system.actorOf(Props(new TestFixedPointsActor(now)))
@@ -50,8 +48,11 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val portStateActor: ActorRef =
     if (usePartitionedPortState) {
       TestPartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config))
-    } else
-      system.actorOf(Props(new TestPortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, 2)), name = "port-state-actor")
+    } else {
+      val liveCrunchStateProps: Props = Props(new TestCrunchStateActor("crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots))
+      val forecastCrunchStateProps: Props = Props(new TestCrunchStateActor("forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots))
+      system.actorOf(Props(new TestPortStateActor(liveCrunchStateProps, forecastCrunchStateProps, now, 2)), name = "port-state-actor")
+    }
 
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
   val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
@@ -61,7 +62,6 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
     baseArrivalsActor,
     forecastArrivalsActor,
     liveArrivalsActor,
-    liveCrunchStateActor,
     forecastArrivalsActor,
     portStateActor,
     voyageManifestsActor,

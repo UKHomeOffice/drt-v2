@@ -26,8 +26,8 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
   def portStateActorProvider: () => ActorRef = () => {
-    val liveCsa = system.actorOf(Props(new CrunchStateActor(None, Sizes.oneMegaByte, "crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis)))
-    val fcstCsa = system.actorOf(Props(new CrunchStateActor(None, Sizes.oneMegaByte, "forecast-crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis)))
+    val liveCsa = Props(new CrunchStateActor(None, Sizes.oneMegaByte, "crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis))
+    val fcstCsa = Props(new CrunchStateActor(None, Sizes.oneMegaByte, "forecast-crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis))
     PortStateActor(myNow, liveCsa, fcstCsa)
   }
 

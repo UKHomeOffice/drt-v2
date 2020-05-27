@@ -21,20 +21,20 @@ import scala.language.postfixOps
 
 
 object PortStateActor {
-  def apply(now: () => SDateLike, liveCrunchStateActor: ActorRef, forecastCrunchStateActor: ActorRef)
+  def apply(now: () => SDateLike, liveCrunchStateProps: Props, forecastCrunchStateProps: Props)
            (implicit system: ActorSystem): ActorRef = {
-    system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
+    system.actorOf(PortStateActor.props(liveCrunchStateProps, forecastCrunchStateProps, now, liveDaysAhead), name = "port-state-actor")
   }
 
-  def props(liveStateActor: ActorRef,
-            forecastStateActor: ActorRef,
+  def props(liveStateProps: Props,
+            forecastStateProps: Props,
             now: () => SDateLike,
             liveDaysAhead: Int): Props =
-    Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead, exitOnQueueException = true))
+    Props(new PortStateActor(liveStateProps, forecastStateProps, now, liveDaysAhead, exitOnQueueException = true))
 }
 
-class PortStateActor(liveStateActor: ActorRef,
-                     forecastStateActor: ActorRef,
+class PortStateActor(liveCrunchStateProps: Props,
+                     forecastCrunchStateProps: Props,
                      now: () => SDateLike,
                      liveDaysAhead: Int,
                      exitOnQueueException: Boolean) extends Actor {
@@ -44,12 +44,46 @@ class PortStateActor(liveStateActor: ActorRef,
 
   implicit val timeout: Timeout = new Timeout(1 minute)
 
+  val liveCrunchStateActor: ActorRef = context.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
+  val forecastCrunchStateActor: ActorRef = context.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
+
   val state: PortStateMutable = PortStateMutable.empty
 
   var maybeCrunchQueueActor: Option[ActorRef] = None
   var crunchSourceIsReady: Boolean = true
   var maybeSimActor: Option[ActorRef] = None
   var simulationActorIsReady: Boolean = true
+
+  override def preStart(): Unit = {
+    val eventualLiveState = liveCrunchStateActor.ask(GetState).mapTo[Option[PortState]]
+    val eventualFcstState = forecastCrunchStateActor.ask(GetState).mapTo[Option[PortState]]
+    for {
+      liveState <- eventualLiveState
+      fcstState <- eventualFcstState
+    } yield mergePortStates(fcstState, liveState).foreach { initialPortState =>
+      log.info(s"Setting initial PortState from live & forecast")
+      state.crunchMinutes ++= initialPortState.crunchMinutes
+      state.staffMinutes ++= initialPortState.staffMinutes
+      state.flights ++= initialPortState.flights
+    }
+  }
+
+  def mergePortStates(maybeForecastPs: Option[PortState],
+                      maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
+    case (None, None) => None
+    case (Some(fps), None) =>
+      log.info(s"We only have initial forecast port state")
+      Option(fps)
+    case (None, Some(lps)) =>
+      log.info(s"We only have initial live port state")
+      Option(lps)
+    case (Some(fps), Some(lps)) =>
+      log.info(s"Merging initial live & forecast port states. ${lps.flights.size} live flights, ${fps.flights.size} forecast flights")
+      Option(PortState(
+        fps.flights ++ lps.flights,
+        fps.crunchMinutes ++ lps.crunchMinutes,
+        fps.staffMinutes ++ lps.staffMinutes))
+  }
 
   override def receive: Receive = {
 
@@ -159,9 +193,8 @@ class PortStateActor(liveStateActor: ActorRef,
       case (live, forecast) =>
         Future
           .sequence(Seq(
-            askAndLogOnFailure(liveStateActor, live, "live crunch persistence request failed"),
-            askAndLogOnFailure(forecastStateActor, forecast, "forecast crunch persistence request failed"))
-                    )
+            askAndLogOnFailure(liveCrunchStateActor, live, "live crunch persistence request failed"),
+            askAndLogOnFailure(forecastCrunchStateActor, forecast, "forecast crunch persistence request failed")))
           .recover { case t => log.error("A future failed", t) }
           .onComplete { _ =>
             log.debug(s"Sending Ack")

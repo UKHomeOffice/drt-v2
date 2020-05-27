@@ -139,13 +139,15 @@ object TestActors {
     override def receive: Receive = reset orElse super.receive
   }
 
-  class TestPortStateActor(live: ActorRef, forecast: ActorRef, now: () => SDateLike, liveDaysAhead: Int)
-    extends PortStateActor(live, forecast, now, liveDaysAhead, true) {
+  class TestPortStateActor(liveProps: Props, forecastProps: Props, now: () => SDateLike, liveDaysAhead: Int)
+    extends PortStateActor(liveProps, forecastProps, now, liveDaysAhead, true) {
     def reset: Receive = {
       case ResetData =>
-        maybeCrunchQueueActor
+        val replyTo = sender()
         state.clear()
-        sender() ! Ack
+        Future
+          .sequence(List(liveCrunchStateActor.ask(ResetData), forecastCrunchStateActor.ask(ResetData)))
+          .foreach(_ => replyTo ! Ack)
     }
 
     override def receive: Receive = reset orElse super.receive
@@ -310,4 +312,5 @@ object TestActors {
 
     override def receive: Receive = testReceive orElse super.receive
   }
+
 }
