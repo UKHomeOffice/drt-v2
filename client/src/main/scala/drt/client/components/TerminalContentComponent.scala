@@ -174,7 +174,8 @@ object TerminalContentComponent {
                         props.arrivalSources,
                         props.loggedInUser.hasRole(ArrivalSource),
                         props.viewMode,
-                        PcpPax.pcpPaxFnFromFeatureFlags(ff)
+                        PcpPax.pcpPaxFnFromFeatureFlags(ff),
+                        props.airportConfig.hasTransfer
                       )
                     ))
                 } else ""

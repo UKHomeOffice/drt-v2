@@ -14,7 +14,7 @@ import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.Reusability
-import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, TableSection}
@@ -28,7 +28,8 @@ object FlightsWithSplitsTable {
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    hasArrivalSourcesAccess: Boolean,
                    viewMode: ViewMode,
-                   pcpPaxFn: Arrival => Int
+                   pcpPaxFn: Arrival => Int,
+                   hasTransfer: Boolean
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
@@ -85,7 +86,8 @@ object FlightsWithSplitsTable {
                     splitsQueueOrder = props.queueOrder,
                     hasEstChox = props.hasEstChox,
                     props.hasArrivalSourcesAccess,
-                    props.viewMode
+                    props.viewMode,
+                    props.hasTransfer
                   ))
               }.toTagMod)
           )
@@ -110,8 +112,8 @@ object FlightsWithSplitsTable {
       ("Act", None),
       ("Est Chox", None),
       ("Act Chox", None),
-      ("Est PCP", Option("pcp")),
-      ("Pax", None))
+      ("Est PCP", None),
+      ("Est PCP Pax", None))
 
     val portColumnThs = columns
       .filter {
@@ -123,14 +125,25 @@ object FlightsWithSplitsTable {
       }
       .toTagMod
 
+    val queueDisplayNames = queues.map(q => <.th(Queues.queueDisplayNames(q))).toTagMod
+
+    val transferPaxTh = <.th("Transfer Pax")
+
     <.thead(
-      <.tr(
-        timelineTh,
-        portColumnThs,
-        queues.map(
-          q => <.th(Queues.queueDisplayNames(q))
-        ).toTagMod
-      )
+      if (props.hasTransfer) {
+        <.tr(
+          timelineTh,
+          portColumnThs,
+          queueDisplayNames,
+          transferPaxTh
+        )
+      } else {
+        <.tr(
+          timelineTh,
+          portColumnThs,
+          queueDisplayNames
+        )
+      }
     )
   }
 }
@@ -154,7 +167,8 @@ object FlightTableRow {
                    splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean,
                    hasArrivalSourcesAccess: Boolean,
-                   viewMode: ViewMode
+                   viewMode: ViewMode,
+                   hasTransfer: Boolean
                   )
 
   case class RowState(hasChanged: Boolean)
@@ -198,7 +212,7 @@ object FlightTableRow {
           props.viewMode match {
             case vm: ViewDay if vm.isHistoric =>
               GetArrivalSourcesForPointInTime(props.viewMode.time.addHours(28), props.flightWithSplits.unique)
-            case vm: ViewPointInTime  =>
+            case vm: ViewPointInTime =>
               GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)
             case _ =>
               GetArrivalSources(props.flightWithSplits.unique)
@@ -232,14 +246,35 @@ object FlightTableRow {
 
       val paxClass = FlightComponents.paxClassFromSplits(flightWithSplits)
 
-      <.tr(
-        ^.key := flight.uniqueId.toString,
-        ^.className := s"${offScheduleClass(flight)} $timeIndicatorClass${if (flight.isCancelled) " arrival-cancelled" else ""}",
-        hasChangedStyle,
-        props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod,
-        flightFields.toTagMod,
-        props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")).toTagMod
-      )
+      val flightId = flight.uniqueId.toString
+
+      val timeLineTagMod = props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod
+
+      val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass${if (flight.isCancelled) " arrival-cancelled" else ""}"
+
+      val queueTagMod = props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")).toTagMod
+
+      if (props.hasTransfer) {
+        <.tr(
+          ^.key := flightId,
+          ^.className := trClassName,
+          hasChangedStyle,
+          timeLineTagMod,
+          flightFields.toTagMod,
+          queueTagMod,
+          <.td(FlightComponents.paxTransferComponent(flight))
+        )
+      } else {
+        <.tr(
+          ^.key := flightId,
+          ^.className := trClassName,
+          hasChangedStyle,
+          timeLineTagMod,
+          flightFields.toTagMod,
+          queueTagMod
+        )
+      }
+
     })
     .configure(Reusability.shouldComponentUpdate)
     .build
