@@ -372,7 +372,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     val requestStart = SDate.now()
     val startMillis = SDate.now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = SDate.now().getLocalNextMidnight.millisSinceEpoch
-    val portState = ctrl.portStateActor.ask(GetPortState(startMillis, endMillis))(30 seconds).mapTo[Option[PortState]]
+    val portState = ctrl.portStateActor.ask(GetPortState(startMillis, endMillis))(30 seconds).mapTo[PortState]
 
     portState
       .map { _ =>
