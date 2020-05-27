@@ -112,7 +112,7 @@ object FlightsWithSplitsTable {
       ("Act", None),
       ("Est Chox", None),
       ("Act Chox", None),
-      ("Est PCP", Option("pcp")),
+      ("Est PCP", None),
       ("Est PCP Pax", None))
 
     val portColumnThs = columns
