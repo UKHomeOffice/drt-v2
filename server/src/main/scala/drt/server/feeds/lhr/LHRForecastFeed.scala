@@ -19,12 +19,11 @@ import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.Try
 
-case class LHRForecastFeed(arrivalsActor: ActorRef) {
+case class LHRForecastFeed(arrivalsActor: ActorRef)(implicit maxWait: FiniteDuration) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def requestFeed: ArrivalsFeedResponse = {
-    val futureArrivals = arrivalsActor.ask(GetFeedImportArrivals)(new Timeout(10 seconds))
-    val futureResponse = futureArrivals
+  def requestFeed: Future[ArrivalsFeedResponse] =
+    arrivalsActor.ask(GetFeedImportArrivals)(new Timeout(maxWait))
       .map {
         case Some(Flights(arrivals)) =>
           log.info(s"Got ${arrivals.length} LHR port forecast arrivals")
@@ -36,13 +35,10 @@ case class LHRForecastFeed(arrivalsActor: ActorRef) {
       .recoverWith {
         case e => Future(ArrivalsFeedFailure(e.getMessage, SDate.now()))
       }
-
-    Await.result(futureResponse, 10 seconds)
-  }
 }
 
 object LHRForecastFeed {
-  def log: Logger = LoggerFactory.getLogger(classOf[LHRForecastFeed])
+  def log: Logger = LoggerFactory.getLogger(getClass)
 
   def lhrFieldsToArrival(flightRow: LHRForecastFlightRow): Try[Arrival] = {
     Try {
