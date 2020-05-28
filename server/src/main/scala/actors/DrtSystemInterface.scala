@@ -330,7 +330,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   }
 
   def createForecastLHRFeed(): Source[ArrivalsFeedResponse, Cancellable] = {
-    implicit val maxFeedResponseWait: FiniteDuration = 10 seconds
+    implicit val timeout: Timeout = new Timeout(10 seconds)
     val lhrForecastFeed = LHRForecastFeed(arrivalsImportActor)
     Source
       .tick(10 seconds, 60 seconds, NotUsed)

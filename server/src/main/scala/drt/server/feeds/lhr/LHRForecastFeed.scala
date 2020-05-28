@@ -19,11 +19,11 @@ import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
 import scala.util.Try
 
-case class LHRForecastFeed(arrivalsActor: ActorRef)(implicit maxWait: FiniteDuration) {
+case class LHRForecastFeed(arrivalsActor: ActorRef)(implicit timeout: Timeout) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def requestFeed: Future[ArrivalsFeedResponse] =
-    arrivalsActor.ask(GetFeedImportArrivals)(new Timeout(maxWait))
+    arrivalsActor.ask(GetFeedImportArrivals)
       .map {
         case Some(Flights(arrivals)) =>
           log.info(s"Got ${arrivals.length} LHR port forecast arrivals")
