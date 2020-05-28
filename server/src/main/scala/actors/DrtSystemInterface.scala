@@ -329,12 +329,12 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   }
 
   def createForecastLHRFeed(): Source[ArrivalsFeedResponse, Cancellable] = {
+    implicit val timeout: Timeout = new Timeout(10 seconds)
     val lhrForecastFeed = LHRForecastFeed(arrivalsImportActor)
     Source
       .tick(10 seconds, 60 seconds, NotUsed)
-      .map(_ => lhrForecastFeed.requestFeed)
+      .mapAsync(1)(_ => lhrForecastFeed.requestFeed)
   }
-
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2 minutes)
 
