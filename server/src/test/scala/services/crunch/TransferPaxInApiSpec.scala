@@ -75,7 +75,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
     success
   }
 
-  "Given a flight with transfer passengers " +
+  "Given a flight with transfer passengers and no live feed pax numbers " +
     "Then these passengers should not be included in the total pax when using API pax nos" >> {
 
     val scheduled = "2017-01-01T00:00Z"
@@ -86,7 +86,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
         schDt = scheduled,
         iata = "TST001",
         terminal = T1,
-        actPax = Option(2),
+        actPax = None,
         tranPax = Option(0))
     ))
 

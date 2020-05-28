@@ -23,7 +23,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
   val scheduled = "2019-11-20T00:00Z"
 
   val flights = Flights(List(
-    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(0), origin = PortCode("JFK"))
+    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(2), origin = PortCode("JFK"))
   ))
 
   val manifests =

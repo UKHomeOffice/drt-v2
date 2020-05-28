@@ -7,10 +7,10 @@ object PcpPax {
 
   def bestPaxEstimateWithApi(flight: Arrival): Int = {
     (flight.ApiPax, flight.ActPax, flight.TranPax, flight.MaxPax) match {
-      case (Some(apiPax), _, _, _) => apiPax
+      case (Some(apiPax), _, _, _) if !flight.FeedSources.contains(LiveFeedSource) => apiPax
       case (_, Some(actPax), Some(tranPax), _) if (actPax - tranPax) >= 0 => actPax - tranPax
       case (_, Some(actPax), None, _) => actPax
-      case (_, _, _, Some(maxPax)) if maxPax > 0 => maxPax
+      case (Some(apiPax), _, _, _) => apiPax
       case _ => defaultPax
     }
   }
@@ -35,8 +35,4 @@ object PcpPax {
     prefix + voyageNumber
   }
 
-  def pcpPaxFnFromFeatureFlags(ff: Map[String, Boolean]): Arrival => Int = if (ff.getOrElse("use-api-pax-nos", false))
-    PcpPax.bestPaxEstimateWithApi
-  else
-    PcpPax.bestPaxEstimateExcludingApi
 }
