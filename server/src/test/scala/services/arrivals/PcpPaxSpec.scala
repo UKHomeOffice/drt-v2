@@ -77,6 +77,16 @@ class PcpPaxSpec extends Specification {
       result === expected
     }
 
+    "Given an arrival with 100 act pax and 10 Transfer" +
+      "Then I should expect 90 PCP pax" >> {
+      val a = arrival(actPax = Option(100), tranPax = Option(10), feedSources = Set(LiveFeedSource))
+
+      val result = PcpPax.bestPaxEstimateWithApi(a)
+      val expected = 90
+
+      result === expected
+    }
+
     "Given an arrival with no values set for act pax and transfer and 130 for max pax" +
       "Then I should expect 0 PCP pax" >> {
       val a = arrival(actPax = None, tranPax = None, maxPax = Option(130), feedSources = Set(LiveFeedSource))
@@ -156,6 +166,16 @@ class PcpPaxSpec extends Specification {
 
       val result = PcpPax.bestPaxEstimateWithApi(a)
       val expected = 0
+
+      result === expected
+    }
+
+    "Given an arrival with 100 act pax and 10 Transfer" +
+      "Then I should expect 90 PCP pax" >> {
+      val a = arrival(actPax = Option(100), tranPax = Option(10), feedSources = Set(AclFeedSource))
+
+      val result = PcpPax.bestPaxEstimateWithApi(a)
+      val expected = 90
 
       result === expected
     }

@@ -23,7 +23,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
   val scheduled = "2019-11-20T00:00Z"
 
   val flights = Flights(List(
-    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(2), origin = PortCode("JFK"))
+    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = None, origin = PortCode("JFK"))
   ))
 
   val manifests =
@@ -35,7 +35,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
         ))
     )))
 
-  "Given a flight with 0 pax numbers and a Manifest of 2 passengers " +
+  "Given a flight with no pax numbers and a Manifest of 2 passengers " +
     "Then we should get 2 passengers in PCP Pax" >> {
 
     val crunch = runCrunchGraph(TestConfig(
@@ -60,7 +60,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
     success
   }
 
-  "Given a flight with 0 pax numbers and a Manifest of 2 passengers " +
+  "Given a flight with no pax numbers and a Manifest of 2 passengers " +
     "Then we should get workload for the 2 passengers Port State" >> {
 
     val crunch = runCrunchGraph(TestConfig(
