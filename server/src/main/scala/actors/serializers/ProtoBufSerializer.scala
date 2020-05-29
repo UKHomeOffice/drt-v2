@@ -3,7 +3,7 @@ package actors.serializers
 import akka.serialization.SerializerWithStringManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinutesMessage, CrunchStateSnapshotMessage, DaysSnapshotMessage, StaffMinutesMessage}
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinutesMessage, CrunchStateSnapshotMessage, DaysSnapshotMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage, StaffMinutesMessage}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
@@ -52,6 +52,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val PaxCount: String                      = classOf[PaxCountMessage].getName
   final val OriginTerminalPaxCounts: String       = classOf[OriginTerminalPaxCountsMessage].getName
   final val DaysSnapshot: String                  = classOf[DaysSnapshotMessage].getName
+  final val FlightsWithSplits: String             = classOf[FlightsWithSplitsMessage].getName
+  final val FlightsWithSplitsDiff: String         = classOf[FlightsWithSplitsDiffMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
     objectToSerialize match {
@@ -88,6 +90,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: PaxCountMessage => m.toByteArray
       case m: OriginTerminalPaxCountsMessage => m.toByteArray
       case m: DaysSnapshotMessage => m.toByteArray
+      case m: FlightsWithSplitsMessage => m.toByteArray
+      case m: FlightsWithSplitsDiffMessage => m.toByteArray
     }
   }
 
@@ -128,6 +132,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case PaxCount                       => PaxCountMessage.parseFrom(bytes)
       case OriginTerminalPaxCounts        => OriginTerminalPaxCountsMessage.parseFrom(bytes)
       case DaysSnapshot                   => DaysSnapshotMessage.parseFrom(bytes)
+      case FlightsWithSplits              => FlightsWithSplitsMessage.parseFrom(bytes)
+      case FlightsWithSplitsDiff          => FlightsWithSplitsDiffMessage.parseFrom(bytes)
     }
   }
 }
