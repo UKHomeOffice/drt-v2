@@ -1,8 +1,6 @@
 package controllers.application
 
 import actors._
-import actors.pointInTime.CrunchStateReadActor
-import akka.actor.PoisonPill
 import akka.pattern._
 import akka.util.{ByteString, Timeout}
 import controllers.Application
@@ -116,31 +114,15 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
           PortState.empty
       }
 
-  val queryFromPortStateFn: (SDateLike, Any) => Future[Any] = (from: SDateLike, message: Any) => {
+  val queryFromPortStateFn: Option[MillisSinceEpoch] => PointInTimeAbleQuery => Future[Any] = (maybePointInTime: Option[MillisSinceEpoch]) => (message: PointInTimeAbleQuery) => {
     implicit val timeout: Timeout = new Timeout(30 seconds)
 
-    val start = from.getLocalLastMidnight
-    val end = start.addDays(1)
-    val pointInTime = end.addHours(4)
-
-    val eventualMaybeResponse = if (isHistoricDate(start.millisSinceEpoch)) {
-      val historicActor = system.actorOf(CrunchStateReadActor.props(
-        airportConfig.portStateSnapshotInterval,
-        pointInTime,
-        DrtStaticParameters.expireAfterMillis,
-        airportConfig.queuesByTerminal,
-        start.millisSinceEpoch,
-        end.millisSinceEpoch))
-      val eventualResponse = historicActor.ask(message)
-      eventualResponse.onComplete(_ => historicActor ! PoisonPill)
-      eventualResponse
-    } else ctrl.portStateActor.ask(message)
-
-    eventualMaybeResponse.recoverWith {
-      case t =>
-        log.error(s"Failed to get response for $message message for ${pointInTime.toISOString()}", t)
-        Future(PortState.empty)
+    val finalMessage = maybePointInTime match {
+      case None => message
+      case Some(pit) => PointInTimeQuery(pit, message)
     }
+
+    ctrl.portStateActor.ask(finalMessage)
   }
 
   def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
@@ -152,6 +134,4 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
 
     (startOfForecast, endOfForecast)
   }
-
-  private def isHistoricDate(day: MillisSinceEpoch): Boolean = day < SDate.now().getLocalLastMidnight.millisSinceEpoch
 }
