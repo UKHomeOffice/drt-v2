@@ -86,7 +86,7 @@ object PortDashboardPage {
 
                       portDashboardModel.featureFlags.renderReady(ff => {
 
-                        val pcpPaxFn: Arrival => Int = PcpPax.pcpPaxFnFromFeatureFlags(ff)
+                        val pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
 
                         DashboardTerminalSummary(
                           DashboardTerminalSummary.Props(scheduledFlightsInTerminal,

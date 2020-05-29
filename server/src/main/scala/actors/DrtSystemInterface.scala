@@ -71,10 +71,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val airportConfig: AirportConfig
   val params: DrtConfigParameters = DrtConfigParameters(config)
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
-  def pcpPaxFn: Arrival => Int = if (params.useApiPaxNos)
-    PcpPax.bestPaxEstimateWithApi
-  else
-    PcpPax.bestPaxEstimateExcludingApi
+
+  def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
 
   val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)))
   val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")

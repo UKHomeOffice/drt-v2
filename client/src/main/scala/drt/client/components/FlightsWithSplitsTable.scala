@@ -230,7 +230,7 @@ object FlightTableRow {
             proxy().render(ai => <.span(ai.country))
           )
         }),
-        <.td(s"${flight.Gate.getOrElse("")}/${flight.Stand.getOrElse("")}"),
+        <.td(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}"),
         <.td(flight.Status.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
         <.td(localDateTimeWithPopup(flight.Estimated)),

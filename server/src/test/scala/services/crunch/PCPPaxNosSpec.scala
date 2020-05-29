@@ -35,7 +35,7 @@ class PCPPaxNosSpec extends CrunchTestLike {
         ))
     )))
 
-  "Given the API Feature flag is turned off then we should use the live feed passenger numbers" >> {
+  "Given flights with API and live feed passenger numbers then we should use the live feed passenger numbers" >> {
 
     val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
