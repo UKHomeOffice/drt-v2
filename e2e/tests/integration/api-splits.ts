@@ -32,6 +32,7 @@ describe('API splits', () => {
     cy
       .addFlight(
         {
+          "ActPax": 10,
           "SchDT": scheduledTime.format()
         }
       )
@@ -54,6 +55,7 @@ describe('API splits', () => {
     cy
       .addFlight(
         {
+          "ActPax": 11,
           "SchDT": scheduledTime.format()
         }
       )

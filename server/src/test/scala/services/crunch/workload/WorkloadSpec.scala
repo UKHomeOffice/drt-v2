@@ -301,11 +301,11 @@ class WorkloadSpec extends Specification {
     )
   }
 
-  "Given an arrival with 1 pax on the arrival and 1 split containing 6 pax with no nationality data " +
-    "When I ask for the workload for this arrival using the API passenger numbers " +
+  "Given an arrival with None pax on the arrival and 1 split containing 6 pax with no nationality data " +
+    "When I ask for the workload for this arrival " +
     "Then I see the 6x the proc time provided" >> {
 
-    val arrival = ArrivalGenerator.arrival(actPax = Option(1), apiPax = Option(6))
+    val arrival = ArrivalGenerator.arrival(actPax = None, apiPax = Option(6))
     val splits = Set(
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 6, None)),
@@ -329,10 +329,10 @@ class WorkloadSpec extends Specification {
   }
 
   "Given an arrival with 1 pax on the arrival and 1 split containing 6 pax with no nationality data " +
-    "When I ask for the workload for this arrival excluding the API passenger numbers " +
+    "When I ask for the workload for this arrival " +
     "Then I see the 1x the proc time provided" >> {
 
-    val arrival = ArrivalGenerator.arrival(actPax = Option(1), apiPax = Option(6))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(1), apiPax = Option(6), feedSources = Set(LiveFeedSource))
     val splits = Set(
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 6, None)),
@@ -347,7 +347,7 @@ class WorkloadSpec extends Specification {
         procTimes,
         emptyNatProcTimes,
         true,
-        PcpPax.bestPaxEstimateExcludingApi
+        PcpPax.bestPaxEstimateWithApi
       )
       .toList
       .map(_.workLoad)

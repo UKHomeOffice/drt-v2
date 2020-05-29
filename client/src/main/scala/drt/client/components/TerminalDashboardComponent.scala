@@ -84,7 +84,7 @@ object TerminalDashboardComponent {
                       None,
                       false,
                       ViewLive,
-                      PcpPax.pcpPaxFnFromFeatureFlags(ff),
+                      PcpPax.bestPaxEstimateWithApi,
                       p.airportConfig.hasTransfer
                     )
                   ))),

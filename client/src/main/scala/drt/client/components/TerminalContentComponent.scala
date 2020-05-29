@@ -165,19 +165,18 @@ object TerminalContentComponent {
               <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                 if (state.activeTab == "arrivals") {
                   val flightsForTerminal = filteredPortState.flights.values.toList
-                  props.featureFlags.renderReady(ff =>
-                    arrivalsTableComponent(
-                      FlightsWithSplitsTable.Props(
-                        flightsForTerminal,
-                        queueOrder,
-                        props.airportConfig.hasEstChox,
-                        props.arrivalSources,
-                        props.loggedInUser.hasRole(ArrivalSource),
-                        props.viewMode,
-                        PcpPax.pcpPaxFnFromFeatureFlags(ff),
-                        props.airportConfig.hasTransfer
-                      )
-                    ))
+                  arrivalsTableComponent(
+                    FlightsWithSplitsTable.Props(
+                      flightsForTerminal,
+                      queueOrder,
+                      props.airportConfig.hasEstChox,
+                      props.arrivalSources,
+                      props.loggedInUser.hasRole(ArrivalSource),
+                      props.viewMode,
+                      PcpPax.bestPaxEstimateWithApi,
+                      props.airportConfig.hasTransfer
+                    )
+                  )
                 } else ""
               }),
               <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
