@@ -17,7 +17,7 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
-import org.scalajs.dom.html.Div
+import org.scalajs.dom.html.{Anchor, Div}
 
 import scala.util.Try
 
@@ -183,7 +183,7 @@ object TerminalContentComponent {
   def exportLink(props: Props,
                  terminal: Terminals.Terminal,
                  terminalName: String,
-                 exportType: ExportType): VdomTagOf[Any] =
+                 exportType: ExportType): VdomTagOf[Anchor] =
     <.a(s"Export $exportType",
       ^.className := "btn btn-default",
       ^.href := SPAMain.exportUrl(exportType, props.terminalPageTab.viewMode, terminal),

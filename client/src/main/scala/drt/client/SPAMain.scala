@@ -277,9 +277,9 @@ object SPAMain {
 
   def exportUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
     case view: ViewPointInTime =>
-      SPAMain.absoluteUrl(s"export/${exportType.urlValue}/${view.millis}/$terminal")
+      SPAMain.absoluteUrl(s"export/$exportType/${view.millis}/$terminal")
     case view =>
-      SPAMain.absoluteUrl(s"export/${exportType.urlValue}/${view.startMillis}/${view.endMillis}/$terminal")
+      SPAMain.absoluteUrl(s"export/$exportType/${view.startMillis}/${view.endMillis}/$terminal")
   }
 
   def assetsPrefix: String = if (pathToThisApp == "/") s"/assets" else s"live/assets"
