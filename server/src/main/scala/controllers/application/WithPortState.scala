@@ -6,7 +6,7 @@ import akka.actor.PoisonPill
 import akka.pattern.ask
 import controllers.Application
 import drt.auth.DesksAndQueuesView
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateError, PortStateUpdates}
+import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
@@ -43,7 +43,7 @@ trait WithPortState {
       eventualUpdates
         .recoverWith {
           case t =>
-            log.error("Error processing request for port state or port state updates", t)
+            log.error(t, "Error processing request for port state or port state updates")
             Future(InternalServerError)
         }
     }
