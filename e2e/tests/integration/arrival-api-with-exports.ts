@@ -71,15 +71,16 @@ describe('Arrivals CSV Export', () => {
       .waitForFlightToAppear("TS0123")
       .addManifest(manifest(passengerList(24, 10, 7, 10)))
       .get('.pax-api')
-      .get('#export-day-arrivals').then((el) => {
-      const href = el.prop('href')
-      cy.request({
-        method: 'GET',
-        url: href,
-      }).then((resp) => {
-        expect(resp.body).to.equal(csvWithNoApiSplits, "Api splits incorrect for regular users")
+      .get('#export-day-arrivals')
+      .then((el) => {
+        const href = el.prop('href')
+        cy.request({
+          method: 'GET',
+          url: href,
+        }).then((resp) => {
+          expect(resp.body).to.equal(csvWithNoApiSplits, "Api splits incorrect for regular users")
+        })
       })
-    })
   });
 
   it('Allows you to view API splits in the flights export for users with api:view permission', () => {
@@ -98,15 +99,16 @@ describe('Arrivals CSV Export', () => {
       .addManifest(manifest(passengerList(24, 10, 7, 10)))
       .get('.pax-api')
       .asABorderForceOfficerWithRoles(["api:view"])
-      .get('#export-day-arrivals').then((el) => {
-      const href = el.prop('href')
-      cy.request({
-        method: 'GET',
-        url: href,
-      }).then((resp) => {
-        expect(resp.body).to.equal(csvWithAPISplits, "Api splits incorrect for users with API reporting role")
+      .get('#export-day-arrivals')
+      .then((el) => {
+        const href = el.prop('href')
+        cy.request({
+          method: 'GET',
+          url: href,
+        }).then((resp) => {
+          expect(resp.body).to.equal(csvWithAPISplits, "Api splits incorrect for users with API reporting role")
+        })
       })
-    })
   });
 });
 
