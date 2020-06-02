@@ -25,6 +25,10 @@ sealed trait ViewMode {
 
   def millis: MillisSinceEpoch = time.millisSinceEpoch
 
+  def startMillis: MillisSinceEpoch = time.getLocalLastMidnight.millisSinceEpoch
+
+  def endMillis: MillisSinceEpoch = time.getLocalNextMidnight.millisSinceEpoch
+
   def dayStart: SDateLike = SDate.midnightOf(time)
 
   def time: SDateLike
@@ -50,6 +54,18 @@ case class ViewPointInTime(time: SDateLike) extends ViewMode {
 
 case class ViewDay(time: SDateLike) extends ViewMode {
   def isHistoric: Boolean = dayStart.millisSinceEpoch < SDate.midnightOf(SDate.now()).millisSinceEpoch
+}
+
+sealed trait ExportType {
+  def urlValue: String
+}
+
+object ExportDesks extends ExportType {
+  override val urlValue = "desks"
+}
+
+object ExportArrivals extends ExportType {
+  override val urlValue = "arrivals"
 }
 
 case class LoadingState(isLoading: Boolean = false)
@@ -99,7 +115,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   def timeProvider(): MillisSinceEpoch = SDate.now().millisSinceEpoch
 
   override protected def initialModel = RootModel()
-  
+
 
   def currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
 

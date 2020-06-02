@@ -9,7 +9,7 @@ import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentCo
 import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, ViewMode}
+import drt.client.services.{ExportArrivals, ExportDesks, SPACircuit, ViewMode}
 import drt.shared.Queues.Queue
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
@@ -119,21 +119,21 @@ object TerminalContentComponent {
               <.div(^.className := "exports",
                 <.a("Export Arrivals",
                   ^.className := "btn btn-default",
-                  ^.href := SPAMain.absoluteUrl(s"export/arrivals/${props.terminalPageTab.viewMode.millis}/$terminal?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
+                  ^.href := SPAMain.exportUrl(ExportArrivals, props.terminalPageTab.viewMode, terminal),
                   ^.target := "_blank",
+                  ^.id := "export-day-arrivals",
                   ^.onClick --> {
-                    Callback(GoogleEventTracker.sendEvent(terminalName, "Export Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
-                  }
-                ),
+                  Callback(GoogleEventTracker.sendEvent(terminalName, "Export Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
+                  }),
                 <.a(
                   "Export Desks",
                   ^.className := "btn btn-default",
-                  ^.href := SPAMain.absoluteUrl(s"export/desks/${props.terminalPageTab.viewMode.millis}/$terminal?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
+                  ^.href := SPAMain.exportUrl(ExportDesks, props.terminalPageTab.viewMode, terminal),
                   ^.target := "_blank",
+                  ^.id := "export-day-desks",
                   ^.onClick --> {
                     Callback(GoogleEventTracker.sendEvent(terminalName, "Export Desks", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
-                  }
-                ),
+                  }),
                 MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser)
               )
             ),

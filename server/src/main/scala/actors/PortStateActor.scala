@@ -180,7 +180,11 @@ class PortStateActor(liveStateActor: ActorRef,
     start.millisSinceEpoch,
     end.millisSinceEpoch)))
 
-  def isHistoricDate(date: MillisSinceEpoch): Boolean = date < now().getLocalLastMidnight.millisSinceEpoch
+  def isHistoricDate(date: MillisSinceEpoch): Boolean = {
+    val historic = date < now().getLocalLastMidnight.millisSinceEpoch
+    if (historic) println(s"\n\n***Historic: ${SDate(date).toISOString()}\n\n")
+    historic
+  }
 
   def stateForPeriod(start: MillisSinceEpoch,
                      end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))

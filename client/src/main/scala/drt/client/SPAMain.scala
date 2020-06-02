@@ -275,6 +275,13 @@ object SPAMain {
     else s"$pathToThisApp/$relativeUrl"
   }
 
+  def exportUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
+    case view: ViewPointInTime =>
+      SPAMain.absoluteUrl(s"export/${exportType.urlValue}/${view.millis}/$terminal")
+    case view =>
+      SPAMain.absoluteUrl(s"export/${exportType.urlValue}/${view.startMillis}/${view.endMillis}/$terminal")
+  }
+
   def assetsPrefix: String = if (pathToThisApp == "/") s"/assets" else s"live/assets"
 
   @JSExportTopLevel("SPAMain")

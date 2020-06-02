@@ -50,9 +50,7 @@ trait WithFlightsExport extends ExportToCsv {
   }
 
   def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String,
-                                              terminalName: String,
-                                              startHour: Int,
-                                              endHour: Int): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+                                              terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action.apply {
       implicit request => exportPointInTimeView(terminalName, pointInTime)
     }
@@ -80,7 +78,6 @@ trait WithFlightsExport extends ExportToCsv {
     val terminal = Terminal(terminalString)
 
     Action(FeedSource(feedSourceString) match {
-
              case Some(fs) =>
                val persistenceId = feedSourceToPersistenceId(fs)
                val arrivalsExport = ArrivalFeedExport()

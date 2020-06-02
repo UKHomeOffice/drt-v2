@@ -19,9 +19,7 @@ trait WithDesksExport extends ExportToCsv {
   }
 
   def exportDesksAndQueuesAtPointInTimeCSV(pointInTime: String,
-                                           terminalName: String,
-                                           startHour: Int,
-                                           endHour: Int): Action[AnyContent] =
+                                           terminalName: String): Action[AnyContent] =
     authByRole(DesksAndQueuesView)(exportPointInTimeView(terminalName, pointInTime))
 
   def exportDesksAndQueuesBetweenTimeStampsCSV(startMillis: String,
