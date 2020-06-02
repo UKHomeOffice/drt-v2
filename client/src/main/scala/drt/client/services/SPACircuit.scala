@@ -56,16 +56,14 @@ case class ViewDay(time: SDateLike) extends ViewMode {
   def isHistoric: Boolean = dayStart.millisSinceEpoch < SDate.midnightOf(SDate.now()).millisSinceEpoch
 }
 
-sealed trait ExportType {
-  def urlValue: String
-}
+sealed trait ExportType
 
 object ExportDesks extends ExportType {
-  override val urlValue = "desks"
+  override def toString = "desks"
 }
 
 object ExportArrivals extends ExportType {
-  override val urlValue = "arrivals"
+  override def toString = "arrivals"
 }
 
 case class LoadingState(isLoading: Boolean = false)
