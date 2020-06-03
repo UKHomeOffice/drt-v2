@@ -135,15 +135,15 @@ class PortStateActor(liveStateActor: ActorRef,
       replyWithDayViewQuery(message)
 
     case GetPortState(start, end) =>
-      log.debug(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      log.info(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriod(start, end)
 
     case GetPortStateForTerminal(start, end, terminal) =>
-      log.debug(s"Received GetPortStateForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
+      log.info(s"Received GetPortStateForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
       sender() ! stateForPeriodForTerminal(start, end, terminal)
 
     case GetFlightsForTerminal(start, end, terminal) =>
-      log.debug(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
+      log.info(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
       sender() ! FlightsWithSplits(stateForPeriodForTerminal(start, end, terminal).flights)
 
     case GetUpdatesSince(millis, start, end) =>

@@ -12,7 +12,6 @@ import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
-import org.scalajs.dom.raw.FormData
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
@@ -23,15 +22,15 @@ sealed trait ViewMode {
 
   def isDifferentTo(viewMode: ViewMode): Boolean = viewMode.uUID != uUID
 
-  def millis: MillisSinceEpoch = time.millisSinceEpoch
+  def time: SDateLike
 
-  def startMillis: MillisSinceEpoch = time.getLocalLastMidnight.millisSinceEpoch
+  val millis: MillisSinceEpoch = time.millisSinceEpoch
 
-  def endMillis: MillisSinceEpoch = time.getLocalNextMidnight.millisSinceEpoch
+  val start: SDateLike = time.getLocalLastMidnight
+
+  val end: SDateLike = start.addDays(1).addMinutes(-1)
 
   def dayStart: SDateLike = SDate.midnightOf(time)
-
-  def time: SDateLike
 
   def isHistoric: Boolean
 }
@@ -110,10 +109,9 @@ object PollDelay {
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
-  def timeProvider(): MillisSinceEpoch = SDate.now().millisSinceEpoch
+  val timeProvider: () => MillisSinceEpoch = () => SDate.now().millisSinceEpoch
 
-  override protected def initialModel = RootModel()
-
+  override protected def initialModel: RootModel = RootModel()
 
   def currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
 
@@ -126,7 +124,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new InitialPortStateHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new PortStateUpdatesHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
-      new AirportCountryHandler(() => timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
+      new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new ArrivalSourcesHandler(zoomRW(_.arrivalSources)((m, v) => m.copy(arrivalSources = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),

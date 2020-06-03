@@ -279,7 +279,7 @@ object SPAMain {
     case view: ViewPointInTime =>
       SPAMain.absoluteUrl(s"export/$exportType/${view.millis}/$terminal")
     case view =>
-      SPAMain.absoluteUrl(s"export/$exportType/${view.startMillis}/${view.endMillis}/$terminal")
+      SPAMain.absoluteUrl(s"export/$exportType/${view.start.millisSinceEpoch}/${view.end.millisSinceEpoch}/$terminal")
   }
 
   def assetsPrefix: String = if (pathToThisApp == "/") s"/assets" else s"live/assets"
