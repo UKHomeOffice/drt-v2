@@ -186,7 +186,7 @@ object TerminalContentComponent {
                  exportType: ExportType): VdomTagOf[Anchor] =
     <.a(s"Export $exportType",
       ^.className := "btn btn-default",
-      ^.href := SPAMain.exportUrl(exportType, props.terminalPageTab.viewMode, terminal),
+      ^.href := SPAMain.exportViewUrl(exportType, props.terminalPageTab.viewMode, terminal),
       ^.target := "_blank",
       ^.id := s"export-day-$exportType",
       ^.onClick --> {

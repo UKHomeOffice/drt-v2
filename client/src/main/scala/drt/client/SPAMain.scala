@@ -14,6 +14,7 @@ import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
+import japgolly.scalajs.react.vdom.html_<^
 import org.scalajs.dom
 import scalacss.ProdDefaults._
 
@@ -32,11 +33,9 @@ object SPAMain {
   object UrlDateParameter {
     val paramName = "date"
 
-    def apply(paramValue: Option[String]): UrlParameter = {
-      new UrlParameter {
-        override val name: String = paramName
-        override val value: Option[String] = paramValue
-      }
+    def apply(paramValue: Option[String]): UrlParameter = new UrlParameter {
+      override val name: String = paramName
+      override val value: Option[String] = paramValue
     }
   }
 
@@ -72,19 +71,20 @@ object SPAMain {
                                 subMode: String = "summary",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
-    val terminal = Terminal(terminalName)
+    val terminal: Terminal = Terminal(terminalName)
     val date: Option[String] = queryParams.get(UrlDateParameter.paramName).filter(_.matches(".+"))
     val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+"))
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+"))
     val viewType: ViewType = queryParams.get(UrlViewType.paramName).map(vt => if (ViewRecs.queryParamsValue == vt) ViewRecs else ViewDeps).getOrElse(ViewDeps)
 
     def viewMode: ViewMode = {
+      val nowMillis = SDate.now().millisSinceEpoch
       (mode, date) match {
-        case ("current", Some(dateString)) => ViewDay(parseDateString(dateString))
+        case ("current", Some(dateString)) => ViewDay(parseDateString(dateString), nowMillis)
         case ("snapshot", dateStringOption) =>
           val pointInTimeMillis = dateStringOption.map(parseDateString).getOrElse(SDate.midnightThisMorning())
           ViewPointInTime(pointInTimeMillis)
-        case _ => ViewLive
+        case _ => ViewLive(nowMillis)
       }
     }
 
@@ -266,7 +266,7 @@ object SPAMain {
       })
   }
 
-  def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
+  def layout(c: RouterCtl[Loc], r: Resolution[Loc]): html_<^.VdomElement = Layout(c, r)
 
   def pathToThisApp: String = dom.document.location.pathname
 
@@ -275,7 +275,7 @@ object SPAMain {
     else s"$pathToThisApp/$relativeUrl"
   }
 
-  def exportUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
+  def exportViewUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
     case view: ViewPointInTime =>
       SPAMain.absoluteUrl(s"export/$exportType/${view.millis}/$terminal")
     case view =>

@@ -27,24 +27,19 @@ object PortStateActor {
   def apply(now: () => SDateLike,
             liveCrunchStateActor: ActorRef,
             forecastCrunchStateActor: ActorRef,
-            queues: Map[Terminal, Seq[Queue]])
+            queues: Map[Terminal, Seq[Queue]],
+            isHistoric: SDateLike => Boolean)
            (implicit system: ActorSystem): ActorRef = {
-    system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead, queues), name = "port-state-actor")
+    system.actorOf(Props(new PortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead, queues, isHistoric)), name = "port-state-actor")
   }
-
-  def props(liveStateActor: ActorRef,
-            forecastStateActor: ActorRef,
-            now: () => SDateLike,
-            liveDaysAhead: Int,
-            queues: Map[Terminal, Seq[Queue]]): Props =
-    Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead, queues))
 }
 
 class PortStateActor(liveStateActor: ActorRef,
                      forecastStateActor: ActorRef,
                      now: () => SDateLike,
                      liveDaysAhead: Int,
-                     queuesByTerminal: Map[Terminal, Seq[Queue]]) extends Actor {
+                     queuesByTerminal: Map[Terminal, Seq[Queue]],
+                     isHistoricDate: SDateLike => Boolean) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val portStateSnapshotInterval: Int = 1000
@@ -131,7 +126,7 @@ class PortStateActor(liveStateActor: ActorRef,
     case PointInTimeQuery(millis, query) =>
       replyWithPointInTimeQuery(SDate(millis), query)
 
-    case message: PointInTimeAbleQuery if isHistoricDate(message.from) =>
+    case message: PointInTimeAbleQuery if isHistoricDate(SDate(message.from)) =>
       replyWithDayViewQuery(message)
 
     case GetPortState(start, end) =>
@@ -180,8 +175,6 @@ class PortStateActor(liveStateActor: ActorRef,
     queuesByTerminal,
     start.millisSinceEpoch,
     end.millisSinceEpoch)))
-
-  def isHistoricDate(date: MillisSinceEpoch): Boolean = date < now().getLocalLastMidnight.millisSinceEpoch
 
   def stateForPeriod(start: MillisSinceEpoch,
                      end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))

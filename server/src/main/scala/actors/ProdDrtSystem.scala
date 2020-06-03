@@ -19,6 +19,7 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services._
 import services.crunch.CrunchSystem
+import services.graphstages.Crunch
 import slickdb.{ArrivalTable, Tables}
 
 import scala.collection.mutable
@@ -59,7 +60,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   override val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
 
-  override val portStateActor: ActorRef = PortStateActor(now, liveCrunchStateActor, forecastCrunchStateActor, airportConfig.queuesByTerminal)
+  override val portStateActor: ActorRef = PortStateActor(now, liveCrunchStateActor, forecastCrunchStateActor, airportConfig.queuesByTerminal, Crunch.isHistoricDate(now))
 
   val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 

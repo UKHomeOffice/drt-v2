@@ -4,7 +4,7 @@ import drt.shared.CrunchApi._
 import drt.shared.MilliTimes._
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared._
+import drt.shared.{SDateLike, _}
 import drt.shared.api.Arrival
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
@@ -14,6 +14,9 @@ import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
 
 object Crunch {
+  def isHistoricDate(now: () => SDateLike): SDateLike => Boolean =
+    (date: SDateLike) => date.millisSinceEpoch < now().getLocalLastMidnight.millisSinceEpoch
+
   val paxOffPerMinute: Int = 20
 
   val log: Logger = LoggerFactory.getLogger(getClass)

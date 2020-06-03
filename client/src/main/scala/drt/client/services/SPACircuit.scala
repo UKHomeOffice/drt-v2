@@ -24,35 +24,45 @@ sealed trait ViewMode {
 
   def time: SDateLike
 
-  val millis: MillisSinceEpoch = time.millisSinceEpoch
+  def millis: MillisSinceEpoch = time.millisSinceEpoch
 
-  val start: SDateLike = time.getLocalLastMidnight
+  def start: SDateLike = time.getLocalLastMidnight
 
-  val end: SDateLike = start.addDays(1).addMinutes(-1)
+  def end: SDateLike = start.addDays(1).addMinutes(-1)
 
   def dayStart: SDateLike = SDate.midnightOf(time)
 
   def isHistoric: Boolean
+
+  def isLive: Boolean
 }
 
-case object ViewLive extends ViewMode {
-  def time: SDateLike = SDate.now()
+case class ViewLive(now: MillisSinceEpoch) extends ViewMode {
+  val time: SDateLike = SDate(now)
 
   def isHistoric: Boolean = false
+
+  def isLive: Boolean = true
 }
 
 case class NoViewMode() extends ViewMode {
   def time: SDateLike = SDate(0L)
 
   def isHistoric: Boolean = false
+
+  def isLive: Boolean = false
 }
 
 case class ViewPointInTime(time: SDateLike) extends ViewMode {
   def isHistoric: Boolean = true
+
+  def isLive: Boolean = false
 }
 
-case class ViewDay(time: SDateLike) extends ViewMode {
-  def isHistoric: Boolean = dayStart.millisSinceEpoch < SDate.midnightOf(SDate.now()).millisSinceEpoch
+case class ViewDay(time: SDateLike, now: MillisSinceEpoch) extends ViewMode {
+  def isHistoric: Boolean = dayStart.millisSinceEpoch < SDate(now).getLocalLastMidnight.millisSinceEpoch
+
+  def isLive: Boolean = false
 }
 
 sealed trait ExportType

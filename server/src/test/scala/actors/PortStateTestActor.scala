@@ -5,6 +5,7 @@ import akka.testkit.TestProbe
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.{PortStateDiff, SDateLike}
+import services.graphstages.Crunch
 
 object PortStateTestActor {
   def apply(testProbe: TestProbe, now: () => SDateLike, queues: Map[Terminal, Seq[Queue]])(implicit system: ActorSystem): ActorRef = {
@@ -19,7 +20,7 @@ class PortStateTestActor(liveActor: ActorRef,
                          now: () => SDateLike,
                          liveDaysAhead: Int,
                          queues: Map[Terminal, Seq[Queue]])
-  extends PortStateActor(liveActor, forecastActor, now, liveDaysAhead, queues) {
+  extends PortStateActor(liveActor, forecastActor, now, liveDaysAhead, queues, Crunch.isHistoricDate(now)) {
   override def splitDiffAndSend(diff: PortStateDiff): Unit = {
     super.splitDiffAndSend(diff)
     probe ! state.immutable

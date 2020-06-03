@@ -11,6 +11,7 @@ import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import services.SDate
 import services.crunch.deskrecs.GetFlights
+import services.graphstages.Crunch
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -24,7 +25,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
     val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(forecastMaxDays).millisSinceEpoch
     val liveCsa = system.actorOf(Props(new CrunchStateActor(None, Sizes.oneMegaByte, "crunch-state", defaultAirportConfig.queuesByTerminal, now, expireAfterMillis, false, forecastMaxMillis)))
     val fcstCsa = system.actorOf(Props(new CrunchStateActor(None, Sizes.oneMegaByte, "forecast-crunch-state", defaultAirportConfig.queuesByTerminal, now, expireAfterMillis, false, forecastMaxMillis)))
-    val ps = PortStateActor(now, liveCsa, fcstCsa, defaultAirportConfig.queuesByTerminal)
+    val ps = PortStateActor(now, liveCsa, fcstCsa, defaultAirportConfig.queuesByTerminal, Crunch.isHistoricDate(now))
 
     "When I send it a flight and then ask for its flights" >> {
       val fws = flightsWithSplits(List(("BA1000", scheduled, T1)))

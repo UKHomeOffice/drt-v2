@@ -10,6 +10,7 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.{PortCode, SDateLike}
 import org.slf4j.Logger
+import services.graphstages.Crunch
 import slickdb.ArrivalTable
 
 
@@ -179,10 +180,9 @@ object TestActors {
   }
 
   class TestPortStateActor(live: ActorRef, forecast: ActorRef, now: () => SDateLike, liveDaysAhead: Int, queues: Map[Terminal, Seq[Queue]])
-    extends PortStateActor(live, forecast, now, liveDaysAhead, queues) {
+    extends PortStateActor(live, forecast, now, liveDaysAhead, queues, Crunch.isHistoricDate(now)) {
     def reset: Receive = {
       case ResetData =>
-        maybeCrunchQueueActor
         state.clear()
         sender() ! Ack
     }
