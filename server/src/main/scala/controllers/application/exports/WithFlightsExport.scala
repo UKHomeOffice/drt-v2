@@ -131,21 +131,24 @@ trait WithFlightsExport extends ExportToCsv {
     else GetSummaries
 
   private def exportEndOfDayView(startMillis: String, endMillis: String, terminalName: String)
-                                (implicit request: Request[AnyContent]): Result =
-    export(startMillis, endMillis, terminalName, None)
+                                (implicit request: Request[AnyContent]): Result = {
+    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(None))
+    val start = SDate(startMillis.toLong)
+    val end = SDate(endMillis.toLong)
+    export(terminalName, start, end, summaryForDate)
+  }
 
   private def exportPointInTimeView(terminalName: String, pointInTime: String)
-                                   (implicit request: Request[AnyContent]): Result =
-    export(pointInTime, pointInTime, terminalName, Option(pointInTime.toLong))
+                                   (implicit request: Request[AnyContent]): Result = {
+    val pit = SDate(pointInTime.toLong)
+    val start = pit.getLocalLastMidnight
+    val end = start.addDays(1).addMinutes(-1)
+    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(Option(pit.millisSinceEpoch)))
+    export(terminalName, start, end, summaryForDate)
+  }
 
-  private def export(startMillis: String,
-                     endMillis: String,
-                     terminalName: String,
-                     maybePointInTime: Option[MillisSinceEpoch])
+  private def export(terminalName: String, start: SDateLike, end: SDateLike, summaryForDate: (SDateLike, SDateLike) => Future[TerminalSummaryLike])
                     (implicit request: Request[AnyContent]): Result = {
-    val start = localLastMidnight(startMillis)
-    val end = localLastMidnight(endMillis)
-    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(maybePointInTime))
     exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryForDate)
   }
 }
