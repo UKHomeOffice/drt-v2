@@ -41,7 +41,7 @@ trait WithFlightsExport extends ExportToCsv {
               terminal = terminal,
               maybeSummaryActorAndRequestProvider = Option(summaryActorProvider, GetSummariesWithActualApi),
               generateNewSummary = summaryFromPortState
-              )
+            )
           case Failure(t) =>
             log.error(f"Bad date date $year%02d/$month%02d/$day%02d", t)
             BadRequest(f"Bad date date $year%02d/$month%02d/$day%02d")
@@ -74,36 +74,36 @@ trait WithFlightsExport extends ExportToCsv {
       LiveFeedSource -> "actors.LiveArrivalsActor-live",
       AclFeedSource -> "actors.ForecastBaseArrivalsActor-forecast-base",
       ForecastFeedSource -> "actors.ForecastPortArrivalsActor-forecast-port"
-      )
+    )
     val terminal = Terminal(terminalString)
 
     Action(FeedSource(feedSourceString) match {
-             case Some(fs) =>
-               val persistenceId = feedSourceToPersistenceId(fs)
-               val arrivalsExport = ArrivalFeedExport()
-               val startDate = SDate(startPit)
-               val numberOfDays = startDate.getLocalLastMidnight.daysBetweenInclusive(SDate(endPit))
+      case Some(fs) =>
+        val persistenceId = feedSourceToPersistenceId(fs)
+        val arrivalsExport = ArrivalFeedExport()
+        val startDate = SDate(startPit)
+        val numberOfDays = startDate.getLocalLastMidnight.daysBetweenInclusive(SDate(endPit))
 
-               val csvDataSource = arrivalsExport.flightsDataSource(startDate, numberOfDays, terminal, fs, persistenceId)
+        val csvDataSource = arrivalsExport.flightsDataSource(startDate, numberOfDays, terminal, fs, persistenceId)
 
-               implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
+        implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
 
-               val periodString = if (numberOfDays > 1)
-                 s"${startDate.getLocalLastMidnight.toISODateOnly}-to-${SDate(endPit).getLocalLastMidnight.toISODateOnly}"
-               else
-                 startDate.getLocalLastMidnight.toISODateOnly
+        val periodString = if (numberOfDays > 1)
+          s"${startDate.getLocalLastMidnight.toISODateOnly}-to-${SDate(endPit).getLocalLastMidnight.toISODateOnly}"
+        else
+          startDate.getLocalLastMidnight.toISODateOnly
 
-               val fileName = s"${airportConfig.portCode}-$terminal-$feedSourceString-$periodString"
+        val fileName = s"${airportConfig.portCode}-$terminal-$feedSourceString-$periodString"
 
-               Result(
-                 header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-                 body = HttpEntity.Chunked(csvDataSource.collect {
-                   case Some(s) => s
-                 }.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType))
+        Result(
+          header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
+          body = HttpEntity.Chunked(csvDataSource.collect {
+            case Some(s) => s
+          }.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType))
 
-             case None =>
-               NotFound(s"Unknown feed source $feedSourceString")
-           })
+      case None =>
+        NotFound(s"Unknown feed source $feedSourceString")
+    })
   }
 
 
