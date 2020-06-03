@@ -51,7 +51,7 @@ class PortStateActor(liveStateActor: ActorRef,
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  implicit val timeout: Timeout = new Timeout(1 minute)
+  implicit val timeout: Timeout = new Timeout(30 seconds)
 
   val state: PortStateMutable = PortStateMutable.empty
 
@@ -164,11 +164,12 @@ class PortStateActor(liveStateActor: ActorRef,
     replyWithPointInTimeQuery(pointInTime, message)
   }
 
-  def replyWithPointInTimeQuery(pointInTime: SDateLike, message: PointInTimeAbleQuery): Unit =
+  def replyWithPointInTimeQuery(pointInTime: SDateLike, message: PointInTimeAbleQuery): Unit = {
+    val tempPitActor = crunchReadActor(pointInTime, SDate(message.from), SDate(message.to))
     killActor
-      .ask(RequestAndTerminate(crunchReadActor(pointInTime, SDate(message.from), SDate(message.to)), message))
+      .ask(RequestAndTerminate(tempPitActor, message))
       .pipeTo(sender())
-
+  }
 
   def crunchReadActor(pointInTime: SDateLike,
                       start: SDateLike,

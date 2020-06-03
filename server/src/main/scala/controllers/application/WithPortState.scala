@@ -38,7 +38,7 @@ trait WithPortState {
       eventualUpdates
         .recoverWith {
           case t =>
-            log.error("Error processing request for port state or port state updates", t)
+            log.error(t, "Error processing request for port state or port state updates")
             Future(InternalServerError)
         }
     }
