@@ -1,11 +1,12 @@
 package actors
 
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayQueuesActor, TerminalDayStaffActor}
+import actors.minutes.MinutesActorLike.MinutesLookup
 import actors.pointInTime.{CrunchStateReadActor, GetCrunchMinutes, GetStaffMinutes}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, TM, TQM}
@@ -34,22 +35,22 @@ trait MinuteLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[MinutesContainer[StaffMinute, TM]]
   }
 
-  val primaryQueuesLookup: (Terminal, SDateLike) => Future[Option[MinutesContainer[CrunchMinute, TQM]]] = (terminal: Terminal, date: SDateLike) => {
+  val primaryQueuesLookup: MinutesLookup[CrunchMinute, TQM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
     val actor = system.actorOf(TerminalDayQueuesActor.props(terminal, date, now))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
   }
 
-  val secondaryQueuesLookup: (Terminal, SDateLike) => Future[Option[MinutesContainer[CrunchMinute, TQM]]] = (terminal: Terminal, date: SDateLike) => {
+  val secondaryQueuesLookup: MinutesLookup[CrunchMinute, TQM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
     val actor = crunchStateReadActor(date)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetCrunchMinutes(terminal))).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
   }
 
-  val primaryStaffLookup: (Terminal, SDateLike) => Future[Option[MinutesContainer[StaffMinute, TM]]] = (terminal: Terminal, date: SDateLike) => {
+  val primaryStaffLookup: MinutesLookup[StaffMinute, TM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
     val actor = system.actorOf(TerminalDayStaffActor.props(terminal, date, now))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
   }
 
-  val secondaryStaffLookup: (Terminal, SDateLike) => Future[Option[MinutesContainer[StaffMinute, TM]]] = (terminal: Terminal, date: SDateLike) => {
+  val secondaryStaffLookup: MinutesLookup[StaffMinute, TM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
     val actor = crunchStateReadActor(date)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetStaffMinutes(terminal))).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
   }

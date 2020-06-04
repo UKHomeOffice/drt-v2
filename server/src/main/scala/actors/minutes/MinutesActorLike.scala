@@ -2,12 +2,12 @@ package actors.minutes
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
-import actors.{GetPortState, GetPortStateForTerminal}
+import actors.{GetPortState, GetPortStateForTerminal, PointInTimeQuery}
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.shared.CrunchApi.{MinuteLike, MinutesContainer}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.Terminals.Terminal
 import drt.shared.{MilliTimes, SDateLike, Terminals, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
@@ -19,7 +19,7 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 
 
 object MinutesActorLike {
-  type MinutesLookup[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike) => Future[Option[MinutesContainer[A, B]]]
+  type MinutesLookup[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, Option[MillisSinceEpoch]) => Future[Option[MinutesContainer[A, B]]]
   type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A, B]]
 }
 
@@ -41,6 +41,13 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
     case StreamCompleted => log.info(s"Stream completed")
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
+
+    case PointInTimeQuery(pit, GetPortState(startMillis, endMillis)) =>
+      val replyTo = sender()
+      val eventualMinutesForAllTerminals = terminals.map { terminal =>
+        handleLookups(terminal, SDate(startMillis), SDate(endMillis))
+      }
+      combineEventualMinutesContainers(eventualMinutesForAllTerminals).pipeTo(replyTo)
 
     case GetPortState(startMillis, endMillis) =>
       val replyTo = sender()
