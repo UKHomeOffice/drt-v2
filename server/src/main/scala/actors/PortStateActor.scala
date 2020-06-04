@@ -25,11 +25,11 @@ import scala.language.postfixOps
 
 object PortStateActor {
   def apply(now: () => SDateLike,
-            liveCrunchStateActor: ActorRef,
-            forecastCrunchStateActor: ActorRef,
+            liveStateActor: ActorRef,
+            forecastStateActor: ActorRef,
             queues: Map[Terminal, Seq[Queue]])
            (implicit system: ActorSystem): ActorRef = {
-    system.actorOf(Props(new PortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead, queues)), name = "port-state-actor")
+    system.actorOf(Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead, queues)), name = "port-state-actor")
   }
 }
 
