@@ -57,10 +57,6 @@ class CrunchStateReadActor(snapshotInterval: Int,
     case SaveSnapshotSuccess =>
       log.info("Saved PortState Snapshot")
 
-    case GetState =>
-      logInfo(s"Received GetState Request (pit: ${pointInTime.toISOString()}")
-      sender() ! Option(state)
-
     case GetCrunchMinutes(terminal) =>
       log.debug(s"Received GetCrunchMinutes request")
       sender() ! Option(MinutesContainer(state.immutable.crunchMinutes.filterKeys(tqm => tqm.terminal == terminal).values), Long.MaxValue)

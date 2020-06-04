@@ -51,7 +51,7 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
     } else {
       val liveCrunchStateProps: Props = Props(new TestCrunchStateActor("crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots))
       val forecastCrunchStateProps: Props = Props(new TestCrunchStateActor("forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots))
-      system.actorOf(Props(new TestPortStateActor(liveCrunchStateProps, forecastCrunchStateProps, now, 2)), name = "port-state-actor")
+      system.actorOf(Props(new TestPortStateActor(liveCrunchStateProps, forecastCrunchStateProps, now, 2, airportConfig.queuesByTerminal)), name = "port-state-actor")
     }
 
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")

@@ -85,7 +85,7 @@ object SplitStyle {
     readwriter[Js.Value].bimap[SplitStyle](
       feedSource => feedSource.toString,
       (s: Value) => apply(s.str)
-      )
+    )
 }
 
 case object PaxNumbers extends SplitStyle
@@ -398,7 +398,7 @@ object FeedSource {
     readwriter[Js.Value].bimap[FeedSource](
       feedSource => feedSource.toString,
       (s: Value) => apply(s.str).getOrElse(UnknownFeedSource)
-      )
+    )
 }
 
 case class ArrivalKey(origin: PortCode,
@@ -433,7 +433,7 @@ trait SDateLike {
   val months = List(
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
-    )
+  )
 
   /**
    * Days of the week 1 to 7 (Monday is 1)
@@ -524,6 +524,8 @@ trait SDateLike {
   def <=(compareTo: SDateLike): Boolean = millisSinceEpoch <= compareTo.millisSinceEpoch
 
   def daysBetweenInclusive(that: SDateLike): Int = ((millisSinceEpoch - that.millisSinceEpoch) / oneDayMillis).abs.toInt + 1
+
+  def isHistoricDate(now: SDateLike): Boolean = millisSinceEpoch < now.getLocalLastMidnight.millisSinceEpoch
 }
 
 case class RemoveFlight(flightKey: UniqueArrival)
@@ -761,7 +763,7 @@ object CrunchApi {
     override def maybeUpdated(existing: StaffMinute, now: MillisSinceEpoch): Option[StaffMinute] =
       if (existing.shifts != shifts || existing.fixedPoints != fixedPoints || existing.movements != movements) Option(existing.copy(
         shifts = shifts, fixedPoints = fixedPoints, movements = movements, lastUpdated = Option(now)
-        ))
+      ))
       else None
 
     override def toUpdatedMinute(now: MillisSinceEpoch): StaffMinute = toMinute.copy(lastUpdated = Option(now))
@@ -836,7 +838,7 @@ object CrunchApi {
       actDesks = ad.desks,
       actWait = ad.waitTime,
       lastUpdated = Option(now)
-      )
+    )
 
     implicit val rw: ReadWriter[CrunchMinute] = macroRW
   }
@@ -864,7 +866,7 @@ object CrunchApi {
       if (existing.paxLoad != paxLoad || existing.workLoad != workLoad || existing.deskRec != deskRec || existing.waitTime != waitTime)
         Option(existing.copy(
           paxLoad = paxLoad, workLoad = workLoad, deskRec = deskRec, waitTime = waitTime, lastUpdated = Option(now)
-          ))
+        ))
       else None
 
     override val lastUpdated: Option[MillisSinceEpoch] = None
@@ -903,7 +905,7 @@ object CrunchApi {
     override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
       if (existing.actDesks != desks || existing.actWait != waitTime) Option(existing.copy(
         actDesks = desks, actWait = waitTime, lastUpdated = Option(now)
-        ))
+      ))
       else None
   }
 
@@ -916,7 +918,7 @@ object CrunchApi {
     override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
       if (existing.actDesks != deskStat.desks || existing.actWait != deskStat.waitTime) Option(existing.copy(
         actDesks = deskStat.desks, actWait = deskStat.waitTime, lastUpdated = Option(now)
-        ))
+      ))
       else None
 
     override val lastUpdated: Option[MillisSinceEpoch] = None
@@ -1033,7 +1035,7 @@ object CrunchApi {
             deployedWait = Option(queueMinutes.map(_.deployedWait.getOrElse(0)).max),
             actDesks = actDesks,
             actWait = actWaits
-            )
+          )
       }
       (startMinute, queueCrunchMinutes)
     })

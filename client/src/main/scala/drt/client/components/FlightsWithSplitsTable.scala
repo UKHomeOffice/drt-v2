@@ -210,7 +210,7 @@ object FlightTableRow {
       val flightCodeCell = if (props.hasArrivalSourcesAccess) <.div(
         ^.onClick --> Callback(SPACircuit.dispatch {
           props.viewMode match {
-            case vm: ViewDay if vm.isHistoric =>
+            case vm: ViewDay if vm.isHistoric(SDate.now()) =>
               GetArrivalSourcesForPointInTime(props.viewMode.time.addHours(28), props.flightWithSplits.unique)
             case vm: ViewPointInTime =>
               GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)

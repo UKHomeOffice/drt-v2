@@ -63,9 +63,7 @@ class TestDrtActor extends Actor {
       val manifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(oneMegaByte, tc.now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval))))
       val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(journalType, tc.airportConfig.crunchOffsetMinutes)))
 
-      //      val flightsStateActor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, Sizes.oneMegaByte, "flights-state", tc.airportConfig.queuesByTerminal, tc.now, tc.expireAfterMillis)))
-      //      val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsStateActor, tc.now, tc.airportConfig)
-      val portStateActor = PortStateTestActor(portStateProbe, tc.now)
+      val portStateActor = PortStateTestActor(portStateProbe, tc.now, tc.airportConfig.queuesByTerminal)
       if (tc.initialPortState.isDefined) Await.ready(portStateActor.ask(tc.initialPortState.get)(new Timeout(1 second)), 1 second)
 
       val portDeskRecs = DesksAndWaitsPortProvider(tc.airportConfig, tc.cruncher, tc.pcpPaxFn)

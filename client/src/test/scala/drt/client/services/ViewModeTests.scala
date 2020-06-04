@@ -1,11 +1,65 @@
-package drt.client
+package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{ViewDay, ViewLive, ViewPointInTime}
-import utest._
+import drt.shared.CrunchApi.MillisSinceEpoch
+import utest.{TestSuite, _}
 
-class ViewModeTests extends TestSuite {
+object ViewModeTests extends TestSuite {
+  val nowMillis: MillisSinceEpoch = SDate.now().millisSinceEpoch
+
   override def tests: Tests = Tests {
+    "ViewMode" - {
+      "Given a ViewLive" - {
+        val viewLive = ViewLive
+        "When I ask if it's historic" - {
+          val isHistoric = viewLive.isHistoric(SDate.now())
+          "Then I should get false" - {
+            assert(!isHistoric)
+          }
+        }
+      }
+
+      "Given a ViewPointInTime" - {
+        val viewLive = ViewPointInTime(SDate(0L))
+        "When I ask if it's historic" - {
+          val isHistoric = viewLive.isHistoric(SDate.now())
+          "Then I should get true" - {
+            assert(isHistoric)
+          }
+        }
+      }
+
+      "Given a ViewDay with a now of 2020-06-01T00:00 BST, and date of the same" - {
+        val now = SDate("2020-06-01T00:00")
+        val viewDay = ViewDay(now)
+        "When I ask if it's historic" - {
+          "Then I should get false" - {
+            assert(!viewDay.isHistoric(now))
+          }
+        }
+      }
+
+      "Given a ViewDay with a now of 2020-06-01T00:00 BST, and date of midnight that morning" - {
+        val now = SDate("2020-06-01T00:00")
+        val viewDay = ViewDay(SDate("2020-06-01T00:00"))
+        "When I ask if it's historic" - {
+          "Then I should get false" - {
+            assert(!viewDay.isHistoric(now))
+          }
+        }
+      }
+
+      "Given a ViewDay with a now of 2020-06-01T00:00 BST, and date of one minutes before midnight that morning" - {
+        val now = SDate("2020-06-01T00:00")
+        val viewDay = ViewDay(SDate("2020-06-01T00:00").addMinutes(-1))
+        "When I ask if it's historic" - {
+          "Then I should get false" - {
+            assert(viewDay.isHistoric(now))
+          }
+        }
+      }
+    }
+
     "Given the same two live view mode instances " +
       "When asking if they're different " +
       "Then the answer should be false" - {

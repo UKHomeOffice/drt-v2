@@ -139,8 +139,8 @@ object TestActors {
     override def receive: Receive = reset orElse super.receive
   }
 
-  class TestPortStateActor(liveProps: Props, forecastProps: Props, now: () => SDateLike, liveDaysAhead: Int)
-    extends PortStateActor(liveProps, forecastProps, now, liveDaysAhead, true) {
+  class TestPortStateActor(liveProps: Props, forecastProps: Props, now: () => SDateLike, liveDaysAhead: Int, queues: Map[Terminal, Seq[Queue]])
+    extends PortStateActor(liveProps, forecastProps, now, liveDaysAhead, queues) {
     def reset: Receive = {
       case ResetData =>
         val replyTo = sender()

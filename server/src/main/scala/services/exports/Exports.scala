@@ -1,6 +1,6 @@
 package services.exports
 
-import actors.{GetFlightsForTerminal, GetPortStateForTerminal}
+import actors.{GetFlightsForTerminal, GetPortStateForTerminal, PointInTimeAbleQuery}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
@@ -98,11 +98,11 @@ object Exports {
   def queueSummariesFromPortState(queues: Seq[Queue],
                                   summaryLengthMinutes: Int,
                                   terminal: Terminal,
-                                  portStateProvider: (SDateLike, Any) => Future[Any])
+                                  portStateProvider: PointInTimeAbleQuery => Future[Any])
                                  (implicit ec: ExecutionContext): (SDateLike, SDateLike) => Future[TerminalSummaryLike] =
     (from: SDateLike, to: SDateLike) => {
       val minutes = from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * MilliTimes.oneMinuteMillis
-      portStateProvider(from, GetPortStateForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal))
+      portStateProvider(GetPortStateForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal))
         .mapTo[PortState]
         .recoverWith {
           case t =>
@@ -128,10 +128,10 @@ object Exports {
   def flightSummariesFromPortState(terminalFlightsSummaryGenerator: TerminalFlightsSummaryLikeGenerator)
                                   (terminal: Terminal,
                                    pcpPaxFn: Arrival => Int,
-                                   flightsProvider: (SDateLike, Any) => Future[Any])
+                                   flightsProvider: PointInTimeAbleQuery => Future[Any])
                                   (from: SDateLike, to: SDateLike)
                                   (implicit ec: ExecutionContext): Future[TerminalSummaryLike] =
-    flightsProvider(from, GetFlightsForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
+    flightsProvider(GetFlightsForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
       case flights: FlightsWithSplits =>
         val terminalFlights = flightsForTimeRange(flights, from, to)
         terminalFlightsSummaryGenerator(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)

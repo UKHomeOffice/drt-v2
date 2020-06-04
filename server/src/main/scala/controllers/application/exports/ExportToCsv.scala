@@ -33,7 +33,7 @@ trait ExportToCsv {
     if (airportConfig.terminals.toSet.contains(terminal)) {
       val startString = start.millisSinceEpoch.toString
       val endString = end.millisSinceEpoch.toString
-      val exportSource = exportBetweenDates(startString, endString, terminal, description, maybeSummaryActorAndRequestProvider, generateNewSummary)
+      val exportSource = exportBetweenDates(start, end, terminal, description, maybeSummaryActorAndRequestProvider, generateNewSummary)
       val fileName = makeFileName(description, terminal, start, end, airportConfig.portCode)
 
       Try(sourceToCsvResponse(exportSource, fileName)) match {
@@ -48,20 +48,18 @@ trait ExportToCsv {
     }
   }
 
-  def exportBetweenDates(start: String,
-                         end: String,
+  def exportBetweenDates(start: SDateLike,
+                         end: SDateLike,
                          terminal: Terminal,
                          description: String,
                          maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
                          generateNewSummary: (SDateLike, SDateLike) => Future[TerminalSummaryLike])
                         (implicit timeout: Timeout): Source[String, NotUsed] = {
-    val startPit = SDate(start.toLong, europeLondonTimeZone).getLocalLastMidnight
-    val endPit = SDate(end.toLong, europeLondonTimeZone).getLocalLastMidnight
-    val numberOfDays = startPit.daysBetweenInclusive(endPit)
+    val numberOfDays = start.daysBetweenInclusive(end)
 
-    log.info(s"Export $description for terminal $terminal between ${SDate(start.toLong).toISOString()} & ${SDate(end.toLong).toISOString()} ($numberOfDays days)")
+    log.info(s"Export $description for terminal $terminal between ${start.toISOString()} & ${end.toISOString()} ($numberOfDays days)")
 
-    Exports.summaryForDaysCsvSource(startPit, numberOfDays, now, terminal, maybeSummaryActorAndRequestProvider, generateNewSummary)
+    Exports.summaryForDaysCsvSource(start, numberOfDays, now, terminal, maybeSummaryActorAndRequestProvider, generateNewSummary)
   }
 
   def makeFileName(subject: String,

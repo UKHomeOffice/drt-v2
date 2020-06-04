@@ -28,7 +28,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
   def portStateActorProvider: () => ActorRef = () => {
     val liveCsa = Props(new CrunchStateActor(None, Sizes.oneMegaByte, "crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis))
     val fcstCsa = Props(new CrunchStateActor(None, Sizes.oneMegaByte, "forecast-crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis))
-    PortStateActor(myNow, liveCsa, fcstCsa)
+    PortStateActor(myNow, liveCsa, fcstCsa, defaultAirportConfig.queuesByTerminal)
   }
 
   def partitionedPortStateActorProvider: () => ActorRef = () => PartitionedPortStateActor(myNow, airportConfig, InMemoryStreamingJournal)

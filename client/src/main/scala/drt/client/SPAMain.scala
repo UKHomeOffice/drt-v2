@@ -14,6 +14,7 @@ import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
+import japgolly.scalajs.react.vdom.html_<^
 import org.scalajs.dom
 import scalacss.ProdDefaults._
 
@@ -32,11 +33,9 @@ object SPAMain {
   object UrlDateParameter {
     val paramName = "date"
 
-    def apply(paramValue: Option[String]): UrlParameter = {
-      new UrlParameter {
-        override val name: String = paramName
-        override val value: Option[String] = paramValue
-      }
+    def apply(paramValue: Option[String]): UrlParameter = new UrlParameter {
+      override val name: String = paramName
+      override val value: Option[String] = paramValue
     }
   }
 
@@ -72,7 +71,7 @@ object SPAMain {
                                 subMode: String = "summary",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
-    val terminal = Terminal(terminalName)
+    val terminal: Terminal = Terminal(terminalName)
     val date: Option[String] = queryParams.get(UrlDateParameter.paramName).filter(_.matches(".+"))
     val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+"))
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+"))
@@ -266,13 +265,20 @@ object SPAMain {
       })
   }
 
-  def layout(c: RouterCtl[Loc], r: Resolution[Loc]) = Layout(c, r)
+  def layout(c: RouterCtl[Loc], r: Resolution[Loc]): html_<^.VdomElement = Layout(c, r)
 
   def pathToThisApp: String = dom.document.location.pathname
 
   def absoluteUrl(relativeUrl: String): String = {
     if (pathToThisApp == "/") s"/$relativeUrl"
     else s"$pathToThisApp/$relativeUrl"
+  }
+
+  def exportViewUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
+    case view: ViewPointInTime =>
+      SPAMain.absoluteUrl(s"export/$exportType/${view.millis}/$terminal")
+    case view =>
+      SPAMain.absoluteUrl(s"export/$exportType/${view.dayStart.millisSinceEpoch}/${view.dayEnd.millisSinceEpoch}/$terminal")
   }
 
   def assetsPrefix: String = if (pathToThisApp == "/") s"/assets" else s"live/assets"

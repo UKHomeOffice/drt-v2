@@ -33,8 +33,8 @@ GET           /fixed-points                                        controllers.A
 POST          /fixed-points                                        controllers.Application.saveFixedPoints
 
 GET           /export/api/:terminalName/:year/:month/:day          controllers.Application.exportApi(day: Int, month: Int, year: Int, terminalName: String)
-GET           /export/desks/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)
-GET           /export/arrivals/:pointInTime/:terminalName          controllers.Application.exportFlightsWithSplitsAtPointInTimeCSV(pointInTime, terminalName, startHour: Int ?= 0, endHour: Int ?= 24)
+GET           /export/desks/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName)
+GET           /export/arrivals/:pointInTime/:terminalName          controllers.Application.exportFlightsWithSplitsAtPointInTimeCSV(pointInTime, terminalName)
 GET           /export/desks/:start/:end/:terminalName              controllers.Application.exportDesksAndQueuesBetweenTimeStampsCSV(start, end, terminalName)
 GET           /export/arrivals/:start/:end/:terminalName           controllers.Application.exportFlightsWithSplitsBetweenTimeStampsCSV(start, end, terminalName)
 GET           /export/planning/:weekStarting/:terminalName         controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)

@@ -101,6 +101,12 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     case GetState =>
       log.warn("Ignoring GetState request (for entire state)")
 
+    case PointInTimeQuery(millis, query) =>
+      replyWithPointInTimeQuery(SDate(millis), query)
+
+    case message: PointInTimeAbleQuery if SDate(message.from).isHistoricDate(now()) =>
+      replyWithDayViewQuery(message)
+
     case GetPortState(start, end) =>
       log.debug(s"Received GetPortState request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       replyWithPortState(start, end, sender())
@@ -120,6 +126,18 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     case getFlightsForTerminal: GetFlightsForTerminal =>
       log.debug(s"Received GetFlightsForTerminal request from ${SDate(getFlightsForTerminal.from).toISOString()} to ${SDate(getFlightsForTerminal.to).toISOString()}")
       flightsActor forward getFlightsForTerminal
+  }
+
+  def replyWithDayViewQuery(message: PointInTimeAbleQuery): Unit = {
+    val pointInTime = SDate(message.to).addHours(4)
+    replyWithPointInTimeQuery(pointInTime, message)
+  }
+
+  def replyWithPointInTimeQuery(pointInTime: SDateLike, message: PointInTimeAbleQuery): Unit = {
+//    val tempPitActor = crunchReadActor(pointInTime, SDate(message.from), SDate(message.to))
+//    killActor
+//      .ask(RequestAndTerminate(tempPitActor, message))
+//      .pipeTo(sender())
   }
 
   override def receive: Receive = processMessage orElse {
