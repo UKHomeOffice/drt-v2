@@ -1,6 +1,6 @@
 package controllers.application.exports
 
-import actors.PointInTimeAbleQuery
+import actors.DateRangeLike
 import actors.summaries.{FlightsSummaryActor, GetSummariesWithActualApi}
 import akka.actor.ActorRef
 import akka.util.ByteString
@@ -107,7 +107,7 @@ trait WithFlightsExport extends ExportToCsv {
   }
 
 
-  private def summaryProviderByRole(terminal: Terminal, flightsProvider: PointInTimeAbleQuery => Future[Any])
+  private def summaryProviderByRole(terminal: Terminal, flightsProvider: DateRangeLike => Future[Any])
                                    (implicit request: Request[AnyContent]): (SDateLike, SDateLike) => Future[TerminalSummaryLike] = {
     val flightSummariesFromPortState =
       if (canAccessActualApi(request))
