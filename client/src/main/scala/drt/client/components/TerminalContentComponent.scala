@@ -9,7 +9,7 @@ import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentCo
 import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, ViewMode}
+import drt.client.services.{ExportArrivals, ExportDesks, ExportType, SPACircuit, ViewMode}
 import drt.shared.Queues.Queue
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
@@ -17,7 +17,7 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
-import org.scalajs.dom.html.Div
+import org.scalajs.dom.html.{Anchor, Div}
 
 import scala.util.Try
 
@@ -117,26 +117,9 @@ object TerminalContentComponent {
                   })
               ),
               <.div(^.className := "exports",
-                <.a("Export Arrivals",
-                  ^.className := "btn btn-default",
-                  ^.href := SPAMain.absoluteUrl(s"export/arrivals/${props.terminalPageTab.viewMode.millis}/$terminal?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
-                  ^.target := "_blank",
-                  ^.onClick --> {
-                    Callback(GoogleEventTracker.sendEvent(terminalName, "Export Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
-                  }
-                ),
-                <.a(
-                  "Export Desks",
-                  ^.className := "btn btn-default",
-                  ^.href := SPAMain.absoluteUrl(s"export/desks/${props.terminalPageTab.viewMode.millis}/$terminal?startHour=${timeRangeHours.start}&endHour=${timeRangeHours.end}"),
-                  ^.target := "_blank",
-                  ^.onClick --> {
-                    Callback(GoogleEventTracker.sendEvent(terminalName, "Export Desks", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
-                  }
-                ),
-                MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser)
-              )
-            ),
+                exportLink(props, terminal, terminalName, ExportArrivals),
+                exportLink(props, terminal, terminalName, ExportDesks),
+                MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
             <.div(^.className := "tab-content",
               <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
                 if (state.activeTab == "desksAndQueues") {
@@ -196,6 +179,19 @@ object TerminalContentComponent {
         }))
     }
   }
+
+  def exportLink(props: Props,
+                 terminal: Terminals.Terminal,
+                 terminalName: String,
+                 exportType: ExportType): VdomTagOf[Anchor] =
+    <.a(s"Export $exportType",
+      ^.className := "btn btn-default",
+      ^.href := SPAMain.exportViewUrl(exportType, props.terminalPageTab.viewMode, terminal),
+      ^.target := "_blank",
+      ^.id := s"export-day-$exportType",
+      ^.onClick --> {
+        Callback(GoogleEventTracker.sendEvent(terminalName, s"Export $exportType", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
+      })
 
   def timeRange(props: Props): CustomWindow = {
     TimeRangeHours(

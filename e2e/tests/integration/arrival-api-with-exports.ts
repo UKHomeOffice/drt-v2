@@ -1,9 +1,10 @@
 import moment from 'moment-timezone'
+
 moment.locale("en-gb");
 
-import { manifestForDateTime, passengerList } from '../support/manifest-helpers'
-import { todayAtUtcString } from '../support/time-helpers'
-import { todayAtUtc } from '../support/time-helpers';
+import {manifestForDateTime, passengerList} from '../support/manifest-helpers'
+import {todayAtUtcString} from '../support/time-helpers'
+import {todayAtUtc} from '../support/time-helpers';
 
 describe('Arrivals CSV Export', () => {
 
@@ -70,15 +71,16 @@ describe('Arrivals CSV Export', () => {
       .waitForFlightToAppear("TS0123")
       .addManifest(manifest(passengerList(24, 10, 7, 10)))
       .get('.pax-api')
-      .request({
-        method: 'GET',
-        url: '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
+      .get('#export-day-arrivals')
+      .then((el) => {
+        const href = el.prop('href')
+        cy.request({
+          method: 'GET',
+          url: href,
+        }).then((resp) => {
+          expect(resp.body).to.equal(csvWithNoApiSplits, "Api splits incorrect for regular users")
+        })
       })
-      .then((resp) => {
-        expect(resp.body)
-          .to
-          .equal(csvWithNoApiSplits, "Api splits incorrect for regular users");
-      });
   });
 
   it('Allows you to view API splits in the flights export for users with api:view permission', () => {
@@ -97,12 +99,16 @@ describe('Arrivals CSV Export', () => {
       .addManifest(manifest(passengerList(24, 10, 7, 10)))
       .get('.pax-api')
       .asABorderForceOfficerWithRoles(["api:view"])
-      .request({
-        method: 'GET',
-        url: '/export/arrivals/' + millis + '/T1?startHour=0&endHour=24',
-      })
-      .then((resp) => {
-        expect(resp.body).to.equal(csvWithAPISplits, "Api splits incorrect for users with API reporting role")
+      .get('#export-day-arrivals')
+      .then((el) => {
+        const href = el.prop('href')
+        cy.request({
+          method: 'GET',
+          url: href,
+        }).then((resp) => {
+          expect(resp.body).to.equal(csvWithAPISplits, "Api splits incorrect for users with API reporting role")
+        })
       })
   });
 });
+

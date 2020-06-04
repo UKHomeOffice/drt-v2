@@ -2,13 +2,15 @@ package actors
 
 import actors.DrtStaticParameters.liveDaysAhead
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
+import actors.pointInTime.CrunchStateReadActor
 import actors.queues.CrunchQueueActor.UpdatedMillis
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.ask
-import akka.stream.Supervision.Stop
+import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -22,26 +24,31 @@ import scala.language.postfixOps
 
 
 object PortStateActor {
-  def apply(now: () => SDateLike, liveCrunchStateActor: ActorRef, forecastCrunchStateActor: ActorRef)
-           (implicit system: ActorSystem): ActorRef = {
-    system.actorOf(PortStateActor.props(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead), name = "port-state-actor")
-  }
-
-  def props(liveStateActor: ActorRef,
+  def apply(now: () => SDateLike,
+            liveStateActor: ActorRef,
             forecastStateActor: ActorRef,
-            now: () => SDateLike,
-            liveDaysAhead: Int): Props =
-    Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead, exitOnQueueException = true))
+            queues: Map[Terminal, Seq[Queue]])
+           (implicit system: ActorSystem): ActorRef = {
+    system.actorOf(Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead, queues)), name = "port-state-actor")
+  }
 }
 
-class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now: () => SDateLike, liveDaysAhead: Int, exitOnQueueException: Boolean) extends Actor {
+class PortStateActor(liveStateActor: ActorRef,
+                     forecastStateActor: ActorRef,
+                     now: () => SDateLike,
+                     liveDaysAhead: Int,
+                     queuesByTerminal: Map[Terminal, Seq[Queue]]) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  val portStateSnapshotInterval: Int = 1000
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  implicit val timeout: Timeout = new Timeout(1 minute)
+  implicit val timeout: Timeout = new Timeout(30 seconds)
 
   val state: PortStateMutable = PortStateMutable.empty
+
+  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
 
   var maybeCrunchQueueActor: Option[ActorRef] = None
   var crunchSourceIsReady: Boolean = true
@@ -114,6 +121,12 @@ class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now
       log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
       sender() ! Option(state.immutable)
 
+    case PointInTimeQuery(millis, query) =>
+      replyWithPointInTimeQuery(SDate(millis), query)
+
+    case message: DateRangeLike if SDate(message.from).isHistoricDate(now()) =>
+      replyWithDayViewQuery(message)
+
     case GetPortState(start, end) =>
       log.debug(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriod(start, end)
@@ -138,6 +151,28 @@ class PortStateActor(liveStateActor: ActorRef, forecastStateActor: ActorRef, now
 
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }
+
+  def replyWithDayViewQuery(message: DateRangeLike): Unit = {
+    val pointInTime = SDate(message.to).addHours(4)
+    replyWithPointInTimeQuery(pointInTime, message)
+  }
+
+  def replyWithPointInTimeQuery(pointInTime: SDateLike, message: DateRangeLike): Unit = {
+    val tempPitActor = crunchReadActor(pointInTime, SDate(message.from), SDate(message.to))
+    killActor
+      .ask(RequestAndTerminate(tempPitActor, message))
+      .pipeTo(sender())
+  }
+
+  def crunchReadActor(pointInTime: SDateLike,
+                      start: SDateLike,
+                      end: SDateLike): ActorRef = context.actorOf(Props(new CrunchStateReadActor(
+    portStateSnapshotInterval,
+    pointInTime,
+    DrtStaticParameters.expireAfterMillis,
+    queuesByTerminal,
+    start.millisSinceEpoch,
+    end.millisSinceEpoch)))
 
   def stateForPeriod(start: MillisSinceEpoch,
                      end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))

@@ -178,11 +178,10 @@ object TestActors {
     override def receive: Receive = reset orElse super.receive
   }
 
-  class TestPortStateActor(live: ActorRef, forecast: ActorRef, now: () => SDateLike, liveDaysAhead: Int)
-    extends PortStateActor(live, forecast, now, liveDaysAhead, true) {
+  class TestPortStateActor(live: ActorRef, forecast: ActorRef, now: () => SDateLike, liveDaysAhead: Int, queues: Map[Terminal, Seq[Queue]])
+    extends PortStateActor(live, forecast, now, liveDaysAhead, queues) {
     def reset: Receive = {
       case ResetData =>
-        maybeCrunchQueueActor
         state.clear()
         sender() ! Ack
     }

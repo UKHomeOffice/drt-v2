@@ -27,29 +27,51 @@ sealed trait ViewMode {
 
   def dayStart: SDateLike = SDate.midnightOf(time)
 
+  def dayEnd: SDateLike = dayStart.addDays(1).addMinutes(-1)
+
   def time: SDateLike
 
-  def isHistoric: Boolean
+  def isLive: Boolean
+
+  def isHistoric(now: SDateLike): Boolean
 }
 
 case object ViewLive extends ViewMode {
   def time: SDateLike = SDate.now()
 
-  def isHistoric: Boolean = false
+  override val isLive: Boolean = true
+
+  override def isHistoric(now: SDateLike): Boolean = false
 }
 
 case class NoViewMode() extends ViewMode {
   def time: SDateLike = SDate(0L)
 
-  def isHistoric: Boolean = false
+  override val isLive: Boolean = false
+
+  override def isHistoric(now: SDateLike): Boolean = false
 }
 
 case class ViewPointInTime(time: SDateLike) extends ViewMode {
-  def isHistoric: Boolean = true
+  override val isLive: Boolean = true
+
+  override def isHistoric(now: SDateLike): Boolean = true
 }
 
 case class ViewDay(time: SDateLike) extends ViewMode {
-  def isHistoric: Boolean = dayStart.millisSinceEpoch < SDate.midnightOf(SDate.now()).millisSinceEpoch
+  override val isLive: Boolean = false
+
+  override def isHistoric(now: SDateLike): Boolean = time.isHistoricDate(now)
+}
+
+sealed trait ExportType
+
+object ExportDesks extends ExportType {
+  override def toString = "desks"
+}
+
+object ExportArrivals extends ExportType {
+  override def toString = "arrivals"
 }
 
 case class LoadingState(isLoading: Boolean = false)
@@ -99,7 +121,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   def timeProvider(): MillisSinceEpoch = SDate.now().millisSinceEpoch
 
   override protected def initialModel = RootModel()
-  
+
 
   def currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
 

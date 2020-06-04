@@ -36,7 +36,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
 
     val summary: String = summaryForMinutes(startDateTime, endDateTime, cms, sms)
 
-    val expected =
+    val expected: String =
       s"""2017-11-10,00:00,1,1,1,,,1,1,1,,,1,1,1,,,1,-1,4,4
          |""".stripMargin
 
@@ -47,7 +47,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
     val startDateTime: SDateLike = SDate("2017-11-10T00:00:00Z")
     val endDateTime: SDateLike = SDate("2017-11-10T00:30:00Z")
 
-    val cms = (0 until 16).flatMap((min: Int) => {
+    val cms: List[CrunchMinute] = (0 until 16).flatMap((min: Int) => {
       List(
         CrunchMinute(T1, Queues.EeaDesk, startDateTime.addMinutes(min).millisSinceEpoch, 1.0, 1, deskRec = 1, 1),
         CrunchMinute(T1, Queues.EGate, startDateTime.addMinutes(min).millisSinceEpoch, 1.0, 1, deskRec = 1, 1),
@@ -55,13 +55,13 @@ class CrunchMinutesToCSVDataTest extends Specification {
         )
     }).toList
 
-    val sms = (0 until 16).map((min: Int) => {
+    val sms: List[StaffMinute] = (0 until 16).map((min: Int) => {
       StaffMinute(T1, startDateTime.addMinutes(min).millisSinceEpoch, 5, fixedPoints = 1, movements = -1)
     }).toList
 
     val summary: String = summaryForMinutes(startDateTime, endDateTime, cms, sms)
 
-    val expected =
+    val expected: String =
       s"""2017-11-10,00:00,15,1,1,,,15,1,1,,,15,1,1,,,1,-1,4,4
          |2017-11-10,00:15,1,1,1,,,1,1,1,,,1,1,1,,,1,-1,4,4
          |""".stripMargin
@@ -115,7 +115,7 @@ class CrunchMinutesToCSVDataTest extends Specification {
                         sms: List[StaffMinute]): String = {
     val portState: PortState = PortState(Iterable(), cms, sms)
     val eventualSummary: Future[TerminalSummaryLike] =
-      Exports.queueSummariesFromPortState(Seq(EeaDesk, NonEeaDesk, EGate), 15, T1, (_, _) => Future(portState))(ec)(startDateTime, endDateTime)
+      Exports.queueSummariesFromPortState(Seq(EeaDesk, NonEeaDesk, EGate), 15, T1, _ => Future(portState))(ec)(startDateTime, endDateTime)
     Await.result(eventualSummary, 1 second).toCsv
   }
 }
