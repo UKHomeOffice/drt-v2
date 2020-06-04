@@ -14,8 +14,8 @@ import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
 
 object Crunch {
-  def isHistoricDate(now: () => SDateLike): SDateLike => Boolean =
-    (date: SDateLike) => date.millisSinceEpoch < now().getLocalLastMidnight.millisSinceEpoch
+//  def isHistoricDate(now: () => SDateLike): SDateLike => Boolean =
+//    (date: SDateLike) => date.millisSinceEpoch < now().getLocalLastMidnight.millisSinceEpoch
 
   val paxOffPerMinute: Int = 20
 

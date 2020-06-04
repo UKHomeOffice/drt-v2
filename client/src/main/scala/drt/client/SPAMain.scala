@@ -80,11 +80,11 @@ object SPAMain {
     def viewMode: ViewMode = {
       val nowMillis = SDate.now().millisSinceEpoch
       (mode, date) match {
-        case ("current", Some(dateString)) => ViewDay(parseDateString(dateString), nowMillis)
+        case ("current", Some(dateString)) => ViewDay(parseDateString(dateString))
         case ("snapshot", dateStringOption) =>
           val pointInTimeMillis = dateStringOption.map(parseDateString).getOrElse(SDate.midnightThisMorning())
           ViewPointInTime(pointInTimeMillis)
-        case _ => ViewLive(nowMillis)
+        case _ => ViewLive
       }
     }
 
@@ -279,7 +279,7 @@ object SPAMain {
     case view: ViewPointInTime =>
       SPAMain.absoluteUrl(s"export/$exportType/${view.millis}/$terminal")
     case view =>
-      SPAMain.absoluteUrl(s"export/$exportType/${view.start.millisSinceEpoch}/${view.end.millisSinceEpoch}/$terminal")
+      SPAMain.absoluteUrl(s"export/$exportType/${view.dayStart.millisSinceEpoch}/${view.dayEnd.millisSinceEpoch}/$terminal")
   }
 
   def assetsPrefix: String = if (pathToThisApp == "/") s"/assets" else s"live/assets"

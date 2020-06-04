@@ -12,6 +12,7 @@ import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
+import org.scalajs.dom.raw.FormData
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
@@ -22,47 +23,45 @@ sealed trait ViewMode {
 
   def isDifferentTo(viewMode: ViewMode): Boolean = viewMode.uUID != uUID
 
-  def time: SDateLike
-
   def millis: MillisSinceEpoch = time.millisSinceEpoch
-
-  def start: SDateLike = time.getLocalLastMidnight
-
-  def end: SDateLike = start.addDays(1).addMinutes(-1)
 
   def dayStart: SDateLike = SDate.midnightOf(time)
 
-  def isHistoric: Boolean
+  def dayEnd: SDateLike = dayStart.addDays(1).addMinutes(-1)
+
+  def time: SDateLike
 
   def isLive: Boolean
+
+  def isHistoric(now: SDateLike): Boolean
 }
 
-case class ViewLive(now: MillisSinceEpoch) extends ViewMode {
-  val time: SDateLike = SDate(now)
+case object ViewLive extends ViewMode {
+  def time: SDateLike = SDate.now()
 
-  def isHistoric: Boolean = false
+  override val isLive: Boolean = true
 
-  def isLive: Boolean = true
+  override def isHistoric(now: SDateLike): Boolean = false
 }
 
 case class NoViewMode() extends ViewMode {
   def time: SDateLike = SDate(0L)
 
-  def isHistoric: Boolean = false
+  override val isLive: Boolean = false
 
-  def isLive: Boolean = false
+  override def isHistoric(now: SDateLike): Boolean = false
 }
 
 case class ViewPointInTime(time: SDateLike) extends ViewMode {
-  def isHistoric: Boolean = true
+  override val isLive: Boolean = true
 
-  def isLive: Boolean = false
+  override def isHistoric(now: SDateLike): Boolean = true
 }
 
-case class ViewDay(time: SDateLike, now: MillisSinceEpoch) extends ViewMode {
-  def isHistoric: Boolean = dayStart.millisSinceEpoch < SDate(now).getLocalLastMidnight.millisSinceEpoch
+case class ViewDay(time: SDateLike) extends ViewMode {
+  override val isLive: Boolean = false
 
-  def isLive: Boolean = false
+  override def isHistoric(now: SDateLike): Boolean = time.isHistoricDate(now)
 }
 
 sealed trait ExportType
@@ -119,9 +118,10 @@ object PollDelay {
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
-  val timeProvider: () => MillisSinceEpoch = () => SDate.now().millisSinceEpoch
+  def timeProvider(): MillisSinceEpoch = SDate.now().millisSinceEpoch
 
-  override protected def initialModel: RootModel = RootModel()
+  override protected def initialModel = RootModel()
+
 
   def currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
 
@@ -134,7 +134,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new InitialPortStateHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new PortStateUpdatesHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
-      new AirportCountryHandler(timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
+      new AirportCountryHandler(() => timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new ArrivalSourcesHandler(zoomRW(_.arrivalSources)((m, v) => m.copy(arrivalSources = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),

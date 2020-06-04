@@ -154,7 +154,7 @@ class CrunchSpec extends Specification {
     val now = SDate("2020-06-01T12:00", Crunch.europeLondonTimeZone)
     "When I ask isHistoric for the same date" >> {
       "Then I should get false" >> {
-        val isHistoric = Crunch.isHistoricDate(() => now)(now)
+        val isHistoric = now.isHistoricDate(now)
         isHistoric === false
       }
     }
@@ -162,7 +162,7 @@ class CrunchSpec extends Specification {
     "When I ask isHistoric for BST midnight earlier that day" >> {
       val date = SDate("2020-06-01T00:00", Crunch.europeLondonTimeZone)
       "Then I should get false" >> {
-        val isHistoric = Crunch.isHistoricDate(() => now)(date)
+        val isHistoric = date.isHistoricDate(now)
         isHistoric === false
       }
     }
@@ -170,7 +170,7 @@ class CrunchSpec extends Specification {
     "When I ask isHistoric for 1 minute before BST midnight earlier that day" >> {
       val date = SDate("2020-06-01T00:00", Crunch.europeLondonTimeZone).addMinutes(-1)
       "Then I should get true" >> {
-        val isHistoric = Crunch.isHistoricDate(() => now)(date)
+        val isHistoric = date.isHistoricDate(now)
         isHistoric === true
       }
     }
@@ -180,7 +180,7 @@ class CrunchSpec extends Specification {
     val now = SDate("2020-06-01T12:00", Crunch.europeLondonTimeZone)
     "When I ask isHistoric for the same date" >> {
       "Then I should get false" >> {
-        val isHistoric = Crunch.isHistoricDate(() => now)(now)
+        val isHistoric = now.isHistoricDate(now)
         isHistoric === false
       }
     }
@@ -188,7 +188,7 @@ class CrunchSpec extends Specification {
     "When I ask isHistoric for BST midnight earlier that day" >> {
       val date = SDate("2020-06-01T00:00", Crunch.europeLondonTimeZone)
       "Then I should get false" >> {
-        val isHistoric = Crunch.isHistoricDate(() => now)(date)
+        val isHistoric = date.isHistoricDate(now)
         isHistoric === false
       }
     }
@@ -196,7 +196,7 @@ class CrunchSpec extends Specification {
     "When I ask isHistoric for 1 minute before BST midnight earlier that day" >> {
       val date = SDate("2020-06-01T00:00", Crunch.europeLondonTimeZone).addMinutes(-1)
       "Then I should get true" >> {
-        val isHistoric = Crunch.isHistoricDate(() => now)(date)
+        val isHistoric = date.isHistoricDate(now)
         isHistoric === true
       }
     }

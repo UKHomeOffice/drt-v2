@@ -40,7 +40,7 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
       }
 
     case SetStaffMovements(viewMode, staffMovements: Seq[StaffMovement]) =>
-      if (viewMode.isHistoric)
+      if (viewMode.isHistoric(SDate.now()))
         updated(Ready(staffMovements))
       else
         updated(Ready(staffMovements), scheduledRequest(viewMode))
@@ -50,7 +50,7 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
       noChange
 
     case GetStaffMovements(viewMode) =>
-      val maybePointInTimeMillis = if (viewMode.isHistoric) Option(viewMode.millis) else None
+      val maybePointInTimeMillis = if (viewMode.isHistoric(SDate.now())) Option(viewMode.millis) else None
 
       log.info(s"Calling getStaffMovements with ${maybePointInTimeMillis.map(SDate(_).toISOString())}")
 

@@ -1,11 +1,11 @@
 package drt.client.services.handlers
 
-import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW, NoAction}
 import drt.client.actions.Actions._
 import drt.client.logger.log
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
 import upickle.default.{read, write}
@@ -20,7 +20,7 @@ class FixedPointsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetFixedPoints(viewMode, fixedPoints, _) =>
-      if (viewMode.isHistoric)
+      if (viewMode.isHistoric(SDate.now()))
         updated(Ready(fixedPoints))
       else
         updated(Ready(fixedPoints), scheduledRequest(viewMode))
@@ -44,7 +44,7 @@ class FixedPointsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW
       noChange
 
     case GetFixedPoints(viewMode) =>
-      val url = if (viewMode.isHistoric) {
+      val url = if (viewMode.isHistoric(SDate.now())) {
         s"fixed-points?pointInTime=${viewMode.millis}"
       } else {
         "fixed-points"

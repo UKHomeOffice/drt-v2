@@ -83,7 +83,7 @@ object TerminalDashboardComponent {
                       p.airportConfig.hasEstChox,
                       None,
                       false,
-                      ViewLive(SDate.now().millisSinceEpoch),
+                      ViewLive,
                       PcpPax.bestPaxEstimateWithApi,
                       p.airportConfig.hasTransfer
                     )

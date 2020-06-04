@@ -180,7 +180,7 @@ object TestActors {
   }
 
   class TestPortStateActor(live: ActorRef, forecast: ActorRef, now: () => SDateLike, liveDaysAhead: Int, queues: Map[Terminal, Seq[Queue]])
-    extends PortStateActor(live, forecast, now, liveDaysAhead, queues, Crunch.isHistoricDate(now)) {
+    extends PortStateActor(live, forecast, now, liveDaysAhead, queues) {
     def reset: Receive = {
       case ResetData =>
         state.clear()

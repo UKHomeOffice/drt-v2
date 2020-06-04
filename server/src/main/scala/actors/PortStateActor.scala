@@ -27,10 +27,9 @@ object PortStateActor {
   def apply(now: () => SDateLike,
             liveCrunchStateActor: ActorRef,
             forecastCrunchStateActor: ActorRef,
-            queues: Map[Terminal, Seq[Queue]],
-            isHistoric: SDateLike => Boolean)
+            queues: Map[Terminal, Seq[Queue]])
            (implicit system: ActorSystem): ActorRef = {
-    system.actorOf(Props(new PortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead, queues, isHistoric)), name = "port-state-actor")
+    system.actorOf(Props(new PortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, liveDaysAhead, queues)), name = "port-state-actor")
   }
 }
 
@@ -38,8 +37,7 @@ class PortStateActor(liveStateActor: ActorRef,
                      forecastStateActor: ActorRef,
                      now: () => SDateLike,
                      liveDaysAhead: Int,
-                     queuesByTerminal: Map[Terminal, Seq[Queue]],
-                     isHistoricDate: SDateLike => Boolean) extends Actor {
+                     queuesByTerminal: Map[Terminal, Seq[Queue]]) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val portStateSnapshotInterval: Int = 1000
@@ -126,7 +124,7 @@ class PortStateActor(liveStateActor: ActorRef,
     case PointInTimeQuery(millis, query) =>
       replyWithPointInTimeQuery(SDate(millis), query)
 
-    case message: PointInTimeAbleQuery if isHistoricDate(SDate(message.from)) =>
+    case message: PointInTimeAbleQuery if SDate(message.from).isHistoricDate(now()) =>
       replyWithDayViewQuery(message)
 
     case GetPortState(start, end) =>

@@ -19,7 +19,7 @@ class UserDashboardHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Lo
     case GetUserDashboardState =>
       value match {
         case Ready(potUser) if potUser.hasRole(BorderForceStaff) =>
-          effectOnly(Effect(Future(SetViewMode(ViewLive(SDate.now().millisSinceEpoch)))))
+          effectOnly(Effect(Future(SetViewMode(ViewLive))))
         case Ready(_) =>
           noChange
         case _ =>

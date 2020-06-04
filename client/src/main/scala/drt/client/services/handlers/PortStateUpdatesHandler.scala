@@ -116,7 +116,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
   def getCrunchUpdatesAfterDelay(viewMode: ViewMode): Effect = Effect(Future(GetPortStateUpdates(viewMode))).after(requestFrequency(viewMode))
 
   def requestFrequency(viewMode: ViewMode): FiniteDuration = viewMode match {
-    case _: ViewLive => liveRequestFrequency
+    case ViewLive => liveRequestFrequency
     case _ => forecastRequestFrequency
   }
 }

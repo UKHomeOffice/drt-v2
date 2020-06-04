@@ -7,6 +7,7 @@ import diode._
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
 import drt.client.logger.log
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{AjaxClient, PollDelay, ViewMode}
 import drt.shared.{Api, ShiftAssignments}
 
@@ -20,7 +21,7 @@ class ShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, P
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetShifts(viewMode, shifts, _) =>
-      if (viewMode.isHistoric)
+      if (viewMode.isHistoric(SDate.now()))
         updated(Ready(shifts))
       else
         updated(Ready(shifts), scheduledRequest(viewMode))
@@ -30,7 +31,7 @@ class ShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, P
       noChange
 
     case GetShifts(viewMode) =>
-      val maybePointInTimeMillis = if (viewMode.isHistoric) Option(viewMode.millis) else None
+      val maybePointInTimeMillis = if (viewMode.isHistoric(SDate.now())) Option(viewMode.millis) else None
 
       val apiCallEffect = Effect(AjaxClient[Api].getShifts(maybePointInTimeMillis).call()
         .map(res => SetShifts(viewMode, res, None))

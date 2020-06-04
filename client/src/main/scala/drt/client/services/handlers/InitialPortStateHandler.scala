@@ -5,6 +5,7 @@ import diode._
 import diode.data._
 import drt.client.actions.Actions._
 import drt.client.logger._
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi._
 import drt.shared.PortState
@@ -48,7 +49,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       val hideLoader = Effect(Future(HideLoader()))
       val fetchOrigins = Effect(Future(GetAirportInfos(originCodes)))
 
-      val effects = if (getCurrentViewMode().isHistoric) {
+      val effects = if (getCurrentViewMode().isHistoric(SDate.now())) {
         hideLoader + fetchOrigins
       } else {
         log.info(s"Starting to poll for crunch updates")
