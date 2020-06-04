@@ -8,7 +8,7 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
-import japgolly.scalajs.react.component.Scala.Unmounted
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import org.scalajs.dom.html.{Span, TableCell, TableSection}
 import utest._
@@ -24,9 +24,8 @@ object FlightsTableTests extends TestSuite {
   import japgolly.scalajs.react.vdom.html_<^._
 
   val queuesWithoutFastTrack: List[Queue] = Queues.queueOrder.filterNot(q => q == Queues.FastTrack || q == Queues.QueueDesk)
-  val nowMillis = SDate.now().millisSinceEpoch
 
-  def tests = Tests {
+  def tests: Tests = Tests {
 
     def date(dt: Option[MillisSinceEpoch], className: Option[String] = None): VdomTagOf[TableCell] = className match {
       case Some(cn) => <.td(flightDate(dt.map(millis => SDate(millis).toISOString().replaceFirst(":00.000Z", "")).getOrElse("")), ^.className := cn)
@@ -143,10 +142,10 @@ object FlightsTableTests extends TestSuite {
                 <.td(<.span(0), ^.className := "queue-split pax-unknown egate-queue-pax right"),
                 <.td(<.span(0), ^.className := "queue-split pax-unknown eeadesk-queue-pax right"),
                 <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right"),
-                <.td(<.div(testFlight.TranPax.get,^.className := "right"))))))
+                <.td(<.div(testFlight.TranPax.get, ^.className := "right"))))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,true)),
+          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true)),
           staticComponent(expected)())
       }
 
@@ -183,10 +182,10 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(0), ^.className := "queue-split pax-unknown egate-queue-pax right"),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown eeadesk-queue-pax right"),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right"),
-                  <.td(<.div(testFlight.TranPax.get,^.className := "right"))))))
+                  <.td(<.div(testFlight.TranPax.get, ^.className := "right"))))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(Option(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,true)),
+          ArrivalsTable(Option(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true)),
           staticComponent(expected)())
       }
 
@@ -220,13 +219,13 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.span(0), ^.className := "queue-split pax-unknown egate-queue-pax right"),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown eeadesk-queue-pax right"),
                   <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right"),
-                  <.td(<.div(testFlight.TranPax.get,^.className := "right"))))))
+                  <.td(<.div(testFlight.TranPax.get, ^.className := "right"))))))
 
           def originMapperComponent(portCode: PortCode): VdomNode = <.span(^.title := "JFK, New York, USA", portCode.toString)
 
           val table = ArrivalsTable(timelineComponent = None,
             originMapper = port => originMapperComponent(port)
-          )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,true))
+          )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true))
 
           assertRenderedComponentsAreEqual(table, staticComponent(expected)())
         }
@@ -314,7 +313,7 @@ object FlightsTableTests extends TestSuite {
                 <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, false, ViewLive, PcpPax.bestPaxEstimateWithApi,false)),
+          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = false)),
           staticComponent(expected)())
       }
 
@@ -334,7 +333,7 @@ object FlightsTableTests extends TestSuite {
     }
   }
 
-  def staticComponent(staticVdomElement: => html_<^.VdomElement) = {
+  def staticComponent(staticVdomElement: => html_<^.VdomElement): Component[Unit, Unit, Unit, CtorType.Nullary] = {
     ScalaComponent.builder[Unit]("Expected")
       .renderStatic(
         staticVdomElement

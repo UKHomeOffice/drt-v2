@@ -4,7 +4,6 @@ import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import drt.auth.{BorderForceStaff, LoggedInUser}
 import drt.client.actions.Actions._
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewLive
 
 import scala.concurrent.ExecutionContext.Implicits.global

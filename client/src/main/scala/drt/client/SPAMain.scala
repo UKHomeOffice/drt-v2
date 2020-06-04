@@ -78,7 +78,6 @@ object SPAMain {
     val viewType: ViewType = queryParams.get(UrlViewType.paramName).map(vt => if (ViewRecs.queryParamsValue == vt) ViewRecs else ViewDeps).getOrElse(ViewDeps)
 
     def viewMode: ViewMode = {
-      val nowMillis = SDate.now().millisSinceEpoch
       (mode, date) match {
         case ("current", Some(dateString)) => ViewDay(parseDateString(dateString))
         case ("snapshot", dateStringOption) =>
