@@ -24,20 +24,20 @@ case object ClearState
 
 case object GetFeedStatuses
 
-case class PointInTimeQuery(pointInTime: MillisSinceEpoch, query: PointInTimeAbleQuery)
+case class PointInTimeQuery(pointInTime: MillisSinceEpoch, query: DateRangeLike)
 
-trait PointInTimeAbleQuery {
+trait DateRangeLike {
   val from: MillisSinceEpoch
   val to: MillisSinceEpoch
 }
 
-case class GetPortState(from: MillisSinceEpoch, to: MillisSinceEpoch) extends PointInTimeAbleQuery
+case class GetPortState(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
 
-case class GetPortStateForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends PointInTimeAbleQuery
+case class GetPortStateForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
 
-case class GetFlightsForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends PointInTimeAbleQuery
+case class GetFlightsForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
 
-case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch)
+case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
 
 case object GetShifts
 

@@ -104,7 +104,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     case PointInTimeQuery(millis, query) =>
       replyWithPointInTimeQuery(SDate(millis), query)
 
-    case message: PointInTimeAbleQuery if SDate(message.from).isHistoricDate(now()) =>
+    case message: DateRangeLike if SDate(message.from).isHistoricDate(now()) =>
       replyWithDayViewQuery(message)
 
     case GetPortState(start, end) =>
@@ -128,12 +128,12 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       flightsActor forward getFlightsForTerminal
   }
 
-  def replyWithDayViewQuery(message: PointInTimeAbleQuery): Unit = {
+  def replyWithDayViewQuery(message: DateRangeLike): Unit = {
     val pointInTime = SDate(message.to).addHours(4)
     replyWithPointInTimeQuery(pointInTime, message)
   }
 
-  def replyWithPointInTimeQuery(pointInTime: SDateLike, message: PointInTimeAbleQuery): Unit = {
+  def replyWithPointInTimeQuery(pointInTime: SDateLike, message: DateRangeLike): Unit = {
 //    val tempPitActor = crunchReadActor(pointInTime, SDate(message.from), SDate(message.to))
 //    killActor
 //      .ask(RequestAndTerminate(tempPitActor, message))

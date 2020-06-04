@@ -1,6 +1,6 @@
 package services.exports
 
-import actors.{GetFlightsForTerminal, GetPortStateForTerminal, PointInTimeAbleQuery}
+import actors.{GetFlightsForTerminal, GetPortStateForTerminal, DateRangeLike}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
@@ -98,7 +98,7 @@ object Exports {
   def queueSummariesFromPortState(queues: Seq[Queue],
                                   summaryLengthMinutes: Int,
                                   terminal: Terminal,
-                                  portStateProvider: PointInTimeAbleQuery => Future[Any])
+                                  portStateProvider: DateRangeLike => Future[Any])
                                  (implicit ec: ExecutionContext): (SDateLike, SDateLike) => Future[TerminalSummaryLike] =
     (from: SDateLike, to: SDateLike) => {
       val minutes = from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * MilliTimes.oneMinuteMillis
@@ -128,7 +128,7 @@ object Exports {
   def flightSummariesFromPortState(terminalFlightsSummaryGenerator: TerminalFlightsSummaryLikeGenerator)
                                   (terminal: Terminal,
                                    pcpPaxFn: Arrival => Int,
-                                   flightsProvider: PointInTimeAbleQuery => Future[Any])
+                                   flightsProvider: DateRangeLike => Future[Any])
                                   (from: SDateLike, to: SDateLike)
                                   (implicit ec: ExecutionContext): Future[TerminalSummaryLike] =
     flightsProvider(GetFlightsForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {

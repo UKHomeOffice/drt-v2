@@ -158,7 +158,7 @@ class PortStateActor(liveCrunchStateProps: Props,
     case PointInTimeQuery(millis, query) =>
       replyWithPointInTimeQuery(SDate(millis), query)
 
-    case message: PointInTimeAbleQuery if SDate(message.from).isHistoricDate(now()) =>
+    case message: DateRangeLike if SDate(message.from).isHistoricDate(now()) =>
       replyWithDayViewQuery(message)
 
     case GetPortState(start, end) =>
@@ -186,12 +186,12 @@ class PortStateActor(liveCrunchStateProps: Props,
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }
 
-  def replyWithDayViewQuery(message: PointInTimeAbleQuery): Unit = {
+  def replyWithDayViewQuery(message: DateRangeLike): Unit = {
     val pointInTime = SDate(message.to).addHours(4)
     replyWithPointInTimeQuery(pointInTime, message)
   }
 
-  def replyWithPointInTimeQuery(pointInTime: SDateLike, message: PointInTimeAbleQuery): Unit = {
+  def replyWithPointInTimeQuery(pointInTime: SDateLike, message: DateRangeLike): Unit = {
     val tempPitActor = crunchReadActor(pointInTime, SDate(message.from), SDate(message.to))
     killActor
       .ask(RequestAndTerminate(tempPitActor, message))
@@ -208,7 +208,8 @@ class PortStateActor(liveCrunchStateProps: Props,
     start.millisSinceEpoch,
     end.millisSinceEpoch)))
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): PortState = state.window(SDate(start), SDate(end))
+  def stateForPeriod(start: MillisSinceEpoch,
+                     end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
 
   def stateForPeriodForTerminal(start: MillisSinceEpoch,
                                 end: MillisSinceEpoch,
