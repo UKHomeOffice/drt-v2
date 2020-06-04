@@ -45,7 +45,7 @@ trait WithPortState {
       eventualUpdates
         .recoverWith {
           case t =>
-            log.error("Error processing request for port state or port state updates", t.getMessage)
+            log.error(t, "Error processing request for port state or port state updates")
             Future(InternalServerError)
         }
     }
@@ -81,7 +81,7 @@ trait WithPortState {
         futureResult.foreach(_ => tempActor ! PoisonPill)
         futureResult
       case _ =>
-        ctrl.portStateActor.ask(request)
+        ctrl.portStateActor.ask(request)(30 seconds)
     }
   }
 }
