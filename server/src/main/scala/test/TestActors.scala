@@ -271,7 +271,7 @@ object TestActors {
                               initialSnapshotBytesThreshold: Int,
                               name: String,
                               now: () => SDateLike,
-                              expireAfterMillis: Int) extends FlightsStateActor(initialMaybeSnapshotInterval, initialSnapshotBytesThreshold, name, now, expireAfterMillis) with Resettable {
+                              expireAfterMillis: Int) extends FlightsStateActor(now, expireAfterMillis) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

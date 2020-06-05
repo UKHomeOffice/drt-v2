@@ -2,9 +2,10 @@ package actors
 
 import actors.PortStateMessageConversion._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import actors.queues.CrunchQueueActor.UpdatedMillis
 import akka.actor._
-import akka.pattern.ask
+import akka.pattern.{ask, pipe}
 import akka.persistence._
 import akka.util.Timeout
 import drt.shared.CrunchApi._
@@ -16,33 +17,47 @@ import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
-import services.crunch.deskrecs.GetFlights
+import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
-                        initialSnapshotBytesThreshold: Int,
-                        name: String,
-                        val now: () => SDateLike,
-                        expireAfterMillis: Int) extends PersistentActor with RecoveryActorLike with PersistentDrtActor[FlightsWithSplits] {
-  override def persistenceId: String = name
+class FlightsStateReadActor(now: () => SDateLike, expireAfterMillis: Int, pointInTime: MillisSinceEpoch)
+  extends FlightsStateActor(now, expireAfterMillis) {
 
-  override val maybeSnapshotInterval: Option[Int] = initialMaybeSnapshotInterval
-  override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
+  override val log: Logger = LoggerFactory.getLogger(s"$getClass-${SDate(pointInTime).toISOString()}")
+
+  override def recovery: Recovery = {
+    val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
+    val recovery = Recovery(fromSnapshot = criteria, replayMax = 10000)
+    log.info(s"Recovery: $recovery")
+    recovery
+  }
+}
+
+class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int)
+  extends PersistentActor with RecoveryActorLike with PersistentDrtActor[FlightsWithSplits] {
+
+  override def persistenceId: String = "flights-state-actor"
+
+  override val maybeSnapshotInterval: Option[Int] = Option(5000)
+  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
-  val log: Logger = LoggerFactory.getLogger(s"$name-$getClass")
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   var state: FlightsWithSplits = FlightsWithSplits.empty
 
   var flightMinutesBuffer: Set[MillisSinceEpoch] = Set[MillisSinceEpoch]()
   var crunchSourceIsReady: Boolean = true
-  var maybeCrunchActor: Option[ActorRef] = None
+  var maybeCrunchQueueActor: Option[ActorRef] = None
+
+  implicit val timeout: Timeout = new Timeout(30 seconds)
+  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
 
   def initialState: FlightsWithSplits = FlightsWithSplits.empty
 
@@ -78,7 +93,7 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
   override def receiveCommand: Receive = {
     case SetCrunchQueueActor(crunchActor) =>
       log.info(s"Received crunchSourceActor")
-      maybeCrunchActor = Option(crunchActor)
+      maybeCrunchQueueActor = Option(crunchActor)
 
     case SetCrunchSourceReady =>
       crunchSourceIsReady = true
@@ -98,16 +113,16 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
       else
         sender() ! Ack
 
-    case GetFlightsForTerminal(startMillis, endMillis, terminal) =>
-      log.debug(s"Received GetFlightsForTerminal Request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()} for $terminal")
+    case GetStateForDateRange(startMillis, endMillis) =>
+      log.debug(s"Received GetStateForDateRange request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")
+      sender() ! state.window(startMillis, endMillis)
+
+    case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
+      log.debug(s"Received GetStateForTerminalDateRange Request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()} for $terminal")
       sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
 
     case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
       sender() ! state.window(startMillis, endMillis).updatedSince(sinceMillis)
-
-    case GetFlights(startMillis, endMillis) =>
-      log.debug(s"Received GetFlights request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")
-      sender() ! state.window(startMillis, endMillis)
 
     case SaveSnapshotSuccess(SnapshotMetadata(_, _, _)) =>
       log.info("Snapshot success")
@@ -123,6 +138,17 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
     case unexpected => log.error(s"Received unexpected message $unexpected")
   }
 
+  def replyWithDayViewQuery(message: DateRangeLike): Unit = {
+    val pointInTime = SDate(message.to).addHours(4)
+    replyWithPointInTimeQuery(pointInTime, message)
+  }
+
+  def replyWithPointInTimeQuery(pointInTime: SDateLike, message: DateRangeLike): Unit = killActor
+    .ask(RequestAndTerminate(tempPitActor(pointInTime), message))
+    .pipeTo(sender())
+
+  def tempPitActor(pointInTime: SDateLike): ActorRef = context.actorOf(Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch)))
+
   def handleDiff(flightUpdates: FlightsWithSplitsDiff): Unit = {
     val (updatedState, updatedMinutes) = flightUpdates.applyTo(state, now().millisSinceEpoch)
     state = updatedState
@@ -137,12 +163,12 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
     persistAndMaybeSnapshot(diffMsg, Option((sender(), Ack)))
   }
 
-  def handlePaxMinuteChangeNotification(): Unit = (maybeCrunchActor, flightMinutesBuffer.nonEmpty, crunchSourceIsReady) match {
-    case (Some(crunchActor), true, true) =>
+  def handlePaxMinuteChangeNotification(): Unit = (maybeCrunchQueueActor, flightMinutesBuffer.nonEmpty, crunchSourceIsReady) match {
+    case (Some(crunchQueueActor), true, true) =>
       crunchSourceIsReady = false
       val updatedMillisToSend = flightMinutesBuffer
       flightMinutesBuffer = Set()
-      crunchActor
+      crunchQueueActor
         .ask(UpdatedMillis(updatedMillisToSend))(new Timeout(15 seconds))
         .recover {
           case e =>
@@ -163,7 +189,7 @@ class FlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
       UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled))
     },
     updates = updates.map(FlightMessageConversion.flightWithSplitsToMessage)
-    )
+  )
 
   def uniqueArrivalFromMessage(uam: UniqueArrivalMessage): UniqueArrival =
     UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled)

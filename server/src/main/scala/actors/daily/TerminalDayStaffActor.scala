@@ -11,6 +11,9 @@ import server.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMes
 object TerminalDayStaffActor {
   def props(terminal: Terminal, date: SDateLike, now: () => SDateLike): Props =
     Props(new TerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, None))
+
+  def propsPointInTime(terminal: Terminal, date: SDateLike, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
+    Props(new TerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, Option(pointInTime)))
 }
 
 class TerminalDayStaffActor(year: Int,

@@ -1,8 +1,8 @@
 package actors.minutes
 
+import actors.PointInTimeQuery
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
-import actors.{GetPortState, GetPortStateForTerminal, PointInTimeQuery}
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
@@ -12,6 +12,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared.{MilliTimes, SDateLike, Terminals, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
 import services.graphstages.Crunch
 
 import scala.collection.immutable
@@ -42,28 +43,30 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
-    case PointInTimeQuery(pit, GetPortState(startMillis, endMillis)) =>
-      val replyTo = sender()
-      val eventualMinutesForAllTerminals = terminals.map { terminal =>
-        handleLookups(terminal, SDate(startMillis), SDate(endMillis))
-      }
-      combineEventualMinutesContainers(eventualMinutesForAllTerminals).pipeTo(replyTo)
+    case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
+      handleAllTerminalLookups(startMillis, endMillis, Option(pit)).pipeTo(sender())
 
-    case GetPortState(startMillis, endMillis) =>
-      val replyTo = sender()
-      val eventualMinutesForAllTerminals = terminals.map { terminal =>
-        handleLookups(terminal, SDate(startMillis), SDate(endMillis))
-      }
-      combineEventualMinutesContainers(eventualMinutesForAllTerminals).pipeTo(replyTo)
+    case PointInTimeQuery(pit, GetStateForTerminalDateRange(startMillis, endMillis, terminal))=>
+      handleLookups(terminal, SDate(startMillis), SDate(endMillis), Option(pit)).pipeTo(sender())
 
-    case GetPortStateForTerminal(startMillis, endMillis, terminal) =>
-      handleLookups(terminal, SDate(startMillis), SDate(endMillis)).pipeTo(sender())
+    case GetStateForDateRange(startMillis, endMillis) =>
+      handleAllTerminalLookups(startMillis, endMillis, None).pipeTo(sender())
+
+    case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
+      handleLookups(terminal, SDate(startMillis), SDate(endMillis), None).pipeTo(sender())
 
     case container: MinutesContainer[A, B] =>
       val replyTo = sender()
       handleUpdatesAndAck(container, replyTo)
 
     case u => log.warn(s"Got an unexpected message: $u")
+  }
+
+  def handleAllTerminalLookups(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, maybePit: Option[MillisSinceEpoch]): Future[MinutesContainer[A, B]] = {
+    val eventualMinutesForAllTerminals = terminals.map { terminal =>
+      handleLookups(terminal, SDate(startMillis), SDate(endMillis), maybePit)
+    }
+    combineEventualMinutesContainers(eventualMinutesForAllTerminals)
   }
 
   def handleUpdatesAndAck(container: MinutesContainer[A, B],
@@ -75,16 +78,17 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
 
   def handleLookups(terminal: Terminal,
                     start: SDateLike,
-                    end: SDateLike): Future[MinutesContainer[A, B]] = {
+                    end: SDateLike,
+                    maybePointInTime: Option[MillisSinceEpoch]): Future[MinutesContainer[A, B]] = {
     val eventualContainerWithBookmarks: Future[immutable.Seq[MinutesContainer[A, B]]] =
       Source(Crunch.utcDaysInPeriod(start, end).toList)
         .mapAsync(1) {
           case day if isHistoric(day) =>
             log.info(s"${day.toISOString()} is historic. Will use CrunchStateReadActor as secondary source")
-            handleLookup(lookupPrimary(terminal, day, None), Option(() => lookupSecondary(terminal, day, None))).map(r => (day, r))
+            handleLookup(lookupPrimary(terminal, day, maybePointInTime), Option(() => lookupSecondary(terminal, day, maybePointInTime))).map(r => (day, r))
           case day =>
             log.info(s"${day.toISOString()} is live. Look up live data from terminal/day actor")
-            handleLookup(lookupPrimary(terminal, day, None), None).map(r => (day, r))
+            handleLookup(lookupPrimary(terminal, day, maybePointInTime), None).map(r => (day, r))
         }
         .collect {
           case (_, Some(container)) => container.window(start, end)
@@ -97,10 +101,10 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
         }
         .runWith(Sink.seq)
 
-      eventualContainerWithBookmarks.map {
-        case cs if cs.nonEmpty => cs.reduce(_ ++ _)
-        case _ => MinutesContainer.empty[A, B]
-      }
+    eventualContainerWithBookmarks.map {
+      case cs if cs.nonEmpty => cs.reduce(_ ++ _)
+      case _ => MinutesContainer.empty[A, B]
+    }
   }
 
   def handleLookup(eventualMaybeResult: Future[Option[MinutesContainer[A, B]]],

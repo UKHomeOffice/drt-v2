@@ -36,21 +36,29 @@ trait MinuteLookupsLike {
   }
 
   val primaryQueuesLookup: MinutesLookup[CrunchMinute, TQM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
-    val actor = system.actorOf(TerminalDayQueuesActor.props(terminal, date, now))
+    val props = maybePit match {
+      case None => TerminalDayQueuesActor.props(terminal, date, now)
+      case Some(pointInTime) => TerminalDayQueuesActor.propsPointInTime(terminal, date, now, pointInTime)
+    }
+    val actor = system.actorOf(props)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
   }
 
-  val secondaryQueuesLookup: MinutesLookup[CrunchMinute, TQM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
+  val secondaryQueuesLookup: MinutesLookup[CrunchMinute, TQM] = (terminal: Terminal, date: SDateLike, _: Option[MillisSinceEpoch]) => {
     val actor = crunchStateReadActor(date)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetCrunchMinutes(terminal))).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
   }
 
   val primaryStaffLookup: MinutesLookup[StaffMinute, TM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
-    val actor = system.actorOf(TerminalDayStaffActor.props(terminal, date, now))
+    val props = maybePit match {
+      case None => TerminalDayStaffActor.props(terminal, date, now)
+      case Some(pointInTime) => TerminalDayStaffActor.propsPointInTime(terminal, date, now, pointInTime)
+    }
+    val actor = system.actorOf(props)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
   }
 
-  val secondaryStaffLookup: MinutesLookup[StaffMinute, TM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
+  val secondaryStaffLookup: MinutesLookup[StaffMinute, TM] = (terminal: Terminal, date: SDateLike, _: Option[MillisSinceEpoch]) => {
     val actor = crunchStateReadActor(date)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetStaffMinutes(terminal))).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
   }
