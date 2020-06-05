@@ -1,12 +1,12 @@
 package services.exports
 
-import actors.{GetFlightsForTerminal, GetPortStateForTerminal, DateRangeLike}
+import actors.{DateRangeLike, GetFlightsForTerminal}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
@@ -14,14 +14,14 @@ import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.exports.summaries.flights.TerminalFlightsSummary
+import services.crunch.deskrecs.GetStateForTerminalDateRange
 import services.exports.summaries.flights.TerminalFlightsSummaryLike.TerminalFlightsSummaryLikeGenerator
 import services.exports.summaries.queues.TerminalQueuesSummary
 import services.exports.summaries.{Summaries, TerminalSummaryLike}
 import services.graphstages.Crunch
 
 import scala.collection.immutable
-import scala.collection.immutable.{NumericRange, SortedMap}
+import scala.collection.immutable.NumericRange
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -102,7 +102,7 @@ object Exports {
                                  (implicit ec: ExecutionContext): (SDateLike, SDateLike) => Future[TerminalSummaryLike] =
     (from: SDateLike, to: SDateLike) => {
       val minutes = from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * MilliTimes.oneMinuteMillis
-      portStateProvider(GetPortStateForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal))
+      portStateProvider(GetStateForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, terminal))
         .mapTo[PortState]
         .recoverWith {
           case t =>

@@ -9,6 +9,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import services.crunch.deskrecs.GetStateForDateRange
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
@@ -50,7 +51,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     actor.ask(message).foreach { _ =>
       message match {
         case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.nonEmpty =>
-          actor.ask(GetPortState(0L, Long.MaxValue)).mapTo[Option[FlightsWithSplits]].foreach {
+          actor.ask(GetStateForDateRange(0L, Long.MaxValue)).mapTo[Option[FlightsWithSplits]].foreach {
             case None => sendStateToProbe()
             case Some(FlightsWithSplits(flights)) =>
               val updatedFlights: SortedMap[UniqueArrival, ApiFlightWithSplits] = SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights
@@ -62,14 +63,14 @@ class PartitionedPortStateTestActor(probe: ActorRef,
           mc.minutes.headOption match {
             case None => sendStateToProbe()
             case Some(minuteLike) if minuteLike.toMinute.isInstanceOf[CrunchMinute] =>
-              actor.ask(GetPortState(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[CrunchMinute, TQM]]
+              actor.ask(GetStateForDateRange(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[CrunchMinute, TQM]]
                 .foreach { container =>
                   val updatedMinutes = state.crunchMinutes ++ container.minutes.map(ml => (ml.key, ml.toMinute))
                   state = state.copy(crunchMinutes = updatedMinutes)
                   sendStateToProbe()
                 }
             case Some(minuteLike) if minuteLike.toMinute.isInstanceOf[StaffMinute] =>
-              actor.ask(GetPortState(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[StaffMinute, TM]]
+              actor.ask(GetStateForDateRange(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[StaffMinute, TM]]
                 .foreach { container =>
                   val updatedMinutes = state.staffMinutes ++ container.minutes.map(ml => (ml.key, ml.toMinute))
                   state = state.copy(staffMinutes = updatedMinutes)

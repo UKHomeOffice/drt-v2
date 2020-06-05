@@ -9,7 +9,7 @@ import akka.event.{Logging, LoggingAdapter}
 import akka.pattern._
 import akka.stream._
 import akka.util.Timeout
-import api.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken, KeyCloakAuthTokenParserProtocol}
+import api._
 import boopickle.Default._
 import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
@@ -31,6 +31,7 @@ import play.api.{Configuration, Environment}
 import services.PcpArrival.{pcpFrom, _}
 import services.SplitsProvider.SplitProvider
 import services._
+import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
 import services.graphstages.Crunch
 import services.metrics.Metrics
 import services.staffing.StaffTimeSlots
@@ -235,7 +236,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, 7)
 
         val portStateFuture = portStateActor.ask(
-          GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
+          GetStateForTerminalDateRange(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
           )(new Timeout(30 seconds))
 
         portStateFuture
@@ -372,7 +373,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     val requestStart = SDate.now()
     val startMillis = SDate.now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = SDate.now().getLocalNextMidnight.millisSinceEpoch
-    val portState = ctrl.portStateActor.ask(GetPortState(startMillis, endMillis))(30 seconds).mapTo[PortState]
+    val portState = ctrl.portStateActor.ask(GetStateForDateRange(startMillis, endMillis))(30 seconds).mapTo[PortState]
 
     portState
       .map { _ =>

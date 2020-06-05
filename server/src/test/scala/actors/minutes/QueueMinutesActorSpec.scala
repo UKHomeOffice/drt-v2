@@ -1,6 +1,5 @@
 package actors.minutes
 
-import actors.GetPortStateForTerminal
 import actors.minutes.MinutesActorLike.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask

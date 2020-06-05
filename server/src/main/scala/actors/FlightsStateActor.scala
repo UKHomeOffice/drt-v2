@@ -35,6 +35,21 @@ class FlightsStateReadActor(now: () => SDateLike, expireAfterMillis: Int, pointI
     log.info(s"Recovery: $recovery")
     recovery
   }
+
+  override def receiveCommand: Receive = {
+    case GetStateForDateRange(startMillis, endMillis) =>
+      log.debug(s"Received GetStateForDateRange request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")
+      sender() ! state.window(startMillis, endMillis)
+
+    case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
+      log.debug(s"Received GetStateForTerminalDateRange Request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()} for $terminal")
+      sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
+
+    case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
+      sender() ! state.window(startMillis, endMillis).updatedSince(sinceMillis)
+
+    case unexpected => log.error(s"Received unexpected message $unexpected")
+  }
 }
 
 class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int)
@@ -112,6 +127,12 @@ class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int)
         handleDiff(flightUpdates)
       else
         sender() ! Ack
+
+    case PointInTimeQuery(pitMillis, request) =>
+      replyWithPointInTimeQuery(SDate(pitMillis), request)
+
+    case request: DateRangeLike if SDate(request.from).isHistoricDate(now()) =>
+      replyWithDayViewQuery(request)
 
     case GetStateForDateRange(startMillis, endMillis) =>
       log.debug(s"Received GetStateForDateRange request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")

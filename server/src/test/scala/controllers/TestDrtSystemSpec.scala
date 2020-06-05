@@ -1,6 +1,6 @@
 package controllers
 
-import actors.{GetPortState, GetUpdatesSince}
+import actors.GetUpdatesSince
 import akka.pattern.ask
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import drt.shared.CrunchApi._
@@ -10,6 +10,7 @@ import drt.shared.Terminals.T1
 import drt.shared.{ApiFlightWithSplits, PortState}
 import play.api.Configuration
 import services.crunch.CrunchTestLike
+import services.crunch.deskrecs.GetStateForDateRange
 import test.TestActors.ResetData
 import test.TestDrtSystem
 
@@ -97,7 +98,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
     Thread.sleep(100)
     val lastMidnight = drtSystem.now().getLocalLastMidnight
     val nextMidnight = lastMidnight.addDays(1)
-    Await.result(drtSystem.portStateActor.ask(GetPortState(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1 second)
+    Await.result(drtSystem.portStateActor.ask(GetStateForDateRange(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1 second)
   }
 
   private def doesFlightExist(drtSystem: TestDrtSystem, fws: ApiFlightWithSplits): Boolean =

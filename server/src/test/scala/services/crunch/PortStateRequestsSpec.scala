@@ -10,7 +10,7 @@ import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import services.SDate
-import services.crunch.deskrecs.GetFlights
+import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 
 import scala.concurrent.duration._
@@ -203,7 +203,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
                         ps: ActorRef): Future[PortState] = eventualAck.flatMap { _ =>
     val startMillis = now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = now().getLocalNextMidnight.millisSinceEpoch
-    ps.ask(GetPortState(startMillis, endMillis)).mapTo[PortState]
+    ps.ask(GetStateForDateRange(startMillis, endMillis)).mapTo[PortState]
   }
 
   def eventualTerminalState(eventualAck: Future[Any],
@@ -211,7 +211,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
                             ps: ActorRef): Future[PortState] = eventualAck.flatMap { _ =>
     val startMillis = now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = now().getLocalNextMidnight.millisSinceEpoch
-    ps.ask(GetPortStateForTerminal(startMillis, endMillis, T1)).mapTo[PortState]
+    ps.ask(GetStateForTerminalDateRange(startMillis, endMillis, T1)).mapTo[PortState]
   }
 
   def eventualPortStateUpdates(eventualAck: Future[Any],

@@ -13,7 +13,6 @@ import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
 import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange, PortStateRequest}
 
 import scala.concurrent.duration._
@@ -101,27 +100,31 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     case GetState =>
       log.warn("Ignoring GetState request (for entire state)")
 
-    case PointInTimeQuery(millis, GetPortState(start, end)) =>
-      replyWithPortState(sender(), PointInTimeQuery(millis, GetStateForDateRange(start, end)))
+    case PointInTimeQuery(millis, request: GetStateForDateRange) =>
+      replyWithPortState(sender(), PointInTimeQuery(millis, request))
 
-    case PointInTimeQuery(millis, GetPortStateForTerminal(start, end, terminal)) =>
-      replyWithPortState(sender(), PointInTimeQuery(millis, GetStateForTerminalDateRange(start, end, terminal)))
+    case PointInTimeQuery(millis, request: GetStateForTerminalDateRange) =>
+      replyWithPortState(sender(), PointInTimeQuery(millis, request))
 
-    case GetPortState(start, end) =>
-      replyWithPortState(sender(), GetStateForDateRange(start, end))
+    case PointInTimeQuery(pitMillis, GetFlights(from, to)) =>
+      flightsActor.ask(PointInTimeQuery(pitMillis, GetStateForDateRange(from, to))).pipeTo(sender())
 
-    case GetPortStateForTerminal(start, end, terminal) =>
-      replyWithPortState(sender(), GetStateForTerminalDateRange(start, end, terminal))
+    case PointInTimeQuery(pitMillis, GetFlightsForTerminal(from, to, terminal)) =>
+      flightsActor.ask(PointInTimeQuery(pitMillis, GetStateForTerminalDateRange(from, to, terminal))).pipeTo(sender())
+
+    case request: GetStateForDateRange =>
+      replyWithPortState(sender(), request)
+
+    case request: GetStateForTerminalDateRange =>
+      replyWithPortState(sender(), request)
 
     case GetUpdatesSince(since, start, end) =>
       replyWithUpdates(since, start, end, sender())
 
     case GetFlights(from, to) =>
-      log.debug(s"Received GetFlights request from ${SDate(from).toISOString()} to ${SDate(to).toISOString()}")
       flightsActor.ask(GetStateForDateRange(from, to)).pipeTo(sender())
 
     case GetFlightsForTerminal(from, to, terminal) =>
-      log.debug(s"Received GetFlightsForTerminal request from ${SDate(from).toISOString()} to ${SDate(to).toISOString()}")
       flightsActor.ask(GetStateForTerminalDateRange(from, to, terminal)).pipeTo(sender())
   }
 

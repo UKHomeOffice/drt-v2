@@ -12,6 +12,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import server.protobuf.messages.CrunchState._
 import services.SDate
+import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
 
 case class GetCrunchMinutes(terminal: Terminal)
 
@@ -59,18 +60,18 @@ class CrunchStateReadActor(snapshotInterval: Int,
 
     case GetCrunchMinutes(terminal) =>
       log.debug(s"Received GetCrunchMinutes request")
-      sender() ! Option(MinutesContainer(state.immutable.crunchMinutes.filterKeys(tqm => tqm.terminal == terminal).values), Long.MaxValue)
+      sender() ! Option(MinutesContainer(state.immutable.crunchMinutes.filterKeys(tqm => tqm.terminal == terminal).values))
 
     case GetStaffMinutes(terminal) =>
       log.debug(s"Received GetStaffMinutes request")
-      sender() ! Option(MinutesContainer(state.immutable.staffMinutes.filterKeys(tm => tm.terminal == terminal).values), Long.MaxValue)
+      sender() ! Option(MinutesContainer(state.immutable.staffMinutes.filterKeys(tm => tm.terminal == terminal).values))
 
-    case GetPortState(start, end) =>
+    case GetStateForDateRange(start, end) =>
       logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriod(start, end)
 
-    case GetPortStateForTerminal(start, end, terminalName) =>
-      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+    case GetStateForTerminalDateRange(start, end, terminalName) =>
+      logInfo(s"Received GetStateForTerminalDateRange Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriodForTerminal(start, end, terminalName)
 
     case GetFlightsForTerminal(start, end, terminalName) =>

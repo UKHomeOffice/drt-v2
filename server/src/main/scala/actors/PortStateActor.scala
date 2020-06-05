@@ -15,7 +15,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.crunch.deskrecs.GetFlights
+import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
 import services.graphstages.Crunch.{LoadMinute, Loads}
 
 import scala.concurrent.duration._
@@ -161,13 +161,19 @@ class PortStateActor(liveCrunchStateProps: Props,
     case message: DateRangeLike if SDate(message.from).isHistoricDate(now()) =>
       replyWithDayViewQuery(message)
 
-    case GetPortState(start, end) =>
+    case GetStateForDateRange(start, end) =>
       log.debug(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriod(start, end)
 
-    case GetPortStateForTerminal(start, end, terminal) =>
+    case GetStateForTerminalDateRange(start, end, terminal) =>
       log.debug(s"Received GetPortStateForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
       sender() ! stateForPeriodForTerminal(start, end, terminal)
+
+    case GetFlights(startMillis, endMillis) =>
+      val start = SDate(startMillis)
+      val end = SDate(endMillis)
+      log.info(s"Got request for flights between ${start.toISOString()} - ${end.toISOString()}")
+      sender() ! FlightsWithSplits(state.flights.range(start, end))
 
     case GetFlightsForTerminal(start, end, terminal) =>
       log.debug(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
@@ -176,12 +182,6 @@ class PortStateActor(liveCrunchStateProps: Props,
     case GetUpdatesSince(millis, start, end) =>
       val updates: Option[PortStateUpdates] = state.updates(millis, start, end)
       sender() ! updates
-
-    case GetFlights(startMillis, endMillis) =>
-      val start = SDate(startMillis)
-      val end = SDate(endMillis)
-      log.info(s"Got request for flights between ${start.toISOString()} - ${end.toISOString()}")
-      sender() ! FlightsWithSplits(state.flights.range(start, end))
 
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }
