@@ -116,13 +116,13 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     case GetUpdatesSince(since, start, end) =>
       replyWithUpdates(since, start, end, sender())
 
-    case getFlights: GetFlights =>
-      log.debug(s"Received GetFlights request from ${SDate(getFlights.from).toISOString()} to ${SDate(getFlights.to).toISOString()}")
-      flightsActor forward getFlights
+    case GetFlights(from, to) =>
+      log.debug(s"Received GetFlights request from ${SDate(from).toISOString()} to ${SDate(to).toISOString()}")
+      flightsActor.ask(GetStateForDateRange(from, to)).pipeTo(sender())
 
-    case getFlightsForTerminal: GetFlightsForTerminal =>
-      log.debug(s"Received GetFlightsForTerminal request from ${SDate(getFlightsForTerminal.from).toISOString()} to ${SDate(getFlightsForTerminal.to).toISOString()}")
-      flightsActor forward getFlightsForTerminal
+    case GetFlightsForTerminal(from, to, terminal) =>
+      log.debug(s"Received GetFlightsForTerminal request from ${SDate(from).toISOString()} to ${SDate(to).toISOString()}")
+      flightsActor.ask(GetStateForTerminalDateRange(from, to, terminal)).pipeTo(sender())
   }
 
   override def receive: Receive = processMessage orElse {
@@ -146,9 +146,19 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
   def portStateComponentsRequest(request: PortStateRequest): (Future[FlightsWithSplits], Future[MinutesContainer[CrunchMinute, TQM]], Future[MinutesContainer[StaffMinute, TM]]) = {
     val eventualFlights = flightsActor.ask(request).mapTo[FlightsWithSplits]
-    val eventualQueueMinutes = queuesActor.ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
-    val eventualStaffMinutes = staffActor.ask(request).mapTo[MinutesContainer[StaffMinute, TM]]
+    val eventualQueueMinutes = queueActorForRequest(request).ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
+    val eventualStaffMinutes = staffActorForRequest(request).ask(request).mapTo[MinutesContainer[StaffMinute, TM]]
     (eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
+  }
+
+  def queueActorForRequest(request: PortStateRequest): ActorRef = request match {
+    case _: GetUpdatesSince => queueUpdatesSupervisor
+    case _ => queuesActor
+  }
+
+  def staffActorForRequest(request: PortStateRequest): ActorRef = request match {
+    case _: GetUpdatesSince => staffUpdatesSupervisor
+    case _ => staffActor
   }
 
   def stateAsTuple(eventualFlights: Future[FlightsWithSplits],
