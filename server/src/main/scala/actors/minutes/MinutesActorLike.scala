@@ -81,10 +81,10 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
         .mapAsync(1) {
           case day if isHistoric(day) =>
             log.info(s"${day.toISOString()} is historic. Will use CrunchStateReadActor as secondary source")
-            handleLookup(lookupPrimary(terminal, day), Option(() => lookupSecondary(terminal, day))).map(r => (day, r))
+            handleLookup(lookupPrimary(terminal, day, None), Option(() => lookupSecondary(terminal, day, None))).map(r => (day, r))
           case day =>
             log.info(s"${day.toISOString()} is live. Look up live data from terminal/day actor")
-            handleLookup(lookupPrimary(terminal, day), None).map(r => (day, r))
+            handleLookup(lookupPrimary(terminal, day, None), None).map(r => (day, r))
         }
         .collect {
           case (_, Some(container)) => container.window(start, end)

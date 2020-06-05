@@ -208,8 +208,7 @@ class PortStateActor(liveCrunchStateProps: Props,
     start.millisSinceEpoch,
     end.millisSinceEpoch)))
 
-  def stateForPeriod(start: MillisSinceEpoch,
-                     end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): PortState = state.window(SDate(start), SDate(end))
 
   def stateForPeriodForTerminal(start: MillisSinceEpoch,
                                 end: MillisSinceEpoch,
