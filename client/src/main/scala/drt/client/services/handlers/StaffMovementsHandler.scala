@@ -1,15 +1,14 @@
 package drt.client.services.handlers
 
-import autowire._
-import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode._
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
 import drt.client.logger.log
+import drt.client.services.{DrtApi, PollDelay, ViewMode}
+import drt.shared.StaffMovement
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{AjaxClient, PollDelay, ViewMode}
-import drt.shared.{Api, StaffMovement}
+import upickle.default.{read, write}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -24,22 +23,32 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
     case AddStaffMovements(staffMovements) =>
       value match {
         case Ready(sms) =>
-          AjaxClient[Api].addStaffMovements(staffMovements).call()
-          val newStaffMovements = (sms ++ staffMovements).sortBy(_.time.millisSinceEpoch)
-          updated(Ready(newStaffMovements))
+          val updatedStaffMovements = (sms ++ staffMovements).sortBy(_.time.millisSinceEpoch)
+          effectOnly(Effect(DrtApi.post("staff-movements", write(staffMovements))
+            .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
+            case _ =>
+              RetryActionAfter(AddStaffMovements(staffMovements), PollDelay.recoveryDelay)
+          }))
+
         case _ => noChange
       }
 
     case RemoveStaffMovements(movementsPairUuid) =>
       value match {
         case Ready(sms) =>
-          AjaxClient[Api].removeStaffMovements(movementsPairUuid).call()
-          val newStaffMovements = sms.filterNot(_.uUID == movementsPairUuid).sortBy(_.time.millisSinceEpoch)
-          updated(Ready(newStaffMovements))
+          val updatedStaffMovements = sms.filterNot(_.uUID == movementsPairUuid).sortBy(_.time.millisSinceEpoch)
+          effectOnly(Effect(DrtApi.delete(s"staff-movements/$movementsPairUuid")
+            .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
+            case _ =>
+              RetryActionAfter(RemoveStaffMovements(movementsPairUuid), PollDelay.recoveryDelay)
+          }))
+
         case _ => noChange
       }
+    case SetStaffMovements(sms) =>
+      updated(Ready(sms))
 
-    case SetStaffMovements(viewMode, staffMovements: Seq[StaffMovement]) =>
+    case SetStaffMovementsAndPollIfLiveView(viewMode, staffMovements: Seq[StaffMovement]) =>
       if (viewMode.isHistoric(SDate.now()))
         updated(Ready(staffMovements))
       else
@@ -50,20 +59,18 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
       noChange
 
     case GetStaffMovements(viewMode) =>
-      val maybePointInTimeMillis = if (viewMode.isHistoric(SDate.now())) Option(viewMode.millis) else None
+      val uri = if (viewMode.isHistoric(SDate.now())) s"staff-movements?pointInTime=${viewMode.millis}" else "staff-movements"
 
-      log.info(s"Calling getStaffMovements with ${maybePointInTimeMillis.map(SDate(_).toISOString())}")
-
-      val apiCallEffect = Effect(AjaxClient[Api].getStaffMovements(maybePointInTimeMillis).call()
-        .map { res =>
-          log.info(s"Got StaffMovements from the server")
-          SetStaffMovements(viewMode, res)
-        }
-        .recoverWith {
+      val apiCallEffect = Effect(DrtApi.get(uri)
+        .map(res => {
+          SetStaffMovementsAndPollIfLiveView(viewMode, read[List[StaffMovement]](res.responseText))
+        })
+        .recover {
           case _ =>
             log.error(s"Failed to get Staff Movements. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(GetStaffMovements(viewMode), PollDelay.recoveryDelay))
+            RetryActionAfter(GetStaffMovements(viewMode), PollDelay.recoveryDelay)
         })
+
       effectOnly(apiCallEffect)
   }
 }

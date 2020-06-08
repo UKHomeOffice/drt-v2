@@ -1054,12 +1054,6 @@ trait Api {
 
   def getShifts(maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments]
 
-  def addStaffMovements(movementsToAdd: Seq[StaffMovement]): Unit
-
-  def removeStaffMovements(movementsToRemove: UUID): Unit
-
-  def getStaffMovements(maybePointInTime: Option[MillisSinceEpoch]): Future[Seq[StaffMovement]]
-
   def getShiftsForMonth(month: MillisSinceEpoch, terminalName: Terminal): Future[ShiftAssignments]
 
   def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit

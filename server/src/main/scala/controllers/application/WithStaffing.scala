@@ -2,12 +2,13 @@ package controllers.application
 
 import java.util.UUID
 
-import actors.pointInTime.FixedPointsReadActor
-import actors.{GetState, SetFixedPoints, SetShifts}
+import actors._
+import actors.pointInTime.{FixedPointsReadActor, StaffMovementsReadActor}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern._
 import controllers.Application
-import drt.auth.{FixedPointsEdit, FixedPointsView, StaffEdit}
+import drt.auth.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}
@@ -46,7 +47,7 @@ trait WithStaffing {
                 Future(FixedPointAssignments.empty)
             }
       }
-      fps.map(fp => Ok(write(fp)))
+      fps.map((fp: FixedPointAssignments) => Ok(write(fp)))
     }
   }
 
@@ -77,6 +78,66 @@ trait WithStaffing {
           case _ =>
             BadRequest("{\"error\": \"Unable to parse data\"}")
         }
+    }
+  }
+
+  def addStaffMovements(): Action[AnyContent] = authByRole(StaffMovementsEdit) {
+    Action {
+      request =>
+        request.body.asText match {
+          case Some(text) =>
+            val movementsToAdd: List[StaffMovement] = read[List[StaffMovement]](text)
+            ctrl.staffMovementsActor ! AddStaffMovements(movementsToAdd)
+            Accepted
+          case None =>
+            BadRequest
+        }
+    }
+  }
+
+
+  def removeStaffMovements(movementsToRemove: UUID): Action[AnyContent] = authByRole(StaffMovementsEdit) {
+    Action {
+
+      ctrl.staffMovementsActor ! RemoveStaffMovements(movementsToRemove)
+      Accepted
+    }
+  }
+
+  def getStaffMovements(maybePointInTime: Option[MillisSinceEpoch]): Action[AnyContent] = authByRole(BorderForceStaff) {
+    Action.async {
+      val staffMovementsFuture = maybePointInTime match {
+        case None =>
+          ctrl.staffMovementsActor.ask(GetState)
+            .map { case StaffMovements(movements) => movements }
+            .recoverWith { case _ => Future(Seq()) }
+
+        case Some(millis) =>
+          val date = SDate(millis)
+
+          val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
+          val staffMovementsReadActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
+
+          staffMovementsReadActor.ask(GetState)
+            .map { case StaffMovements(movements) =>
+              staffMovementsReadActor ! PoisonPill
+              movements
+            }
+            .recoverWith {
+              case _ =>
+                staffMovementsReadActor ! PoisonPill
+                Future(Seq())
+            }
+      }
+
+      val eventualStaffMovements = staffMovementsFuture.collect {
+        case Nil =>
+          log.debug(s"Got no movements")
+          List()
+        case sm: Seq[StaffMovement] => sm
+      }
+
+      eventualStaffMovements.map(sms => Ok(write(sms)))
     }
   }
 

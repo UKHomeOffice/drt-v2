@@ -75,6 +75,30 @@ describe('Restrict access to endpoint by role', () => {
       shouldBeGranted: false
     },
     {
+      roles: ["test", "border-force-staff"],
+      endpoint: "/staff-movements",
+      method: "POST",
+      shouldBeGranted: false
+    },
+    {
+      roles: ["test", "border-force-staff"],
+      endpoint: "/staff-movements/3b867548-b313-45df-a6b1-bb1f94c4d054",
+      method: "DELETE",
+      shouldBeGranted: false
+    },
+    {
+      roles: ["test", "border-force-staff", "staff-movements:edit"],
+      endpoint: "/staff-movements",
+      method: "POST",
+      shouldBeGranted: true
+    },
+    {
+      roles: ["test", "border-force-staff", "staff-movements:edit"],
+      endpoint: "/staff-movements/3b867548-b313-45df-a6b1-bb1f94c4d054",
+      method: "DELETE",
+      shouldBeGranted: true
+    },
+    {
       roles: ["test", "port-feed-upload"],
       endpoint: "/data/feed/live/lhr",
       method: "POST",
