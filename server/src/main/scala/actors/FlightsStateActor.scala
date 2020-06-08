@@ -36,6 +36,16 @@ class FlightsStateReadActor(now: () => SDateLike, expireAfterMillis: Int, pointI
     recovery
   }
 
+  override def processRecoveryMessage: PartialFunction[Any, Unit] = {
+    case diff@FlightsWithSplitsDiffMessage(Some(createdAt), _, _) if createdAt <= pointInTime =>
+      log.info(s"FlightsWithSplitsDiffMessage created at: ${SDate(createdAt).toISOString()}")
+      handleDiffMessage(diff)
+    case newerMsg: FlightsWithSplitsDiffMessage =>
+      log.info(s"TOO NEW FlightsWithSplitsDiffMessage created at: ${SDate(newerMsg.createdAt.getOrElse(0L)).toISOString()}")
+    case other =>
+      log.info(s"Got other message: ${other.getClass}")
+  }
+
   override def receiveCommand: Receive = {
     case GetStateForDateRange(startMillis, endMillis) =>
       log.debug(s"Received GetStateForDateRange request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")
@@ -86,17 +96,22 @@ class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case FlightsWithSplitsMessage(flightMessages) => state = FlightsWithSplits(flightsFromMessages(flightMessages))
+    case FlightsWithSplitsMessage(flightMessages) =>
+      log.info(s"Processing snapshot message")
+      state = FlightsWithSplits(flightsFromMessages(flightMessages))
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case diff@FlightsWithSplitsDiffMessage(_, removals, updates) =>
-      state = state -- removals.map(uniqueArrivalFromMessage)
-      state = state ++ flightsFromMessages(updates)
-      logRecoveryState()
+    case diff: FlightsWithSplitsDiffMessage => handleDiffMessage(diff)
+  }
 
-      bytesSinceSnapshotCounter += diff.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
+  def handleDiffMessage(diff: FlightsWithSplitsDiffMessage): Unit = {
+    state = state -- diff.removals.map(uniqueArrivalFromMessage)
+    state = state ++ flightsFromMessages(diff.updates)
+    logRecoveryState()
+
+    bytesSinceSnapshotCounter += diff.serializedSize
+    messagesPersistedSinceSnapshotCounter += 1
   }
 
   def logRecoveryState(): Unit = {
@@ -150,11 +165,6 @@ class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int)
 
     case SaveSnapshotFailure(md, cause) =>
       log.error(s"Save snapshot failure: $md", cause)
-
-    case DeleteSnapshotsSuccess(_) =>
-      log.info(s"Purged snapshots")
-
-    case StreamCompleted => log.warn("Received shutdown")
 
     case unexpected => log.error(s"Received unexpected message $unexpected")
   }

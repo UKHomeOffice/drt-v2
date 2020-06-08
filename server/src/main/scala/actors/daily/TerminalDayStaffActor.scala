@@ -33,7 +33,7 @@ class TerminalDayStaffActor(year: Int,
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case StaffMinutesMessage(minuteMessages) =>
       log.debug(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
-      state = state ++ minuteMessagesToKeysAndMinutes(minuteMessages)
+      state = state ++ updatesToApply(minuteMessagesToKeysAndMinutes(minuteMessages))
   }
 
   private def minuteMessagesToKeysAndMinutes(messages: Seq[StaffMinuteMessage]): Iterable[(TM, StaffMinute)] = messages

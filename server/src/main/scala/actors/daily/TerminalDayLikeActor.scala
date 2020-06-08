@@ -31,7 +31,11 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
                                                                                               terminal: Terminal,
                                                                                               now: () => SDateLike,
                                                                                               maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
-  override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d")
+  val loggerSuffix: String = maybePointInTime match {
+    case None => ""
+    case Some(pit) => f"@${SDate(pit).toISOString()}"
+  }
+  override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
   val typeForPersistenceId: String
 
@@ -97,4 +101,12 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     }
 
   def containerToMessage(differences: Iterable[VAL]): GeneratedMessage
+
+  def updatesToApply(allUpdates: Iterable[(INDEX, VAL)]): Iterable[(INDEX, VAL)] =
+    maybePointInTime match {
+      case None => allUpdates
+      case Some(pit) => allUpdates.filter {
+        case (_, cm) => cm.lastUpdated.getOrElse(0L) <= pit
+      }
+    }
 }

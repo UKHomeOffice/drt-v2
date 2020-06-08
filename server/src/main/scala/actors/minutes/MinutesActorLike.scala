@@ -84,7 +84,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
       Source(Crunch.utcDaysInPeriod(start, end).toList)
         .mapAsync(1) {
           case day if isHistoric(day) =>
-            log.info(s"${day.toISOString()} is historic. Will use CrunchStateReadActor as secondary source")
+            log.info(s"${day.toISOString()} is historic. Will use secondary source if primary data doesn't exist")
             handleLookup(lookupPrimary(terminal, day, maybePointInTime), Option(() => lookupSecondary(terminal, day, maybePointInTime))).map(r => (day, r))
           case day =>
             log.info(s"${day.toISOString()} is live. Look up live data from terminal/day actor")
