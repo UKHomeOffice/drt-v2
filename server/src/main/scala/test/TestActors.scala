@@ -209,8 +209,8 @@ object TestActors {
              (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
       val lookups = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
       val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", now, expireAfterMillis)))
-      val queuesActor: ActorRef = lookups.queueMinutesActor(classOf[TestQueueMinutesActor])
-      val staffActor: ActorRef = lookups.staffMinutesActor(classOf[TestStaffMinutesActor])
+      val queuesActor: ActorRef = lookups.queueMinutesActor
+      val staffActor: ActorRef = lookups.staffMinutesActor
       system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList, streamingJournal)))
     }
   }

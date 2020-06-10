@@ -8,7 +8,7 @@ import drt.shared.Queues.Queue
 import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import services.SDate
-import test.TestActors.{ResetData, TestTerminalDayQueuesActor, TestTerminalDayStaffActor}
+import test.TestActors.{ResetData, TestQueueMinutesActor, TestStaffMinutesActor, TestTerminalDayQueuesActor, TestTerminalDayStaffActor}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,7 +29,7 @@ case class TestMinuteLookups(system: ActorSystem,
     actor.ask(ResetData).map(_ => actor ! PoisonPill)
   }
 
-  override def queueMinutesActor(clazz: Class[_]): ActorRef = system.actorOf(Props(clazz, now, queuesByTerminal.keys, primaryQueuesLookup, secondaryQueuesLookup, updateCrunchMinutes, resetQueuesData))
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(now, queuesByTerminal.keys, primaryQueuesLookup, secondaryQueuesLookup, updateCrunchMinutes, resetQueuesData)))
 
-  override def staffMinutesActor(clazz: Class[_]): ActorRef = system.actorOf(Props(clazz, now, queuesByTerminal.keys, primaryStaffLookup, secondaryStaffLookup, updateStaffMinutes, resetStaffData))
+  override val staffMinutesActor: ActorRef = system.actorOf(Props(new TestStaffMinutesActor(now, queuesByTerminal.keys, primaryStaffLookup, secondaryStaffLookup, updateStaffMinutes, resetStaffData)))
 }

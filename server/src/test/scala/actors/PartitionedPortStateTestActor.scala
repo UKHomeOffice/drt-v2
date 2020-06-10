@@ -18,8 +18,8 @@ object PartitionedPortStateTestActor {
   def apply(testProbe: TestProbe, flightsActor: ActorRef, now: () => SDateLike, airportConfig: AirportConfig)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-    val queuesActor = lookups.queueMinutesActor(classOf[QueueMinutesActor])
-    val staffActor = lookups.staffMinutesActor(classOf[StaffMinutesActor])
+    val queuesActor = lookups.queueMinutesActor
+    val staffActor = lookups.staffMinutesActor
     system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList)))
   }
 }

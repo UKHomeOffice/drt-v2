@@ -2,6 +2,7 @@ package actors
 
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayQueuesActor, TerminalDayStaffActor}
 import actors.minutes.MinutesActorLike.MinutesLookup
+import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
 import actors.pointInTime.{CrunchStateReadActor, GetCrunchMinutes, GetStaffMinutes}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
@@ -68,9 +69,9 @@ trait MinuteLookupsLike {
     system.actorOf(Props(new CrunchStateReadActor(1000, date.addHours(4), expireAfterMillis, queuesByTerminal, date.millisSinceEpoch, date.addDays(1).millisSinceEpoch)))
   }
 
-  def queueMinutesActor(clazz: Class[_]): ActorRef
+  def queueMinutesActor: ActorRef
 
-  def staffMinutesActor(clazz: Class[_]): ActorRef
+  def staffMinutesActor: ActorRef
 }
 
 case class MinuteLookups(system: ActorSystem,
@@ -78,7 +79,7 @@ case class MinuteLookups(system: ActorSystem,
                          expireAfterMillis: Int,
                          queuesByTerminal: Map[Terminal, Seq[Queue]])
                         (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
-  override def queueMinutesActor(clazz: Class[_]): ActorRef = system.actorOf(Props(clazz, now, queuesByTerminal.keys, primaryQueuesLookup, secondaryQueuesLookup, updateCrunchMinutes))
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(now, queuesByTerminal.keys, primaryQueuesLookup, secondaryQueuesLookup, updateCrunchMinutes)))
 
-  override def staffMinutesActor(clazz: Class[_]): ActorRef = system.actorOf(Props(clazz, now, queuesByTerminal.keys, primaryStaffLookup, secondaryStaffLookup, updateStaffMinutes))
+  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(now, queuesByTerminal.keys, primaryStaffLookup, secondaryStaffLookup, updateStaffMinutes)))
 }
