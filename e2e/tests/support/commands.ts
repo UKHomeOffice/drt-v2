@@ -32,11 +32,28 @@ Cypress.Commands.add('setRoles', (roles = []) => {
 
 const portRole = ["test"]
 const lhrPortRole = ["LHR"]
-const bfRoles = ["border-force-staff", "forecast:view", "fixed-points:view", "arrivals-and-splits:view", "desks-and-queues:view","staff-movements:edit"];
-const bfReadOnlyRoles = ["border-force-staff", "forecast:view", "fixed-points:view", "arrivals-and-splits:view", "desks-and-queues:view"];
+const bfRoles = [
+  "border-force-staff",
+  "forecast:view",
+  "fixed-points:view",
+  "arrivals-and-splits:view",
+  "desks-and-queues:view",
+  "staff-movements:edit",
+  "staff-movements:export"
+];
+const bfReadOnlyRoles = [
+  "border-force-staff",
+  "forecast:view",
+  "fixed-points:view",
+  "arrivals-and-splits:view",
+  "desks-and-queues:view"
+];
 const bfPlanningRoles = ["staff:edit"];
 const superUserRoles = ["create-alerts", "manage-users"];
-const portOperatorRoles = ["port-operator-staff", "arrivals-and-splits:view", "api:view-port-arrivals"]
+const portOperatorRoles = ["port-operator-staff",
+  "arrivals-and-splits:view",
+  "api:view-port-arrivals"
+]
 
 Cypress.Commands.add('asABorderForceOfficer', () => {
   cy.request("POST", '/test/mock-roles', { "roles": portRole.concat(bfRoles) });

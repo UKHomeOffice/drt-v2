@@ -99,6 +99,18 @@ describe('Restrict access to endpoint by role', () => {
       shouldBeGranted: true
     },
     {
+      roles: ["test", "border-force-staff", "staff-movements:export"],
+      endpoint: "export/staff-movements/" + millis + "/T1",
+      method: "GET",
+      shouldBeGranted: true
+    },
+    {
+      roles: ["test", "border-force-staff"],
+      endpoint: "export/staff-movements/" + millis + "/T1",
+      method: "GET",
+      shouldBeGranted: false
+    },
+    {
       roles: ["test", "port-feed-upload"],
       endpoint: "/data/feed/live/lhr",
       method: "POST",

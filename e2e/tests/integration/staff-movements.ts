@@ -13,6 +13,8 @@ describe('Staff movements', () => {
     return moment().tz('Europe/London').startOf('day');
   }
 
+  const midnightTonight: moment = midnightThisMorning().add('day', 1)
+
   const shifts = (numberOfStaff): object => {
     return {
       "shifts": [
@@ -25,23 +27,36 @@ describe('Staff movements', () => {
   }
 
   describe('When adding staff movements on the desks and queues page', () => {
-    it("Should update the available staff when 1 staff member is added for 1 hour, and record the correct reason", () => {
-      cy
-        .asABorderForcePlanningOfficer()
-        .navigateHome()
-        .navigateToMenuItem('T1')
-        .selectCurrentTab()
-        .choose24Hours()
-        .openAdjustmentDialogueForHour('add', 0)
-        .adjustMinutes(60)
-        .adjustStaffBy(1)
-        .checkStaffMovementsOnDesksAndQueuesTabAre(1)
-        .checkStaffAvailableOnDesksAndQueuesTabAre(1)
-        .findAndClick('Staff Movements')
-        .checkStaffNumbersOnMovementsTabAre(1)
-        .checkUserNameOnMovementsTab(1, "Unknown")
-        .removeXMovements(1);
-    });
+    it("Should update the available staff when 1 staff member is added for 1 hour, and record the correct reason and " +
+      "it should appear in the export", () => {
+        const movementsCSV = "Terminal,Reason,Time,Staff Change,Made by" + "\n" +
+              "T1,Other start,"+ midnightThisMorning().format("YYYY-MM-DD") + " 00:00,1,\"Unknown\"" + "\n" +
+              "T1,Other end,"+ midnightThisMorning().format("YYYY-MM-DD") + " 01:00,-1,\"Unknown\""
+        cy
+          .asABorderForcePlanningOfficer()
+          .navigateHome()
+          .navigateToMenuItem('T1')
+          .selectCurrentTab()
+          .choose24Hours()
+          .openAdjustmentDialogueForHour('add', 0)
+          .adjustMinutes(60)
+          .adjustStaffBy(1)
+          .checkStaffMovementsOnDesksAndQueuesTabAre(1)
+          .checkStaffAvailableOnDesksAndQueuesTabAre(1)
+          .findAndClick('Staff Movements')
+          .checkStaffNumbersOnMovementsTabAre(1)
+          .checkUserNameOnMovementsTab(1, "Unknown")
+          .request({
+            method: 'GET',
+            url: '/export/staff-movements/' + midnightTonight.unix() * 1000 + '/T1',
+          })
+          .then((resp) => {
+            expect(resp.body)
+              .to
+              .equal(movementsCSV, "Staff movements Export CSV is wrong.");
+          })
+          .removeXMovements(1);
+      });
 
     it("Should update the available staff when 1 staff member is removed for 1 hour", () => {
       cy
@@ -84,28 +99,28 @@ describe('Staff movements', () => {
     });
 
     it("BorderForce user should be able to adjust the staff movement", () => {
-          cy
-            .asABorderForceOfficer()
-            .navigateHome()
-            .navigateToMenuItem('T1')
-            .selectCurrentTab()
-            .choose24Hours()
-            .get('.staff-deployment-adjustment-container').should('exist')
-            .findAndClick('Recommendations')
-            .get('.staff-deployment-adjustment-container').should('exist')
-        });
+      cy
+        .asABorderForceOfficer()
+        .navigateHome()
+        .navigateToMenuItem('T1')
+        .selectCurrentTab()
+        .choose24Hours()
+        .get('.staff-deployment-adjustment-container').should('exist')
+        .findAndClick('Recommendations')
+        .get('.staff-deployment-adjustment-container').should('exist')
+    });
 
     it("BorderForceReadOnly should not be able to adjust the staff movement", () => {
-          cy
-            .asABorderForceReadOnlyOfficer()
-            .navigateHome()
-            .navigateToMenuItem('T1')
-            .selectCurrentTab()
-            .choose24Hours()
-            .get('.staff-deployment-adjustment-container').should('not.exist')
-            .findAndClick('Recommendations')
-            .get('.staff-deployment-adjustment-container').should('not.exist')
-        });
+      cy
+        .asABorderForceReadOnlyOfficer()
+        .navigateHome()
+        .navigateToMenuItem('T1')
+        .selectCurrentTab()
+        .choose24Hours()
+        .get('.staff-deployment-adjustment-container').should('not.exist')
+        .findAndClick('Recommendations')
+        .get('.staff-deployment-adjustment-container').should('not.exist')
+    });
   });
 });
 

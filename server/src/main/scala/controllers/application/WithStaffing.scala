@@ -4,15 +4,21 @@ import java.util.UUID
 
 import actors._
 import actors.pointInTime.{FixedPointsReadActor, StaffMovementsReadActor}
+import akka.NotUsed
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern._
+import akka.stream.scaladsl.Source
 import controllers.Application
-import drt.auth.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit}
+import controllers.application.exports.CsvFileStreaming
+import drt.auth.{FixedPointsEdit, FixedPointsView, StaffMovementsEdit, StaffEdit, BorderForceStaff, StaffMovementsExport => StaffMovementsExportRole}
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
+import services.exports.StaffMovementsExport
+
 import upickle.default.{read, write}
 
 import scala.concurrent.Future
@@ -140,5 +146,43 @@ trait WithStaffing {
       eventualStaffMovements.map(sms => Ok(write(sms)))
     }
   }
+
+  def exportStaffMovements(terminalString: String, pointInTime: MillisSinceEpoch): Action[AnyContent] =
+    authByRole(StaffMovementsExportRole) {
+      Action {
+        val terminal = Terminal(terminalString)
+        val date = SDate(pointInTime)
+        val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
+        val staffMovementsReadActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
+
+        val eventualStaffMovements: Future[Seq[StaffMovement]] = staffMovementsReadActor.ask(GetState)
+          .map {
+            case StaffMovements(movements) =>
+              staffMovementsReadActor ! PoisonPill
+              movements
+          }
+          .recoverWith {
+            case _ =>
+              staffMovementsReadActor ! PoisonPill
+              Future(Seq())
+          }
+
+        val csvSource: Source[String, NotUsed] = Source
+          .fromFuture(eventualStaffMovements
+            .map(sm => {
+              StaffMovementsExport.toCSVWithHeader(sm, terminal)
+            }))
+
+        CsvFileStreaming.sourceToCsvResponse(
+          csvSource,
+          CsvFileStreaming.makeFileName(
+            "staff-movements",
+            terminal,
+            date,
+            date,
+            portCode
+          ))
+      }
+    }
 
 }

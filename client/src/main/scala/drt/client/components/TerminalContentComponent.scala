@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
-import drt.auth.{ArrivalSource, LoggedInUser}
+import drt.auth.{ArrivalSource, LoggedInUser, StaffMovementsExport}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
@@ -119,6 +119,16 @@ object TerminalContentComponent {
               <.div(^.className := "exports",
                 exportLink(props, terminal, terminalName, ExportArrivals),
                 exportLink(props, terminal, terminalName, ExportDesks),
+                if (props.loggedInUser.hasRole(StaffMovementsExport))
+                  <.a(
+                    "Export Movements",
+                    ^.className := "btn btn-default",
+                    ^.href := SPAMain.absoluteUrl(s"export/staff-movements/${props.terminalPageTab.viewMode.millis}/$terminal?pointInTime=${props.viewMode.millis}"),
+                    ^.target := "_blank",
+                    ^.onClick --> {
+                      Callback(GoogleEventTracker.sendEvent(terminalName, "Export Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
+                    }
+                  ) else EmptyVdom,
                 MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
             <.div(^.className := "tab-content",
               <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",

@@ -60,6 +60,8 @@ object JSDateConversions {
 
       def millisSinceEpoch: MillisSinceEpoch = date.unix().toLong * 1000
 
+      def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
+
       override def toISOString(): String = date.seconds(0).millisecond(0).toISOString()
 
       def getDayOfWeek(): Int = {
@@ -85,19 +87,19 @@ object JSDateConversions {
     def apply(millis: MillisSinceEpoch): SDateLike = Moment.tz(millis, europeLondon)
 
     /** **
-      * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component
-      */
+     * Beware - in JS land, this is interpreted as Local time, but the parse will interpret the timezone component
+     */
     def apply(y: Int, m: Int, d: Int, h: Int = 0, mm: Int = 0, s: Int = 0, ms: Int = 0): SDateLike = {
       val formattedDate = f"$y-$m%02d-$d%02d $h%02d:$mm%02d:$s%02d.$ms"
       Moment.tz(formattedDate, europeLondon)
     }
 
     /** *
-      * dateString is an ISO parseable datetime representation, with optional timezone
-      *
-      * @param dateString
-      * @return
-      */
+     * dateString is an ISO parseable datetime representation, with optional timezone
+     *
+     * @param dateString
+     * @return
+     */
     def apply(dateString: String): SDateLike = Moment.tz(dateString, europeLondon)
 
     def stringToSDateLikeOption(dateString: String): Option[SDateLike] = {

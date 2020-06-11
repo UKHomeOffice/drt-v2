@@ -21,6 +21,8 @@ import scala.util.{Failure, Success, Try}
 trait ExportToCsv {
   self: Application =>
 
+  import CsvFileStreaming._
+
   implicit val timeout: Timeout = new Timeout(5 seconds)
 
   def exportToCsv(start: SDateLike,
@@ -61,6 +63,17 @@ trait ExportToCsv {
 
     Exports.summaryForDaysCsvSource(start, numberOfDays, now, terminal, maybeSummaryActorAndRequestProvider, generateNewSummary)
   }
+}
+
+object CsvFileStreaming {
+
+  def sourceToCsvResponse(exportSource: Source[String, NotUsed], fileName: String): Result = {
+    implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
+
+    Result(
+      header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
+      body = HttpEntity.Chunked(exportSource.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType))
+  }
 
   def makeFileName(subject: String,
                    terminalName: Terminal,
@@ -75,11 +88,4 @@ trait ExportToCsv {
       f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}%02d" + endDate
   }
 
-  def sourceToCsvResponse(exportSource: Source[String, NotUsed], fileName: String): Result = {
-    implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
-
-    Result(
-      header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-      body = HttpEntity.Chunked(exportSource.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType))
-  }
 }

@@ -477,7 +477,7 @@ trait SDateLike {
     addMillis(-1 * remainder.toInt)
   }
 
-  def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
+  def toLocalDateTimeString(): String
 
   def toISODateOnly: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d"
 
