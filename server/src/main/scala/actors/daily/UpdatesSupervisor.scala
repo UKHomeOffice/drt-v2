@@ -13,7 +13,7 @@ import drt.shared.{MilliTimes, SDateLike, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -109,7 +109,12 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
         case (terminal, day) =>
           lastRequests = lastRequests + ((terminal, day) -> now().millisSinceEpoch)
           updatesActor(terminal, day)
-              .ask(GetAllUpdatesSince(sinceMillis))
-              .mapTo[MinutesContainer[A, B]]
+            .ask(GetAllUpdatesSince(sinceMillis))
+            .mapTo[MinutesContainer[A, B]]
+            .recoverWith{
+              case t =>
+                log.error(s"Failed to fetch updates from streaming updates actor: ${SDate(day).toISOString()}", t)
+                Future(MinutesContainer.empty[A, B])
+            }
       }
 }
