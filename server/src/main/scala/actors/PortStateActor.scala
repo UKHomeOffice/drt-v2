@@ -158,7 +158,7 @@ class PortStateActor(liveCrunchStateProps: Props,
     case PointInTimeQuery(millis, query) =>
       replyWithPointInTimeQuery(SDate(millis), query)
 
-    case message: DateRangeLike if SDate(message.from).isHistoricDate(now()) =>
+    case message: DateRangeLike if SDate(message.to).isHistoricDate(now()) =>
       replyWithDayViewQuery(message)
 
     case GetStateForDateRange(start, end) =>

@@ -3,6 +3,7 @@ package actors
 import actors.PortStateMessageConversion._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
+import actors.pointInTime.{CrunchStateReadActor, FlightsStateReadActor}
 import actors.queues.CrunchQueueActor.UpdatedMillis
 import akka.actor._
 import akka.pattern.{ask, pipe}
@@ -10,6 +11,8 @@ import akka.persistence._
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
@@ -17,53 +20,34 @@ import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
-import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
+import services.crunch.deskrecs.{FlightsRequest, GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-class FlightsStateReadActor(now: () => SDateLike, expireAfterMillis: Int, pointInTime: MillisSinceEpoch)
-  extends FlightsStateActor(now, expireAfterMillis) {
+object FlightsStateActor {
+  def isNonLegacyRequest(pointInTime: SDateLike, legacyDataCutoff: SDateLike): Boolean =
+    pointInTime.millisSinceEpoch >= legacyDataCutoff.millisSinceEpoch
 
-  override val log: Logger = LoggerFactory.getLogger(s"$getClass-${SDate(pointInTime).toISOString()}")
-
-  override def recovery: Recovery = {
-    val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-    val recovery = Recovery(fromSnapshot = criteria, replayMax = 10000)
-    log.info(s"Recovery: $recovery")
-    recovery
-  }
-
-  override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case diff@FlightsWithSplitsDiffMessage(Some(createdAt), _, _) if createdAt <= pointInTime =>
-      log.info(s"FlightsWithSplitsDiffMessage created at: ${SDate(createdAt).toISOString()}")
-      handleDiffMessage(diff)
-    case newerMsg: FlightsWithSplitsDiffMessage =>
-      log.info(s"TOO NEW FlightsWithSplitsDiffMessage created at: ${SDate(newerMsg.createdAt.getOrElse(0L)).toISOString()}")
-    case other =>
-      log.info(s"Got other message: ${other.getClass}")
-  }
-
-  override def receiveCommand: Receive = {
-    case GetStateForDateRange(startMillis, endMillis) =>
-      log.debug(s"Received GetStateForDateRange request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")
-      sender() ! state.window(startMillis, endMillis)
-
-    case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
-      log.debug(s"Received GetStateForTerminalDateRange Request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()} for $terminal")
-      sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
-
-    case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
-      sender() ! state.window(startMillis, endMillis).updatedSince(sinceMillis)
-
-    case unexpected => log.error(s"Received unexpected message $unexpected")
+  def tempPitActorProps(pointInTime: SDateLike,
+                        message: DateRangeLike,
+                        now: () => SDateLike,
+                        queues: Map[Terminal, Seq[Queue]],
+                        expireAfterMillis: Int,
+                        legacyDataCutoff: SDateLike): Props = {
+    if (isNonLegacyRequest(pointInTime, legacyDataCutoff))
+      Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch, queues, legacyDataCutoff))
+    else
+      Props(new CrunchStateReadActor(1000, pointInTime, expireAfterMillis, queues, message.from, message.to))
   }
 }
 
-class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int)
+class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int, queues: Map[Terminal, Seq[Queue]], legacyDataCutoff: SDateLike)
   extends PersistentActor with RecoveryActorLike with PersistentDrtActor[FlightsWithSplits] {
+
+  import FlightsStateActor._
 
   override def persistenceId: String = "flights-state-actor"
 
@@ -98,7 +82,11 @@ class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int)
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case FlightsWithSplitsMessage(flightMessages) =>
       log.info(s"Processing snapshot message")
-      state = FlightsWithSplits(flightsFromMessages(flightMessages))
+      setStateFromSnapshot(flightMessages)
+  }
+
+  def setStateFromSnapshot(flightMessages: Seq[FlightWithSplitsMessage]): Unit = {
+    state = FlightsWithSplits(flightsFromMessages(flightMessages))
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
@@ -146,15 +134,13 @@ class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int)
     case PointInTimeQuery(pitMillis, request) =>
       replyWithPointInTimeQuery(SDate(pitMillis), request)
 
-    case request: DateRangeLike if SDate(request.from).isHistoricDate(now()) =>
+    case request: DateRangeLike if SDate(request.to).isHistoricDate(now()) =>
       replyWithDayViewQuery(request)
 
     case GetStateForDateRange(startMillis, endMillis) =>
-      log.debug(s"Received GetStateForDateRange request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")
       sender() ! state.window(startMillis, endMillis)
 
     case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
-      log.debug(s"Received GetStateForTerminalDateRange Request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()} for $terminal")
       sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
 
     case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
@@ -174,11 +160,21 @@ class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int)
     replyWithPointInTimeQuery(pointInTime, message)
   }
 
-  def replyWithPointInTimeQuery(pointInTime: SDateLike, message: DateRangeLike): Unit = killActor
-    .ask(RequestAndTerminate(tempPitActor(pointInTime), message))
-    .pipeTo(sender())
+  def replyWithPointInTimeQuery(pointInTime: SDateLike, message: DateRangeLike): Unit = {
+    val finalMessage = if (isNonLegacyRequest(pointInTime, legacyDataCutoff)) message else toLegacyMessage(message)
+    val tempActor = tempPointInTimeActor(pointInTime, finalMessage)
+    killActor
+      .ask(RequestAndTerminate(tempActor, finalMessage))
+      .pipeTo(sender())
+  }
 
-  def tempPitActor(pointInTime: SDateLike): ActorRef = context.actorOf(Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch)))
+  def toLegacyMessage(message: DateRangeLike): DateRangeLike with FlightsRequest = message match {
+    case GetStateForDateRange(from, to) => GetFlights(from, to)
+    case GetStateForTerminalDateRange(from, to, terminal) => GetFlightsForTerminal(from, to, terminal)
+  }
+
+  def tempPointInTimeActor(pointInTime: SDateLike, message: DateRangeLike): ActorRef =
+    context.actorOf(tempPitActorProps(pointInTime, message, now, queues, expireAfterMillis, legacyDataCutoff))
 
   def handleDiff(flightUpdates: FlightsWithSplitsDiff): Unit = {
     val (updatedState, updatedMinutes) = flightUpdates.applyTo(state, now().millisSinceEpoch)

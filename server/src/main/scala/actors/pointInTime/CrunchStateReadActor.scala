@@ -12,7 +12,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import server.protobuf.messages.CrunchState._
 import services.SDate
-import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
+import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
 
 case class GetCrunchMinutes(terminal: Terminal)
 
@@ -32,7 +32,7 @@ class CrunchStateReadActor(snapshotInterval: Int,
     now = () => pointInTime,
     expireAfterMillis = expireAfterMillis,
     purgePreviousSnapshots = false,
-    forecastMaxMillis = () => endMillis) {
+    forecastMaxMillis = () => endMillis) with FlightsDataLike {
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
@@ -67,15 +67,19 @@ class CrunchStateReadActor(snapshotInterval: Int,
       sender() ! Option(MinutesContainer(state.immutable.staffMinutes.filterKeys(tm => tm.terminal == terminal).values))
 
     case GetStateForDateRange(start, end) =>
-      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      logInfo(s"Received GetStateForDateRange Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriod(start, end)
 
     case GetStateForTerminalDateRange(start, end, terminalName) =>
       logInfo(s"Received GetStateForTerminalDateRange Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriodForTerminal(start, end, terminalName)
 
+    case GetFlights(start, end) =>
+      logInfo(s"Received GetFlights Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      sender() ! FlightsWithSplits(stateForPeriod(start, end).flights)
+
     case GetFlightsForTerminal(start, end, terminalName) =>
-      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      logInfo(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! FlightsWithSplits(stateForPeriodForTerminal(start, end, terminalName).flights)
 
     case u =>

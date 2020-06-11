@@ -208,7 +208,7 @@ object TestActors {
     def apply(now: () => SDateLike, airportConfig: AirportConfig, streamingJournal: StreamingJournalLike)
              (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
       val lookups = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-      val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", now, expireAfterMillis)))
+      val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", now, expireAfterMillis, airportConfig.queuesByTerminal)))
       val queuesActor: ActorRef = lookups.queueMinutesActor
       val staffActor: ActorRef = lookups.staffMinutesActor
       system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList, streamingJournal)))
@@ -271,7 +271,8 @@ object TestActors {
                               initialSnapshotBytesThreshold: Int,
                               name: String,
                               now: () => SDateLike,
-                              expireAfterMillis: Int) extends FlightsStateActor(now, expireAfterMillis) with Resettable {
+                              expireAfterMillis: Int,
+                              queues: Map[Terminal, Seq[Queue]]) extends FlightsStateActor(now, expireAfterMillis, queues, SDate("1970-01-01")) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
