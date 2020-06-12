@@ -66,7 +66,6 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
     case GetState =>
       log.debug(s"Received GetState")
-
       sender() ! stateResponse
 
     case m => log.warn(s"Got unexpected message: $m")

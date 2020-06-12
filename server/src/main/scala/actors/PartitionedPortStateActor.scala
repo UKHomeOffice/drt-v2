@@ -64,7 +64,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
-  implicit val timeout: Timeout = new Timeout(10 seconds)
+  implicit val timeout: Timeout = new Timeout(60 seconds)
 
   def processMessage: Receive = {
     case msg: SetCrunchQueueActor =>
