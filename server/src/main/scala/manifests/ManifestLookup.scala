@@ -119,7 +119,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             voyage_number,
             scheduled_date
           FROM
-
+            voyage_manifest_passenger_info
           WHERE
             event_code ='DC'
             and arrival_port_code=${uniqueArrivalKey.arrivalPort.toString}
