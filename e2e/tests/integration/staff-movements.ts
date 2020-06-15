@@ -30,8 +30,8 @@ describe('Staff movements', () => {
     it("Should update the available staff when 1 staff member is added for 1 hour, and record the correct reason and " +
       "it should appear in the export", () => {
         const movementsCSV = "Terminal,Reason,Time,Staff Change,Made by" + "\n" +
-              "T1,Other start,"+ midnightThisMorning().format("YYYY-MM-DD") + " 00:00,1,\"Unknown\"" + "\n" +
-              "T1,Other end,"+ midnightThisMorning().format("YYYY-MM-DD") + " 01:00,-1,\"Unknown\""
+          "T1,Other start," + midnightThisMorning().format("YYYY-MM-DD") + " 00:00,1,\"Unknown\"" + "\n" +
+          "T1,Other end," + midnightThisMorning().format("YYYY-MM-DD") + " 01:00,-1,\"Unknown\""
         cy
           .asABorderForcePlanningOfficer()
           .navigateHome()
@@ -46,14 +46,15 @@ describe('Staff movements', () => {
           .findAndClick('Staff Movements')
           .checkStaffNumbersOnMovementsTabAre(1)
           .checkUserNameOnMovementsTab(1, "Unknown")
-          .request({
-            method: 'GET',
-            url: '/export/staff-movements/' + midnightTonight.unix() * 1000 + '/T1',
-          })
-          .then((resp) => {
-            expect(resp.body)
-              .to
-              .equal(movementsCSV, "Staff movements Export CSV is wrong.");
+          .get('#export-day-staff-movements')
+          .then((el) => {
+            const href = el.prop('href')
+            cy.request({
+              method: 'GET',
+              url: href,
+            }).then((resp) => {
+              expect(resp.body).to.equal(movementsCSV, "Staff movements Export CSV is wrong.");
+            })
           })
           .removeXMovements(1);
       });

@@ -10,7 +10,7 @@ import akka.pattern._
 import akka.stream.scaladsl.Source
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming
-import drt.auth.{FixedPointsEdit, FixedPointsView, StaffMovementsEdit, StaffEdit, BorderForceStaff, StaffMovementsExport => StaffMovementsExportRole}
+import drt.auth.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -18,7 +18,6 @@ import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
 import services.exports.StaffMovementsExport
-
 import upickle.default.{read, write}
 
 import scala.concurrent.Future
@@ -112,7 +111,7 @@ trait WithStaffing {
 
   def getStaffMovements(maybePointInTime: Option[MillisSinceEpoch]): Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async {
-      val staffMovementsFuture = maybePointInTime match {
+      val eventualStaffMovements = maybePointInTime match {
         case None =>
           ctrl.staffMovementsActor.ask(GetState)
             .map { case StaffMovements(movements) => movements }
@@ -121,28 +120,9 @@ trait WithStaffing {
         case Some(millis) =>
           val date = SDate(millis)
 
-          val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
-          val staffMovementsReadActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
-
-          staffMovementsReadActor.ask(GetState)
-            .map { case StaffMovements(movements) =>
-              staffMovementsReadActor ! PoisonPill
-              movements
-            }
-            .recoverWith {
-              case _ =>
-                staffMovementsReadActor ! PoisonPill
-                Future(Seq())
-            }
+          staffMovementsForDay(date)
       }
-
-      val eventualStaffMovements = staffMovementsFuture.collect {
-        case Nil =>
-          log.debug(s"Got no movements")
-          List()
-        case sm: Seq[StaffMovement] => sm
-      }
-
+      
       eventualStaffMovements.map(sms => Ok(write(sms)))
     }
   }
@@ -152,20 +132,7 @@ trait WithStaffing {
       Action {
         val terminal = Terminal(terminalString)
         val date = SDate(pointInTime)
-        val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
-        val staffMovementsReadActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
-
-        val eventualStaffMovements: Future[Seq[StaffMovement]] = staffMovementsReadActor.ask(GetState)
-          .map {
-            case StaffMovements(movements) =>
-              staffMovementsReadActor ! PoisonPill
-              movements
-          }
-          .recoverWith {
-            case _ =>
-              staffMovementsReadActor ! PoisonPill
-              Future(Seq())
-          }
+        val eventualStaffMovements = staffMovementsForDay(date)
 
         val csvSource: Source[String, NotUsed] = Source
           .fromFuture(eventualStaffMovements
@@ -185,4 +152,21 @@ trait WithStaffing {
       }
     }
 
+  def staffMovementsForDay(date: SDateLike): Future[Seq[StaffMovement]] = {
+    val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
+    val staffMovementsReadActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
+
+    val eventualStaffMovements: Future[Seq[StaffMovement]] = staffMovementsReadActor.ask(GetState)
+      .map {
+        case StaffMovements(movements) =>
+          staffMovementsReadActor ! PoisonPill
+          movements
+      }
+      .recoverWith {
+        case _ =>
+          staffMovementsReadActor ! PoisonPill
+          Future(Seq())
+      }
+    eventualStaffMovements
+  }
 }
