@@ -108,7 +108,7 @@ class TestDrtActor extends Actor {
       val passengersActorProvider: () => ActorRef = tc.maybePassengersActorProps match {
         case Some(props) => () => system.actorOf(props)
         case None => () =>
-          system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays)))
+          system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, tc.now)))
       }
 
       val aggregatedArrivalsActor = tc.maybeAggregatedArrivalsActor match {

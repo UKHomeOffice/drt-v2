@@ -73,12 +73,12 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val journalType: StreamingJournalLike = ProdStreamingJournal
 
   def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
-  
+
   val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)))
   val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val registeredArrivalsActor: ActorRef = system.actorOf(Props(new RegisteredArrivalsActor(oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis)), name = "registered-arrivals-actor")
-  val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(journalType, airportConfig.crunchOffsetMinutes)))
+  val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(journalType, airportConfig.crunchOffsetMinutes)))
 
   val portStateActor: ActorRef
   val shiftsActor: ActorRef
@@ -95,7 +95,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val aclFeed: AclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
 
   val maxDaysToConsider: Int = 14
-  val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays)))
+  val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, now)))
 
   val liveCrunchStateActor: ActorRef
   val forecastCrunchStateActor: ActorRef
