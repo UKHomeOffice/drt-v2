@@ -477,7 +477,7 @@ trait SDateLike {
     addMillis(-1 * remainder.toInt)
   }
 
-  def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
+  def toLocalDateTimeString(): String
 
   def toISODateOnly: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d"
 
@@ -1053,12 +1053,6 @@ object CrunchApi {
 trait Api {
 
   def getShifts(maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments]
-
-  def addStaffMovements(movementsToAdd: Seq[StaffMovement]): Unit
-
-  def removeStaffMovements(movementsToRemove: UUID): Unit
-
-  def getStaffMovements(maybePointInTime: Option[MillisSinceEpoch]): Future[Seq[StaffMovement]]
 
   def getShiftsForMonth(month: MillisSinceEpoch, terminalName: Terminal): Future[ShiftAssignments]
 

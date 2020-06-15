@@ -4,7 +4,7 @@ import java.util.UUID
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.util.Timeout
-import controllers.{ShiftPersistence, StaffMovementsPersistence}
+import controllers.ShiftPersistence
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
@@ -64,8 +64,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
                          )
   extends Api
     with AirportToCountryLike
-    with ShiftPersistence
-    with StaffMovementsPersistence {
+    with ShiftPersistence {
 
   override implicit val timeout: akka.util.Timeout = Timeout(30 seconds)
 
@@ -81,7 +80,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit
 
-  def getKeyCloakUsers() : Future[List[KeyCloakUser]]
+  def getKeyCloakUsers(): Future[List[KeyCloakUser]]
 
   def getKeyCloakGroups(): Future[List[KeyCloakGroup]]
 

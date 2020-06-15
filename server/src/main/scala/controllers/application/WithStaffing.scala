@@ -2,16 +2,22 @@ package controllers.application
 
 import java.util.UUID
 
-import actors.pointInTime.FixedPointsReadActor
-import actors.{GetState, SetFixedPoints, SetShifts}
+import actors._
+import actors.pointInTime.{FixedPointsReadActor, StaffMovementsReadActor}
+import akka.NotUsed
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern._
+import akka.stream.scaladsl.Source
 import controllers.Application
-import drt.auth.{FixedPointsEdit, FixedPointsView, StaffEdit}
+import controllers.application.exports.CsvFileStreaming
+import drt.auth.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
+import services.exports.StaffMovementsExport
 import upickle.default.{read, write}
 
 import scala.concurrent.Future
@@ -46,7 +52,7 @@ trait WithStaffing {
                 Future(FixedPointAssignments.empty)
             }
       }
-      fps.map(fp => Ok(write(fp)))
+      fps.map((fp: FixedPointAssignments) => Ok(write(fp)))
     }
   }
 
@@ -80,4 +86,87 @@ trait WithStaffing {
     }
   }
 
+  def addStaffMovements(): Action[AnyContent] = authByRole(StaffMovementsEdit) {
+    Action {
+      request =>
+        request.body.asText match {
+          case Some(text) =>
+            val movementsToAdd: List[StaffMovement] = read[List[StaffMovement]](text)
+            ctrl.staffMovementsActor ! AddStaffMovements(movementsToAdd)
+            Accepted
+          case None =>
+            BadRequest
+        }
+    }
+  }
+
+
+  def removeStaffMovements(movementsToRemove: UUID): Action[AnyContent] = authByRole(StaffMovementsEdit) {
+    Action {
+
+      ctrl.staffMovementsActor ! RemoveStaffMovements(movementsToRemove)
+      Accepted
+    }
+  }
+
+  def getStaffMovements(maybePointInTime: Option[MillisSinceEpoch]): Action[AnyContent] = authByRole(BorderForceStaff) {
+    Action.async {
+      val eventualStaffMovements = maybePointInTime match {
+        case None =>
+          ctrl.staffMovementsActor.ask(GetState)
+            .map { case StaffMovements(movements) => movements }
+            .recoverWith { case _ => Future(Seq()) }
+
+        case Some(millis) =>
+          val date = SDate(millis)
+
+          staffMovementsForDay(date)
+      }
+      
+      eventualStaffMovements.map(sms => Ok(write(sms)))
+    }
+  }
+
+  def exportStaffMovements(terminalString: String, pointInTime: MillisSinceEpoch): Action[AnyContent] =
+    authByRole(StaffMovementsExportRole) {
+      Action {
+        val terminal = Terminal(terminalString)
+        val date = SDate(pointInTime)
+        val eventualStaffMovements = staffMovementsForDay(date)
+
+        val csvSource: Source[String, NotUsed] = Source
+          .fromFuture(eventualStaffMovements
+            .map(sm => {
+              StaffMovementsExport.toCSVWithHeader(sm, terminal)
+            }))
+
+        CsvFileStreaming.sourceToCsvResponse(
+          csvSource,
+          CsvFileStreaming.makeFileName(
+            "staff-movements",
+            terminal,
+            date,
+            date,
+            portCode
+          ))
+      }
+    }
+
+  def staffMovementsForDay(date: SDateLike): Future[Seq[StaffMovement]] = {
+    val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
+    val staffMovementsReadActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
+
+    val eventualStaffMovements: Future[Seq[StaffMovement]] = staffMovementsReadActor.ask(GetState)
+      .map {
+        case StaffMovements(movements) =>
+          staffMovementsReadActor ! PoisonPill
+          movements
+      }
+      .recoverWith {
+        case _ =>
+          staffMovementsReadActor ! PoisonPill
+          Future(Seq())
+      }
+    eventualStaffMovements
+  }
 }

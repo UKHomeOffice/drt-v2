@@ -25,49 +25,4 @@ trait StaffMovementsPersistence {
   def actorSystem: ActorSystem
 
   def staffMovementsActor: ActorRef
-
-  def addStaffMovements(movementsToAdd: Seq[StaffMovement]): Unit = {
-    actorSystem.log.info(s"Sending StaffMovements to staffMovementsActor")
-    staffMovementsActor ! AddStaffMovements(movementsToAdd)
-  }
-
-  def removeStaffMovements(movementsToRemove: UUID): Unit = {
-    actorSystem.log.info(s"Sending StaffMovements to staffMovementsActor")
-    staffMovementsActor ! RemoveStaffMovements(movementsToRemove)
-  }
-
-  def getStaffMovements(maybePointInTime: Option[MillisSinceEpoch]): Future[Seq[StaffMovement]] = {
-    val staffMovementsFuture = maybePointInTime match {
-      case None =>
-        staffMovementsActor.ask(GetState)
-          .map { case StaffMovements(movements) => movements }
-          .recoverWith { case _ => Future(Seq()) }
-
-      case Some(millis) =>
-        val date = SDate(millis)
-
-        val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
-        val staffMovementsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
-
-        staffMovementsReadActor.ask(GetState)
-          .map { case StaffMovements(movements) =>
-            staffMovementsReadActor ! PoisonPill
-            movements
-          }
-          .recoverWith {
-            case _ =>
-              staffMovementsReadActor ! PoisonPill
-              Future(Seq())
-          }
-    }
-
-    val eventualStaffMovements = staffMovementsFuture.collect {
-      case Nil =>
-        log.debug(s"Got no movements")
-        List()
-      case sm: Seq[StaffMovement] => sm
-    }
-
-    eventualStaffMovements
-  }
 }

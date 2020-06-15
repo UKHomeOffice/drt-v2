@@ -62,6 +62,10 @@ POST          /logging                                             controllers.A
 
 
 POST          /data/staff                                          controllers.Application.saveStaff
+GET           /staff-movements                                     controllers.Application.getStaffMovements(pointInTime: Option[Long])
+GET           /export/staff-movements/:pointInTime/:terminal       controllers.Application.exportStaffMovements(terminal: String, pointInTime: Long)
+POST          /staff-movements                                     controllers.Application.addStaffMovements()
+DELETE        /staff-movements/:uuid                               controllers.Application.removeStaffMovements(uuid: java.util.UUID)
 
 
 # Feed import
