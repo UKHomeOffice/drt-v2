@@ -2,14 +2,14 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
-import drt.auth.{ArrivalSource, LoggedInUser, StaffMovementsExport}
+import drt.auth.{ArrivalSource, LoggedInUser, Role, StaffMovementsExport}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{ExportArrivals, ExportDesks, ExportType, SPACircuit, ViewMode}
+import drt.client.services._
 import drt.shared.Queues.Queue
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
@@ -117,18 +117,30 @@ object TerminalContentComponent {
                   })
               ),
               <.div(^.className := "exports",
-                exportLink(props, terminal, terminalName, ExportArrivals),
-                exportLink(props, terminal, terminalName, ExportDesks),
-                if (props.loggedInUser.hasRole(StaffMovementsExport))
-                  <.a(
-                    "Export Movements",
-                    ^.className := "btn btn-default",
-                    ^.href := SPAMain.absoluteUrl(s"export/staff-movements/${props.terminalPageTab.viewMode.millis}/$terminal?pointInTime=${props.viewMode.millis}"),
-                    ^.target := "_blank",
-                    ^.onClick --> {
-                      Callback(GoogleEventTracker.sendEvent(terminalName, "Export Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
-                    }
-                  ) else EmptyVdom,
+                exportLink(
+                  props.terminalPageTab.dateFromUrlOrNow,
+                  terminalName,
+                  ExportArrivals,
+                  SPAMain.exportViewUrl(ExportArrivals, props.terminalPageTab.viewMode, terminal)
+                ),
+                exportLink(
+                  props.terminalPageTab.dateFromUrlOrNow,
+                  terminalName,
+                  ExportDesks,
+                  SPAMain.exportViewUrl(ExportDesks, props.terminalPageTab.viewMode, terminal)
+                ),
+                displayForRole(
+                  exportLink(
+                    props.terminalPageTab.dateFromUrlOrNow,
+                    terminalName,
+                    ExportStaffMovements,
+                    SPAMain.absoluteUrl(
+                      s"export/staff-movements/${props.terminalPageTab.viewMode.millis}/$terminal?pointInTime=${props.viewMode.millis}"
+                    )
+                  ),
+                  StaffMovementsExport,
+                  props.loggedInUser
+                ),
                 MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
             <.div(^.className := "tab-content",
               <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
@@ -190,18 +202,25 @@ object TerminalContentComponent {
     }
   }
 
-  def exportLink(props: Props,
-                 terminal: Terminals.Terminal,
+  def exportLink(exportDay: SDateLike,
                  terminalName: String,
-                 exportType: ExportType): VdomTagOf[Anchor] =
+                 exportType: ExportType,
+                 exportUrl: String
+                ): VdomTagOf[Anchor] =
     <.a(s"Export $exportType",
       ^.className := "btn btn-default",
-      ^.href := SPAMain.exportViewUrl(exportType, props.terminalPageTab.viewMode, terminal),
+      ^.href := exportUrl,
       ^.target := "_blank",
-      ^.id := s"export-day-$exportType",
+      ^.id := s"export-day-${exportType.toUrlString}",
       ^.onClick --> {
-        Callback(GoogleEventTracker.sendEvent(terminalName, s"Export $exportType", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
+        Callback(GoogleEventTracker.sendEvent(terminalName, s"Export $exportType", exportDay.toISODateOnly))
       })
+
+  def displayForRole(node: VdomNode, role: Role, loggedInUser: LoggedInUser) =
+    if (loggedInUser.hasRole(role))
+      node
+    else
+      EmptyVdom
 
   def timeRange(props: Props): CustomWindow = {
     TimeRangeHours(

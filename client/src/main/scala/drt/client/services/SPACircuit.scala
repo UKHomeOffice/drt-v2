@@ -12,7 +12,6 @@ import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
-import org.scalajs.dom.raw.FormData
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
@@ -64,14 +63,26 @@ case class ViewDay(time: SDateLike) extends ViewMode {
   override def isHistoric(now: SDateLike): Boolean = time.isHistoricDate(now)
 }
 
-sealed trait ExportType
+sealed trait ExportType {
+  def toUrlString: String
+}
 
 object ExportDesks extends ExportType {
-  override def toString = "desks"
+  override def toString = "Desks"
+
+  override def toUrlString: String = toString.toLowerCase
 }
 
 object ExportArrivals extends ExportType {
-  override def toString = "arrivals"
+  override def toString = "Arrivals"
+
+  override def toUrlString: String = toString.toLowerCase
+}
+
+object ExportStaffMovements extends ExportType {
+  override def toString = "Movements"
+
+  override def toUrlString: String = "staff-movements"
 }
 
 case class LoadingState(isLoading: Boolean = false)
@@ -104,7 +115,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      displayAlertDialog: Pot[Boolean] = Empty,
                      oohStatus: Pot[OutOfHoursStatus] = Empty,
                      featureFlags: Pot[Map[String, Boolean]] = Empty,
-                     fileUploadState:Pot[FileUploadState] = Empty
+                     fileUploadState: Pot[FileUploadState] = Empty
                     )
 
 object PollDelay {

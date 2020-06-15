@@ -87,7 +87,7 @@ class StaffMovementsExportSpec extends Specification {
          |T1,test,2020-07-07 13:00,2,test@test.com
          |T1,test,2020-07-07 14:00,-2,test@test.com""".stripMargin
 
-    val result = StaffMovementsExport.toCSV(movements, Terminal("T1"))
+    val result = StaffMovementsExport.toCSVWithHeader(movements, Terminal("T1"))
 
     result === expected
   }
