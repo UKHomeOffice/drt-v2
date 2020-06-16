@@ -39,7 +39,7 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
   val log: Logger = LoggerFactory.getLogger(getClass)
   implicit val ex: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
-  implicit val timeout: Timeout = new Timeout(15 seconds)
+  implicit val timeout: Timeout = new Timeout(30 seconds)
   val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 10 seconds, self, PurgeExpired)
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
 

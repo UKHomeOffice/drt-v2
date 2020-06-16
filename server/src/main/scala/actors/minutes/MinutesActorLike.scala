@@ -3,6 +3,7 @@ package actors.minutes
 import actors.PointInTimeQuery
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
+import akka.NotUsed
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
@@ -44,13 +45,13 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
-      handleAllTerminalLookups(startMillis, endMillis, Option(pit)).pipeTo(sender())
+      handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).pipeTo(sender())
 
-    case PointInTimeQuery(pit, GetStateForTerminalDateRange(startMillis, endMillis, terminal))=>
+    case PointInTimeQuery(pit, GetStateForTerminalDateRange(startMillis, endMillis, terminal)) =>
       handleLookups(terminal, SDate(startMillis), SDate(endMillis), Option(pit)).pipeTo(sender())
 
     case GetStateForDateRange(startMillis, endMillis) =>
-      handleAllTerminalLookups(startMillis, endMillis, None).pipeTo(sender())
+      handleAllTerminalLookupsStream(startMillis, endMillis, None).pipeTo(sender())
 
     case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
       handleLookups(terminal, SDate(startMillis), SDate(endMillis), None).pipeTo(sender())
@@ -62,11 +63,12 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
     case u => log.warn(s"Got an unexpected message: $u")
   }
 
-  def handleAllTerminalLookups(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, maybePit: Option[MillisSinceEpoch]): Future[MinutesContainer[A, B]] = {
-    val eventualMinutesForAllTerminals = terminals.map { terminal =>
-      handleLookups(terminal, SDate(startMillis), SDate(endMillis), maybePit)
-    }
-    combineEventualMinutesContainers(eventualMinutesForAllTerminals)
+  def handleAllTerminalLookupsStream(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, maybePit: Option[MillisSinceEpoch]): Future[MinutesContainer[A, B]] = {
+    val eventualMinutesForAllTerminals = Source(terminals.toList)
+      .mapAsync(1) { terminal =>
+        handleLookups(terminal, SDate(startMillis), SDate(endMillis), maybePit)
+      }
+    combineEventualMinutesContainersStream(eventualMinutesForAllTerminals)
   }
 
   def handleUpdatesAndAck(container: MinutesContainer[A, B],
@@ -125,26 +127,30 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
     }
 
   def updateByTerminalDayAndGetDiff(container: MinutesContainer[A, B]): Future[Option[MinutesContainer[A, B]]] = {
-    val eventualUpdatedMinutesDiff = groupByTerminalAndDay(container)
-      .map {
-        case ((terminal, day), terminalDayMinutes) => handleUpdateAndGetDiff(terminal, day, terminalDayMinutes)
-      }
-    combineEventualMinutesContainers(eventualUpdatedMinutesDiff).map(Option(_))
+    val eventualUpdatedMinutesDiff = Source(groupByTerminalAndDay(container)).mapAsync(1) {
+      case ((terminal, day), terminalDayMinutes) => handleUpdateAndGetDiff(terminal, day, terminalDayMinutes)
+    }
+    combineEventualMinutesContainersStream(eventualUpdatedMinutesDiff).map(Option(_))
   }
 
   def groupByTerminalAndDay(container: MinutesContainer[A, B]): Map[(Terminal, SDateLike), Iterable[MinuteLike[A, B]]] =
     container.minutes
       .groupBy(simMin => (simMin.terminal, SDate(simMin.minute).getUtcLastMidnight))
 
-  private def combineEventualMinutesContainers(eventualUpdatedMinutesDiff: Iterable[Future[MinutesContainer[A, B]]]): Future[MinutesContainer[A, B]] =
-    Future
-      .sequence(eventualUpdatedMinutesDiff)
-      .map(_.foldLeft(MinutesContainer.empty[A, B])(_ ++ _))
+  private def combineEventualMinutesContainersStream(eventualUpdatedMinutesDiff: Source[MinutesContainer[A, B], NotUsed]): Future[MinutesContainer[A, B]] = {
+    eventualUpdatedMinutesDiff
+      .fold(MinutesContainer.empty[A, B])(_ ++ _)
+      .runWith(Sink.seq)
+      .map {
+        case containers if containers.nonEmpty => containers.reduce(_ ++ _)
+        case _ => MinutesContainer.empty[A, B]
+      }
       .recoverWith {
         case t =>
           log.error("Failed to combine containers", t)
           Future(MinutesContainer.empty[A, B])
       }
+  }
 
   def handleUpdateAndGetDiff(terminal: Terminal,
                              day: SDateLike,
