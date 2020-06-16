@@ -41,7 +41,7 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = new Timeout(30 seconds)
   val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 10 seconds, self, PurgeExpired)
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
+  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))//, "updates-supervisor-kill-actor")
 
   var streamingUpdateActors: Map[(Terminal, MillisSinceEpoch), ActorRef] = Map[(Terminal, MillisSinceEpoch), ActorRef]()
   var lastRequests: Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch] = Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch]()

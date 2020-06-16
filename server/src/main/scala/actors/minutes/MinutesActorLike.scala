@@ -2,7 +2,7 @@ package actors.minutes
 
 import actors.PointInTimeQuery
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
+import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef}
 import akka.pattern.pipe
@@ -23,6 +23,9 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 object MinutesActorLike {
   type MinutesLookup[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, Option[MillisSinceEpoch]) => Future[Option[MinutesContainer[A, B]]]
   type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A, B]]
+
+  case object ProcessNextUpdateRequest
+
 }
 
 abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
@@ -34,6 +37,9 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  var updateRequestsQueue: List[(ActorRef, MinutesContainer[A, B])] = List()
+  var processingRequest: Boolean = false
 
   def isHistoric(date: SDateLike): Boolean = MilliTimes.isHistoric(now, date)
 
@@ -57,8 +63,17 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
       handleLookups(terminal, SDate(startMillis), SDate(endMillis), None).pipeTo(sender())
 
     case container: MinutesContainer[A, B] =>
-      val replyTo = sender()
-      handleUpdatesAndAck(container, replyTo)
+      updateRequestsQueue = (sender(), container) :: updateRequestsQueue
+      self ! ProcessNextUpdateRequest
+
+    case ProcessNextUpdateRequest =>
+      if (!processingRequest) {
+        updateRequestsQueue match {
+          case (replyTo, container) :: tail =>
+            handleUpdatesAndAck(container, replyTo)
+            updateRequestsQueue = tail
+        }
+      }
 
     case u => log.warn(s"Got an unexpected message: $u")
   }
@@ -73,8 +88,13 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
 
   def handleUpdatesAndAck(container: MinutesContainer[A, B],
                           replyTo: ActorRef): Future[Option[MinutesContainer[A, B]]] = {
+    processingRequest = true
     val eventualUpdatesDiff = updateByTerminalDayAndGetDiff(container)
-    eventualUpdatesDiff.onComplete(_ => replyTo ! Ack)
+    eventualUpdatesDiff.onComplete { _ =>
+      processingRequest = false
+      replyTo ! Ack
+      self ! ProcessNextUpdateRequest
+    }
     eventualUpdatesDiff
   }
 

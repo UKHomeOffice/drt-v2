@@ -51,7 +51,7 @@ class PortStateActor(liveCrunchStateProps: Props,
 
   val state: PortStateMutable = PortStateMutable.empty
 
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
+  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))//, "port-state-kill-actor")
 
   var maybeCrunchQueueActor: Option[ActorRef] = None
   var crunchSourceIsReady: Boolean = true

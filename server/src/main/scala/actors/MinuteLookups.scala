@@ -25,7 +25,7 @@ trait MinuteLookupsLike {
   val now: () => SDateLike
   val expireAfterMillis: Int
   val queuesByTerminal: Map[Terminal, Seq[Queue]]
-  val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()))
+  val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()))//, "minutes-lookup-kill-actor")
 
   val updateCrunchMinutes: (Terminal, SDateLike, MinutesContainer[CrunchMinute, TQM]) => Future[MinutesContainer[CrunchMinute, TQM]] = (terminal: Terminal, date: SDateLike, container: MinutesContainer[CrunchMinute, TQM]) => {
     val actor = system.actorOf(TerminalDayQueuesActor.props(terminal, date, now))

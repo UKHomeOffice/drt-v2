@@ -66,7 +66,7 @@ class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int, queues
   var maybeCrunchQueueActor: Option[ActorRef] = None
 
   implicit val timeout: Timeout = new Timeout(30 seconds)
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
+  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))//, "flights-state-kill-actor")
 
   def initialState: FlightsWithSplits = FlightsWithSplits.empty
 
