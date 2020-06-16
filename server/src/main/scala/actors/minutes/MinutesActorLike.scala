@@ -72,6 +72,8 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
           case (replyTo, container) :: tail =>
             handleUpdatesAndAck(container, replyTo)
             updateRequestsQueue = tail
+          case Nil =>
+            log.debug("Update requests queue is empty. Nothing to do")
         }
       }
 
