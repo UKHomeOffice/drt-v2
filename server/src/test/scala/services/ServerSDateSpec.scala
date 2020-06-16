@@ -164,4 +164,23 @@ class ServerSDateSpec extends Specification {
       expected === result
     }
   }
+
+  "When asking for toLocalDateTimeString" >> {
+    val gmtDate = SDate("2020-01-01T00:00Z")
+    val expectedGMT = "2020-01-01 00:00"
+
+    s"Given a gmt time ${gmtDate.toISOString()} then I should expect $expectedGMT" >> {
+      val result = gmtDate.toLocalDateTimeString()
+
+      result === expectedGMT
+    }
+
+    val bstDate = SDate("2020-06-01T00:00Z")
+    val expectedBST = "2020-06-01 01:00"
+    s"Given a BST time ${bstDate.toISOString()} then I should expect $expectedBST" >> {
+      val result = bstDate.toLocalDateTimeString()
+
+      result === expectedBST
+    }
+  }
 }

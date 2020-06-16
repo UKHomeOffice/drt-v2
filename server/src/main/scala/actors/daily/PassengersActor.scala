@@ -2,7 +2,7 @@ package actors.daily
 
 import akka.actor.ActorRef
 import akka.persistence._
-import drt.shared.PortCode
+import drt.shared.{PortCode, SDateLike}
 import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, PaxCountMessage}
@@ -18,7 +18,14 @@ case object ClearState
 
 case class GetAverageAdjustment(originAndTerminal: OriginAndTerminal, numberOfDays: Int)
 
-class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int) extends PersistentActor {
+object PassengersActor {
+  def relevantPaxCounts(numDaysInAverage: Int, now: () => SDateLike)(paxCountMessages: Seq[PaxCountMessage]): Seq[PaxCountMessage] = {
+    val cutoff = now().getLocalLastMidnight.addDays(-1 * numDaysInAverage).millisSinceEpoch
+    paxCountMessages.filter(msg => msg.getDay >= cutoff)
+  }
+}
+
+class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, now: () => SDateLike) extends PersistentActor {
   override val persistenceId = s"daily-pax"
 
   val log: Logger = LoggerFactory.getLogger(persistenceId)
@@ -28,13 +35,14 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int) extends Per
 
   log.info(s"Using $numDaysInAverage days to calculate the average difference in pax")
 
+  import PassengersActor._
+
+  val filterRelevantPaxCounts: Seq[PaxCountMessage] => Seq[PaxCountMessage] = relevantPaxCounts(numDaysInAverage, now)
+
   override def receiveRecover: Receive = {
-    case OriginTerminalPaxCountsMessage(Some(origin), Some(terminal), countMessages) =>
-      log.debug(s"Got a OriginTerminalPaxCountsMessage with ${countMessages.size} counts. Applying")
-      val updatesForOriginTerminal = messagesToUpdates(countMessages)
-      val originAndTerminal = OriginAndTerminal(PortCode(origin), Terminal(terminal))
-      val updatedOriginTerminal = originTerminalPaxNosState.getOrElse(originAndTerminal, Map()) ++ updatesForOriginTerminal
-      originTerminalPaxNosState = originTerminalPaxNosState.updated(originAndTerminal, updatedOriginTerminal)
+    case OriginTerminalPaxCountsMessage(Some(origin), Some(terminal), allPaxCountMessages) =>
+      val relevantPaxCounts = filterRelevantPaxCounts(allPaxCountMessages)
+      applyPaxCounts(origin, terminal, relevantPaxCounts)
 
     case _: OriginTerminalPaxCountsMessage =>
       log.warn(s"Ignoring OriginTerminalPaxCountsMessage with missing origin and/or terminal")
@@ -46,6 +54,15 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int) extends Per
     case u =>
       log.info(s"Got unexpected recovery msg: $u")
   }
+
+  def applyPaxCounts(origin: String, terminal: String, relevantPaxCounts: Seq[PaxCountMessage]): Unit =
+    if (relevantPaxCounts.nonEmpty) {
+      log.debug(s"Got a OriginTerminalPaxCountsMessage with ${relevantPaxCounts.size} counts. Applying")
+      val updatesForOriginTerminal = messagesToUpdates(relevantPaxCounts)
+      val originAndTerminal = OriginAndTerminal(PortCode(origin), Terminal(terminal))
+      val updatedOriginTerminal = originTerminalPaxNosState.getOrElse(originAndTerminal, Map()) ++ updatesForOriginTerminal
+      originTerminalPaxNosState = originTerminalPaxNosState.updated(originAndTerminal, updatedOriginTerminal)
+    }
 
   private def setPortAverage(state: Map[OriginAndTerminal, Map[(Long, Long), Int]]): Unit = {
     val portAverageDeltas = state.values

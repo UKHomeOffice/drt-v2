@@ -56,7 +56,7 @@ trait WithPortState {
         .map { updates => Ok(write(updates)) }
         .recoverWith {
           case t =>
-            log.error("Error processing request for port state", t)
+            log.error(t, "Error processing request for port state")
             Future(InternalServerError)
         }
     }

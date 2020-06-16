@@ -71,7 +71,7 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
     aggregatedArrivalsActor,
     testManifestsActor,
     testArrivalActor
-    )
+  )
 
   val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
 
