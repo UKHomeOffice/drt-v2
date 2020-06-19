@@ -115,7 +115,7 @@ object Exports {
         }
     }
 
-  private def queueSummaries(queues: Seq[Queue],
+  def queueSummaries(queues: Seq[Queue],
                              summaryLengthMinutes: Int,
                              minutes: NumericRange[MillisSinceEpoch],
                              crunchMinutes: immutable.SortedMap[TQM, CrunchApi.CrunchMinute],
