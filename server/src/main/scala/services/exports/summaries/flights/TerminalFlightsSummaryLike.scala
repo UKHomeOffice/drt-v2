@@ -40,7 +40,7 @@ trait TerminalFlightsSummaryLike extends TerminalSummaryLike {
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))
 
   def flightWithSplitsToCsvRow(queueNames: Seq[Queue], fws: ApiFlightWithSplits): List[String] = {
-    val splitsForSources = splitSources.flatMap(ss => queueSplits(queueNames, fws, ss))
+    val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
     TerminalFlightsSummary.arrivalAsRawCsvValues(fws.apiFlight, millisToDateOnly, millisToHoursAndMinutes) ++
       List(pcpPaxFn(fws.apiFlight).toString) ++ splitsForSources
   }
