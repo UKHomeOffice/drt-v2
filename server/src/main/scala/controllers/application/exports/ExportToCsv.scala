@@ -23,8 +23,6 @@ trait ExportToCsv {
 
   import CsvFileStreaming._
 
-  implicit val timeout: Timeout = new Timeout(5 seconds)
-
   def exportToCsv(start: SDateLike,
                   end: SDateLike,
                   description: String,

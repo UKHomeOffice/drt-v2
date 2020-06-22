@@ -176,6 +176,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   implicit val mat: ActorMaterializer = DrtActorSystem.mat
   implicit val ec: ExecutionContext = DrtActorSystem.ec
 
+  implicit val timeout: Timeout = new Timeout(30 seconds)
+
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
   val ctrl: DrtSystemInterface = DrtActorSystem.drtSystem
