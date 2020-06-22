@@ -1,13 +1,21 @@
 package services.imports
 
-import drt.shared.CrunchApi.MillisSinceEpoch
+import actors.GetState
+import actors.acking.AckingReceiver.{Ack, StreamInitialized}
+import akka.actor.{Actor, ActorLogging, ActorRef}
+import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, Transit, VisaNational}
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.{ApiFlightWithSplits, ApiPaxTypeAndQueueCount, ArrivalStatus, EventTypes, LiveFeedSource, PortCode, Queues, Splits}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import services.SDate
+import services.crunch.deskrecs.GetFlights
+import akka.pattern.pipe
 
+import scala.concurrent.{ExecutionContextExecutor, Promise}
+import scala.util.Try
 
 object ArrivalImporter {
 
@@ -100,4 +108,28 @@ object ArrivalImporter {
 
   def dateTimeStringToMillis(date: String)(time: String): MillisSinceEpoch =
     SDate(date + "T" + time).millisSinceEpoch
+}
+
+class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor with ActorLogging {
+  implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
+
+  var promisedResult = Promise[DeskRecMinutes]
+
+  override def receive: Receive = {
+    case GetFlights(_, _) =>
+      sender() ! fws
+
+    case GetState =>
+      val replyTo = sender()
+      promisedResult.future.pipeTo(replyTo)
+
+    case m: DeskRecMinutes =>
+      promisedResult.complete(Try(m))
+
+    case StreamInitialized =>
+      sender() ! Ack
+
+    case unexpected =>
+      log.warning(s"Got and unexpected message $unexpected")
+  }
 }

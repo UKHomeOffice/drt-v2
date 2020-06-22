@@ -1,12 +1,12 @@
 package scenarios
 
 import actors.GetState
-import actors.acking.AckingReceiver.{Ack, StreamInitialized}
-import akka.actor.{Actor, Props}
+import akka.actor.Props
+import akka.pattern.ask
 import akka.stream.UniqueKillSwitch
 import akka.stream.scaladsl.SourceQueueWithComplete
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
@@ -16,15 +16,12 @@ import drt.shared.airportconfig.Lhr
 import drt.shared.api.Arrival
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.PortDeskLimits
-import services.crunch.deskrecs.{DesksAndWaitsPortProvider, GetFlights, RunnableDeskRecs}
+import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.exports.Exports
 import services.exports.summaries.flights.TerminalFlightsWithActualApiSummary
-import services.exports.summaries.queues.TerminalQueuesSummary
-import services.imports.ArrivalImporter
+import services.imports.{ArrivalCrunchSimulationActor, ArrivalImporter}
 import services.{Optimiser, SDate}
-import akka.pattern.ask
 
-import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -113,24 +110,6 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
     result === expected
   }
 
-  class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor {
-    var minutes: Option[DeskRecMinutes] = None
-
-    override def receive: Receive = {
-      case GetFlights(_, _) => sender() ! fws
-        println(fws)
-      case m: DeskRecMinutes =>
-        minutes = Option(m)
-      case GetState =>
-        sender() ! minutes
-      case StreamInitialized =>
-        sender() ! Ack
-      case unexpected =>
-        println(unexpected)
-    }
-
-  }
-
   "Given a csv of arrivals for a day then I should get a desks and queues export for that day" >> {
 
     val flightsWithSplits = ArrivalImporter(csv, terminal)
@@ -145,6 +124,7 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
       slaByQueue = Lhr.config.slaByQueue.mapValues(_ => 15)
     )
     val fws = FlightsWithSplits(flightsWithSplits.map(f => f.unique -> f).toMap)
+
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(fws)))
     val dawp = DesksAndWaitsPortProvider(lhrHalved, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi)
 
@@ -153,24 +133,15 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
     val date = SDate("2020-06-17T05:30:00Z")
     runnableDeskRecs.offer(date.millisSinceEpoch)
 
-    val queues = lhrHalved.queuesByTerminal(terminal)
-    val minutes = date.getLocalLastMidnight.millisSinceEpoch to date.getLocalNextMidnight.millisSinceEpoch by 15 * MilliTimes.oneMinuteMillis
-    Thread.sleep(2000L)
-    val futureDeskRecsOption: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
-      case Some(dr: DeskRecMinutes) => dr
-      case _ => DeskRecMinutes(Seq())
+    val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
+      case drm :DeskRecMinutes => drm
     }
-    val crunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ Await.result(futureDeskRecsOption, 5 seconds)
-      .minutes
-      .map(dr => dr.key -> dr.toMinute).toMap
 
-    val desks = TerminalQueuesSummary(queues, Exports.queueSummaries(queues, 15, minutes, crunchMinutes, SortedMap())).toCsvWithHeader
+    val deskRecMinutes = Await.result(futureDeskRecMinutes, 5 seconds)
 
-    println(desks)
+    val totalPax = deskRecMinutes.minutes.map(_.paxLoad).sum
 
-    
-    true
+    totalPax === 14.0
   }
-
 
 }

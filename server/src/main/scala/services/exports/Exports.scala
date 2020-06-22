@@ -1,11 +1,11 @@
 package services.exports
 
-import actors.{GetFlightsForTerminal, GetPortStateForTerminal, DateRangeLike}
+import actors.{DateRangeLike, GetFlightsForTerminal, GetPortStateForTerminal}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
-import akka.util.Timeout
+import akka.util.{ByteString, Timeout}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
@@ -13,6 +13,8 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import play.api.http.HttpEntity
+import play.api.mvc.{ResponseHeader, Result}
 import services.SDate
 import services.exports.summaries.flights.TerminalFlightsSummary
 import services.exports.summaries.flights.TerminalFlightsSummaryLike.TerminalFlightsSummaryLikeGenerator
@@ -163,4 +165,8 @@ object Exports {
         })
     }
     .flatten
+
+  def csvFileResult(fileName: String, data: String): Result = Result(
+    ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
+    HttpEntity.Strict(ByteString(data), Option("application/csv")))
 }
