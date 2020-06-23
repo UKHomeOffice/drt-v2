@@ -193,9 +193,10 @@ class PortStateActor(liveStateActor: ActorRef,
         Future
           .sequence(Seq(
             askAndLogOnFailure(liveStateActor, live, "live crunch persistence request failed"),
-            askAndLogOnFailure(forecastStateActor, forecast, "forecast crunch persistence request failed"))
-                    )
-          .recover { case t => log.error("A future failed", t) }
+            askAndLogOnFailure(forecastStateActor, forecast, "forecast crunch persistence request failed")))
+          .recover { case t =>
+            log.error("A future failed on requesting persistence", t)
+          }
           .onComplete { _ =>
             log.debug(s"Sending Ack")
             replyTo ! Ack
@@ -243,7 +244,7 @@ class PortStateActor(liveStateActor: ActorRef,
   private def askAndLogOnFailure[A](actor: ActorRef, question: Any, msg: String): Future[Any] = actor
     .ask(question)
     .recover {
-      case t => log.error(msg, t)
+      case t => throw new Exception(msg, t)
     }
 
   private def crunchMinutesToLoads(diff: PortStateDiff): Iterable[(TQM, LoadMinute)] = diff.crunchMinuteUpdates.map {
