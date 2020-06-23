@@ -33,6 +33,8 @@ object MainMenu {
 
   def forecastUploadFile(position: Int): MenuItem = MenuItem(position, _ => "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
 
+  def simulateArrivalsItem(position: Int): MenuItem = MenuItem(position, _ => "Simulate Arrivals", Icon.fighterJet, SimulateArrivalsLoc)
+
   def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
     val rag = if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Red)) Red
     else if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Amber)) Amber
@@ -44,7 +46,7 @@ object MainMenu {
 
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedSourceStatuses]): List[MenuItem] = {
 
-    def addFileUpload: List[(Role, Int => MenuItem)] = if (List(PortCode("LHR"), PortCode("TEST")) contains airportConfig.portCode) List((PortFeedUpload, forecastUploadFile _)) else List.empty
+    def addFileUpload: List[(Role, Int => MenuItem)] = if (List(PortCode("LHR"), PortCode("TEST")) contains airportConfig.portCode) List((ArrivalSimulationUpload, forecastUploadFile _)) else List.empty
 
     def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = airportConfig.terminals.map { tn =>
       val terminalName = tn.toString
@@ -64,7 +66,7 @@ object MainMenu {
     val restrictedMenuItems: List[(Role, Int => MenuItem)] = List(
       (ManageUsers, usersMenuItem _),
       (CreateAlerts, alertsMenuItem _),
-    ) ++ addFileUpload ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem))
+    ) ++ addFileUpload ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem)) :+ ((PortFeedUpload, simulateArrivalsItem _))
 
     val nonTerminalUnrestrictedMenuItems = dashboardMenuItem :: Nil
 

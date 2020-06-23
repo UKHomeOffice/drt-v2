@@ -37,15 +37,17 @@ case class TerminalFlightsWithActualApiSummary(flights: Seq[ApiFlightWithSplits]
 
 object TerminalFlightsWithActualApiSummary {
   def actualApiHeadingsForFlights(flights: Seq[ApiFlightWithSplits]): Seq[String] = Seq(
-      "API Actual - B5JSSK to Desk",
-      "API Actual - B5JSSK to eGates",
-      "API Actual - EEA (Machine Readable)",
-      "API Actual - EEA (Non Machine Readable)",
-      "API Actual - Non EEA (Non Visa)",
-      "API Actual - Non EEA (Visa)",
-      "API Actual - Transfer",
-      "API Actual - eGates"
-    )
+    "API Actual - B5JSSK to Desk",
+    "API Actual - B5JSSK to eGates",
+    "API Actual - EEA (Machine Readable)",
+    "API Actual - EEA (Non Machine Readable)",
+    "API Actual - Fast Track (Non Visa)",
+    "API Actual - Fast Track (Visa)",
+    "API Actual - Non EEA (Non Visa)",
+    "API Actual - Non EEA (Visa)",
+    "API Actual - Transfer",
+    "API Actual - eGates"
+  )
 
   def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
     headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
