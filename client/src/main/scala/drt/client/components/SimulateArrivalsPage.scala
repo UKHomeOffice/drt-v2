@@ -3,10 +3,10 @@ package drt.client.components
 import drt.client.SPAMain
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
+import drt.shared.Terminals.Terminal
 import drt.shared.{PaxTypes, Queues}
-import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent, _}
+import japgolly.scalajs.react.{Callback, ScalaComponent, _}
 
 
 object SimulateArrivalsPage {
@@ -15,7 +15,7 @@ object SimulateArrivalsPage {
 
   case class Props()
 
-  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalSimulations")
+  val component = ScalaComponent.builder[Props]("ArrivalSimulations")
     .initialState(State(None))
     .renderS { (scope, state) =>
 
@@ -31,11 +31,6 @@ object SimulateArrivalsPage {
               ^.method := "post",
               ^.encType := "multipart/form-data",
               <.div(
-                ^.className := "form-group row col-sm-10",
-                <.label(^.htmlFor := "arrivals-file", "Arrivals File", ^.className := "col-sm-3"),
-                <.input(^.tpe := "file", ^.name := "arrivals-file", ^.id := "arrivals-file", ^.required := true)
-              ),
-              <.div(
                 ^.className := "form-group row  col-sm-10",
                 <.label(^.className := "col-sm-3", ^.htmlFor := "terminal", "Terminal"),
                 <.select(
@@ -44,15 +39,18 @@ object SimulateArrivalsPage {
                   <.option(),
                   airportConfig.terminals.map(t => <.option(^.value := t.toString, t.toString)).toTagMod,
                   ^.onChange ==> ((e: ReactEventFromInput) => {
-
                     val newState = if (e.target.value != "")
                       State(Option(e.target.value))
                     else
                       State(None)
-
                     scope.setState(newState)
                   })
                 )
+              ),
+              <.div(
+                ^.className := "form-group row col-sm-10",
+                <.label(^.htmlFor := "arrivals-file", "Arrivals File", ^.className := "col-sm-3"),
+                <.input(^.tpe := "file", ^.name := "arrivals-file", ^.id := "arrivals-file", ^.required := true)
               ),
               <.div(
                 ^.className := "form-group row  col-sm-10",
@@ -75,6 +73,25 @@ object SimulateArrivalsPage {
 
                   }.toTagMod
                 )),
+              state.terminalString.map(ts =>
+                <.div(
+                  ^.className := "form-group row col-sm-10",
+                  <.legend(^.className := "pt-0", "Desks / Banks"),
+                  <.div(^.className := "",
+                    airportConfig.minMaxDesksByTerminalQueue24Hrs(Terminal(ts)).map {
+                      case (q, (_, max)) =>
+                        <.div(
+                          ^.className := "form-check",
+                          <.label(
+                            ^.className := "col-sm-3",
+                            s"${Queues.queueDisplayNames(q)}"
+                          ),
+                          <.input(^.tpe := "number", ^.name := s"${q}_max", ^.defaultValue := max.max)
+                        )
+                    }.toTagMod
+                  ))
+              ).getOrElse(EmptyVdom),
+
               <.div(^.className := "form-group row col-sm-10",
                 <.button(^.tpe := "Submit", ^.className := "btn btn-primary", "Submit"))
             )

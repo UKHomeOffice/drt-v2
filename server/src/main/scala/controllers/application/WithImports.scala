@@ -1,5 +1,6 @@
 package controllers.application
 
+import java.io
 import java.nio.file.Paths
 import java.util.UUID
 
@@ -69,6 +70,12 @@ trait WithImports {
               .flatMap(_.headOption)
               .getOrElse("1.0").toDouble
 
+            val terminalString = request.body.dataParts.get("terminal")
+              .flatMap(_.headOption)
+              .getOrElse(airportConfig.terminals.head.toString)
+
+            val terminal = Terminal(terminalString)
+
             val processingTimes: Map[PaxTypeAndQueue, Double] = airportConfig.terminalProcessingTimes.head._2.map {
               case (ptq, defaultValue) =>
                 ptq -> request.body.dataParts.get(ptq.key).flatMap(_.headOption)
@@ -76,17 +83,17 @@ trait WithImports {
                   .getOrElse(defaultValue)
             }
 
-            val (terminal: Terminal, date: SDateLike) = arrivalsFileToTerminalAndDate(arrivalsFile)
-
+            val openDesks: Map[Queues.Queue, (List[Int], List[Int])] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
+              case (q, (_, maxDesks)) =>
+                val desks: Option[Int] = request.body.dataParts.get(s"${q}_max").flatMap(_.headOption).map(_.toInt)
+                val newDesks = maxDesks.map(d => desks.getOrElse(d))
+                q -> (newDesks, newDesks)
+            }
+            val (_, date: SDateLike) = arrivalsFileToTerminalAndDate(arrivalsFile)
             val flightsWithSplits: Array[ApiFlightWithSplits] = flightsWithSplitsFromPost(arrivalsFile, terminal, passengerWeighting)
 
             val lhrHalved = airportConfig.copy(
-              minMaxDesksByTerminalQueue24Hrs = airportConfig.minMaxDesksByTerminalQueue24Hrs.mapValues(_.map {
-                case (q, (_, max)) if q != Queues.EGate =>
-                  val openDesks = max.map(x => x / 2)
-                  q -> (openDesks, openDesks)
-                case (q, (_, max)) => q -> (max, max)
-              }),
+              minMaxDesksByTerminalQueue24Hrs = airportConfig.minMaxDesksByTerminalQueue24Hrs + (terminal -> openDesks),
               eGateBankSize = 5,
               slaByQueue = airportConfig.slaByQueue.mapValues(_ => 15),
               crunchOffsetMinutes = 0,
