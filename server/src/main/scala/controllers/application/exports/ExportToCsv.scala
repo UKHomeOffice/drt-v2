@@ -12,6 +12,7 @@ import play.api.mvc.{ResponseHeader, Result}
 import services.SDate
 import services.exports.Exports
 import services.exports.summaries.TerminalSummaryLike
+import services.graphstages.Crunch
 import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.concurrent.Future
@@ -78,12 +79,14 @@ object CsvFileStreaming {
                    startPit: SDateLike,
                    endPit: SDateLike,
                    portCode: PortCode): String = {
-    val endDate = if (startPit != endPit)
-      f"-to-${endPit.getFullYear()}-${endPit.getMonth()}%02d-${endPit.getDate()}%02d"
+    val startLocal = SDate(startPit, Crunch.europeLondonTimeZone)
+    val endLocal = SDate(endPit, Crunch.europeLondonTimeZone)
+    val endDate = if (startLocal.daysBetweenInclusive(endLocal) > 1)
+      f"-to-${endLocal.getFullYear()}-${endLocal.getMonth()}%02d-${endLocal.getDate()}%02d"
     else ""
 
     f"$portCode-$terminalName-$subject-" +
-      f"${startPit.getFullYear()}-${startPit.getMonth()}%02d-${startPit.getDate()}%02d" + endDate
+      f"${startLocal.getFullYear()}-${startLocal.getMonth()}%02d-${startLocal.getDate()}%02d" + endDate
   }
 
 }
