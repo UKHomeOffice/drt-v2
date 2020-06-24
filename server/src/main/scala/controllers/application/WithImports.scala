@@ -11,13 +11,13 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.util.Timeout
 import api.ApiResponseBody
 import controllers.Application
+import controllers.application.exports.CsvFileStreaming
 import drt.auth.{ArrivalSimulationUpload, PortFeedUpload}
 import drt.server.feeds.lhr.forecast.LHRForecastCSVExtractor
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.airportconfig.Lhr
 import drt.shared.api.Arrival
 import play.api.libs.Files
 import play.api.libs.json.Json._
@@ -57,63 +57,82 @@ trait WithImports {
     }
   }
 
-  def simulationImport(): Action[MultipartFormData[Files.TemporaryFile]] = authByRole(ArrivalSimulationUpload) { Action.async(parse.multipartFormData) {
-    request: Request[MultipartFormData[Files.TemporaryFile]] =>
-      implicit val timeout = new Timeout(2 minutes)
-      val filePath = s"/tmp/${UUID.randomUUID().toString}"
+  def simulationImport(): Action[MultipartFormData[Files.TemporaryFile]] = authByRole(ArrivalSimulationUpload) {
+    Action.async(parse.multipartFormData) {
+      request: Request[MultipartFormData[Files.TemporaryFile]] =>
+        implicit val timeout = new Timeout(2 minutes)
 
-      val eventualResult: Future[Result] = request.body.file("arrivals-file") match {
-        case Some(arrivalsFile) =>
+        val eventualResult: Future[Result] = request.body.file("arrivals-file") match {
+          case Some(arrivalsFile) =>
 
-          val passengerWeighting = request.body.dataParts.get("passenger-weighting")
-            .flatMap(_.headOption)
-            .getOrElse("1.0").toDouble
+            val passengerWeighting = request.body.dataParts.get("passenger-weighting")
+              .flatMap(_.headOption)
+              .getOrElse("1.0").toDouble
 
-          val (terminal: Terminal, date: SDateLike) = arrivalsFileToTerminalAndDate(arrivalsFile)
+            val processingTimes: Map[PaxTypeAndQueue, Double] = airportConfig.terminalProcessingTimes.head._2.map {
+              case (ptq, defaultValue) =>
+                ptq -> request.body.dataParts.get(ptq.key).flatMap(_.headOption)
+                  .map(s => s.toDouble / 60)
+                  .getOrElse(defaultValue)
+            }
 
-          val flightsWithSplits: Array[ApiFlightWithSplits] = flightsWithSplitsFromPost(arrivalsFile, terminal, passengerWeighting)
+            val (terminal: Terminal, date: SDateLike) = arrivalsFileToTerminalAndDate(arrivalsFile)
 
-          val lhrHalved = Lhr.config.copy(
-            minMaxDesksByTerminalQueue24Hrs = Lhr.config.minMaxDesksByTerminalQueue24Hrs.mapValues(_.map {
-              case (q, (_, max)) =>
-                val openDesks = max.map(x => x / 2)
-                q -> (openDesks, openDesks)
-            }),
-            eGateBankSize = 5,
-            slaByQueue = Lhr.config.slaByQueue.mapValues(_ => 15),
-            crunchOffsetMinutes = 0
-          )
-          val fws = FlightsWithSplits(flightsWithSplits.map(f => f.unique -> f).toMap)
+            val flightsWithSplits: Array[ApiFlightWithSplits] = flightsWithSplitsFromPost(arrivalsFile, terminal, passengerWeighting)
 
-          val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(fws)))
+            val lhrHalved = airportConfig.copy(
+              minMaxDesksByTerminalQueue24Hrs = airportConfig.minMaxDesksByTerminalQueue24Hrs.mapValues(_.map {
+                case (q, (_, max)) if q != Queues.EGate =>
+                  val openDesks = max.map(x => x / 2)
+                  q -> (openDesks, openDesks)
+                case (q, (_, max)) => q -> (max, max)
+              }),
+              eGateBankSize = 5,
+              slaByQueue = airportConfig.slaByQueue.mapValues(_ => 15),
+              crunchOffsetMinutes = 0,
+              terminalProcessingTimes = airportConfig.terminalProcessingTimes + (terminal -> processingTimes)
+            )
 
-          val dawp = DesksAndWaitsPortProvider(lhrHalved, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi)
-          val (runnableDeskRecs, _): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = RunnableDeskRecs(portStateActor, dawp, PortDeskLimits.fixed(lhrHalved)).run()
-          runnableDeskRecs.offer(date.millisSinceEpoch)
+            val fws = FlightsWithSplits(flightsWithSplits.map(f => f.unique -> f).toMap)
 
-          val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
-            case drm: DeskRecMinutes => drm
-          }
+            val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(fws)))
 
-          val queues = lhrHalved.queuesByTerminal(terminal)
-          val minutes = date.getLocalLastMidnight.millisSinceEpoch to date.getLocalNextMidnight.millisSinceEpoch by 15 * MilliTimes.oneMinuteMillis
+            val dawp = DesksAndWaitsPortProvider(lhrHalved, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi)
+            val (runnableDeskRecs, _): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = RunnableDeskRecs(portStateActor, dawp, PortDeskLimits.fixed(lhrHalved)).run()
+            runnableDeskRecs.offer(date.millisSinceEpoch)
 
-          futureDeskRecMinutes.map(deskRecMinutes => {
+            val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
+              case drm: DeskRecMinutes => drm
+            }
 
-            val crunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ deskRecMinutes
-              .minutes
-              .map(dr => dr.key -> dr.toMinute).toMap
+            val queues = lhrHalved.queuesByTerminal(terminal)
+            val minutes = date.getLocalLastMidnight.millisSinceEpoch to date.getLocalNextMidnight.millisSinceEpoch by 15 * MilliTimes.oneMinuteMillis
 
-            val desks = TerminalQueuesSummary(queues, Exports.queueSummaries(queues, 15, minutes, crunchMinutes, SortedMap())).toCsvWithHeader
+            futureDeskRecMinutes.map(deskRecMinutes => {
 
-            Exports.csvFileResult("desks.csv", desks)
-          })
+              val crunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ deskRecMinutes
+                .minutes
+                .map(dr => dr.key -> dr.toMinute).toMap
 
-        case None => Future(BadRequest(""))
-      }
+              val desks = TerminalQueuesSummary(queues, Exports.queueSummaries(queues, 15, minutes, crunchMinutes, SortedMap())).toCsvWithHeader
 
-      eventualResult
-  }}
+              Exports.csvFileResult(
+                CsvFileStreaming.makeFileName(s"simulation-$passengerWeighting",
+                  terminal,
+                  date,
+                  date,
+                  airportConfig.portCode
+                ),
+                desks
+              )
+            })
+
+          case None => Future(BadRequest(""))
+        }
+
+        eventualResult
+    }
+  }
 
   def flightsWithSplitsFromPost(arrivalsFile: MultipartFormData.FilePart[Files.TemporaryFile],
                                 terminal: Terminal,

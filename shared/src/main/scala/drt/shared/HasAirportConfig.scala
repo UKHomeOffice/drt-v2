@@ -192,7 +192,9 @@ object PaxTypes {
   }
 }
 
-case class PaxTypeAndQueue(passengerType: PaxType, queueType: Queue)
+case class PaxTypeAndQueue(passengerType: PaxType, queueType: Queue) {
+  def key = s"${passengerType}_${queueType}"
+}
 
 object PaxTypeAndQueue {
   def apply(split: ApiPaxTypeAndQueueCount): PaxTypeAndQueue = PaxTypeAndQueue(split.passengerType, split.queueType)
