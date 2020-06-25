@@ -109,10 +109,10 @@ trait WithImports {
             runnableDeskRecs.offer(date.millisSinceEpoch)
 
             val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
-              case drm: DeskRecMinutes => drm
+              case drm: DeskRecMinutes => DeskRecMinutes(drm.minutes.filter(_.terminal == terminal))
             }
 
-            val queues = lhrHalved.queuesByTerminal(terminal)
+            val queues = lhrHalved.nonTransferQueues(terminal)
             val minutes = date.getLocalLastMidnight.millisSinceEpoch to date.getLocalNextMidnight.millisSinceEpoch by 15 * MilliTimes.oneMinuteMillis
 
             futureDeskRecMinutes.map(deskRecMinutes => {
