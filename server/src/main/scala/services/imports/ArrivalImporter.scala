@@ -2,17 +2,17 @@ package services.imports
 
 import actors.GetState
 import actors.acking.AckingReceiver.{Ack, StreamInitialized}
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.actor.{Actor, ActorLogging}
+import akka.pattern.pipe
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, Transit, VisaNational}
+import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import drt.shared.{ApiFlightWithSplits, ApiPaxTypeAndQueueCount, ArrivalStatus, EventTypes, LiveFeedSource, PortCode, Queues, Splits}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
+import drt.shared._
 import services.SDate
 import services.crunch.deskrecs.GetFlights
-import akka.pattern.pipe
 
 import scala.concurrent.{ExecutionContextExecutor, Promise}
 import scala.util.Try
@@ -85,21 +85,22 @@ object ArrivalImporter {
     )
   }
 
-  def lineToSplits(arrivalFields: Array[String], h: Map[String, Int]): Set[Splits] = Set(
-    Splits(
-      Set(
-        ApiPaxTypeAndQueueCount(B5JPlusNational, Queues.EeaDesk, arrivalFields(h("API Actual - B5JSSK to Desk")).toDouble, None),
-        ApiPaxTypeAndQueueCount(B5JPlusNational, Queues.EGate, arrivalFields(h("API Actual - B5JSSK to eGates")).toDouble, None),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, arrivalFields(h("API Actual - EEA (Machine Readable)")).toDouble, None),
-        ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, arrivalFields(h("API Actual - EEA (Non Machine Readable)")).toDouble, None),
-        ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, arrivalFields(h("API Actual - Non EEA (Non Visa)")).toDouble, None),
-        ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, arrivalFields(h("API Actual - Non EEA (Visa)")).toDouble, None),
-        ApiPaxTypeAndQueueCount(Transit, Queues.Transfer, arrivalFields(h("API Actual - Transfer")).toDouble, None),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, arrivalFields(h("API Actual - eGates")).toDouble, None)
-      ),
-      ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)
-    )
-  )
+  def lineToSplits(arrivalFields: Array[String], h: Map[String, Int]): Set[Splits] = {
+    val splitsSet = Set(
+      (B5JPlusNational, Queues.EeaDesk, "API Actual - B5JSSK to Desk"),
+      (B5JPlusNational, Queues.EGate, "API Actual - B5JSSK to eGates"),
+      (EeaMachineReadable, Queues.EeaDesk, "API Actual - EEA (Machine Readable)"),
+      (EeaNonMachineReadable, Queues.EeaDesk, "API Actual - EEA (Non Machine Readable)"),
+      (NonVisaNational, Queues.NonEeaDesk, "API Actual - Non EEA (Non Visa)"),
+      (VisaNational, Queues.NonEeaDesk, "API Actual - Non EEA (Visa)"),
+      (Transit, Queues.Transfer, "API Actual - Transfer"),
+      (EeaMachineReadable, Queues.EGate, "API Actual - eGates")
+    ).collect {
+      case (paxType, queue, key) if h.contains(key) =>
+        ApiPaxTypeAndQueueCount(paxType, queue, arrivalFields(h(key)).toDouble, None)
+    }
+    Set(Splits(splitsSet, ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)))
+  }
 
   def csvOptionalField(field: String): Option[String] = field match {
     case s if s.isEmpty => None
@@ -113,7 +114,7 @@ object ArrivalImporter {
 class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor with ActorLogging {
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
 
-  var promisedResult = Promise[DeskRecMinutes]
+  var promisedResult: Promise[DeskRecMinutes] = Promise[DeskRecMinutes]
 
   override def receive: Receive = {
     case GetFlights(_, _) =>

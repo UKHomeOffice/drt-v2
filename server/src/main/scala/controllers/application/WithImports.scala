@@ -28,7 +28,7 @@ import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.exports.Exports
 import services.exports.summaries.queues.TerminalQueuesSummary
 import services.imports.{ArrivalCrunchSimulationActor, ArrivalImporter}
-import services.{Optimiser, SDate, TryRenjin}
+import services.{SDate, TryRenjin}
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
@@ -60,7 +60,7 @@ trait WithImports {
   def simulationImport(): Action[MultipartFormData[Files.TemporaryFile]] = authByRole(ArrivalSimulationUpload) {
     Action.async(parse.multipartFormData) {
       request: Request[MultipartFormData[Files.TemporaryFile]] =>
-        implicit val timeout = new Timeout(2 minutes)
+        implicit val timeout: Timeout = new Timeout(2 minutes)
 
         val eventualResult: Future[Result] = request.body.file("arrivals-file") match {
           case Some(arrivalsFile) =>
