@@ -37,7 +37,10 @@ describe('Arrivals CSV Export', () => {
     "API e-Gates,API EEA,API Non-EEA,API Fast Track," +
     "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
     "Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track";
-  const actApiHeaders = "API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - eGates";
+  const actApiHeaders = "API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates" +
+  ",API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable)," +
+  "API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual " +
+  "- Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates";
   const headersWithActApi = headersWithoutActApi + "," + actApiHeaders;
   const totalPax = "51";
   const eGatePax = "25";
@@ -49,7 +52,7 @@ describe('Arrivals CSV Export', () => {
     eGatePax + "," + eeaDesk + "," + nonEEADesk + ",," +
     ",,,," +
     "13,37,1,";
-  const actApiData = "4.0,6.0,5.0,7.0,10.0,19.0";
+  const actApiData = "4.0,6.0,5.0,0.0,0.0,0.0,7.0,10.0,0.0,19.0";
 
   const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
