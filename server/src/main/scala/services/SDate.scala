@@ -123,4 +123,14 @@ object SDate {
     implicits.jodaToSDate(new DateTime(y, m, d, h, mm, dateTimeZone))
 
   def tryParseString(dateTime: String): Try[SDateLike] = Try(apply(dateTime))
+
+  def yyyyMmDdForZone(date: SDateLike, dateTimeZone: DateTimeZone): String = {
+    val (month, year, day) = yearMonthDayForZone(date, dateTimeZone)
+    f"$year-$month%02d-$day%02d"
+  }
+
+  def yearMonthDayForZone(date: SDateLike, dateTimeZone: DateTimeZone): (Int, Int, Int) = {
+    val zoneDate = SDate(date, dateTimeZone)
+    (zoneDate.getFullYear(), zoneDate.getMonth(), zoneDate.getDate())
+  }
 }
