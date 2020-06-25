@@ -26,7 +26,7 @@ class TerminalQueuesSummaryActorSpec extends CrunchTestLike with ImplicitSender 
 
   "Given a BST date of 2020-06-25" >> {
     "When I ask for a TerminalQueuesSummaryActor" >> {
-      "I should find the persistenceId is " >> {
+      "I should find the persistenceId is 'terminal-queues-summary-t1-2020-06-25'" >> {
         system.actorOf(Props(new TestTerminalQueuesSummaryActor(probe, 2020, 6, 25, T1, () => SDate("2020-06-01"))))
         probe.expectMsg("terminal-queues-summary-t1-2020-06-25")
         success
