@@ -79,13 +79,14 @@ object SimulateArrivalsPage {
                   <.legend(^.className := "pt-0", "Desks / Banks"),
                   <.div(^.className := "",
                     airportConfig.minMaxDesksByTerminalQueue24Hrs(Terminal(ts)).map {
-                      case (q, (_, max)) =>
+                      case (q, (min, max)) =>
                         <.div(
                           ^.className := "form-check",
                           <.label(
                             ^.className := "col-sm-3",
                             s"${Queues.queueDisplayNames(q)}"
                           ),
+                          <.input(^.tpe := "number", ^.name := s"${q}_min", ^.defaultValue := min.max),
                           <.input(^.tpe := "number", ^.name := s"${q}_max", ^.defaultValue := max.max)
                         )
                     }.toTagMod

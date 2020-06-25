@@ -1,6 +1,5 @@
 package controllers.application
 
-import java.io
 import java.nio.file.Paths
 import java.util.UUID
 
@@ -29,7 +28,7 @@ import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.exports.Exports
 import services.exports.summaries.queues.TerminalQueuesSummary
 import services.imports.{ArrivalCrunchSimulationActor, ArrivalImporter}
-import services.{Optimiser, SDate}
+import services.{Optimiser, SDate, TryRenjin}
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
@@ -84,10 +83,12 @@ trait WithImports {
             }
 
             val openDesks: Map[Queues.Queue, (List[Int], List[Int])] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
-              case (q, (_, maxDesks)) =>
-                val desks: Option[Int] = request.body.dataParts.get(s"${q}_max").flatMap(_.headOption).map(_.toInt)
-                val newDesks = maxDesks.map(d => desks.getOrElse(d))
-                q -> (newDesks, newDesks)
+              case (q, (origMinDesks, origMaxDesks)) =>
+                val maxDesks: Option[Int] = request.body.dataParts.get(s"${q}_max").flatMap(_.headOption).map(_.toInt)
+                val minDesks: Option[Int] = request.body.dataParts.get(s"${q}_min").flatMap(_.headOption).map(_.toInt)
+                val newMaxDesks = origMaxDesks.map(d => maxDesks.getOrElse(d))
+                val newMinDesks = origMinDesks.map(d => minDesks.getOrElse(d))
+                q -> (newMinDesks, newMaxDesks)
             }
             val (_, date: SDateLike) = arrivalsFileToTerminalAndDate(arrivalsFile)
             val flightsWithSplits: Array[ApiFlightWithSplits] = flightsWithSplitsFromPost(arrivalsFile, terminal, passengerWeighting)
@@ -104,7 +105,7 @@ trait WithImports {
 
             val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(fws)))
 
-            val dawp = DesksAndWaitsPortProvider(lhrHalved, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi)
+            val dawp = DesksAndWaitsPortProvider(lhrHalved, TryRenjin.crunch, PcpPax.bestPaxEstimateWithApi)
             val (runnableDeskRecs, _): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = RunnableDeskRecs(portStateActor, dawp, PortDeskLimits.fixed(lhrHalved)).run()
             runnableDeskRecs.offer(date.millisSinceEpoch)
 
