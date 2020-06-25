@@ -13,10 +13,12 @@ import server.protobuf.messages.TerminalQueuesSummary.{QueueSummaryMessage, Queu
 import services.SDate
 import services.exports.summaries.GetSummaries
 import services.exports.summaries.queues._
+import services.graphstages.Crunch
 
 object TerminalQueuesSummaryActor {
   def props(date: SDateLike, terminal: Terminal, now: () => SDateLike): Props = {
-    Props(classOf[TerminalQueuesSummaryActor], date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)
+    val (year, month, day) = SDate.yearMonthDayForZone(date, Crunch.europeLondonTimeZone)
+    Props(new TerminalQueuesSummaryActor(year, month, day, terminal, now))
   }
 }
 
@@ -27,7 +29,7 @@ class TerminalQueuesSummaryActor(year: Int,
                                  val now: () => SDateLike) extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override def persistenceId: String = s"terminal-queues-summary-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
+  override def persistenceId: String = f"terminal-queues-summary-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch

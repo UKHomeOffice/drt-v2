@@ -183,4 +183,52 @@ class ServerSDateSpec extends Specification {
       result === expectedBST
     }
   }
+
+  "When I ask for the year, month & day for a Europe/London BST date" >> {
+    "Given a BST date/time of 2020-06-25T00:00" >> {
+      val date = SDate("2020-06-25T00:00", Crunch.europeLondonTimeZone)
+      "I should get (2020, 6, 25)" >> {
+        val result = SDate.yearMonthDayForZone(date, Crunch.europeLondonTimeZone)
+        result === (2020, 6, 25)
+      }
+    }
+    "Given a UTC date/time of 2020-02-25T00:00" >> {
+      val date = SDate("2020-02-25T00:00", Crunch.europeLondonTimeZone)
+      "I should get (2020, 2, 25)" >> {
+        val result = SDate.yearMonthDayForZone(date, Crunch.europeLondonTimeZone)
+        result === (2020, 2, 25)
+      }
+    }
+    "Given a UTC date/time of 2020-06-24T23:00" >> {
+      val date = SDate("2020-06-24T23:00", Crunch.utcTimeZone)
+      "I should get (2020, 6, 25)" >> {
+        val result = SDate.yearMonthDayForZone(date, Crunch.europeLondonTimeZone)
+        result === (2020, 6, 25)
+      }
+    }
+  }
+
+  "When I ask for the yyyyMmDd string for a Europe/London BST date" >> {
+    "Given a BST date/time of 2020-06-05T00:00" >> {
+      val date = SDate("2020-06-05T00:00", Crunch.europeLondonTimeZone)
+      "I should get 2020-06-05)" >> {
+        val result = SDate.yyyyMmDdForZone(date, Crunch.europeLondonTimeZone)
+        result === "2020-06-05"
+      }
+    }
+    "Given a UTC date/time of 2020-02-05T00:00" >> {
+      val date = SDate("2020-02-05T00:00", Crunch.europeLondonTimeZone)
+      "I should get 2020-02-05" >> {
+        val result = SDate.yyyyMmDdForZone(date, Crunch.europeLondonTimeZone)
+        result === "2020-02-05"
+      }
+    }
+    "Given a UTC date/time of 2020-06-04T23:00" >> {
+      val date = SDate("2020-06-04T23:00", Crunch.utcTimeZone)
+      "I should get 2020-06-05" >> {
+        val result = SDate.yyyyMmDdForZone(date, Crunch.europeLondonTimeZone)
+        result === "2020-06-05"
+      }
+    }
+  }
 }
