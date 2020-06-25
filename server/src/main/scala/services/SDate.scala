@@ -125,7 +125,7 @@ object SDate {
   def tryParseString(dateTime: String): Try[SDateLike] = Try(apply(dateTime))
 
   def yyyyMmDdForZone(date: SDateLike, dateTimeZone: DateTimeZone): String = {
-    val (month, year, day) = yearMonthDayForZone(date, dateTimeZone)
+    val (year, month, day) = yearMonthDayForZone(date, dateTimeZone)
     f"$year-$month%02d-$day%02d"
   }
 
