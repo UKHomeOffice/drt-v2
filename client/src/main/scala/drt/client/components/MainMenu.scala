@@ -33,6 +33,8 @@ object MainMenu {
 
   def forecastUploadFile(position: Int): MenuItem = MenuItem(position, _ => "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
 
+  def simulateArrivalsItem(position: Int): MenuItem = MenuItem(position, _ => "Simulate Arrivals", Icon.fighterJet, SimulateArrivalsLoc)
+
   def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
     val rag = if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Red)) Red
     else if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Amber)) Amber
@@ -64,7 +66,7 @@ object MainMenu {
     val restrictedMenuItems: List[(Role, Int => MenuItem)] = List(
       (ManageUsers, usersMenuItem _),
       (CreateAlerts, alertsMenuItem _),
-    ) ++ addFileUpload ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem))
+    ) ++ addFileUpload ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem)) :+ ((ArrivalSimulationUpload, simulateArrivalsItem _))
 
     val nonTerminalUnrestrictedMenuItems = dashboardMenuItem :: Nil
 

@@ -67,6 +67,7 @@ GET           /export/staff-movements/:pointInTime/:terminal       controllers.A
 POST          /staff-movements                                     controllers.Application.addStaffMovements()
 DELETE        /staff-movements/:uuid                               controllers.Application.removeStaffMovements(uuid: java.util.UUID)
 
+POST          /desk-rec-simulation                                 controllers.Application.simulationImport
 
 # Feed import
 POST          /data/feed/:feedType/:portCode                       controllers.Application.feedImport(feedType: String, portCode: String)
