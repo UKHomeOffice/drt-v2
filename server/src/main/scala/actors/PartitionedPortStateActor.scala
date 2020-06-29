@@ -69,11 +69,11 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   def processMessage: Receive = {
     case msg: SetCrunchQueueActor =>
       log.info(s"Received crunchSourceActor")
-      flightsActor.ask(msg)
+      flightsActor ! msg
 
     case msg: SetSimulationActor =>
       log.info(s"Received simulationSourceActor")
-      queuesActor.ask(msg)
+      queuesActor ! msg
 
     case StreamInitialized => sender() ! Ack
 
@@ -140,16 +140,22 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     combineToPortStateUpdates(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).pipeTo(replyTo)
   }
 
-  def replyWithPortState(replyTo: ActorRef, request: PortStateRequest): Future[PortState] = {
+  def replyWithPortState(replyTo: ActorRef, request: PortStateRequest): Unit = {
     val (eventualFlights, eventualQueueMinutes, eventualStaffMinutes) = portStateComponentsRequest(request)
 
     combineToPortState(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).pipeTo(replyTo)
   }
 
   def portStateComponentsRequest(request: PortStateRequest): (Future[FlightsWithSplits], Future[MinutesContainer[CrunchMinute, TQM]], Future[MinutesContainer[StaffMinute, TM]]) = {
-    val eventualFlights = flightsActor.ask(request).mapTo[FlightsWithSplits]
-    val eventualQueueMinutes = queueActorForRequest(request).ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
-    val eventualStaffMinutes = staffActorForRequest(request).ask(request).mapTo[MinutesContainer[StaffMinute, TM]]
+    val eventualFlights = flightsActor.ask(request).mapTo[FlightsWithSplits].recoverWith {
+      case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
+    }
+    val eventualQueueMinutes = queueActorForRequest(request).ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]].recoverWith {
+      case t => throw new Exception(s"Error receiving MinutesContainer from the queues actors, for request $request", t)
+    }
+    val eventualStaffMinutes = staffActorForRequest(request).ask(request).mapTo[MinutesContainer[StaffMinute, TM]].recoverWith {
+      case t => throw new Exception(s"Error receiving MinutesContainer from the staff actors, for request $request", t)
+    }
     (eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
   }
 
