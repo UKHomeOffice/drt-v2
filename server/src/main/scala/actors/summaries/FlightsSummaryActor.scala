@@ -16,8 +16,10 @@ import services.exports.summaries.flights.{TerminalFlightsSummary, TerminalFligh
 import services.graphstages.Crunch
 
 object FlightsSummaryActor {
-  def props(date: SDateLike, terminal: Terminal, pcpPaxFn: Arrival => Int, now: () => SDateLike): Props =
-    Props(classOf[FlightsSummaryActor], date.getFullYear(), date.getMonth(), date.getDate(), terminal, pcpPaxFn, now)
+  def props(date: SDateLike, terminal: Terminal, pcpPaxFn: Arrival => Int, now: () => SDateLike): Props = {
+    val (year, month, day) = SDate.yearMonthDayForZone(date, Crunch.europeLondonTimeZone)
+    Props(new FlightsSummaryActor(year, month, day, terminal, pcpPaxFn, now))
+  }
 }
 
 case object GetSummariesWithActualApi
@@ -30,7 +32,7 @@ class FlightsSummaryActor(year: Int,
                           val now: () => SDateLike) extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override def persistenceId: String = s"flights-summary-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
+  override def persistenceId: String = f"flights-summary-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch

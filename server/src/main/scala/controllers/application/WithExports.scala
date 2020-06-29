@@ -13,7 +13,7 @@ import drt.users.KeyCloakGroups
 import play.api.http.HttpEntity
 import play.api.mvc._
 import services.crunch.deskrecs.GetStateForTerminalDateRange
-import services.exports.Forecast
+import services.exports.{Exports, Forecast}
 import services.{CSVData, SDate}
 
 import scala.concurrent.Future
@@ -56,7 +56,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
           .map { portState =>
             val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
             val csvData = CSVData.forecastPeriodToCsv(fp)
-            csvFileResult(fileName, csvData)
+            Exports.csvFileResult(fileName, csvData)
           }
           .recover {
             case t =>
@@ -88,7 +88,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
           .map { portState =>
             val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
             val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
-            csvFileResult(fileName, csvData)
+            Exports.csvFileResult(fileName, csvData)
           }
           .recover {
             case t =>
@@ -98,10 +98,6 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
       }
     }
   }
-
-  def csvFileResult(fileName: String, data: String): Result = Result(
-    ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-    HttpEntity.Strict(ByteString(data), Option("application/csv")))
 
   def portStateForTerminal(terminal: Terminal,
                            endOfForecast: SDateLike,
