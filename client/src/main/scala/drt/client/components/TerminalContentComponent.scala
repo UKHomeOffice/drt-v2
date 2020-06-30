@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
-import drt.auth.{ArrivalSource, LoggedInUser, Role, StaffMovementsExport}
+import drt.auth._
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
@@ -79,6 +79,7 @@ object TerminalContentComponent {
       val desksAndQueuesActive = if (state.activeTab == "desksAndQueues") "active" else ""
       val arrivalsActive = if (state.activeTab == "arrivals") "active" else ""
       val staffingActive = if (state.activeTab == "staffing") "active" else ""
+      val simulationsActive = if (state.activeTab == "simulations") "active" else ""
 
       val desksAndQueuesPanelActive = if (state.activeTab == "desksAndQueues") "active" else "fade"
       val arrivalsPanelActive = if (state.activeTab == "arrivals") "active" else "fade"
@@ -114,7 +115,15 @@ object TerminalContentComponent {
                   <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements"), ^.onClick --> {
                     GoogleEventTracker.sendEvent(terminalName, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
-                  })
+                  }),
+                displayForRole(
+                  <.li(^.className := simulationsActive,
+                    <.a(^.id := "simulationDayTab", VdomAttr("data-toggle") := "tab", "Simulate Day"), ^.onClick --> {
+                      GoogleEventTracker.sendEvent(terminalName, "Simulate Day", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
+                      props.router.set(props.terminalPageTab.copy(subMode = "simulations"))
+                    }),
+                  ArrivalSimulationUpload, props.loggedInUser
+                )
               ),
               <.div(^.className := "exports",
                 exportLink(
@@ -184,6 +193,16 @@ object TerminalContentComponent {
                   )
                 } else ""
               }),
+              displayForRole(
+                <.div(^.id := "simluations", ^.className := s"tab-pane in $simulationsActive", {
+                  if (state.activeTab == "simulations") {
+
+                    SimulateArrivalsComponent(props.viewMode.dayStart, props.terminalPageTab.terminal, props.airportConfig)
+                  } else "not rendering"
+                }),
+                ArrivalSimulationUpload,
+                props.loggedInUser
+              ),
               <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
                 if (state.activeTab == "staffing") {
                   TerminalStaffing(TerminalStaffing.Props(

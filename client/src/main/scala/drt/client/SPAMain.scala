@@ -5,7 +5,7 @@ import java.util.UUID
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, SimulateArrivalsPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
+import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -133,7 +133,6 @@ object SPAMain {
 
   case object ForecastFileUploadLoc extends Loc
 
-  case object SimulateArrivalsLoc extends Loc
 
   case class KeyCloakUserEditLoc(userId: UUID) extends Loc
 
@@ -171,8 +170,7 @@ object SPAMain {
         alertRoute(dsl) |
         contactRoute(dsl) |
         portConfigRoute(dsl) |
-        forecastFileUploadRoute(dsl) |
-        simulateArrivalsRoute(dsl)
+        forecastFileUploadRoute(dsl)
 
       rule.notFound(redirectToPage(PortDashboardLoc(None))(Redirect.Replace))
     }
@@ -244,12 +242,6 @@ object SPAMain {
     import dsl._
 
     staticRoute("#forecastFileUpload", ForecastFileUploadLoc) ~> renderR(_ => ForecastFileUploadPage())
-  }
-
-  def simulateArrivalsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#simulateArrivals", SimulateArrivalsLoc) ~> renderR(_ => SimulateArrivalsPage())
   }
 
   def portConfigRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
