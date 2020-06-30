@@ -86,7 +86,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
       playSnapshotMessage(ss)
 
     case RecoveryCompleted =>
-      log.info(s"Recovery complete. Took ${now().millisSinceEpoch - recoveryStartMillis}ms")
+      log.info(s"Recovery complete. Took ${now().millisSinceEpoch - recoveryStartMillis}ms. $messagesPersistedSinceSnapshotCounter messages replayed.")
       postRecoveryComplete()
 
     case event: GeneratedMessage =>
