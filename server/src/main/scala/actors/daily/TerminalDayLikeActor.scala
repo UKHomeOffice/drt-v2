@@ -1,17 +1,12 @@
 package actors.daily
 
-import actors.{RecoveryActorLike, Sizes}
+import actors.{GetState, RecoveryActorLike, Sizes}
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
-import actors.PortStateMessageConversion.crunchMinuteToMessage
-import actors.{GetState, RecoveryActorLike, Sizes}
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinuteLike, MinutesContainer}
-import drt.shared.{SDateLike, TQM, WithTimeAccessor}
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import services.SDate
 import services.graphstages.Crunch
 
@@ -44,6 +39,8 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   override def persistenceId: String = f"terminal-$typeForPersistenceId-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  private val maxSnapshotInterval = 250
+  override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   val firstMinute: SDateLike = SDate(year, month, day, 0, 0, Crunch.utcTimeZone)
@@ -54,7 +51,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     case None => Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
     case Some(pointInTime) =>
       val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-      val recovery = Recovery(fromSnapshot = criteria, replayMax = 10000)
+      val recovery = Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
       log.info(s"Recovery: $recovery")
       recovery
   }

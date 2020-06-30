@@ -112,9 +112,6 @@ class ShiftsActorBase(val now: () => SDateLike,
       val shiftsToRecover = shiftMessagesToStaffAssignments(sm.shifts)
       val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
       purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
-
-      bytesSinceSnapshotCounter += sm.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
   }
 
   def receiveCommand: Receive = {

@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS public.journal (
 
 CREATE UNIQUE INDEX journal_ordering_idx ON public.journal(ordering);
 
+CREATE INDEX journal_ordering_deleted_idx ON public.journal(persistence_id, sequence_number, deleted);
+
 DROP TABLE IF EXISTS public.snapshot;
 
 CREATE TABLE IF NOT EXISTS public.snapshot (

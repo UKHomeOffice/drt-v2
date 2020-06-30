@@ -67,22 +67,16 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
     case recoveredLZF: String =>
       state = state.copy(latestZipFilename = recoveredLZF)
 
-    case m@VoyageManifestLatestFileNameMessage(_, Some(latestFilename)) =>
+    case VoyageManifestLatestFileNameMessage(_, Some(latestFilename)) =>
       state = state.copy(latestZipFilename = latestFilename)
-      bytesSinceSnapshotCounter += m.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
 
-    case m@VoyageManifestsMessage(_, manifestMessages) =>
+    case VoyageManifestsMessage(_, manifestMessages) =>
       val updatedManifests = manifestMessages.map(voyageManifestFromMessage)
       newStateManifests(state.manifests, updatedManifests)
-      bytesSinceSnapshotCounter += m.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
 
     case feedStatusMessage: FeedStatusMessage =>
       val status = feedStatusFromFeedStatusMessage(feedStatusMessage)
       state = state.copy(maybeSourceStatuses = Option(state.addStatus(status)))
-      bytesSinceSnapshotCounter += feedStatusMessage.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
   }
 
   def newStateManifests(existing: mutable.SortedMap[MilliDate, VoyageManifest], updates: Seq[VoyageManifest]): Unit = {

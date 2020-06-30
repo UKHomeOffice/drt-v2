@@ -52,8 +52,6 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     case diff: CrunchDiffMessage =>
       applyRecoveryDiff(diff, forecastMaxMillis())
       logRecoveryState()
-      bytesSinceSnapshotCounter += diff.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
   }
 
   override def postRecoveryComplete(): Unit = {

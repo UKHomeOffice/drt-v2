@@ -134,8 +134,6 @@ abstract class ArrivalsActor(now: () => SDateLike,
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: FlightsDiffMessage =>
       consumeDiffsMessage(diff)
-      bytesSinceSnapshotCounter += diff.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
 
     case feedStatusMessage: FeedStatusMessage =>
       val status = feedStatusFromFeedStatusMessage(feedStatusMessage)

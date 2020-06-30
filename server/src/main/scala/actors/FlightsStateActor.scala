@@ -97,9 +97,6 @@ class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int, queues
     state = state -- diff.removals.map(uniqueArrivalFromMessage)
     state = state ++ flightsFromMessages(diff.updates)
     logRecoveryState()
-
-    bytesSinceSnapshotCounter += diff.serializedSize
-    messagesPersistedSinceSnapshotCounter += 1
   }
 
   def logRecoveryState(): Unit = {
