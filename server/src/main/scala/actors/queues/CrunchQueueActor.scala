@@ -83,8 +83,6 @@ class CrunchQueueActor(val journalType: StreamingJournalLike, crunchOffsetMinute
     case UpdatedMillis(millis) =>
       log.info(s"Received ${millis.size} UpdatedMillis")
       val days = uniqueDays(millis)
-      println(s"millis: ${millis.map(m => SDate(m).toISOString()).toList.sorted.mkString(", ")}")
-      println(s"days: ${days.map(m => SDate(m).toISOString()).toList.sorted.mkString(", ")}")
       updateState(days)
       sender() ! Ack
       emitNextDayIfReady()

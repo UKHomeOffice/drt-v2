@@ -52,8 +52,6 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
             val scheduled = "2017-06-01T00:00Z" // 2017-06-01 01:00 BST
 
-            println(s"scheduled: ${SDate(scheduled).millisSinceEpoch}")
-
             val flights = Flights(List(
               ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(1))
               ))
@@ -90,8 +88,6 @@ class CrunchTimezoneSpec extends CrunchTestLike {
             crunch.portStateTestProbe.fishForMessage(5 seconds) {
               case ps: PortState =>
                 val resultSummary = deskRecsFromPortState(ps, 120)
-                println(s"\n\n**resultSummary: $resultSummary")
-                println(s"\n\n${ps.crunchMinutes.values.map(cm => (cm.terminal, SDate(cm.minute).toISOString(), cm.deskRec)).mkString("\n")}")
                 resultSummary == expected
             }
 

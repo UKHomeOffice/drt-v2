@@ -38,7 +38,6 @@ class FlightsStateReadActor(now: () => SDateLike, expireAfterMillis: Int, pointI
   override def receiveCommand: Receive = {
     case GetStateForDateRange(startMillis, endMillis) =>
       log.debug(s"Received GetStateForDateRange request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")
-      println(s"\n\n lastSequenceNr: $lastSequenceNr\n\n")
       sender() ! state.window(startMillis, endMillis)
 
     case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>

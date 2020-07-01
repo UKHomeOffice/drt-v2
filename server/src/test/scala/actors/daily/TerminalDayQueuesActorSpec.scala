@@ -101,8 +101,6 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
       val eventual = sendMinutesAndGetState(crunchMinutes, terminalDayActor)
       val result = Await.result(eventual, 1 second)
 
-      println(s"Got result: $result")
-
       result === Option(MinutesContainer(Set(inside.copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }
   }
