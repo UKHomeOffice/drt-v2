@@ -262,7 +262,7 @@ class PortStateActor(liveCrunchStateProps: Props,
       val loadsToSend = loadMinutesBuffer.values.toList
       loadMinutesBuffer = Map()
       simActor
-        .ask(Loads(loadsToSend))(new Timeout(15 seconds))
+        .ask(Loads(loadsToSend))(new Timeout(1 minute))
         .recover {
           case t =>
             log.error("Error sending loads to simulate. Putting loads back in the buffer to send later", t)
