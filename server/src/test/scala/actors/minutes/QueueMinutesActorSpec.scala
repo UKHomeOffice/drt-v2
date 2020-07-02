@@ -31,7 +31,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
 
   "When I ask for CrunchMinutes" >> {
 
-    "Given a primary & secondary lookups with no data" >> {
+    "Given a primary & legacy lookups with no data" >> {
       "I should get None" >> {
         val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(myNow, Seq(T1), lookupWithData(minutesContainer), lookupWithNoData, noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
@@ -51,8 +51,8 @@ class QueueMinutesActorSpec extends CrunchTestLike {
       }
     }
 
-    "Given a primary lookup with no data and secondary lookup with data" >> {
-      "I should get the data from the secondary source" >> {
+    "Given a primary lookup with no data and legacy lookup with data" >> {
+      "I should get the data from the legacy source" >> {
         val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(myNow, Seq(T1), lookupWithNoData, lookupWithNoData, noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1 second)

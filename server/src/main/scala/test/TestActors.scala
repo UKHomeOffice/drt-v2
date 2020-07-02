@@ -186,21 +186,21 @@ object TestActors {
 
   class TestStaffMinutesActor(now: () => SDateLike,
                               terminals: Iterable[Terminal],
-                              lookupPrimary: MinutesLookup[StaffMinute, TM],
-                              lookupSecondary: MinutesLookup[StaffMinute, TM],
+                              lookup: MinutesLookup[StaffMinute, TM],
+                              lookupLegacy: MinutesLookup[StaffMinute, TM],
                               updateMinutes: MinutesUpdate[StaffMinute, TM],
                               val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends StaffMinutesActor(now, terminals, lookupPrimary, lookupSecondary, updateMinutes) with TestMinuteActorLike[StaffMinute, TM] {
+    extends StaffMinutesActor(now, terminals, lookup, lookupLegacy, updateMinutes) with TestMinuteActorLike[StaffMinute, TM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
   class TestQueueMinutesActor(now: () => SDateLike,
                               terminals: Iterable[Terminal],
-                              lookupPrimary: MinutesLookup[CrunchMinute, TQM],
-                              lookupSecondary: MinutesLookup[CrunchMinute, TQM],
+                              lookup: MinutesLookup[CrunchMinute, TQM],
+                              lookupLegacy: MinutesLookup[CrunchMinute, TQM],
                               updateMinutes: MinutesUpdate[CrunchMinute, TQM],
                               val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends QueueMinutesActor(now, terminals, lookupPrimary, lookupSecondary, updateMinutes) with TestMinuteActorLike[CrunchMinute, TQM] {
+    extends QueueMinutesActor(now, terminals, lookup, lookupLegacy, updateMinutes) with TestMinuteActorLike[CrunchMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 

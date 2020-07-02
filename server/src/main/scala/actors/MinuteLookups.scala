@@ -37,7 +37,7 @@ trait MinuteLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[MinutesContainer[StaffMinute, TM]]
   }
 
-  val primaryQueuesLookup: MinutesLookup[CrunchMinute, TQM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
+  val queuesLookup: MinutesLookup[CrunchMinute, TQM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
     val props = maybePit match {
       case None => TerminalDayQueuesActor.props(terminal, date, now)
       case Some(pointInTime) => TerminalDayQueuesActor.propsPointInTime(terminal, date, now, pointInTime)
@@ -46,12 +46,12 @@ trait MinuteLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
   }
 
-  val secondaryQueuesLookup: MinutesLookup[CrunchMinute, TQM] = (terminal: Terminal, date: SDateLike, _: Option[MillisSinceEpoch]) => {
+  val legacyQueuesLookup: MinutesLookup[CrunchMinute, TQM] = (terminal: Terminal, date: SDateLike, _: Option[MillisSinceEpoch]) => {
     val actor = crunchStateReadActor(date)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetCrunchMinutes(terminal))).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
   }
 
-  val primaryStaffLookup: MinutesLookup[StaffMinute, TM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
+  val staffLookup: MinutesLookup[StaffMinute, TM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
     val props = maybePit match {
       case None => TerminalDayStaffActor.props(terminal, date, now)
       case Some(pointInTime) => TerminalDayStaffActor.propsPointInTime(terminal, date, now, pointInTime)
@@ -60,7 +60,7 @@ trait MinuteLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
   }
 
-  val secondaryStaffLookup: MinutesLookup[StaffMinute, TM] = (terminal: Terminal, date: SDateLike, _: Option[MillisSinceEpoch]) => {
+  val legacyStaffLookup: MinutesLookup[StaffMinute, TM] = (terminal: Terminal, date: SDateLike, _: Option[MillisSinceEpoch]) => {
     val actor = crunchStateReadActor(date)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetStaffMinutes(terminal))).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
   }
@@ -79,7 +79,7 @@ case class MinuteLookups(system: ActorSystem,
                          expireAfterMillis: Int,
                          queuesByTerminal: Map[Terminal, Seq[Queue]])
                         (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(now, queuesByTerminal.keys, primaryQueuesLookup, secondaryQueuesLookup, updateCrunchMinutes)))
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(now, queuesByTerminal.keys, queuesLookup, legacyQueuesLookup, updateCrunchMinutes)))
 
-  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(now, queuesByTerminal.keys, primaryStaffLookup, secondaryStaffLookup, updateStaffMinutes)))
+  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(now, queuesByTerminal.keys, staffLookup, legacyStaffLookup, updateStaffMinutes)))
 }

@@ -16,9 +16,9 @@ import scala.concurrent.duration._
 
 class QueueMinutesActor(now: () => SDateLike,
                         terminals: Iterable[Terminal],
-                        lookupPrimary: MinutesLookup[CrunchMinute, TQM],
-                        lookupSecondary: MinutesLookup[CrunchMinute, TQM],
-                        updateMinutes: MinutesUpdate[CrunchMinute, TQM]) extends MinutesActorLike(now, terminals, lookupPrimary, lookupSecondary, updateMinutes) {
+                        lookup: MinutesLookup[CrunchMinute, TQM],
+                        lookupLegacy: MinutesLookup[CrunchMinute, TQM],
+                        updateMinutes: MinutesUpdate[CrunchMinute, TQM]) extends MinutesActorLike(now, terminals, lookup, lookupLegacy, updateMinutes) {
 
   val minutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()
   var maybeUpdateSubscriber: Option[ActorRef] = None

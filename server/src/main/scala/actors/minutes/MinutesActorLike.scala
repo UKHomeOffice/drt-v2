@@ -30,8 +30,8 @@ object MinutesActorLike {
 
 abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
                                                           terminals: Iterable[Terminal],
-                                                          lookupPrimary: MinutesLookup[A, B],
-                                                          lookupSecondary: MinutesLookup[A, B],
+                                                          lookup: MinutesLookup[A, B],
+                                                          lookupLegacy: MinutesLookup[A, B],
                                                           updateMinutes: MinutesUpdate[A, B]) extends Actor {
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
@@ -109,10 +109,10 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
         .mapAsync(1) {
           case day if isHistoric(day) =>
             log.info(s"${day.toISOString()} is historic. Will use secondary source if primary data doesn't exist")
-            handleLookup(lookupPrimary(terminal, day, maybePointInTime), Option(() => lookupSecondary(terminal, day, maybePointInTime))).map(r => (day, r))
+            handleLookup(lookup(terminal, day, maybePointInTime), Option(() => lookupLegacy(terminal, day, maybePointInTime))).map(r => (day, r))
           case day =>
             log.info(s"${day.toISOString()} is live. Look up live data from terminal/day actor")
-            handleLookup(lookupPrimary(terminal, day, maybePointInTime), None).map(r => (day, r))
+            handleLookup(lookup(terminal, day, maybePointInTime), None).map(r => (day, r))
         }
         .collect {
           case (_, Some(container)) => container.window(start, end)

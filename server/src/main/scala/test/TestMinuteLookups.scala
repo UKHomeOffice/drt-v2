@@ -29,7 +29,7 @@ case class TestMinuteLookups(system: ActorSystem,
     actor.ask(ResetData).map(_ => actor ! PoisonPill)
   }
 
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(now, queuesByTerminal.keys, primaryQueuesLookup, secondaryQueuesLookup, updateCrunchMinutes, resetQueuesData)))
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(now, queuesByTerminal.keys, queuesLookup, legacyQueuesLookup, updateCrunchMinutes, resetQueuesData)))
 
-  override val staffMinutesActor: ActorRef = system.actorOf(Props(new TestStaffMinutesActor(now, queuesByTerminal.keys, primaryStaffLookup, secondaryStaffLookup, updateStaffMinutes, resetStaffData)))
+  override val staffMinutesActor: ActorRef = system.actorOf(Props(new TestStaffMinutesActor(now, queuesByTerminal.keys, staffLookup, legacyStaffLookup, updateStaffMinutes, resetStaffData)))
 }

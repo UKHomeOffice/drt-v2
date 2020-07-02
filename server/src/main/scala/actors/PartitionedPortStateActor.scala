@@ -96,9 +96,6 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       val replyTo = sender()
       askThenAck(someStaffUpdates.asContainer, replyTo, staffActor)
 
-    case GetState =>
-      log.warn("Ignoring GetState request (for entire state)")
-
     case PointInTimeQuery(millis, request: GetStateForDateRange) =>
       replyWithPortState(sender(), PointInTimeQuery(millis, request))
 
