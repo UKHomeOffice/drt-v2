@@ -20,7 +20,7 @@ import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
-import services.crunch.deskrecs.{FlightsRequest, GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
+import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
@@ -165,7 +165,7 @@ class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int, queues
       .pipeTo(sender())
   }
 
-  def toLegacyMessage(message: DateRangeLike): DateRangeLike with FlightsRequest = message match {
+  def toLegacyMessage(message: DateRangeLike): DateRangeLike = message match {
     case GetStateForDateRange(from, to) => GetFlights(from, to)
     case GetStateForTerminalDateRange(from, to, terminal) => GetFlightsForTerminal(from, to, terminal)
   }

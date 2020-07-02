@@ -11,7 +11,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
-import services.crunch.deskrecs.{FlightsRequest, PortStateRequest}
+import services.crunch.deskrecs.PortStateRequest
 import services.graphstages.Crunch
 import services.{OfferHandler, SDate}
 
@@ -32,7 +32,7 @@ trait DateRangeLike {
   val to: MillisSinceEpoch
 }
 
-case class GetFlightsForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike with FlightsRequest
+case class GetFlightsForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
 
 case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
 

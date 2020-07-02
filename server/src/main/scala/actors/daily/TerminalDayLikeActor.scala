@@ -10,15 +10,6 @@ import scalapb.GeneratedMessage
 import services.SDate
 import services.graphstages.Crunch
 
-case object GetSummariesWithActualApi
-
-case class MinutesState[A, B <: WithTimeAccessor](minutes: MinutesContainer[A, B], bookmarkSeqNr: Long) {
-  def window(start: SDateLike, end: SDateLike): MinutesState[A, B] = this.copy(minutes = minutes.window(start, end))
-}
-
-object TerminalDay {
-  type TerminalDayBookmarks = Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch]
-}
 
 abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor](year: Int,
                                                                                               month: Int,

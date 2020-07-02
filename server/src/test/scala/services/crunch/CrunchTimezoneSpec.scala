@@ -50,17 +50,17 @@ class CrunchTimezoneSpec extends CrunchTestLike {
                 )
               )
 
-            val scheduled = "2017-06-01T00:00Z" // 2017-06-01 01:00 BST
+            val scheduledDuringBst = "2017-06-01T00:00Z"
 
             val flights = Flights(List(
-              ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(1))
+              ArrivalGenerator.arrival(schDt = scheduledDuringBst, iata = "BA0001", terminal = T1, actPax = Option(1))
               ))
 
             val fiveMinutes = 600d / 60
             val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
 
         val crunch = runCrunchGraph(TestConfig(
-          now = () => SDate(scheduled),
+          now = () => SDate(scheduledDuringBst),
           airportConfig = defaultAirportConfig.copy(
             minMaxDesksByTerminalQueue24Hrs = minMaxDesks,
             terminalProcessingTimes = procTimes,

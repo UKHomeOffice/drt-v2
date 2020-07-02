@@ -129,7 +129,7 @@ object TestActors {
   }
 
   class TestAggregatedArrivalsActor() extends {
-    private val portCode = PortCode("LHR")
+    private val portCode = PortCode("TEST")
   } with AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables)) {
     def reset: Receive = {
       case ResetData =>

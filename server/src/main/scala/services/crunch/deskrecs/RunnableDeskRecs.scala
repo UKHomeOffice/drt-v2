@@ -88,9 +88,7 @@ object RunnableDeskRecs {
   }
 }
 
-trait FlightsRequest
-
-case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with FlightsRequest
+case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
 
 trait PortStateRequest
 
