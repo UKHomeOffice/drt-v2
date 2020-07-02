@@ -81,6 +81,16 @@ class JsonSerializationSpec extends Specification {
       deserialized === info
     }
 
+    "PortState (empty)" >> {
+      val ps = PortState(Seq(), Seq(), Seq())
+
+      val asJson: String = write(ps)
+
+      val deserialized: PortState = read[PortState](asJson)
+
+      deserialized === ps
+    }
+
     "PortState" >> {
       val flightWithSplits = ApiFlightWithSplits(
         Arrival(None, ArrivalStatus("scheduled"), None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),

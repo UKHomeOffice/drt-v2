@@ -1,6 +1,6 @@
 package controllers.application
 
-import actors.{GetPortState, GetUpdatesSince, PointInTimeQuery}
+import actors.{GetUpdatesSince, PointInTimeQuery}
 import akka.pattern.ask
 import controllers.Application
 import drt.auth.DesksAndQueuesView
@@ -8,6 +8,7 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
+import services.crunch.deskrecs.GetStateForDateRange
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -30,7 +31,7 @@ trait WithPortState {
 
       val eventualUpdates = maybeSinceMillis match {
         case None =>
-          futurePortState(maybePointInTime, GetPortState(startMillis, endMillis)).map(r => Ok(write(r)))
+          futurePortState(maybePointInTime, GetStateForDateRange(startMillis, endMillis)).map(r => Ok(write(r)))
         case Some(sinceMillis) =>
           futureUpdates(GetUpdatesSince(sinceMillis, startMillis, endMillis)).map(r => Ok(write(r)))
       }
@@ -49,7 +50,7 @@ trait WithPortState {
       val startMillis = request.queryString.get("start").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
       val endMillis = request.queryString.get("end").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
 
-      val futureState = futurePortState(Option(pointInTime), GetPortState(startMillis, endMillis))
+      val futureState = futurePortState(Option(pointInTime), GetStateForDateRange(startMillis, endMillis))
 
       futureState
         .map { updates => Ok(write(updates)) }
@@ -61,12 +62,12 @@ trait WithPortState {
     }
   }
 
-  def futurePortState(maybePointInTime: Option[MillisSinceEpoch], request: GetPortState): Future[Option[PortState]] = {
+  def futurePortState(maybePointInTime: Option[MillisSinceEpoch], request: GetStateForDateRange): Future[PortState] = {
     val finalMessage = maybePointInTime match {
       case Some(pit) => PointInTimeQuery(pit, request)
       case _ => request
     }
-    ctrl.portStateActor.ask(finalMessage).mapTo[Option[PortState]]
+    ctrl.portStateActor.ask(finalMessage).mapTo[PortState]
   }
 
   def futureUpdates(request: GetUpdatesSince): Future[Option[PortStateUpdates]] =

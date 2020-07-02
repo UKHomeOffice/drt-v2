@@ -1,11 +1,11 @@
 package services.`export`
 
-import actors.GetPortStateForTerminal
 import akka.actor.Actor
 import drt.shared.PortState
+import services.crunch.deskrecs.GetStateForTerminalDateRange
 
 class MockPortStateActor(portState: PortState) extends Actor {
   override def receive: Receive = {
-    case GetPortStateForTerminal(_, _, _) => sender() ! portState
+    case GetStateForTerminalDateRange(_, _, _) => sender() ! portState
   }
 }

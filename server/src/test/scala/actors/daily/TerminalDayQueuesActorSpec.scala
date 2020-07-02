@@ -17,7 +17,7 @@ import scala.concurrent.{Await, Future}
 
 class MockTerminalDayQueuesActor(day: SDateLike,
                                  terminal: Terminal,
-                                 initialState: Map[TQM, CrunchMinute]) extends TerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day) {
+                                 initialState: Map[TQM, CrunchMinute]) extends TerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, None) {
   state = initialState
 }
 
@@ -29,7 +29,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
   val myNow: () => SDateLike = () => date
 
   "Given an empty TerminalDayQueuesActor" >> {
-    val queuesActor: ActorRef = system.actorOf(Props(new TerminalDayQueuesActor(2020, 1, 1, terminal, myNow)))
+    val queuesActor: ActorRef = system.actorOf(Props(new TerminalDayQueuesActor(2020, 1, 1, terminal, myNow, None)))
 
     "When I send it a DeskRecMinute" >> {
       val drm = DeskRecMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4)
@@ -47,7 +47,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
 
       val eventualContainer = queuesActor
         .ask(MinutesContainer(Iterable(drm)))
-        .flatMap {_ => queuesActor.ask(MinutesContainer(Iterable(sm)))}
+        .flatMap { _ => queuesActor.ask(MinutesContainer(Iterable(sm))) }
         .mapTo[MinutesContainer[CrunchMinute, TQM]]
 
       "I should get back the merged CrunchMinute" >> {
@@ -59,11 +59,11 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
   }
 
   "Given a terminal-day queues actor for a day which does not any data" >> {
-    val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
+    val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
     "When I ask for the state for that day" >> {
       "I should get back an empty map of crunch minutes" >> {
-        val result = Await.result(terminalSummariesActor.ask(GetState).mapTo[Option[Map[TQM, CrunchMinute]]], 1 second)
+        val result = Await.result(terminalDayActor.ask(GetState).mapTo[Option[Map[TQM, CrunchMinute]]], 1 second)
 
         result === None
       }
@@ -72,9 +72,9 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
     "When I send minutes to persist which lie within the day, and then ask for its state I should see the minutes sent" >> {
       val minutes = Set(crunchMinuteForDate(date))
       val container = MinutesContainer(minutes)
-      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
-      val eventual = sendMinuteQueryAndClear(container, terminalSummariesActor)
+      val eventual = sendMinutesAndGetState(container, terminalDayActor)
       val result = Await.result(eventual, 1 second)
 
       result === Option(MinutesContainer(minutes.map(_.copy(lastUpdated = Option(date.millisSinceEpoch)))))
@@ -83,9 +83,9 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
     "When I send minutes to persist which lie outside the day, and then ask for its state I should see None" >> {
       val otherDate = SDate("2020-01-02T00:00")
       val crunchMinutes = MinutesContainer(Set(crunchMinuteForDate(otherDate)))
-      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
-      val eventual = sendMinuteQueryAndClear(crunchMinutes, terminalSummariesActor)
+      val eventual = sendMinutesAndGetState(crunchMinutes, terminalDayActor)
       val result = Await.result(eventual, 1 second)
 
       result === None
@@ -96,19 +96,19 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
       val inside = crunchMinuteForDate(date)
       val outside = crunchMinuteForDate(otherDate)
       val crunchMinutes = MinutesContainer(Set(inside, outside))
-      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
-      val eventual = sendMinuteQueryAndClear(crunchMinutes, terminalSummariesActor)
+      val eventual = sendMinutesAndGetState(crunchMinutes, terminalDayActor)
       val result = Await.result(eventual, 1 second)
 
       result === Option(MinutesContainer(Set(inside.copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }
   }
 
-  private def sendMinuteQueryAndClear(minutesContainer: MinutesContainer[CrunchMinute, TQM],
-                                      terminalSummariesActor: ActorRef): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = {
-    terminalSummariesActor.ask(minutesContainer).flatMap { _ =>
-      terminalSummariesActor.ask(GetState).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
+  private def sendMinutesAndGetState(minutesContainer: MinutesContainer[CrunchMinute, TQM],
+                                     actor: ActorRef): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = {
+    actor.ask(minutesContainer).flatMap { _ =>
+      actor.ask(GetState).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
     }
   }
 

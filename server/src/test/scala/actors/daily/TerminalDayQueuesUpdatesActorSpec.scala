@@ -1,15 +1,11 @@
 package actors.daily
 
-import java.io.File
-import java.util.UUID
-
 import actors.daily.ReadJournalTypes.ReadJournalWithEvents
 import actors.{InMemoryStreamingJournal, StreamingJournalLike}
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.testkit.TestProbe
-import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{Queues, SDateLike}
@@ -21,8 +17,6 @@ import test.TestActors.TestTerminalDayQueuesActor
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
-import scala.reflect.io.Directory
-
 
 class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
   implicit val mat: ActorMaterializer = ActorMaterializer()

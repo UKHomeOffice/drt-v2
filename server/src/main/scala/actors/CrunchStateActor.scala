@@ -3,6 +3,7 @@ package actors
 import actors.FlightMessageConversion.flightWithSplitsFromMessage
 import actors.PortStateMessageConversion._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted}
+import actors.pointInTime.GetCrunchMinutes
 import actors.restore.RestorerWithLegacy
 import akka.actor._
 import akka.persistence._
@@ -16,27 +17,6 @@ import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 
-
-object CrunchStateActor {
-  def props(initialMaybeSnapshotInterval: Option[Int],
-            initialSnapshotBytesThreshold: Int,
-            name: String,
-            portQueues: Map[Terminal, Seq[Queue]],
-            now: () => SDateLike,
-            expireAfterMillis: Int,
-            purgePreviousSnapshots: Boolean,
-            forecastMaxMillis: () => MillisSinceEpoch) = Props(
-    new CrunchStateActor(
-      initialMaybeSnapshotInterval,
-      initialSnapshotBytesThreshold,
-      name,
-      portQueues,
-      now,
-      expireAfterMillis,
-      purgePreviousSnapshots,
-      forecastMaxMillis
-    ))
-}
 
 class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
                        initialSnapshotBytesThreshold: Int,
@@ -72,8 +52,6 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     case diff: CrunchDiffMessage =>
       applyRecoveryDiff(diff, forecastMaxMillis())
       logRecoveryState()
-      bytesSinceSnapshotCounter += diff.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
   }
 
   override def postRecoveryComplete(): Unit = {
@@ -135,7 +113,7 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
     staffMinutesToUpdate = diff.staffMinuteUpdates.values.map(staffMinuteToMessage).toList
   )
 
-  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): PortState = state.window(SDate(start), SDate(end))
 
   def setStateFromSnapshot(snapshot: CrunchStateSnapshotMessage, timeWindowEnd: Option[SDateLike] = None): Unit = {
     snapshotMessageToState(snapshot, timeWindowEnd, state)

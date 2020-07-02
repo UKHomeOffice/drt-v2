@@ -19,7 +19,6 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services._
 import services.crunch.CrunchSystem
-import services.graphstages.Crunch
 import slickdb.{ArrivalTable, Tables}
 
 import scala.collection.mutable
@@ -36,8 +35,8 @@ case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsF
 
 case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
                         (implicit val materializer: Materializer,
-                     val ec: ExecutionContext,
-                     val system: ActorSystem) extends DrtSystemInterface {
+                         val ec: ExecutionContext,
+                         val system: ActorSystem) extends DrtSystemInterface {
 
   import DrtStaticParameters._
 
@@ -47,8 +46,6 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   val aggregateArrivalsDbConfigKey = "aggregated-db"
 
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
-  val liveCrunchStateProps: Props = CrunchStateActor.props(Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots, forecastMaxMillis)
-  val forecastCrunchStateProps: Props = CrunchStateActor.props(Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots, forecastMaxMillis)
 
   override val baseArrivalsActor: ActorRef = system.actorOf(Props(new ForecastBaseArrivalsActor(params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis)), name = "base-arrivals-actor")
   override val forecastArrivalsActor: ActorRef = system.actorOf(Props(new ForecastPortArrivalsActor(params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis)), name = "forecast-arrivals-actor")
@@ -57,10 +54,16 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
 
-  override val liveCrunchStateActor: ActorRef = system.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
-  override val forecastCrunchStateActor: ActorRef = system.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
+  val legacyFlightDataCutoff: SDateLike = SDate(config.get[String]("legacy-flight-data-cutoff"))
 
-  override val portStateActor: ActorRef = PortStateActor(now, liveCrunchStateActor, forecastCrunchStateActor, airportConfig.queuesByTerminal)
+  override val portStateActor: ActorRef = if (usePartitionedPortState) {
+    log.info(s"Legacy flight data cutoff: ${legacyFlightDataCutoff.toISOString()}")
+    PartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config), legacyFlightDataCutoff)
+  } else {
+    val liveCrunchStateProps: Props = Props(new CrunchStateActor(Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots, forecastMaxMillis))
+    val forecastCrunchStateProps: Props = Props(new CrunchStateActor(Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots, forecastMaxMillis))
+    PortStateActor(now, liveCrunchStateProps, forecastCrunchStateProps, airportConfig.queuesByTerminal)
+  }
 
   val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 
@@ -83,34 +86,29 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     } else userRolesFromHeader(headers)
 
   def run(): Unit = {
-    val futurePortStates: Future[(Option[PortState], Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
-      val maybeLivePortState = initialStateFuture[PortState](liveCrunchStateActor)
-      val maybeForecastPortState = initialStateFuture[PortState](forecastCrunchStateActor)
+    val futurePortStates: Future[(Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
+      val maybeLivePortState = if (usePartitionedPortState) Future(None) else initialStateFuture[PortState](portStateActor)
       val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialRegisteredArrivals = initialStateFuture[RegisteredArrivals](registeredArrivalsActor)
       for {
         lps <- maybeLivePortState
-        fps <- maybeForecastPortState
         ba <- maybeInitialBaseArrivals
         fa <- maybeInitialFcstArrivals
         la <- maybeInitialLiveArrivals
         ra <- maybeInitialRegisteredArrivals
-      } yield (lps, fps, ba, fa, la, ra)
+      } yield (lps, ba, fa, la, ra)
     }
 
     futurePortStates.onComplete {
-      case Success((maybeLiveState, maybeForecastState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
+      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
         system.log.info(s"Successfully restored initial state for App")
-        val initialPortState: Option[PortState] = mergePortStates(maybeForecastState, maybeLiveState)
-        initialPortState.foreach(ps => portStateActor ! ps)
-
         val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
         val (manifestResponsesSource, _, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
         val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(
-          initialPortState,
+          maybePortState,
           maybeBaseArrivals,
           maybeForecastArrivals,
           Option(mutable.SortedMap[UniqueArrival, Arrival]()),
@@ -118,7 +116,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
           manifestRequestsSink,
           manifestResponsesSource,
           params.refreshArrivalsOnStart,
-          checkRequiredStaffUpdatesOnStartup = true,
+          checkRequiredStaffUpdatesOnStartup = false,
           useLegacyDeployments,
           startDeskRecs)
 
@@ -130,7 +128,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
         new S3ManifestPoller(crunchInputs.manifestsLiveResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
 
         if (!params.useLegacyManifests) {
-          val initRegisteredArrivals: Option[RegisteredArrivals] = initialRegisteredArrivals(maybeRegisteredArrivals, initialPortState)
+          val initRegisteredArrivals: Option[RegisteredArrivals] = initialRegisteredArrivals(maybeRegisteredArrivals, maybePortState)
           val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 15 * oneMinuteMillis
           startManifestsGraph(initRegisteredArrivals, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
         }
@@ -238,7 +236,7 @@ object ArrivalGenerator {
       PcpTime = pcpTime,
       Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
       FeedSources = feedSources
-      )
+    )
   }
 
   def arrivals(now: () => SDateLike, terminalNames: Iterable[Terminal]): Iterable[Arrival] = {

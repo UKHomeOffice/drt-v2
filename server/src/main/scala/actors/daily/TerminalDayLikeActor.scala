@@ -1,24 +1,27 @@
 package actors.daily
 
-import actors.PortStateMessageConversion.crunchMinuteToMessage
 import actors.{GetState, RecoveryActorLike, Sizes}
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinuteLike, MinutesContainer}
-import drt.shared.{SDateLike, TQM, WithTimeAccessor}
+import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.Terminals.Terminal
+import drt.shared.{SDateLike, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import services.SDate
 import services.graphstages.Crunch
 
-case object GetSummariesWithActualApi
 
 abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor](year: Int,
                                                                                               month: Int,
                                                                                               day: Int,
                                                                                               terminal: Terminal,
-                                                                                              now: () => SDateLike) extends RecoveryActorLike {
-  override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d")
+                                                                                              now: () => SDateLike,
+                                                                                              maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
+  val loggerSuffix: String = maybePointInTime match {
+    case None => ""
+    case Some(pit) => f"@${SDate(pit).toISOString()}"
+  }
+  override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
   val typeForPersistenceId: String
 
@@ -27,11 +30,22 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   override def persistenceId: String = f"terminal-$typeForPersistenceId-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  private val maxSnapshotInterval = 250
+  override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
-  val firstMinute: SDateLike = SDate(year, month, day, 0, 0, Crunch.europeLondonTimeZone)
+  val firstMinute: SDateLike = SDate(year, month, day, 0, 0, Crunch.utcTimeZone)
   val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
   val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
+
+  override def recovery: Recovery = maybePointInTime match {
+    case None => Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
+    case Some(pointInTime) =>
+      val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
+      val recovery = Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
+      log.info(s"Recovery: $recovery")
+      recovery
+  }
 
   override def receiveCommand: Receive = {
     case container: MinutesContainer[VAL, INDEX] =>
@@ -45,9 +59,8 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     case m => log.warn(s"Got unexpected message: $m")
   }
 
-  private def stateResponse: Option[MinutesContainer[VAL, INDEX]] = {
+  private def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
     if (state.nonEmpty) Option(MinutesContainer(state.values.toSet)) else None
-  }
 
   def diffFromMinutes(state: Map[INDEX, VAL], minutes: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
     val nowMillis = now().millisSinceEpoch
@@ -66,7 +79,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
     diffFromMinutes(state, container.minutes) match {
-      case noDifferences if noDifferences.isEmpty => sender() ! true
+      case noDifferences if noDifferences.isEmpty => sender() ! MinutesContainer.empty[VAL, INDEX]
       case differences =>
         state = updateStateFromDiff(state, differences)
         val messageToPersist = containerToMessage(differences)
@@ -75,4 +88,12 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     }
 
   def containerToMessage(differences: Iterable[VAL]): GeneratedMessage
+
+  def updatesToApply(allUpdates: Iterable[(INDEX, VAL)]): Iterable[(INDEX, VAL)] =
+    maybePointInTime match {
+      case None => allUpdates
+      case Some(pit) => allUpdates.filter {
+        case (_, cm) => cm.lastUpdated.getOrElse(0L) <= pit
+      }
+    }
 }

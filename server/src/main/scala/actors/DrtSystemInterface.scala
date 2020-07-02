@@ -70,7 +70,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val config: Configuration
   val airportConfig: AirportConfig
   val params: DrtConfigParameters = DrtConfigParameters(config)
-  val journalType: StreamingJournalLike = ProdStreamingJournal
+  val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
 
   def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
 
@@ -79,6 +79,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val registeredArrivalsActor: ActorRef = system.actorOf(Props(new RegisteredArrivalsActor(oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis)), name = "registered-arrivals-actor")
   val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(journalType, airportConfig.crunchOffsetMinutes)))
+
+  val usePartitionedPortState: Boolean = config.get[Boolean]("feature-flags.use-partitioned-state")
 
   val portStateActor: ActorRef
   val shiftsActor: ActorRef
@@ -97,8 +99,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val maxDaysToConsider: Int = 14
   val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, now)))
 
-  val liveCrunchStateActor: ActorRef
-  val forecastCrunchStateActor: ActorRef
   val aggregatedArrivalsActor: ActorRef
 
   val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
@@ -363,23 +363,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     implicit val scheduler: Scheduler = system.scheduler
     Retry.retry(future, RetryDelays.fibonacci, 3, 5 seconds)
-  }
-
-  def mergePortStates(maybeForecastPs: Option[PortState],
-                      maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
-    case (None, None) => None
-    case (Some(fps), None) =>
-      log.info(s"We only have initial forecast port state")
-      Option(fps)
-    case (None, Some(lps)) =>
-      log.info(s"We only have initial live port state")
-      Option(lps)
-    case (Some(fps), Some(lps)) =>
-      log.info(s"Merging initial live & forecast port states. ${lps.flights.size} live flights, ${fps.flights.size} forecast flights")
-      Option(PortState(
-        fps.flights ++ lps.flights,
-        fps.crunchMinutes ++ lps.crunchMinutes,
-        fps.staffMinutes ++ lps.staffMinutes))
   }
 
   def getFeedStatus: Future[Seq[FeedSourceStatuses]] = Source(feedActors)

@@ -7,6 +7,6 @@ import drt.shared.Terminals.Terminal
 
 class StaffMinutesActor(now: () => SDateLike,
                         terminals: Iterable[Terminal],
-                        lookupPrimary: MinutesLookup[StaffMinute, TM],
-                        lookupSecondary: MinutesLookup[StaffMinute, TM],
-                        updateMinutes: MinutesUpdate[StaffMinute, TM]) extends MinutesActorLike(now, terminals, lookupPrimary, lookupSecondary, updateMinutes)
+                        lookup: MinutesLookup[StaffMinute, TM],
+                        lookupLegacy: MinutesLookup[StaffMinute, TM],
+                        updateMinutes: MinutesUpdate[StaffMinute, TM]) extends MinutesActorLike(now, terminals, lookup, lookupLegacy, updateMinutes)

@@ -30,12 +30,12 @@ class PortStateSpec extends CrunchTestLike {
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case ps: PortState =>
         val staffUpdated = ps.staffMinutes.exists {
-          case (TM(T1, m), sm) =>
-            m == millis && sm.shifts == 1
+          case (TM(T1, m), sm) if m == millis => sm.shifts == 1
+          case _ => false
         }
         val paxLoadUnchanged = ps.crunchMinutes.exists {
-          case (TQM(T1, Queues.EeaDesk, m), cm) =>
-            m == millis && cm.paxLoad == 10
+          case (TQM(T1, Queues.EeaDesk, m), cm) if m == millis => cm.paxLoad == 10
+          case _ => false
         }
 
         staffUpdated && paxLoadUnchanged

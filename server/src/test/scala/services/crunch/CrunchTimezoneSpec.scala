@@ -40,27 +40,27 @@ class CrunchTimezoneSpec extends CrunchTestLike {
     }
 
     "Min / Max desks in BST " >> {
-      "Given flights with one passenger and one split to eea desk " +
-        "When the date falls within BST " +
-        "Then I should see min desks allocated in alignment with BST" >> {
-        val minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]] = Map(
-          T1 -> Map(
-            Queues.EeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20)),
-            Queues.NonEeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20))
-          )
-        )
+      "Given flights with one passenger and one split to eea desk " >> {
+        "When the date falls within BST " >> {
+          "Then I should see min desks allocated in alignment with BST" >> {
+            val minMaxDesks: Map[Terminal, Map[Queue, (List[Int], List[Int])]] = Map(
+              T1 -> Map(
+                Queues.EeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20)),
+                Queues.NonEeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20))
+                )
+              )
 
-        val scheduled = "2017-06-01T00:00Z"
+            val scheduledDuringBst = "2017-06-01T00:00Z"
 
-        val flights = Flights(List(
-          ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(1))
-        ))
+            val flights = Flights(List(
+              ArrivalGenerator.arrival(schDt = scheduledDuringBst, iata = "BA0001", terminal = T1, actPax = Option(1))
+              ))
 
-        val fiveMinutes = 600d / 60
-        val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
+            val fiveMinutes = 600d / 60
+            val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
 
         val crunch = runCrunchGraph(TestConfig(
-          now = () => SDate(scheduled),
+          now = () => SDate(scheduledDuringBst),
           airportConfig = defaultAirportConfig.copy(
             minMaxDesksByTerminalQueue24Hrs = minMaxDesks,
             terminalProcessingTimes = procTimes,
@@ -68,30 +68,32 @@ class CrunchTimezoneSpec extends CrunchTestLike {
             minutesToCrunch = 120
             )))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+            offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-        val expected = Map(T1 -> Map(
-          Queues.EeaDesk -> List(
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
-          ),
-          Queues.NonEeaDesk -> List(
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-            5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
-          )
-        ))
+            val expected = Map(T1 -> Map(
+              Queues.EeaDesk -> List(
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+                5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
+                ),
+              Queues.NonEeaDesk -> List(
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
+                5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
+                )
+              ))
 
-        crunch.portStateTestProbe.fishForMessage(5 seconds) {
-          case ps: PortState =>
-            val resultSummary = deskRecsFromPortState(ps, 120)
-            resultSummary == expected
+            crunch.portStateTestProbe.fishForMessage(5 seconds) {
+              case ps: PortState =>
+                val resultSummary = deskRecsFromPortState(ps, 120)
+                resultSummary == expected
+            }
+
+            success
+          }
         }
-
-        success
       }
 
       "Given a list of Min or Max desks" >> {

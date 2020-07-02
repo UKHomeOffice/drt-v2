@@ -25,12 +25,9 @@ class ArrivalsReadActor(pointInTime: SDateLike, persistenceIdString: String, fee
   def consumeDiffsMessage(diffsMessage: FlightsDiffMessage): Unit = consumeUpdates(diffsMessage)
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case diff@FlightsDiffMessage(Some(createdMillis), _, _, _) if createdMillis <= pointInTime.millisSinceEpoch =>
-
-      consumeDiffsMessage(diff)
-
-    case _: FeedStatusMessage =>
-
+    case diff@FlightsDiffMessage(Some(createdMillis), _, _, _) =>
+      if (createdMillis <= pointInTime.millisSinceEpoch) consumeDiffsMessage(diff)
+    case _ =>
   }
 
   override def recovery: Recovery = {

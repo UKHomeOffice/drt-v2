@@ -15,7 +15,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.crunch.deskrecs.GetFlights
+import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
 import services.graphstages.Crunch.{LoadMinute, Loads}
 
 import scala.concurrent.duration._
@@ -25,16 +25,16 @@ import scala.language.postfixOps
 
 object PortStateActor {
   def apply(now: () => SDateLike,
-            liveStateActor: ActorRef,
-            forecastStateActor: ActorRef,
+            liveCrunchStateProps: Props,
+            forecastCrunchStateProps: Props,
             queues: Map[Terminal, Seq[Queue]])
            (implicit system: ActorSystem): ActorRef = {
-    system.actorOf(Props(new PortStateActor(liveStateActor, forecastStateActor, now, liveDaysAhead, queues)), name = "port-state-actor")
+    system.actorOf(Props(new PortStateActor(liveCrunchStateProps, forecastCrunchStateProps, now, liveDaysAhead, queues)), name = "port-state-actor")
   }
 }
 
-class PortStateActor(liveStateActor: ActorRef,
-                     forecastStateActor: ActorRef,
+class PortStateActor(liveCrunchStateProps: Props,
+                     forecastCrunchStateProps: Props,
                      now: () => SDateLike,
                      liveDaysAhead: Int,
                      queuesByTerminal: Map[Terminal, Seq[Queue]]) extends Actor {
@@ -46,14 +46,48 @@ class PortStateActor(liveStateActor: ActorRef,
 
   implicit val timeout: Timeout = new Timeout(30 seconds)
 
+  val liveCrunchStateActor: ActorRef = context.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
+  val forecastCrunchStateActor: ActorRef = context.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
+
   val state: PortStateMutable = PortStateMutable.empty
 
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
+  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))//, "port-state-kill-actor")
 
   var maybeCrunchQueueActor: Option[ActorRef] = None
   var crunchSourceIsReady: Boolean = true
   var maybeSimActor: Option[ActorRef] = None
   var simulationActorIsReady: Boolean = true
+
+  override def preStart(): Unit = {
+    val eventualLiveState = liveCrunchStateActor.ask(GetState).mapTo[Option[PortState]]
+    val eventualFcstState = forecastCrunchStateActor.ask(GetState).mapTo[Option[PortState]]
+    for {
+      liveState <- eventualLiveState
+      fcstState <- eventualFcstState
+    } yield mergePortStates(fcstState, liveState).foreach { initialPortState =>
+      log.info(s"Setting initial PortState from live & forecast")
+      state.crunchMinutes ++= initialPortState.crunchMinutes
+      state.staffMinutes ++= initialPortState.staffMinutes
+      state.flights ++= initialPortState.flights
+    }
+  }
+
+  def mergePortStates(maybeForecastPs: Option[PortState],
+                      maybeLivePs: Option[PortState]): Option[PortState] = (maybeForecastPs, maybeLivePs) match {
+    case (None, None) => None
+    case (Some(fps), None) =>
+      log.info(s"We only have initial forecast port state")
+      Option(fps)
+    case (None, Some(lps)) =>
+      log.info(s"We only have initial live port state")
+      Option(lps)
+    case (Some(fps), Some(lps)) =>
+      log.info(s"Merging initial live & forecast port states. ${lps.flights.size} live flights, ${fps.flights.size} forecast flights")
+      Option(PortState(
+        fps.flights ++ lps.flights,
+        fps.crunchMinutes ++ lps.crunchMinutes,
+        fps.staffMinutes ++ lps.staffMinutes))
+  }
 
   override def receive: Receive = {
 
@@ -124,16 +158,22 @@ class PortStateActor(liveStateActor: ActorRef,
     case PointInTimeQuery(millis, query) =>
       replyWithPointInTimeQuery(SDate(millis), query)
 
-    case message: DateRangeLike if SDate(message.from).isHistoricDate(now()) =>
+    case message: DateRangeLike if SDate(message.to).isHistoricDate(now()) =>
       replyWithDayViewQuery(message)
 
-    case GetPortState(start, end) =>
+    case GetStateForDateRange(start, end) =>
       log.debug(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriod(start, end)
 
-    case GetPortStateForTerminal(start, end, terminal) =>
+    case GetStateForTerminalDateRange(start, end, terminal) =>
       log.debug(s"Received GetPortStateForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
       sender() ! stateForPeriodForTerminal(start, end, terminal)
+
+    case GetFlights(startMillis, endMillis) =>
+      val start = SDate(startMillis)
+      val end = SDate(endMillis)
+      log.info(s"Got request for flights between ${start.toISOString()} - ${end.toISOString()}")
+      sender() ! FlightsWithSplits(state.flights.range(start, end))
 
     case GetFlightsForTerminal(start, end, terminal) =>
       log.debug(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()} for $terminal")
@@ -142,12 +182,6 @@ class PortStateActor(liveStateActor: ActorRef,
     case GetUpdatesSince(millis, start, end) =>
       val updates: Option[PortStateUpdates] = state.updates(millis, start, end)
       sender() ! updates
-
-    case GetFlights(startMillis, endMillis) =>
-      val start = SDate(startMillis)
-      val end = SDate(endMillis)
-      log.info(s"Got request for flights between ${start.toISOString()} - ${end.toISOString()}")
-      sender() ! FlightsWithSplits(state.flights.range(start, end))
 
     case unexpected => log.warn(s"Got unexpected: $unexpected")
   }
@@ -174,8 +208,7 @@ class PortStateActor(liveStateActor: ActorRef,
     start.millisSinceEpoch,
     end.millisSinceEpoch)))
 
-  def stateForPeriod(start: MillisSinceEpoch,
-                     end: MillisSinceEpoch): Option[PortState] = Option(state.window(SDate(start), SDate(end)))
+  def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): PortState = state.window(SDate(start), SDate(end))
 
   def stateForPeriodForTerminal(start: MillisSinceEpoch,
                                 end: MillisSinceEpoch,
@@ -192,8 +225,8 @@ class PortStateActor(liveStateActor: ActorRef,
       case (live, forecast) =>
         Future
           .sequence(Seq(
-            askAndLogOnFailure(liveStateActor, live, "live crunch persistence request failed"),
-            askAndLogOnFailure(forecastStateActor, forecast, "forecast crunch persistence request failed")))
+            askAndLogOnFailure(liveCrunchStateActor, live, "live crunch persistence request failed"),
+            askAndLogOnFailure(forecastCrunchStateActor, forecast, "forecast crunch persistence request failed")))
           .recover { case t =>
             log.error("A future failed on requesting persistence", t)
           }

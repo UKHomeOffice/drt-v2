@@ -1,7 +1,7 @@
 package actors.daily
 
 import akka.actor.Props
-import drt.shared.CrunchApi.StaffMinute
+import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, TM}
 import scalapb.GeneratedMessage
@@ -10,14 +10,18 @@ import server.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMes
 
 object TerminalDayStaffActor {
   def props(terminal: Terminal, date: SDateLike, now: () => SDateLike): Props =
-    Props(new TerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now))
+    Props(new TerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, None))
+
+  def propsPointInTime(terminal: Terminal, date: SDateLike, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
+    Props(new TerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, Option(pointInTime)))
 }
 
 class TerminalDayStaffActor(year: Int,
                             month: Int,
                             day: Int,
                             terminal: Terminal,
-                            val now: () => SDateLike) extends TerminalDayLikeActor[StaffMinute, TM](year, month, day, terminal, now) {
+                            val now: () => SDateLike,
+                            maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[StaffMinute, TM](year, month, day, terminal, now, maybePointInTime) {
   override val typeForPersistenceId: String = "staff"
 
   import actors.PortStateMessageConversion._
@@ -29,7 +33,7 @@ class TerminalDayStaffActor(year: Int,
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case StaffMinutesMessage(minuteMessages) =>
       log.debug(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
-      state = state ++ minuteMessagesToKeysAndMinutes(minuteMessages)
+      state = state ++ updatesToApply(minuteMessagesToKeysAndMinutes(minuteMessages))
   }
 
   private def minuteMessagesToKeysAndMinutes(messages: Seq[StaffMinuteMessage]): Iterable[(TM, StaffMinute)] = messages

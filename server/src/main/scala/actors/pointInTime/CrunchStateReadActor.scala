@@ -5,18 +5,18 @@ import actors.PortStateMessageConversion.{crunchMinuteFromMessage, staffMinuteFr
 import actors.Sizes.oneMegaByte
 import actors._
 import akka.persistence._
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import server.protobuf.messages.CrunchState._
 import services.SDate
+import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
 
 case class GetCrunchMinutes(terminal: Terminal)
 
 case class GetStaffMinutes(terminal: Terminal)
-
 
 class CrunchStateReadActor(snapshotInterval: Int,
                            pointInTime: SDateLike,
@@ -32,7 +32,7 @@ class CrunchStateReadActor(snapshotInterval: Int,
     now = () => pointInTime,
     expireAfterMillis = expireAfterMillis,
     purgePreviousSnapshots = false,
-    forecastMaxMillis = () => endMillis) {
+    forecastMaxMillis = () => endMillis) with FlightsDataLike {
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: CrunchStateSnapshotMessage => setStateFromSnapshot(snapshot, Option(pointInTime.addDays(2)))
@@ -58,16 +58,28 @@ class CrunchStateReadActor(snapshotInterval: Int,
     case SaveSnapshotSuccess =>
       log.info("Saved PortState Snapshot")
 
-    case GetPortState(start, end) =>
-      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+    case GetCrunchMinutes(terminal) =>
+      log.debug(s"Received GetCrunchMinutes request")
+      sender() ! Option(MinutesContainer(state.immutable.crunchMinutes.filterKeys(tqm => tqm.terminal == terminal).values))
+
+    case GetStaffMinutes(terminal) =>
+      log.debug(s"Received GetStaffMinutes request")
+      sender() ! Option(MinutesContainer(state.immutable.staffMinutes.filterKeys(tm => tm.terminal == terminal).values))
+
+    case GetStateForDateRange(start, end) =>
+      logInfo(s"Received GetStateForDateRange Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriod(start, end)
 
-    case GetPortStateForTerminal(start, end, terminalName) =>
-      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+    case GetStateForTerminalDateRange(start, end, terminalName) =>
+      logInfo(s"Received GetStateForTerminalDateRange Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriodForTerminal(start, end, terminalName)
 
+    case GetFlights(start, end) =>
+      logInfo(s"Received GetFlights Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      sender() ! FlightsWithSplits(stateForPeriod(start, end).flights)
+
     case GetFlightsForTerminal(start, end, terminalName) =>
-      logInfo(s"Received GetPortState Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      logInfo(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! FlightsWithSplits(stateForPeriodForTerminal(start, end, terminalName).flights)
 
     case u =>

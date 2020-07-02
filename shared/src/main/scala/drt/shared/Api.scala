@@ -648,8 +648,8 @@ object FlightsApi {
     }
 
     def applyTo(flightsWithSplits: FlightsWithSplits,
-                now: MillisSinceEpoch): (FlightsWithSplits, Seq[MillisSinceEpoch]) = {
-      val updated = flightsWithSplits.flights ++ flightsToUpdate.map(f => (f.apiFlight.unique, f))
+                nowMillis: MillisSinceEpoch): (FlightsWithSplits, Seq[MillisSinceEpoch]) = {
+      val updated = flightsWithSplits.flights ++ flightsToUpdate.map(f => (f.apiFlight.unique, f.copy(lastUpdated = Option(nowMillis))))
       val minusRemovals = updated.toMap -- arrivalsToRemove.map(_.unique)
 
       val asMap = flightsWithSplits.flights.toMap

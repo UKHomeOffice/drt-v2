@@ -46,9 +46,9 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case RegisteredArrivalsMessage(arrivalMessages) =>
-      log.info(s"Got a recovery message containing ${arrivalMessages.length} arrivals")
+      log.debug(s"Got a recovery message containing ${arrivalMessages.length} arrivals")
       addRegisteredArrivalsFromMessages(arrivalMessages)
-      log.info(s"Now ${state.arrivals.size} registered arrivals")
+      log.debug(s"Now ${state.arrivals.size} registered arrivals")
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {

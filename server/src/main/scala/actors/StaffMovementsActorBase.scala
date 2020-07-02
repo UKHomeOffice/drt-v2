@@ -117,14 +117,8 @@ class StaffMovementsActorBase(val now: () => SDateLike,
     case smm: StaffMovementsMessage =>
       updateState(addToState(smm.staffMovements))
 
-      bytesSinceSnapshotCounter += smm.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
-
     case rsmm: RemoveStaffMovementMessage =>
       rsmm.uUID.map(uuidToRemove => updateState(removeFromState(uuidToRemove)))
-
-      bytesSinceSnapshotCounter += rsmm.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
   }
 
   def removeFromState(uuidToRemove: String): StaffMovements =

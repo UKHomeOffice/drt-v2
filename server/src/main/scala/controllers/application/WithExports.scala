@@ -12,6 +12,7 @@ import drt.shared.{PortState, SDateLike}
 import drt.users.KeyCloakGroups
 import play.api.http.HttpEntity
 import play.api.mvc._
+import services.crunch.deskrecs.GetStateForTerminalDateRange
 import services.exports.{Exports, Forecast}
 import services.{CSVData, SDate}
 
@@ -102,7 +103,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
                            endOfForecast: SDateLike,
                            startOfForecast: SDateLike): Future[PortState] =
     ctrl.portStateActor
-      .ask(GetPortStateForTerminal(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal))(new Timeout(30 seconds))
+      .ask(GetStateForTerminalDateRange(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal))(new Timeout(30 seconds))
       .mapTo[PortState]
       .recover {
         case t =>

@@ -11,6 +11,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
+import services.crunch.deskrecs.PortStateRequest
 import services.graphstages.Crunch
 import services.{OfferHandler, SDate}
 
@@ -24,20 +25,16 @@ case object ClearState
 
 case object GetFeedStatuses
 
-case class PointInTimeQuery(pointInTime: MillisSinceEpoch, query: DateRangeLike)
+case class PointInTimeQuery(pointInTime: MillisSinceEpoch, query: DateRangeLike) extends PortStateRequest
 
 trait DateRangeLike {
   val from: MillisSinceEpoch
   val to: MillisSinceEpoch
 }
 
-case class GetPortState(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
-
-case class GetPortStateForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
-
 case class GetFlightsForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
 
-case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
+case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
 
 case object GetShifts
 
@@ -115,9 +112,6 @@ class ShiftsActorBase(val now: () => SDateLike,
       val shiftsToRecover = shiftMessagesToStaffAssignments(sm.shifts)
       val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
       purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
-
-      bytesSinceSnapshotCounter += sm.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
   }
 
   def receiveCommand: Receive = {
@@ -132,7 +126,7 @@ class ShiftsActorBase(val now: () => SDateLike,
 
       val createdAt = now()
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
-      persistAndMaybeSnapshot(shiftsMessage, Option(sender(), UpdateShiftsAck(shiftsToUpdate)))
+      persistAndMaybeSnapshot(shiftsMessage, Option((sender(), UpdateShiftsAck(shiftsToUpdate))))
 
     case SetShifts(newShiftAssignments) =>
       if (newShiftAssignments != state) {
@@ -141,7 +135,7 @@ class ShiftsActorBase(val now: () => SDateLike,
 
         val createdAt = now()
         val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(newShiftAssignments), createdAt), Option(createdAt.millisSinceEpoch))
-        persistAndMaybeSnapshot(shiftsMessage, Option(sender(), SetShiftsAck(newShiftAssignments)))
+        persistAndMaybeSnapshot(shiftsMessage, Option((sender(), SetShiftsAck(newShiftAssignments))))
       } else {
         log.info(s"No change. Nothing to persist")
         sender() ! SetShiftsAck(newShiftAssignments)

@@ -4,18 +4,17 @@ import actors.acking.AckingReceiver.Ack
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
-import drt.shared.{ApiFlightWithSplits, MilliTimes, SDateLike}
 import drt.shared.Terminals.{T1, T2}
+import drt.shared.{ApiFlightWithSplits, MilliTimes, SDateLike}
 import org.specs2.execute.{Failure, Result}
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.GetFlights
+import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class FlightsStateActorResponsesSpec extends CrunchTestLike {
-
   val myToday = "2020-06-01"
   val myNow: () => SDateLike = () => SDate(myToday)
 
@@ -23,12 +22,14 @@ class FlightsStateActorResponsesSpec extends CrunchTestLike {
   val scheduled0506 = "2020-06-05T12:00"
   val scheduled0606 = "2020-06-06T12:00"
 
-  def actor: ActorRef = system.actorOf(Props(new FlightsStateActor(None, 1, "flights", myNow, MilliTimes.oneDayMillis)))
+  val legacyDataCutoff: SDateLike = SDate("1970-01-01")
+
+  def actor: ActorRef = system.actorOf(Props(new FlightsStateActor(myNow, MilliTimes.oneDayMillis, Map(), legacyDataCutoff)))
 
   val messagesAndResponseTypes: Map[Any, (PartialFunction[Any, Result], Any)] = Map(
-    GetFlightsForTerminal(0L, 1L, T1) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),
+    GetStateForTerminalDateRange(0L, 1L, T1) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),
     GetUpdatesSince(0L, 0L, 1L) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),
-    GetFlights(0L, 1L) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),
+    GetStateForDateRange(0L, 1L) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),
     FlightsWithSplitsDiff(List(), List()) -> (({ case Ack => success }, Ack))
     )
 
@@ -55,21 +56,21 @@ class FlightsStateActorResponsesSpec extends CrunchTestLike {
       Await.ready(flightsActor.ask(FlightsWithSplitsDiff(fws, List())), 1 second)
 
       "When I ask for all flights between 2020-06-06 and 2020-06-07" >> {
-        val flights = Await.result(flightsActor.ask(GetFlights(startMillis, endMillis)), 1 second).asInstanceOf[FlightsWithSplits]
+        val flights = Await.result(flightsActor.ask(GetStateForDateRange(startMillis, endMillis)), 1 second).asInstanceOf[FlightsWithSplits]
         "I should get the flight I sent it" >> {
           flights.flights.toMap.keys === Set(fws06.unique)
         }
       }
 
       "When I ask for T1 flights between 2020-06-06 and 2020-06-07" >> {
-        val flights = Await.result(flightsActor.ask(GetFlightsForTerminal(startMillis, endMillis, T1)), 1 second).asInstanceOf[FlightsWithSplits]
+        val flights = Await.result(flightsActor.ask(GetStateForTerminalDateRange(startMillis, endMillis, T1)), 1 second).asInstanceOf[FlightsWithSplits]
         "I should get the flight I sent it" >> {
           flights.flights.toMap.keys === Set(fws06.unique)
         }
       }
 
       "When I ask for T2 flights between 2020-06-06 and 2020-06-07" >> {
-        val flights = Await.result(flightsActor.ask(GetFlightsForTerminal(startMillis, endMillis, T2)), 1 second).asInstanceOf[FlightsWithSplits]
+        val flights = Await.result(flightsActor.ask(GetStateForTerminalDateRange(startMillis, endMillis, T2)), 1 second).asInstanceOf[FlightsWithSplits]
         "I should get no flights" >> {
           flights.flights.isEmpty
         }
@@ -97,7 +98,7 @@ class FlightsStateActorResponsesSpec extends CrunchTestLike {
       "When I ask for all flights between 2020-06-06 and 2020-06-07" >> {
         val startMillis = SDate(scheduled0606).getLocalLastMidnight.millisSinceEpoch
         val endMillis = SDate(scheduled0606).getLocalNextMidnight.millisSinceEpoch
-        val flights = Await.result(flightsActor.ask(GetFlights(startMillis, endMillis)), 1 second).asInstanceOf[FlightsWithSplits]
+        val flights = Await.result(flightsActor.ask(GetStateForDateRange(startMillis, endMillis)), 1 second).asInstanceOf[FlightsWithSplits]
         "I should get just the flight scheduled 0606 I sent it" >> {
           flights.flights.toMap.keys === Set(fws06.unique)
         }
@@ -113,7 +114,7 @@ class FlightsStateActorResponsesSpec extends CrunchTestLike {
       "When I ask for all flights between 2020-05-25 and 2020-06-07" >> {
         val startMillis = SDate(scheduledBeforeExpiry).getLocalLastMidnight.millisSinceEpoch
         val endMillis = SDate(scheduled0606).getLocalNextMidnight.millisSinceEpoch
-        val flights = Await.result(flightsActor.ask(GetFlights(startMillis, endMillis)), 1 second).asInstanceOf[FlightsWithSplits]
+        val flights = Await.result(flightsActor.ask(GetStateForDateRange(startMillis, endMillis)), 1 second).asInstanceOf[FlightsWithSplits]
         "I should get just the flight scheduled 0606 I sent it as the other should have been purged from the state" >> {
           flights.flights.toMap.keys === Set(fws06.unique)
         }

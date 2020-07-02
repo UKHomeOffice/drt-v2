@@ -7,7 +7,7 @@ import drt.shared.UniqueArrival
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.metrics.{Metrics, StageTimer}
+import services.metrics.StageTimer
 
 import scala.collection.mutable
 
@@ -53,7 +53,6 @@ final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueA
     def pushAndClear(): Unit = {
       maybeResponseToPush.collect {
         case afs: ArrivalsFeedResponse =>
-          Metrics.counter(s"$stageName.arrival-updates", afs.length)
           push(out, afs)
       }
       maybeResponseToPush = None

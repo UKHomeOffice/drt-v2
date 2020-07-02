@@ -18,8 +18,8 @@ object MockTerminalDayStaffActor {
 }
 
 class MockTerminalDayStaffActor(day: SDateLike,
-                                 terminal: Terminal,
-                                 initialState: Map[TM, StaffMinute]) extends TerminalDayStaffActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day) {
+                                terminal: Terminal,
+                                initialState: Map[TM, StaffMinute]) extends TerminalDayStaffActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, None) {
   state = initialState
 }
 
@@ -30,11 +30,11 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
   val myNow: () => SDateLike = () => date
 
   "Given a terminal-day queues actor for a day which does not any data" >> {
-    val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
+    val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
     "When I ask for the state for that day" >> {
       "I should get back an empty map of staff minutes" >> {
-        val result = Await.result(terminalSummariesActor.ask(GetState).asInstanceOf[Future[Option[Map[TM, StaffMinute]]]], 1 second)
+        val result = Await.result(terminalDayActor.ask(GetState).asInstanceOf[Future[Option[Map[TM, StaffMinute]]]], 1 second)
 
         result === None
       }
@@ -42,9 +42,9 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
 
     "When I send minutes to persist which lie within the day, and then ask for its state I should see the minutes sent" >> {
       val staffMinutes = MinutesContainer(Set(staffMinuteForDate(date)))
-      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
-      val eventual = sendMinuteQueryAndClear(staffMinutes, terminalSummariesActor)
+      val eventual = sendMinutesAndGetState(staffMinutes, terminalDayActor)
       val result = Await.result(eventual, 1 second)
 
       result === Option(MinutesContainer(Set(staffMinuteForDate(date).copy(lastUpdated = Option(date.millisSinceEpoch)))))
@@ -53,9 +53,9 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
     "When I send minutes to persist which lie outside the day, and then ask for its state I should see None" >> {
       val otherDate = SDate("2020-01-02T00:00")
       val staffMinutes = MinutesContainer(Set(staffMinuteForDate(otherDate)))
-      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
-      val eventual = sendMinuteQueryAndClear(staffMinutes, terminalSummariesActor)
+      val eventual = sendMinutesAndGetState(staffMinutes, terminalDayActor)
       val result = Await.result(eventual, 1 second)
 
       result === None
@@ -66,19 +66,19 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
       val inside = staffMinuteForDate(date)
       val outside = staffMinuteForDate(otherDate)
       val staffMinutes = MinutesContainer(Set(inside, outside))
-      val terminalSummariesActor: ActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
-      val eventual = sendMinuteQueryAndClear(staffMinutes, terminalSummariesActor)
+      val eventual = sendMinutesAndGetState(staffMinutes, terminalDayActor)
       val result = Await.result(eventual, 1 second)
 
       result === Option(MinutesContainer(Set(inside.copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }
   }
 
-  private def sendMinuteQueryAndClear(minutesContainer: MinutesContainer[StaffMinute, TM],
-                                      terminalSummariesActor: ActorRef): Future[Option[MinutesContainer[StaffMinute, TM]]] = {
-    terminalSummariesActor.ask(minutesContainer).flatMap { _ =>
-      terminalSummariesActor.ask(GetState).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
+  private def sendMinutesAndGetState(minutesContainer: MinutesContainer[StaffMinute, TM],
+                              actor: ActorRef): Future[Option[MinutesContainer[StaffMinute, TM]]] = {
+    actor.ask(minutesContainer).flatMap { _ =>
+      actor.ask(GetState).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
     }
   }
 

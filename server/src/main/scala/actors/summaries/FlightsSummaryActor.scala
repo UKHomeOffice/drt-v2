@@ -43,7 +43,7 @@ class FlightsSummaryActor(year: Int,
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case tqm: FlightsSummaryMessage =>
-      log.info(s"Got a recovery message with ${tqm.flights.size} flights. Setting state")
+      log.debug(s"Got a recovery message with ${tqm.flights.size} flights. Setting state")
       state = Option(flightsFromMessage(tqm))
   }
 

@@ -1,12 +1,12 @@
 package services.exports
 
-import actors.{DateRangeLike, GetFlightsForTerminal, GetPortStateForTerminal}
+import actors.{DateRangeLike, GetFlightsForTerminal}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.{ByteString, Timeout}
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
@@ -16,14 +16,14 @@ import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.HttpEntity
 import play.api.mvc.{ResponseHeader, Result}
 import services.SDate
-import services.exports.summaries.flights.TerminalFlightsSummary
+import services.crunch.deskrecs.GetStateForTerminalDateRange
 import services.exports.summaries.flights.TerminalFlightsSummaryLike.TerminalFlightsSummaryLikeGenerator
-import services.exports.summaries.queues.TerminalQueuesSummary
+import services.exports.summaries.queues.{QueuesSummary, TerminalQueuesSummary}
 import services.exports.summaries.{Summaries, TerminalSummaryLike}
 import services.graphstages.Crunch
 
 import scala.collection.immutable
-import scala.collection.immutable.{NumericRange, SortedMap}
+import scala.collection.immutable.NumericRange
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -104,7 +104,7 @@ object Exports {
                                  (implicit ec: ExecutionContext): (SDateLike, SDateLike) => Future[TerminalSummaryLike] =
     (from: SDateLike, to: SDateLike) => {
       val minutes = from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * MilliTimes.oneMinuteMillis
-      portStateProvider(GetPortStateForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal))
+      portStateProvider(GetStateForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, terminal))
         .mapTo[PortState]
         .recoverWith {
           case t =>
@@ -118,13 +118,11 @@ object Exports {
     }
 
   def queueSummaries(queues: Seq[Queue],
-                             summaryLengthMinutes: Int,
-                             minutes: NumericRange[MillisSinceEpoch],
-                             crunchMinutes: immutable.SortedMap[TQM, CrunchApi.CrunchMinute],
-                             staffMinutes: immutable.SortedMap[TM, CrunchApi.StaffMinute]) = {
-    minutes.map { millis =>
-      Summaries.terminalSummaryForPeriod(crunchMinutes, staffMinutes, queues, SDate(millis), summaryLengthMinutes)
-    }
+                     summaryLengthMinutes: Int,
+                     minutes: NumericRange[MillisSinceEpoch],
+                     crunchMinutes: immutable.SortedMap[TQM, CrunchApi.CrunchMinute],
+                     staffMinutes: immutable.SortedMap[TM, CrunchApi.StaffMinute]): Seq[QueuesSummary] = minutes.map { millis =>
+    Summaries.terminalSummaryForPeriod(crunchMinutes, staffMinutes, queues, SDate(millis), summaryLengthMinutes)
   }
 
   def flightSummariesFromPortState(terminalFlightsSummaryGenerator: TerminalFlightsSummaryLikeGenerator)

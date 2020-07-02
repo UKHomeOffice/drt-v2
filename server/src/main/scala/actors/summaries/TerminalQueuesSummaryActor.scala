@@ -40,7 +40,7 @@ class TerminalQueuesSummaryActor(year: Int,
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case tqm: TerminalQueuesSummaryMessage =>
-      log.info(s"Got a recovery message with ${tqm.summaries.size} summaries. Setting state")
+      log.debug(s"Got a recovery message with ${tqm.summaries.size} summaries. Setting state")
       state = Option(terminalQueuesSummaryFromMessage(tqm))
   }
 

@@ -2,8 +2,9 @@ package test
 
 import actors._
 import actors.acking.AckingReceiver.Ack
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Status}
 import akka.pattern.ask
+import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
 import akka.stream.scaladsl.Source
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
@@ -38,30 +39,41 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val baseArrivalsActor: ActorRef = system.actorOf(Props(new TestForecastBaseArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
   override val forecastArrivalsActor: ActorRef = system.actorOf(Props(new TestForecastPortArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
   override val liveArrivalsActor: ActorRef = system.actorOf(Props(new TestLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
-  override val liveCrunchStateActor: ActorRef = system.actorOf(Props(new TestCrunchStateActor(airportConfig.portStateSnapshotInterval, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots)), name = "crunch-live-state-actor")
-  override val forecastCrunchStateActor: ActorRef = system.actorOf(Props(new TestCrunchStateActor(100, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots)), name = "crunch-forecast-state-actor")
-  override val portStateActor: ActorRef = system.actorOf(Props(new TestPortStateActor(liveCrunchStateActor, forecastCrunchStateActor, now, 2, airportConfig.queuesByTerminal)), name = "port-state-actor")
   override val voyageManifestsActor: ActorRef = system.actorOf(Props(new TestVoyageManifestsActor(now, expireAfterMillis, params.snapshotIntervalVm)), name = "voyage-manifests-actor")
   override val shiftsActor: ActorRef = system.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))))
   override val fixedPointsActor: ActorRef = system.actorOf(Props(new TestFixedPointsActor(now)))
   override val staffMovementsActor: ActorRef = system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new TestAggregatedArrivalsActor()))
 
+  override val portStateActor: ActorRef =
+    if (usePartitionedPortState) {
+      TestPartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config))
+    } else {
+      val liveCrunchStateProps: Props = Props(new TestCrunchStateActor("crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots))
+      val forecastCrunchStateProps: Props = Props(new TestCrunchStateActor("forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots))
+      system.actorOf(Props(new TestPortStateActor(liveCrunchStateProps, forecastCrunchStateProps, now, 2, airportConfig.queuesByTerminal)), name = "port-state-actor")
+    }
+
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
   val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
   val testFeed: Source[ArrivalsFeedResponse, Cancellable] = TestFixtureFeed(system, testArrivalActor)
 
   val testActors = List(
-    baseArrivalsActor, forecastArrivalsActor, liveArrivalsActor,
-    liveCrunchStateActor, forecastArrivalsActor, portStateActor,
+    baseArrivalsActor,
+    forecastArrivalsActor,
+    liveArrivalsActor,
+    forecastArrivalsActor,
+    portStateActor,
     voyageManifestsActor,
-    shiftsActor, fixedPointsActor, staffMovementsActor,
+    shiftsActor,
+    fixedPointsActor,
+    staffMovementsActor,
     aggregatedArrivalsActor,
     testManifestsActor,
     testArrivalActor
   )
 
-  val restartActor: ActorRef = system.actorOf(Props(RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
+  val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
@@ -117,8 +129,8 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   }
 }
 
-case class RestartActor(startSystem: () => List[KillSwitch],
-                        testActors: List[ActorRef]) extends Actor with ActorLogging {
+class RestartActor(startSystem: () => List[KillSwitch],
+                   testActors: List[ActorRef]) extends Actor with ActorLogging {
 
   var currentKillSwitches: List[KillSwitch] = List()
 
@@ -128,6 +140,8 @@ case class RestartActor(startSystem: () => List[KillSwitch],
     case ResetData =>
       val replyTo = sender()
 
+      resetInMemoryData()
+
       log.info(s"About to shut down everything. Pressing kill switches")
 
       currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
@@ -135,16 +149,28 @@ case class RestartActor(startSystem: () => List[KillSwitch],
         ks.shutdown()
       }
 
-      Future.sequence(testActors.map(_.ask(ResetData)(new Timeout(1 second)))).onComplete { _ =>
+      Future.sequence(testActors.map(_.ask(ResetData)(new Timeout(5 second)))).onComplete { _ =>
         log.info(s"Shutdown triggered")
         startTestSystem()
         replyTo ! Ack
       }
 
+    case Status.Success(_) =>
+      log.info(s"Got a Status acknowledgement from InMemoryJournalStorage")
+
+    case Status.Failure(t) =>
+      log.error("Got a failure message", t)
+
     case StartTestSystem => startTestSystem()
+    case u => log.error(s"Received unexpected message: ${u.getClass}")
   }
 
   def startTestSystem(): Unit = currentKillSwitches = startSystem()
+
+  def resetInMemoryData(): Unit = {
+    StorageExtension(context.system).journalStorage ! InMemoryJournalStorage.ClearJournal
+    StorageExtension(context.system).snapshotStorage ! InMemorySnapshotStorage.ClearSnapshots
+  }
 }
 
 case object StartTestSystem

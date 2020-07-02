@@ -1,5 +1,6 @@
 package services.crunch.deskrecs
 
+import actors.DateRangeLike
 import actors.acking.AckingReceiver._
 import akka.actor.ActorRef
 import akka.pattern.ask
@@ -27,10 +28,8 @@ object RunnableDeskRecs {
             portDeskRecs: DesksAndWaitsPortProviderLike,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
            (implicit executionContext: ExecutionContext,
-            timeout: Timeout = new Timeout(10 seconds)): RunnableGraph[(SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch)] = {
+            timeout: Timeout = new Timeout(60 seconds)): RunnableGraph[(SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
-
-    val askablePortStateActor: ActorRef = portStateActor
 
     val crunchPeriodStartMillis: SDateLike => SDateLike = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes)
 
@@ -47,7 +46,7 @@ object RunnableDeskRecs {
             .map(min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch)
             .mapAsync(1) { crunchStartMillis =>
               log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString()}")
-              flightsToCrunch(askablePortStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
+              flightsToCrunch(portStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
             }
             .map { case (crunchStartMillis, flights) =>
               val crunchEndMillis = SDate(crunchStartMillis).addMinutes(portDeskRecs.minutesToCrunch).millisSinceEpoch
@@ -66,18 +65,19 @@ object RunnableDeskRecs {
     RunnableGraph.fromGraph(graph).addAttributes(Attributes.inputBuffer(1, 1))
   }
 
-  private def flightsToCrunch(askablePortStateActor: ActorRef)
+  private def flightsToCrunch(portStateActor: ActorRef)
                              (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
                              (implicit executionContext: ExecutionContext,
-                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] = askablePortStateActor
-    .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
-    .mapTo[FlightsWithSplits]
-    .map { fs => (crunchStartMillis, fs) }
-    .recoverWith {
-      case t =>
-        log.error("Failed to fetch flights from PortStateActor", t)
-        Future((crunchStartMillis, FlightsWithSplits(List())))
-    }
+                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] =
+    portStateActor
+      .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
+      .mapTo[FlightsWithSplits]
+      .map(fs => (crunchStartMillis, fs))
+      .recoverWith {
+        case t =>
+          log.error("Failed to fetch flights from PortStateActor", t)
+          Future((crunchStartMillis, FlightsWithSplits(List())))
+      }
 
   def start(portStateActor: ActorRef,
             portDeskRecs: DesksAndWaitsPortProviderLike,
@@ -88,4 +88,10 @@ object RunnableDeskRecs {
   }
 }
 
-case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch)
+case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
+
+trait PortStateRequest
+
+case class GetStateForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
+
+case class GetStateForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike with PortStateRequest

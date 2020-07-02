@@ -1,7 +1,7 @@
 package actors.daily
 
 import akka.actor.Props
-import drt.shared.CrunchApi.CrunchMinute
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, TQM}
 import scalapb.GeneratedMessage
@@ -10,15 +10,21 @@ import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesM
 
 object TerminalDayQueuesActor {
   def props(terminal: Terminal, date: SDateLike, now: () => SDateLike): Props =
-    Props(new TerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now))
+    Props(new TerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, None))
+
+  def propsPointInTime(terminal: Terminal, date: SDateLike, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
+    Props(new TerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, Option(pointInTime)))
 }
 
 class TerminalDayQueuesActor(year: Int,
                              month: Int,
                              day: Int,
                              terminal: Terminal,
-                             val now: () => SDateLike) extends TerminalDayLikeActor[CrunchMinute, TQM](year, month, day, terminal, now) {
+                             val now: () => SDateLike,
+                             maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[CrunchMinute, TQM](year, month, day, terminal, now, maybePointInTime) {
   override val typeForPersistenceId: String = "queues"
+
+  log.info(s"PersistenceId: $persistenceId")
 
   import actors.PortStateMessageConversion._
 
@@ -29,18 +35,19 @@ class TerminalDayQueuesActor(year: Int,
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case CrunchMinutesMessage(minuteMessages) =>
       log.debug(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
-      state = state ++ minuteMessagesToKeysAndMinutes(minuteMessages)
+      state = state ++ updatesToApply(minuteMessagesToKeysAndMinutes(minuteMessages))
   }
 
-  private def minuteMessagesToKeysAndMinutes(messages: Seq[CrunchMinuteMessage]): Iterable[(TQM, CrunchMinute)] = messages
-    .filter { cmm =>
-      val minuteMillis = cmm.minute.getOrElse(0L)
-      firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
-    }
-    .map { cmm =>
-      val cm = crunchMinuteFromMessage(cmm)
-      (cm.key, cm)
-    }
+  private def minuteMessagesToKeysAndMinutes(messages: Seq[CrunchMinuteMessage]): Iterable[(TQM, CrunchMinute)] =
+    messages
+      .filter { cmm =>
+        val minuteMillis = cmm.minute.getOrElse(0L)
+        firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
+      }
+      .map { cmm =>
+        val cm = crunchMinuteFromMessage(cmm)
+        (cm.key, cm)
+      }
 
   override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)
 

@@ -2,12 +2,12 @@ package actors.minutes
 
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.{HandleSimulationRequest, SetSimulationActor, SetSimulationSourceReady}
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, Cancellable}
 import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
-import drt.shared.{SDateLike, TQM}
 import drt.shared.Terminals.Terminal
+import drt.shared.{SDateLike, TQM}
 import services.graphstages.Crunch.{LoadMinute, Loads}
 
 import scala.collection.mutable
@@ -16,13 +16,21 @@ import scala.concurrent.duration._
 
 class QueueMinutesActor(now: () => SDateLike,
                         terminals: Iterable[Terminal],
-                        lookupPrimary: MinutesLookup[CrunchMinute, TQM],
-                        lookupSecondary: MinutesLookup[CrunchMinute, TQM],
-                        updateMinutes: MinutesUpdate[CrunchMinute, TQM]) extends MinutesActorLike(now, terminals, lookupPrimary, lookupSecondary, updateMinutes) {
+                        lookup: MinutesLookup[CrunchMinute, TQM],
+                        lookupLegacy: MinutesLookup[CrunchMinute, TQM],
+                        updateMinutes: MinutesUpdate[CrunchMinute, TQM]) extends MinutesActorLike(now, terminals, lookup, lookupLegacy, updateMinutes) {
 
   val minutesBuffer: mutable.Map[TQM, LoadMinute] = mutable.Map[TQM, LoadMinute]()
   var maybeUpdateSubscriber: Option[ActorRef] = None
   var subscriberIsReady: Boolean = false
+
+  val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 1 second, self, HandleSimulationRequest)
+
+  override def postStop(): Unit = {
+    log.warn("Actor stopped. Cancelling scheduled tick")
+    cancellableTick.cancel()
+    super.postStop()
+  }
 
   override def handleUpdatesAndAck(container: MinutesContainer[CrunchMinute, TQM],
                                    replyTo: ActorRef): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = {
@@ -40,7 +48,6 @@ class QueueMinutesActor(now: () => SDateLike,
         (m.key, LoadMinute(m))
       }
       minutesBuffer ++= updatedLoads
-      sendToSubscriber()
   }
 
   private def sendToSubscriber(): Unit = (maybeUpdateSubscriber, minutesBuffer.nonEmpty, subscriberIsReady) match {
@@ -58,7 +65,7 @@ class QueueMinutesActor(now: () => SDateLike,
         }
       minutesBuffer.clear()
     case _ =>
-      log.info(s"Not sending (${minutesBuffer.size}) minutes from buffer to subscriber")
+      log.debug(s"Not sending (${minutesBuffer.size}) minutes from buffer to subscriber")
   }
 
   override def receive: Receive = simulationReceives orElse super.receive
@@ -71,10 +78,8 @@ class QueueMinutesActor(now: () => SDateLike,
 
     case SetSimulationSourceReady =>
       subscriberIsReady = true
-      context.self ! HandleSimulationRequest
 
     case HandleSimulationRequest =>
       sendToSubscriber()
-
   }
 }
