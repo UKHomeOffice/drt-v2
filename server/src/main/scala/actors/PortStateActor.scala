@@ -102,12 +102,12 @@ class PortStateActor(liveCrunchStateProps: Props,
   override def receive: Receive = {
     case Start =>
       unstashAll()
-      context.become(regularBehaviour)
+      context.become(readyBehaviour)
 
-    case msg => stash()
+    case _ => stash()
   }
 
-  def regularBehaviour: Receive = {
+  def readyBehaviour: Receive = {
     case SetCrunchQueueActor(crunchActor) =>
       log.info(s"Received crunchSourceActor")
       if (maybeCrunchQueueActor.isEmpty) maybeCrunchQueueActor = Option(crunchActor)

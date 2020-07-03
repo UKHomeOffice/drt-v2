@@ -6,9 +6,7 @@ import drt.shared.PortState
 
 class CrunchStateMockActor(initialPortState: Option[PortState]) extends Actor {
   override def receive: Receive = {
-    case GetState =>
-      println(s"\n\nGot GetState, replying with $initialPortState\n\n")
-      sender() ! initialPortState
+    case GetState => sender() ! initialPortState
     case _ => sender() ! Ack
   }
 }

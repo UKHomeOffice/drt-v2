@@ -294,13 +294,13 @@ class PortStateSpec extends CrunchTestLike {
     arrivals.map(a => ApiFlightWithSplits(a, Set()))
   }
 
-  "Given a 'slow' live crunch actor containing a single flight which takes 2 seconds to provide its state to the PortStateActor" >> {
+  "Given a 'slow' live crunch actor containing a single flight which takes 1 second to provide its state to the PortStateActor" >> {
     "When I immediately ask the PortStateActor for flights for the day the crunch actor's flight is scheduled" >> {
       "Then the response should contain the crunch actor's flight" >> {
         val today = SDate("2020-07-03T00:00")
         val flightsWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = today.toISOString()), Set())
         val maybePortState = Option(PortState(Iterable(flightsWithSplits), Iterable(), Iterable()))
-        val liveActor = Props(new SlowCrunchStateActor(maybePortState, delay = 2 seconds))
+        val liveActor = Props(new SlowCrunchStateActor(maybePortState, delay = 1 second))
         val fcstActor = Props(new SlowCrunchStateActor(Option(PortState.empty), delay = 0 seconds))
         val portStateActor = system.actorOf(Props(new PortStateActor(liveActor, fcstActor, () => today, 2, defaultAirportConfig.queuesByTerminal)))
         val response = Await.result(portStateActor.ask(GetFlights(today.millisSinceEpoch, today.addMinutes(1).millisSinceEpoch)), 5 seconds)
