@@ -4,13 +4,13 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared.{PortStateDiff, SDateLike}
-import services.graphstages.Crunch
+import drt.shared.{PortState, PortStateDiff, SDateLike}
 
 object PortStateTestActor {
-  def apply(testProbe: TestProbe, now: () => SDateLike, queues: Map[Terminal, Seq[Queue]])(implicit system: ActorSystem): ActorRef = {
-    val crunchStateMockActor: Props = Props(classOf[CrunchStateMockActor])
-    system.actorOf(Props(new PortStateTestActor(crunchStateMockActor, crunchStateMockActor, testProbe.ref, now, 100, queues)), name = "port-state-actor")
+  def apply(testProbe: TestProbe, now: () => SDateLike, queues: Map[Terminal, Seq[Queue]], initialPortState: Option[PortState])(implicit system: ActorSystem): ActorRef = {
+    val crunchStateMockLiveProps: Props = Props(new CrunchStateMockActor(initialPortState))
+    val crunchStateMockFcstProps: Props = Props(new CrunchStateMockActor(None))
+    system.actorOf(Props(new PortStateTestActor(crunchStateMockLiveProps, crunchStateMockFcstProps, testProbe.ref, now, 100, queues)), name = "port-state-actor")
   }
 }
 

@@ -35,7 +35,7 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     .map { case (terminal, maxDesksProvider) =>
       val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loadsByQueue)
       val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loadsByQueue)
-      log.info(s"Optimising $terminal")
+      log.debug(s"Optimising $terminal")
 
       terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPax, terminalWork, maxDesksProvider)
     }
@@ -95,7 +95,7 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
       .map { case (terminal, maxDesksProvider) =>
         val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loads)
         val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)
-        log.info(s"Optimising $terminal")
+        log.debug(s"Optimising $terminal")
 
         terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPax, terminalWork, maxDesksProvider)
       }
