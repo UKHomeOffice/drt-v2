@@ -1,18 +1,23 @@
 package services
 
+import actors.{GetState, PortStateActor}
+import akka.actor.{Actor, Props}
+import akka.pattern.{after, ask}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.Flights
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import server.feeds.ArrivalsFeedSuccess
+import services.crunch.deskrecs.GetFlights
 import services.crunch.{CrunchTestLike, TestConfig}
 import services.graphstages.{SimulationMinute, SimulationMinutes}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 
 class PortStateSpec extends CrunchTestLike {
   "Given an initial PortState with some pax loads " +
@@ -287,5 +292,33 @@ class PortStateSpec extends CrunchTestLike {
 
   private def arrivalsToFlightsWithSplits(arrivals: List[Arrival]): List[ApiFlightWithSplits] = {
     arrivals.map(a => ApiFlightWithSplits(a, Set()))
+  }
+
+  "Given a 'slow' live crunch actor containing a single flight which takes 1 second to provide its state to the PortStateActor" >> {
+    "When I immediately ask the PortStateActor for flights for the day the crunch actor's flight is scheduled" >> {
+      "Then the response should contain the crunch actor's flight" >> {
+        val today = SDate("2020-07-03T00:00")
+        val flightsWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = today.toISOString()), Set())
+        val maybePortState = Option(PortState(Iterable(flightsWithSplits), Iterable(), Iterable()))
+        val liveActor = Props(new SlowCrunchStateActor(maybePortState, delay = 1 second))
+        val fcstActor = Props(new SlowCrunchStateActor(Option(PortState.empty), delay = 0 seconds))
+        val portStateActor = system.actorOf(Props(new PortStateActor(liveActor, fcstActor, () => today, 2, defaultAirportConfig.queuesByTerminal)))
+        val response = Await.result(portStateActor.ask(GetFlights(today.millisSinceEpoch, today.addMinutes(1).millisSinceEpoch)), 5 seconds)
+
+        response === FlightsWithSplits(Map(flightsWithSplits.unique -> flightsWithSplits))
+      }
+    }
+  }
+}
+
+class SlowCrunchStateActor(maybeState: Option[PortState], delay: FiniteDuration) extends Actor {
+  implicit val ec: ExecutionContextExecutor = context.dispatcher
+
+  override def receive: Receive = {
+    case GetState =>
+      val replyTo = sender()
+      after(delay, context.system.scheduler)(
+        Future(replyTo ! maybeState)
+      )
   }
 }

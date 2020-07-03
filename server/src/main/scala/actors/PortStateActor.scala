@@ -1,11 +1,12 @@
 package actors
 
 import actors.DrtStaticParameters.liveDaysAhead
+import actors.PortStateActor.Start
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import actors.pointInTime.CrunchStateReadActor
 import actors.queues.CrunchQueueActor.UpdatedMillis
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props, Stash}
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
@@ -31,13 +32,16 @@ object PortStateActor {
            (implicit system: ActorSystem): ActorRef = {
     system.actorOf(Props(new PortStateActor(liveCrunchStateProps, forecastCrunchStateProps, now, liveDaysAhead, queues)), name = "port-state-actor")
   }
+
+  case object Start
+
 }
 
 class PortStateActor(liveCrunchStateProps: Props,
                      forecastCrunchStateProps: Props,
                      now: () => SDateLike,
                      liveDaysAhead: Int,
-                     queuesByTerminal: Map[Terminal, Seq[Queue]]) extends Actor {
+                     queuesByTerminal: Map[Terminal, Seq[Queue]]) extends Actor with Stash {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val portStateSnapshotInterval: Int = 1000
@@ -51,7 +55,7 @@ class PortStateActor(liveCrunchStateProps: Props,
 
   val state: PortStateMutable = PortStateMutable.empty
 
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))//, "port-state-kill-actor")
+  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor())) //, "port-state-kill-actor")
 
   var maybeCrunchQueueActor: Option[ActorRef] = None
   var crunchSourceIsReady: Boolean = true
@@ -61,15 +65,21 @@ class PortStateActor(liveCrunchStateProps: Props,
   override def preStart(): Unit = {
     val eventualLiveState = liveCrunchStateActor.ask(GetState).mapTo[Option[PortState]]
     val eventualFcstState = forecastCrunchStateActor.ask(GetState).mapTo[Option[PortState]]
-    for {
+    val eventualStates = for {
       liveState <- eventualLiveState
       fcstState <- eventualFcstState
-    } yield mergePortStates(fcstState, liveState).foreach { initialPortState =>
-      log.info(s"Setting initial PortState from live & forecast")
-      state.crunchMinutes ++= initialPortState.crunchMinutes
-      state.staffMinutes ++= initialPortState.staffMinutes
-      state.flights ++= initialPortState.flights
+    } yield mergePortStates(fcstState, liveState)
+
+    eventualStates.foreach { maybeInitialPortState =>
+      maybeInitialPortState.foreach { initialPortState =>
+        log.info(s"Setting initial PortState from live & forecast")
+        state.crunchMinutes ++= initialPortState.crunchMinutes
+        state.staffMinutes ++= initialPortState.staffMinutes
+        state.flights ++= initialPortState.flights
+      }
     }
+
+    eventualStates.onComplete(_ => self ! Start)
   }
 
   def mergePortStates(maybeForecastPs: Option[PortState],
@@ -90,7 +100,14 @@ class PortStateActor(liveCrunchStateProps: Props,
   }
 
   override def receive: Receive = {
+    case Start =>
+      unstashAll()
+      context.become(readyBehaviour)
 
+    case _ => stash()
+  }
+
+  def readyBehaviour: Receive = {
     case SetCrunchQueueActor(crunchActor) =>
       log.info(s"Received crunchSourceActor")
       if (maybeCrunchQueueActor.isEmpty) maybeCrunchQueueActor = Option(crunchActor)
@@ -98,14 +115,6 @@ class PortStateActor(liveCrunchStateProps: Props,
     case SetSimulationActor(simActor) =>
       log.info(s"Received simulationSourceActor")
       maybeSimActor = Option(simActor)
-
-    case ps: PortState =>
-      log.info(s"Received initial PortState")
-      state.crunchMinutes ++= ps.crunchMinutes
-      state.staffMinutes ++= ps.staffMinutes
-      state.flights ++= ps.flights
-      log.info(s"Finished setting state (${state.crunchMinutes.all.size} crunch minutes, ${state.staffMinutes.all.size} staff minutes, ${state.flights.all.size} flights)")
-      sender() ! Ack
 
     case StreamInitialized => sender() ! Ack
 
@@ -150,10 +159,6 @@ class PortStateActor(liveCrunchStateProps: Props,
 
     case HandleSimulationRequest =>
       handleSimulationRequest()
-
-    case GetState =>
-      log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.count} crunch minutes")
-      sender() ! Option(state.immutable)
 
     case PointInTimeQuery(millis, query) =>
       replyWithPointInTimeQuery(SDate(millis), query)

@@ -150,7 +150,7 @@ object TestActors {
           .foreach(_ => replyTo ! Ack)
     }
 
-    override def receive: Receive = reset orElse super.receive
+    override def readyBehaviour: Receive = reset orElse super.readyBehaviour
   }
 
   trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B] {
