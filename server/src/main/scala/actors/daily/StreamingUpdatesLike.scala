@@ -2,6 +2,8 @@ package actors.daily
 
 import actors.StreamingJournalLike
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
+import actors.daily.StreamingUpdatesLike.StopUpdates
+import akka.actor.PoisonPill
 import akka.persistence.query.PersistenceQuery
 import akka.persistence.{PersistentActor, RecoveryCompleted}
 import akka.stream.scaladsl.{Keep, Sink}
@@ -10,6 +12,10 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.{MilliTimes, SDateLike, WithTimeAccessor}
 import org.slf4j.Logger
 import scalapb.GeneratedMessage
+
+object StreamingUpdatesLike {
+  case object StopUpdates
+}
 
 trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends PersistentActor {
   val journalType: StreamingJournalLike
@@ -36,12 +42,20 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
       sender() ! Ack
 
     case StreamCompleted =>
-      log.warn("Stream completed")
+      log.info("Stream completed. Shutting myself down")
+      self ! PoisonPill
 
     case GetAllUpdatesSince(sinceMillis) =>
       sender() ! updatesSince(sinceMillis)
 
+    case StopUpdates =>
+      stopUpdatesStream()
+
     case x => log.warn(s"Received unexpected message ${x.getClass}")
+  }
+
+  private def stopUpdatesStream(): Unit = {
+    maybeKillSwitch.foreach(_.shutdown())
   }
 
   def streamingUpdatesReceiveRecover: Receive = {
@@ -58,12 +72,6 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
   def updateState(minuteMessages: Seq[GeneratedMessage]): Unit = {
     updates = updates ++ updatesFromMessages(minuteMessages).map(cm => (cm.key, cm))
     purgeOldUpdates()
-  }
-
-  override def postStop(): Unit = {
-    log.info(s"I've been stopped. Killing updates stream")
-    maybeKillSwitch.foreach(_.shutdown())
-    super.postStop()
   }
 
   def expireBeforeMillis: MillisSinceEpoch = now().millisSinceEpoch - MilliTimes.oneMinuteMillis

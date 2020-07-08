@@ -1,15 +1,18 @@
 package actors.daily
 
+import java.util.UUID
+
 import actors.GetUpdatesSince
+import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props}
-import akka.pattern.{ask, pipe}
+import akka.pattern.{AskTimeoutException, AskableActorRef, ask, pipe}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinuteLike, MinutesContainer, StaffMinute}
 import drt.shared.Terminals.Terminal
-import drt.shared.{MilliTimes, SDateLike, WithTimeAccessor}
+import drt.shared.{MilliTimes, SDateLike, TM, TQM, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
@@ -26,14 +29,18 @@ case class GetAllUpdatesSince(sinceMillis: MillisSinceEpoch)
 
 case class StartUpdatesStream(terminal: Terminal, day: SDateLike)
 
-object UpdatesSupervisor {
-  def props[A <: MinuteLike[A, B], B <: WithTimeAccessor](now: () => SDateLike,
-                                                          terminals: List[Terminal],
-                                                          updatesActorFactory: (Terminal, SDateLike) => Props): Props =
-    Props(new UpdatesSupervisor[A, B](now, terminals, updatesActorFactory))
-}
 
-class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
+class QueueUpdatesSupervisor(now: () => SDateLike,
+                             terminals: List[Terminal],
+                             updatesActorFactory: (Terminal, SDateLike) => Props)
+  extends UpdatesSupervisor[CrunchMinute, TQM](now, terminals, updatesActorFactory)
+
+class StaffUpdatesSupervisor(now: () => SDateLike,
+                             terminals: List[Terminal],
+                             updatesActorFactory: (Terminal, SDateLike) => Props)
+  extends UpdatesSupervisor[StaffMinute, TM](now, terminals, updatesActorFactory)
+
+abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
                                                   terminals: List[Terminal],
                                                   updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -41,7 +48,7 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = new Timeout(30 seconds)
   val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 10 seconds, self, PurgeExpired)
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))//, "updates-supervisor-kill-actor")
+  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), s"updates-supervisor-kill-actor-${getClass.getTypeName}")
 
   var streamingUpdateActors: Map[(Terminal, MillisSinceEpoch), ActorRef] = Map[(Terminal, MillisSinceEpoch), ActorRef]()
   var lastRequests: Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch] = Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch]()
@@ -57,7 +64,7 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
     case Some(existing) => existing
     case None =>
       log.info(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly}")
-      val actor = context.system.actorOf(updatesActorFactory(terminal, day))
+      val actor = context.system.actorOf(updatesActorFactory(terminal, day), s"updates-actor-$terminal-${day.toISOString()}-${UUID.randomUUID().toString}")
       streamingUpdateActors = streamingUpdateActors + ((terminal, day.millisSinceEpoch) -> actor)
       lastRequests = lastRequests + ((terminal, day.millisSinceEpoch) -> now().millisSinceEpoch)
       actor
@@ -69,7 +76,7 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
       val expiredToRemove = lastRequests.collect {
         case (tm, lastRequest) if now().millisSinceEpoch - lastRequest > MilliTimes.oneMinuteMillis =>
           log.info(s"Shutting down streaming updates for ${tm._1}/${SDate(tm._2).toISODateOnly}")
-          streamingUpdateActors.get(tm).foreach(_ ! PoisonPill)
+          streamingUpdateActors.get(tm).foreach(_ ! StopUpdates)
           tm
       }
       streamingUpdateActors = streamingUpdateActors -- expiredToRemove
@@ -81,6 +88,11 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
 
       terminalsAndDaysUpdatesSource(terminalDays, sinceMillis)
         .runWith(Sink.fold(MinutesContainer.empty[A, B])(_ ++ _))
+        .recoverWith {
+          case t =>
+            log.error(s"Failed to get a response", t)
+            Future(MinutesContainer.empty[A, B])
+        }
         .pipeTo(replyTo)
   }
 
@@ -111,7 +123,10 @@ class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
           updatesActor(terminal, day)
             .ask(GetAllUpdatesSince(sinceMillis))
             .mapTo[MinutesContainer[A, B]]
-            .recoverWith{
+            .recoverWith {
+              case t: AskTimeoutException =>
+                log.warn(s"Timed out waiting for updates. Actor may have already been terminated", t)
+                Future(MinutesContainer.empty[A, B])
               case t =>
                 log.error(s"Failed to fetch updates from streaming updates actor: ${SDate(day).toISOString()}", t)
                 Future(MinutesContainer.empty[A, B])
