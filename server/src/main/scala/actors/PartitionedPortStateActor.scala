@@ -2,7 +2,7 @@ package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.daily.{TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
+import actors.daily.{QueueUpdatesSupervisor, StaffUpdatesSupervisor, TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
 import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
@@ -50,8 +50,8 @@ trait PartitionedPortStateActorLike {
 }
 
 trait ProdPartitionedPortStateActor extends PartitionedPortStateActorLike {
-  override val queueUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new UpdatesSupervisor[CrunchMinute, TQM](now, terminals, queueUpdatesProps)))
-  override val staffUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new UpdatesSupervisor[StaffMinute, TM](now, terminals, staffUpdatesProps)))
+  override val queueUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new QueueUpdatesSupervisor(now, terminals, queueUpdatesProps)), "updates-supervisor-queues")
+  override val staffUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new StaffUpdatesSupervisor(now, terminals, staffUpdatesProps)), "updates-supervisor-staff")
 }
 
 class PartitionedPortStateActor(flightsActor: ActorRef,

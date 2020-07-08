@@ -74,11 +74,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
 
-  val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)))
+  val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)), name = "alerts-actor")
   val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val registeredArrivalsActor: ActorRef = system.actorOf(Props(new RegisteredArrivalsActor(oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis)), name = "registered-arrivals-actor")
-  val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(journalType, airportConfig.crunchOffsetMinutes)))
+  val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
 
   val usePartitionedPortState: Boolean = config.get[Boolean]("feature-flags.use-partitioned-state")
 
@@ -97,7 +97,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val aclFeed: AclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
 
   val maxDaysToConsider: Int = 14
-  val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, now)))
+  val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, now)), name = "passengers-actor")
 
   val aggregatedArrivalsActor: ActorRef
 

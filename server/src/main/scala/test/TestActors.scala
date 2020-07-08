@@ -216,8 +216,8 @@ object TestActors {
   }
 
   trait TestPartitionedPortStateActorLike extends PartitionedPortStateActorLike {
-    override val queueUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new TestUpdatesSupervisor[CrunchMinute, TQM](now, terminals, queueUpdatesProps)))
-    override val staffUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new TestUpdatesSupervisor[StaffMinute, TM](now, terminals, staffUpdatesProps)))
+    override val queueUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new QueueTestUpdatesSupervisor(now, terminals, queueUpdatesProps)))
+    override val staffUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new StaffTestUpdatesSupervisor(now, terminals, staffUpdatesProps)))
   }
 
   class TestPartitionedPortStateActor(flightsActor: ActorRef,
@@ -232,7 +232,7 @@ object TestActors {
       staffActor -> ResetData,
       queueUpdatesSupervisor -> PurgeAll,
       staffUpdatesSupervisor -> PurgeAll
-      )
+    )
 
     def myReceive: Receive = {
       case ResetData =>
@@ -297,9 +297,20 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestUpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
+  class QueueTestUpdatesSupervisor(now: () => SDateLike,
+                                   terminals: List[Terminal],
+                                   updatesActorFactory: (Terminal, SDateLike) => Props)
+    extends TestUpdatesSupervisor[CrunchMinute, TQM](now, terminals, updatesActorFactory)
+
+  class StaffTestUpdatesSupervisor(now: () => SDateLike,
+                                   terminals: List[Terminal],
+                                   updatesActorFactory: (Terminal, SDateLike) => Props)
+    extends TestUpdatesSupervisor[StaffMinute, TM](now, terminals, updatesActorFactory)
+
+  abstract class TestUpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
                                                         terminals: List[Terminal],
-                                                        updatesActorFactory: (Terminal, SDateLike) => Props) extends UpdatesSupervisor(now, terminals, updatesActorFactory) {
+                                                        updatesActorFactory: (Terminal, SDateLike) => Props)
+    extends UpdatesSupervisor(now, terminals, updatesActorFactory) {
     def testReceive: Receive = {
       case PurgeAll =>
         val replyTo = sender()
