@@ -88,11 +88,6 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
 
       terminalsAndDaysUpdatesSource(terminalDays, sinceMillis)
         .runWith(Sink.fold(MinutesContainer.empty[A, B])(_ ++ _))
-        .recoverWith {
-          case t =>
-            log.error(s"Failed to get a response", t)
-            Future(MinutesContainer.empty[A, B])
-        }
         .pipeTo(replyTo)
   }
 
