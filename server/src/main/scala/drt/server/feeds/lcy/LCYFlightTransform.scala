@@ -80,7 +80,7 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
     val flights = flightNodeSeq.map(n => {
       val airline = (n \ "LegIdentifier" \ "Airline").text
       val flightNumber = (n \ "LegIdentifier" \ "FlightNumber").text
-      val arrivalAirport = (n \ "LegIdentifier" \ "DepartureAirport").text
+      val arrivalAirport = (n \ "LegIdentifier" \ "ArrivalAirport").text
       val departureAirport = (n \ "LegIdentifier" \ "DepartureAirport").text
       val aircraftTerminal = (n \ "LegData" \ "AirportResources" \ "Resource" \ "AircraftTerminal").text
       val status = (n \ "LegData" \ "RemarkFreeText").text
