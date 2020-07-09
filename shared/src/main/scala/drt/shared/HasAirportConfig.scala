@@ -41,6 +41,7 @@ object Terminals {
       case "ter" => T1
       case "n" => N
       case "s" => S
+      case "mt" => T1
       case _ => InvalidTerminal
     }
   }

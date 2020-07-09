@@ -10,6 +10,7 @@ import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal, Un
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
+import drt.server.feeds.common.FlightStatus
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.LiveFeedSource
@@ -71,46 +72,6 @@ case class BHXFlight(
                       paxCount: Option[Int] = None,
                       codeShares: List[String] = Nil
                     )
-
-object BHXFlightStatus {
-  val statusCodes = Map(
-    "AFC" -> "AF CHECK-IN OPEN",
-    "AIR" -> "AIRBORNE",
-    "ARR" -> "ARRIVED ON STAND",
-    "BBR" -> "BOARDING BY ROW",
-    "BBZ" -> "BOARDING BY ZONE",
-    "BDG" -> "BOARDING",
-    "BOB" -> "BAGGAGE IN HALL",
-    "CAN" -> "CANCELLED",
-    "CIC" -> "CHECK-IN CLOSED",
-    "CIO" -> "CHECK-IN OPEN",
-    "DEP" -> "DEPARTED (PUSH BACK)",
-    "DIV" -> "DIVERTED",
-    "DLO" -> "DELAYED OPERATIONAL",
-    "EGC" -> "GATE CLOSED",
-    "ETD" -> "ESTIMATED TIME DEPARTURE",
-    "EXP" -> "EXPECTED",
-    "EZS" -> "EZS CHECK-IN OPEN",
-    "EZY" -> "EZY CHECK-IN OPEN",
-    "FCL" -> "FINAL CALL",
-    "FTJ" -> "FAILED TO JOIN",
-    "GTO" -> "GATE OPEN",
-    "IND" -> "INDEFINTE DELAY",
-    "LBB" -> "LAST BAG DELIVERED",
-    "LND" -> "LANDED",
-    "MDB" -> "THOMAS COOK DAY BEFORE CHECK IN",
-    "NXT" -> "NEXT INFORMATION AT",
-    "ONA" -> "ON APPROACH",
-    "RSH" -> "RESCHEDULED",
-    "STA" -> "SCHEDULED TIME OF ARRIVAL",
-    "TDB" -> "THOMSON DAY BEFORE CHECK IN",
-    "TOM" -> "TOM CHECK-IN OPEN",
-    "WAI" -> "WAIT IN LOUNGE"
-  )
-
-  def apply(code: String): String = statusCodes.getOrElse(code, code)
-}
-
 
 final class SoapActionHeader(action: String) extends ModeledCustomHeader[SoapActionHeader] {
   override def renderInRequests = true
@@ -334,7 +295,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
   def bhxFlightToArrival(f: BHXFlight): Arrival = {
     Arrival(
       f.airline,
-      BHXFlightStatus(f.status),
+      FlightStatus(f.status),
       maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
       maybeTimeStringToMaybeMillis(f.actualTouchDown),
       None,
