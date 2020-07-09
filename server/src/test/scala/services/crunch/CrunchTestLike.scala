@@ -117,7 +117,7 @@ class CrunchTestLike
   }
 
   override def after: Unit = {
-    log.info("\n\nShutting down actor system!!!")
+    log.info("Shutting down actor system!!!")
     TestKit.shutdownActorSystem(system)
   }
 
@@ -141,7 +141,7 @@ class CrunchTestLike
   }
 
   def shutDownDrtActor(drtActor: ActorRef): Terminated = {
-    log.info("\n\nShutting down drt actor")
+    log.info("Shutting down drt actor")
     watch(drtActor)
     drtActor ! Stop
     expectMsgClass(classOf[Terminated])
