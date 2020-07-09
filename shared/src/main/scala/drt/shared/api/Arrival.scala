@@ -69,7 +69,7 @@ case class Arrival(Operator: Option[Operator],
   lazy val pax: Int = ActPax.getOrElse(0)
 
   lazy val minutesOfPaxArrivals: Int =
-    if (pax == 0) 0
+    if (pax <= 0) 0
     else (pax.toDouble / paxOffPerMinute).ceil.toInt - 1
 
   def pcpRange(): NumericRange[MillisSinceEpoch] = {
