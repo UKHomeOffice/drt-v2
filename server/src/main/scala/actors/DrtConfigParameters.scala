@@ -81,4 +81,9 @@ case class DrtConfigParameters(config: Configuration) {
     .getOptional[Boolean]("feature-flags.enable-toggle-display-wait-times").getOrElse(false)
   val adjustEGateUseByUnder12s: Boolean = config.getOptional[Boolean]("feature-flags.adjust-egates-use-by-u12s").getOrElse(false)
 
+  val maybeLcySoapEndPointUrl: Option[String] = config.getOptional[String]("feeds.lcy.soap.endPointUrl")
+  val lcyLiveEndPointUrl: String = config.get[String]("feeds.lcy.live.endPointUrl")
+  val lcyLiveUsername: String = config.get[String]("feeds.lcy.live.username")
+  val lcyLivePassword: String = config.get[String]("feeds.lcy.live.password")
+
 }

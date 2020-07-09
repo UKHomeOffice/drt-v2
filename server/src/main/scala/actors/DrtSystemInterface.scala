@@ -21,7 +21,9 @@ import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.cirium.CiriumFeed
+import drt.server.feeds.common.HttpClient
 import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
+import drt.server.feeds.lcy.{LCYClient, LCYFeed}
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LGWForecastFeed}
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
@@ -155,7 +157,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         "live-base-arrivals" -> liveBaseArrivalsActor,
         "live-arrivals" -> liveArrivalsActor,
         "aggregated-arrivals" -> aggregatedArrivalsActor
-        ),
+      ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
       manifestsLiveSource = voyageManifestsLiveSource,
@@ -274,6 +276,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
       case "BHX" =>
         BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
+      case "LCY" if !params.lcyLiveEndPointUrl.isEmpty =>
+        LCYFeed(LCYClient(new HttpClient,params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), 80 seconds, 1 milliseconds)(system)
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
         val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
