@@ -1,11 +1,14 @@
 package actors.daily
 
+import actors.RecoveryActorLike
 import akka.actor.ActorRef
 import akka.persistence._
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{PortCode, SDateLike}
 import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, PaxCountMessage}
+import scalapb.GeneratedMessage
+import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
 import services.{PaxDeltas, SDate}
 
 import scala.language.postfixOps
@@ -25,8 +28,10 @@ object PassengersActor {
   }
 }
 
-class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, now: () => SDateLike) extends PersistentActor {
+class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: () => SDateLike) extends RecoveryActorLike {
   override val persistenceId = s"daily-pax"
+
+  override val recoveryStartMillis: MillisSinceEpoch = 0L
 
   val log: Logger = LoggerFactory.getLogger(persistenceId)
 
@@ -39,7 +44,7 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, now: () => 
 
   val filterRelevantPaxCounts: Seq[PaxCountMessage] => Seq[PaxCountMessage] = relevantPaxCounts(numDaysInAverage, now)
 
-  override def receiveRecover: Receive = {
+  override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case OriginTerminalPaxCountsMessage(Some(origin), Some(terminal), allPaxCountMessages) =>
       val relevantPaxCounts = filterRelevantPaxCounts(allPaxCountMessages)
       applyPaxCounts(origin, terminal, relevantPaxCounts)
@@ -55,13 +60,26 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, now: () => 
       log.info(s"Got unexpected recovery msg: $u")
   }
 
-  def applyPaxCounts(origin: String, terminal: String, relevantPaxCounts: Seq[PaxCountMessage]): Unit =
+  override def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case OriginTerminalPaxCountsMessages(messages) => messages.map { message =>
+      applyPaxCounts(message.getOrigin, message.getTerminal, message.counts)
+    }
+  }
+
+  override def stateToMessage: GeneratedMessage = {
+    log.warn("This function should not be called")
+    OriginTerminalPaxCountsMessages(Seq())
+  }
+
+  def applyPaxCounts(originString: String, terminalString: String, relevantPaxCounts: Seq[PaxCountMessage]): Unit =
     if (relevantPaxCounts.nonEmpty) {
       log.debug(s"Got a OriginTerminalPaxCountsMessage with ${relevantPaxCounts.size} counts. Applying")
       val updatesForOriginTerminal = messagesToUpdates(relevantPaxCounts)
-      val originAndTerminal = OriginAndTerminal(PortCode(origin), Terminal(terminal))
+      val origin = PortCode(originString)
+      val terminal = Terminal(terminalString)
+      val originAndTerminal = OriginAndTerminal(origin, terminal)
       val updatedOriginTerminal = originTerminalPaxNosState.getOrElse(originAndTerminal, Map()) ++ updatesForOriginTerminal
-      originTerminalPaxNosState = originTerminalPaxNosState.updated(originAndTerminal, updatedOriginTerminal)
+      updateState(origin, terminal, updatedOriginTerminal)
     }
 
   private def setPortAverage(state: Map[OriginAndTerminal, Map[(Long, Long), Int]]): Unit = {
@@ -79,6 +97,10 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, now: () => 
   override def receiveCommand: Receive = {
     case gad: GetAverageAdjustment => sendAverageDelta(gad, sender())
     case u => log.info(s"Got unexpected command: $u")
+  }
+
+  private def updateState(origin: PortCode, terminal: Terminal, updateForState: Map[(Long, Long), Int]): Unit = {
+    originTerminalPaxNosState = originTerminalPaxNosState.updated(OriginAndTerminal(origin, terminal), updateForState)
   }
 
   private def sendAverageDelta(gad: GetAverageAdjustment, replyTo: ActorRef): Unit = {
