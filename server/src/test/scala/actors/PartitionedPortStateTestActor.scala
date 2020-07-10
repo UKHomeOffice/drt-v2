@@ -9,6 +9,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import services.SDate
 import services.crunch.deskrecs.GetStateForDateRange
 
 import scala.collection.immutable.SortedMap
@@ -29,7 +30,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                                     queuesActor: ActorRef,
                                     staffActor: ActorRef,
                                     now: () => SDateLike,
-                                    terminals: List[Terminal]) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, InMemoryStreamingJournal) {
+                                    terminals: List[Terminal]) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, InMemoryStreamingJournal, SDate("1970-01-01")) {
   var state: PortState = PortState.empty
 
   override def receive: Receive = processMessage orElse {

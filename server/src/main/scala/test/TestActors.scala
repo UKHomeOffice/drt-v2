@@ -225,7 +225,7 @@ object TestActors {
                                       staffActor: ActorRef,
                                       now: () => SDateLike,
                                       terminals: List[Terminal],
-                                      journalType: StreamingJournalLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, journalType) with TestPartitionedPortStateActorLike {
+                                      journalType: StreamingJournalLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, journalType, SDate("1970-01-01")) with TestPartitionedPortStateActorLike {
     val actorClearRequests = Map(
       flightsActor -> ResetData,
       queuesActor -> ResetData,

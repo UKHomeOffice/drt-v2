@@ -1,14 +1,17 @@
 package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
+import actors.FlightsStateActor.tempPitActorProps
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.daily.{QueueUpdatesSupervisor, StaffUpdatesSupervisor, TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
+import actors.daily.{QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor, TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
+import actors.pointInTime.{CrunchStateReadActor, FlightsStateReadActor}
 import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -25,7 +28,17 @@ object PartitionedPortStateActor {
     val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(now, expireAfterMillis, airportConfig.queuesByTerminal, legacyDataCutoff)))
     val queuesActor: ActorRef = lookups.queueMinutesActor
     val staffActor: ActorRef = lookups.staffMinutesActor
-    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList, journalType)))
+    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList, journalType, legacyDataCutoff)))
+  }
+
+  def isNonLegacyRequest(pointInTime: SDateLike, legacyDataCutoff: SDateLike): Boolean =
+    pointInTime.millisSinceEpoch >= legacyDataCutoff.millisSinceEpoch
+
+  def tempLegacyActorProps(pointInTime: SDateLike,
+                           message: DateRangeLike,
+                           queues: Map[Terminal, Seq[Queue]],
+                           expireAfterMillis: Int): Props = {
+    Props(new CrunchStateReadActor(1000, pointInTime, expireAfterMillis, queues, message.from, message.to))
   }
 }
 
@@ -59,12 +72,15 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
                                 staffActor: ActorRef,
                                 val now: () => SDateLike,
                                 val terminals: List[Terminal],
-                                val journalType: StreamingJournalLike) extends Actor with ProdPartitionedPortStateActor {
+                                val journalType: StreamingJournalLike,
+                                legacyDataCutoff: SDateLike) extends Actor with ProdPartitionedPortStateActor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = new Timeout(60 seconds)
+
+  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
 
   def processMessage: Receive = {
     case msg: SetCrunchQueueActor =>
@@ -97,6 +113,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       askThenAck(someStaffUpdates.asContainer, replyTo, staffActor)
 
     case PointInTimeQuery(millis, request: GetStateForDateRange) =>
+      if (PartitionedPortStateActor.isNonLegacyRequest())
       replyWithPortState(sender(), PointInTimeQuery(millis, request))
 
     case PointInTimeQuery(millis, request: GetStateForTerminalDateRange) =>
@@ -155,6 +172,10 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     }
     (eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
   }
+
+  def tempPointInTimeActor(pointInTime: SDateLike, message: DateRangeLike): ActorRef =
+    context.actorOf(tempPitActorProps(pointInTime, message, now, queues, expireAfterMillis, legacyDataCutoff))
+
 
   def queueActorForRequest(request: PortStateRequest): ActorRef = request match {
     case _: GetUpdatesSince => queueUpdatesSupervisor
