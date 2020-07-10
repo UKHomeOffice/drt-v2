@@ -93,7 +93,7 @@ trait WithImports {
           terminalProcessingTimes = airportConfig.terminalProcessingTimes + (terminal -> processingTimes)
         )
 
-        val date = fieldFromRequest(request, "date").map(d => SDate(d))
+        val date = fieldFromRequest(request, "simulation-date").map(d => SDate(d))
           .getOrElse(SDate.now())
 
         val eventualFlightsWithSplits: Future[FlightsWithSplits] = (ctrl.portStateActor ? GetFlightsForTerminal(
