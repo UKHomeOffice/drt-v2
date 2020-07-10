@@ -19,7 +19,7 @@ case class GetCrunchMinutes(terminal: Terminal)
 case class GetStaffMinutes(terminal: Terminal)
 
 object CrunchStateReadActor {
-  val snapshotInterval = 10000
+  val snapshotInterval = 1000
 }
 
 class CrunchStateReadActor(pointInTime: SDateLike,
