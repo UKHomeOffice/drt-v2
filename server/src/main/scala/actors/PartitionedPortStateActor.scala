@@ -3,7 +3,7 @@ package actors
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.FlightsStateActor.tempPitActorProps
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.daily.{QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor, TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
+import actors.daily.{QueueUpdatesSupervisor, RequestAndTerminate, RequestAndTerminateActor, StaffUpdatesSupervisor, TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
 import actors.pointInTime.{CrunchStateReadActor, FlightsStateReadActor}
 import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
@@ -15,6 +15,7 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import services.SDate
 import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange, PortStateRequest}
 
 import scala.concurrent.duration._
@@ -28,7 +29,7 @@ object PartitionedPortStateActor {
     val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(now, expireAfterMillis, airportConfig.queuesByTerminal, legacyDataCutoff)))
     val queuesActor: ActorRef = lookups.queueMinutesActor
     val staffActor: ActorRef = lookups.staffMinutesActor
-    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList, journalType, legacyDataCutoff)))
+    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal, journalType, legacyDataCutoff)))
   }
 
   def isNonLegacyRequest(pointInTime: SDateLike, legacyDataCutoff: SDateLike): Boolean =
@@ -46,7 +47,8 @@ trait PartitionedPortStateActorLike {
   val now: () => SDateLike
   val context: ActorContext
   val journalType: StreamingJournalLike
-  val terminals: List[Terminal]
+  val queues: Map[Terminal, Seq[Queue]]
+  def terminals: List[Terminal] = queues.keys.toList
 
   val queueUpdatesProps: (Terminal, SDateLike) => Props =
     (terminal: Terminal, day: SDateLike) => {
@@ -71,7 +73,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
                                 queuesActor: ActorRef,
                                 staffActor: ActorRef,
                                 val now: () => SDateLike,
-                                val terminals: List[Terminal],
+                                val queues: Map[Terminal, Seq[Queue]],
                                 val journalType: StreamingJournalLike,
                                 legacyDataCutoff: SDateLike) extends Actor with ProdPartitionedPortStateActor {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -113,8 +115,10 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       askThenAck(someStaffUpdates.asContainer, replyTo, staffActor)
 
     case PointInTimeQuery(millis, request: GetStateForDateRange) =>
-      if (PartitionedPortStateActor.isNonLegacyRequest())
-      replyWithPortState(sender(), PointInTimeQuery(millis, request))
+      if (PartitionedPortStateActor.isNonLegacyRequest(SDate(millis), legacyDataCutoff))
+        replyWithPortState(sender(), PointInTimeQuery(millis, request))
+      else
+        replyWithLegacyQuery(sender(), SDate(millis), request)
 
     case PointInTimeQuery(millis, request: GetStateForTerminalDateRange) =>
       replyWithPortState(sender(), PointInTimeQuery(millis, request))
@@ -173,9 +177,15 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     (eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
   }
 
+  def replyWithLegacyQuery(replyTo: ActorRef, pointInTime: SDateLike, message: DateRangeLike): Unit = {
+    val tempActor = tempPointInTimeActor(pointInTime, message)
+    killActor
+      .ask(RequestAndTerminate(tempActor, message))
+      .pipeTo(replyTo)
+  }
+
   def tempPointInTimeActor(pointInTime: SDateLike, message: DateRangeLike): ActorRef =
     context.actorOf(tempPitActorProps(pointInTime, message, now, queues, expireAfterMillis, legacyDataCutoff))
-
 
   def queueActorForRequest(request: PortStateRequest): ActorRef = request match {
     case _: GetUpdatesSince => queueUpdatesSupervisor

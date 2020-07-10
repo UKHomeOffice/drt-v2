@@ -7,6 +7,7 @@ import akka.pattern.ask
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import services.SDate
@@ -21,7 +22,7 @@ object PartitionedPortStateTestActor {
     val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
     val queuesActor = lookups.queueMinutesActor
     val staffActor = lookups.staffMinutesActor
-    system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList)))
+    system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal)))
   }
 }
 
@@ -30,7 +31,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                                     queuesActor: ActorRef,
                                     staffActor: ActorRef,
                                     now: () => SDateLike,
-                                    terminals: List[Terminal]) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, InMemoryStreamingJournal, SDate("1970-01-01")) {
+                                    queues: Map[Terminal, Seq[Queue]]) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, queues, InMemoryStreamingJournal, SDate("1970-01-01")) {
   var state: PortState = PortState.empty
 
   override def receive: Receive = processMessage orElse {
