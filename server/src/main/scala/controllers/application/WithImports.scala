@@ -88,7 +88,6 @@ trait WithImports {
 
         val simulationConfig = airportConfig.copy(
           minMaxDesksByTerminalQueue24Hrs = airportConfig.minMaxDesksByTerminalQueue24Hrs + (terminal -> openDesks),
-          eGateBankSize = 5,
           slaByQueue = airportConfig.slaByQueue.mapValues(_ => 15),
           crunchOffsetMinutes = 0,
           terminalProcessingTimes = airportConfig.terminalProcessingTimes + (terminal -> processingTimes)
