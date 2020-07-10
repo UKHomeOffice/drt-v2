@@ -104,7 +104,11 @@ trait WithImports {
 
 
         eventualFlightsWithSplits.map { fws =>
-          val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(fws)))
+          val weightedFlights = FlightsWithSplits(fws.flights.map {
+            case (ua, f) => (ua, f.copy(apiFlight = applyWeighting(f.apiFlight, passengerWeighting)))
+          })
+
+          val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(weightedFlights)))
 
           val dawp = DesksAndWaitsPortProvider(simulationConfig, TryRenjin.crunch, PcpPax.bestPaxEstimateWithApi)
           val (runnableDeskRecs, _): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = RunnableDeskRecs(portStateActor, dawp, PortDeskLimits.fixed(simulationConfig)).run()
