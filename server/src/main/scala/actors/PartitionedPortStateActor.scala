@@ -118,7 +118,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       if (PartitionedPortStateActor.isNonLegacyRequest(SDate(millis), legacyDataCutoff))
         replyWithPortState(sender(), PointInTimeQuery(millis, request))
       else
-        replyWithLegacyQuery(sender(), SDate(millis), request)
+        replyWithLegacyPortState(sender(), SDate(millis), request)
 
     case PointInTimeQuery(millis, request: GetStateForTerminalDateRange) =>
       replyWithPortState(sender(), PointInTimeQuery(millis, request))
@@ -177,7 +177,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     (eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
   }
 
-  def replyWithLegacyQuery(replyTo: ActorRef, pointInTime: SDateLike, message: DateRangeLike): Unit = {
+  def replyWithLegacyPortState(replyTo: ActorRef, pointInTime: SDateLike, message: DateRangeLike): Unit = {
     val tempActor = tempPointInTimeActor(pointInTime, message)
     killActor
       .ask(RequestAndTerminate(tempActor, message))
