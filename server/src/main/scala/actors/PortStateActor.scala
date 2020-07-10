@@ -44,7 +44,7 @@ class PortStateActor(liveCrunchStateProps: Props,
                      queuesByTerminal: Map[Terminal, Seq[Queue]]) extends Actor with Stash {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val portStateSnapshotInterval: Int = 1000
+  val portStateSnapshotInterval: Int = 10000
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
@@ -206,7 +206,6 @@ class PortStateActor(liveCrunchStateProps: Props,
   def crunchReadActor(pointInTime: SDateLike,
                       start: SDateLike,
                       end: SDateLike): ActorRef = context.actorOf(Props(new CrunchStateReadActor(
-    portStateSnapshotInterval,
     pointInTime,
     DrtStaticParameters.expireAfterMillis,
     queuesByTerminal,

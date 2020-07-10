@@ -40,7 +40,7 @@ object FlightsStateActor {
     if (isNonLegacyRequest(pointInTime, legacyDataCutoff))
       Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch, queues, legacyDataCutoff))
     else
-      Props(new CrunchStateReadActor(1000, pointInTime, expireAfterMillis, queues, message.from, message.to))
+      Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to))
   }
 }
 

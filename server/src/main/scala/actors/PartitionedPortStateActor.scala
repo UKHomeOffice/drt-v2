@@ -39,7 +39,7 @@ object PartitionedPortStateActor {
                            message: DateRangeLike,
                            queues: Map[Terminal, Seq[Queue]],
                            expireAfterMillis: Int): Props = {
-    Props(new CrunchStateReadActor(1000, pointInTime, expireAfterMillis, queues, message.from, message.to))
+    Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to))
   }
 }
 
