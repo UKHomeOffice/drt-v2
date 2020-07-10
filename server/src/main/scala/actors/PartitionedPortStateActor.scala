@@ -48,6 +48,7 @@ trait PartitionedPortStateActorLike {
   val context: ActorContext
   val journalType: StreamingJournalLike
   val queues: Map[Terminal, Seq[Queue]]
+
   def terminals: List[Terminal] = queues.keys.toList
 
   val queueUpdatesProps: (Terminal, SDateLike) => Props =
@@ -130,7 +131,10 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       flightsActor.ask(PointInTimeQuery(pitMillis, GetStateForTerminalDateRange(from, to, terminal))).pipeTo(sender())
 
     case request: GetStateForDateRange =>
-      replyWithPortState(sender(), request)
+      if (SDate(request.to).isHistoricDate(now()))
+        replyWithLegacyPortState(sender(), SDate(request.to).addHours(4), request)
+      else
+        replyWithPortState(sender(), request)
 
     case request: GetStateForTerminalDateRange =>
       replyWithPortState(sender(), request)
