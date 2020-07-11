@@ -29,7 +29,7 @@ object PartitionedPortStateActor {
     val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(now, expireAfterMillis, airportConfig.queuesByTerminal, legacyDataCutoff)))
     val queuesActor: ActorRef = lookups.queueMinutesActor
     val staffActor: ActorRef = lookups.staffMinutesActor
-    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal, journalType, legacyDataCutoff)))
+    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal, journalType, legacyDataCutoff, tempLegacyActorProps)))
   }
 
   def isNonLegacyRequest(pointInTime: SDateLike, legacyDataCutoff: SDateLike): Boolean =
@@ -76,7 +76,8 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
                                 val now: () => SDateLike,
                                 val queues: Map[Terminal, Seq[Queue]],
                                 val journalType: StreamingJournalLike,
-                                legacyDataCutoff: SDateLike) extends Actor with ProdPartitionedPortStateActor {
+                                legacyDataCutoff: SDateLike,
+                                tempLegacyActorProps: (SDateLike, DateRangeLike, Map[Terminal, Seq[Queue]], Int) => Props) extends Actor with ProdPartitionedPortStateActor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
@@ -131,10 +132,10 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       flightsActor.ask(PointInTimeQuery(pitMillis, GetStateForTerminalDateRange(from, to, terminal))).pipeTo(sender())
 
     case request: GetStateForDateRange =>
-      if (SDate(request.to).isHistoricDate(now()))
-        replyWithLegacyPortState(sender(), SDate(request.to).addHours(4), request)
-      else
+      if (PartitionedPortStateActor.isNonLegacyRequest(SDate(request.to), legacyDataCutoff))
         replyWithPortState(sender(), request)
+      else
+        replyWithLegacyPortState(sender(), SDate(request.to).addHours(4), request)
 
     case request: GetStateForTerminalDateRange =>
       replyWithPortState(sender(), request)
@@ -189,7 +190,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   }
 
   def tempPointInTimeActor(pointInTime: SDateLike, message: DateRangeLike): ActorRef =
-    context.actorOf(tempPitActorProps(pointInTime, message, now, queues, expireAfterMillis, legacyDataCutoff))
+    context.actorOf(tempLegacyActorProps(pointInTime, message, queues, expireAfterMillis))
 
   def queueActorForRequest(request: PortStateRequest): ActorRef = request match {
     case _: GetUpdatesSince => queueUpdatesSupervisor
