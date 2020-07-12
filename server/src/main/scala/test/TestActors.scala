@@ -211,7 +211,7 @@ object TestActors {
       val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", now, expireAfterMillis, airportConfig.queuesByTerminal)))
       val queuesActor: ActorRef = lookups.queueMinutesActor
       val staffActor: ActorRef = lookups.staffMinutesActor
-      system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.terminals.toList, streamingJournal)))
+      system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal, streamingJournal)))
     }
   }
 
@@ -224,8 +224,8 @@ object TestActors {
                                       queuesActor: ActorRef,
                                       staffActor: ActorRef,
                                       now: () => SDateLike,
-                                      terminals: List[Terminal],
-                                      journalType: StreamingJournalLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, terminals, journalType) with TestPartitionedPortStateActorLike {
+                                      queues: Map[Terminal, Seq[Queue]],
+                                      journalType: StreamingJournalLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, queues, journalType, SDate("1970-01-01"), PartitionedPortStateActor.tempLegacyActorProps) with TestPartitionedPortStateActorLike {
     val actorClearRequests = Map(
       flightsActor -> ResetData,
       queuesActor -> ResetData,

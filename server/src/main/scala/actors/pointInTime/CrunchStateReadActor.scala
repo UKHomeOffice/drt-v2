@@ -18,14 +18,17 @@ case class GetCrunchMinutes(terminal: Terminal)
 
 case class GetStaffMinutes(terminal: Terminal)
 
-class CrunchStateReadActor(snapshotInterval: Int,
-                           pointInTime: SDateLike,
+object CrunchStateReadActor {
+  val snapshotInterval = 1000
+}
+
+class CrunchStateReadActor(pointInTime: SDateLike,
                            expireAfterMillis: Int,
                            portQueues: Map[Terminal, Seq[Queue]],
                            startMillis: MillisSinceEpoch,
                            endMillis: MillisSinceEpoch)
   extends CrunchStateActor(
-    initialMaybeSnapshotInterval = Option(snapshotInterval),
+    initialMaybeSnapshotInterval = Option(CrunchStateReadActor.snapshotInterval),
     initialSnapshotBytesThreshold = oneMegaByte,
     name = "crunch-state",
     portQueues = portQueues,
@@ -90,7 +93,7 @@ class CrunchStateReadActor(snapshotInterval: Int,
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime.millisSinceEpoch)
     val recovery = Recovery(
       fromSnapshot = criteria,
-      replayMax = snapshotInterval)
+      replayMax = CrunchStateReadActor.snapshotInterval)
     log.info(s"recovery: $recovery")
     recovery
   }

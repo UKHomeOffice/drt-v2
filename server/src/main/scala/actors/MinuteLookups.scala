@@ -66,7 +66,7 @@ trait MinuteLookupsLike {
   }
 
   def crunchStateReadActor(date: SDateLike): ActorRef = {
-    system.actorOf(Props(new CrunchStateReadActor(1000, date.addHours(4), expireAfterMillis, queuesByTerminal, date.millisSinceEpoch, date.addDays(1).millisSinceEpoch)))
+    system.actorOf(Props(new CrunchStateReadActor(date.addHours(4), expireAfterMillis, queuesByTerminal, date.millisSinceEpoch, date.addDays(1).millisSinceEpoch)))
   }
 
   def queueMinutesActor: ActorRef
