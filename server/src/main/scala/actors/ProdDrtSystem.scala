@@ -2,11 +2,14 @@ package actors
 
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
+import akka.pattern.ask
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
+import akka.util.Timeout
 import drt.auth.{Role, Roles}
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.MilliTimes._
 import drt.shared.Terminals._
 import drt.shared._
@@ -19,10 +22,13 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services._
 import services.crunch.CrunchSystem
+import services.crunch.deskrecs.GetFlights
 import slickdb.{ArrivalTable, Tables}
 
+import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
@@ -87,7 +93,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
-      val maybeLivePortState = if (usePartitionedPortState) Future(None) else initialStateFuture[PortState](portStateActor)
+      val maybeLivePortState = if (usePartitionedPortState) initialFlightsPortState(portStateActor) else initialStateFuture[PortState](portStateActor)
       val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
