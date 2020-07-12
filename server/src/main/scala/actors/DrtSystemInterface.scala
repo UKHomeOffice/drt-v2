@@ -31,7 +31,7 @@ import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.Flights
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
@@ -46,7 +46,7 @@ import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, 
 import services.SplitsProvider.SplitProvider
 import services._
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.{DesksAndWaitsPortProvider, DesksAndWaitsPortProviderLike, RunnableDeskRecs}
+import services.crunch.deskrecs.{DesksAndWaitsPortProvider, DesksAndWaitsPortProviderLike, GetFlights, RunnableDeskRecs}
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch
 import slickdb.VoyageManifestPassengerInfoTable
@@ -339,6 +339,17 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   }
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2 minutes)
+
+  def initialFlightsPortState(actor: ActorRef): Future[Option[PortState]] = {
+    val from = now().getLocalLastMidnight.addDays(-1)
+    val to = from.addDays(180)
+    val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
+    actor
+      .ask(request)(new Timeout(15 seconds)).mapTo[FlightsWithSplits]
+      .map { fws =>
+        Option(PortState(fws.flights.toMap.values, Iterable(), Iterable()))
+      }
+  }
 
   def initialStateFuture[A](askableActor: ActorRef): Future[Option[A]] = {
     val actorPath = askableActor.actorRef.path
