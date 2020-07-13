@@ -36,15 +36,20 @@ object FlightsStateActor {
                         now: () => SDateLike,
                         queues: Map[Terminal, Seq[Queue]],
                         expireAfterMillis: Int,
-                        legacyDataCutoff: SDateLike): Props = {
+                        legacyDataCutoff: SDateLike,
+                        replayMaxMessages: Int): Props = {
     if (isNonLegacyRequest(pointInTime, legacyDataCutoff))
       Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch, queues, legacyDataCutoff))
     else
-      Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to))
+      Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to, replayMaxMessages))
   }
 }
 
-class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int, queues: Map[Terminal, Seq[Queue]], legacyDataCutoff: SDateLike)
+class FlightsStateActor(val now: () => SDateLike,
+                        expireAfterMillis: Int,
+                        queues: Map[Terminal, Seq[Queue]],
+                        legacyDataCutoff: SDateLike,
+                        replayMaxCrunchStateMessages: Int)
   extends PersistentActor with RecoveryActorLike with PersistentDrtActor[FlightsWithSplits] {
 
   import FlightsStateActor._
@@ -171,7 +176,7 @@ class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int, queues
   }
 
   def tempPointInTimeActor(pointInTime: SDateLike, message: DateRangeLike): ActorRef =
-    context.actorOf(tempPitActorProps(pointInTime, message, now, queues, expireAfterMillis, legacyDataCutoff))
+    context.actorOf(tempPitActorProps(pointInTime, message, now, queues, expireAfterMillis, legacyDataCutoff, replayMaxCrunchStateMessages))
 
   def handleDiff(flightUpdates: FlightsWithSplitsDiff): Unit = {
     val (updatedState, updatedMinutes) = flightUpdates.applyTo(state, now().millisSinceEpoch)

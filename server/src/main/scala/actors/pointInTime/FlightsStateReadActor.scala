@@ -15,7 +15,7 @@ import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRa
 trait FlightsDataLike extends Actor
 
 class FlightsStateReadActor(now: () => SDateLike, expireAfterMillis: Int, pointInTime: MillisSinceEpoch, queues: Map[Terminal, Seq[Queue]], legacyDataCutoff: SDateLike)
-  extends FlightsStateActor(now, expireAfterMillis, queues, legacyDataCutoff) with FlightsDataLike {
+  extends FlightsStateActor(now, expireAfterMillis, queues, legacyDataCutoff, 1000) with FlightsDataLike {
 
   override val log: Logger = LoggerFactory.getLogger(s"$getClass-${SDate(pointInTime).toISOString()}")
 

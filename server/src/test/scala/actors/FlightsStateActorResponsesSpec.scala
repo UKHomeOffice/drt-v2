@@ -24,7 +24,7 @@ class FlightsStateActorResponsesSpec extends CrunchTestLike {
 
   val legacyDataCutoff: SDateLike = SDate("1970-01-01")
 
-  def actor: ActorRef = system.actorOf(Props(new FlightsStateActor(myNow, MilliTimes.oneDayMillis, Map(), legacyDataCutoff)))
+  def actor: ActorRef = system.actorOf(Props(new FlightsStateActor(myNow, MilliTimes.oneDayMillis, Map(), legacyDataCutoff, 1000)))
 
   val messagesAndResponseTypes: Map[Any, (PartialFunction[Any, Result], Any)] = Map(
     GetStateForTerminalDateRange(0L, 1L, T1) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),

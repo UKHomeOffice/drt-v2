@@ -19,7 +19,7 @@ class TestCrunchStateReadActor(probe: ActorRef,
                                expireAfterMillis: Int,
                                portQueues: Map[Terminal, Seq[Queue]],
                                startMillis: MillisSinceEpoch,
-                               endMillis: MillisSinceEpoch) extends CrunchStateReadActor(pointInTime, expireAfterMillis, portQueues, startMillis, endMillis) {
+                               endMillis: MillisSinceEpoch) extends CrunchStateReadActor(pointInTime, expireAfterMillis, portQueues, startMillis, endMillis, 1000) {
   override def receiveCommand: Receive = {
     case msg => probe ! msg
   }

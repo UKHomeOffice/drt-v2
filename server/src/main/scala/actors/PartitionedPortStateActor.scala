@@ -1,10 +1,9 @@
 package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
-import actors.FlightsStateActor.tempPitActorProps
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.daily.{QueueUpdatesSupervisor, RequestAndTerminate, RequestAndTerminateActor, StaffUpdatesSupervisor, TerminalDayQueuesUpdatesActor, TerminalDayStaffUpdatesActor, UpdatesSupervisor}
-import actors.pointInTime.{CrunchStateReadActor, FlightsStateReadActor}
+import actors.daily._
+import actors.pointInTime.CrunchStateReadActor
 import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
@@ -23,23 +22,24 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 object PartitionedPortStateActor {
-  def apply(now: () => SDateLike, airportConfig: AirportConfig, journalType: StreamingJournalLike, legacyDataCutoff: SDateLike)
+  def apply(now: () => SDateLike, airportConfig: AirportConfig, journalType: StreamingJournalLike, legacyDataCutoff: SDateLike, replayMaxCrunchStateMessages: Int)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
     val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-    val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(now, expireAfterMillis, airportConfig.queuesByTerminal, legacyDataCutoff)))
+    val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(now, expireAfterMillis, airportConfig.queuesByTerminal, legacyDataCutoff, replayMaxCrunchStateMessages)))
     val queuesActor: ActorRef = lookups.queueMinutesActor
     val staffActor: ActorRef = lookups.staffMinutesActor
-    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal, journalType, legacyDataCutoff, tempLegacyActorProps)))
+    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal, journalType, legacyDataCutoff, tempLegacyActorProps(replayMaxCrunchStateMessages))))
   }
 
   def isNonLegacyRequest(pointInTime: SDateLike, legacyDataCutoff: SDateLike): Boolean =
     pointInTime.millisSinceEpoch >= legacyDataCutoff.millisSinceEpoch
 
-  def tempLegacyActorProps(pointInTime: SDateLike,
+  def tempLegacyActorProps(replayMaxMessages: Int)
+                          (pointInTime: SDateLike,
                            message: DateRangeLike,
                            queues: Map[Terminal, Seq[Queue]],
                            expireAfterMillis: Int): Props = {
-    Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to))
+    Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to, replayMaxMessages))
   }
 }
 
