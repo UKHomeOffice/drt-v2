@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext
 object PartitionedPortStateTestActor {
   def apply(testProbe: TestProbe, flightsActor: ActorRef, now: () => SDateLike, airportConfig: AirportConfig)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-    val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+    val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, 1000)
     val queuesActor = lookups.queueMinutesActor
     val staffActor = lookups.staffMinutesActor
     system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal)))
@@ -31,7 +31,8 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                                     queuesActor: ActorRef,
                                     staffActor: ActorRef,
                                     now: () => SDateLike,
-                                    queues: Map[Terminal, Seq[Queue]]) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, queues, InMemoryStreamingJournal, SDate("1970-01-01"), PartitionedPortStateActor.tempLegacyActorProps(1000)) {
+                                    queues: Map[Terminal, Seq[Queue]])
+  extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, queues, InMemoryStreamingJournal, SDate("1970-01-01"), PartitionedPortStateActor.tempLegacyActorProps(1000)) {
   var state: PortState = PortState.empty
 
   override def receive: Receive = processMessage orElse {
