@@ -17,6 +17,8 @@ case class TestMinuteLookups(system: ActorSystem,
                              expireAfterMillis: Int,
                              queuesByTerminal: Map[Terminal, Seq[Queue]])
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
+  override val replayMaxCrunchStateMessages = 1000
+  
   val resetQueuesData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
     val date = SDate(millis)
     val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)))

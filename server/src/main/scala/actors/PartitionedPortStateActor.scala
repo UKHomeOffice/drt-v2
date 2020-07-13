@@ -24,7 +24,7 @@ import scala.language.postfixOps
 object PartitionedPortStateActor {
   def apply(now: () => SDateLike, airportConfig: AirportConfig, journalType: StreamingJournalLike, legacyDataCutoff: SDateLike, replayMaxCrunchStateMessages: Int)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-    val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+    val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, replayMaxCrunchStateMessages)
     val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(now, expireAfterMillis, airportConfig.queuesByTerminal, legacyDataCutoff, replayMaxCrunchStateMessages)))
     val queuesActor: ActorRef = lookups.queueMinutesActor
     val staffActor: ActorRef = lookups.staffMinutesActor
