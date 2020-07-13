@@ -28,10 +28,10 @@ class PortStateRequestsSpec extends CrunchTestLike {
   def portStateActorProvider: () => ActorRef = () => {
     val liveCsa = Props(new CrunchStateActor(None, Sizes.oneMegaByte, "crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis))
     val fcstCsa = Props(new CrunchStateActor(None, Sizes.oneMegaByte, "forecast-crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis))
-    PortStateActor(myNow, liveCsa, fcstCsa, defaultAirportConfig.queuesByTerminal)
+    PortStateActor(myNow, liveCsa, fcstCsa, defaultAirportConfig.queuesByTerminal, 1000)
   }
 
-  def partitionedPortStateActorProvider: () => ActorRef = () => PartitionedPortStateActor(myNow, airportConfig, InMemoryStreamingJournal, SDate("1970-01-01"))
+  def partitionedPortStateActorProvider: () => ActorRef = () => PartitionedPortStateActor(myNow, airportConfig, InMemoryStreamingJournal, SDate("1970-01-01"), 1000)
 
   def resetData(terminal: Terminal, day: SDateLike): Unit = {
     val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => SDate.now())))

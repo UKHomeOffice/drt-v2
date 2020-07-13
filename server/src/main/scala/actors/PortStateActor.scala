@@ -28,10 +28,9 @@ object PortStateActor {
   def apply(now: () => SDateLike,
             liveCrunchStateProps: Props,
             forecastCrunchStateProps: Props,
-            queues: Map[Terminal, Seq[Queue]])
-           (implicit system: ActorSystem): ActorRef = {
-    system.actorOf(Props(new PortStateActor(liveCrunchStateProps, forecastCrunchStateProps, now, liveDaysAhead, queues)), name = "port-state-actor")
-  }
+            queues: Map[Terminal, Seq[Queue]],
+            replayMaxCrunchStateMessages: Int)(implicit system: ActorSystem): ActorRef =
+    system.actorOf(Props(new PortStateActor(liveCrunchStateProps, forecastCrunchStateProps, now, liveDaysAhead, queues, replayMaxCrunchStateMessages)), name = "port-state-actor")
 
   case object Start
 
@@ -41,10 +40,9 @@ class PortStateActor(liveCrunchStateProps: Props,
                      forecastCrunchStateProps: Props,
                      now: () => SDateLike,
                      liveDaysAhead: Int,
-                     queuesByTerminal: Map[Terminal, Seq[Queue]]) extends Actor with Stash {
+                     queuesByTerminal: Map[Terminal, Seq[Queue]],
+                     replayMaxCrunchStateMessages: Int) extends Actor with Stash {
   val log: Logger = LoggerFactory.getLogger(getClass)
-
-  val portStateSnapshotInterval: Int = 10000
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
@@ -205,12 +203,8 @@ class PortStateActor(liveCrunchStateProps: Props,
 
   def crunchReadActor(pointInTime: SDateLike,
                       start: SDateLike,
-                      end: SDateLike): ActorRef = context.actorOf(Props(new CrunchStateReadActor(
-    pointInTime,
-    DrtStaticParameters.expireAfterMillis,
-    queuesByTerminal,
-    start.millisSinceEpoch,
-    end.millisSinceEpoch)))
+                      end: SDateLike): ActorRef =
+    context.actorOf(Props(new CrunchStateReadActor(pointInTime, DrtStaticParameters.expireAfterMillis, queuesByTerminal, start.millisSinceEpoch, end.millisSinceEpoch, replayMaxCrunchStateMessages)))
 
   def stateForPeriod(start: MillisSinceEpoch, end: MillisSinceEpoch): PortState = state.window(SDate(start), SDate(end))
 

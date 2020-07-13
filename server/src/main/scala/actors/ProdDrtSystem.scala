@@ -2,14 +2,11 @@ package actors
 
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
-import akka.pattern.ask
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
-import akka.util.Timeout
 import drt.auth.{Role, Roles}
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.MilliTimes._
 import drt.shared.Terminals._
 import drt.shared._
@@ -22,13 +19,10 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services._
 import services.crunch.CrunchSystem
-import services.crunch.deskrecs.GetFlights
 import slickdb.{ArrivalTable, Tables}
 
-import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
@@ -64,11 +58,11 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   override val portStateActor: ActorRef = if (usePartitionedPortState) {
     log.info(s"Legacy flight data cutoff: ${legacyFlightDataCutoff.toISOString()}")
-    PartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config), legacyFlightDataCutoff)
+    PartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config), legacyFlightDataCutoff, airportConfig.portStateSnapshotInterval)
   } else {
     val liveCrunchStateProps: Props = Props(new CrunchStateActor(Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots, forecastMaxMillis))
     val forecastCrunchStateProps: Props = Props(new CrunchStateActor(Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots, forecastMaxMillis))
-    PortStateActor(now, liveCrunchStateProps, forecastCrunchStateProps, airportConfig.queuesByTerminal)
+    PortStateActor(now, liveCrunchStateProps, forecastCrunchStateProps, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
   }
 
   val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)

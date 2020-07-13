@@ -36,22 +36,28 @@ object FlightsStateActor {
                         now: () => SDateLike,
                         queues: Map[Terminal, Seq[Queue]],
                         expireAfterMillis: Int,
-                        legacyDataCutoff: SDateLike): Props = {
+                        legacyDataCutoff: SDateLike,
+                        replayMaxCrunchStateMessages: Int): Props = {
     if (isNonLegacyRequest(pointInTime, legacyDataCutoff))
-      Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch, queues, legacyDataCutoff))
+      Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch, queues, legacyDataCutoff, replayMaxCrunchStateMessages))
     else
-      Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to))
+      Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to, replayMaxCrunchStateMessages))
   }
 }
 
-class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int, queues: Map[Terminal, Seq[Queue]], legacyDataCutoff: SDateLike)
+class FlightsStateActor(val now: () => SDateLike,
+                        expireAfterMillis: Int,
+                        queues: Map[Terminal, Seq[Queue]],
+                        legacyDataCutoff: SDateLike,
+                        replayMaxCrunchStateMessages: Int)
   extends PersistentActor with RecoveryActorLike with PersistentDrtActor[FlightsWithSplits] {
 
   import FlightsStateActor._
 
   override def persistenceId: String = "flights-state-actor"
 
-  override val maybeSnapshotInterval: Option[Int] = Option(5000)
+  val snapshotInterval = 1000
+  override val maybeSnapshotInterval: Option[Int] = Option(snapshotInterval)
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
@@ -171,7 +177,7 @@ class FlightsStateActor(val now: () => SDateLike, expireAfterMillis: Int, queues
   }
 
   def tempPointInTimeActor(pointInTime: SDateLike, message: DateRangeLike): ActorRef =
-    context.actorOf(tempPitActorProps(pointInTime, message, now, queues, expireAfterMillis, legacyDataCutoff))
+    context.actorOf(tempPitActorProps(pointInTime, message, now, queues, expireAfterMillis, legacyDataCutoff, replayMaxCrunchStateMessages))
 
   def handleDiff(flightUpdates: FlightsWithSplitsDiff): Unit = {
     val (updatedState, updatedMinutes) = flightUpdates.applyTo(state, now().millisSinceEpoch)
