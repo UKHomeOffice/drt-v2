@@ -197,7 +197,7 @@ object TerminalContentComponent {
                 <.div(^.id := "simluations", ^.className := s"tab-pane in $simulationsActive", {
                   if (state.activeTab == "simulations") {
 
-                    SimulateArrivalsComponent(props.viewMode.dayStart, props.terminalPageTab.terminal, props.airportConfig)
+                    SimulateArrivalsComponent(props.viewMode.dayStart.toLocalDate, props.terminalPageTab.terminal, props.airportConfig)
                   } else "not rendering"
                 }),
                 ArrivalSimulationUpload,

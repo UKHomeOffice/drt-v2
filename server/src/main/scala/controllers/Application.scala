@@ -98,7 +98,7 @@ trait AirportConfProvider extends AirportConfiguration {
     val configForPort = getPortConfFromEnvVar.copy(
       contactEmail = contactEmail,
       outOfHoursContactPhone = oohPhone
-      )
+    )
 
     configForPort.assertValid()
 
@@ -135,7 +135,7 @@ trait UserRoleProviderLike {
       id = headers.get("X-Auth-Userid").getOrElse("Unknown"),
       email = headers.get("X-Auth-Email").getOrElse("Unknown"),
       roles = roles
-      )
+    )
   }
 }
 
@@ -171,6 +171,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithPortState
     with WithStaffing
     with WithVersion
+    with WithSimulations
     with ProdPassengerSplitProviders {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
@@ -315,7 +316,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
               gps.foreach(group => {
                 val response = keyCloakClient.addUserToGroup(userId, group.id)
                 response.map(res => log.info(s"Added group and got: ${res.status}  $res")
-                             )
+                )
               })
             case _ => log.error(s"Unable to add $userId to $groups")
           }
@@ -347,7 +348,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
         router(
           autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
-          ).map(buffer => {
+        ).map(buffer => {
           val data = Array.ofDim[Byte](buffer.remaining())
           buffer.get(data)
           Ok(data)
@@ -415,7 +416,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
     def missingPostFieldsResponse = Future(
       BadRequest(KeyCloakAuthError("invalid_form_data", "You must provide a username and password").toJson.toString)
-      )
+    )
 
     val result: Option[Future[Result]] = for {
       tokenUrl <- tokenUrlOption
@@ -434,8 +435,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       KeyCloakAuthError(
         "feature_not_implemented",
         "This feature is not currently available for this port on DRT"
-        ).toJson.toString
-      ))
+      ).toJson.toString
+    ))
 
     result match {
       case Some(f) => f.map(t => t)
@@ -470,7 +471,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
           "logTime" -> SDate(millis).toISOString(),
           "url" -> postStringValOrElse("url", request.headers.get("referrer").getOrElse("unknown url")),
           "logLevel" -> logLevel
-          )
+        )
 
         log.log(Logging.levelFor(logLevel).getOrElse(Logging.ErrorLevel), s"Client Error: ${
           logMessage.map {

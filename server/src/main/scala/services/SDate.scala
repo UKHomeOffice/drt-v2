@@ -1,7 +1,7 @@
 package services
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{MilliDate, SDateLike}
+import drt.shared.{LocalDate, MilliDate, SDateLike}
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
@@ -45,9 +45,9 @@ object SDate {
     def millisSinceEpoch: MillisSinceEpoch = dateTime.getMillis
 
     def toLocalDateTimeString(): String = {
-      val localNow = SDate(dateTime, europeLondonTimeZone)
       f"${localNow.getFullYear()}-${localNow.getMonth()}%02d-${localNow.getDate()}%02d ${localNow.getHours()}%02d:${localNow.getMinutes()}%02d"
     }
+
 
     def toISOString(): String = jodaSDateToIsoString(dateTime)
 
@@ -63,15 +63,17 @@ object SDate {
     }
 
     def getLocalLastMidnight: SDateLike = {
-      val localNow = SDate(dateTime, europeLondonTimeZone)
       SDate(localNow.toIsoMidnight, europeLondonTimeZone)
     }
+
+    private def localNow: SDateLike = SDate(dateTime, europeLondonTimeZone)
 
     def getLocalNextMidnight: SDateLike = {
       val nextDay = getLocalLastMidnight.addDays(1)
       SDate(nextDay.toIsoMidnight, europeLondonTimeZone)
     }
 
+    def toLocalDate: LocalDate = LocalDate(localNow.getFullYear(), localNow.getMonth(), localNow.getDate())
   }
 
   def millisToLocalIsoDateOnly(timeZone: DateTimeZone): MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, timeZone).toISODateOnly
@@ -111,6 +113,8 @@ object SDate {
   def apply(millis: MillisSinceEpoch, timeZone: DateTimeZone): SDateLike = JodaSDate(new DateTime(millis, timeZone))
 
   def apply(millis: MilliDate): SDateLike = JodaSDate(new DateTime(millis.millisSinceEpoch, DateTimeZone.UTC))
+
+  def apply(localDate: LocalDate): SDateLike = SDate(localDate.toISOString + "T00:00", Crunch.europeLondonTimeZone)
 
   def now(): JodaSDate = JodaSDate(new DateTime(DateTimeZone.UTC))
 
