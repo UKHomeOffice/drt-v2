@@ -21,7 +21,7 @@ class FlightsStateReadActor(now: () => SDateLike, expireAfterMillis: Int, pointI
 
   override def recovery: Recovery = {
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-    val recovery = Recovery(fromSnapshot = criteria, replayMax = 1000)
+    val recovery = Recovery(fromSnapshot = criteria, replayMax = snapshotInterval)
     log.info(s"Recovery: $recovery")
     recovery
   }

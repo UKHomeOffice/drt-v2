@@ -56,7 +56,8 @@ class FlightsStateActor(val now: () => SDateLike,
 
   override def persistenceId: String = "flights-state-actor"
 
-  override val maybeSnapshotInterval: Option[Int] = Option(1000)
+  val snapshotInterval = 1000
+  override val maybeSnapshotInterval: Option[Int] = Option(snapshotInterval)
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
