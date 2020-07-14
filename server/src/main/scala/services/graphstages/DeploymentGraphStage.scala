@@ -12,7 +12,7 @@ import services.crunch.desklimits.PortDeskLimits
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.deskrecs.DesksAndWaitsPortProvider
 import services.graphstages.Crunch._
-import services.metrics.{Metrics, StageTimer}
+import services.metrics.StageTimer
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
