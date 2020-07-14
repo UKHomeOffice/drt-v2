@@ -4,7 +4,6 @@ import { manifestForDateTime, passengerList } from '../support/manifest-helpers'
 
 moment.locale("en-gb");
 
-// import {manifestForDateTime, passengerList} from '../support/manifest-helpers'
 import { todayAtUtcString } from '../support/time-helpers'
 import { todayAtUtc } from '../support/time-helpers';
 

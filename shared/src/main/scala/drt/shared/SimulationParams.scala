@@ -95,7 +95,7 @@ object SimulationParams {
     },
     eGateBanksSize = airportConfig.eGateBankSize,
     slaByQueue = airportConfig.slaByQueue,
-    0
+    crunchOffsetMinutes = 0
   )
 
   val requiredFields = List(

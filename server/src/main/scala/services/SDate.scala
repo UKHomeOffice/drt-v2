@@ -48,7 +48,6 @@ object SDate {
       f"${localNow.getFullYear()}-${localNow.getMonth()}%02d-${localNow.getDate()}%02d ${localNow.getHours()}%02d:${localNow.getMinutes()}%02d"
     }
 
-
     def toISOString(): String = jodaSDateToIsoString(dateTime)
 
     def getZone(): String = dateTime.getZone.getID
