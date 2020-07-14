@@ -95,6 +95,7 @@ object Lhr extends AirportConfigLike {
       "Evening shift, T2, {date}, 17:00, 23:59, 22"
     ),
     hasActualDeskStats = true,
+    portStateSnapshotInterval = 250,
     hasEstChox = true,
     exportQueueOrder = Queues.exportQueueOrderWithFastTrack,
     role = LHRAccess,
