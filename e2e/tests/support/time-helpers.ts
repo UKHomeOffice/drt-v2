@@ -1,7 +1,7 @@
-import moment from 'moment-timezone';
+import moment from "moment";
 moment.locale("en-gb");
 
-const todayAtUtcString = (hours: number, minutes: number): moment =>
+const todayAtUtcString = (hours: number, minutes: number): string =>
     moment()
         .hour(hours)
         .minute(minutes)
@@ -9,7 +9,7 @@ const todayAtUtcString = (hours: number, minutes: number): moment =>
         .utc()
         .format()
 
-const inDaysAtTimeUtcString = (daysToAdd: number, hours: number, minutes: number): moment =>
+const inDaysAtTimeUtcString = (daysToAdd: number, hours: number, minutes: number): string =>
     moment()
         .hour(hours)
         .minute(minutes)
@@ -18,14 +18,14 @@ const inDaysAtTimeUtcString = (daysToAdd: number, hours: number, minutes: number
         .utc()
         .format()
 
-const todayAtUtc = (hours: number, minutes: number): moment =>
+const todayAtUtc = (hours: number, minutes: number): moment.Moment =>
     moment()
         .hour(hours)
         .minute(minutes)
         .seconds(0)
         .utc()
 
-const currentTimeString = (): moment =>
+const currentTimeString = (): string =>
     moment()
         .seconds(0)
         .utc()

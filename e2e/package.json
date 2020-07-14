@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc",
+    "watch": "tsc -w",
     "lint": "eslint . --ext .ts",
     "test": "npm run build && npx cypress run",
     "test-browser": "npm run build && npx cypress open"
@@ -12,6 +13,7 @@
   "author": "UK Home Office",
   "license": "UNLICENSED",
   "devDependencies": {
+    "@types/moment-timezone": "^0.5.13",
     "@types/node": "^13.7.4",
     "@typescript-eslint/eslint-plugin": "^2.20.0",
     "@typescript-eslint/parser": "^2.20.0",
@@ -23,6 +25,6 @@
   "dependencies": {
     "cypress": "^3.8.3",
     "moment": "^2.24.0",
-    "moment-timezone": "^0.5.28"
+    "moment-timezone": "^0.5.31"
   }
 }

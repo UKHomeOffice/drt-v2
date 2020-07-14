@@ -1,4 +1,4 @@
-import moment from 'moment-timezone'
+import moment from "moment";
 moment.locale("en-gb");
 
 import { manifestForDateTime, passengerProfiles } from '../support/manifest-helpers'

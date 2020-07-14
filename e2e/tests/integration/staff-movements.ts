@@ -1,4 +1,4 @@
-import moment from 'moment-timezone'
+import moment from 'moment-timezone';
 moment.locale("en-gb");
 
 describe('Staff movements', () => {
@@ -9,11 +9,9 @@ describe('Staff movements', () => {
       .addFlight({});
   });
 
-  const midnightThisMorning = (): moment => {
+  const midnightThisMorning = (): moment.Moment => {
     return moment().tz('Europe/London').startOf('day');
   }
-
-  const midnightTonight: moment = midnightThisMorning().add('day', 1)
 
   const shifts = (numberOfStaff): object => {
     return {

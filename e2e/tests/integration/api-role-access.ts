@@ -1,4 +1,4 @@
-import moment from 'moment-timezone'
+import moment from "moment";
 moment.locale("en-gb");
 
 describe('Restrict access to endpoint by role', () => {
@@ -325,6 +325,18 @@ describe('Restrict access to endpoint by role', () => {
       endpoint: "/arrival/1000/234/T1/100",
       method: "GET",
       shouldBeGranted: true
+    },
+    {
+      roles: ["test", "arrival-simulation-upload"],
+      endpoint: "/export/desk-rec-simulation",
+      method: "GET",
+      shouldBeGranted: true
+    },
+    {
+      roles: ["test"],
+      endpoint: "/export/desk-rec-simulation",
+      method: "GET",
+      shouldBeGranted: false
     }
   ]
 
