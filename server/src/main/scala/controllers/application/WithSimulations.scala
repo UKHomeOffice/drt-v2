@@ -100,32 +100,4 @@ trait WithSimulations {
     })
   }
 
-  def fieldFromRequest(request: Request[Map[String, Seq[String]]], name: String): Option[String] = {
-    request.body.get(name)
-      .flatMap(_.headOption)
-  }
-
-  def flightsWithSplitsFromPost(arrivalsFile: MultipartFormData.FilePart[Files.TemporaryFile],
-                                terminal: Terminal,
-                                passengerWeighting: Double
-                               ): Array[ApiFlightWithSplits] = {
-    val bufferedSource: BufferedSource = scala.io.Source.fromFile(arrivalsFile.ref.path.toUri)(Codec.UTF8)
-    val csv = bufferedSource.getLines().filter(_.contains(",")).mkString("\n")
-    bufferedSource.close()
-
-    val flights = ArrivalImporter(csv, terminal)
-      .map(fws =>
-        fws.copy(
-          apiFlight = applyWeighting(fws.apiFlight, passengerWeighting)
-        )
-      )
-
-    flights.filter(f => f.splits.flatMap(_.splits.map(_.paxCount)).sum > 0)
-  }
-
-  def applyWeighting(arrival: Arrival, passengerWeighting: Double): Arrival = arrival.copy(
-    ActPax = arrival.ActPax.map(_ * passengerWeighting).map(_.toInt),
-    TranPax = arrival.TranPax.map(_ * passengerWeighting).map(_.toInt),
-  )
-
 }

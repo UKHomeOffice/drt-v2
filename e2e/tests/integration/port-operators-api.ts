@@ -1,4 +1,4 @@
-import moment from "moment";
+import moment from "moment-timezone";
 
 moment.locale("en-gb");
 
@@ -29,6 +29,7 @@ describe('Advanced Passenger Information Splits exposed to Port Operators', () =
                 expect(response.status).to.eq(400);
             });
     });
+
 
     it("Bad Request when the terminal is invalid", () => {
         cy
