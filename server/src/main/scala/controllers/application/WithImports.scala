@@ -13,7 +13,9 @@ import api.ApiResponseBody
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming
 import drt.auth.{ArrivalSimulationUpload, PortFeedUpload}
+import drt.server.feeds.lgw.LGWForecastXLSExtractor
 import drt.server.feeds.lhr.forecast.LHRForecastCSVExtractor
+import drt.server.feeds.stn.STNForecastXLSExtractor
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.Terminals.Terminal
@@ -21,7 +23,7 @@ import drt.shared._
 import drt.shared.api.Arrival
 import play.api.libs.Files
 import play.api.libs.json.Json._
-import play.api.mvc.{Action, AnyContent, AnyContentAsFormUrlEncoded, MultipartFormData, Request}
+import play.api.mvc.{Action, MultipartFormData, Request}
 import server.feeds.StoreFeedImportArrivals
 import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
@@ -45,7 +47,13 @@ trait WithImports {
 
       request.body.moveTo(Paths.get(filePath), replace = true)
 
-      val extractedArrivals = LHRForecastCSVExtractor(filePath)
+      val extractedArrivals = portCode match {
+        case "LHR" => LHRForecastCSVExtractor(filePath)
+        case "LGW" => LGWForecastXLSExtractor(filePath)
+        case "STN" => STNForecastXLSExtractor(filePath)
+        case port => log.info(s"$port -> Not valid port for upload")
+          List.empty
+      }
 
       val response = if (extractedArrivals.nonEmpty) {
         log.info(s"Import found ${extractedArrivals.length} arrivals")
