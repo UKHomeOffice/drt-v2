@@ -1,12 +1,12 @@
 package drt.server.feeds.lhr.forecast
 
+
 import java.util.TimeZone
 
+import drt.server.feeds.common.XlsExtractorUtil._
 import drt.server.feeds.lhr.LHRForecastFeed
 import drt.shared.SDateLike
 import drt.shared.api.Arrival
-import info.folone.scala.poi._
-import info.folone.scala.poi.impure._
 import org.apache.poi.ss.usermodel.DateUtil
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -36,26 +36,32 @@ object LHRForecastXLSExtractor {
     }
 
   def rows(xlsFilePath: String): List[LHRForecastFlightRow] = {
-    val lhrWorkbook: Workbook = load(xlsFilePath)
+    val lhrWorkbook = workbook(xlsFilePath)
 
-    log.info(s"Extracting forecast flights from XLS Workbook located at $xlsFilePath")
+    val numberOfSheet: Int = getNumberOfSheets(lhrWorkbook)
 
-    val arrivalRows = for {
-      terminal <- List("T2", "T3", "T4", "T5")
-      row <- lhrWorkbook.sheetMap(terminal + " Arr").rows
-      flightDate <- row.cells.find(cell => cell.index == 1 && cell.isInstanceOf[NumericCell]).map(c => c.asInstanceOf[NumericCell].data)
-      number <- row.cells.find(cell => cell.index == 2 && cell.isInstanceOf[StringCell]).map(c => c.asInstanceOf[StringCell].data)
-      airport <- row.cells.find(cell => cell.index == 3 && cell.isInstanceOf[StringCell]).map(c => c.asInstanceOf[StringCell].data)
-      internationalDomestic <- row.cells.find(cell => cell.index == 4 && cell.isInstanceOf[StringCell]).map(c => c.asInstanceOf[StringCell].data)
-      total <- row.cells.find(cell => cell.index == 5 && cell.isInstanceOf[NumericCell]).map(c => c.asInstanceOf[NumericCell].data)
-      transfer <- row.cells.find(cell => cell.index == 7 && cell.isInstanceOf[NumericCell]).map(c => c.asInstanceOf[NumericCell].data)
-    } yield {
-      val scheduled = SDate(DateUtil.getJavaDate(flightDate, TimeZone.getTimeZone(europeLondonId)).getTime)
-      LHRForecastFlightRow(scheduledDate = scheduled, flightCode = number, origin = airport, internationalDomestic = internationalDomestic, totalPax = total.toInt, transferPax = transfer.toInt, terminal)
+    val arrivalRows: Seq[LHRForecastFlightRow] = 1 until numberOfSheet flatMap { sheetNumber =>
+      val sheet = sheetMapByIndex(sheetNumber, lhrWorkbook)
+      for {
+        rowNumber <- 3 to sheet.getLastRowNum
+        row = sheet.getRow(rowNumber)
+        if row.getCell(1) != null
+      } yield {
+        val scheduledCell = numericCell(1, row).getOrElse(0.0)
+        val flightNumberCell = stringCell(2, row).getOrElse("")
+        val airportCell = stringCell(3, row).getOrElse("")
+        val internationalDomesticCell = stringCell(4, row).getOrElse("")
+        val totalCell = numericCell(5, row).getOrElse(0.0)
+        val transferPaxCell = numericCell(6, row).getOrElse(0.0)
+        val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone(europeLondonId)).getTime)
+        val terminal = s"T${sheetNumber + 1}"
+
+        LHRForecastFlightRow(scheduledDate = scheduled, flightCode = flightNumberCell, origin = airportCell, internationalDomestic = internationalDomesticCell, totalPax = totalCell.toInt, transferPax = transferPaxCell.toInt, terminal)
+      }
     }
 
-    log.info(s"Extracted ${arrivalRows.length} arrival rows from XLS Workbook")
+    log.info(s"Extracted ${arrivalRows.size} arrival rows from LHR XLS Workbook")
 
-    arrivalRows
+    arrivalRows.toList.filter(_.internationalDomestic == "INTERNATIONAL")
   }
 }
