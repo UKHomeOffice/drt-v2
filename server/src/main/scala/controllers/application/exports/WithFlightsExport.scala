@@ -135,7 +135,7 @@ trait WithFlightsExport extends ExportToCsv {
     val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(None))
     val start = SDate(startMillis.toLong)
     val end = SDate(endMillis.toLong)
-    export(terminalName, start, end, summaryForDate)
+    exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryForDate)
   }
 
   private def exportPointInTimeView(terminalName: String, pointInTime: String)
@@ -144,11 +144,5 @@ trait WithFlightsExport extends ExportToCsv {
     val start = pit.getLocalLastMidnight
     val end = start.addDays(1).addMinutes(-1)
     val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(Option(pit.millisSinceEpoch)))
-    export(terminalName, start, end, summaryForDate)
-  }
-
-  private def export(terminalName: String, start: SDateLike, end: SDateLike, summaryForDate: (SDateLike, SDateLike) => Future[TerminalSummaryLike])
-                    (implicit request: Request[AnyContent]): Result = {
-    exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryForDate)
-  }
+    exportToCsv(start, end, "flights", terminal(terminalName), None, summaryForDate)}
 }

@@ -479,6 +479,8 @@ trait SDateLike {
 
   def toLocalDateTimeString(): String
 
+  def toLocalDate: LocalDate
+
   def toISODateOnly: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d"
 
   def toHoursAndMinutes(): String = f"${getHours()}%02d:${getMinutes()}%02d"

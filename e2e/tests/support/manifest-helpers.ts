@@ -99,7 +99,7 @@ const manifestForDateTime = (dateString, timeString, passengerList): object => {
 };
 
 
-const passengerList = (euPax, visaNationals, nonVisaNationals, b5JNationals): object[] => {
+const passengerList = (euPax: number, visaNationals: number, nonVisaNationals: number, b5JNationals: number): object[] => {
 
     return Array(euPax).fill(passengerProfiles.ukPassport)
         .concat(Array(visaNationals).fill(passengerProfiles.visaNational))

@@ -2,7 +2,7 @@ package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate.JSSDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{MilliDate, SDateLike}
+import drt.shared.{LocalDate, MilliDate, SDateLike}
 import moment._
 
 import scala.language.implicitConversions
@@ -61,6 +61,8 @@ object JSDateConversions {
       def millisSinceEpoch: MillisSinceEpoch = date.unix().toLong * 1000
 
       def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
+
+      override def toLocalDate: LocalDate = LocalDate(getFullYear(), getMonth(), getDate())
 
       override def toISOString(): String = date.seconds(0).millisecond(0).toISOString()
 

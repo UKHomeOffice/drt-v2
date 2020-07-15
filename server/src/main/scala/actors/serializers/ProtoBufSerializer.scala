@@ -7,7 +7,7 @@ import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinutesMes
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
-import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, PaxCountMessage}
+import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
@@ -51,6 +51,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val StaffMinutes: String                  = classOf[StaffMinutesMessage].getName
   final val PaxCount: String                      = classOf[PaxCountMessage].getName
   final val OriginTerminalPaxCounts: String       = classOf[OriginTerminalPaxCountsMessage].getName
+  final val OriginTerminalPaxCountsMgs: String    = classOf[OriginTerminalPaxCountsMessages].getName
   final val DaysSnapshot: String                  = classOf[DaysSnapshotMessage].getName
   final val FlightsWithSplits: String             = classOf[FlightsWithSplitsMessage].getName
   final val FlightsWithSplitsDiff: String         = classOf[FlightsWithSplitsDiffMessage].getName
@@ -89,6 +90,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: StaffMinutesMessage => m.toByteArray
       case m: PaxCountMessage => m.toByteArray
       case m: OriginTerminalPaxCountsMessage => m.toByteArray
+      case m: OriginTerminalPaxCountsMessages => m.toByteArray
       case m: DaysSnapshotMessage => m.toByteArray
       case m: FlightsWithSplitsMessage => m.toByteArray
       case m: FlightsWithSplitsDiffMessage => m.toByteArray
@@ -131,6 +133,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case StaffMinutes                   => StaffMinutesMessage.parseFrom(bytes)
       case PaxCount                       => PaxCountMessage.parseFrom(bytes)
       case OriginTerminalPaxCounts        => OriginTerminalPaxCountsMessage.parseFrom(bytes)
+      case OriginTerminalPaxCountsMgs     => OriginTerminalPaxCountsMessages.parseFrom(bytes)
       case DaysSnapshot                   => DaysSnapshotMessage.parseFrom(bytes)
       case FlightsWithSplits              => FlightsWithSplitsMessage.parseFrom(bytes)
       case FlightsWithSplitsDiff          => FlightsWithSplitsDiffMessage.parseFrom(bytes)

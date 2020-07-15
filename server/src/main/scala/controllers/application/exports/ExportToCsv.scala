@@ -32,9 +32,11 @@ trait ExportToCsv {
                   generateNewSummary: (SDateLike, SDateLike) => Future[TerminalSummaryLike])
                  (implicit timeout: Timeout): Result = {
     if (airportConfig.terminals.toSet.contains(terminal)) {
-      val startString = start.millisSinceEpoch.toString
-      val endString = end.millisSinceEpoch.toString
-      val exportSource = exportBetweenDates(start, end, terminal, description, maybeSummaryActorAndRequestProvider, generateNewSummary)
+      val numberOfDays = start.daysBetweenInclusive(end)
+
+      log.info(s"Export $description for terminal $terminal between ${start.toISOString()} & ${end.toISOString()} ($numberOfDays days)")
+
+      val exportSource = Exports.summaryForDaysCsvSource(start, numberOfDays, now, terminal, maybeSummaryActorAndRequestProvider, generateNewSummary)
       val fileName = makeFileName(description, terminal, start, end, airportConfig.portCode)
 
       Try(sourceToCsvResponse(exportSource, fileName)) match {
@@ -47,20 +49,6 @@ trait ExportToCsv {
       log.error(s"Bad terminal: $terminal")
       BadRequest(s"Invalid terminal $terminal")
     }
-  }
-
-  def exportBetweenDates(start: SDateLike,
-                         end: SDateLike,
-                         terminal: Terminal,
-                         description: String,
-                         maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
-                         generateNewSummary: (SDateLike, SDateLike) => Future[TerminalSummaryLike])
-                        (implicit timeout: Timeout): Source[String, NotUsed] = {
-    val numberOfDays = start.daysBetweenInclusive(end)
-
-    log.info(s"Export $description for terminal $terminal between ${start.toISOString()} & ${end.toISOString()} ($numberOfDays days)")
-
-    Exports.summaryForDaysCsvSource(start, numberOfDays, now, terminal, maybeSummaryActorAndRequestProvider, generateNewSummary)
   }
 }
 

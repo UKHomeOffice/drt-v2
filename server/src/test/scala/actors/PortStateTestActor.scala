@@ -20,7 +20,7 @@ class PortStateTestActor(liveProps: Props,
                          now: () => SDateLike,
                          liveDaysAhead: Int,
                          queues: Map[Terminal, Seq[Queue]])
-  extends PortStateActor(liveProps, forecastProps, now, liveDaysAhead, queues) {
+  extends PortStateActor(liveProps, forecastProps, now, liveDaysAhead, queues, replayMaxCrunchStateMessages = 1000) {
   override def splitDiffAndSend(diff: PortStateDiff): Unit = {
     super.splitDiffAndSend(diff)
     probe ! state.immutable

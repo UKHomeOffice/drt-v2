@@ -158,4 +158,6 @@ object Actions {
 
   case class ResetFileUpload() extends Action
 
+  case class SimulationExport(simulation: SimulationParams) extends Action
+
 }
