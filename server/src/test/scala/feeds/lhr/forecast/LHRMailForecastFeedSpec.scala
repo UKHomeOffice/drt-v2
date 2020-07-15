@@ -1,9 +1,13 @@
 package feeds.lhr.forecast
 
+import java.util.TimeZone
+
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.lhr.forecast.{LHRForecastEmail, LHRForecastXLSExtractor}
+import org.joda.time.DateTimeZone
 import org.specs2.mutable.Specification
 import services.SDate
+import services.graphstages.Crunch.europeLondonId
 
 
 class LHRMailForecastFeedSpec extends Specification {
@@ -33,11 +37,11 @@ class LHRMailForecastFeedSpec extends Specification {
         .toSet
 
       val expected = Set(
-        (SDate("2018-02-07T06:40").millisSinceEpoch, "UA 0958", "ORD", "INTERNATIONAL", 100, 80, "T2"),
-        (SDate("2018-02-07T06:45").millisSinceEpoch, "QF 0001", "SYD", "INTERNATIONAL", 180, 100, "T3"),
-        (SDate("2018-02-07T06:45").millisSinceEpoch, "EY 0011", "AUH", "INTERNATIONAL", 100, 70, "T4"),
-        (SDate("2018-02-07T07:00").millisSinceEpoch, "BA 0246", "GRU", "INTERNATIONAL", 100, 50, "T5"),
-        (SDate("2018-02-07T06:45").millisSinceEpoch, "BA 0294", "ORD", "INTERNATIONAL", 100, 60, "T5")
+        (SDate("2018-02-07T06:40", DateTimeZone.forID(europeLondonId)).millisSinceEpoch, "UA 0958", "ORD", "INTERNATIONAL", 100, 20, "T2"),
+        (SDate("2018-02-07T06:45", DateTimeZone.forID(europeLondonId)).millisSinceEpoch, "QF 0001", "SYD", "INTERNATIONAL", 180, 80, "T3"),
+        (SDate("2018-02-07T06:45", DateTimeZone.forID(europeLondonId)).millisSinceEpoch, "EY 0011", "AUH", "INTERNATIONAL", 100, 30, "T4"),
+        (SDate("2018-02-07T07:00", DateTimeZone.forID(europeLondonId)).millisSinceEpoch, "BA 0246", "GRU", "INTERNATIONAL", 100, 50, "T5"),
+        (SDate("2018-02-07T06:45", DateTimeZone.forID(europeLondonId)).millisSinceEpoch, "BA 0294", "ORD", "INTERNATIONAL", 100, 40, "T5")
       )
 
       result === expected
@@ -54,11 +58,11 @@ class LHRMailForecastFeedSpec extends Specification {
         .toSet
 
       val expected = Set(
-        (SDate("2018-08-15T05:40").millisSinceEpoch, "UA 0958", "ORD", "INTERNATIONAL", 100, 80, "T2"),
-        (SDate("2018-08-15T05:45").millisSinceEpoch, "QF 0001", "SYD", "INTERNATIONAL", 180, 100, "T3"),
-        (SDate("2018-08-15T05:45").millisSinceEpoch, "EY 0011", "AUH", "INTERNATIONAL", 100, 70, "T4"),
+        (SDate("2018-08-15T05:40").millisSinceEpoch, "UA 0958", "ORD", "INTERNATIONAL", 100, 20, "T2"),
+        (SDate("2018-08-15T05:45").millisSinceEpoch, "QF 0001", "SYD", "INTERNATIONAL", 180, 80, "T3"),
+        (SDate("2018-08-15T05:45").millisSinceEpoch, "EY 0011", "AUH", "INTERNATIONAL", 100, 30, "T4"),
         (SDate("2018-08-15T06:00").millisSinceEpoch, "BA 0246", "GRU", "INTERNATIONAL", 100, 50, "T5"),
-        (SDate("2018-08-15T05:45").millisSinceEpoch, "BA 0294", "ORD", "INTERNATIONAL", 100, 60, "T5")
+        (SDate("2018-08-15T05:45").millisSinceEpoch, "BA 0294", "ORD", "INTERNATIONAL", 100, 40, "T5")
       )
 
       result === expected

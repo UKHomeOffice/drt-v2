@@ -119,7 +119,7 @@ object Settings {
     "com.mfglabs" %% "commons-aws-s3" % awsCommons,
 
     "javax.mail" % "mail" % "1.4.7",
-    "info.folone" %% "poi-scala" % "0.18",
+    "info.folone" %% "poi-scala" % "0.19",
     "net.liftweb" %% "lift-json" % "3.1.0",
 
     "net.databinder.dispatch" %% "dispatch-core" % "0.13.4",

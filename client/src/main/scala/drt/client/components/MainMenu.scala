@@ -44,7 +44,7 @@ object MainMenu {
 
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedSourceStatuses]): List[MenuItem] = {
 
-    def addFileUpload: List[(Role, Int => MenuItem)] = if (List(PortCode("LHR"), PortCode("TEST")) contains airportConfig.portCode) List((PortFeedUpload, forecastUploadFile _)) else List.empty
+    def addFileUpload: List[(Role, Int => MenuItem)] = if (List(PortCode("LHR"), PortCode("LGW"), PortCode("STN"), PortCode("TEST")) contains airportConfig.portCode) List((PortFeedUpload, forecastUploadFile _)) else List.empty
 
     def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = airportConfig.terminals.map { tn =>
       val terminalName = tn.toString
