@@ -34,7 +34,7 @@ trait WithDesksExport extends ExportToCsv {
     val start = SDate(startMillis.toLong)
     val end = SDate(endMillis.toLong)
     val summaryForPeriodFn = Exports.queueSummariesFromPortState(airportConfig.nonTransferQueues(terminal(terminalName)), 15, Terminal(terminalName), queryFromPortStateFn(None))
-    export(start, end, terminalName, summaryForPeriodFn)
+    Action(exportToCsv(start, end, "desks and queues", terminal(terminalName), Option((summaryActorProvider, GetSummaries)), summaryForPeriodFn))
   }
 
   private def exportPointInTimeView(terminalName: String, pointInTime: String): Action[AnyContent] = {
@@ -42,10 +42,6 @@ trait WithDesksExport extends ExportToCsv {
     val start = pit.getLocalLastMidnight
     val end = start.addDays(1).addMinutes(-1)
     val summaryForPeriodFn = Exports.queueSummariesFromPortState(airportConfig.nonTransferQueues(terminal(terminalName)), 15, Terminal(terminalName), queryFromPortStateFn(Option(pit.millisSinceEpoch)))
-    export(start, end, terminalName, summaryForPeriodFn)
-  }
-
-  private def export(start: SDateLike, end: SDateLike, terminalName: String, summaryForPeriodFn: (SDateLike, SDateLike) => Future[TerminalSummaryLike]) = {
-    Action(exportToCsv(start, end, "desks and queues", terminal(terminalName), Option((summaryActorProvider, GetSummaries)), summaryForPeriodFn))
+    Action(exportToCsv(start, end, "desks and queues", terminal(terminalName), None, summaryForPeriodFn))
   }
 }
