@@ -177,7 +177,7 @@ class FlightsStateActor(val now: () => SDateLike,
   }
 
   def tempPointInTimeActor(pointInTime: SDateLike, message: DateRangeLike): ActorRef =
-    context.actorOf(tempPitActorProps(pointInTime, message, now, queues, expireAfterMillis, legacyDataCutoff, replayMaxCrunchStateMessages))
+    context.actorOf(tempPitActorProps(pointInTime, message, () => pointInTime, queues, expireAfterMillis, legacyDataCutoff))
 
   def handleDiff(flightUpdates: FlightsWithSplitsDiff): Unit = {
     val (updatedState, updatedMinutes) = flightUpdates.applyTo(state, now().millisSinceEpoch)
