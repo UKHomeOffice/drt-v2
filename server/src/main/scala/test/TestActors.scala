@@ -140,7 +140,7 @@ object TestActors {
   }
 
   class TestPortStateActor(liveProps: Props, forecastProps: Props, now: () => SDateLike, liveDaysAhead: Int, queues: Map[Terminal, Seq[Queue]])
-    extends PortStateActor(liveProps, forecastProps, now, liveDaysAhead, queues) {
+    extends PortStateActor(liveProps, forecastProps, now, liveDaysAhead, queues, replayMaxCrunchStateMessages = 1000) {
     def reset: Receive = {
       case ResetData =>
         val replyTo = sender()
@@ -225,7 +225,8 @@ object TestActors {
                                       staffActor: ActorRef,
                                       now: () => SDateLike,
                                       queues: Map[Terminal, Seq[Queue]],
-                                      journalType: StreamingJournalLike) extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, queues, journalType, SDate("1970-01-01"), PartitionedPortStateActor.tempLegacyActorProps) with TestPartitionedPortStateActorLike {
+                                      journalType: StreamingJournalLike)
+    extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, queues, journalType, SDate("1970-01-01"), PartitionedPortStateActor.tempLegacyActorProps(1000)) with TestPartitionedPortStateActorLike {
     val actorClearRequests = Map(
       flightsActor -> ResetData,
       queuesActor -> ResetData,
@@ -272,7 +273,7 @@ object TestActors {
                               name: String,
                               now: () => SDateLike,
                               expireAfterMillis: Int,
-                              queues: Map[Terminal, Seq[Queue]]) extends FlightsStateActor(now, expireAfterMillis, queues, SDate("1970-01-01")) with Resettable {
+                              queues: Map[Terminal, Seq[Queue]]) extends FlightsStateActor(now, expireAfterMillis, queues, SDate("1970-01-01"), 1000) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

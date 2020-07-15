@@ -25,6 +25,7 @@ trait MinuteLookupsLike {
   val now: () => SDateLike
   val expireAfterMillis: Int
   val queuesByTerminal: Map[Terminal, Seq[Queue]]
+  val replayMaxCrunchStateMessages: Int
   val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()))//, "minutes-lookup-kill-actor")
 
   val updateCrunchMinutes: (Terminal, SDateLike, MinutesContainer[CrunchMinute, TQM]) => Future[MinutesContainer[CrunchMinute, TQM]] = (terminal: Terminal, date: SDateLike, container: MinutesContainer[CrunchMinute, TQM]) => {
@@ -66,7 +67,7 @@ trait MinuteLookupsLike {
   }
 
   def crunchStateReadActor(date: SDateLike): ActorRef = {
-    system.actorOf(Props(new CrunchStateReadActor(date.addHours(4), expireAfterMillis, queuesByTerminal, date.millisSinceEpoch, date.addDays(1).millisSinceEpoch)))
+    system.actorOf(Props(new CrunchStateReadActor(date.addHours(4), expireAfterMillis, queuesByTerminal, date.millisSinceEpoch, date.addDays(1).millisSinceEpoch, 1000)))
   }
 
   def queueMinutesActor: ActorRef
@@ -77,7 +78,8 @@ trait MinuteLookupsLike {
 case class MinuteLookups(system: ActorSystem,
                          now: () => SDateLike,
                          expireAfterMillis: Int,
-                         queuesByTerminal: Map[Terminal, Seq[Queue]])
+                         queuesByTerminal: Map[Terminal, Seq[Queue]],
+                         override val replayMaxCrunchStateMessages: Int)
                         (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val queueMinutesActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(now, queuesByTerminal.keys, queuesLookup, legacyQueuesLookup, updateCrunchMinutes)))
 

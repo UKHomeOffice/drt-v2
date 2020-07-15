@@ -1,6 +1,6 @@
 package services
 
-import drt.shared.SDateLike
+import drt.shared.LocalDate
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
 
@@ -231,4 +231,60 @@ class ServerSDateSpec extends Specification {
       }
     }
   }
+
+  "When I ask for a LocalDate in BST" >> {
+    "Given a BST date/time of midnight 2020-06-25 created as a UTC SDate" >> {
+      val date = SDate("2020-06-24T23:00")
+      "I should get (2020, 6, 25)" >> {
+        val result = date.toLocalDate
+        result === LocalDate(2020, 6, 25)
+      }
+    }
+    "Given a BST date/time of 1 minute before midnight 2020-06-25 created as a UTC SDate" >> {
+      val date = SDate(2020, 6, 24, 22, 59)
+      "I should get (2020, 6, 24)" >> {
+        val result = date.toLocalDate
+        result === LocalDate(2020, 6, 24)
+      }
+    }
+    "Given a BST date/time of midnight 2020-06-25 created as a Local SDate" >> {
+      val date = SDate("2020-06-25T00:00", Crunch.europeLondonTimeZone)
+      "I should get (2020, 6, 25)" >> {
+        val result = date.toLocalDate
+        result === LocalDate(2020, 6, 25)
+      }
+    }
+    "Given a UTC date/time of midnight 2020-02-25 created as a UTC SDate" >> {
+      val date = SDate("2020-02-25T00:00")
+      "I should get (2020, 2, 25)" >> {
+        val result = date.toLocalDate
+        result === LocalDate(2020, 2, 25)
+      }
+    }
+    "Given a UTC date/time of midnight 2020-02-25 created as a Local SDate" >> {
+      val date = SDate("2020-02-25T00:00", Crunch.europeLondonTimeZone)
+      "I should get (2020, 2, 25)" >> {
+        val result = date.toLocalDate
+        result === LocalDate(2020, 2, 25)
+      }
+    }
+  }
+
+  "When creating an SDateLike from a LocalDate then I should get back an SDate at midnight localtime on that day" >> {
+    "Given a BST period, I should get back BST midnight" >> {
+      val localDate = LocalDate(2020, 7, 2)
+      val expected = SDate("2020-07-01T23:00Z")
+      val result = SDate(localDate)
+
+      result === expected
+    }
+    "Given a UTC period, I should get back UTC midnight" >> {
+      val localDate = LocalDate(2020, 1, 2)
+      val expected = SDate("2020-01-02T00:00Z")
+      val result = SDate(localDate)
+
+      result === expected
+    }
+  }
+
 }

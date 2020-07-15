@@ -1,4 +1,4 @@
-import moment from 'moment-timezone'
+import moment from "moment-timezone";
 moment.locale("en-gb");
 
 describe('Monthly Staffing', () => {
@@ -7,15 +7,15 @@ describe('Monthly Staffing', () => {
     cy.deleteData();
   });
 
-  const firstMidnightOfThisMonth = (): moment => {
+  const firstMidnightOfThisMonth = (): moment.Moment => {
     return moment().tz('Europe/London').startOf('month');
   }
 
-  const firstMidnightOfNextMonth = (): moment => {
+  const firstMidnightOfNextMonth = (): moment.Moment => {
     return firstMidnightOfThisMonth().add(1, 'M');
   }
 
-  const midDayToday = (): moment => {
+  const midDayToday = (): moment.Moment => {
     return moment().tz('Europe/London').startOf('day').hour(12).minute(0);
   }
 
@@ -50,11 +50,11 @@ describe('Monthly Staffing', () => {
       });
   });
 
-  const thisMonthDateString = (): moment => {
+  const thisMonthDateString = (): string => {
     return moment().toISOString().split("T")[0];
   }
 
-  const nextMonthDateString = (): moment => {
+  const nextMonthDateString = (): string => {
     return moment().add(1, 'M').toISOString().split("T")[0];
   }
 

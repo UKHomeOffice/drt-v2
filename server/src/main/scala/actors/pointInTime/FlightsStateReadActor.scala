@@ -14,14 +14,14 @@ import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRa
 
 trait FlightsDataLike extends Actor
 
-class FlightsStateReadActor(now: () => SDateLike, expireAfterMillis: Int, pointInTime: MillisSinceEpoch, queues: Map[Terminal, Seq[Queue]], legacyDataCutoff: SDateLike)
-  extends FlightsStateActor(now, expireAfterMillis, queues, legacyDataCutoff) with FlightsDataLike {
+class FlightsStateReadActor(now: () => SDateLike, expireAfterMillis: Int, pointInTime: MillisSinceEpoch, queues: Map[Terminal, Seq[Queue]], legacyDataCutoff: SDateLike, replayMaxCrunchStateMessages: Int)
+  extends FlightsStateActor(now, expireAfterMillis, queues, legacyDataCutoff, replayMaxCrunchStateMessages) with FlightsDataLike {
 
   override val log: Logger = LoggerFactory.getLogger(s"$getClass-${SDate(pointInTime).toISOString()}")
 
   override def recovery: Recovery = {
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-    val recovery = Recovery(fromSnapshot = criteria, replayMax = 10000)
+    val recovery = Recovery(fromSnapshot = criteria, replayMax = snapshotInterval)
     log.info(s"Recovery: $recovery")
     recovery
   }

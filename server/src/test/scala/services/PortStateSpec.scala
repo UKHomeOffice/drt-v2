@@ -302,7 +302,7 @@ class PortStateSpec extends CrunchTestLike {
         val maybePortState = Option(PortState(Iterable(flightsWithSplits), Iterable(), Iterable()))
         val liveActor = Props(new SlowCrunchStateActor(maybePortState, delay = 1 second))
         val fcstActor = Props(new SlowCrunchStateActor(Option(PortState.empty), delay = 0 seconds))
-        val portStateActor = system.actorOf(Props(new PortStateActor(liveActor, fcstActor, () => today, 2, defaultAirportConfig.queuesByTerminal)))
+        val portStateActor = system.actorOf(Props(new PortStateActor(liveActor, fcstActor, () => today, 2, defaultAirportConfig.queuesByTerminal, replayMaxCrunchStateMessages = 1000)))
         val response = Await.result(portStateActor.ask(GetFlights(today.millisSinceEpoch, today.addMinutes(1).millisSinceEpoch)), 5 seconds)
 
         response === FlightsWithSplits(Map(flightsWithSplits.unique -> flightsWithSplits))
