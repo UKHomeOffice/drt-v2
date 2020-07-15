@@ -44,20 +44,20 @@ object ForecastFileUploadPage {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ForecastFileUpload")
     .render_P { _ =>
       val fileUploadStateRCP = SPACircuit.connect(m => FileUploadStateModel(m.fileUploadState, m.airportConfig))
-      <.div(
-        fileUploadStateRCP(fileUploadStateMP => {
-          if (fileUploadStateMP().fileUploadState.isEmpty) {
-            upload(fileUploadStateMP().airportConfig.head.portCode.iata)
-          } else {
-            <.div(fileUploadStateMP().fileUploadState.render(details => {
-              details.state match {
-                case "uploaded" | "error" => uploadResult(details.message)
-                case _ => upload(fileUploadStateMP().airportConfig.head.portCode.iata)
-              }
+      fileUploadStateRCP(fileUploadStateMP => {
+        <.div(
+          fileUploadStateMP().airportConfig.renderReady(airportConfig =>
+            if (fileUploadStateMP().fileUploadState.isEmpty) {
+              upload(airportConfig.portCode.iata)
+            } else {
+              <.div(fileUploadStateMP().fileUploadState.render(details => {
+                details.state match {
+                  case "uploaded" | "error" => uploadResult(details.message)
+                  case _ => upload(airportConfig.portCode.iata)
+                }
+              }))
             })
-            )
-          }
-        })
+        )}
       )
     }.componentDidMount(_ => Callback {
     GoogleEventTracker.sendPageView(s"forecastFileUpload")

@@ -18,7 +18,7 @@ class LGWForecastXLSExtractorSpec extends Specification {
       )
       .toSet
 
-    val expected = Set((SDate("2020-07-10T07:40").millisSinceEpoch, "BT0651", "RIX", "I", 14, 0, "N"))
+    val expected = Set((SDate("2020-07-10T07:40").millisSinceEpoch, "TST005", "RIX", "I", 14, 0, "N"))
 
     result === expected
   }
@@ -28,7 +28,7 @@ class LGWForecastXLSExtractorSpec extends Specification {
 
     val result = LGWForecastXLSExtractor(path)
 
-    val expected = List(Arrival(None, CarrierCode("BT"), VoyageNumber(651), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, None, Some(14), Some(0), None, None, PortCode("LGW"), Terminal("N"), PortCode("RIX"), SDate("2020-07-10T07:40").millisSinceEpoch, None, Set(ForecastFeedSource), None, None))
+    val expected = List(Arrival(None, CarrierCode("TST"), VoyageNumber(5), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, None, Some(14), Some(0), None, None, PortCode("LGW"), Terminal("N"), PortCode("RIX"), SDate("2020-07-10T07:40").millisSinceEpoch, None, Set(ForecastFeedSource), None, None))
 
     result === expected
   }
