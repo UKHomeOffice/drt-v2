@@ -11,9 +11,8 @@ import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import server.feeds.ArrivalsFeedSuccess
-import services.crunch.deskrecs.GetFlights
+import services.crunch.deskrecs.{GetFlights, SimulationMinute, SimulationMinutes}
 import services.crunch.{CrunchTestLike, TestConfig}
-import services.graphstages.{SimulationMinute, SimulationMinutes}
 
 import scala.collection.mutable
 import scala.concurrent.duration._

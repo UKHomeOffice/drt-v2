@@ -3,8 +3,8 @@ package actors
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.Sizes.oneMegaByte
 import actors.daily.PassengersActor
-import actors.queues.CrunchQueueActor
-import actors.queues.CrunchQueueActor.UpdatedMillis
+import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
@@ -46,9 +46,10 @@ import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, 
 import services.SplitsProvider.SplitProvider
 import services._
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.{DesksAndWaitsPortProvider, DesksAndWaitsPortProviderLike, GetFlights, RunnableDeskRecs}
+import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch
+import services.graphstages.Crunch.crunchStartWithOffset
 import slickdb.VoyageManifestPassengerInfoTable
 
 import scala.collection.mutable
@@ -80,9 +81,12 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val registeredArrivalsActor: ActorRef = system.actorOf(Props(new RegisteredArrivalsActor(oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis)), name = "registered-arrivals-actor")
-  val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
+  val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
+  val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
 
   val usePartitionedPortState: Boolean = config.get[Boolean]("feature-flags.use-partitioned-state")
+
+  val lookups: MinuteLookupsLike
 
   val portStateActor: ActorRef
   val shiftsActor: ActorRef
@@ -109,7 +113,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val portDeskRecs: DesksAndWaitsPortProviderLike = DesksAndWaitsPortProvider(airportConfig, optimiser, pcpPaxFn)
 
-  val maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
+  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
     PortDeskLimits.flexed(airportConfig)
   else
     PortDeskLimits.fixed(airportConfig)
@@ -136,7 +140,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         refreshArrivalsOnStart: Boolean,
                         checkRequiredStaffUpdatesOnStartup: Boolean,
                         useLegacyDeployments: Boolean,
-                        startDeskRecs: () => UniqueKillSwitch): CrunchSystem[Cancellable] = {
+                        startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {
 
     val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
@@ -156,7 +160,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         "forecast-arrivals" -> forecastArrivalsActor,
         "live-base-arrivals" -> liveBaseArrivalsActor,
         "live-arrivals" -> liveArrivalsActor,
-        "aggregated-arrivals" -> aggregatedArrivalsActor
+        "aggregated-arrivals" -> aggregatedArrivalsActor,
+        "deployment-request" -> deploymentQueueActor
       ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
@@ -202,15 +207,22 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   private def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
 
-  val startDeskRecs: () => UniqueKillSwitch = () => {
-    val (daysQueueSource, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, maxDesksProviders)
+  val startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch) = () => {
+    val (queueSourceForDaysToReCrunch, deskRecsKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, deskLimitsProviders)
+    val terminalToIntsToTerminalToStaff = PortDeskLimits.flexedByAvailableStaff(airportConfig) _
+    val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(airportConfig.crunchOffsetMinutes)
+    val (queueSourceForDaysToRedeploy, deploymentsKillSwitch) = RunnableDeployments.start(
+      portStateActor, lookups.queueMinutesActor, lookups.staffMinutesActor, terminalToIntsToTerminalToStaff, crunchStartDateProvider, deskLimitsProviders, airportConfig.minutesToCrunch, portDeskRecs)
 
-    crunchQueueActor ! SetDaysQueueSource(daysQueueSource)
+    crunchQueueActor ! SetDaysQueueSource(queueSourceForDaysToReCrunch)
+    deploymentQueueActor ! SetDaysQueueSource(queueSourceForDaysToRedeploy)
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 
     portStateActor ! SetCrunchQueueActor(crunchQueueActor)
-    deskRecsKillSwitch
+    portStateActor ! SetDeploymentQueueActor(deploymentQueueActor)
+
+    (deskRecsKillSwitch, deploymentsKillSwitch)
   }
 
   def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {

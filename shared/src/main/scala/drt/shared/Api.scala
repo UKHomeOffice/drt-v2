@@ -791,6 +791,8 @@ object CrunchApi {
       portState.staffMinutes +++= minutesDiff
       PortStateDiff(Seq(), Seq(), Seq(), Seq(), minutesDiff)
     }
+
+    lazy val millis: Iterable[MillisSinceEpoch] = minutes.map(_.minute)
   }
 
   object StaffMinutes {

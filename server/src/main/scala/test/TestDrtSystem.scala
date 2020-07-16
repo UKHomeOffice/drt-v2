@@ -11,7 +11,7 @@ import akka.util.Timeout
 import drt.auth.Role
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.Arrival
-import drt.shared.{AirportConfig, PortCode}
+import drt.shared.{AirportConfig, MilliTimes, PortCode}
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import play.api.Configuration
@@ -45,14 +45,9 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val staffMovementsActor: ActorRef = system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new TestAggregatedArrivalsActor()))
 
-  override val portStateActor: ActorRef =
-    if (usePartitionedPortState) {
-      TestPartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config))
-    } else {
-      val liveCrunchStateProps: Props = Props(new TestCrunchStateActor("crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots))
-      val forecastCrunchStateProps: Props = Props(new TestCrunchStateActor("forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots))
-      system.actorOf(Props(new TestPortStateActor(liveCrunchStateProps, forecastCrunchStateProps, now, 2, airportConfig.queuesByTerminal)), name = "port-state-actor")
-    }
+  override val lookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+
+  override val portStateActor: ActorRef = TestPartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config), lookups)
 
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
   val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
@@ -112,13 +107,11 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
       manifestResponsesSource,
       refreshArrivalsOnStart = false,
       checkRequiredStaffUpdatesOnStartup = false,
-      useLegacyDeployments,
+      useLegacyDeployments = useLegacyDeployments,
       startDeskRecs = startDeskRecs)
 
     val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
     val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
-
-    portStateActor ! SetSimulationActor(cs.loadsToSimulate)
 
     subscribeStaffingActors(cs)
     startScheduledFeedImports(cs)

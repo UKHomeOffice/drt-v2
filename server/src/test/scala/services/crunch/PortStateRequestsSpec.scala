@@ -1,7 +1,7 @@
 package services.crunch
 
 import actors._
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
@@ -31,7 +31,10 @@ class PortStateRequestsSpec extends CrunchTestLike {
     PortStateActor(myNow, liveCsa, fcstCsa, defaultAirportConfig.queuesByTerminal, 1000)
   }
 
-  def partitionedPortStateActorProvider: () => ActorRef = () => PartitionedPortStateActor(myNow, airportConfig, InMemoryStreamingJournal, SDate("1970-01-01"), 1000)
+  val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
+
+  def partitionedPortStateActorProvider: () => ActorRef =
+    () => PartitionedPortStateActor(myNow, airportConfig, InMemoryStreamingJournal, SDate("1970-01-01"), 1000, lookups)
 
   def resetData(terminal: Terminal, day: SDateLike): Unit = {
     val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => SDate.now())))

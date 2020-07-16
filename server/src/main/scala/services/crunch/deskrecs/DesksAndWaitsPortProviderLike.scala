@@ -19,4 +19,8 @@ trait DesksAndWaitsPortProviderLike {
   def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
                    loads: Map[TQM, LoadMinute],
                    maxDesksByTerminal: Map[Terminal, TerminalDeskLimitsLike]): DeskRecMinutes
+
+  def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
+                         loadsByQueue: Map[TQM, LoadMinute],
+                         deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): Map[TQM, SimulationMinute]
 }

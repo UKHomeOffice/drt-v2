@@ -63,6 +63,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
       handleLookups(terminal, SDate(startMillis), SDate(endMillis), None).pipeTo(sender())
 
     case container: MinutesContainer[A, B] =>
+      log.info(s"Adding ${container.minutes.size} minutes to requests queue")
       updateRequestsQueue = (sender(), container) :: updateRequestsQueue
       self ! ProcessNextUpdateRequest
 

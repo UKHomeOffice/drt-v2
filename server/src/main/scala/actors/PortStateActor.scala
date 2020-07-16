@@ -5,9 +5,9 @@ import actors.PortStateActor.Start
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import actors.pointInTime.CrunchStateReadActor
-import actors.queues.CrunchQueueActor.UpdatedMillis
-import akka.actor.{Actor, ActorRef, ActorSystem, Props, Stash}
+import akka.actor.{Actor, ActorRef, ActorSystem, Cancellable, Props, Stash}
 import akka.pattern.{ask, pipe}
+import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -15,12 +15,12 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
 import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
-import services.graphstages.Crunch.{LoadMinute, Loads}
+import services.graphstages.Crunch.LoadMinute
+import services.{RecalculationRequester, SDate}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 
@@ -44,9 +44,10 @@ class PortStateActor(liveCrunchStateProps: Props,
                      replayMaxCrunchStateMessages: Int) extends Actor with Stash {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-
+  implicit val ec: ExecutionContextExecutor = context.dispatcher
+  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = new Timeout(30 seconds)
+  val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 500 millisecond, self, HandleRecalculations)
 
   val liveCrunchStateActor: ActorRef = context.actorOf(liveCrunchStateProps, name = "crunch-live-state-actor")
   val forecastCrunchStateActor: ActorRef = context.actorOf(forecastCrunchStateProps, name = "crunch-forecast-state-actor")
@@ -55,10 +56,12 @@ class PortStateActor(liveCrunchStateProps: Props,
 
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor())) //, "port-state-kill-actor")
 
-  var maybeCrunchQueueActor: Option[ActorRef] = None
-  var crunchSourceIsReady: Boolean = true
-  var maybeSimActor: Option[ActorRef] = None
-  var simulationActorIsReady: Boolean = true
+//  var maybeCrunchQueueActor: Option[ActorRef] = None
+//  var crunchSourceIsReady: Boolean = true
+//  var maybeSimActor: Option[ActorRef] = None
+//  var simulationActorIsReady: Boolean = true
+  val reCrunchHandler = new RecalculationRequester()
+  val reDeployHandler = new RecalculationRequester()
 
   override def preStart(): Unit = {
     val eventualLiveState = liveCrunchStateActor.ask(GetState).mapTo[Option[PortState]]
@@ -106,13 +109,13 @@ class PortStateActor(liveCrunchStateProps: Props,
   }
 
   def readyBehaviour: Receive = {
-    case SetCrunchQueueActor(crunchActor) =>
-      log.info(s"Received crunchSourceActor")
-      if (maybeCrunchQueueActor.isEmpty) maybeCrunchQueueActor = Option(crunchActor)
+    case SetCrunchQueueActor(actor) =>
+      log.info(s"Received crunch queue actor")
+      reCrunchHandler.setQueueActor(actor)
 
-    case SetSimulationActor(simActor) =>
-      log.info(s"Received simulationSourceActor")
-      maybeSimActor = Option(simActor)
+    case SetDeploymentQueueActor(actor) =>
+      log.info(s"Received deployment queue actor")
+      reDeployHandler.setQueueActor(actor)
 
     case StreamInitialized => sender() ! Ack
 
@@ -125,10 +128,8 @@ class PortStateActor(liveCrunchStateProps: Props,
 
       val diff = flightsWithSplits.applyTo(state, nowMillis)
 
-      if (diff.flightMinuteUpdates.nonEmpty) flightMinutesBuffer ++= diff.flightMinuteUpdates
-
-      handleCrunchRequest()
-      handleSimulationRequest()
+      if (diff.flightMinuteUpdates.nonEmpty)
+        reCrunchHandler.addMillis(diff.flightMinuteUpdates)
 
       splitDiffAndSend(diff)
 
@@ -137,26 +138,14 @@ class PortStateActor(liveCrunchStateProps: Props,
 
       val diff = updates.applyTo(state, nowMillis)
 
-      if (diff.crunchMinuteUpdates.nonEmpty) loadMinutesBuffer = loadMinutesBuffer ++ crunchMinutesToLoads(diff)
-
-      handleCrunchRequest()
-      handleSimulationRequest()
+      if (diff.crunchMinuteUpdates.nonEmpty)
+        reDeployHandler.addMillis(diff.crunchMinuteUpdates.keys.map(_.minute))
 
       splitDiffAndSend(diff)
 
-    case SetCrunchSourceReady =>
-      crunchSourceIsReady = true
-      context.self ! HandleCrunchRequest
-
-    case SetSimulationSourceReady =>
-      simulationActorIsReady = true
-      context.self ! HandleSimulationRequest
-
-    case HandleCrunchRequest =>
-      handleCrunchRequest()
-
-    case HandleSimulationRequest =>
-      handleSimulationRequest()
+    case HandleRecalculations =>
+      reCrunchHandler.handleUpdatedMillis()
+      reDeployHandler.handleUpdatedMillis()
 
     case PointInTimeQuery(millis, query) =>
       replyWithPointInTimeQuery(SDate(millis), query)
@@ -213,9 +202,6 @@ class PortStateActor(liveCrunchStateProps: Props,
                                 terminal: Terminal): PortState =
     state.windowWithTerminalFilter(SDate(start), SDate(end), Seq(terminal))
 
-  var flightMinutesBuffer: Set[MillisSinceEpoch] = Set[MillisSinceEpoch]()
-  var loadMinutesBuffer: Map[TQM, LoadMinute] = Map[TQM, LoadMinute]()
-
   def splitDiffAndSend(diff: PortStateDiff): Unit = {
     val replyTo = sender()
 
@@ -233,43 +219,6 @@ class PortStateActor(liveCrunchStateProps: Props,
             replyTo ! Ack
           }
     }
-  }
-
-  private def handleCrunchRequest(): Unit = (maybeCrunchQueueActor, flightMinutesBuffer.nonEmpty, crunchSourceIsReady) match {
-    case (Some(crunchActor), true, true) =>
-      crunchSourceIsReady = false
-      val updatedMillisToSend = flightMinutesBuffer
-      flightMinutesBuffer = Set()
-      log.info(s"Sending ${updatedMillisToSend.size} UpdatedMillis to the crunch queue actor")
-      crunchActor
-        .ask(UpdatedMillis(updatedMillisToSend))(new Timeout(15 seconds))
-        .recover {
-          case e =>
-            log.error("Error updated minutes to crunch queue actor. Putting the minutes back in the buffer to try again", e)
-            flightMinutesBuffer = flightMinutesBuffer ++ updatedMillisToSend
-        }
-        .onComplete { _ =>
-          context.self ! SetCrunchSourceReady
-        }
-    case _ =>
-  }
-
-  private def handleSimulationRequest(): Unit = (maybeSimActor, loadMinutesBuffer.nonEmpty, simulationActorIsReady) match {
-    case (Some(simActor), true, true) =>
-      simulationActorIsReady = false
-      val loadsToSend = loadMinutesBuffer.values.toList
-      loadMinutesBuffer = Map()
-      simActor
-        .ask(Loads(loadsToSend))(new Timeout(1 minute))
-        .recover {
-          case t =>
-            log.error("Error sending loads to simulate. Putting loads back in the buffer to send later", t)
-            loadMinutesBuffer = loadMinutesBuffer ++ loadsToSend.map(lm => (lm.uniqueId, lm))
-        }
-        .onComplete { _ =>
-          context.self ! SetSimulationSourceReady
-        }
-    case _ =>
   }
 
   private def askAndLogOnFailure[A](actor: ActorRef, question: Any, msg: String): Future[Any] = actor
@@ -300,10 +249,6 @@ class PortStateActor(liveCrunchStateProps: Props,
   def forecastStart(now: () => SDateLike): SDateLike = now().getLocalNextMidnight.addDays(1)
 }
 
-case object HandleCrunchRequest
-
-case object HandleSimulationRequest
-
-case object SetCrunchSourceReady
+case object HandleRecalculations
 
 case object SetSimulationSourceReady

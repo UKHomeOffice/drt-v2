@@ -55,14 +55,11 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
 
   val legacyFlightDataCutoff: SDateLike = SDate(config.get[String]("legacy-flight-data-cutoff"))
+  override val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
 
-  override val portStateActor: ActorRef = if (usePartitionedPortState) {
+  override val portStateActor: ActorRef = {
     log.info(s"Legacy flight data cutoff: ${legacyFlightDataCutoff.toISOString()}")
-    PartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config), legacyFlightDataCutoff, airportConfig.portStateSnapshotInterval)
-  } else {
-    val liveCrunchStateProps: Props = Props(new CrunchStateActor(Option(airportConfig.portStateSnapshotInterval), params.snapshotMegaBytesLivePortState, "crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldLiveSnapshots, forecastMaxMillis))
-    val forecastCrunchStateProps: Props = Props(new CrunchStateActor(Option(100), params.snapshotMegaBytesFcstPortState, "forecast-crunch-state", airportConfig.queuesByTerminal, now, expireAfterMillis, purgeOldForecastSnapshots, forecastMaxMillis))
-    PortStateActor(now, liveCrunchStateProps, forecastCrunchStateProps, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
+    PartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config), legacyFlightDataCutoff, airportConfig.portStateSnapshotInterval, lookups)
   }
 
   val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
@@ -119,8 +116,6 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
           checkRequiredStaffUpdatesOnStartup = false,
           useLegacyDeployments,
           startDeskRecs)
-
-        portStateActor ! SetSimulationActor(crunchInputs.loadsToSimulate)
 
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
         else log.info(s"sending no registered arrivals to batch stage")
@@ -183,9 +178,9 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     } else maybeRegisteredArrivals
 }
 
-case class SetSimulationActor(loadsToSimulate: ActorRef)
-
 case class SetCrunchQueueActor(millisToCrunchActor: ActorRef)
+
+case class SetDeploymentQueueActor(millisToDeployActor: ActorRef)
 
 case class SetDaysQueueSource(daysQueueSource: SourceQueueWithComplete[MillisSinceEpoch])
 

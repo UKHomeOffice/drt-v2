@@ -1,7 +1,7 @@
 package actors.queues
 
+import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.{InMemoryStreamingJournal, SetDaysQueueSource}
-import actors.queues.CrunchQueueActor.UpdatedMillis
 import akka.actor.{ActorRef, Props, Terminated}
 import akka.stream.OverflowStrategy
 import akka.stream.Supervision.Stop
@@ -17,6 +17,7 @@ import scala.concurrent.duration._
 
 
 class CrunchQueueSpec extends CrunchTestLike {
+  val myNow: () => SDateLike = () => SDate("2020-05-06", Crunch.europeLondonTimeZone)
 
   def startReadActor(probe: TestProbe): ActorRef = {
     val source: SourceQueueWithComplete[MillisSinceEpoch] = Source
@@ -24,12 +25,11 @@ class CrunchQueueSpec extends CrunchTestLike {
       .throttle(1, 1 second)
       .toMat(Sink.foreach(probe.ref ! _))(Keep.left)
       .run()
-    val actor = system.actorOf(Props(new CrunchQueueActor(InMemoryStreamingJournal, defaultAirportConfig.crunchOffsetMinutes)), "crunch-queue")
+    val actor = system.actorOf(Props(new CrunchQueueActor(myNow, InMemoryStreamingJournal, defaultAirportConfig.crunchOffsetMinutes)), "crunch-queue")
     actor ! SetDaysQueueSource(source)
     actor
   }
 
-  val myNow: () => SDateLike = () => SDate("2020-05-06", Crunch.europeLondonTimeZone)
   val day: MillisSinceEpoch = myNow().millisSinceEpoch
 
   "Given a CrunchQueueReadActor" >> {

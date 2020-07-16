@@ -4,10 +4,10 @@ import actors.PortStateMessageConversion._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import actors.pointInTime.{CrunchStateReadActor, FlightsStateReadActor}
-import actors.queues.CrunchQueueActor.UpdatedMillis
 import akka.actor._
 import akka.pattern.{ask, pipe}
 import akka.persistence._
+import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -19,8 +19,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
-import services.SDate
 import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
+import services.{RecalculationRequester, SDate}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
@@ -62,16 +62,16 @@ class FlightsStateActor(val now: () => SDateLike,
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
+  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val timeout: Timeout = new Timeout(30 seconds)
+  val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 500 millisecond, self, HandleRecalculations)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   var state: FlightsWithSplits = FlightsWithSplits.empty
 
-  var flightMinutesBuffer: Set[MillisSinceEpoch] = Set[MillisSinceEpoch]()
-  var crunchSourceIsReady: Boolean = true
-  var maybeCrunchQueueActor: Option[ActorRef] = None
+  val reCrunchHandler = new RecalculationRequester()
 
-  implicit val timeout: Timeout = new Timeout(30 seconds)
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
 
   def initialState: FlightsWithSplits = FlightsWithSplits.empty
@@ -112,15 +112,12 @@ class FlightsStateActor(val now: () => SDateLike,
   override def stateToMessage: GeneratedMessage = FlightMessageConversion.flightsToMessage(state.flights.toMap.values)
 
   override def receiveCommand: Receive = {
-    case SetCrunchQueueActor(crunchActor) =>
-      log.info(s"Received crunchSourceActor")
-      maybeCrunchQueueActor = Option(crunchActor)
+    case SetCrunchQueueActor(actor) =>
+      log.info(s"Received crunch queue actor")
+      reCrunchHandler.setQueueActor(actor)
 
-    case SetCrunchSourceReady =>
-      crunchSourceIsReady = true
-      context.self ! HandleCrunchRequest
-
-    case HandleCrunchRequest => handlePaxMinuteChangeNotification()
+    case HandleRecalculations =>
+      reCrunchHandler.handleUpdatedMillis()
 
     case StreamInitialized => sender() ! Ack
 
@@ -184,31 +181,11 @@ class FlightsStateActor(val now: () => SDateLike,
     state = updatedState
     purgeExpired()
 
-    if (updatedMinutes.nonEmpty) {
-      flightMinutesBuffer ++= updatedMinutes
-      self ! HandleCrunchRequest
-    }
+    if (updatedMinutes.nonEmpty)
+      reCrunchHandler.addMillis(updatedMinutes)
 
     val diffMsg = diffMessageForFlights(flightUpdates.flightsToUpdate, flightUpdates.arrivalsToRemove)
     persistAndMaybeSnapshot(diffMsg, Option((sender(), Ack)))
-  }
-
-  def handlePaxMinuteChangeNotification(): Unit = (maybeCrunchQueueActor, flightMinutesBuffer.nonEmpty, crunchSourceIsReady) match {
-    case (Some(crunchQueueActor), true, true) =>
-      crunchSourceIsReady = false
-      val updatedMillisToSend = flightMinutesBuffer
-      flightMinutesBuffer = Set()
-      crunchQueueActor
-        .ask(UpdatedMillis(updatedMillisToSend))(new Timeout(15 seconds))
-        .recover {
-          case e =>
-            log.error("Error updated minutes to crunch queue actor. Putting the minutes back in the buffer to try again", e)
-            flightMinutesBuffer = flightMinutesBuffer ++ updatedMillisToSend
-        }
-        .onComplete { _ =>
-          context.self ! SetCrunchSourceReady
-        }
-    case _ =>
   }
 
   def diffMessageForFlights(updates: List[ApiFlightWithSplits],

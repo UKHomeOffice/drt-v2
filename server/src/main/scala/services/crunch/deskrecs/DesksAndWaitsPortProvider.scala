@@ -11,7 +11,7 @@ import services.TryCrunch
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.Crunch.LoadMinute
-import services.graphstages.{SimulationMinute, WorkloadCalculator}
+import services.graphstages.WorkloadCalculator
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 
@@ -41,7 +41,7 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }
     .toSeq.flatten
 
-  def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
+  override def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
                          loadsByQueue: Map[TQM, LoadMinute],
                          deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): Map[TQM, SimulationMinute] =
     deskRecsToSimulations(loadsToDeskRecs(minuteMillis, loadsByQueue, deskLimitProviders))
