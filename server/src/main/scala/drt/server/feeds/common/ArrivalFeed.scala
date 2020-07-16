@@ -18,7 +18,7 @@ case class ArrivalFeed(arrivalsActor: ActorRef)(implicit timeout: Timeout) {
     arrivalsActor.ask(GetFeedImportArrivals)
       .map {
         case Some(Flights(arrivals)) =>
-          log.info(s"Got ${arrivals.length} $portCode port arrivals")
+          log.info(s"Got ${arrivals.length} port arrivals")
           ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
         case x =>
           log.info(s"Got no $portCode port arrivals: $x")
