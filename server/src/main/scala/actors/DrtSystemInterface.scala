@@ -315,7 +315,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case PortCode("LHR") => createArrivalFeed("LHR")
       case PortCode("BHX") => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
       case PortCode("LGW") => createArrivalFeed("LGW")
-        LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
