@@ -21,13 +21,13 @@ import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.cirium.CiriumFeed
-import drt.server.feeds.common.HttpClient
+import drt.server.feeds.common.{ArrivalFeed, HttpClient}
 import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LGWForecastFeed}
+import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
-import drt.server.feeds.lhr.{LHRFlightFeed, LHRForecastFeed}
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -277,7 +277,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case "BHX" =>
         BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LCY" if !params.lcyLiveEndPointUrl.isEmpty =>
-        LCYFeed(LCYClient(new HttpClient,params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), 80 seconds, 1 milliseconds)(system)
+        LCYFeed(LCYClient(new HttpClient, params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), 80 seconds, 1 milliseconds)(system)
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
         val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
@@ -312,9 +312,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def forecastArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] = {
     val feed = portCode match {
-      case PortCode("LHR") => createForecastLHRFeed()
+      case PortCode("LHR") => createArrivalFeed("LHR")
       case PortCode("BHX") => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
-      case PortCode("LGW") => LGWForecastFeed()
+      case PortCode("LGW") => createArrivalFeed("LGW")
+        LGWForecastFeed()
       case _ =>
         system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
@@ -330,12 +331,12 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     ChromaForecastFeed(new ChromaFetcher[ChromaForecastFlight](feedType, ChromaFlightMarshallers.forecast) with ProdSendAndReceive)
   }
 
-  def createForecastLHRFeed(): Source[ArrivalsFeedResponse, Cancellable] = {
+  def createArrivalFeed(portCode:String): Source[ArrivalsFeedResponse, Cancellable] = {
     implicit val timeout: Timeout = new Timeout(10 seconds)
-    val lhrForecastFeed = LHRForecastFeed(arrivalsImportActor)
+    val arrivalFeed = ArrivalFeed(arrivalsImportActor)
     Source
       .tick(10 seconds, 60 seconds, NotUsed)
-      .mapAsync(1)(_ => lhrForecastFeed.requestFeed)
+      .mapAsync(1)(_ => arrivalFeed.requestFeed(portCode))
   }
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2 minutes)
@@ -381,10 +382,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   }
 
   def getFeedStatus: Future[Seq[FeedSourceStatuses]] = Source(feedActors)
-      .mapAsync(1) { actor =>
-        queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
-      }
-      .collect { case Some(fs) => fs }
-      .filter(fss => isValidFeedSource(fss.feedSource))
-      .runWith(Sink.seq)
+    .mapAsync(1) { actor =>
+      queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
+    }
+    .collect { case Some(fs) => fs }
+    .filter(fss => isValidFeedSource(fss.feedSource))
+    .runWith(Sink.seq)
 }
