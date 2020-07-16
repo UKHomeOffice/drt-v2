@@ -17,7 +17,7 @@ class SlowResponseActor extends Actor {
   }
 }
 
-class LHRForecastFeedSpec extends CrunchTestLike {
+class ArrivalFeedSpec extends CrunchTestLike {
   "Given an LHR forecast feed with a mock actor that takes longer than the timeout to respond" >> {
     val mockActor = system.actorOf(Props(new SlowResponseActor()))
     val lhrFeed = ArrivalFeed(mockActor)(new Timeout(100 milliseconds))
