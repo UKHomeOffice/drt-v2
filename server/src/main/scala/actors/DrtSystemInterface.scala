@@ -335,7 +335,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val arrivalFeed = ArrivalFeed(arrivalsImportActor)
     Source
       .tick(10 seconds, 60 seconds, NotUsed)
-      .mapAsync(1)(_ => arrivalFeed.requestFeed(portCode))
+      .mapAsync(1)(_ => arrivalFeed.requestFeed)
   }
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2 minutes)

@@ -22,7 +22,7 @@ class ArrivalFeedSpec extends CrunchTestLike {
     val arrivalFeed = ArrivalFeed(mockActor)(new Timeout(100 milliseconds))
 
     "When I request the feed" >> {
-      val result = Await.result(arrivalFeed.requestFeed("LHR"), 2 seconds)
+      val result = Await.result(arrivalFeed.requestFeed, 2 seconds)
 
       "I should get a ArrivalsFeedFailure rather than an uncaught exception" >> {
         result.getClass === classOf[ArrivalsFeedFailure]

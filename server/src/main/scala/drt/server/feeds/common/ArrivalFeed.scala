@@ -14,14 +14,14 @@ import scala.concurrent.Future
 case class ArrivalFeed(arrivalsActor: ActorRef)(implicit timeout: Timeout) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def requestFeed(portCode: String): Future[ArrivalsFeedResponse] =
+  def requestFeed: Future[ArrivalsFeedResponse] =
     arrivalsActor.ask(GetFeedImportArrivals)
       .map {
         case Some(Flights(arrivals)) =>
           log.info(s"Got ${arrivals.length} port arrivals")
           ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
         case x =>
-          log.info(s"Got no $portCode port arrivals: $x")
+          log.info(s"Got no port arrivals: $x")
           ArrivalsFeedSuccess(Flights(Seq()), SDate.now())
       }
       .recoverWith {
