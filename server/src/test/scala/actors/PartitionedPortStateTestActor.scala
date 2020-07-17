@@ -41,7 +41,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
 
     case ps: PortState =>
       val replyTo = sender()
-      log.info(s"Setting initial port state")
+      log.info(s"\n\nSetting initial port state\n\n")
       state = ps
       flightsActor.ask(FlightsWithSplitsDiff(ps.flights.values.toList, List())).flatMap { _ =>
         queuesActor.ask(MinutesContainer(ps.crunchMinutes.values)).flatMap { _ =>
@@ -54,9 +54,8 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     actor.ask(message).foreach { _ =>
       message match {
         case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.nonEmpty =>
-          actor.ask(GetStateForDateRange(0L, Long.MaxValue)).mapTo[Option[FlightsWithSplits]].foreach {
-            case None => sendStateToProbe()
-            case Some(FlightsWithSplits(flights)) =>
+          actor.ask(GetStateForDateRange(0L, Long.MaxValue)).mapTo[FlightsWithSplits].foreach {
+            case FlightsWithSplits(flights) =>
               val updatedFlights: SortedMap[UniqueArrival, ApiFlightWithSplits] = SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights
               state = state.copy(flights = updatedFlights)
               sendStateToProbe()

@@ -1,7 +1,9 @@
 package services.crunch.deskrecs
 
+import actors.MinuteLookupsLike
 import actors.acking.AckingReceiver._
-import akka.actor.ActorRef
+import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
@@ -22,6 +24,18 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
+
+case class MinuteLookups(system: ActorSystem,
+                         now: () => SDateLike,
+                         expireAfterMillis: Int,
+                         queuesByTerminal: Map[Terminal, Seq[Queue]],
+                         override val replayMaxCrunchStateMessages: Int)
+                        (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(now, queuesByTerminal.keys, queuesLookup, legacyQueuesLookup, updateCrunchMinutes)))
+
+  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(now, queuesByTerminal.keys, staffLookup, legacyStaffLookup, updateStaffMinutes)))
+}
+
 object RunnableDeployments {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -32,7 +46,8 @@ object RunnableDeployments {
             crunchPeriodStartMillis: SDateLike => SDateLike,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
             minutesToCrunch: Int,
-            portDeskRecs: DesksAndWaitsPortProviderLike)
+            portDeskRecs: DesksAndWaitsPortProviderLike /*,
+            queuesByTerminal: Map[Terminal, Seq[Queue]]*/)
            (implicit executionContext: ExecutionContext,
             timeout: Timeout = new Timeout(60 seconds)): RunnableGraph[(SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
@@ -58,19 +73,23 @@ object RunnableDeployments {
             }
             .mapAsync(1) { case (firstMillis, lastMillis, queues) =>
               staffMinutes(staffActor, firstMillis, lastMillis)
-                .map(staff => (firstMillis, lastMillis, queues, availableStaff(staff)))
+                .map(staff => {
+                  val terminals = maxDesksProviders.keys
+                  (firstMillis, lastMillis, queues, availableStaff(staff, terminals))
+                })
             }
-            .map { case (firstMillis, lastMillis, queues, availableStaffByTerminal) =>
-              val minuteMillis = firstMillis to lastMillis by 60000
+            .map {
+              case (firstMillis, lastMillis, queues, availableStaffByTerminal) =>
+                val minuteMillis = firstMillis to lastMillis by 60000
 
-              log.info(s"Simulating ${minuteMillis.length} minutes (${SDate(firstMillis).toISOString()} to ${SDate(lastMillis).toISOString()})")
-              val deskLimitsByTerminal: Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff] = staffToDeskLimits(availableStaffByTerminal)
-              val workload = queues.minutes.map(_.toMinute)
-                .map { minute => (minute.key, LoadMinute(minute)) }
-                .toMap
-              val simulationMinutes = portDeskRecs.loadsToSimulations(minuteMillis, workload, deskLimitsByTerminal)
-              log.info(s"Finished simulation")
-              SimulationMinutes(simulationMinutes.values.toSeq)
+                log.info(s"Simulating ${minuteMillis.length} minutes (${SDate(firstMillis).toISOString()} to ${SDate(lastMillis).toISOString()})")
+                val deskLimitsByTerminal: Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff] = staffToDeskLimits(availableStaffByTerminal)
+                val workload = queues.minutes.map(_.toMinute)
+                  .map { minute => (minute.key, LoadMinute(minute)) }
+                  .toMap
+                val simulationMinutes = portDeskRecs.loadsToSimulations(minuteMillis, workload, deskLimitsByTerminal)
+                log.info(s"Finished simulation: ${simulationMinutes.size} minutes")
+                SimulationMinutes(simulationMinutes.values.toList)
             } ~> killSwitch ~> deploymentsSink
 
           ClosedShape
@@ -85,13 +104,14 @@ object RunnableDeployments {
       .ask(GetStateForDateRange(firstMillis, lastMillis))
       .mapTo[MinutesContainer[StaffMinute, TM]]
 
-  private def availableStaff(staff: MinutesContainer[StaffMinute, TM]): Map[Terminal, List[Int]] =
-    staff.minutes
-      .map(_.toMinute)
-      .groupBy(_.terminal)
-      .map {
-        case (terminal, minutes) => (terminal, minutes.toList.sortBy(_.minute).map(_.availableAtPcp))
+  private def availableStaff(staff: MinutesContainer[StaffMinute, TM], terminals: Iterable[Terminal]): Map[Terminal, List[Int]] =
+    terminals
+      .map { terminal =>
+        val minutesForTerminal = staff.minutes.filter(_.terminal == terminal)
+        val availableForTerminal = minutesForTerminal.map(_.toMinute).toList.sortBy(_.minute).map(_.availableAtPcp)
+        (terminal, availableForTerminal)
       }
+      .toMap
 
   private def queueMinutes(queuesActor: ActorRef, firstMillis: MillisSinceEpoch, lastMillis: MillisSinceEpoch)
                           (implicit timeout: Timeout): Future[MinutesContainer[CrunchMinute, TQM]] =
@@ -106,10 +126,11 @@ object RunnableDeployments {
             crunchPeriodStart: SDateLike => SDateLike,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
             minutesToCrunch: Int,
-            portDeskRecs: DesksAndWaitsPortProviderLike)
+            portDeskRecs: DesksAndWaitsPortProviderLike /*,
+            queuesByTerminal: Map[Terminal, Seq[Queue]]*/)
            (implicit ec: ExecutionContext, mat: Materializer): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = {
 
-    RunnableDeployments(portStateActor, queuesActor, staffActor, staffToDeskLimits, crunchPeriodStart, maxDesksProviders, minutesToCrunch, portDeskRecs).run()
+    RunnableDeployments(portStateActor, queuesActor, staffActor, staffToDeskLimits, crunchPeriodStart, maxDesksProviders, minutesToCrunch, portDeskRecs /*, queuesByTerminal*/).run()
   }
 }
 

@@ -14,7 +14,7 @@ import scala.language.postfixOps
 class RecalculationRequester() {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  private var sourceIsReady: Boolean = false
+  private var sourceIsReady: Boolean = true
   private var millisBuffer: Set[MillisSinceEpoch] = Set()
   private var maybeQueueActor: Option[ActorRef] = None
 

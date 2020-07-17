@@ -212,7 +212,16 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val terminalToIntsToTerminalToStaff = PortDeskLimits.flexedByAvailableStaff(airportConfig) _
     val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(airportConfig.crunchOffsetMinutes)
     val (queueSourceForDaysToRedeploy, deploymentsKillSwitch) = RunnableDeployments.start(
-      portStateActor, lookups.queueMinutesActor, lookups.staffMinutesActor, terminalToIntsToTerminalToStaff, crunchStartDateProvider, deskLimitsProviders, airportConfig.minutesToCrunch, portDeskRecs)
+      portStateActor,
+      lookups.queueMinutesActor,
+      lookups.staffMinutesActor,
+      terminalToIntsToTerminalToStaff,
+      crunchStartDateProvider,
+      deskLimitsProviders,
+      airportConfig.minutesToCrunch,
+      portDeskRecs/*,
+      airportConfig.queuesByTerminal*/
+    )
 
     crunchQueueActor ! SetDaysQueueSource(queueSourceForDaysToReCrunch)
     deploymentQueueActor ! SetDaysQueueSource(queueSourceForDaysToRedeploy)

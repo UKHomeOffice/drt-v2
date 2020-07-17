@@ -64,7 +64,14 @@ class FlightsStateActor(val now: () => SDateLike,
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = new Timeout(30 seconds)
-  val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 500 millisecond, self, HandleRecalculations)
+
+  val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 1 second, self, HandleRecalculations)
+
+  override def postStop(): Unit = {
+    log.warn("Actor stopped. Cancelling scheduled tick")
+    cancellableTick.cancel()
+    super.postStop()
+  }
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -117,6 +124,7 @@ class FlightsStateActor(val now: () => SDateLike,
       reCrunchHandler.setQueueActor(actor)
 
     case HandleRecalculations =>
+      println(s"Trying to handle milli updates")
       reCrunchHandler.handleUpdatedMillis()
 
     case StreamInitialized => sender() ! Ack
@@ -181,8 +189,10 @@ class FlightsStateActor(val now: () => SDateLike,
     state = updatedState
     purgeExpired()
 
-    if (updatedMinutes.nonEmpty)
+    if (updatedMinutes.nonEmpty) {
       reCrunchHandler.addMillis(updatedMinutes)
+      self ! HandleRecalculations
+    }
 
     val diffMsg = diffMessageForFlights(flightUpdates.flightsToUpdate, flightUpdates.arrivalsToRemove)
     persistAndMaybeSnapshot(diffMsg, Option((sender(), Ack)))

@@ -1,5 +1,6 @@
 package services.crunch
 
+import actors.DrtStaticParameters.expireAfterMillis
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.daily.PassengersActor
@@ -16,6 +17,7 @@ import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import services.SDate
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeployments, RunnableDeskRecs}
 import services.graphstages.Crunch
@@ -66,8 +68,11 @@ class TestDrtActor extends Actor {
       val manifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(oneMegaByte, tc.now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval))))
       val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(tc.now, journalType, tc.airportConfig.crunchOffsetMinutes)))
       val deploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(tc.now, journalType, tc.airportConfig.crunchOffsetMinutes)))
+      val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(tc.now, expireAfterMillis, tc.airportConfig.queuesByTerminal, SDate("1970-01-01"), 1000)))
 
-      val portStateActor = PortStateTestActor(portStateProbe, tc.now, tc.airportConfig.queuesByTerminal, tc.initialPortState)
+      val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsActor, tc.now, tc.airportConfig)
+
+      tc.initialPortState.foreach(ps => portStateActor ! ps)
 
       val portDeskRecs = DesksAndWaitsPortProvider(tc.airportConfig, tc.cruncher, tc.pcpPaxFn)
 
@@ -92,7 +97,7 @@ class TestDrtActor extends Actor {
         val terminalToIntsToTerminalToStaff = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig) _
         val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(tc.airportConfig.crunchOffsetMinutes)
         val (queueSourceForDaysToRedeploy, deploymentsKillSwitch) = RunnableDeployments.start(
-          portStateActor, lookups.queueMinutesActor, lookups.staffMinutesActor, terminalToIntsToTerminalToStaff, crunchStartDateProvider, deskLimitsProviders, tc.airportConfig.minutesToCrunch, portDeskRecs)
+          portStateActor, lookups.queueMinutesActor, lookups.staffMinutesActor, terminalToIntsToTerminalToStaff, crunchStartDateProvider, deskLimitsProviders, tc.airportConfig.minutesToCrunch, portDeskRecs/*, tc.airportConfig.queuesByTerminal*/)
 
         maybeCrunchQueueActor = Option(crunchQueueActor)
         maybeDeploymentQueueActor = Option(deploymentQueueActor)

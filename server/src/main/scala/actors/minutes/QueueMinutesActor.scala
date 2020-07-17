@@ -20,7 +20,7 @@ class QueueMinutesActor(now: () => SDateLike,
 
   val reDeployHandler = new RecalculationRequester()
 
-  val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 500 millisecond, self, HandleRecalculations)
+  val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 1 second, self, HandleRecalculations)
 
   override def postStop(): Unit = {
     log.warn("Actor stopped. Cancelling scheduled tick")
@@ -33,7 +33,7 @@ class QueueMinutesActor(now: () => SDateLike,
     val eventualUpdatesDiff = super.handleUpdatesAndAck(container, replyTo)
     val gotDeskRecs = container.contains(classOf[DeskRecMinute])
 
-    if (gotDeskRecs) addUpdatesToBufferAndSendToSubscriber(eventualUpdatesDiff)
+    if (gotDeskRecs) addUpdatesToBufferAndSendToSubscriber(eventualUpdatesDiff).onComplete(_ => self ! HandleRecalculations)
 
     eventualUpdatesDiff
   }
