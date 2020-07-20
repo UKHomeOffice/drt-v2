@@ -124,7 +124,6 @@ class FlightsStateActor(val now: () => SDateLike,
       reCrunchHandler.setQueueActor(actor)
 
     case HandleRecalculations =>
-      println(s"Trying to handle milli updates")
       reCrunchHandler.handleUpdatedMillis()
 
     case StreamInitialized => sender() ! Ack

@@ -86,7 +86,6 @@ class StaffMinutesSpec extends CrunchTestLike {
           val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queue)).take(10)
           val deployments = minutesInOrder.map(cm => (cm.queue, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
 
-          println(s"Got $deployments")
           deployments == expectedCrunchDeployments
       }
 

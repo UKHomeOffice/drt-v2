@@ -15,7 +15,6 @@ case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[I
     val availableDesksByMinute = maxDesks(minuteMillis, queue, allocatedDesks)
     val availableStaffByMinute = availableStaffForMinutes(minuteMillis, queue, allocatedDesks)
 
-    println(s"desks: ${availableDesksByMinute.size}, staff: ${availableStaffByMinute.size}")
     Crunch.reduceIterables[Int](List(availableDesksByMinute, availableStaffByMinute))(Math.min)
   }
 
@@ -29,7 +28,7 @@ case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[I
     val remainingQueues = minDesksByQueue24Hrs.keys.toSet -- (processedQueues + queue)
     val minDesksForRemainingQueuesByMinute = DeskRecs.desksByMinuteForQueues(minDesksByQueue24Hrs, minuteMillis, remainingQueues).values.toList
     val minimumPromisedStaffByMinute = if (minDesksForRemainingQueuesByMinute.nonEmpty) Crunch.reduceIterables[Int](minDesksForRemainingQueuesByMinute)(_ + _) else List()
-println(s"${totalStaffByMinute.size}, ${totalDeployedByMinute.size}, ${minimumPromisedStaffByMinute.size}")
+
     Crunch.reduceIterables[Int](List(totalStaffByMinute, totalDeployedByMinute, minimumPromisedStaffByMinute))(_ - _)
   }
 }

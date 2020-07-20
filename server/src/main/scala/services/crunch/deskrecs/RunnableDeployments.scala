@@ -75,22 +75,20 @@ object RunnableDeployments {
               staffMinutes(staffActor, firstMillis, lastMillis)
                 .map(staff => {
                   val terminals = maxDesksProviders.keys
-                  //                  println(s"\n\nstaff ${staff.minutes.groupBy(_.terminal).map(_._2.size)}")
                   (firstMillis, lastMillis, queues, availableStaff(staff, terminals, firstMillis, lastMillis))
                 })
             }
             .map {
               case (firstMillis, lastMillis, queues, availableStaffByTerminal) =>
                 val minuteMillis = firstMillis to lastMillis by 60000
-
                 log.info(s"Simulating ${minuteMillis.length} minutes (${SDate(firstMillis).toISOString()} to ${SDate(lastMillis).toISOString()})")
-                println(s"availableStaffByTerminal: ${availableStaffByTerminal.map(_._2.size)}")
+
                 val deskLimitsByTerminal: Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff] = staffToDeskLimits(availableStaffByTerminal)
                 val workload = queues.minutes.map(_.toMinute)
                   .map { minute => (minute.key, LoadMinute(minute)) }
                   .toMap
                 val simulationMinutes = portDeskRecs.loadsToSimulations(minuteMillis, workload, deskLimitsByTerminal)
-                log.info(s"Finished simulation: ${simulationMinutes.size} minutes")
+
                 SimulationMinutes(simulationMinutes.values.toList)
             } ~> killSwitch ~> deploymentsSink
 
