@@ -75,7 +75,8 @@ object RunnableDeployments {
               staffMinutes(staffActor, firstMillis, lastMillis)
                 .map(staff => {
                   val terminals = maxDesksProviders.keys
-                  (firstMillis, lastMillis, queues, availableStaff(staff, terminals))
+                  //                  println(s"\n\nstaff ${staff.minutes.groupBy(_.terminal).map(_._2.size)}")
+                  (firstMillis, lastMillis, queues, availableStaff(staff, terminals, firstMillis, lastMillis))
                 })
             }
             .map {
@@ -83,6 +84,7 @@ object RunnableDeployments {
                 val minuteMillis = firstMillis to lastMillis by 60000
 
                 log.info(s"Simulating ${minuteMillis.length} minutes (${SDate(firstMillis).toISOString()} to ${SDate(lastMillis).toISOString()})")
+                println(s"availableStaffByTerminal: ${availableStaffByTerminal.map(_._2.size)}")
                 val deskLimitsByTerminal: Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff] = staffToDeskLimits(availableStaffByTerminal)
                 val workload = queues.minutes.map(_.toMinute)
                   .map { minute => (minute.key, LoadMinute(minute)) }
@@ -104,14 +106,28 @@ object RunnableDeployments {
       .ask(GetStateForDateRange(firstMillis, lastMillis))
       .mapTo[MinutesContainer[StaffMinute, TM]]
 
-  private def availableStaff(staff: MinutesContainer[StaffMinute, TM], terminals: Iterable[Terminal]): Map[Terminal, List[Int]] =
-    terminals
-      .map { terminal =>
-        val minutesForTerminal = staff.minutes.filter(_.terminal == terminal)
-        val availableForTerminal = minutesForTerminal.map(_.toMinute).toList.sortBy(_.minute).map(_.availableAtPcp)
-        (terminal, availableForTerminal)
+  private def availableStaff(staff: MinutesContainer[StaffMinute, TM],
+                             terminals: Iterable[Terminal],
+                             firstMillis: MillisSinceEpoch,
+                             lastMillis: MillisSinceEpoch): Map[Terminal, List[Int]] =
+    allMinutesForPeriod(terminals, firstMillis, lastMillis, staff.indexed)
+      .groupBy(_.terminal)
+      .map {
+        case (t, minutes) =>
+          val availableByMinute = minutes.toList.sortBy(_.minute).map(_.availableAtPcp)
+          (t, availableByMinute)
       }
-      .toMap
+
+  private def allMinutesForPeriod(terminals: Iterable[Terminal],
+                                  firstMillis: MillisSinceEpoch,
+                                  lastMillis: MillisSinceEpoch,
+                                  indexedStaff: Map[TM, StaffMinute]): Iterable[StaffMinute] =
+    for {
+      terminal <- terminals
+      minute <- firstMillis to lastMillis by MilliTimes.oneMinuteMillis
+    } yield {
+      indexedStaff.getOrElse(TM(terminal, minute), StaffMinute(terminal, minute, 0, 0, 0, None))
+    }
 
   private def queueMinutes(queuesActor: ActorRef, firstMillis: MillisSinceEpoch, lastMillis: MillisSinceEpoch)
                           (implicit timeout: Timeout): Future[MinutesContainer[CrunchMinute, TQM]] =

@@ -2,6 +2,7 @@ package test
 
 import actors._
 import actors.acking.AckingReceiver.Ack
+import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Status}
 import akka.pattern.ask
 import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
@@ -44,6 +45,8 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val fixedPointsActor: ActorRef = system.actorOf(Props(new TestFixedPointsActor(now)))
   override val staffMovementsActor: ActorRef = system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new TestAggregatedArrivalsActor()))
+  override val crunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
+  override val deploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
 
   override val lookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
@@ -65,7 +68,9 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
     staffMovementsActor,
     aggregatedArrivalsActor,
     testManifestsActor,
-    testArrivalActor
+    testArrivalActor,
+    crunchQueueActor,
+    deploymentQueueActor
   )
 
   val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
@@ -107,7 +112,6 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
       manifestResponsesSource,
       refreshArrivalsOnStart = false,
       checkRequiredStaffUpdatesOnStartup = false,
-      useLegacyDeployments = useLegacyDeployments,
       startDeskRecs = startDeskRecs)
 
     val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000

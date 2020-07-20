@@ -41,7 +41,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
 
     case ps: PortState =>
       val replyTo = sender()
-      log.info(s"\n\nSetting initial port state\n\n")
+      log.info(s"Setting initial port state")
       state = ps
       flightsActor.ask(FlightsWithSplitsDiff(ps.flights.values.toList, List())).flatMap { _ =>
         queuesActor.ask(MinutesContainer(ps.crunchMinutes.values)).flatMap { _ =>

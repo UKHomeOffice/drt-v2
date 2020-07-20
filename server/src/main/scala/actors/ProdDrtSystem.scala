@@ -1,5 +1,6 @@
 package actors
 
+import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
@@ -53,6 +54,9 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val voyageManifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm))), name = "voyage-manifests-actor")
 
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
+
+  override val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
+  override val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
 
   val legacyFlightDataCutoff: SDateLike = SDate(config.get[String]("legacy-flight-data-cutoff"))
   override val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
@@ -114,7 +118,6 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
           manifestResponsesSource,
           params.refreshArrivalsOnStart,
           checkRequiredStaffUpdatesOnStartup = false,
-          useLegacyDeployments,
           startDeskRecs)
 
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")

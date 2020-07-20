@@ -180,7 +180,6 @@ class TestDrtActor extends Actor {
         pcpPaxFn = tc.pcpPaxFn,
         adjustEGateUseByUnder12s = false,
         optimiser = tc.cruncher,
-        useLegacyDeployments = tc.useLegacyDeployments,
         aclPaxAdjustmentDays = aclPaxAdjustmentDays,
         startDeskRecs = startDeskRecs))
 

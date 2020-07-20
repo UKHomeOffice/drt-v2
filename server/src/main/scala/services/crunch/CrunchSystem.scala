@@ -74,7 +74,6 @@ case class CrunchProps[FR](
                             stageThrottlePer: FiniteDuration,
                             adjustEGateUseByUnder12s: Boolean,
                             optimiser: TryCrunch,
-                            useLegacyDeployments: Boolean,
                             aclPaxAdjustmentDays: Int,
                             startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch))
 

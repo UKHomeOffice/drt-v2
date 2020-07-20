@@ -7,6 +7,7 @@ import actors.acking.AckingReceiver.Ack
 import actors.daily._
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
+import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
@@ -19,6 +20,7 @@ import org.slf4j.Logger
 import services.SDate
 import slickdb.ArrivalTable
 
+import scala.collection.immutable.SortedSet
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -133,6 +135,32 @@ object TestActors {
   } with AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables)) {
     def reset: Receive = {
       case ResetData =>
+        sender() ! Ack
+    }
+
+    override def receive: Receive = reset orElse super.receive
+  }
+
+  class TestCrunchQueueActor(now: () => SDateLike, journalType: StreamingJournalLike, crunchOffsetMinutes: Int)
+    extends CrunchQueueActor(now, journalType, crunchOffsetMinutes) {
+    def reset: Receive = {
+      case ResetData =>
+        readyToEmit = true
+        maybeDaysQueueSource = None
+        queuedDays = SortedSet()
+        sender() ! Ack
+    }
+
+    override def receive: Receive = reset orElse super.receive
+  }
+
+  class TestDeploymentQueueActor(now: () => SDateLike, journalType: StreamingJournalLike, crunchOffsetMinutes: Int)
+    extends DeploymentQueueActor(now, journalType, crunchOffsetMinutes) {
+    def reset: Receive = {
+      case ResetData =>
+        readyToEmit = true
+        maybeDaysQueueSource = None
+        queuedDays = SortedSet()
         sender() ! Ack
     }
 

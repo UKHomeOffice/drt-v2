@@ -81,8 +81,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val registeredArrivalsActor: ActorRef = system.actorOf(Props(new RegisteredArrivalsActor(oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis)), name = "registered-arrivals-actor")
-  val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
-  val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
+  val crunchQueueActor: ActorRef
+  val deploymentQueueActor: ActorRef
 
   val usePartitionedPortState: Boolean = config.get[Boolean]("feature-flags.use-partitioned-state")
 
@@ -118,8 +118,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   else
     PortDeskLimits.fixed(airportConfig)
 
-  val useLegacyDeployments: Boolean = config.get[Boolean]("crunch.use-legacy-deployments")
-
   def run(): Unit
 
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
@@ -139,7 +137,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                         refreshArrivalsOnStart: Boolean,
                         checkRequiredStaffUpdatesOnStartup: Boolean,
-                        useLegacyDeployments: Boolean,
                         startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {
 
     val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
@@ -189,7 +186,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       pcpPaxFn = pcpPaxFn,
       adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
       optimiser = optimiser,
-      useLegacyDeployments = useLegacyDeployments,
       aclPaxAdjustmentDays = aclPaxAdjustmentDays,
       startDeskRecs = startDeskRecs))
     crunchInputs
@@ -219,8 +215,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       crunchStartDateProvider,
       deskLimitsProviders,
       airportConfig.minutesToCrunch,
-      portDeskRecs/*,
-      airportConfig.queuesByTerminal*/
+      portDeskRecs
     )
 
     crunchQueueActor ! SetDaysQueueSource(queueSourceForDaysToReCrunch)

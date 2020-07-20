@@ -986,6 +986,8 @@ object CrunchApi {
       case Some(x) if x.getClass == clazz => true
       case _ => false
     }
+
+    lazy val indexed: IMap[B, A] = minutes.map(m => (m.key, m.toMinute)).toMap
   }
 
   case class CrunchMinutes(minutes: Set[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
