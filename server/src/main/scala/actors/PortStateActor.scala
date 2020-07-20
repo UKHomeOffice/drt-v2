@@ -56,10 +56,6 @@ class PortStateActor(liveCrunchStateProps: Props,
 
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor())) //, "port-state-kill-actor")
 
-//  var maybeCrunchQueueActor: Option[ActorRef] = None
-//  var crunchSourceIsReady: Boolean = true
-//  var maybeSimActor: Option[ActorRef] = None
-//  var simulationActorIsReady: Boolean = true
   val reCrunchHandler = new RecalculationRequester()
   val reDeployHandler = new RecalculationRequester()
 
