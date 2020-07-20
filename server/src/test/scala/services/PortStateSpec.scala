@@ -1,22 +1,22 @@
 package services
 
-import actors.{GetState, PortStateActor}
-import akka.actor.{Actor, Props}
-import akka.pattern.{after, ask}
+import actors.GetState
+import akka.actor.Actor
+import akka.pattern.after
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.FlightsApi.Flights
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import server.feeds.ArrivalsFeedSuccess
-import services.crunch.deskrecs.{GetFlights, SimulationMinute, SimulationMinutes}
+import services.crunch.deskrecs.{SimulationMinute, SimulationMinutes}
 import services.crunch.{CrunchTestLike, TestConfig}
 
 import scala.collection.mutable
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 class PortStateSpec extends CrunchTestLike {
   "Given an initial PortState with some pax loads " +
@@ -291,22 +291,6 @@ class PortStateSpec extends CrunchTestLike {
 
   private def arrivalsToFlightsWithSplits(arrivals: List[Arrival]): List[ApiFlightWithSplits] = {
     arrivals.map(a => ApiFlightWithSplits(a, Set()))
-  }
-
-  "Given a 'slow' live crunch actor containing a single flight which takes 1 second to provide its state to the PortStateActor" >> {
-    "When I immediately ask the PortStateActor for flights for the day the crunch actor's flight is scheduled" >> {
-      "Then the response should contain the crunch actor's flight" >> {
-        val today = SDate("2020-07-03T00:00")
-        val flightsWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = today.toISOString()), Set())
-        val maybePortState = Option(PortState(Iterable(flightsWithSplits), Iterable(), Iterable()))
-        val liveActor = Props(new SlowCrunchStateActor(maybePortState, delay = 1 second))
-        val fcstActor = Props(new SlowCrunchStateActor(Option(PortState.empty), delay = 0 seconds))
-        val portStateActor = system.actorOf(Props(new PortStateActor(liveActor, fcstActor, () => today, 2, defaultAirportConfig.queuesByTerminal, replayMaxCrunchStateMessages = 1000)))
-        val response = Await.result(portStateActor.ask(GetFlights(today.millisSinceEpoch, today.addMinutes(1).millisSinceEpoch)), 5 seconds)
-
-        response === FlightsWithSplits(Map(flightsWithSplits.unique -> flightsWithSplits))
-      }
-    }
   }
 }
 

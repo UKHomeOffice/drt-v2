@@ -1,7 +1,8 @@
 package actors.minutes
 
+import actors.FlightsStateActor.HandleRecalculations
+import actors.SetDeploymentQueueActor
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
-import actors.{HandleRecalculations, SetDeploymentQueueActor}
 import akka.actor.{ActorRef, Cancellable}
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
 import drt.shared.Terminals.Terminal

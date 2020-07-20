@@ -25,12 +25,6 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxDays = 10
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
-  def portStateActorProvider: () => ActorRef = () => {
-    val liveCsa = Props(new CrunchStateActor(None, Sizes.oneMegaByte, "crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis))
-    val fcstCsa = Props(new CrunchStateActor(None, Sizes.oneMegaByte, "forecast-crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis))
-    PortStateActor(myNow, liveCsa, fcstCsa, defaultAirportConfig.queuesByTerminal, 1000)
-  }
-
   val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
 
   def partitionedPortStateActorProvider: () => ActorRef =
@@ -41,9 +35,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
     Await.ready(actor.ask(ResetData), 1 second)
   }
 
-  private val actorProviders = List(
-    ("PortStateActor", portStateActorProvider),
-    ("PartitionedPortStateActor", partitionedPortStateActorProvider))
+  private val actorProviders = List(("PartitionedPortStateActor", partitionedPortStateActorProvider))
 
   def flightsWithSplits(params: Iterable[(String, String, Terminal)]): List[ApiFlightWithSplits] = params.map { case (_, scheduled, _) =>
     val flight = ArrivalGenerator.arrival("BA1000", schDt = scheduled, terminal = T1)

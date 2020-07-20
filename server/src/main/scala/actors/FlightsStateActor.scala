@@ -43,6 +43,8 @@ object FlightsStateActor {
     else
       Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to, replayMaxCrunchStateMessages))
   }
+
+  case object HandleRecalculations
 }
 
 class FlightsStateActor(val now: () => SDateLike,

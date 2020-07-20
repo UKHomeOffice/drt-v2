@@ -167,20 +167,6 @@ object TestActors {
     override def receive: Receive = reset orElse super.receive
   }
 
-  class TestPortStateActor(liveProps: Props, forecastProps: Props, now: () => SDateLike, liveDaysAhead: Int, queues: Map[Terminal, Seq[Queue]])
-    extends PortStateActor(liveProps, forecastProps, now, liveDaysAhead, queues, replayMaxCrunchStateMessages = 1000) {
-    def reset: Receive = {
-      case ResetData =>
-        val replyTo = sender()
-        state.clear()
-        Future
-          .sequence(List(liveCrunchStateActor.ask(ResetData), forecastCrunchStateActor.ask(ResetData)))
-          .foreach(_ => replyTo ! Ack)
-    }
-
-    override def readyBehaviour: Receive = reset orElse super.readyBehaviour
-  }
-
   trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
     var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
