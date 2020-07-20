@@ -1,10 +1,10 @@
 package actors.queues
 
 import actors.acking.AckingReceiver.Ack
-import actors.{RecoveryActorLike, SetDaysQueueSource, StreamingJournalLike}
 import actors.queues.QueueLikeActor.{ReadyToEmit, Tick, UpdatedMillis}
+import actors.{RecoveryActorLike, SetDaysQueueSource, StreamingJournalLike}
 import akka.actor.Cancellable
-import akka.persistence.{DeleteSnapshotSuccess, RecoveryCompleted, SaveSnapshotSuccess, SnapshotMetadata, SnapshotOffer}
+import akka.persistence._
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -12,12 +12,13 @@ import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.DaysSnapshotMessage
-import services.{RecalculationRequester, SDate}
+import services.SDate
 import services.graphstages.Crunch
 
 import scala.collection.immutable.SortedSet
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 
 object QueueLikeActor {
@@ -50,11 +51,11 @@ abstract class QueueLikeActor(val now: () => SDateLike, val journalType: Streami
     super.postStop()
   }
 
-  override def processRecoveryMessage: PartialFunction[Any, Unit] = ???
+  override def processRecoveryMessage: PartialFunction[Any, Unit] = { case _ => Unit }
 
-  override def processSnapshotMessage: PartialFunction[Any, Unit] = ???
+  override def processSnapshotMessage: PartialFunction[Any, Unit] = { case _ => Unit }
 
-  override def stateToMessage: GeneratedMessage = ???
+  override def stateToMessage: GeneratedMessage = DaysSnapshotMessage(queuedDays.toList)
 
   override def receiveRecover: Receive = {
     case SnapshotOffer(SnapshotMetadata(_, sequenceNr, _), DaysSnapshotMessage(days)) =>
@@ -95,7 +96,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, val journalType: Streami
 
     case Stop =>
       log.info("Being asked to stop. Taking snapshot of the current queue")
-      saveSnapshot(DaysSnapshotMessage(queuedDays.toList))
+      saveSnapshot(stateToMessage)
 
     case _: SaveSnapshotSuccess =>
       log.info(s"Successfully saved snapshot. Shutting down now")
