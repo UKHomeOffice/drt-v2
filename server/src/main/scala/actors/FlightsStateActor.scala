@@ -4,6 +4,7 @@ import actors.PortStateMessageConversion._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import actors.pointInTime.{CrunchStateReadActor, FlightsStateReadActor}
+import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.actor._
 import akka.pattern.{ask, pipe}
 import akka.persistence._
@@ -19,8 +20,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
+import services.SDate
 import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
-import services.{RecalculationRequester, SDate}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
@@ -43,8 +44,6 @@ object FlightsStateActor {
     else
       Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to, replayMaxCrunchStateMessages))
   }
-
-  case object HandleRecalculations
 }
 
 class FlightsStateActor(val now: () => SDateLike,
@@ -67,19 +66,11 @@ class FlightsStateActor(val now: () => SDateLike,
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = new Timeout(30 seconds)
 
-  val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 1 second, self, HandleRecalculations)
-
-  override def postStop(): Unit = {
-    log.warn("Actor stopped. Cancelling scheduled tick")
-    cancellableTick.cancel()
-    super.postStop()
-  }
-
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   var state: FlightsWithSplits = FlightsWithSplits.empty
 
-  val reCrunchHandler = new RecalculationRequester()
+  var maybeUpdatesSubscriber: Option[ActorRef] = None
 
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
 
@@ -123,10 +114,7 @@ class FlightsStateActor(val now: () => SDateLike,
   override def receiveCommand: Receive = {
     case SetCrunchQueueActor(actor) =>
       log.info(s"Received crunch queue actor")
-      reCrunchHandler.setQueueActor(actor)
-
-    case HandleRecalculations =>
-      reCrunchHandler.handleUpdatedMillis()
+      maybeUpdatesSubscriber = Option(actor)
 
     case StreamInitialized => sender() ! Ack
 
@@ -190,10 +178,8 @@ class FlightsStateActor(val now: () => SDateLike,
     state = updatedState
     purgeExpired()
 
-    if (updatedMinutes.nonEmpty) {
-      reCrunchHandler.addMillis(updatedMinutes)
-      self ! HandleRecalculations
-    }
+    if (updatedMinutes.nonEmpty)
+      maybeUpdatesSubscriber.foreach(_ ! UpdatedMillis(updatedMinutes))
 
     val diffMsg = diffMessageForFlights(flightUpdates.flightsToUpdate, flightUpdates.arrivalsToRemove)
     persistAndMaybeSnapshot(diffMsg, Option((sender(), Ack)))

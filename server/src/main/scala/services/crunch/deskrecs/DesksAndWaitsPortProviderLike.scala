@@ -2,8 +2,8 @@ package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.TQM
 import drt.shared.Terminals.Terminal
+import drt.shared.{SimulationMinute, TQM}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.graphstages.Crunch.LoadMinute
 

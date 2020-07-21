@@ -5,7 +5,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.{Queue, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
-import drt.shared.{AirportConfig, PaxTypeAndQueue, TQM}
+import drt.shared.{AirportConfig, PaxTypeAndQueue, SimulationMinute, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunch
 import services.crunch.desklimits.TerminalDeskLimitsLike

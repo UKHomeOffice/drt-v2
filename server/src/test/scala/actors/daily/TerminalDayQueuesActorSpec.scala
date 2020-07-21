@@ -6,10 +6,9 @@ import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
 import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{SDateLike, TQM}
+import drt.shared.{SDateLike, SimulationMinute, TQM}
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.SimulationMinute
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

@@ -1,15 +1,12 @@
 package services.crunch.deskrecs
 
-import actors.MinuteLookupsLike
 import actors.acking.AckingReceiver._
-import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
-import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -25,17 +22,6 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 
-case class MinuteLookups(system: ActorSystem,
-                         now: () => SDateLike,
-                         expireAfterMillis: Int,
-                         queuesByTerminal: Map[Terminal, Seq[Queue]],
-                         override val replayMaxCrunchStateMessages: Int)
-                        (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(now, queuesByTerminal.keys, queuesLookup, legacyQueuesLookup, updateCrunchMinutes)))
-
-  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(now, queuesByTerminal.keys, staffLookup, legacyStaffLookup, updateStaffMinutes)))
-}
-
 object RunnableDeployments {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -46,8 +32,7 @@ object RunnableDeployments {
             crunchPeriodStartMillis: SDateLike => SDateLike,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
             minutesToCrunch: Int,
-            portDeskRecs: DesksAndWaitsPortProviderLike /*,
-            queuesByTerminal: Map[Terminal, Seq[Queue]]*/)
+            portDeskRecs: DesksAndWaitsPortProviderLike)
            (implicit executionContext: ExecutionContext,
             timeout: Timeout = new Timeout(60 seconds)): RunnableGraph[(SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
@@ -62,8 +47,8 @@ object RunnableDeployments {
           val deploymentsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
 
           daysSourceQueueAsync.out
-            .map { min =>
-              val firstMinute = crunchPeriodStartMillis(SDate(min))
+            .map { dayToCrunch =>
+              val firstMinute = crunchPeriodStartMillis(SDate(dayToCrunch))
               val lastMinute = firstMinute.addMinutes(minutesToCrunch - 1)
               (firstMinute.millisSinceEpoch, lastMinute.millisSinceEpoch)
             }
@@ -140,55 +125,9 @@ object RunnableDeployments {
             crunchPeriodStart: SDateLike => SDateLike,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
             minutesToCrunch: Int,
-            portDeskRecs: DesksAndWaitsPortProviderLike /*,
-            queuesByTerminal: Map[Terminal, Seq[Queue]]*/)
+            portDeskRecs: DesksAndWaitsPortProviderLike)
            (implicit ec: ExecutionContext, mat: Materializer): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = {
 
-    RunnableDeployments(portStateActor, queuesActor, staffActor, staffToDeskLimits, crunchPeriodStart, maxDesksProviders, minutesToCrunch, portDeskRecs /*, queuesByTerminal*/).run()
-  }
-}
-
-case class SimulationMinute(terminal: Terminal,
-                            queue: Queue,
-                            minute: MillisSinceEpoch,
-                            desks: Int,
-                            waitTime: Int) extends SimulationMinuteLike with MinuteComparison[CrunchMinute] with MinuteLike[CrunchMinute, TQM] {
-  lazy val key: TQM = MinuteHelper.key(terminal, queue, minute)
-
-  override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
-    if (existing.deployedDesks.isEmpty || existing.deployedDesks.get != desks || existing.deployedWait.isEmpty || existing.deployedWait.get != waitTime) Option(existing.copy(
-      deployedDesks = Option(desks), deployedWait = Option(waitTime), lastUpdated = Option(now)
-    ))
-    else None
-
-  override val lastUpdated: Option[MillisSinceEpoch] = None
-
-  override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = toMinute.copy(lastUpdated = Option(now))
-
-  override def toMinute: CrunchMinute = CrunchMinute(
-    terminal = terminal,
-    queue = queue,
-    minute = minute,
-    paxLoad = 0,
-    workLoad = 0,
-    deskRec = 0,
-    waitTime = 0,
-    deployedDesks = Option(desks),
-    deployedWait = Option(waitTime),
-    lastUpdated = None)
-
-}
-
-case class SimulationMinutes(minutes: Seq[SimulationMinute]) extends PortStateQueueMinutes {
-  override val asContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
-
-  override def isEmpty: Boolean = minutes.isEmpty
-
-  override def applyTo(portState: PortStateMutable, now: MillisSinceEpoch): PortStateDiff = {
-    val minutesDiff = minutes.foldLeft(List[CrunchMinute]()) { case (soFar, dm) =>
-      addIfUpdated(portState.crunchMinutes.getByKey(dm.key), now, soFar, dm, () => dm.toUpdatedMinute(now))
-    }
-    portState.crunchMinutes +++= minutesDiff
-    PortStateDiff(Seq(), Seq(), Seq(), minutesDiff, Seq())
+    RunnableDeployments(portStateActor, queuesActor, staffActor, staffToDeskLimits, crunchPeriodStart, maxDesksProviders, minutesToCrunch, portDeskRecs).run()
   }
 }
