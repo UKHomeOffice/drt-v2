@@ -1,11 +1,14 @@
 package services.crunch.deskrecs
 
-import actors.MinuteLookups
+import actors.MinuteLookupsLike
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import akka.actor.{Actor, Props}
+import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
+import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
-import drt.shared.CrunchApi.DeskRecMinutes
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.CrunchApi.CrunchMinute
+import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
@@ -14,11 +17,11 @@ import services.crunch.desklimits.PortDeskLimits
 import services.graphstages.Crunch.crunchStartWithOffset
 import services.{Optimiser, SDate}
 
-import scala.concurrent.duration._
+import scala.collection.immutable.Map
+import scala.concurrent.ExecutionContext
 
 
 class MockPortStateActorForDeployments(probe: TestProbe, responseDelayMillis: Long = 0L) extends Actor {
-  var flightsToReturn: List[ApiFlightWithSplits] = List()
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def receive: Receive = {
@@ -33,26 +36,38 @@ class MockPortStateActorForDeployments(probe: TestProbe, responseDelayMillis: Lo
       log.error(s"Failed", t)
       probe.ref ! StreamFailure
 
-    case getFlights: GetFlights =>
-      Thread.sleep(responseDelayMillis)
-      sender() ! FlightsWithSplits(flightsToReturn.map(fws => (fws.unique, fws)))
-      probe.ref ! getFlights
-
-    case drm: DeskRecMinutes =>
-      sender() ! Ack
-      probe.ref ! drm
-
     case simMins: SimulationMinutes =>
       sender() ! Ack
       probe.ref ! simMins
-
-    case SetFlights(flightsToSet) => flightsToReturn = flightsToSet
-
-    case message =>
-      log.warn(s"Hmm got a $message")
-      sender() ! Ack
-      probe.ref ! message
   }
+}
+
+class TestQueueMinutesActor(probe: ActorRef,
+                            now: () => SDateLike,
+                            terminals: Iterable[Terminal],
+                            lookup: MinutesLookup[CrunchMinute, TQM],
+                            lookupLegacy: MinutesLookup[CrunchMinute, TQM],
+                            updateMinutes: MinutesUpdate[CrunchMinute, TQM]) extends QueueMinutesActor(now, terminals, lookup, lookupLegacy, updateMinutes) {
+
+  override def receive: Receive = testReceives
+
+  def testReceives: Receive = {
+    case msg =>
+      probe ! msg
+      super.receive(msg)
+  }
+}
+
+case class TestMinuteLookups(queueProbe: ActorRef,
+                             system: ActorSystem,
+                             now: () => SDateLike,
+                             expireAfterMillis: Int,
+                             queuesByTerminal: Map[Terminal, Seq[Queue]],
+                             override val replayMaxCrunchStateMessages: Int)
+                            (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queueProbe, now, queuesByTerminal.keys, queuesLookup, legacyQueuesLookup, updateCrunchMinutes)))
+
+  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(now, queuesByTerminal.keys, staffLookup, legacyStaffLookup, updateStaffMinutes)))
 }
 
 
@@ -62,11 +77,12 @@ class RunnableDeploymentsSpec extends CrunchTestLike {
 
   "Given a RunnableDescRecs with a mock PortStateActor and mock crunch " +
     "When I give it a millisecond of 2019-01-01T00:00 " +
-    "I should see a request for xxx for 2019-01-01 00:00 to 00:30" >> {
+    "The I should see a queues actor request for GetStateForDateRange followed by a SimulationMinutes message to the port state actor" >> {
+    val queuesProbe = TestProbe("queues")
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActorForDeployments(portStateProbe, noDelay)))
     val now = () => SDate("2020-07-17T00:00")
-    val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, defaultAirportConfig.queuesByTerminal, 1000)
+    val lookups = TestMinuteLookups(queuesProbe.ref, system, now, MilliTimes.oneDayMillis, defaultAirportConfig.queuesByTerminal, 1000)
     val terminalToIntsToTerminalToStaff = PortDeskLimits.flexedByAvailableStaff(defaultAirportConfig) _
     val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(defaultAirportConfig.crunchOffsetMinutes)
     val (daysQueueSource, _) = RunnableDeployments(
@@ -82,6 +98,8 @@ class RunnableDeploymentsSpec extends CrunchTestLike {
 
     val midnight20190101 = SDate("2019-01-01T00:00")
     daysQueueSource.offer(midnight20190101.millisSinceEpoch)
+
+    queuesProbe.expectMsg(GetStateForDateRange(midnight20190101.millisSinceEpoch, midnight20190101.addMinutes(defaultAirportConfig.minutesToCrunch - 1).millisSinceEpoch))
 
     portStateProbe.expectMsgClass(classOf[SimulationMinutes])
 
