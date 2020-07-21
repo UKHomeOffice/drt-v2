@@ -22,12 +22,16 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 object PartitionedPortStateActor {
-  def apply(now: () => SDateLike, airportConfig: AirportConfig, journalType: StreamingJournalLike, legacyDataCutoff: SDateLike, replayMaxCrunchStateMessages: Int)
+  def apply(now: () => SDateLike,
+            airportConfig: AirportConfig,
+            journalType: StreamingJournalLike,
+            legacyDataCutoff: SDateLike,
+            replayMaxCrunchStateMessages: Int,
+            minuteLookups: MinuteLookupsLike)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-    val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, replayMaxCrunchStateMessages)
     val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(now, expireAfterMillis, airportConfig.queuesByTerminal, legacyDataCutoff, replayMaxCrunchStateMessages)))
-    val queuesActor: ActorRef = lookups.queueMinutesActor
-    val staffActor: ActorRef = lookups.staffMinutesActor
+    val queuesActor: ActorRef = minuteLookups.queueMinutesActor
+    val staffActor: ActorRef = minuteLookups.staffMinutesActor
     system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal, journalType, legacyDataCutoff, tempLegacyActorProps(replayMaxCrunchStateMessages))))
   }
 
@@ -88,11 +92,11 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
   def processMessage: Receive = {
     case msg: SetCrunchQueueActor =>
-      log.info(s"Received crunchSourceActor")
+      log.info(s"Received crunch queue actor")
       flightsActor ! msg
 
-    case msg: SetSimulationActor =>
-      log.info(s"Received simulationSourceActor")
+    case msg: SetDeploymentQueueActor =>
+      log.info(s"Received deployment queue actor")
       queuesActor ! msg
 
     case StreamInitialized => sender() ! Ack

@@ -28,7 +28,6 @@ import scala.concurrent.duration._
 case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
                             fixedPoints: SourceQueueWithComplete[FixedPointAssignments],
                             staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
-                            loadsToSimulate: ActorRef,
                             forecastBaseArrivalsResponse: FR,
                             forecastArrivalsResponse: FR,
                             liveBaseArrivalsResponse: FR,
@@ -75,9 +74,8 @@ case class CrunchProps[FR](
                             stageThrottlePer: FiniteDuration,
                             adjustEGateUseByUnder12s: Boolean,
                             optimiser: TryCrunch,
-                            useLegacyDeployments: Boolean,
                             aclPaxAdjustmentDays: Int,
-                            startDeskRecs: () => UniqueKillSwitch)
+                            startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch))
 
 object CrunchSystem {
 
@@ -156,29 +154,6 @@ object CrunchSystem {
       numberOfDays = props.maxDaysToCrunch,
       checkRequiredUpdatesOnStartup = props.checkRequiredStaffUpdatesOnStartup)
 
-    val staffBatcher = new StaffBatchUpdateGraphStage(props.now, props.expireAfterMillis, props.airportConfig.crunchOffsetMinutes)
-
-    val deploymentGraphStage = if (props.useLegacyDeployments)
-      new LegacyDeploymentGraphStage(
-        name = props.logLabel,
-        optionalInitialCrunchMinutes = maybeCrunchMinutes,
-        optionalInitialStaffMinutes = maybeStaffMinutes,
-        airportConfig = props.airportConfig,
-        expireAfterMillis = props.expireAfterMillis,
-        now = props.now,
-        simulate = props.simulator,
-        crunchPeriodStartMillis = crunchStartDateProvider)
-    else
-      new DeploymentGraphStage(
-        name = props.logLabel,
-        optionalInitialCrunchMinutes = maybeCrunchMinutes,
-        optionalInitialStaffMinutes = maybeStaffMinutes,
-        airportConfig = props.airportConfig,
-        expireAfterMillis = props.expireAfterMillis,
-        now = props.now,
-        crunchPeriodStartMillis = crunchStartDateProvider,
-        DesksAndWaitsPortProvider(props.airportConfig, props.optimiser, props.pcpPaxFn))
-
     val crunchSystem = RunnableCrunch(
       forecastBaseArrivalsSource = props.arrivalsForecastBaseSource,
       forecastArrivalsSource = props.arrivalsForecastSource,
@@ -193,8 +168,6 @@ object CrunchSystem {
       arrivalsGraphStage = arrivalsStage,
       arrivalSplitsStage = arrivalSplitsGraphStage,
       staffGraphStage = staffGraphStage,
-      staffBatchUpdateGraphStage = staffBatcher,
-      deploymentGraphStage = deploymentGraphStage,
       forecastArrivalsDiffStage = forecastArrivalsDiffingStage,
       liveBaseArrivalsDiffStage = liveBaseArrivalsDiffingStage,
       liveArrivalsDiffStage = liveArrivalsDiffingStage,
@@ -207,26 +180,28 @@ object CrunchSystem {
       manifestRequestsSink = props.manifestRequestsSink,
       portStateActor = props.portStateActor,
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
+      deploymentRequestActor = props.actors("deployment-request"),
       forecastMaxMillis = forecastMaxMillis,
       throttleDurationPer = props.stageThrottlePer
     )
 
-    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, simloadsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
+    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
 
-    val drKillSwitch = props.startDeskRecs()
+    val (deskRecsKillSwitch, deploymentsKillSwitch) = props.startDeskRecs()
+
+    val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS, deskRecsKillSwitch, deploymentsKillSwitch)
 
     CrunchSystem(
       shifts = shiftsIn,
       fixedPoints = fixedPointsIn,
       staffMovements = movementsIn,
-      loadsToSimulate = simloadsIn,
       forecastBaseArrivalsResponse = forecastBaseIn,
       forecastArrivalsResponse = forecastIn,
       liveBaseArrivalsResponse = liveBaseIn,
       liveArrivalsResponse = liveIn,
       manifestsLiveResponse = manifestsLiveIn,
       actualDeskStats = actDesksIn,
-      List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS, drKillSwitch)
+      killSwitches
     )
   }
 

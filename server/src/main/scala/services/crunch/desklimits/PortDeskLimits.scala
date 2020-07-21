@@ -39,7 +39,10 @@ object PortDeskLimits {
           minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
           maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
           terminalDesksByMinute <- desksByTerminalByMinute.get(terminal)
-        } yield (terminal, FlexedTerminalDeskLimitsFromAvailableStaff(terminalStaffByMinute, terminalDesksByMinute, airportConfig.flexedQueues, minDesksByQueue24Hrs, maxDesksByQueue24Hrs))
+        } yield {
+
+          (terminal, FlexedTerminalDeskLimitsFromAvailableStaff(terminalStaffByMinute, terminalDesksByMinute, airportConfig.flexedQueues, minDesksByQueue24Hrs, maxDesksByQueue24Hrs))
+        }
       }
       .collect { case Some(terminalDesks) => terminalDesks }
       .toMap

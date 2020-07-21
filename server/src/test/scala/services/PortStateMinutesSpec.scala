@@ -6,7 +6,6 @@ import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Terminals.T1
 import drt.shared._
 import org.specs2.mutable.Specification
-import services.graphstages.{SimulationMinute, SimulationMinutes}
 
 import scala.collection.immutable.Map
 

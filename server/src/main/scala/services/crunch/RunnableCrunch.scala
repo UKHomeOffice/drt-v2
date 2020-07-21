@@ -1,20 +1,20 @@
 package services.crunch
 
 import actors.acking.AckingReceiver._
+import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import akka.stream.stage.GraphStage
 import drt.chroma.ArrivalsDiffingStage
-import drt.shared.{ApiFlightWithSplits, ArrivalsDiff, FixedPointAssignments, RemoveFlight, SDateLike, ShiftAssignments, StaffMovement}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, FlightsWithSplitsDiff}
 import drt.shared.api.Arrival
+import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
-import services.graphstages.Crunch.Loads
 import services.graphstages._
 
 import scala.concurrent.Future
@@ -41,8 +41,6 @@ object RunnableCrunch {
                                        arrivalsGraphStage: ArrivalsGraphStage,
                                        arrivalSplitsStage: GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplitsDiff]],
                                        staffGraphStage: StaffGraphStage,
-                                       staffBatchUpdateGraphStage: StaffBatchUpdateGraphStage,
-                                       deploymentGraphStage: GraphStage[FanInShape2[Loads, StaffMinutes, SimulationMinutes]],
 
                                        forecastArrivalsDiffStage: ArrivalsDiffingStage,
                                        liveBaseArrivalsDiffStage: ArrivalsDiffingStage,
@@ -59,11 +57,12 @@ object RunnableCrunch {
 
                                        portStateActor: ActorRef,
                                        aggregatedArrivalsStateActor: ActorRef,
+                                       deploymentRequestActor: ActorRef,
 
                                        forecastMaxMillis: () => MillisSinceEpoch,
                                        throttleDurationPer: FiniteDuration
                                       )
-                                      (implicit mat: Materializer, system: ActorSystem): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, ActorRef, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                      (implicit mat: Materializer, system: ActorSystem): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsFeedResponse]
     val manifestsLiveKillSwitch = KillSwitches.single[ManifestsFeedResponse]
@@ -82,14 +81,13 @@ object RunnableCrunch {
       shiftsSource.async("staff-dispatcher"),
       fixedPointsSource.async("staff-dispatcher"),
       staffMovementsSource.async("staff-dispatcher"),
-      Source.actorRefWithAck[Loads](Ack).async,
       actualDesksAndWaitTimesSource,
       arrivalsKillSwitch,
       manifestsLiveKillSwitch,
       shiftsKillSwitch,
       fixedPointsKillSwitch,
       movementsKillSwitch
-      )((_, _, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
+      )((_, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
@@ -101,7 +99,6 @@ object RunnableCrunch {
           shiftsSourceAsync,
           fixedPointsSourceAsync,
           staffMovementsSourceAsync,
-          loadsToSimulateSourceAsync,
           actualDesksAndWaitTimesSourceSync,
           arrivalsKillSwitchSync,
           manifestsLiveKillSwitchSync,
@@ -109,16 +106,18 @@ object RunnableCrunch {
           fixedPointsKillSwitchSync,
           movementsKillSwitchSync
         ) =>
+          def newPortStateSink(): SinkShape[Any] = {
+            builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
+          }
+
           val arrivals = builder.add(arrivalsGraphStage.async("arrivals-dispatcher"))
           val arrivalSplits = builder.add(arrivalSplitsStage.async("arrivals-dispatcher"))
           val staff = builder.add(staffGraphStage.async("staff-dispatcher"))
-          val batchStaff = builder.add(staffBatchUpdateGraphStage.async("staff-dispatcher"))
-          val simulation = builder.add(deploymentGraphStage.async("simulation-dispatcher"))
-          val deskStatsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
-          val flightsWithSplitsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
+          val deploymentRequestSink = builder.add(Sink.actorRef(deploymentRequestActor, StreamCompleted).async("simulation-dispatcher"))
+          val deskStatsSink = newPortStateSink()
+          val flightsWithSplitsSink = newPortStateSink()
 
-          val simulationsSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
-          val staffSink = builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
+          val staffSink = newPortStateSink()
           val fcstArrivalsDiffing = builder.add(forecastArrivalsDiffStage)
           val liveBaseArrivalsDiffing = builder.add(liveBaseArrivalsDiffStage)
           val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage)
@@ -215,14 +214,11 @@ object RunnableCrunch {
                                     acc :+ incoming }
                                  .mapConcat(_.flatten) ~> arrivalUpdatesSink
 
-          actualDesksAndWaitTimesSourceSync  ~> deskStatsSink
-
-          loadsToSimulateSourceAsync ~> simulation.in0
+          actualDesksAndWaitTimesSourceSync ~> deskStatsSink
 
           staff.out ~> staffFanOut ~> staffSink
-                       staffFanOut ~> batchStaff ~> simulation.in1
+                       staffFanOut.map(staffMinutes => UpdatedMillis(staffMinutes.millis)) ~> deploymentRequestSink
 
-          simulation.out ~> simulationsSink
           // @formatter:on
 
           ClosedShape

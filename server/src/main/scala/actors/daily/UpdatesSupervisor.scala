@@ -44,9 +44,11 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
                                                   terminals: List[Terminal],
                                                   updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
-  implicit val ex: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
+
+  implicit val ex: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = new Timeout(30 seconds)
+
   val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 10 seconds, self, PurgeExpired)
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), s"updates-supervisor-kill-actor-${getClass.getTypeName}")
 

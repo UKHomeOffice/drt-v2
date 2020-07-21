@@ -5,13 +5,13 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.{Queue, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
-import drt.shared.{AirportConfig, PaxTypeAndQueue, TQM}
+import drt.shared.{AirportConfig, PaxTypeAndQueue, SimulationMinute, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunch
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.Crunch.LoadMinute
-import services.graphstages.{SimulationMinute, WorkloadCalculator}
+import services.graphstages.WorkloadCalculator
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 
@@ -29,22 +29,12 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                     ) extends DesksAndWaitsPortProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def loadsToDeskRecs(minuteMillis: NumericRange[MillisSinceEpoch],
-                      loadsByQueue: Map[TQM, LoadMinute],
-                      deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): Seq[DeskRecMinute] = deskLimitProviders
-    .map { case (terminal, maxDesksProvider) =>
-      val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loadsByQueue)
-      val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loadsByQueue)
-      log.debug(s"Optimising $terminal")
-
-      terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPax, terminalWork, maxDesksProvider)
-    }
-    .toSeq.flatten
-
-  def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
-                         loadsByQueue: Map[TQM, LoadMinute],
-                         deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): Map[TQM, SimulationMinute] =
-    deskRecsToSimulations(loadsToDeskRecs(minuteMillis, loadsByQueue, deskLimitProviders))
+  override def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
+                                  loadsByQueue: Map[TQM, LoadMinute],
+                                  deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): Map[TQM, SimulationMinute] = {
+    val deskRecMinutes = loadsToDesks(minuteMillis, loadsByQueue, deskLimitProviders)
+    deskRecsToSimulations(deskRecMinutes.minutes)
+  }
 
   def deskRecsToSimulations(terminalQueueDeskRecs: Seq[DeskRecMinute]): Map[TQM, SimulationMinute] = terminalQueueDeskRecs
     .map {
@@ -91,14 +81,14 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
   override def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
                             loads: Map[TQM, LoadMinute],
                             maxDesksByTerminal: Map[Terminal, TerminalDeskLimitsLike]): DeskRecMinutes = {
-    val terminalQueueDeskRecs = maxDesksByTerminal
-      .map { case (terminal, maxDesksProvider) =>
+    val terminalQueueDeskRecs = maxDesksByTerminal.map {
+      case (terminal, maxDesksProvider) =>
         val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loads)
         val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)
-        log.debug(s"Optimising $terminal")
+        log.info(s"Optimising $terminal")
 
         terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPax, terminalWork, maxDesksProvider)
-      }
+    }
 
     DeskRecMinutes(terminalQueueDeskRecs.toSeq.flatten)
   }

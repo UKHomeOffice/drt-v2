@@ -32,7 +32,6 @@ case class TestConfig(initialForecastBaseArrivals: mutable.SortedMap[UniqueArriv
                       refreshArrivalsOnStart: Boolean = false,
                       recrunchOnStart: Boolean = false,
                       flexDesks: Boolean = false,
-                      useLegacyDeployments: Boolean = false,
                       maybePassengersActorProps: Option[Props] = None,
                       pcpPaxFn: Arrival => Int = TestDefaults.pcpPaxFn
                      )

@@ -7,6 +7,7 @@ import actors.acking.AckingReceiver.Ack
 import actors.daily._
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
+import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
@@ -19,6 +20,7 @@ import org.slf4j.Logger
 import services.SDate
 import slickdb.ArrivalTable
 
+import scala.collection.immutable.SortedSet
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -139,18 +141,30 @@ object TestActors {
     override def receive: Receive = reset orElse super.receive
   }
 
-  class TestPortStateActor(liveProps: Props, forecastProps: Props, now: () => SDateLike, liveDaysAhead: Int, queues: Map[Terminal, Seq[Queue]])
-    extends PortStateActor(liveProps, forecastProps, now, liveDaysAhead, queues, replayMaxCrunchStateMessages = 1000) {
+  class TestCrunchQueueActor(now: () => SDateLike, journalType: StreamingJournalLike, crunchOffsetMinutes: Int)
+    extends CrunchQueueActor(now, journalType, crunchOffsetMinutes) {
     def reset: Receive = {
       case ResetData =>
-        val replyTo = sender()
-        state.clear()
-        Future
-          .sequence(List(liveCrunchStateActor.ask(ResetData), forecastCrunchStateActor.ask(ResetData)))
-          .foreach(_ => replyTo ! Ack)
+        readyToEmit = true
+        maybeDaysQueueSource = None
+        queuedDays = SortedSet()
+        sender() ! Ack
     }
 
-    override def readyBehaviour: Receive = reset orElse super.readyBehaviour
+    override def receive: Receive = reset orElse super.receive
+  }
+
+  class TestDeploymentQueueActor(now: () => SDateLike, journalType: StreamingJournalLike, crunchOffsetMinutes: Int)
+    extends DeploymentQueueActor(now, journalType, crunchOffsetMinutes) {
+    def reset: Receive = {
+      case ResetData =>
+        readyToEmit = true
+        maybeDaysQueueSource = None
+        queuedDays = SortedSet()
+        sender() ! Ack
+    }
+
+    override def receive: Receive = reset orElse super.receive
   }
 
   trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B] {
@@ -205,12 +219,14 @@ object TestActors {
   }
 
   object TestPartitionedPortStateActor {
-    def apply(now: () => SDateLike, airportConfig: AirportConfig, streamingJournal: StreamingJournalLike)
+    def apply(now: () => SDateLike,
+              airportConfig: AirportConfig,
+              streamingJournal: StreamingJournalLike,
+              minuteLookups: MinuteLookupsLike)
              (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-      val lookups = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
       val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", now, expireAfterMillis, airportConfig.queuesByTerminal)))
-      val queuesActor: ActorRef = lookups.queueMinutesActor
-      val staffActor: ActorRef = lookups.staffMinutesActor
+      val queuesActor: ActorRef = minuteLookups.queueMinutesActor
+      val staffActor: ActorRef = minuteLookups.staffMinutesActor
       system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal, streamingJournal)))
     }
   }

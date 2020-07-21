@@ -1,7 +1,7 @@
 package services.crunch
 
 import actors._
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
@@ -25,22 +25,17 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxDays = 10
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
-  def portStateActorProvider: () => ActorRef = () => {
-    val liveCsa = Props(new CrunchStateActor(None, Sizes.oneMegaByte, "crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis))
-    val fcstCsa = Props(new CrunchStateActor(None, Sizes.oneMegaByte, "forecast-crunch-state", airportConfig.queuesByTerminal, myNow, expireAfterMillis, false, forecastMaxMillis))
-    PortStateActor(myNow, liveCsa, fcstCsa, defaultAirportConfig.queuesByTerminal, 1000)
-  }
+  val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
 
-  def partitionedPortStateActorProvider: () => ActorRef = () => PartitionedPortStateActor(myNow, airportConfig, InMemoryStreamingJournal, SDate("1970-01-01"), 1000)
+  def partitionedPortStateActorProvider: () => ActorRef =
+    () => PartitionedPortStateActor(myNow, airportConfig, InMemoryStreamingJournal, SDate("1970-01-01"), 1000, lookups)
 
   def resetData(terminal: Terminal, day: SDateLike): Unit = {
     val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => SDate.now())))
     Await.ready(actor.ask(ResetData), 1 second)
   }
 
-  private val actorProviders = List(
-    ("PortStateActor", portStateActorProvider),
-    ("PartitionedPortStateActor", partitionedPortStateActorProvider))
+  private val actorProviders = List(("PartitionedPortStateActor", partitionedPortStateActorProvider))
 
   def flightsWithSplits(params: Iterable[(String, String, Terminal)]): List[ApiFlightWithSplits] = params.map { case (_, scheduled, _) =>
     val flight = ArrivalGenerator.arrival("BA1000", schDt = scheduled, terminal = T1)

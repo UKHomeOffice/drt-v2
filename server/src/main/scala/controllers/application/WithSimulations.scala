@@ -11,22 +11,19 @@ import controllers.application.exports.CsvFileStreaming
 import drt.auth.ArrivalSimulationUpload
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.Arrival
-import play.api.libs.Files
 import play.api.mvc._
 import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.exports.Exports
 import services.exports.summaries.queues.TerminalQueuesSummary
-import services.imports.{ArrivalCrunchSimulationActor, ArrivalImporter}
+import services.imports.ArrivalCrunchSimulationActor
 import services.{SDate, TryRenjin}
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.io.{BufferedSource, Codec}
+import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 trait WithSimulations {
