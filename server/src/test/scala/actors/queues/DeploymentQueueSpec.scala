@@ -16,12 +16,12 @@ import services.graphstages.Crunch
 import scala.concurrent.duration._
 
 
-class TestCrunchQueueActor(now: () => SDateLike, offsetMinutes: Int)
-  extends CrunchQueueActor(now, InMemoryStreamingJournal, offsetMinutes) {
+class TestDeploymentQueueActor(now: () => SDateLike, offsetMinutes: Int)
+  extends DeploymentQueueActor(now, InMemoryStreamingJournal, offsetMinutes) {
   override val maybeSnapshotInterval: Option[Int] = Option(1)
 }
 
-class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
+class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
   val myNow: () => SDateLike = () => SDate("2020-05-06", Crunch.europeLondonTimeZone)
 
   def startQueueActor(probe: TestProbe): ActorRef = {
@@ -30,14 +30,14 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
       .throttle(1, 1 second)
       .toMat(Sink.foreach(probe.ref ! _))(Keep.left)
       .run()
-    val actor = system.actorOf(Props(new TestDeploymentQueueActor(myNow, defaultAirportConfig.crunchOffsetMinutes)), "crunch-queue")
+    val actor = system.actorOf(Props(new TestDeploymentQueueActor(myNow, defaultAirportConfig.crunchOffsetMinutes)), "deployment-queue")
     actor ! SetDaysQueueSource(source)
     actor
   }
 
   val day: MillisSinceEpoch = myNow().millisSinceEpoch
 
-  "Given a CrunchQueueReadActor" >> {
+  "Given a DeploymentQueueReadActor" >> {
     "When I send it an UpdatedMillis message with one day in it" >> {
       "Then I should see the day as milliseconds in the source" >> {
         val daysSourceProbe: TestProbe = TestProbe()

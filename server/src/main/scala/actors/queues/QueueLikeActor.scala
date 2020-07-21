@@ -5,13 +5,12 @@ import actors.queues.QueueLikeActor.{ReadyToEmit, Tick, UpdatedMillis}
 import actors.{RecoveryActorLike, SetDaysQueueSource, StreamingJournalLike}
 import akka.actor.Cancellable
 import akka.persistence._
-import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.DaysSnapshotMessage
+import server.protobuf.messages.CrunchState.{DaysMessage, RemoveDayMessage}
 import services.SDate
 import services.graphstages.Crunch
 
@@ -34,6 +33,8 @@ object QueueLikeActor {
 abstract class QueueLikeActor(val now: () => SDateLike, val journalType: StreamingJournalLike, crunchOffsetMinutes: Int) extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
+  override val maybeSnapshotInterval: Option[Int] = Option(500)
+
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
@@ -51,25 +52,18 @@ abstract class QueueLikeActor(val now: () => SDateLike, val journalType: Streami
     super.postStop()
   }
 
-  override def processRecoveryMessage: PartialFunction[Any, Unit] = { case _ => Unit }
-
-  override def processSnapshotMessage: PartialFunction[Any, Unit] = { case _ => Unit }
-
-  override def stateToMessage: GeneratedMessage = DaysSnapshotMessage(queuedDays.toList)
-
-  override def receiveRecover: Receive = {
-    case SnapshotOffer(SnapshotMetadata(_, sequenceNr, _), DaysSnapshotMessage(days)) =>
-      log.info(s"Restoring queue to ${days.size} days")
-      queuedDays = queuedDays ++ days
-      deleteSnapshot(sequenceNr)
-
-    case RecoveryCompleted =>
-      log.info(s"Recovery completed. ${queuedDays.map(m => SDate(m, Crunch.europeLondonTimeZone).toISODateOnly).mkString(", ")}")
-      emitNextDayIfReady()
-
-    case u =>
-      log.warn(s"Unexpected recovery message: $u")
+  override def processRecoveryMessage: PartialFunction[Any, Unit] = {
+    case DaysMessage(days) => queuedDays = queuedDays ++ days
+    case RemoveDayMessage(Some(day)) => queuedDays = queuedDays - day
   }
+
+  override def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case DaysMessage(days) =>
+      log.info(s"Restoring queue to ${days.size} days")
+      queuedDays = SortedSet[MillisSinceEpoch]() ++ days
+  }
+
+  override def stateToMessage: GeneratedMessage = DaysMessage(queuedDays.toList)
 
   override def receiveCommand: Receive = {
     case Tick =>
@@ -89,18 +83,13 @@ abstract class QueueLikeActor(val now: () => SDateLike, val journalType: Streami
 
     case UpdatedMillis(millis) =>
       log.info(s"Received ${millis.size} UpdatedMillis")
-      val days = uniqueDays(millis)
+      val days: Set[MillisSinceEpoch] = uniqueDays(millis)
       updateState(days)
-      sender() ! Ack
       emitNextDayIfReady()
-
-    case Stop =>
-      log.info("Being asked to stop. Taking snapshot of the current queue")
-      saveSnapshot(stateToMessage)
+      persistAndMaybeSnapshot(DaysMessage(days.toList), Option((sender(), Ack)))
 
     case _: SaveSnapshotSuccess =>
-      log.info(s"Successfully saved snapshot. Shutting down now")
-      context.stop(self)
+      log.info(s"Successfully saved snapshot")
 
     case _: DeleteSnapshotSuccess =>
       log.info(s"Successfully deleted snapshot")
@@ -123,6 +112,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, val journalType: Streami
           }
         }
         queuedDays = queuedDays.drop(1)
+        persistAndMaybeSnapshot(RemoveDayMessage(Option(day)))
       case None =>
         log.debug(s"Nothing in the queue to emit")
     }

@@ -3,7 +3,7 @@ package actors.serializers
 import akka.serialization.SerializerWithStringManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinutesMessage, CrunchStateSnapshotMessage, DaysSnapshotMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage, StaffMinutesMessage}
+import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
@@ -21,6 +21,9 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
 
   final val CrunchDiff: String                    = classOf[CrunchDiffMessage].getName
   final val CrunchStateSnapshot: String           = classOf[CrunchStateSnapshotMessage].getName
+  final val CrunchMinutes: String                 = classOf[CrunchMinutesMessage].getName
+  final val FlightsWithSplits: String             = classOf[FlightsWithSplitsMessage].getName
+  final val FlightsWithSplitsDiff: String         = classOf[FlightsWithSplitsDiffMessage].getName
   final val Shifts: String                        = classOf[ShiftsMessage].getName
   final val ShiftStateSnapshot: String            = classOf[ShiftStateSnapshotMessage].getName
   final val Shift: String                         = classOf[ShiftMessage].getName
@@ -34,32 +37,33 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val FlightsDiff: String                   = classOf[FlightsDiffMessage].getName
   final val FlightStateSnapshot: String           = classOf[FlightStateSnapshotMessage].getName
   final val Flight: String                        = classOf[FlightMessage].getName
-  final val UniqueArrival: String                 = classOf[UniqueArrivalMessage].getName
   final val FeedStatus: String                    = classOf[FeedStatusMessage].getName
   final val FeedStatuses: String                  = classOf[FeedStatusesMessage].getName
+  final val UniqueArrival: String                 = classOf[UniqueArrivalMessage].getName
   final val VoyageManifestStateSnapshot: String   = classOf[VoyageManifestStateSnapshotMessage].getName
   final val VoyageManifestLatestFileName: String  = classOf[VoyageManifestLatestFileNameMessage].getName
   final val VoyageManifests: String               = classOf[VoyageManifestsMessage].getName
   final val VoyageManifest: String                = classOf[VoyageManifestMessage].getName
   final val Alerts: String                        = classOf[Alert].getName
   final val AlertSnapshot: String                 = classOf[AlertSnapshotMessage].getName
-  final val RegisteredArrivals: String            = classOf[RegisteredArrivalsMessage].getName
   final val RegisteredArrival: String             = classOf[RegisteredArrivalMessage].getName
+  final val RegisteredArrivals: String            = classOf[RegisteredArrivalsMessage].getName
   final val TerminalQueuesSummary: String         = classOf[TerminalQueuesSummaryMessage].getName
   final val FlightsSummary: String                = classOf[FlightsSummaryMessage].getName
-  final val CrunchMinutes: String                 = classOf[CrunchMinutesMessage].getName
   final val StaffMinutes: String                  = classOf[StaffMinutesMessage].getName
   final val PaxCount: String                      = classOf[PaxCountMessage].getName
   final val OriginTerminalPaxCounts: String       = classOf[OriginTerminalPaxCountsMessage].getName
   final val OriginTerminalPaxCountsMgs: String    = classOf[OriginTerminalPaxCountsMessages].getName
-  final val DaysSnapshot: String                  = classOf[DaysSnapshotMessage].getName
-  final val FlightsWithSplits: String             = classOf[FlightsWithSplitsMessage].getName
-  final val FlightsWithSplitsDiff: String         = classOf[FlightsWithSplitsDiffMessage].getName
+  final val Days: String                          = classOf[DaysMessage].getName
+  final val RemoveDay: String                     = classOf[RemoveDayMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
     objectToSerialize match {
       case m: CrunchDiffMessage => m.toByteArray
       case m: CrunchStateSnapshotMessage => m.toByteArray
+      case m: CrunchMinutesMessage => m.toByteArray
+      case m: FlightsWithSplitsMessage => m.toByteArray
+      case m: FlightsWithSplitsDiffMessage => m.toByteArray
       case m: ShiftsMessage => m.toByteArray
       case m: ShiftStateSnapshotMessage => m.toByteArray
       case m: ShiftMessage => m.toByteArray
@@ -73,9 +77,9 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: FlightsDiffMessage => m.toByteArray
       case m: FlightStateSnapshotMessage => m.toByteArray
       case m: FlightMessage => m.toByteArray
-      case m: UniqueArrivalMessage => m.toByteArray
       case m: FeedStatusMessage => m.toByteArray
       case m: FeedStatusesMessage => m.toByteArray
+      case m: UniqueArrivalMessage => m.toByteArray
       case m: VoyageManifestStateSnapshotMessage => m.toByteArray
       case m: VoyageManifestLatestFileNameMessage => m.toByteArray
       case m: VoyageManifestsMessage => m.toByteArray
@@ -86,14 +90,12 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: RegisteredArrivalsMessage => m.toByteArray
       case m: TerminalQueuesSummaryMessage => m.toByteArray
       case m: FlightsSummaryMessage => m.toByteArray
-      case m: CrunchMinutesMessage => m.toByteArray
       case m: StaffMinutesMessage => m.toByteArray
       case m: PaxCountMessage => m.toByteArray
       case m: OriginTerminalPaxCountsMessage => m.toByteArray
       case m: OriginTerminalPaxCountsMessages => m.toByteArray
-      case m: DaysSnapshotMessage => m.toByteArray
-      case m: FlightsWithSplitsMessage => m.toByteArray
-      case m: FlightsWithSplitsDiffMessage => m.toByteArray
+      case m: DaysMessage => m.toByteArray
+      case m: RemoveDayMessage => m.toByteArray
     }
   }
 
@@ -134,7 +136,8 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case PaxCount                       => PaxCountMessage.parseFrom(bytes)
       case OriginTerminalPaxCounts        => OriginTerminalPaxCountsMessage.parseFrom(bytes)
       case OriginTerminalPaxCountsMgs     => OriginTerminalPaxCountsMessages.parseFrom(bytes)
-      case DaysSnapshot                   => DaysSnapshotMessage.parseFrom(bytes)
+      case Days                           => DaysMessage.parseFrom(bytes)
+      case RemoveDay                      => RemoveDayMessage.parseFrom(bytes)
       case FlightsWithSplits              => FlightsWithSplitsMessage.parseFrom(bytes)
       case FlightsWithSplitsDiff          => FlightsWithSplitsDiffMessage.parseFrom(bytes)
     }
