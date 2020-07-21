@@ -43,7 +43,9 @@ case class Arrival(Operator: Option[Operator],
     case Some(s) => s.suffix
   }
 
-  def flightCode: String = s"$CarrierCode${VoyageNumber.toPaddedString}$suffixString"
+  val flightCode: FlightCode = FlightCode(CarrierCode, VoyageNumber, FlightCodeSuffix)
+
+  def flightCodeString: String = flightCode.toString
 
   def basicForComparison: Arrival = copy(PcpTime = None)
 
@@ -91,7 +93,7 @@ case class Arrival(Operator: Option[Operator],
 object Arrival {
   val flightCodeRegex: Regex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]*)$".r
 
-  def summaryString(arrival: Arrival): String = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.Scheduled + "!" + arrival.flightCode
+  def summaryString(arrival: Arrival): String = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.Scheduled + "!" + arrival.flightCodeString
 
   def standardiseFlightCode(flightCode: String): String = {
     val flightCodeRegex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]?)$".r
@@ -142,7 +144,7 @@ object Arrival {
         case _ => ""
       }
 
-      FlightParsing.flightCodeToParts(bestCode)
+      FlightCode.flightCodeToParts(bestCode)
     }
 
     Arrival(

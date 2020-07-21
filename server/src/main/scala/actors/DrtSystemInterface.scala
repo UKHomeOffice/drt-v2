@@ -45,6 +45,7 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services.SplitsProvider.SplitProvider
 import services._
+import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
@@ -142,6 +143,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
 
+    val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(
+      airportConfig.portCode,
+      params.maybeEdiTerminalMapCsvUrl
+    )
+
     val crunchInputs = CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTimeCalculator,
@@ -187,7 +193,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
       optimiser = optimiser,
       aclPaxAdjustmentDays = aclPaxAdjustmentDays,
-      startDeskRecs = startDeskRecs))
+      startDeskRecs = startDeskRecs,
+      arrivalsAdjustments = arrivalAdjustments
+    ))
     crunchInputs
   }
 
@@ -281,7 +289,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         val contentProvider = () => LhrSftpLiveContentProvider(host, username, password).latestContent
         LHRFlightFeed(contentProvider)
       case "EDI" =>
-        createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
+        createLiveChromaFlightFeed(ChromaLive).chromaFlights(30 seconds)
       case "LGW" =>
         val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
         val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
@@ -308,7 +316,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case "MAN" | "STN" | "EMA" =>
         if (config.get[Boolean]("feeds.mag.use-legacy")) {
           log.info(s"Using legacy MAG live feed")
-          createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
+          createLiveChromaFlightFeed(ChromaLive).chromaFlights(30 seconds)
         } else {
           log.info(s"Using new MAG live feed")
           val privateKey: String = config.get[String]("feeds.mag.private-key")

@@ -127,7 +127,7 @@ object FlightsTableTests extends TestSuite {
             thead(),
             <.tbody(
               <.tr(^.className := " before-now",
-                <.td(^.className := "arrivals__table__flight-code", <.div(testFlight.flightCode)),
+                <.td(^.className := "arrivals__table__flight-code", <.div(testFlight.flightCodeString)),
                 <.td(testFlight.Origin.toString),
                 <.td(<.span(<.span())),
                 <.td(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}"),
@@ -167,7 +167,7 @@ object FlightsTableTests extends TestSuite {
               <.tbody(
                 <.tr(^.className := " before-now",
                   <.td(<.span("herebecallback")),
-                  <.td(^.className := "arrivals__table__flight-code", <.div(testFlight.flightCode)),
+                  <.td(^.className := "arrivals__table__flight-code", <.div(testFlight.flightCodeString)),
                   <.td(testFlight.Origin.toString),
                   <.td(<.span(<.span())),
                   <.td(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}"),
@@ -205,7 +205,7 @@ object FlightsTableTests extends TestSuite {
               thead(),
               <.tbody(
                 <.tr(^.className := " before-now",
-                  <.td(^.className := "arrivals__table__flight-code", <.div(testFlight.flightCode)),
+                  <.td(^.className := "arrivals__table__flight-code", <.div(testFlight.flightCodeString)),
                   <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin.toString)), <.td(<.span(<.span())),
                   <.td(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}"),
                   <.td(testFlight.Status.description),
@@ -296,7 +296,7 @@ object FlightsTableTests extends TestSuite {
             thead(),
             <.tbody(
               <.tr(^.className := " before-now",
-                <.td(^.className := "arrivals__table__flight-code", <.div(testLTNFlight.flightCode)),
+                <.td(^.className := "arrivals__table__flight-code", <.div(testLTNFlight.flightCodeString)),
                 <.td(testLTNFlight.Origin.toString),
                 <.td(<.span(<.span())),
                 <.td(s"${testLTNFlight.Gate.getOrElse("")} / ${testLTNFlight.Stand.getOrElse("")}"),

@@ -15,7 +15,7 @@ import queueus._
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.SplitsProvider.SplitProvider
 import services._
-import services.arrivals.ArrivalDataSanitiser
+import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop, EdiArrivalsTerminalAdjustments}
 import services.crunch.deskrecs.DesksAndWaitsPortProvider
 import services.graphstages.Crunch._
 import services.graphstages._
@@ -75,7 +75,9 @@ case class CrunchProps[FR](
                             adjustEGateUseByUnder12s: Boolean,
                             optimiser: TryCrunch,
                             aclPaxAdjustmentDays: Int,
-                            startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch))
+                            startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch),
+                            arrivalsAdjustments: ArrivalsAdjustmentsLike
+                          )
 
 object CrunchSystem {
 
@@ -113,6 +115,7 @@ object CrunchSystem {
         props.airportConfig.maybeCiriumEstThresholdHours,
         props.airportConfig.maybeCiriumTaxiThresholdMinutes
       ),
+      arrivalsAdjustments = props.arrivalsAdjustments,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 

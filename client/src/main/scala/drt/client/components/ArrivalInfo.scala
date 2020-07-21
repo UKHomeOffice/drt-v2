@@ -72,7 +72,7 @@ object FeedSourceRow {
       val paxTrans: String = arrival.TranPax.map(_.toString).getOrElse("-")
       val flightFields = List[TagMod](
         <.td(feedSource.name),
-        <.td(arrival.flightCode),
+        <.td(arrival.flightCodeString),
         <.td(arrival.Origin.toString),
         <.td(s"${arrival.Gate.getOrElse("")}/${arrival.Stand.getOrElse("")}"),
         <.td(arrival.Status.description),

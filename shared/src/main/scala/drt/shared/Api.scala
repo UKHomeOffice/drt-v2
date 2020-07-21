@@ -45,16 +45,43 @@ object MilliDate {
   def atTime: MillisSinceEpoch => MilliDate = (time: MillisSinceEpoch) => MilliDate(time)
 }
 
-object FlightParsing {
+case class FlightCode(
+                       carrierCode: CarrierCode,
+                       voyageNumberLike: VoyageNumberLike,
+                       maybeFlightCodeSuffix: Option[FlightCodeSuffix]) {
+
+  val suffixString: String = maybeFlightCodeSuffix.map(_.suffix).getOrElse("")
+
+  override def toString = s"${carrierCode}${voyageNumberLike.toPaddedString}$suffixString"
+
+}
+
+object FlightCode {
   val iataRe: Regex = "^([A-Z0-9]{2}?)([0-9]{1,4})([A-Z]*)$".r
   val icaoRe: Regex = "^([A-Z]{2,3}?)([0-9]{1,4})([A-Z]*)$".r
 
-  def flightCodeToParts(iata: String): (CarrierCode, VoyageNumberLike, Option[FlightCodeSuffix]) = {
-    iata match {
-      case iataRe(cc, vn, suffix) => stringsToComponents(cc, vn, suffix)
-      case icaoRe(cc, vn, suffix) => stringsToComponents(cc, vn, suffix)
-      case _ => (CarrierCode(""), VoyageNumber(0), None)
+  def flightCodeToParts(code: String): (CarrierCode, VoyageNumberLike, Option[FlightCodeSuffix]) = code match {
+    case iataRe(cc, vn, suffix) => stringsToComponents(cc, vn, suffix)
+    case icaoRe(cc, vn, suffix) => stringsToComponents(cc, vn, suffix)
+    case _ => (CarrierCode(""), VoyageNumber(0), None)
+  }
+
+  def apply(rawIATA: String, rawICAO: String): FlightCode = {
+    FlightCode(bestCode(rawIATA, rawICAO))
+  }
+
+  def apply(code: String): FlightCode = {
+    val (carrierCode: CarrierCode, voyageNumber: VoyageNumber, maybeSuffix: Option[FlightCodeSuffix]) = {
+
+      FlightCode.flightCodeToParts(code)
     }
+    FlightCode(carrierCode, voyageNumber, maybeSuffix)
+  }
+
+  def bestCode(rawIATA: String, rawICAO: String): String = (rawIATA, rawICAO) match {
+    case (iata, _) if iata != "" => iata
+    case (_, icao) if icao != "" => icao
+    case _ => ""
   }
 
   private def stringsToComponents(cc: String,
@@ -304,6 +331,8 @@ case class FlightsNotReady()
 
 sealed trait VoyageNumberLike {
   def numeric: Int
+
+  def toPaddedString: String
 }
 
 case class VoyageNumber(numeric: Int) extends VoyageNumberLike with Ordered[VoyageNumber] {
@@ -326,6 +355,8 @@ case class VoyageNumber(numeric: Int) extends VoyageNumberLike with Ordered[Voya
 
 case class InvalidVoyageNumber(exception: Throwable) extends VoyageNumberLike {
   override def toString: String = "invalid"
+
+  override def toPaddedString: String = toString
 
   override def numeric: Int = 0
 }
@@ -426,14 +457,18 @@ case class ArrivalUpdate(old: Arrival, updated: Arrival)
 
 case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: Set[Arrival])
 
-trait SDateLike {
-
-  def ddMMyyString: String = f"$getDate%02d/$getMonth%02d/${getFullYear - 2000}%02d"
-
+object MonthStrings {
   val months = List(
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   )
+}
+
+trait SDateLike {
+
+  import MonthStrings._
+
+  def ddMMyyString: String = f"$getDate%02d/$getMonth%02d/${getFullYear - 2000}%02d"
 
   /**
    * Days of the week 1 to 7 (Monday is 1)

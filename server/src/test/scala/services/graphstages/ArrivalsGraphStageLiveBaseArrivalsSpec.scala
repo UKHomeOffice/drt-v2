@@ -9,7 +9,7 @@ import drt.shared.Terminals.T1
 import drt.shared._
 import drt.shared.api.Arrival
 import org.specs2.specification.AfterEach
-import services.arrivals.ArrivalDataSanitiser
+import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsNoop}
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
 
@@ -238,6 +238,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     pcpTimeCalc,
     Set(T1),
     sanitiser,
+    ArrivalsAdjustmentsNoop,
     oneDayMillis,
     () => scheduled
     )
@@ -252,6 +253,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     pcpTimeCalc,
     Set(T1),
     ArrivalDataSanitiser(None, None),
+    ArrivalsAdjustmentsNoop,
     oneDayMillis,
     () => scheduled
     )

@@ -14,7 +14,7 @@ object SplitsProvider {
     providers.foldLeft(None: Option[SplitRatios])((prev, provider) => {
       prev match {
         case Some(_) => prev
-        case None => provider(apiFlight.flightCode, MilliDate(apiFlight.Scheduled))
+        case None => provider(apiFlight.flightCodeString, MilliDate(apiFlight.Scheduled))
       }
     })
   }

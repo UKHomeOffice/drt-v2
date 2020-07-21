@@ -214,7 +214,7 @@ class AclFeedSpec extends CrunchTestLike {
         """.stripMargin
 
         val arrivals = voyageNumbersAndTerminals(csvContent, PortCode("EDI"))
-        val expected = Set((VoyageNumber(1686), A1))
+        val expected = Set((VoyageNumber(1686), T1))
 
         arrivals === expected
       }

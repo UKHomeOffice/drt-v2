@@ -115,7 +115,7 @@ object AclFeed {
 
     if (arrivals.nonEmpty) {
       val latestArrival = arrivals.maxBy(_.Scheduled)
-      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.flightCode})")
+      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.flightCodeString})")
     }
     arrivals
   }
@@ -243,7 +243,6 @@ object AclFeed {
 
   def aclToPortMapping(portCode: PortCode): Terminal => Terminal = portCode match {
     case PortCode("LGW") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> S, T2 -> N).getOrElse(tIn, tIn)
-    case PortCode("EDI") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> A1).getOrElse(tIn, tIn)
     case PortCode("LCY") => (tIn: Terminal) => Map[Terminal, Terminal](ACLTER -> T1).getOrElse(tIn, tIn)
     case _ => (tIn: Terminal) => tIn
   }
