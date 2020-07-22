@@ -12,7 +12,7 @@ import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
+import controllers.{Deskstats, MockedChromaSendReceive, PaxFlow, UserRoleProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}
@@ -289,7 +289,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         val contentProvider = () => LhrSftpLiveContentProvider(host, username, password).latestContent
         LHRFlightFeed(contentProvider)
       case "EDI" =>
-        createLiveChromaFlightFeed(ChromaLive).chromaFlights(30 seconds)
+        createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" =>
         val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
         val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
@@ -316,7 +316,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case "MAN" | "STN" | "EMA" =>
         if (config.get[Boolean]("feeds.mag.use-legacy")) {
           log.info(s"Using legacy MAG live feed")
-          createLiveChromaFlightFeed(ChromaLive).chromaFlights(30 seconds)
+          createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
         } else {
           log.info(s"Using new MAG live feed")
           val privateKey: String = config.get[String]("feeds.mag.private-key")
@@ -347,7 +347,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   }
 
   def createLiveChromaFlightFeed(feedType: ChromaFeedType): ChromaLiveFeed = {
-    ChromaLiveFeed(new ChromaFetcher[ChromaLiveFlight](feedType, ChromaFlightMarshallers.live) with ProdSendAndReceive)
+    ChromaLiveFeed(new ChromaFetcher[ChromaLiveFlight](feedType, ChromaFlightMarshallers.live) with MockedChromaSendReceive)
   }
 
   def createForecastChromaFlightFeed(feedType: ChromaFeedType): ChromaForecastFeed = {

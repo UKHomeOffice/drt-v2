@@ -18,7 +18,23 @@ import scala.language.postfixOps
 case class ChromaLiveFeed(chromaFetcher: ChromaFetcher[ChromaLiveFlight]) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def chromaFlights(frequency: FiniteDuration)(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
+  def chromaEdiFlights()(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
+    val chromaFlow = StreamingChromaFlow.chromaPollingSource(
+      chromaFetcher,
+      30 seconds,
+      StreamingChromaFlow.liveChromaToArrival
+    )
+
+    chromaFlow.map {
+      case aff: ArrivalsFeedFailure => aff
+      case afs: ArrivalsFeedSuccess => afs.copy(arrivals = Flights(correctEdiTerminals(afs)))
+    }
+  }
+
+  def correctEdiTerminals(afs: ArrivalsFeedSuccess): Seq[Arrival] = afs.arrivals.flights
+    .map(csf => csf.copy(Terminal = A1))
+
+  def chromaVanillaFlights(frequency: FiniteDuration)(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
     StreamingChromaFlow.chromaPollingSource(chromaFetcher, frequency, StreamingChromaFlow.liveChromaToArrival)
   }
 }

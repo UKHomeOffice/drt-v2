@@ -26,6 +26,7 @@ trait MockedChromaSendReceive extends WithSendAndReceive {
                 |"token_type":"bearer","expires_in":86399}""".stripMargin))
 
         case Uri.Path(chromaPayh) if chromaPayh.contains("/chroma/live/") =>
+          log.info("Sending mocked chroma flights.")
           HttpResponse(
             status = StatusCodes.OK,
             entity = HttpEntity(ContentTypes.`application/json`, content)

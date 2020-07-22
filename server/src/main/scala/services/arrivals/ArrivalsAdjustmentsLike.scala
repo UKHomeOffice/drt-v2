@@ -23,14 +23,20 @@ object ArrivalsAdjustments {
         .map(url =>
           EdiArrivalTerminalCsvMapper(new URL(url)) match {
             case Success(arrivalsMap) =>
+              log.info(s"Using EdiArrivalsTerminalAdjustments with Historic CSV")
               arrivalsMap
             case Failure(exception) =>
-              log.error("Failed to load EDI terminal Map CSV - only live terminal mapping available", exception)
+              log.error(
+                "Failed to load EDI terminal Map CSV - using EdiArrivalsTerminalAdjustments with no historic csv",
+                exception
+              )
               Map[String, Map[String, Terminal]]()
           }
         ).getOrElse(Map[String, Map[String, Terminal]]())
       EdiArrivalsTerminalAdjustments(historicTerminalMap)
     }
-    else
+    else {
+      log.info(s"Using  ArrivalsAdjustmentsNoop")
       ArrivalsAdjustmentsNoop
+    }
 }

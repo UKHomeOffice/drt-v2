@@ -62,7 +62,7 @@ class MockChromaConnectorSpec extends CrunchTestLike {
     }
     val testProbe = TestProbe("chroma-test")
     val liveFeed = ChromaLiveFeed(fetcher)
-    val cancellable = liveFeed.chromaFlights(1 second).to(Sink.actorRef(testProbe.ref, "done")).run()
+    val cancellable = liveFeed.chromaVanillaFlights(1 second).to(Sink.actorRef(testProbe.ref, "done")).run()
 
     testProbe.expectMsgAllClassOf(1 second, classOf[ArrivalsFeedFailure])
 

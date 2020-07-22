@@ -3,16 +3,21 @@ package services.arrivals
 import drt.shared.ArrivalsDiff
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
+import org.slf4j.LoggerFactory
 import services.SDate
 
 case class EdiArrivalsTerminalAdjustments(historicFlightTerminalMap: Map[String, Map[String, Terminal]])
   extends ArrivalsAdjustmentsLike {
+  val log = LoggerFactory.getLogger(getClass)
 
-  val defaultTerminal = Terminal("A1")
+  val defaultTerminal: Terminal = Terminal("A1")
 
-  override def apply(arrivalsDiff: ArrivalsDiff): ArrivalsDiff = applyBaggageReclaimIdRule(
-    applyHistoricTerminalRule(arrivalsDiff)
-  )
+  override def apply(arrivalsDiff: ArrivalsDiff): ArrivalsDiff = {
+    log.info(s"Adjusting terminals ${arrivalsDiff.toUpdate.size} updates and ${arrivalsDiff.toRemove.size} deletions")
+    applyBaggageReclaimIdRule(
+      applyHistoricTerminalRule(arrivalsDiff)
+    )
+  }
 
   def applyHistoricTerminalRule(arrivalsDiff: ArrivalsDiff): ArrivalsDiff = arrivalsDiff
     .copy(
@@ -31,7 +36,7 @@ case class EdiArrivalsTerminalAdjustments(historicFlightTerminalMap: Map[String,
     a.copy(Terminal = adjustedTerminal)
   }
 
-  def applyBaggageReclaimIdRule(arrivalsDiff: ArrivalsDiff) = {
+  def applyBaggageReclaimIdRule(arrivalsDiff: ArrivalsDiff): ArrivalsDiff = {
     arrivalsDiff
       .copy(
         toUpdate = arrivalsDiff.toUpdate.map {

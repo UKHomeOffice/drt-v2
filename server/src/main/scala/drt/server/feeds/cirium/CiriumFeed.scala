@@ -55,8 +55,10 @@ object CiriumFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def terminalMatchForPort(terminal: Option[String], portCode: PortCode): Terminal = portCode.iata match {
-    case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" | "EDI" =>
+    case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" =>
       T1
+    case "EDI" =>
+      A1
     case "LHR" | "MAN" =>
       terminal.map(t => Terminal(s"T$t")).getOrElse(InvalidTerminal)
     case _ => Terminal(terminal.getOrElse(""))
