@@ -347,7 +347,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   }
 
   def createLiveChromaFlightFeed(feedType: ChromaFeedType): ChromaLiveFeed = {
-    ChromaLiveFeed(new ChromaFetcher[ChromaLiveFlight](feedType, ChromaFlightMarshallers.live) with MockedChromaSendReceive)
+    ChromaLiveFeed(new ChromaFetcher[ChromaLiveFlight](feedType, ChromaFlightMarshallers.live) with ProdSendAndReceive)
   }
 
   def createForecastChromaFlightFeed(feedType: ChromaFeedType): ChromaForecastFeed = {

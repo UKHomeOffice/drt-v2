@@ -40,7 +40,7 @@ object PassengerTypeCalculator {
   def loadCountries(): Seq[Either[String, Country]] = {
     log.info(s"Loading countries for passengerTypeCalculator")
     val countryInfoStream = getClass.getClassLoader.getResourceAsStream("countrycodes.csv")
-    val asScala =  scala.io.Source.fromInputStream(countryInfoStream).getLines().drop(1)
+    val asScala = scala.io.Source.fromInputStream(countryInfoStream).getLines().drop(1)
     val visaCountries: Iterator[Either[String, Country]] = for {
       (l, idx) <- asScala.zipWithIndex
     } yield {
