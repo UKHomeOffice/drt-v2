@@ -86,4 +86,6 @@ case class DrtConfigParameters(config: Configuration) {
   val lcyLiveUsername: String = config.get[String]("feeds.lcy.live.username")
   val lcyLivePassword: String = config.get[String]("feeds.lcy.live.password")
 
+  val maybeEdiTerminalMapCsvUrl = config.getOptional[String]("feeds.edi.terminal-map-csv-url")
+
 }

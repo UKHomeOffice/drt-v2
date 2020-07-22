@@ -38,8 +38,8 @@ object TerminalFlightsSummary {
 
   def arrivalAsRawCsvValues(arrival: Arrival, millisToDateOnly: MillisSinceEpoch => String,
                             millisToHoursAndMinutes: MillisSinceEpoch => String): List[String] = {
-    List(arrival.flightCode,
-      arrival.flightCode,
+    List(arrival.flightCodeString,
+      arrival.flightCodeString,
       arrival.Origin.toString,
       arrival.Gate.getOrElse("") + "/" + arrival.Stand.getOrElse(""),
       arrival.Status.description,

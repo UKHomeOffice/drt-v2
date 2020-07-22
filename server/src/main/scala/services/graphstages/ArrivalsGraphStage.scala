@@ -8,7 +8,7 @@ import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.arrivals.{ArrivalDataSanitiser, LiveArrivalsUtil}
+import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalDataSanitiser, LiveArrivalsUtil}
 import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.SortedMap
@@ -35,6 +35,7 @@ class ArrivalsGraphStage(name: String = "",
                          pcpArrivalTime: Arrival => MilliDate,
                          validPortTerminals: Set[Terminal],
                          arrivalDataSanitiser: ArrivalDataSanitiser,
+                         arrivalsAdjustments: ArrivalsAdjustmentsLike,
                          expireAfterMillis: Int,
                          now: () => SDateLike)
   extends GraphStage[FanInShape4[List[Arrival], List[Arrival], List[Arrival], List[Arrival], ArrivalsDiff]] {
@@ -143,7 +144,7 @@ class ArrivalsGraphStage(name: String = "",
           forecastBaseArrivals ++= filteredArrivals
           toPush = mergeUpdatesFromAllSources()
       }
-      pushIfAvailable(toPush, outArrivalsDiff)
+      pushIfAvailable(toPush.map(arrivalsAdjustments(_)), outArrivalsDiff)
     }
 
     def updateArrivalsSource(existingArrivals: mutable.SortedMap[UniqueArrival, Arrival],
@@ -208,7 +209,7 @@ class ArrivalsGraphStage(name: String = "",
     def relevantFlights(arrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = {
       val toRemove = arrivals.filter {
         case (_, f) if !isFlightRelevant(f) =>
-          log.debug(s"Filtering out irrelevant arrival: ${f.flightCode}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
+          log.debug(s"Filtering out irrelevant arrival: ${f.flightCodeString}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
           true
         case _ => false
       }.keys

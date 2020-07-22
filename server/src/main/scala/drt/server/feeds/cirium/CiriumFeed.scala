@@ -9,7 +9,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.{InvalidTerminal, T1, Terminal}
+import drt.shared.Terminals.{A1, InvalidTerminal, T1, Terminal}
 import drt.shared.api.Arrival
 import drt.shared.{LiveBaseFeedSource, PortCode, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
@@ -57,6 +57,8 @@ object CiriumFeed {
   def terminalMatchForPort(terminal: Option[String], portCode: PortCode): Terminal = portCode.iata match {
     case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" =>
       T1
+    case "EDI" =>
+      A1
     case "LHR" | "MAN" =>
       terminal.map(t => Terminal(s"T$t")).getOrElse(InvalidTerminal)
     case _ => Terminal(terminal.getOrElse(""))

@@ -17,6 +17,7 @@ import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import services.arrivals.ArrivalsAdjustmentsNoop
 import services.SDate
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeployments, RunnableDeskRecs}
@@ -181,7 +182,9 @@ class TestDrtActor extends Actor {
         adjustEGateUseByUnder12s = false,
         optimiser = tc.cruncher,
         aclPaxAdjustmentDays = aclPaxAdjustmentDays,
-        startDeskRecs = startDeskRecs))
+        startDeskRecs = startDeskRecs,
+        arrivalsAdjustments = ArrivalsAdjustmentsNoop
+      ))
 
       replyTo ! CrunchGraphInputsAndProbes(
         baseArrivalsInput = crunchInputs.forecastBaseArrivalsResponse,

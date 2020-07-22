@@ -1,6 +1,5 @@
 package drt.chroma
 
-import akka.event.LoggingAdapter
 import akka.http.scaladsl.model._
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe

@@ -19,7 +19,7 @@ object LiveArrivalsUtil {
 
   def printArrival(a: Arrival): String = {
     s"""
-       |flightCode: ${a.flightCode}
+       |flightCode: ${a.flightCodeString}
        |terminal: ${a.Terminal}
        |scheduled: ${SDate(a.Scheduled).toISOString()}
        |Est: ${a.Estimated.map(d => SDate(d).toISOString())}

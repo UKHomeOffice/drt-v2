@@ -18,21 +18,12 @@ import scala.language.postfixOps
 case class ChromaLiveFeed(chromaFetcher: ChromaFetcher[ChromaLiveFlight]) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  object EdiChroma {
-    val ArrivalsHall1: Terminal = A1
-    val ArrivalsHall2: Terminal = A2
-    val ediMapTerminals: Map[Terminal, Terminal] = Map(
-      T1 -> ArrivalsHall1,
-      T2 -> ArrivalsHall2
-    )
-
-    def ediBaggageTerminalHack(csf: Arrival): Arrival = {
-      if (csf.BaggageReclaimId.getOrElse("") == "7") csf.copy(Terminal = ArrivalsHall2) else csf
-    }
-  }
-
   def chromaEdiFlights()(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
-    val chromaFlow = StreamingChromaFlow.chromaPollingSource(chromaFetcher, 30 seconds, StreamingChromaFlow.liveChromaToArrival)
+    val chromaFlow = StreamingChromaFlow.chromaPollingSource(
+      chromaFetcher,
+      30 seconds,
+      StreamingChromaFlow.liveChromaToArrival
+    )
 
     chromaFlow.map {
       case aff: ArrivalsFeedFailure => aff
@@ -41,11 +32,7 @@ case class ChromaLiveFeed(chromaFetcher: ChromaFetcher[ChromaLiveFlight]) {
   }
 
   def correctEdiTerminals(afs: ArrivalsFeedSuccess): Seq[Arrival] = afs.arrivals.flights
-    .map(EdiChroma.ediBaggageTerminalHack(_))
-    .map(csf => EdiChroma.ediMapTerminals.get(csf.Terminal) match {
-      case Some(renamedTerminal) => csf.copy(Terminal = renamedTerminal)
-      case None => csf
-    })
+    .map(csf => csf.copy(Terminal = A1))
 
   def chromaVanillaFlights(frequency: FiniteDuration)(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
     StreamingChromaFlow.chromaPollingSource(chromaFetcher, frequency, StreamingChromaFlow.liveChromaToArrival)

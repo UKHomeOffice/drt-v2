@@ -112,11 +112,11 @@ trait ProdPassengerSplitProviders {
   val csvSplitsProvider: SplitsProvider.SplitProvider = SplitsProvider.csvProvider
 
   def egatePercentageProvider(apiFlight: Arrival): Double = {
-    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight.flightCode, MilliDate(apiFlight.Scheduled)), 0.6)
+    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight.flightCodeString, MilliDate(apiFlight.Scheduled)), 0.6)
   }
 
   def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] =
-    Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight.flightCode, MilliDate(apiFlight.Scheduled)), 0d, 0d))
+    Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight.flightCodeString, MilliDate(apiFlight.Scheduled)), 0d, 0d))
 }
 
 trait UserRoleProviderLike {
@@ -208,8 +208,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   assert(defaultTimeZone == "UTC", "Default Timezone is not set to UTC")
 
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
-
-  log.info(s"Application using airportConfig $airportConfig")
 
   val cacheActorRef: ActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
 

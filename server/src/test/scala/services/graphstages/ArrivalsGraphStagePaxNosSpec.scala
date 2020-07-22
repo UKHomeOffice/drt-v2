@@ -20,7 +20,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     def fishForArrivalWithActPax(actPax: Option[Int], status: String = ""): Success = {
       crunch.portStateTestProbe.fishForMessage(1 second) {
         case PortState(flights, _, _) =>
-          flights.values.toList.exists(fws => fws.apiFlight.flightCode == "BA0001" && fws.apiFlight.ActPax == actPax && fws.apiFlight.Status == ArrivalStatus(status))
+          flights.values.toList.exists(fws => fws.apiFlight.flightCodeString == "BA0001" && fws.apiFlight.ActPax == actPax && fws.apiFlight.Status == ArrivalStatus(status))
       }
 
       success
