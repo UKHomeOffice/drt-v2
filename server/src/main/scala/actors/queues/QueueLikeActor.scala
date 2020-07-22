@@ -86,7 +86,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, val journalType: Streami
       val days: Set[MillisSinceEpoch] = uniqueDays(millis)
       updateState(days)
       emitNextDayIfReady()
-      persistAndMaybeSnapshot(DaysMessage(days.toList), Option((sender(), Ack)))
+      persistAndMaybeSnapshot(DaysMessage(days.toList))
 
     case _: SaveSnapshotSuccess =>
       log.info(s"Successfully saved snapshot")
