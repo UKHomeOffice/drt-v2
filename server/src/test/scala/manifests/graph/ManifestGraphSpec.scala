@@ -118,9 +118,11 @@ class ManifestGraphSpec extends CrunchTestLike {
       Crunch.isDueLookup,
       () => SDate("2019-03-06T11:00:00Z"))
 
+    val eventualResponses = responseSource.runWith(Sink.seq)
+
     Source(List(List(testArrival))).runWith(requestSink)
 
-    val responses = Await.result(responseSource.runWith(Sink.seq), 2 second)
+    val responses = Await.result(eventualResponses, 2 second)
 
     killSwitch.shutdown()
 
