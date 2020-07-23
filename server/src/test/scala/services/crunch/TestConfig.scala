@@ -28,7 +28,6 @@ case class TestConfig(initialForecastBaseArrivals: mutable.SortedMap[UniqueArriv
                       maybeAggregatedArrivalsActor: Option[ActorRef] = None,
                       useLegacyManifests: Boolean = false,
                       maxDaysToCrunch: Int = 2,
-                      checkRequiredStaffUpdatesOnStartup: Boolean = false,
                       refreshArrivalsOnStart: Boolean = false,
                       recrunchOnStart: Boolean = false,
                       flexDesks: Boolean = false,

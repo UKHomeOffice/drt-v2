@@ -7,22 +7,19 @@ import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch.{movementsUpdateCriteria, purgeExpired}
+import services.graphstages.Crunch.movementsUpdateCriteria
 import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.SortedMap
-import scala.collection.mutable
 
-class StaffGraphStage(name: String = "",
-                      initialShifts: ShiftAssignments,
+class StaffGraphStage(initialShifts: ShiftAssignments,
                       initialFixedPoints: FixedPointAssignments,
                       optionalInitialMovements: Option[Seq[StaffMovement]],
-                      initialStaffMinutes: StaffMinutes,
                       now: () => SDateLike,
                       expireAfterMillis: Int,
-                      airportConfig: AirportConfig,
-                      numberOfDays: Int,
-                      checkRequiredUpdatesOnStartup: Boolean) extends GraphStage[FanInShape3[ShiftAssignments, FixedPointAssignments, Seq[StaffMovement], StaffMinutes]] {
+                      numberOfDays: Int)
+  extends GraphStage[FanInShape3[ShiftAssignments, FixedPointAssignments, Seq[StaffMovement], StaffMinutes]] {
+
   val inShifts: Inlet[ShiftAssignments] = Inlet[ShiftAssignments]("Shifts.in")
   val inFixedPoints: Inlet[FixedPointAssignments] = Inlet[FixedPointAssignments]("FixedPoints.in")
   val inMovements: Inlet[Seq[StaffMovement]] = Inlet[Seq[StaffMovement]]("Movements.in")
@@ -36,10 +33,9 @@ class StaffGraphStage(name: String = "",
     var shifts: ShiftAssignments = ShiftAssignments.empty
     var fixedPoints: FixedPointAssignments = FixedPointAssignments.empty
     var movementsOption: Option[Seq[StaffMovement]] = None
-    val staffMinutes: mutable.SortedMap[TM, StaffMinute] = mutable.SortedMap()
-    val staffMinuteUpdates: mutable.SortedMap[TM, StaffMinute] = mutable.SortedMap()
+    var staffMinuteUpdates: SortedMap[TM, StaffMinute] = SortedMap()
 
-    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
+    val log: Logger = LoggerFactory.getLogger(getClass)
 
     val expireBefore: MillisSinceEpoch = now().millisSinceEpoch - expireAfterMillis
 
@@ -49,60 +45,8 @@ class StaffGraphStage(name: String = "",
       shifts = initialShifts
       fixedPoints = initialFixedPoints
       movementsOption = optionalInitialMovements
-      staffMinutes ++= initialStaffMinutes.minutes.map(sm => (TM(sm.terminal, sm.minute), sm))
-
-      if (checkRequiredUpdatesOnStartup) {
-        val lastMidnightMillis = now().getLocalLastMidnight.millisSinceEpoch
-
-        val missing = Crunch.missingMinutesForDay(lastMidnightMillis, minuteExists, airportConfig.terminals.toList, numberOfDays)
-        val requiringUpdate = minutesRequiringUpdate(lastMidnightMillis)
-
-        missing ++ requiringUpdate match {
-          case m if m.isEmpty => log.info(s"No minutes to add or update")
-          case minutes =>
-            val updateCriteria = UpdateCriteria(minutes.toList.sorted, airportConfig.terminals.toSet)
-            log.info(s"${updateCriteria.minuteMillis.length} minutes to add or update")
-            applyUpdatesFromSources(staffSources, updateCriteria)
-            log.info(s"${staffMinuteUpdates.size} minutes generated across terminals")
-        }
-      } else {
-        log.warn(s"Prestart update checks are disabled")
-      }
 
       super.preStart()
-    }
-
-    def minutesRequiringUpdate(fromMillis: MillisSinceEpoch): Set[MillisSinceEpoch] = {
-      val minutesMillis = (fromMillis until (fromMillis + (numberOfDays.toLong * MilliTimes.oneDayMillis)) by 60000).toArray
-
-      log.info(s"Checking $numberOfDays days worth of minutes (${minutesMillis.length} minutes starting at ${SDate(minutesMillis.head).toISOString()}")
-      val maybeUpdates = for {
-        terminal <- airportConfig.terminals
-        minuteMillis <- minutesMillis
-      } yield {
-        val shifts = staffSources.shifts.terminalStaffAt(terminal, SDate(minuteMillis))
-        lazy val fps = staffSources.fixedPoints.terminalStaffAt(terminal, SDate(minuteMillis))((md: MilliDate) => SDate(md))
-        lazy val mms = staffSources.movements.terminalStaffAt(terminal, minuteMillis)
-        val tm: TM = TM(terminal, minuteMillis)
-        staffMinutes.get(tm) match {
-          case None => Option(minuteMillis)
-          case Some(StaffMinute(_, _, s, f, m, _)) if s != shifts || f != fps || m != mms => Option(minuteMillis)
-          case _ => None
-        }
-      }
-
-      val requiringUpdate = maybeUpdates.collect { case Some(millis) => millis }
-
-      log.info(s"Finished checking. Found ${requiringUpdate.size} minutes requiring an update")
-
-      requiringUpdate.toSet
-    }
-
-    @scala.annotation.tailrec
-    def minuteExists(millis: MillisSinceEpoch, terminals: List[Terminal]): Boolean = terminals match {
-      case Nil => false
-      case t :: _ if staffMinutes.contains(TM(t, millis)) => true
-      case _ :: tail => minuteExists(millis, tail)
     }
 
     setHandler(inShifts, new InHandler {
@@ -222,10 +166,7 @@ class StaffGraphStage(name: String = "",
           }
         })
 
-      staffMinutes ++= updatedMinutes
-      staffMinuteUpdates ++= updatedMinutes
-
-      purgeExpired(staffMinutes, TM.atTime, now, expireAfterMillis.toInt)
+      staffMinuteUpdates = staffMinuteUpdates ++ updatedMinutes
     }
 
     def tryPush(): Unit = {
@@ -233,8 +174,8 @@ class StaffGraphStage(name: String = "",
         if (staffMinuteUpdates.nonEmpty) {
           log.info(s"Pushing ${staffMinuteUpdates.size} staff minute updates")
           Metrics.counter(s"$stageName.minute-updates", staffMinuteUpdates.size)
-          push(outStaffMinutes, StaffMinutes(Map[TM, StaffMinute]() ++ staffMinuteUpdates))
-          staffMinuteUpdates.clear()
+          push(outStaffMinutes, StaffMinutes(staffMinuteUpdates))
+          staffMinuteUpdates = SortedMap()
         }
       } else log.debug(s"outStaffMinutes not available to push")
     }

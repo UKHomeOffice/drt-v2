@@ -109,10 +109,10 @@ class StaffMinutesSpec extends CrunchTestLike {
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
       ),
-      now = () => shiftStart,
-      initialShifts = initialShifts,
-      checkRequiredStaffUpdatesOnStartup = true
+      now = () => shiftStart
     ))
+
+    offerAndWait(crunch.shiftsInput, initialShifts)
 
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
     val expectedMillis = (shiftStart.millisSinceEpoch to (shiftStart.millisSinceEpoch + 29 * oneMinuteMillis) by oneMinuteMillis).toList
@@ -196,10 +196,10 @@ class StaffMinutesSpec extends CrunchTestLike {
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
       ),
-      now = () => startDate,
-      checkRequiredStaffUpdatesOnStartup = true,
-      initialStaffMovements = initialMovements
+      now = () => startDate
     ))
+
+    offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
 
     val minutesToCheck = 5
     val expectedStaffAvailableAndMovements = List.fill(minutesToCheck)((0, -1))
@@ -361,10 +361,10 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(
       now = () => now,
-      initialFixedPoints = fixedPoints,
-      maxDaysToCrunch = 5,
-      checkRequiredStaffUpdatesOnStartup = true
+      maxDaysToCrunch = 5
     ))
+
+    offerAndWait(crunch.fixedPointsInput, fixedPoints)
 
     val expectedStaffMinutes = (0 until 5).map { day =>
       val date = SDate(scheduled).addDays(day).toISODateOnly
@@ -407,11 +407,11 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(
       now = () => now,
-      initialFixedPoints = fixedPoints,
       maxDaysToCrunch = daysToCrunch,
-      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled))),
-      checkRequiredStaffUpdatesOnStartup = true
+      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled)))
     ))
+
+    offerAndWait(crunch.fixedPointsInput, fixedPoints)
 
     val expectedStaffMinutes = (0 until 5).map { day =>
       val date = SDate(scheduled).addDays(day).toISODateOnly

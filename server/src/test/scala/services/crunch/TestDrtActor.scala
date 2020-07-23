@@ -176,7 +176,6 @@ class TestDrtActor extends Actor {
         initialFixedPoints = tc.initialFixedPoints,
         initialStaffMovements = tc.initialStaffMovements,
         refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
-        checkRequiredStaffUpdatesOnStartup = tc.checkRequiredStaffUpdatesOnStartup,
         stageThrottlePer = 50 milliseconds,
         pcpPaxFn = tc.pcpPaxFn,
         adjustEGateUseByUnder12s = false,

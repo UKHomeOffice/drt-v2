@@ -70,7 +70,6 @@ case class CrunchProps[FR](
                             initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
                             initialStaffMovements: Seq[StaffMovement] = Seq(),
                             refreshArrivalsOnStart: Boolean,
-                            checkRequiredStaffUpdatesOnStartup: Boolean,
                             stageThrottlePer: FiniteDuration,
                             adjustEGateUseByUnder12s: Boolean,
                             optimiser: TryCrunch,
@@ -90,8 +89,6 @@ object CrunchSystem {
     val fixedPointsSource: Source[FixedPointAssignments, SourceQueueWithComplete[FixedPointAssignments]] = Source.queue[FixedPointAssignments](10, OverflowStrategy.backpressure)
     val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.backpressure)
     val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](10, OverflowStrategy.backpressure)
-
-    val maybeStaffMinutes = initialStaffMinutesFromPortState(props.initialPortState)
 
     val initialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState)
 
@@ -143,16 +140,12 @@ object CrunchSystem {
     )
 
     val staffGraphStage = new StaffGraphStage(
-      name = props.logLabel,
       initialShifts = props.initialShifts,
       initialFixedPoints = props.initialFixedPoints,
       optionalInitialMovements = Option(props.initialStaffMovements),
-      initialStaffMinutes = maybeStaffMinutes.getOrElse(StaffMinutes(Seq())),
       now = props.now,
       expireAfterMillis = props.expireAfterMillis,
-      airportConfig = props.airportConfig,
-      numberOfDays = props.maxDaysToCrunch,
-      checkRequiredUpdatesOnStartup = props.checkRequiredStaffUpdatesOnStartup)
+      numberOfDays = props.maxDaysToCrunch)
 
     val crunchSystem = RunnableCrunch(
       forecastBaseArrivalsSource = props.arrivalsForecastBaseSource,

@@ -2,7 +2,6 @@ package test
 
 import actors._
 import actors.acking.AckingReceiver.Ack
-import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Status}
 import akka.pattern.ask
 import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
