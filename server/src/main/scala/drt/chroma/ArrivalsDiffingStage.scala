@@ -10,7 +10,6 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSucc
 import services.metrics.StageTimer
 
 import scala.collection.immutable.SortedMap
-import scala.collection.mutable
 
 
 final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, Arrival], forecastMaxMillis: () => MillisSinceEpoch) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
@@ -23,10 +22,10 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
   override val shape: FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse] = FlowShape.of(in, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    val knownArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap[UniqueArrival, Arrival]()
+    var knownArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival]()
     var maybeResponseToPush: Option[ArrivalsFeedResponse] = None
 
-    knownArrivals ++= initialKnownArrivals
+    knownArrivals = knownArrivals ++ initialKnownArrivals
 
     override def preStart(): Unit = {
       log.info(s"Started with ${knownArrivals.size} known arrivals")
@@ -65,8 +64,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
         val incomingArrivals: Seq[(UniqueArrival, Arrival)] = latestArrivals.flights.filter(_.Scheduled <= maxScheduledMillis).map(a => (UniqueArrival(a), a))
         val newUpdates: Seq[(UniqueArrival, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
         if (newUpdates.nonEmpty) log.info(s"Got ${newUpdates.size} new arrival updates")
-        knownArrivals.clear
-        knownArrivals ++= incomingArrivals
+        knownArrivals = SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals
         Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates.map(_._2))))
       case aff@ArrivalsFeedFailure(_, _) =>
         log.info("Passing ArrivalsFeedFailure through. Nothing to diff. No updates to knownArrivals")
@@ -76,7 +74,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
         None
     }
 
-    def filterArrivalsWithUpdates(existingArrivals: mutable.SortedMap[UniqueArrival, Arrival], newArrivals: Seq[(UniqueArrival, Arrival)]): Seq[(UniqueArrival, Arrival)] = newArrivals
+    def filterArrivalsWithUpdates(existingArrivals: SortedMap[UniqueArrival, Arrival], newArrivals: Seq[(UniqueArrival, Arrival)]): Seq[(UniqueArrival, Arrival)] = newArrivals
       .foldLeft(List[(UniqueArrival, Arrival)]()) {
         case (soFar, (key, arrival)) => existingArrivals.get(key) match {
           case None => (key, arrival) :: soFar

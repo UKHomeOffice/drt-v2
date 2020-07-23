@@ -23,7 +23,6 @@ import services.crunch.CrunchSystem
 import slickdb.{ArrivalTable, Tables}
 
 import scala.collection.immutable.SortedMap
-import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
