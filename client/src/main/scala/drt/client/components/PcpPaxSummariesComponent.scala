@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{ViewLive, ViewMode}
+import drt.client.services.ViewMode
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
@@ -51,7 +51,7 @@ object PcpPaxSummariesComponent {
               boxes.zipWithIndex.map {
                 case (label, box) =>
                   val start = now.addMinutes(box * 5)
-                  val crunchMinutes = cs.window(start, start.addMinutes(5), Map(props.terminalName -> queues)).crunchMinutes
+                  val crunchMinutes = cs.window(start, start.addMinutes(5)).crunchMinutes
                   val summary = PcpPaxSummary(start, fiveMinutes, crunchMinutes, props.terminalName, queues.toSet)
                   summaryBox(box, label, start, queues, summary)
               }.toTagMod

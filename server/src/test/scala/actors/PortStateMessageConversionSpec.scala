@@ -23,10 +23,7 @@ class PortStateMessageConversionSpec extends Specification {
       StaffMinuteMessage(Option("T1"), Option(validMinuteMilli), Option(1), Option(0), Option(0), None),
       StaffMinuteMessage(Option("T1"), Option(invalidMinuteMilli), Option(2), Option(0), Option(0), None)
     )
-    val stateM = PortStateMutable.empty
-    snapshotMessageToState(CrunchStateSnapshotMessage(None, None, Seq(), crunchMinutes, staffMinutes), None, stateM)
-
-    val state = stateM.immutable
+    val state = snapshotMessageToState(CrunchStateSnapshotMessage(None, None, Seq(), crunchMinutes, staffMinutes), None)
 
     val correctedMillis = MilliDate(invalidMinuteMilli).millisSinceEpoch
     val expectedCrunchMinutes = SortedMap[TQM, CrunchMinute]() ++ Seq(

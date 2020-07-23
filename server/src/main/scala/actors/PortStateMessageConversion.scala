@@ -8,55 +8,34 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
-import services.SDate
-import services.graphstages.Crunch
 
 object PortStateMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def snapshotMessageToState(sm: CrunchStateSnapshotMessage,
-                             optionalTimeWindowEnd: Option[SDateLike],
-                             state: PortStateMutable): Unit = {
-    state.clear()
-
-    log.debug(s"Unwrapping flights messages")
+                             optionalTimeWindowEnd: Option[SDateLike]): PortState =
     optionalTimeWindowEnd match {
       case None =>
-        state.flights ++= sm.flightWithSplits.map(message => {
-          val fws = flightWithSplitsFromMessage(message)
-          (fws.unique, fws)
-        })
-        state.crunchMinutes ++= sm.crunchMinutes.collect {
-          case message =>
-            val cm = crunchMinuteFromMessage(message)
-            (cm.key, cm)
-        }
-        state.staffMinutes ++= sm.staffMinutes.collect {
-          case message if message.getShifts > 0 =>
-            val sm = staffMinuteFromMessage(message)
-            (sm.key, sm)
-        }
+        val flights = sm.flightWithSplits.map(flightWithSplitsFromMessage)
+        val crunchMinutes = sm.crunchMinutes.map(crunchMinuteFromMessage)
+        val staffMinutes = sm.staffMinutes.map(staffMinuteFromMessage)
+        PortState(flights, crunchMinutes, staffMinutes)
       case Some(timeWindowEnd) =>
         val windowEndMillis = timeWindowEnd.millisSinceEpoch
-        state.flights ++= sm.flightWithSplits.collect {
+        val flights = sm.flightWithSplits.collect {
           case message if message.flight.map(fm => fm.pcpTime.getOrElse(0L)).getOrElse(0L) <= windowEndMillis =>
-            val fws = flightWithSplitsFromMessage(message)
-            (fws.unique, fws)
+            flightWithSplitsFromMessage(message)
         }
-        state.crunchMinutes ++= sm.crunchMinutes.collect {
+        val crunchMinutes = sm.crunchMinutes.collect {
           case message if message.getMinute <= windowEndMillis =>
-            val cm = crunchMinuteFromMessage(message)
-            (cm.key, cm)
+            crunchMinuteFromMessage(message)
         }
-        state.staffMinutes ++= sm.staffMinutes.collect {
+        val staffMinutes = sm.staffMinutes.collect {
           case message if message.getMinute <= windowEndMillis =>
-            val sm = staffMinuteFromMessage(message)
-            (sm.key, sm)
+            staffMinuteFromMessage(message)
         }
+        PortState(flights, crunchMinutes, staffMinutes)
     }
-
-    log.debug(s"Finished unwrapping messages")
-  }
 
   def crunchMinuteFromMessage(cmm: CrunchMinuteMessage): CrunchMinute = {
     val minute = cmm.minute.getOrElse(0L)
@@ -98,23 +77,18 @@ object PortStateMessageConversion {
     movements = Option(sm.movements),
     lastUpdated = sm.lastUpdated)
 
-  def snapshotMessageToFlightsState(sm: CrunchStateSnapshotMessage, state: PortStateMutable): Unit = {
-    state.clear()
-    state.flights ++= flightsFromMessages(sm.flightWithSplits)
-  }
-
   def flightsFromMessages(flightMessages: Seq[FlightWithSplitsMessage]): Seq[(UniqueArrival, ApiFlightWithSplits)] = flightMessages.map(message => {
     val fws = flightWithSplitsFromMessage(message)
     (fws.unique, fws)
   })
 
-  def portStateToSnapshotMessage(portState: PortStateMutable): CrunchStateSnapshotMessage = {
+  def portStateToSnapshotMessage(portState: PortState): CrunchStateSnapshotMessage = {
     CrunchStateSnapshotMessage(
       Option(0L),
       Option(0),
-      portState.flights.all.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
-      portState.crunchMinutes.all.values.toList.map(crunchMinuteToMessage),
-      portState.staffMinutes.all.values.toList.map(staffMinuteToMessage)
+      portState.flights.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
+      portState.crunchMinutes.values.toList.map(crunchMinuteToMessage),
+      portState.staffMinutes.values.toList.map(staffMinuteToMessage)
       )
   }
 

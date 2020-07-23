@@ -24,7 +24,7 @@ object FilterCrunchByRangeTests extends TestSuite {
 
         val state = PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange))
         val (start, end) = viewStartAndEnd(dateWithinRange, range)
-        val result = state.window(start, end, Map(T1 -> Seq(Queues.EeaDesk)))
+        val result = state.window(start, end)
         val expected = PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange))
 
         assert(result == expected)
@@ -37,7 +37,7 @@ object FilterCrunchByRangeTests extends TestSuite {
 
         val state = PortState(List(flightNotWithinRange), List(crunchMinuteNotWithinRange), List(staffMinuteNotWithinRange))
         val (start, end) = viewStartAndEnd(dateWithinRange, range)
-        val result = state.window(start, end, Map(T1 -> Seq(Queues.EeaDesk)))
+        val result = state.window(start, end)
         val expected = PortState.empty
 
         assert(result == expected)
@@ -58,7 +58,7 @@ object FilterCrunchByRangeTests extends TestSuite {
           List(staffMinuteNotWithinRange, staffMinuteWithinRange))
 
         val (start, end) = viewStartAndEnd(dateWithinRange, range)
-        val result = portState.window(start, end, Map(T1 -> Seq(Queues.EeaDesk)))
+        val result = portState.window(start, end)
 
         val expected = PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange))
 

@@ -61,11 +61,11 @@ class CrunchStateReadActor(pointInTime: SDateLike,
 
     case GetCrunchMinutes(terminal) =>
       log.debug(s"Received GetCrunchMinutes request")
-      sender() ! Option(MinutesContainer(state.immutable.crunchMinutes.filterKeys(tqm => tqm.terminal == terminal).values))
+      sender() ! Option(MinutesContainer(state.crunchMinutes.filterKeys(tqm => tqm.terminal == terminal).values))
 
     case GetStaffMinutes(terminal) =>
       log.debug(s"Received GetStaffMinutes request")
-      sender() ! Option(MinutesContainer(state.immutable.staffMinutes.filterKeys(tm => tm.terminal == terminal).values))
+      sender() ! Option(MinutesContainer(state.staffMinutes.filterKeys(tm => tm.terminal == terminal).values))
 
     case GetStateForDateRange(start, end) =>
       logInfo(s"Received GetStateForDateRange Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
@@ -126,5 +126,5 @@ class CrunchStateReadActor(pointInTime: SDateLike,
   }
 
   def stateForPeriodForTerminal(start: MillisSinceEpoch, end: MillisSinceEpoch, terminalName: Terminal): PortState =
-    state.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.keys.filter(_ == terminalName).toSeq)
+    state.windowWithTerminalFilter(SDate(start), SDate(end), portQueues.filterKeys(_ == terminalName))
 }

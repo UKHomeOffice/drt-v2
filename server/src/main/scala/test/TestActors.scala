@@ -309,7 +309,7 @@ object TestActors {
       expireAfterMillis = expireAfterMillis,
       purgePreviousSnapshots = purgePreviousSnapshots,
       forecastMaxMillis = () => now().addDays(2).millisSinceEpoch) with Resettable {
-    override def resetState(): Unit = state = PortStateMutable.empty
+    override def resetState(): Unit = state = PortState.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
