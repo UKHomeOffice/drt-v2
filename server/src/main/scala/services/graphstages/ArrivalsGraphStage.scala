@@ -197,11 +197,11 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def purgeExpired(): Unit = {
-      Crunch.purgeExpired(liveArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
-      Crunch.purgeExpired(liveBaseArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
-      Crunch.purgeExpired(forecastArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
-      Crunch.purgeExpired(forecastBaseArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
-      Crunch.purgeExpired(merged, UniqueArrival.atTime, now, expireAfterMillis.toInt)
+      liveArrivals = Crunch.purgeExpired(liveArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
+      liveBaseArrivals = Crunch.purgeExpired(liveBaseArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
+      forecastArrivals = Crunch.purgeExpired(forecastArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
+      forecastBaseArrivals = Crunch.purgeExpired(forecastBaseArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
+      merged = Crunch.purgeExpired(merged, UniqueArrival.atTime, now, expireAfterMillis.toInt)
     }
 
     def relevantFlights(arrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = {

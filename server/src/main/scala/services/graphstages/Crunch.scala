@@ -205,9 +205,9 @@ object Crunch {
     val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
     val sizeBefore = expireable.size
     val expired = expireable.range(atTime(0L), atTime(thresholdMillis + 1))
-    val updatedExpireable =expireable -- expired.keys
+    val updatedExpireable = expireable -- expired.keys
     val purgedCount = sizeBefore - updatedExpireable.size
-    if (purgedCount > 0) log.info(s"Purged $purgedCount items (mutable.SortedMap[A, B])")
+    if (purgedCount > 0) log.info(s"Purged $purgedCount items (SortedMap[A, B])")
     updatedExpireable
   }
 
@@ -232,7 +232,7 @@ object Crunch {
     val expired = expireable.range(atTime(0L), atTime(thresholdMillis + 1))
     val updatedExpireable = expireable -- expired
     val purgedCount = sizeBefore - updatedExpireable.size
-    if (purgedCount > 0) log.info(s"Purged $purgedCount items (mutable.SortedSet[A])")
+    if (purgedCount > 0) log.info(s"Purged $purgedCount items (SortedSet[A])")
     updatedExpireable
   }
 
