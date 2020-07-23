@@ -27,11 +27,11 @@ case object ForecastArrivals extends ArrivalsSourceType
 case object BaseArrivals extends ArrivalsSourceType
 
 class ArrivalsGraphStage(name: String = "",
-                         initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival],
-                         initialForecastArrivals: mutable.SortedMap[UniqueArrival, Arrival],
-                         initialLiveBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival],
-                         initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival],
-                         initialMergedArrivals: mutable.SortedMap[UniqueArrival, Arrival],
+                         initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival],
+                         initialForecastArrivals: SortedMap[UniqueArrival, Arrival],
+                         initialLiveBaseArrivals: SortedMap[UniqueArrival, Arrival],
+                         initialLiveArrivals: SortedMap[UniqueArrival, Arrival],
+                         initialMergedArrivals: SortedMap[UniqueArrival, Arrival],
                          pcpArrivalTime: Arrival => MilliDate,
                          validPortTerminals: Set[Terminal],
                          arrivalDataSanitiser: ArrivalDataSanitiser,
@@ -73,7 +73,7 @@ class ArrivalsGraphStage(name: String = "",
       super.preStart()
     }
 
-    def prepInitialArrivals(initialArrivals: mutable.SortedMap[UniqueArrival, Arrival],
+    def prepInitialArrivals(initialArrivals: SortedMap[UniqueArrival, Arrival],
                             arrivals: mutable.SortedMap[UniqueArrival, Arrival]): Unit = {
       arrivals ++= relevantFlights(SortedMap[UniqueArrival, Arrival]() ++ initialArrivals)
       Crunch.purgeExpired(arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)

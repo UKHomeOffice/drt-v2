@@ -110,7 +110,6 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
       manifestRequestsSink,
       manifestResponsesSource,
       refreshArrivalsOnStart = false,
-      checkRequiredStaffUpdatesOnStartup = false,
       startDeskRecs = startDeskRecs)
 
     val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000

@@ -2,17 +2,17 @@ package services.crunch
 
 import actors.DrtStaticParameters
 import akka.actor.{ActorRef, Props}
-import drt.shared.{AirportConfig, FixedPointAssignments, MilliDate, PortState, SDateLike, ShiftAssignments, StaffMovement, UniqueArrival}
 import drt.shared.api.Arrival
-import services.{Simulator, SplitsProvider, TryCrunch}
+import drt.shared._
 import services.graphstages.CrunchMocks
+import services.{Simulator, SplitsProvider, TryCrunch}
 
-import scala.collection.mutable
+import scala.collection.immutable.SortedMap
 
-case class TestConfig(initialForecastBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
-                      initialForecastArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
-                      initialLiveBaseArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
-                      initialLiveArrivals: mutable.SortedMap[UniqueArrival, Arrival] = mutable.SortedMap(),
+case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
+                      initialForecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
+                      initialLiveBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
+                      initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
                       initialPortState: Option[PortState] = None,
                       airportConfig: AirportConfig = TestDefaults.airportConfig,
                       csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,

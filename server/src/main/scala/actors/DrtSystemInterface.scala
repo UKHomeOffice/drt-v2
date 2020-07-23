@@ -52,7 +52,7 @@ import services.graphstages.Crunch
 import services.graphstages.Crunch.crunchStartWithOffset
 import slickdb.VoyageManifestPassengerInfoTable
 
-import scala.collection.mutable
+import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
@@ -129,14 +129,13 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
   def startCrunchSystem(initialPortState: Option[PortState],
-                        initialForecastBaseArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
-                        initialForecastArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
-                        initialLiveBaseArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
-                        initialLiveArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
+                        initialForecastBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
+                        initialForecastArrivals: Option[SortedMap[UniqueArrival, Arrival]],
+                        initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
+                        initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         manifestRequestsSink: Sink[List[Arrival], NotUsed],
                         manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                         refreshArrivalsOnStart: Boolean,
-                        checkRequiredStaffUpdatesOnStartup: Boolean,
                         startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {
 
     val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
@@ -173,10 +172,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       manifestRequestsSink = manifestRequestsSink,
       simulator = Optimiser.runSimulationOfWork,
       initialPortState = initialPortState,
-      initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(mutable.SortedMap()),
-      initialForecastArrivals = initialForecastArrivals.getOrElse(mutable.SortedMap()),
-      initialLiveBaseArrivals = initialLiveBaseArrivals.getOrElse(mutable.SortedMap()),
-      initialLiveArrivals = initialLiveArrivals.getOrElse(mutable.SortedMap()),
+      initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(SortedMap()),
+      initialForecastArrivals = initialForecastArrivals.getOrElse(SortedMap()),
+      initialLiveBaseArrivals = initialLiveBaseArrivals.getOrElse(SortedMap()),
+      initialLiveArrivals = initialLiveArrivals.getOrElse(SortedMap()),
       arrivalsForecastBaseSource = baseArrivalsSource(),
       arrivalsForecastSource = forecastArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveBaseSource = liveBaseArrivalsSource(airportConfig.feedPortCode),

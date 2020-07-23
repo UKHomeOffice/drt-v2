@@ -22,6 +22,7 @@ import services._
 import services.crunch.CrunchSystem
 import slickdb.{ArrivalTable, Tables}
 
+import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -87,7 +88,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     } else userRolesFromHeader(headers)
 
   def run(): Unit = {
-    val futurePortStates: Future[(Option[PortState], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[mutable.SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
+    val futurePortStates: Future[(Option[PortState], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
       val maybeLivePortState = if (usePartitionedPortState) initialFlightsPortState(portStateActor) else initialStateFuture[PortState](portStateActor)
       val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
@@ -112,12 +113,11 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
           maybePortState,
           maybeBaseArrivals,
           maybeForecastArrivals,
-          Option(mutable.SortedMap[UniqueArrival, Arrival]()),
+          Option(SortedMap[UniqueArrival, Arrival]()),
           maybeLiveArrivals,
           manifestRequestsSink,
           manifestResponsesSource,
           params.refreshArrivalsOnStart,
-          checkRequiredStaffUpdatesOnStartup = false,
           startDeskRecs)
 
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
@@ -170,14 +170,13 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
                                 initialPortState: Option[PortState]): Option[RegisteredArrivals] =
     if (params.resetRegisteredArrivalOnStart) {
       log.info(s"Resetting registered arrivals for manifest lookups")
-      val maybeAllArrivals: Option[mutable.SortedMap[ArrivalKey, Option[MillisSinceEpoch]]] = initialPortState
+      val maybeAllArrivals = initialPortState
         .map { state =>
-          val arrivalsByKeySorted = mutable.SortedMap[ArrivalKey, Option[MillisSinceEpoch]]()
-          state.flights.values.foreach(fws => arrivalsByKeySorted += (ArrivalKey(fws.apiFlight) -> None))
+          val arrivalsByKeySorted = SortedMap[ArrivalKey, Option[MillisSinceEpoch]]() ++ state.flights.values.map(fws => ArrivalKey(fws.apiFlight) -> None)
           log.info(s"Sending ${arrivalsByKeySorted.size} arrivals by key from ${state.flights.size} port state arrivals")
           arrivalsByKeySorted
         }
-      Option(RegisteredArrivals(maybeAllArrivals.getOrElse(mutable.SortedMap())))
+      Option(RegisteredArrivals(maybeAllArrivals.getOrElse(SortedMap())))
     } else maybeRegisteredArrivals
 }
 

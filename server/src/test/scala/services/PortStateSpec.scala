@@ -13,7 +13,7 @@ import drt.shared.api.Arrival
 import server.feeds.ArrivalsFeedSuccess
 import services.crunch.{CrunchTestLike, TestConfig}
 
-import scala.collection.mutable
+import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -195,7 +195,7 @@ class PortStateSpec extends CrunchTestLike {
         val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduled, terminal = T1)
         val fws = ApiFlightWithSplits(arrival, Set())
         val existingPortState = PortState(Iterable(fws), Iterable(), Iterable())
-        val initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival]() ++ Seq(arrival).map(a => (a.unique, a)).toMap
+        val initialLiveArrivals = SortedMap[UniqueArrival, Arrival]() ++ Seq(arrival).map(a => (a.unique, a)).toMap
         val crunch = runCrunchGraph(TestConfig(now = now, refreshArrivalsOnStart = true, initialPortState = Option(existingPortState), initialLiveArrivals = initialLiveArrivals))
 
         val newArrival = ArrivalGenerator.arrival("BA0010", schDt = scheduled, terminal = T2, actPax = Option(100))

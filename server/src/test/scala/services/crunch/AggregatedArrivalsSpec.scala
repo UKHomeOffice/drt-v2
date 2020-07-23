@@ -21,7 +21,6 @@ import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTabl
 import test.feeds.test.GetArrivals
 
 import scala.collection.immutable.{List, Seq, SortedMap}
-import scala.collection.mutable
 import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.util.Try
@@ -127,7 +126,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     val testProbe = TestProbe("arrivals-probe")
 
     val crunch = runCrunchGraph(TestConfig(
-      initialForecastBaseArrivals = mutable.SortedMap[UniqueArrival, Arrival](expiredArrival.unique -> expiredArrival),
+      initialForecastBaseArrivals = SortedMap[UniqueArrival, Arrival](expiredArrival.unique -> expiredArrival),
       initialPortState = Option(initialPortState),
       now = () => SDate(scheduled),
       expireAfterMillis = 250,
@@ -168,7 +167,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     val testProbe = TestProbe("arrivals-probe")
 
     val crunch = runCrunchGraph(TestConfig(
-      initialForecastBaseArrivals = mutable.SortedMap[UniqueArrival, Arrival](descheduledArrival.unique -> descheduledArrival),
+      initialForecastBaseArrivals = SortedMap[UniqueArrival, Arrival](descheduledArrival.unique -> descheduledArrival),
       initialPortState = Option(initialPortState),
       now = () => SDate(scheduled),
       expireAfterMillis = 250,

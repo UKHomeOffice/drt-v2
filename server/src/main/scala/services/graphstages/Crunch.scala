@@ -10,8 +10,8 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
 
-import scala.collection.immutable.{Map, SortedMap}
-import scala.collection.mutable
+import scala.collection.immutable.{Map, SortedMap, SortedSet}
+import scala.collection.{immutable, mutable}
 
 object Crunch {
   val paxOffPerMinute: Int = 20
@@ -198,6 +198,19 @@ object Crunch {
     if (purgedCount > 0) log.info(s"Purged $purgedCount items (mutable.SortedMap[A, B])")
   }
 
+  def purgeExpired[A <: WithTimeAccessor, B](expireable: SortedMap[A, B],
+                                             atTime: MillisSinceEpoch => A,
+                                             now: () => SDateLike,
+                                             expireAfter: Int): SortedMap[A, B] = {
+    val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
+    val sizeBefore = expireable.size
+    val expired = expireable.range(atTime(0L), atTime(thresholdMillis + 1))
+    val updatedExpireable =expireable -- expired.keys
+    val purgedCount = sizeBefore - updatedExpireable.size
+    if (purgedCount > 0) log.info(s"Purged $purgedCount items (mutable.SortedMap[A, B])")
+    updatedExpireable
+  }
+
   def purgeExpired[A <: WithTimeAccessor](expireable: mutable.SortedSet[A],
                                           atTime: MillisSinceEpoch => A,
                                           now: () => SDateLike,
@@ -208,6 +221,19 @@ object Crunch {
     expireable --= expired
     val purgedCount = sizeBefore - expireable.size
     if (purgedCount > 0) log.info(s"Purged $purgedCount items (mutable.SortedSet[A])")
+  }
+
+  def purgeExpired[A <: WithTimeAccessor](expireable: SortedSet[A],
+                                          atTime: MillisSinceEpoch => A,
+                                          now: () => SDateLike,
+                                          expireAfter: Int): SortedSet[A] = {
+    val thresholdMillis = now().addMillis(-1 * expireAfter).millisSinceEpoch
+    val sizeBefore = expireable.size
+    val expired = expireable.range(atTime(0L), atTime(thresholdMillis + 1))
+    val updatedExpireable = expireable -- expired
+    val purgedCount = sizeBefore - updatedExpireable.size
+    if (purgedCount > 0) log.info(s"Purged $purgedCount items (mutable.SortedSet[A])")
+    updatedExpireable
   }
 
   def hasExpired[A](now: SDateLike, expireAfterMillis: Int, toMillis: A => MillisSinceEpoch)(toCompare: A): Boolean = {
@@ -273,14 +299,11 @@ object Crunch {
     .toSeq
 
   def baseArrivalsRemovalsAndUpdates(incoming: Map[UniqueArrival, Arrival],
-                                     existing: mutable.Map[UniqueArrival, Arrival]): (mutable.Set[UniqueArrival], mutable.Set[Arrival]) = {
-    val removals = mutable.Set[UniqueArrival]()
-    val updates = mutable.Set[Arrival]()
+                                     existing: Map[UniqueArrival, Arrival]): (Set[UniqueArrival], Iterable[Arrival]) = {
+    val removals = existing.keys.toSet -- incoming.keys.toSet
 
-    removals ++= existing.keys.toSet -- incoming.keys.toSet
-
-    incoming.foreach {
-      case (k, a) => if (!existing.contains(k) || existing(k) != a) updates += a
+    val updates = incoming.collect {
+      case (k, a) if !existing.contains(k) || existing(k) != a =>  a
     }
 
     (removals, updates)

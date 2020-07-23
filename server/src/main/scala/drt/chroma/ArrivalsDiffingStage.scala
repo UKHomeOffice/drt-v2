@@ -9,10 +9,11 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.metrics.StageTimer
 
+import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 
 
-final class ArrivalsDiffingStage(initialKnownArrivals: mutable.SortedMap[UniqueArrival, Arrival], forecastMaxMillis: () => MillisSinceEpoch) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
+final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, Arrival], forecastMaxMillis: () => MillisSinceEpoch) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
   val in: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("DiffingStage.in")
   val out: Outlet[ArrivalsFeedResponse] = Outlet[ArrivalsFeedResponse]("DiffingStage.out")
   val stageName = "arrivals-diffing"
