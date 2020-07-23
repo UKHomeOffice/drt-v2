@@ -109,10 +109,10 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
       Source(Crunch.utcDaysInPeriod(start, end).toList)
         .mapAsync(1) {
           case day if isHistoric(day) =>
-            log.info(s"${day.toISOString()} is historic. Will use secondary source if primary data doesn't exist")
+            log.debug(s"${day.toISOString()} is historic. Will use secondary source if primary data doesn't exist")
             handleLookup(lookup(terminal, day, maybePointInTime), Option(() => lookupLegacy(terminal, day, maybePointInTime))).map(r => (day, r))
           case day =>
-            log.info(s"${day.toISOString()} is live. Look up live data from terminal/day actor")
+            log.debug(s"${day.toISOString()} is live. Look up live data from terminal/day actor")
             handleLookup(lookup(terminal, day, maybePointInTime), None).map(r => (day, r))
         }
         .collect {
