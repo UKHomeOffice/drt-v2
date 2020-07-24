@@ -64,6 +64,8 @@ describe('Arrivals page', () => {
     }
   }
 
+  const totalPaxSelector = ':nth-child(12) > .right';
+
   it('Displays a flight after it has been ingested via the live feed', () => {
     cy
       .addFlight(
@@ -115,9 +117,9 @@ describe('Arrivals page', () => {
   ];
 
   it('Handles manifests where the doctype is specified incorectly or left off', () => {
-    const eGatesCellSelector = ':nth-child(12) > span';
-    const eeaCellSelector = ':nth-child(13) > span';
-    const nonEeaCellSelector = ':nth-child(14) > span';
+    const eGatesCellSelector = ':nth-child(13) > span';
+    const eeaCellSelector = ':nth-child(14) > span';
+    const nonEeaCellSelector = ':nth-child(15) > span';
 
     cy
       .addFlight({
@@ -138,8 +140,6 @@ describe('Arrivals page', () => {
   });
 
   it('Uses passenger numbers calculated from API data if no live pax number exists', () => {
-
-    const totalPaxSelector = ':nth-child(11) > .right';
 
     cy
       .addFlight({
@@ -184,7 +184,6 @@ describe('Arrivals page', () => {
 
   it('only counts each passenger once if API data contains multiple entries for each passenger', () => {
 
-    const totalPaxSelector = ':nth-child(11) > .right';
     cy
       .addFlight({
         "SchDT": todayAtUtcString(0, 55),
@@ -209,7 +208,6 @@ describe('Arrivals page', () => {
 
   it('does not add transit passengers to the total pax when using API pax', () => {
 
-    const totalPaxSelector = ':nth-child(11) > .right';
     cy
       .addFlight({
         "SchDT": todayAtUtcString(0, 55),
