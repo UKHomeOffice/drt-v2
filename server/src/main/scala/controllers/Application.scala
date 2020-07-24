@@ -186,7 +186,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   ctrl.run()
 
-  val now: () => SDateLike = (() => SDate.now())
+  val now: () => SDateLike = () => SDate.now()
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
 
@@ -368,8 +368,10 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
   }
 
-  def getActorTree(): Action[AnyContent] = Action { request =>
-    Ok(ActorTree.get().toString)
+  def getActorTree: Action[AnyContent] = authByRole(Debug) {
+    Action { _ =>
+      Ok(ActorTree.get().toString)
+    }
   }
 
   def healthCheck: Action[AnyContent] = Action.async { _ =>
@@ -485,23 +487,3 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 }
 
 case class GetTerminalCrunch(terminalName: Terminal)
-
-class PrivateMethodCaller(x: AnyRef, methodName: String) {
-  def apply(_args: Any*): Any = {
-    val args = _args.map(_.asInstanceOf[AnyRef])
-    def _parents: Stream[Class[_]] = Stream(x.getClass) #::: _parents.map(_.getSuperclass)
-    val parents = _parents.takeWhile(_ != null).toList
-    val methods = parents.flatMap(_.getDeclaredMethods)
-    val method = methods.find(_.getName == methodName).getOrElse(throw new IllegalArgumentException("Method " + methodName + " not found"))
-    method.setAccessible(true)
-    method.invoke(x, args : _*)
-  }
-}
-
-class PrivateMethodExposer(x: AnyRef) {
-  def apply(method: scala.Symbol): PrivateMethodCaller = new PrivateMethodCaller(x, method.name)
-}
-
-object ActorTree {
-  def get()(implicit system: ActorSystem): Any = new PrivateMethodExposer(system)('printTree)()
-}
