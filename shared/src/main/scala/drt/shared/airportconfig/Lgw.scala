@@ -24,7 +24,6 @@ object Lgw extends AirportConfigLike {
       EGate -> 10,
       NonEeaDesk -> 45
     ),
-    hasEstChox = true,
     defaultWalkTimeMillis = Map(N -> 180000L, S -> 180000L),
     terminalPaxSplits = List(N, S).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
