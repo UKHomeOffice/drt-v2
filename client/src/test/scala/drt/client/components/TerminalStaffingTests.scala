@@ -2,10 +2,9 @@ package drt.client.components
 
 import java.util.UUID
 
-import drt.client.components.TerminalStaffing.movementsForDay
 import drt.client.services.JSDateConversions._
-import drt.shared.StaffMovement
 import drt.shared.Terminals.T1
+import drt.shared.{StaffMovement, StaffMovements}
 import utest.{TestSuite, _}
 
 import scala.collection.immutable._
@@ -19,13 +18,13 @@ object TerminalStaffingTests extends TestSuite {
         val uid2 = UUID.randomUUID()
         val yesterday = StaffMovement(T1, "reason", SDate(2017, 7, 20, 12, 0), 1, uid1, None, None)
         val today = StaffMovement(T1, "reason", SDate(2017, 7, 21, 12, 0), 1, uid2, None, None)
-        val sm = Seq(
+        val sm = StaffMovements(Seq(
           yesterday,
           today
-        )
+        ))
 
         val expected = Seq(today)
-        val result = movementsForDay(sm, SDate(2017, 7, 21, 0, 0))
+        val result = sm.movementsForDay(SDate(2017, 7, 21, 0, 0))
 
         assert(expected == result)
       }
@@ -39,10 +38,10 @@ object TerminalStaffingTests extends TestSuite {
         val crossingNextMidnight = Seq(
           StaffMovement(T1, "before next midnight", SDate("2017-07-22T22:00"), 1, uidNext, None, None),
           StaffMovement(T1, "after next midnight", SDate("2017-07-23T02:00"), 1, uidNext, None, None))
-        val sm = crossingLastMidnight ++ crossingNextMidnight
+        val sm = StaffMovements(crossingLastMidnight ++ crossingNextMidnight)
 
         val expected = crossingLastMidnight ++ crossingNextMidnight
-        val result = movementsForDay(sm, SDate(2017, 7, 22, 0, 0))
+        val result = sm.movementsForDay(SDate(2017, 7, 22, 0, 0))
 
         assert(expected.toSet == result.toSet)
       }
@@ -60,10 +59,10 @@ object TerminalStaffingTests extends TestSuite {
         val pairTomorrow = Seq(
           StaffMovement(T1, "reason start", SDate("2017-07-23" + T1 + "0:00"), 1, uidTomorrow, None, None),
           StaffMovement(T1, "reason end", SDate("2017-07-23" + T1 + "2:00"), 1, uidTomorrow, None, None))
-        val sm = pairYesterday ++ pairToday ++ pairTomorrow
+        val sm = StaffMovements(pairYesterday ++ pairToday ++ pairTomorrow)
 
         val expected = pairToday
-        val result = movementsForDay(sm, SDate(2017, 7, 22, 0, 0))
+        val result = sm.movementsForDay(SDate(2017, 7, 22, 0, 0))
 
         assert(expected.toSet == result.toSet)
       }

@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{ViewLive, ViewMode}
+import drt.client.services.ViewMode
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
@@ -75,7 +75,7 @@ object PcpPaxSummariesComponent {
       ),
       <.div(^.className := "vertical-spacer"),
       <.div(^.className := "time-range-label", label),
-      <.div(^.className := "time-range", s"${now.toHoursAndMinutes()} - ${now.addMinutes(5).toHoursAndMinutes()}")
+      <.div(^.className := "time-range", s"${now.toHoursAndMinutes} - ${now.addMinutes(5).toHoursAndMinutes}")
     )
   }
 

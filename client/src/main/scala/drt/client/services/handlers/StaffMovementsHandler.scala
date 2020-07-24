@@ -6,7 +6,7 @@ import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay, ViewMode}
-import drt.shared.StaffMovement
+import drt.shared.{StaffMovement, StaffMovements}
 import drt.client.services.JSDateConversions.SDate
 import upickle.default.{read, write}
 
@@ -16,14 +16,14 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
-                               modelRW: ModelRW[M, Pot[Seq[StaffMovement]]]) extends LoggingActionHandler(modelRW) {
+                               modelRW: ModelRW[M, Pot[StaffMovements]]) extends LoggingActionHandler(modelRW) {
   def scheduledRequest(viewMode: ViewMode): Effect = Effect(Future(GetStaffMovements(viewMode))).after(2 seconds)
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddStaffMovements(staffMovements) =>
       value match {
         case Ready(sms) =>
-          val updatedStaffMovements = (sms ++ staffMovements).sortBy(_.time.millisSinceEpoch)
+          val updatedStaffMovements = StaffMovements((sms.movements ++ staffMovements).sortBy(_.time.millisSinceEpoch))
           effectOnly(Effect(DrtApi.post("staff-movements", write(staffMovements))
             .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
             case _ =>
@@ -36,7 +36,7 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
     case RemoveStaffMovements(movementsPairUuid) =>
       value match {
         case Ready(sms) =>
-          val updatedStaffMovements = sms.filterNot(_.uUID == movementsPairUuid).sortBy(_.time.millisSinceEpoch)
+          val updatedStaffMovements = StaffMovements(sms.movements.filterNot(_.uUID == movementsPairUuid).sortBy(_.time.millisSinceEpoch))
           effectOnly(Effect(DrtApi.delete(s"staff-movements/$movementsPairUuid")
             .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
             case _ =>
@@ -48,7 +48,7 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
     case SetStaffMovements(sms) =>
       updated(Ready(sms))
 
-    case SetStaffMovementsAndPollIfLiveView(viewMode, staffMovements: Seq[StaffMovement]) =>
+    case SetStaffMovementsAndPollIfLiveView(viewMode, staffMovements) =>
       if (viewMode.isHistoric(SDate.now()))
         updated(Ready(staffMovements))
       else
@@ -63,7 +63,7 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
 
       val apiCallEffect = Effect(DrtApi.get(uri)
         .map(res => {
-          SetStaffMovementsAndPollIfLiveView(viewMode, read[List[StaffMovement]](res.responseText))
+          SetStaffMovementsAndPollIfLiveView(viewMode, StaffMovements(read[List[StaffMovement]](res.responseText)))
         })
         .recover {
           case _ =>

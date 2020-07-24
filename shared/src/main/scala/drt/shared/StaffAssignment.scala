@@ -45,13 +45,13 @@ case class FixedPointAssignments(assignments: Seq[StaffAssignment]) extends Fixe
 
   def terminalStaffAt(terminalName: Terminal, date: SDateLike)
                      (implicit mdToSd: MilliDate => SDateLike): Int = {
-    val hoursAndMinutes = date.toHoursAndMinutes()
+    val hoursAndMinutes = date.toHoursAndMinutes
 
     assignments
       .filter { assignment =>
         assignment.terminal == terminalName &&
-          hoursAndMinutes >= mdToSd(assignment.startDt).toHoursAndMinutes() &&
-          hoursAndMinutes <= mdToSd(assignment.endDt).toHoursAndMinutes()
+          hoursAndMinutes >= mdToSd(assignment.startDt).toHoursAndMinutes &&
+          hoursAndMinutes <= mdToSd(assignment.endDt).toHoursAndMinutes
       }
       .map(_.numberOfStaff)
       .sum

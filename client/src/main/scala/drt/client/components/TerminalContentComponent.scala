@@ -26,7 +26,7 @@ object TerminalContentComponent {
   case class Props(portStatePot: Pot[PortState],
                    potShifts: Pot[ShiftAssignments],
                    potFixedPoints: Pot[FixedPointAssignments],
-                   potStaffMovements: Pot[Seq[StaffMovement]],
+                   potStaffMovements: Pot[StaffMovements],
                    airportConfig: AirportConfig,
                    terminalPageTab: TerminalPageTabLoc,
                    defaultTimeRangeHours: TimeRangeHours,
@@ -235,7 +235,7 @@ object TerminalContentComponent {
         Callback(GoogleEventTracker.sendEvent(terminalName, s"Export $exportType", exportDay.toISODateOnly))
       })
 
-  def displayForRole(node: VdomNode, role: Role, loggedInUser: LoggedInUser) =
+  def displayForRole(node: VdomNode, role: Role, loggedInUser: LoggedInUser): TagMod =
     if (loggedInUser.hasRole(role))
       node
     else

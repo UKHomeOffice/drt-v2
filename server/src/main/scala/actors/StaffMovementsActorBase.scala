@@ -10,7 +10,7 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared.{HasExpireables, MilliDate, SDateLike, StaffMovement}
+import drt.shared.{HasExpireables, MilliDate, SDateLike, StaffMovement, StaffMovements}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
@@ -18,28 +18,6 @@ import services.OfferHandler
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[StaffMovements] {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  def +(movementsToAdd: Seq[StaffMovement]): StaffMovements =
-    copy(movements = movements ++ movementsToAdd)
-
-  def -(movementsToRemove: Seq[UUID]): StaffMovements =
-    copy(movements = movements.filterNot(sm => movementsToRemove.contains(sm.uUID)))
-
-  def purgeExpired(expireBefore: () => SDateLike): StaffMovements = {
-    val expireBeforeMillis = expireBefore().millisSinceEpoch
-    val unexpiredPairsOfMovements = movements
-      .groupBy(_.uUID)
-      .values
-      .filter(pair => {
-        val neitherHaveExpired = pair.exists(!_.isExpired(expireBeforeMillis))
-        neitherHaveExpired
-      })
-      .flatten.toSeq
-    copy(movements = unexpiredPairsOfMovements)
-  }
-}
 
 case class StaffMovementsState(staffMovements: StaffMovements) {
   def updated(data: StaffMovements): StaffMovementsState = copy(staffMovements = data)
