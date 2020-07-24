@@ -66,6 +66,7 @@ object Bhx extends AirportConfigLike {
           List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1))
       )
     ),
+    hasEstChox = false,
     role = BHXAccess,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
