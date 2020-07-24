@@ -2,6 +2,7 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
+import drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.SplitRatiosNs.SplitSources
@@ -13,7 +14,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.purgeExpired
 import services.metrics.{Metrics, StageTimer}
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Map, SortedMap}
 import scala.collection.mutable
 
 case class UpdateStats(updatesCount: Int, additionsCount: Int)
@@ -38,7 +39,7 @@ class ArrivalSplitsGraphStage(name: String = "",
   override val shape = new FanInShape3(inArrivalsDiff, inManifestsLive, inManifestsHistoric, outArrivalsWithSplits)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    val flightsByFlightId: mutable.SortedMap[ArrivalKey, ApiFlightWithSplits] = mutable.SortedMap()
+    var flightsByFlightId: SortedMap[ArrivalKey, ApiFlightWithSplits] = SortedMap()
     val codeShares: mutable.SortedMap[CodeShareKeyOrderedByDupes[ArrivalKey], Set[ArrivalKey]] = mutable.SortedMap()
     var arrivalsWithSplitsDiff: Map[ArrivalKey, ApiFlightWithSplits] = Map()
     var arrivalsToRemove: Set[Arrival] = Set()
@@ -49,8 +50,8 @@ class ArrivalSplitsGraphStage(name: String = "",
       optionalInitialFlights match {
         case Some(FlightsWithSplitsDiff(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
-          flights.foreach(fws => flightsByFlightId += (ArrivalKey(fws.apiFlight) -> fws))
-          purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
+          flightsByFlightId = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ flights.map(fws => (ArrivalKey(fws.apiFlight) -> fws))
+          flightsByFlightId = purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
 
           flightsByFlightId.foreach { case (arrivalKey, fws) =>
             val csKey = CodeShareKeyOrderedByDupes[ArrivalKey](fws.apiFlight.Scheduled, fws.apiFlight.Terminal, fws.apiFlight.Origin, Set())
@@ -89,7 +90,7 @@ class ArrivalSplitsGraphStage(name: String = "",
         updateCodeSharesFromDiff(arrivalsDiff)
         updateFlightsFromIncoming(arrivalsDiff)
 
-        purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
+        flightsByFlightId = purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
 
         val uniqueFlightsWithUpdates = flightsWithUpdates.filterKeys(flightsByFlightId.contains)
 
@@ -159,7 +160,7 @@ class ArrivalSplitsGraphStage(name: String = "",
           val flightsWithUpdates = updateFlightsWithManifests(incoming)
 
           arrivalsWithSplitsDiff = mergeDiffSets(flightsWithUpdates, arrivalsWithSplitsDiff)
-          purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
+          flightsByFlightId = purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
 
           pushStateIfReady()
 
@@ -178,7 +179,7 @@ class ArrivalSplitsGraphStage(name: String = "",
     def updateFlightsFromIncoming(arrivalsDiff: ArrivalsDiff): Unit = {
       log.debug(s"${arrivalsDiff.toUpdate.size} diff updates, ${flightsByFlightId.size} existing flights")
 
-      flightsByFlightId --= arrivalsDiff.toRemove.map(ArrivalKey(_))
+      flightsByFlightId = flightsByFlightId -- arrivalsDiff.toRemove.map(ArrivalKey(_))
 
       val updateStats = arrivalsDiff.toUpdate.foldLeft(UpdateStats(0, 0)) {
         case (statsSoFar, (_, updatedFlight)) => updateWithFlight(statsSoFar, updatedFlight)
@@ -197,7 +198,7 @@ class ArrivalSplitsGraphStage(name: String = "",
           removalsSoFar ++ keysToRemove
       }
 
-      flightsByFlightId --= codeSharesToRemove
+      flightsByFlightId = flightsByFlightId -- codeSharesToRemove
 
       log.debug(s"${flightsByFlightId.size} flights after accounting for codeshares")
     }
@@ -208,11 +209,11 @@ class ArrivalSplitsGraphStage(name: String = "",
         case None =>
           val splits: Set[Splits] = initialSplits(updatedFlight, key)
           val newFlightWithSplits: ApiFlightWithSplits = makeFlightWithSplits(updatedFlight, splits)
-          flightsByFlightId += (key -> newFlightWithSplits.copy(lastUpdated = nowMillis))
+          flightsByFlightId = flightsByFlightId + (key -> newFlightWithSplits.copy(lastUpdated = nowMillis))
           updatedFlights.copy(additionsCount = updatedFlights.additionsCount + 1)
 
         case Some(existingFlight) if existingFlight.apiFlight != updatedFlight =>
-          flightsByFlightId += (key -> existingFlight.copy(apiFlight = updatedFlight, lastUpdated = nowMillis))
+          flightsByFlightId = flightsByFlightId + (key -> existingFlight.copy(apiFlight = updatedFlight, lastUpdated = nowMillis))
           updatedFlights.copy(updatesCount = updatedFlights.updatesCount + 1)
 
         case _ => updatedFlights
@@ -244,7 +245,7 @@ class ArrivalSplitsGraphStage(name: String = "",
                       flightForManifest.apiFlight,
                       updateSplitsWithNewManifest(manifestSplits, flightForManifest.splits)
                     )
-                    flightsByFlightId += (key -> flightWithManifestSplits)
+                    flightsByFlightId = flightsByFlightId + (key -> flightWithManifestSplits)
                     flightsWithNewSplits.updated(key, flightWithManifestSplits)
                   } else flightsWithNewSplits
                 case None =>

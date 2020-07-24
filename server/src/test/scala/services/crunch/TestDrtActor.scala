@@ -4,21 +4,21 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.daily.PassengersActor
-import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, UniqueKillSwitch}
-import drt.shared.{MilliTimes, SDateLike}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
+import drt.shared.{MilliTimes, SDateLike}
 import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
-import services.arrivals.ArrivalsAdjustmentsNoop
 import services.SDate
+import services.arrivals.ArrivalsAdjustmentsNoop
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeployments, RunnableDeskRecs}
 import services.graphstages.Crunch
@@ -176,7 +176,6 @@ class TestDrtActor extends Actor {
         initialFixedPoints = tc.initialFixedPoints,
         initialStaffMovements = tc.initialStaffMovements,
         refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
-        checkRequiredStaffUpdatesOnStartup = tc.checkRequiredStaffUpdatesOnStartup,
         stageThrottlePer = 50 milliseconds,
         pcpPaxFn = tc.pcpPaxFn,
         adjustEGateUseByUnder12s = false,

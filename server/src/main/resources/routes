@@ -58,6 +58,8 @@ POST          /data/login                                          controllers.A
 
 GET           /data/user/has-port-access                           controllers.Application.getUserHasPortAccess()
 
+GET           /data/actor-tree                                     controllers.Application.getActorTree()
+
 
 # Logging
 POST          /logging                                             controllers.Application.logging
@@ -67,7 +69,6 @@ POST          /data/staff                                          controllers.A
 GET           /staff-movements                                     controllers.Application.getStaffMovements(pointInTime: Option[Long])
 POST          /staff-movements                                     controllers.Application.addStaffMovements()
 DELETE        /staff-movements/:uuid                               controllers.Application.removeStaffMovements(uuid: java.util.UUID)
-
 
 # Feed import
 POST          /data/feed/:feedType/:portCode                       controllers.Application.feedImport(feedType: String, portCode: String)

@@ -2,8 +2,8 @@ package manifests.graph
 
 import akka.NotUsed
 import akka.pattern.pipe
-import akka.stream.{ActorMaterializer, Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -11,16 +11,16 @@ import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared._
 import drt.shared.api.Arrival
 import graphs.SinkToSourceBridge
-import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import services.SDate
 import services.crunch.CrunchTestLike
 import services.graphstages.Crunch
 
-import scala.collection.mutable
-import scala.concurrent.{Await, Future}
+import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 
 class ManifestGraphSpec extends CrunchTestLike {
@@ -78,7 +78,7 @@ class ManifestGraphSpec extends CrunchTestLike {
     val (killSwitch, requestSink, responseSource) = createAndRunGraph(
       registeredArrivalSinkProbe,
       testManifest,
-      Some(RegisteredArrivals(mutable.SortedMap(ArrivalKey(testArrival) -> Option(lastLookup)))),
+      Some(RegisteredArrivals(SortedMap(ArrivalKey(testArrival) -> Option(lastLookup)))),
       Crunch.isDueLookup,
       () => SDate("2019-03-06T11:00:00Z"))
 
@@ -114,7 +114,7 @@ class ManifestGraphSpec extends CrunchTestLike {
     val (killSwitch, requestSink, responseSource) = createAndRunGraph(
       registeredArrivalSinkProbe,
       testManifest,
-      Some(RegisteredArrivals(mutable.SortedMap(ArrivalKey(testArrival) -> Option(lastLookup)))),
+      Some(RegisteredArrivals(SortedMap(ArrivalKey(testArrival) -> Option(lastLookup)))),
       Crunch.isDueLookup,
       () => SDate("2019-03-06T11:00:00Z"))
 

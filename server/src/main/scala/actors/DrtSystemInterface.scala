@@ -4,7 +4,6 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.Sizes.oneMegaByte
 import actors.daily.PassengersActor
 import actors.queues.QueueLikeActor.UpdatedMillis
-import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
@@ -12,7 +11,7 @@ import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{Deskstats, MockedChromaSendReceive, PaxFlow, UserRoleProviderLike}
+import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}
@@ -25,7 +24,7 @@ import drt.server.feeds.common.{ArrivalFeed, HttpClient}
 import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
-import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LGWForecastFeed}
+import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed}
 import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
@@ -53,7 +52,7 @@ import services.graphstages.Crunch
 import services.graphstages.Crunch.crunchStartWithOffset
 import slickdb.VoyageManifestPassengerInfoTable
 
-import scala.collection.mutable
+import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
@@ -130,14 +129,13 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
   def startCrunchSystem(initialPortState: Option[PortState],
-                        initialForecastBaseArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
-                        initialForecastArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
-                        initialLiveBaseArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
-                        initialLiveArrivals: Option[mutable.SortedMap[UniqueArrival, Arrival]],
+                        initialForecastBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
+                        initialForecastArrivals: Option[SortedMap[UniqueArrival, Arrival]],
+                        initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
+                        initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         manifestRequestsSink: Sink[List[Arrival], NotUsed],
                         manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                         refreshArrivalsOnStart: Boolean,
-                        checkRequiredStaffUpdatesOnStartup: Boolean,
                         startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {
 
     val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
@@ -174,10 +172,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       manifestRequestsSink = manifestRequestsSink,
       simulator = Optimiser.runSimulationOfWork,
       initialPortState = initialPortState,
-      initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(mutable.SortedMap()),
-      initialForecastArrivals = initialForecastArrivals.getOrElse(mutable.SortedMap()),
-      initialLiveBaseArrivals = initialLiveBaseArrivals.getOrElse(mutable.SortedMap()),
-      initialLiveArrivals = initialLiveArrivals.getOrElse(mutable.SortedMap()),
+      initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(SortedMap()),
+      initialForecastArrivals = initialForecastArrivals.getOrElse(SortedMap()),
+      initialLiveBaseArrivals = initialLiveBaseArrivals.getOrElse(SortedMap()),
+      initialLiveArrivals = initialLiveArrivals.getOrElse(SortedMap()),
       arrivalsForecastBaseSource = baseArrivalsSource(),
       arrivalsForecastSource = forecastArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveBaseSource = liveBaseArrivalsSource(airportConfig.feedPortCode),
@@ -187,7 +185,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       initialFixedPoints = initialState[FixedPointAssignments](fixedPointsActor).getOrElse(FixedPointAssignments(Seq())),
       initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
       refreshArrivalsOnStart = refreshArrivalsOnStart,
-      checkRequiredStaffUpdatesOnStartup = checkRequiredStaffUpdatesOnStartup,
       stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") milliseconds,
       pcpPaxFn = pcpPaxFn,
       adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,

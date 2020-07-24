@@ -66,7 +66,7 @@ object TestActors {
 
   class TestForecastBaseArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
-    override def resetState(): Unit = state.clear()
+    override def resetState(): Unit = state = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
@@ -309,7 +309,7 @@ object TestActors {
       expireAfterMillis = expireAfterMillis,
       purgePreviousSnapshots = purgePreviousSnapshots,
       forecastMaxMillis = () => now().addDays(2).millisSinceEpoch) with Resettable {
-    override def resetState(): Unit = state = PortStateMutable.empty
+    override def resetState(): Unit = state = PortState.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }

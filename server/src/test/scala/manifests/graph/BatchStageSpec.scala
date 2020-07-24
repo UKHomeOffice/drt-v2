@@ -4,11 +4,11 @@ import controllers.ArrivalGenerator
 import drt.shared.{ArrivalKey, PortCode}
 import org.specs2.mutable.SpecificationLike
 
-import scala.collection.mutable
+import scala.collection.immutable.SortedMap
 
 class BatchStageSpec extends SpecificationLike {
   "Given an empty arrivals registry" >> {
-    def emptyRegistry: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap[ArrivalKey, Option[Long]]()
+    def emptyRegistry: SortedMap[ArrivalKey, Option[Long]] = SortedMap[ArrivalKey, Option[Long]]()
 
     "A single new arrival should return a List of one arrival" >> {
       val registry = emptyRegistry
@@ -20,56 +20,56 @@ class BatchStageSpec extends SpecificationLike {
   }
 
   "Given an empty arrivals & arrival updates registry" >> {
-    def emptyRegistry: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap[ArrivalKey, Option[Long]]()
+    def emptyRegistry: SortedMap[ArrivalKey, Option[Long]] = SortedMap[ArrivalKey, Option[Long]]()
 
     "A call to registerNewArrivals with one arrival should result in it being added to both registries" >> {
       val registry = emptyRegistry
       val updates = emptyRegistry
       val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T00:00", origin = PortCode("JFK"))
-      BatchStage.registerNewArrivals(List(arrival), registry, updates)
+      val (updatedRegistry, updatedUpdates) = BatchStage.registerNewArrivals(List(arrival), registry, updates)
 
-      val expected = mutable.SortedMap[ArrivalKey, Option[Long]]() ++ List((ArrivalKey(arrival), None))
+      val expected = SortedMap[ArrivalKey, Option[Long]]() ++ List((ArrivalKey(arrival), None))
 
-      registry === expected && updates === expected
+      updatedRegistry === expected && updatedUpdates === expected
     }
   }
 
   "Given arrivals & arrival updates registries both containing a single arrival" >> {
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T00:00", origin = PortCode("JFK"))
-    def singleArrivalRegistry: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap[ArrivalKey, Option[Long]](ArrivalKey(arrival) -> Option(1L))
+    def singleArrivalRegistry: SortedMap[ArrivalKey, Option[Long]] = SortedMap[ArrivalKey, Option[Long]](ArrivalKey(arrival) -> Option(1L))
 
     "A call to registerNewArrivals with no arrivals should leave both registries the same" >> {
       val registry = singleArrivalRegistry
       val updates = singleArrivalRegistry
-      BatchStage.registerNewArrivals(List(), registry, updates)
+      val (updatedRegistry, updatedUpdates) = BatchStage.registerNewArrivals(List(), registry, updates)
 
-      val expected = mutable.SortedMap[ArrivalKey, Option[Long]]() ++ List((ArrivalKey(arrival), Option(1L)))
+      val expected = SortedMap[ArrivalKey, Option[Long]]() ++ List((ArrivalKey(arrival), Option(1L)))
 
-      registry === expected && updates === expected
+      updatedRegistry === expected && updatedUpdates === expected
     }
 
     "A call to registerNewArrivals with the same arrival should leave both registries the same" >> {
       val registry = singleArrivalRegistry
       val updates = singleArrivalRegistry
-      BatchStage.registerNewArrivals(List(arrival), registry, updates)
+      val (updatedRegistry, updatedUpdates) = BatchStage.registerNewArrivals(List(arrival), registry, updates)
 
-      val expected = mutable.SortedMap[ArrivalKey, Option[Long]]() ++ List((ArrivalKey(arrival), Option(1L)))
+      val expected = SortedMap[ArrivalKey, Option[Long]]() ++ List((ArrivalKey(arrival), Option(1L)))
 
-      registry === expected && updates === expected
+      updatedRegistry === expected && updatedUpdates === expected
     }
 
     "A call to registerNewArrivals with a different arrival should add it to both registries" >> {
       val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2019-01-02T00:00", origin = PortCode("AAA"))
       val registry = singleArrivalRegistry
       val updates = singleArrivalRegistry
-      BatchStage.registerNewArrivals(List(arrival2), registry, updates)
+      val (updatedRegistry, updatedUpdates) = BatchStage.registerNewArrivals(List(arrival2), registry, updates)
 
-      val expected = mutable.SortedMap[ArrivalKey, Option[Long]]() ++ List(
+      val expected = SortedMap[ArrivalKey, Option[Long]]() ++ List(
         (ArrivalKey(arrival), Option(1L)),
         (ArrivalKey(arrival2), None)
       )
 
-      registry === expected && updates === expected
+      updatedRegistry === expected && updatedUpdates === expected
     }
   }
 }

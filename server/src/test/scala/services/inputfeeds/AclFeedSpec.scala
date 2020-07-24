@@ -14,7 +14,7 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
 
-import scala.collection.immutable.List
+import scala.collection.immutable.{List, SortedMap}
 import scala.collection.mutable
 import scala.concurrent.duration._
 
@@ -496,7 +496,7 @@ class AclFeedSpec extends CrunchTestLike {
       val initialAcl1 = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(150), status = ArrivalStatus("forecast"))
       val initialAcl2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2017-01-01T00:15Z", actPax = Option(151), status = ArrivalStatus("forecast"))
       val initialAcl = Set(initialAcl1, initialAcl2)
-      val initialLive = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(99), status = ArrivalStatus("scheduled"))).map(a => (a.unique, a))
+      val initialLive = SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", actPax = Option(99), status = ArrivalStatus("scheduled"))).map(a => (a.unique, a))
 
       val newLive = Set(
         ArrivalGenerator.arrival(iata = "BAW0001", schDt = "2017-01-01T00:05Z", actPax = Option(105), status = ArrivalStatus("estimated"), estDt = "2017-01-01T00:06Z"))
@@ -527,8 +527,8 @@ class AclFeedSpec extends CrunchTestLike {
 
       val initialAcl1 = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2017-01-01T00:01Z", actPax = Option(150), status = ArrivalStatus("forecast"))
       val initialAcl2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = "2017-01-01T00:02Z", actPax = Option(151), status = ArrivalStatus("forecast"))
-      val initialAcl = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(initialAcl1, initialAcl2).map(a => (a.unique, a))
-      val initialLive = mutable.SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(iata = "BA0003", schDt = "2017-01-01T00:03Z", actPax = Option(99), status = ArrivalStatus("scheduled"))).map(a => (a.unique, a))
+      val initialAcl = SortedMap[UniqueArrival, Arrival]() ++ List(initialAcl1, initialAcl2).map(a => (a.unique, a))
+      val initialLive = SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(iata = "BA0003", schDt = "2017-01-01T00:03Z", actPax = Option(99), status = ArrivalStatus("scheduled"))).map(a => (a.unique, a))
 
       val newAcl = Flights(Seq(ArrivalGenerator.arrival(iata = "BA0004", schDt = "2017-01-01T00:04Z", actPax = Option(100))))
       val newLive = Flights(Seq(ArrivalGenerator.arrival(iata = "BAW0005", schDt = "2017-01-01T00:05Z", actPax = Option(101))))

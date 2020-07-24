@@ -45,7 +45,7 @@ case class DesksAndWaitsTerminalProvider(slas: Map[Queue, Int],
       .filter(queuesToProcess.contains)
       .foldLeft(Map[Queue, (Iterable[Int], Iterable[Int])]()) {
         case (queueRecsSoFar, queue) =>
-          log.info(s"Optimising $queue")
+          log.debug(s"Optimising $queue")
           val queueWork = adjustedWork(queue, loadsByQueue(queue))
           val minDesks = deskLimitsProvider.minDesksForMinutes(minuteMillis, queue).toSeq
 

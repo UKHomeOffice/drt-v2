@@ -186,7 +186,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   ctrl.run()
 
-  val now: () => SDateLike = (() => SDate.now())
+  val now: () => SDateLike = () => SDate.now()
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
 
@@ -208,8 +208,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   assert(defaultTimeZone == "UTC", "Default Timezone is not set to UTC")
 
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
-
-  val cacheActorRef: ActorRef = system.actorOf(Props(classOf[CachingCrunchReadActor]), name = "cache-actor")
 
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
@@ -365,16 +363,22 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     eventualThing
   }
 
-  def index = Action { request =>
+  def index: Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
     Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
+  }
+
+  def getActorTree: Action[AnyContent] = authByRole(Debug) {
+    Action { _ =>
+      Ok(ActorTree.get().toString)
+    }
   }
 
   def healthCheck: Action[AnyContent] = Action.async { _ =>
     val requestStart = SDate.now()
     val startMillis = SDate.now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = SDate.now().getLocalNextMidnight.millisSinceEpoch
-    val portState = ctrl.portStateActor.ask(GetStateForDateRange(startMillis, endMillis))(30 seconds).mapTo[PortState]
+    val portState = ctrl.portStateActor.ask(GetStateForDateRange(startMillis, endMillis))(10 seconds).mapTo[PortState]
 
     portState
       .map { _ =>

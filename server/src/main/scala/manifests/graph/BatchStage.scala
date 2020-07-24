@@ -11,6 +11,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
 import services.metrics.{Metrics, StageTimer}
 
+import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -35,8 +36,8 @@ class BatchStage(now: () => SDateLike,
   var maybeCancellable: Option[Cancellable] = None
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    val registeredArrivals: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap()
-    val registeredArrivalsUpdates: mutable.SortedMap[ArrivalKey, Option[Long]] = mutable.SortedMap()
+    var registeredArrivals: SortedMap[ArrivalKey, Option[Long]] = SortedMap()
+    var registeredArrivalsUpdates: SortedMap[ArrivalKey, Option[Long]] = SortedMap()
     val lookupQueue: mutable.SortedSet[ArrivalKey] = mutable.SortedSet()
     var lastLookupRefresh = 0L
 
@@ -44,7 +45,7 @@ class BatchStage(now: () => SDateLike,
       if (maybeInitialState.isEmpty) log.warn(s"Did not receive any initial registered arrivals")
       maybeInitialState.foreach { state =>
         log.info(s"Received ${state.arrivals.size} initial registered arrivals")
-        registeredArrivals ++= state.arrivals
+        registeredArrivals = registeredArrivals ++ state.arrivals
 
         refreshLookupQueue(now())
 
@@ -64,7 +65,9 @@ class BatchStage(now: () => SDateLike,
 
         log.info(s"grabbed ${incoming.length} requests for arrival manifests")
 
-        BatchStage.registerNewArrivals(incoming, registeredArrivals, registeredArrivalsUpdates)
+        val (registeredArrivals_, registeredArrivalsUpdates_) = BatchStage.registerNewArrivals(incoming, registeredArrivals, registeredArrivalsUpdates)
+        registeredArrivals = registeredArrivals_
+        registeredArrivalsUpdates = registeredArrivalsUpdates_
 
         Metrics.counter("manifests.registered-arrivals", registeredArrivals.size)
 
@@ -102,7 +105,7 @@ class BatchStage(now: () => SDateLike,
 
     private def prioritiseAndPush(): Unit = {
       Crunch.purgeExpired(lookupQueue, ArrivalKey.atTime, now, expireAfterMillis.toInt)
-      Crunch.purgeExpired(registeredArrivals, ArrivalKey.atTime, now, expireAfterMillis.toInt)
+      registeredArrivals = Crunch.purgeExpired(registeredArrivals, ArrivalKey.atTime, now, expireAfterMillis.toInt)
 
       val lookupBatch = updatePrioritisedAndSubscribers()
 
@@ -123,7 +126,7 @@ class BatchStage(now: () => SDateLike,
     private def pushRegisteredArrivalsUpdates(): Unit = if (registeredArrivalsUpdates.nonEmpty) {
       Metrics.counter("manifests.lookup-requests", registeredArrivalsUpdates.size)
       push(outRegisteredArrivals, RegisteredArrivals(registeredArrivalsUpdates))
-      registeredArrivalsUpdates.clear
+      registeredArrivalsUpdates = SortedMap()
     }
 
     private def updatePrioritisedAndSubscribers(): Set[ArrivalKey] = {
@@ -164,14 +167,13 @@ class BatchStage(now: () => SDateLike,
 
 object BatchStage {
   def registerNewArrivals(incoming: List[Arrival],
-                          arrivalsRegistry: mutable.SortedMap[ArrivalKey, Option[MillisSinceEpoch]],
-                          updatesRegistry: mutable.SortedMap[ArrivalKey, Option[MillisSinceEpoch]]): Unit = {
+                          arrivalsRegistry: SortedMap[ArrivalKey, Option[MillisSinceEpoch]],
+                          updatesRegistry: SortedMap[ArrivalKey, Option[MillisSinceEpoch]]): (SortedMap[ArrivalKey, Option[MillisSinceEpoch]], SortedMap[ArrivalKey, Option[MillisSinceEpoch]]) = {
     val unregisteredArrivals = BatchStage.arrivalsToRegister(incoming, arrivalsRegistry)
-    arrivalsRegistry ++= unregisteredArrivals
-    updatesRegistry ++= unregisteredArrivals
+    (arrivalsRegistry ++ unregisteredArrivals, updatesRegistry ++ unregisteredArrivals)
   }
 
-  def arrivalsToRegister(arrivalsToConsider: List[Arrival], arrivalsRegistry: mutable.SortedMap[ArrivalKey, Option[MillisSinceEpoch]]): List[(ArrivalKey, Option[Long])] = arrivalsToConsider
+  def arrivalsToRegister(arrivalsToConsider: List[Arrival], arrivalsRegistry: SortedMap[ArrivalKey, Option[MillisSinceEpoch]]): List[(ArrivalKey, Option[Long])] = arrivalsToConsider
     .map(a => (ArrivalKey(a), None))
     .filterNot { case (k, _) => arrivalsRegistry.contains(k) }
 }

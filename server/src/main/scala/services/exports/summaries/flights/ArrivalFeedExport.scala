@@ -14,12 +14,12 @@ import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{FeedSource, SDateLike, UniqueArrival}
 import services.SDate
-import services.arrivals.LiveArrivalsUtil
 import services.exports.Exports
 
-import scala.collection.mutable
+import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.language.postfixOps
 
 case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: ExecutionContext) {
 
@@ -43,7 +43,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
     feedActor
       .ask(GetState)(Timeout(60 seconds))
       .map {
-        case ArrivalsState(arrivals: mutable.Map[UniqueArrival, Arrival], _, _) =>
+        case ArrivalsState(arrivals, _, _) =>
           feedActor ! PoisonPill
           system.log.info(s"Exporting $fs arrivals for ${exportDay.toISODateOnly}")
           val csvData: Iterable[List[String]] = arrivalsToCsvRows(terminal, arrivals, exportDay)
@@ -60,10 +60,9 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
       None
   }
 
-  def arrivalsToCsvRows(
-                         terminal: Terminal,
-                         arrivals: mutable.SortedMap[UniqueArrival, Arrival],
-                         exportDay: SDateLike
+  def arrivalsToCsvRows(terminal: Terminal,
+                        arrivals: SortedMap[UniqueArrival, Arrival],
+                        exportDay: SDateLike
                        ): Iterable[List[String]] = {
 
     val arrivalsForDay = arrivals

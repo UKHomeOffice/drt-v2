@@ -36,12 +36,12 @@ class RequestAndTerminateActor(implicit timeout: Timeout) extends Actor {
       actor ! PoisonPill
 
     case Terminated(terminatedActor) =>
-      log.info("Actor terminated. Replying to sender")
+      log.debug("Actor terminated. Replying to sender")
       deathWatchReplyToAndResponse.get(terminatedActor) match {
         case None => log.error("Failed to find a matching terminated actor to respond to")
         case Some((replyTo, response)) =>
           deathWatchReplyToAndResponse = deathWatchReplyToAndResponse - terminatedActor
-          log.info(s"Sending response to sender")
+          log.debug(s"Sending response to sender")
           replyTo ! response
       }
   }

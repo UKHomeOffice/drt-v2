@@ -12,7 +12,6 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 
 import scala.collection.immutable.{Seq, SortedMap}
-import scala.collection.mutable
 import scala.concurrent.duration._
 
 
@@ -61,9 +60,9 @@ class ApplicationRestartSpec extends CrunchTestLike {
       crunchMinutes = SortedMap[TQM, CrunchMinute](),
       staffMinutes = SortedMap[TM, StaffMinute]() ++ emptyStaffMinutes(now, daysToCrunch, defaultAirportConfig.terminals.toList)
     )
-    val initialLiveArrivals = mutable.SortedMap[UniqueArrival, Arrival](arrivalLive.unique -> arrivalLive)
+    val initialLiveArrivals = SortedMap[UniqueArrival, Arrival](arrivalLive.unique -> arrivalLive)
 
-    val initialBaseArrivals = mutable.SortedMap[UniqueArrival, Arrival](arrivalBase.unique -> arrivalBase)
+    val initialBaseArrivals = SortedMap[UniqueArrival, Arrival](arrivalBase.unique -> arrivalBase)
     val crunch = runCrunchGraph(TestConfig(
       now = now,
       initialPortState = Option(portState),

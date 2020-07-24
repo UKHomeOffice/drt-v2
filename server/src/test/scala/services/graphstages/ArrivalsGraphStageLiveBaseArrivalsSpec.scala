@@ -13,6 +13,7 @@ import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsNoop}
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
 
+import scala.collection.immutable.SortedMap
 import scala.collection.mutable
 import scala.concurrent.duration._
 
@@ -230,11 +231,11 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
   private def buildArrivalsGraphStageWithSanitiser(sanitiser: ArrivalDataSanitiser) = new ArrivalsGraphStage(
     "",
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
     pcpTimeCalc,
     Set(T1),
     sanitiser,
@@ -245,11 +246,11 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
   private def buildArrivalsGraphStage = new ArrivalsGraphStage(
     "",
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
-    mutable.SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
     pcpTimeCalc,
     Set(T1),
     ArrivalDataSanitiser(None, None),

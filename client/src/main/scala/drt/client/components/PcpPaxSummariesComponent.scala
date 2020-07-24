@@ -51,7 +51,7 @@ object PcpPaxSummariesComponent {
               boxes.zipWithIndex.map {
                 case (label, box) =>
                   val start = now.addMinutes(box * 5)
-                  val crunchMinutes = cs.window(start, start.addMinutes(5), Map(props.terminalName -> queues)).crunchMinutes
+                  val crunchMinutes = cs.window(start, start.addMinutes(5)).crunchMinutes
                   val summary = PcpPaxSummary(start, fiveMinutes, crunchMinutes, props.terminalName, queues.toSet)
                   summaryBox(box, label, start, queues, summary)
               }.toTagMod

@@ -9,10 +9,9 @@ import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessa
 import services.graphstages.Crunch
 
 import scala.collection.immutable.SortedMap
-import scala.collection.mutable
 
 
-case class RegisteredArrivals(arrivals: mutable.SortedMap[ArrivalKey, Option[Long]])
+case class RegisteredArrivals(arrivals: SortedMap[ArrivalKey, Option[Long]])
 
 class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
                               val initialMaybeSnapshotInterval: Option[Int],
@@ -22,18 +21,18 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
                              ) extends RecoveryActorLike with PersistentDrtActor[RegisteredArrivals] {
   override def persistenceId: String = "registered-arrivals"
 
-  override def initialState: RegisteredArrivals = RegisteredArrivals(mutable.SortedMap())
+  override def initialState: RegisteredArrivals = RegisteredArrivals(SortedMap())
 
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
-  override val state: RegisteredArrivals = RegisteredArrivals(mutable.SortedMap())
+  var state: RegisteredArrivals = RegisteredArrivals(SortedMap())
 
   override def stateToMessage: GeneratedMessage = arrivalsToMessage(state.arrivals)
 
-  private def arrivalsToMessage(arrivalWithLastLookup: mutable.SortedMap[ArrivalKey, Option[Long]]): RegisteredArrivalsMessage = {
+  private def arrivalsToMessage(arrivalWithLastLookup: SortedMap[ArrivalKey, Option[Long]]): RegisteredArrivalsMessage = {
     RegisteredArrivalsMessage(
       arrivalWithLastLookup
         .map { case (ArrivalKey(o, v, s), l) =>
@@ -54,7 +53,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case RegisteredArrivalsMessage(arrivalMessages) =>
       log.info(s"Got a snapshot containing ${arrivalMessages.length} arrivals")
-      state.arrivals.clear
+      state = state.copy(arrivals = SortedMap())
       addRegisteredArrivalsFromMessages(arrivalMessages)
   }
 
@@ -68,12 +67,11 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
 
       val arrivalsToBeRegistered = findUpdatesToPersist(SortedMap[ArrivalKey, Option[Long]]() ++ incomingArrivals)
       if (arrivalsToBeRegistered.nonEmpty) {
-        val messageToPersist = arrivalsToMessage(mutable.SortedMap[ArrivalKey, Option[Long]]() ++ arrivalsToBeRegistered)
+        val messageToPersist = arrivalsToMessage(SortedMap[ArrivalKey, Option[Long]]() ++ arrivalsToBeRegistered)
         persistAndMaybeSnapshot(messageToPersist)
       }
 
-      state.arrivals ++= arrivalsToBeRegistered
-      Crunch.purgeExpired(state.arrivals, ArrivalKey.atTime, now, expireAfterMillis.toInt)
+      state = state.copy(arrivals = Crunch.purgeExpired(state.arrivals ++ arrivalsToBeRegistered, ArrivalKey.atTime, now, expireAfterMillis.toInt))
   }
 
   private def findUpdatesToPersist(newArrivals: SortedMap[ArrivalKey, Option[Long]]): SortedMap[ArrivalKey, Option[Long]] = newArrivals.filter {
@@ -95,6 +93,6 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
       }
       .collect { case Some(keyAndLookedUp) => keyAndLookedUp }
 
-    state.arrivals ++= arrivalsFromMessages
+    state = state.copy(arrivals = state.arrivals ++ arrivalsFromMessages)
   }
 }

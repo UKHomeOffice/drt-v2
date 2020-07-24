@@ -12,7 +12,7 @@ import scala.collection.{Map, SortedMap}
 case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
                      crunchMinutes: ISortedMap[TQM, CrunchMinute],
                      staffMinutes: ISortedMap[TM, StaffMinute]) extends PortStateLike {
-  def window(start: SDateLike, end: SDateLike, portQueues: IMap[Terminal, Seq[Queue]]): PortState = {
+  def window(start: SDateLike, end: SDateLike): PortState = {
     val roundedStart = start.roundToMinute()
     val roundedEnd = end.roundToMinute()
 
@@ -147,12 +147,24 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
       movements = 0)
   }
 
-  def mutable: PortStateMutable = {
-    val ps = new PortStateMutable
-    ps.flights ++= SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights.map { case (_, fws) => (fws.apiFlight.unique, fws) }
-    ps.crunchMinutes ++= crunchMinutes
-    ps.staffMinutes ++= staffMinutes
-    ps
+  def applyFlightsWithSplitsDiff(flightRemovals: Seq[UniqueArrival], flightUpdates: Iterable[(UniqueArrival, ApiFlightWithSplits)], nowMillis: MillisSinceEpoch): PortState = {
+    copy(flights = (flights -- flightRemovals) ++ flightUpdates)
+  }
+
+  def applyCrunchDiff(crunchMinuteUpdates: SortedMap[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): PortState = {
+    copy(crunchMinutes = crunchMinutes ++ crunchMinuteUpdates)
+  }
+
+  def applyCrunchDiff(crunchMinuteUpdates: Seq[CrunchMinute], nowMillis: MillisSinceEpoch): PortState = {
+    copy(crunchMinutes = crunchMinutes ++ crunchMinuteUpdates.map(cm => (cm.key, cm.copy(lastUpdated = Option(nowMillis)))))
+  }
+
+  def applyStaffDiff(staffMinuteUpdates: SortedMap[TM, StaffMinute], nowMillis: MillisSinceEpoch): PortState = {
+    copy(staffMinutes = staffMinutes ++ staffMinuteUpdates)
+  }
+
+  def applyStaffDiff(staffMinuteUpdates: Seq[StaffMinute], nowMillis: MillisSinceEpoch): PortState = {
+    copy(staffMinutes = staffMinutes ++ staffMinuteUpdates.map(sm => (sm.key, sm.copy(lastUpdated = Option(nowMillis)))))
   }
 }
 
@@ -191,125 +203,7 @@ sealed trait PortStateLike {
     List(latestFlights, latestCrunch, latestStaff).max
   }
 
-  def window(start: SDateLike, end: SDateLike, portQueues: IMap[Terminal, Seq[Queue]]): PortState
+  def window(start: SDateLike, end: SDateLike): PortState
 
   def windowWithTerminalFilter(start: SDateLike, end: SDateLike, portQueues: IMap[Terminal, Seq[Queue]]): PortState
 }
-
-
-class PortStateMutable {
-  val flights = new IndexedFlights
-  val crunchMinutes = new IndexedCrunchMinutes
-  val staffMinutes = new IndexedStaffMinutes
-
-  def window(start: SDateLike, end: SDateLike): PortState = {
-    val roundedStart = start.roundToMinute()
-    val roundedEnd = end.roundToMinute()
-
-    val fs = flightsRange(roundedStart, roundedEnd)
-    val cms = crunchMinuteRange(roundedStart, roundedEnd)
-    val sms = staffMinuteRange(roundedStart, roundedEnd)
-
-    PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
-  }
-
-  def windowWithTerminalFilter(start: SDateLike, end: SDateLike, terminals: Seq[Terminal]): PortState = {
-    val roundedStart = start.roundToMinute()
-    val roundedEnd = end.roundToMinute()
-
-    val fs = flightsRangeWithTerminals(roundedStart, roundedEnd, terminals)
-    val cms = crunchMinuteRangeWithTerminals(roundedStart, roundedEnd, terminals)
-    val sms = staffMinuteRangeWithTerminals(roundedStart, roundedEnd, terminals)
-
-    PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
-  }
-
-  def flightsRange(start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] = flights.range(start, end)
-
-  private def filterByPcp(flightsToFilter: ISortedMap[UniqueArrival, ApiFlightWithSplits], start: SDateLike, end: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits] =
-    flightsToFilter.filterNot {
-      case (_, ApiFlightWithSplits(arrival, _, _)) =>
-        val firstPcpMin = arrival.pcpRange().min
-        val lastPcpMin = arrival.pcpRange().max
-        val startMillis = start.millisSinceEpoch
-        val endMillis = end.millisSinceEpoch
-        firstPcpMin > endMillis || lastPcpMin < startMillis
-    }
-
-  def flightsRangeWithTerminals(roundedStart: SDateLike, roundedEnd: SDateLike, terminals: Seq[Terminal]): ISortedMap[UniqueArrival, ApiFlightWithSplits] =
-    flights.rangeAtTerminals(roundedStart, roundedEnd, terminals)
-
-  def purgeOlderThanDate(thresholdMillis: MillisSinceEpoch): Unit = {
-    flights.purgeDataBefore(thresholdMillis)
-    crunchMinutes.purgeDataBefore(thresholdMillis)
-    staffMinutes.purgeDataBefore(thresholdMillis)
-  }
-
-  def purgeRecentUpdates(thresholdMillis: MillisSinceEpoch): Unit = {
-    flights.purgeCacheBefore(thresholdMillis)
-    crunchMinutes.purgeCacheBefore(thresholdMillis)
-    staffMinutes.purgeCacheBefore(thresholdMillis)
-  }
-
-  def crunchMinuteRange(start: SDateLike, end: SDateLike): ISortedMap[TQM, CrunchMinute] = crunchMinutes.range(start, end)
-
-  def crunchMinuteRangeWithTerminals(start: SDateLike, end: SDateLike, terminals: Seq[Terminal]): ISortedMap[TQM, CrunchMinute] =
-    crunchMinutes.rangeAtTerminals(start, end, terminals)
-
-  def staffMinuteRange(start: SDateLike, end: SDateLike): ISortedMap[TM, StaffMinute] = staffMinutes.range(start, end)
-
-  def staffMinuteRangeWithTerminals(start: SDateLike, end: SDateLike, terminals: Seq[Terminal]): ISortedMap[TM, StaffMinute] =
-    staffMinutes.rangeAtTerminals(start, end, terminals)
-
-  def updates(sinceEpoch: MillisSinceEpoch, start: MillisSinceEpoch, end: MillisSinceEpoch): Option[PortStateUpdates] = {
-    val updatedFlights = flights.updatesSince(sinceEpoch).filter(fws => start <= fws.apiFlight.PcpTime.getOrElse(0L) && fws.apiFlight.PcpTime.getOrElse(0L) < end)
-    val updatedCrunch: Set[CrunchMinute] = crunchMinutes.updatesSince(sinceEpoch).filter(m => start <= m.minute && m.minute < end)
-    val updatedStaff = staffMinutes.updatesSince(sinceEpoch).filter(m => start <= m.minute && m.minute < end)
-
-    if (updatedFlights.nonEmpty || updatedCrunch.nonEmpty || updatedStaff.nonEmpty) {
-      val updateTimes = updatedFlights.map(_.lastUpdated.getOrElse(0L)) ++ updatedCrunch.map(_.lastUpdated.getOrElse(0L)) ++ updatedStaff.map(_.lastUpdated.getOrElse(0L))
-      val latestUpdate = updateTimes.max
-      val allUpdates = PortStateUpdates(latestUpdate, updatedFlights, updatedCrunch, updatedStaff)
-      Option(allUpdates)
-    } else None
-  }
-
-  def applyFlightsWithSplitsDiff(flightRemovals: Seq[UniqueArrival], flightUpdates: Iterable[(UniqueArrival, ApiFlightWithSplits)], nowMillis: MillisSinceEpoch): Unit = {
-    flights --= flightRemovals
-    flights ++= flightUpdates
-  }
-
-  def applyCrunchDiff(crunchMinuteUpdates: SortedMap[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): Unit = {
-    crunchMinutes ++= crunchMinuteUpdates
-  }
-
-  def applyCrunchDiff(crunchMinuteUpdates: Seq[CrunchMinute], nowMillis: MillisSinceEpoch): Unit = {
-    crunchMinutes ++= crunchMinuteUpdates.map(cm => (cm.key, cm.copy(lastUpdated = Option(nowMillis))))
-  }
-
-  def applyStaffDiff(staffMinuteUpdates: SortedMap[TM, StaffMinute], nowMillis: MillisSinceEpoch): Unit = {
-    staffMinutes ++= staffMinuteUpdates
-  }
-
-  def applyStaffDiff(staffMinuteUpdates: Seq[StaffMinute], nowMillis: MillisSinceEpoch): Unit = {
-    staffMinutes ++= staffMinuteUpdates.map(sm => (sm.key, sm.copy(lastUpdated = Option(nowMillis))))
-  }
-
-  def immutable: PortState = {
-    val fs = ISortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights.all
-    val cms = ISortedMap[TQM, CrunchMinute]() ++ crunchMinutes.all
-    val sms = ISortedMap[TM, StaffMinute]() ++ staffMinutes.all
-    PortState(fs, cms, sms)
-  }
-
-  def clear(): Unit = {
-    flights.clear()
-    crunchMinutes.clear()
-    staffMinutes.clear()
-  }
-}
-
-object PortStateMutable {
-  def empty: PortStateMutable = new PortStateMutable
-}
-
