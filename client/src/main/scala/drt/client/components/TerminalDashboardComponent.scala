@@ -62,7 +62,7 @@ object TerminalDashboardComponent {
 
       <.div(^.className := "terminal-dashboard",
 
-        if (p.terminalPageTabLoc.queryParams.get("showArrivals").isDefined) {
+        if (p.terminalPageTabLoc.queryParams.contains("showArrivals")) {
           val closeArrivalsPopupLink = p.terminalPageTabLoc.copy(
             queryParams = p.terminalPageTabLoc.queryParams - "showArrivals"
           )
@@ -72,7 +72,7 @@ object TerminalDashboardComponent {
             <.div(^.className := "dashboard-arrivals-popup",
               <.h2("Arrivals"),
               <.div(^.className := "terminal-dashboard__arrivals_popup_table",
-                p.featureFlags.renderReady(ff =>
+                p.featureFlags.renderReady(_ =>
                   FlightsWithSplitsTable.ArrivalsTable(
                     None,
                     originMapper,
@@ -82,10 +82,10 @@ object TerminalDashboardComponent {
                       p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
                       p.airportConfig.hasEstChox,
                       None,
-                      false,
+                      hasArrivalSourcesAccess = false,
                       ViewLive,
                       PcpPax.bestPaxEstimateWithApi,
-                      p.airportConfig.hasTransfer
+                      hasTransfer = p.airportConfig.hasTransfer
                     )
                   ))),
               p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")

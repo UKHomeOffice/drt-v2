@@ -57,7 +57,7 @@ object CSVData {
       )
 
   def millisToHoursAndMinutesString: MillisSinceEpoch => String =
-    (millis: MillisSinceEpoch) => SDate(millis, europeLondonTimeZone).toHoursAndMinutes()
+    (millis: MillisSinceEpoch) => SDate(millis, europeLondonTimeZone).toHoursAndMinutes
 
   def periodTimeslotsToCSVString(timeSlotStarts: Seq[String], byTimeSlot: List[List[Option[ForecastTimeSlot]]]): String = {
     byTimeSlot.zip(timeSlotStarts).map {

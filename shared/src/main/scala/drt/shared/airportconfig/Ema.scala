@@ -60,7 +60,6 @@ object Ema extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.6993)
       )))
     ),
-    hasEstChox = true,
     flexedQueues = Set(),
     desksByTerminal = Map(T1 -> 5)
     )

@@ -27,7 +27,7 @@ object TerminalComponent {
                            potShifts: Pot[ShiftAssignments],
                            potMonthOfShifts: Pot[MonthOfShifts],
                            potFixedPoints: Pot[FixedPointAssignments],
-                           potStaffMovements: Pot[Seq[StaffMovement]],
+                           potStaffMovements: Pot[StaffMovements],
                            airportConfig: Pot[AirportConfig],
                            loadingState: LoadingState,
                            showActuals: Boolean,

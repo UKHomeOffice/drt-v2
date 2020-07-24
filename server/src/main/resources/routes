@@ -32,15 +32,17 @@ GET           /logged-in                                           controllers.A
 GET           /fixed-points                                        controllers.Application.getFixedPoints
 POST          /fixed-points                                        controllers.Application.saveFixedPoints
 
-GET           /export/api/:terminalName/:year/:month/:day          controllers.Application.exportApi(day: Int, month: Int, year: Int, terminalName: String)
-GET           /export/desks/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName)
-GET           /export/arrivals/:pointInTime/:terminalName          controllers.Application.exportFlightsWithSplitsAtPointInTimeCSV(pointInTime, terminalName)
 GET           /export/desks/:start/:end/:terminalName              controllers.Application.exportDesksAndQueuesBetweenTimeStampsCSV(start, end, terminalName)
+GET           /export/desks/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName)
 GET           /export/arrivals/:start/:end/:terminalName           controllers.Application.exportFlightsWithSplitsBetweenTimeStampsCSV(start, end, terminalName)
+GET           /export/arrivals/:pointInTime/:terminalName          controllers.Application.exportFlightsWithSplitsAtPointInTimeCSV(pointInTime, terminalName)
+GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource        controllers.Application.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
+GET           /export/api/:terminalName/:year/:month/:day          controllers.Application.exportApi(day: Int, month: Int, year: Int, terminalName: String)
 GET           /export/planning/:weekStarting/:terminalName         controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
 GET           /export/headlines/:weekStarting/:terminalName        controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
 GET           /export/users                                        controllers.Application.exportUsers
-GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource        controllers.Application.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
+GET           /export/staff-movements/:pointInTime/:terminal       controllers.Application.exportStaffMovements(terminal: String, pointInTime: Long)
+GET           /export/desk-rec-simulation                          controllers.Application.simulationImport
 
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/fonts/*file                                  controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
@@ -65,11 +67,8 @@ POST          /logging                                             controllers.A
 
 POST          /data/staff                                          controllers.Application.saveStaff
 GET           /staff-movements                                     controllers.Application.getStaffMovements(pointInTime: Option[Long])
-GET           /export/staff-movements/:pointInTime/:terminal       controllers.Application.exportStaffMovements(terminal: String, pointInTime: Long)
 POST          /staff-movements                                     controllers.Application.addStaffMovements()
 DELETE        /staff-movements/:uuid                               controllers.Application.removeStaffMovements(uuid: java.util.UUID)
-
-GET           /export/desk-rec-simulation                          controllers.Application.simulationImport
 
 # Feed import
 POST          /data/feed/:feedType/:portCode                       controllers.Application.feedImport(feedType: String, portCode: String)

@@ -75,7 +75,7 @@ object PcpPaxSummariesComponent {
       ),
       <.div(^.className := "vertical-spacer"),
       <.div(^.className := "time-range-label", label),
-      <.div(^.className := "time-range", s"${now.toHoursAndMinutes()} - ${now.addMinutes(5).toHoursAndMinutes()}")
+      <.div(^.className := "time-range", s"${now.toHoursAndMinutes} - ${now.addMinutes(5).toHoursAndMinutes}")
     )
   }
 

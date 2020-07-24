@@ -77,7 +77,7 @@ object SDate {
 
   def millisToLocalIsoDateOnly(timeZone: DateTimeZone): MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, timeZone).toISODateOnly
 
-  def millisToLocalHoursAndMinutes(timeZone: DateTimeZone): MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, timeZone).toHoursAndMinutes()
+  def millisToLocalHoursAndMinutes(timeZone: DateTimeZone): MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, timeZone).toHoursAndMinutes
 
   object implicits {
 

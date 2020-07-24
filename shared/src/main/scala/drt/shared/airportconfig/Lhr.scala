@@ -96,7 +96,6 @@ object Lhr extends AirportConfigLike {
     ),
     hasActualDeskStats = true,
     portStateSnapshotInterval = 250,
-    hasEstChox = true,
     exportQueueOrder = Queues.exportQueueOrderWithFastTrack,
     role = LHRAccess,
     terminalPaxTypeQueueAllocation = Map(

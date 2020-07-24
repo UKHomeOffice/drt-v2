@@ -10,14 +10,13 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions._
 import drt.client.services._
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import japgolly.scalajs.react.{CtorType, _}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
+import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Anchor, Div, Table}
 import org.scalajs.dom.raw.HTMLElement
 
@@ -35,65 +34,29 @@ object TerminalStaffing {
                     terminalName: Terminal,
                     potShifts: Pot[ShiftAssignments],
                     potFixedPoints: Pot[FixedPointAssignments],
-                    potStaffMovements: Pot[Seq[StaffMovement]],
+                    potStaffMovements: Pot[StaffMovements],
                     airportConfig: AirportConfig,
                     loggedInUser: LoggedInUser,
                     viewMode: ViewMode
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by(p => {
-    (p.potShifts.getOrElse(ShiftAssignments.empty), p.potFixedPoints.getOrElse(FixedPointAssignments.empty), p.potStaffMovements.getOrElse(Seq[StaffMovement]())).hashCode()
+    (p.potShifts.getOrElse(ShiftAssignments.empty), p.potFixedPoints.getOrElse(FixedPointAssignments.empty), p.potStaffMovements.getOrElse(StaffMovements.empty)).hashCode()
   })
-
-  def movementsForDay(movements: Seq[StaffMovement], day: SDateLike): Seq[StaffMovement] = {
-    val startOfDayMillis = startOfDay(day).millisSinceEpoch
-    val endOfDayMillis = endOfDay(day).millisSinceEpoch
-
-    movements
-      .groupBy(_.uUID)
-      .filter { case (_, movementsPair) => areInWindow(startOfDayMillis, endOfDayMillis, movementsPair) }
-      .values
-      .flatten
-      .toSeq
-  }
-
-  def areInWindow(startOfDayMillis: MillisSinceEpoch,
-                  endOfDayMillis: MillisSinceEpoch,
-                  movementsPair: Seq[StaffMovement]): Boolean = {
-    val chronologicalMovementsPair = movementsPair.sortBy(_.time.millisSinceEpoch).toList
-
-    chronologicalMovementsPair match {
-      case singleMovement :: Nil =>
-        val movementMillis = singleMovement.time.millisSinceEpoch
-        isInWindow(startOfDayMillis, endOfDayMillis, movementMillis)
-
-      case start :: end :: Nil =>
-        val firstInWindow = isInWindow(startOfDayMillis, endOfDayMillis, start.time.millisSinceEpoch)
-        val lastInWindow = isInWindow(startOfDayMillis, endOfDayMillis, end.time.millisSinceEpoch)
-        firstInWindow || lastInWindow
-
-      case _ => false
-    }
-  }
-
-  def isInWindow(startOfDayMillis: MillisSinceEpoch,
-                 endOfDayMillis: MillisSinceEpoch,
-                 movementMillis: MillisSinceEpoch): Boolean = {
-    startOfDayMillis <= movementMillis && movementMillis <= endOfDayMillis
-  }
 
   class Backend() {
     def render(props: Props): VdomTagOf[Div] = <.div(
       props.potShifts.render(shifts => {
         props.potFixedPoints.render(fixedPoints => {
-          props.potStaffMovements.render((movements: Seq[StaffMovement]) => {
+          props.potStaffMovements.render((movements: StaffMovements) => {
+            val movementsForTheDay = movements.movementsForDay(props.viewMode.time)
             <.div(
               <.div(^.className := "container",
                 <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminalName)), props.airportConfig, props.terminalName, props.loggedInUser))),
-                <.div(^.className := "col-md-4", movementsEditor(movementsForDay(movements, props.viewMode.time), props.terminalName))
+                <.div(^.className := "col-md-4", movementsEditor(movementsForTheDay, props.terminalName))
               ),
               <.div(^.className := "container",
-                <.div(^.className := "col-md-10", staffOverTheDay(movementsForDay(movements, props.viewMode.time), shifts, props.terminalName)))
+                <.div(^.className := "col-md-10", staffOverTheDay(movementsForTheDay, shifts, props.terminalName)))
             )
           })
         })
@@ -275,15 +238,9 @@ object TerminalStaffing {
       s"${movement.delta} @ $startDateForDisplay ${displayTime(movement.time)} -> ongoing $reasonForDisplay by $createdBy"
     }
 
-    def displayTime(time: MilliDate): String = {
-      val startDate: SDateLike = SDate(time)
-      f"${startDate.getHours()}%02d:${startDate.getMinutes()}%02d"
-    }
+    def displayTime(time: MilliDate): String = SDate(time).toHoursAndMinutes
 
-    def displayDate(time: MilliDate): String = {
-      val startDate: SDateLike = SDate(time)
-      f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
-    }
+    def displayDate(time: MilliDate): String = SDate(time).ddMMyyString
   }
 
 }
@@ -293,7 +250,7 @@ object FixedPoints {
     val lines = rawFixedPoints.split("\n").toList.map(line => {
       val withTerminal = line.split(",").toList.map(_.trim)
       val withOutTerminal = withTerminal match {
-        case fpName :: _ :: _ :: tail => fpName.toString :: tail
+        case fpName :: _ :: _ :: tail => fpName :: tail
         case _ => Nil
       }
       withOutTerminal.mkString(", ")
@@ -308,7 +265,7 @@ object FixedPoints {
     val lines = rawFixedPoints.split("\n").toList.map(line => {
       val withoutTerminal = line.split(",").toList.map(_.trim)
       val withTerminal = withoutTerminal match {
-        case fpName :: tail => fpName.toString :: terminalName.toString :: todayString :: tail
+        case fpName :: tail => fpName :: terminalName.toString :: todayString :: tail
         case _ => Nil
       }
       withTerminal.mkString(", ")
