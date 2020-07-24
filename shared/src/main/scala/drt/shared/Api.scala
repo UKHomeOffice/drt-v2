@@ -518,7 +518,7 @@ trait SDateLike {
 
   def toISODateOnly: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d"
 
-  def toHoursAndMinutes(): String = f"${getHours()}%02d:${getMinutes()}%02d"
+  def toHoursAndMinutes: String = f"${getHours()}%02d:${getMinutes()}%02d"
 
   def prettyDateTime(): String = f"${getDate()}%02d-${getMonth()}%02d-${getFullYear()} ${getHours()}%02d:${getMinutes()}%02d"
 

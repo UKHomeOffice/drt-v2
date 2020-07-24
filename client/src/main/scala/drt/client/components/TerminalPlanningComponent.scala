@@ -52,7 +52,7 @@ object TerminalPlanningComponent {
 
       val slotStartTimes = Forecast.timeSlotStartTimes(
         props.forecastPeriod.forecast,
-        (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes()
+        (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes
       )
       <.div(
         <.div(^.className := "form-group row planning-week",

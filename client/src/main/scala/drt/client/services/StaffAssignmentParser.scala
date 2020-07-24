@@ -1,7 +1,5 @@
 package drt.client.services
 
-import java.util.UUID
-
 import drt.shared.Terminals.Terminal
 import drt.shared._
 
@@ -54,11 +52,7 @@ object StaffAssignmentHelper {
   def toCsv(assignment: StaffAssignment): String = {
     val startDate: SDateLike = SDate(assignment.startDt)
     val endDate: SDateLike = SDate(assignment.endDt)
-    val startDateString = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d"
-    val startTimeString = f"${startDate.getHours()}%02d:${startDate.getMinutes()}%02d"
-    val endTimeString = f"${endDate.getHours()}%02d:${endDate.getMinutes()}%02d"
-
-    s"${assignment.name},${assignment.terminal},$startDateString,$startTimeString,$endTimeString,${assignment.numberOfStaff}"
+    s"${assignment.name},${assignment.terminal},${startDate.ddMMyyString},${startDate.toHoursAndMinutes},${endDate.toHoursAndMinutes},${assignment.numberOfStaff}"
   }
 
   def fixedPointsFormat(fixedPoints: FixedPointAssignments): String = fixedPoints.assignments.map(fixedPointFormat).mkString("\n")
@@ -66,28 +60,20 @@ object StaffAssignmentHelper {
   def fixedPointFormat(assignment: StaffAssignment): String = {
     val startDate: SDateLike = SDate(assignment.startDt)
     val endDate: SDateLike = SDate(assignment.endDt)
-    val startTimeString = f"${startDate.getHours()}%02d:${startDate.getMinutes()}%02d"
-    val endTimeString = f"${endDate.getHours()}%02d:${endDate.getMinutes()}%02d"
-
-    s"${assignment.name}, $startTimeString, $endTimeString, ${assignment.numberOfStaff}"
+    s"${assignment.name}, ${startDate.toHoursAndMinutes}, ${endDate.toHoursAndMinutes}, ${assignment.numberOfStaff}"
   }
 
-  private def adjustEndDateIfEndTimeIsBeforeStartTime(d: Int, m: Int, y: Int, startDt: SDateLike, endDt: SDateLike): SDateLike = {
-    if (endDt.millisSinceEpoch < startDt.millisSinceEpoch) {
+  private def adjustEndDateIfEndTimeIsBeforeStartTime(d: Int, m: Int, y: Int, startDt: SDateLike, endDt: SDateLike): SDateLike =
+    if (endDt.millisSinceEpoch < startDt.millisSinceEpoch)
       SDate(y, m, d, endDt.getHours(), endDt.getMinutes()).addDays(1)
-    }
-    else {
+    else
       endDt
-    }
-  }
 
-  private def parseTimeWithStartTime(startTime: String, d: Int, m: Int, y: Int): Try[SDateLike] = {
-    Try {
-      val startT = startTime.split(":").toVector
-      val (startHour, startMinute) = (startT(0).toInt, startT(1).toInt)
-      val startDt = SDate(y, m, d, startHour, startMinute)
-      startDt
-    }
+  private def parseTimeWithStartTime(startTime: String, d: Int, m: Int, y: Int): Try[SDateLike] = Try {
+    val startT = startTime.split(":").toVector
+    val (startHour, startMinute) = (startT(0).toInt, startT(1).toInt)
+    val startDt = SDate(y, m, d, startHour, startMinute)
+    startDt
   }
 }
 
@@ -102,23 +88,4 @@ case class StaffAssignmentParser(rawStaffAssignments: String) {
       case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
         StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime, staffNumberDelta, None)
     }
-}
-
-object StaffMovements {
-  def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]): Seq[StaffMovement] = {
-    staffAssignments.flatMap(assignment => {
-      val uuid: UUID = UUID.randomUUID()
-      StaffMovement(assignment.terminal, assignment.name + " start", time = assignment.startDt, assignment.numberOfStaff, uuid, createdBy = assignment.createdBy) ::
-        StaffMovement(assignment.terminal, assignment.name + " end", time = assignment.endDt, -assignment.numberOfStaff, uuid, createdBy = assignment.createdBy) :: Nil
-    }).sortBy(_.time.millisSinceEpoch)
-  }
-
-  def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: SDateLike): Int = movements.sortBy(_.time.millisSinceEpoch).takeWhile(_.time.millisSinceEpoch <= dateTime.millisSinceEpoch).map(_.delta).sum
-
-  def terminalStaffAt(shiftAssignments: ShiftAssignments)(movements: Seq[StaffMovement])(terminalName: Terminal, dateTime: SDateLike): Int = {
-    val baseStaff = shiftAssignments.terminalStaffAt(terminalName, dateTime)
-
-    val movementAdjustments = adjustmentsAt(movements.filter(_.terminal == terminalName))(dateTime)
-    baseStaff + movementAdjustments
-  }
 }

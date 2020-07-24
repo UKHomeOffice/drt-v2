@@ -7,7 +7,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.SDateLike
+import drt.shared.{SDateLike, StaffMovements}
 import drt.shared.Terminals.Terminal
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.Reusability
@@ -181,7 +181,7 @@ object StaffAdjustmentDialogue {
         popoverFormRow(
           "Ending at",
           Option("staff-adjustment--end-time"),
-          selectFromRange(timesBy15Minutes(state.startTimeHours), f"${endHours}%02d:${endMinutes}%02d", "staff-adjustment--select-end-time", adjustLengthFromEndTime)
+          selectFromRange(timesBy15Minutes(state.startTimeHours), f"$endHours%02d:$endMinutes%02d", "staff-adjustment--select-end-time", adjustLengthFromEndTime)
         )
       }
 

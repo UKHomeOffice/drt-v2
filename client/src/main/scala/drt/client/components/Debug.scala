@@ -3,10 +3,10 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.services._
-import drt.shared.{FixedPointAssignments, PortState, ShiftAssignments, StaffMovement}
-import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import drt.shared.{FixedPointAssignments, PortState, ShiftAssignments, StaffMovements}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import org.scalajs.dom
 
 import scala.scalajs.js
@@ -29,7 +29,7 @@ object Debug {
       staffingRCP((staffingMP: ModelProxy[(
         Pot[ShiftAssignments],
           Pot[FixedPointAssignments],
-          Pot[Seq[StaffMovement]],
+          Pot[StaffMovements],
           Pot[PortState],
           LoadingState
         )]) => {

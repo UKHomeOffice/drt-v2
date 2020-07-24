@@ -92,9 +92,9 @@ object Actions {
 
   case class RemoveStaffMovements(uUID: UUID) extends Action
 
-  case class SetStaffMovementsAndPollIfLiveView(viewMode: ViewMode, staffMovements: Seq[StaffMovement]) extends Action
+  case class SetStaffMovementsAndPollIfLiveView(viewMode: ViewMode, staffMovements: StaffMovements) extends Action
 
-  case class SetStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
+  case class SetStaffMovements(staffMovements: StaffMovements) extends Action
 
   case class GetStaffMovements(viewMode: ViewMode) extends Action
 

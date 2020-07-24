@@ -112,7 +112,7 @@ object TerminalDesksAndQueuesRow {
           <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(minus, <.span(^.className := "deployed", available), plus))
         else
           <.td(^.className := s"total-deployed staff-adjustments", ^.colSpan := 2, <.span(^.className := "deployed", available)))
-      <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes()) :: queueTds.toList ++ pcpTds).toTagMod)
+      <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes) :: queueTds.toList ++ pcpTds).toTagMod)
     })
     .componentDidMount(_ => Callback.log("TerminalDesksAndQueuesRow did mount"))
     .configure(Reusability.shouldComponentUpdate)
