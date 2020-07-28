@@ -24,7 +24,7 @@ object TerminalStaffingTests extends TestSuite {
         ))
 
         val expected = Seq(today)
-        val result = sm.movementsForDay(SDate(2017, 7, 21, 0, 0))
+        val result = sm.forDay(SDate(2017, 7, 21, 0, 0))
 
         assert(expected == result)
       }
@@ -41,7 +41,7 @@ object TerminalStaffingTests extends TestSuite {
         val sm = StaffMovements(crossingLastMidnight ++ crossingNextMidnight)
 
         val expected = crossingLastMidnight ++ crossingNextMidnight
-        val result = sm.movementsForDay(SDate(2017, 7, 22, 0, 0))
+        val result = sm.forDay(SDate(2017, 7, 22, 0, 0))
 
         assert(expected.toSet == result.toSet)
       }
@@ -62,7 +62,7 @@ object TerminalStaffingTests extends TestSuite {
         val sm = StaffMovements(pairYesterday ++ pairToday ++ pairTomorrow)
 
         val expected = pairToday
-        val result = sm.movementsForDay(SDate(2017, 7, 22, 0, 0))
+        val result = sm.forDay(SDate(2017, 7, 22, 0, 0))
 
         assert(expected.toSet == result.toSet)
       }
