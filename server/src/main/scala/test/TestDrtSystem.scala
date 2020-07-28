@@ -97,7 +97,7 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
     restartActor ! StartTestSystem
   }
 
-  def startSystem(implicit system: ActorSystem, materializer: ActorMaterializer): () => List[KillSwitch] = () => {
+  def startSystem: () => List[KillSwitch] = () => {
     val (manifestRequestsSource, bridge1Ks, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
     val (manifestResponsesSource, bridge2Ks, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
