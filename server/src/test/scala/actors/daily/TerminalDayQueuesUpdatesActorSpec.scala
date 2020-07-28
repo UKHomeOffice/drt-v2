@@ -4,7 +4,6 @@ import actors.daily.ReadJournalTypes.ReadJournalWithEvents
 import actors.{InMemoryStreamingJournal, StreamingJournalLike}
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import akka.stream.ActorMaterializer
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.Terminals.{T1, Terminal}
@@ -19,8 +18,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 
 class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
-  implicit val mat: ActorMaterializer = ActorMaterializer()
-
   val terminal: Terminal = T1
   val queue: Queues.Queue = Queues.EeaDesk
   val date: String = "2020-01-01"

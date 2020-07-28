@@ -21,9 +21,10 @@ trait WithContactDetails {
 
     val localTime = SDate.now(Crunch.europeLondonTimeZone)
 
-    OOHChecker(BankHolidayApiClient()).isOOH(localTime).map { isOoh =>
-
-      Ok(write(OutOfHoursStatus(localTime.toLocalDateTimeString(), isOoh)))
-    }
+    OOHChecker(BankHolidayApiClient())
+      .isOOH(localTime)
+      .map { isOoh =>
+        Ok(write(OutOfHoursStatus(localTime.toLocalDateTimeString(), isOoh)))
+      }
   }
 }

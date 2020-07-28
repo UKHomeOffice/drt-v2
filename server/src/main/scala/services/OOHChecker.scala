@@ -30,17 +30,14 @@ case class OOHChecker(bankHolidayClient: BankHolidayApiClient) {
 
 }
 
-case class BankHolidayApiClient(uri: String = "https://www.gov.uk/bank-holidays.json")(implicit system: ActorSystem) {
+case class BankHolidayApiClient(uri: String = "https://www.gov.uk/bank-holidays.json")(implicit system: ActorSystem, materializer: ActorMaterializer) {
 
   import BankHolidayParserProtocol._
 
-  def getHolidays(): Future[Map[String, BankHolidayDivision]] = {
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
-
+  def getHolidays(): Future[Map[String, BankHolidayDivision]] =
     sendAndReceive(HttpRequest(HttpMethods.GET, Uri(uri)))
       .map(res => Unmarshal[HttpResponse](res).to[Map[String, BankHolidayDivision]])
       .flatMap(identity)
-  }
 
   def sendAndReceive: HttpRequest => Future[HttpResponse] = request => Http()(system).singleRequest(request)
 

@@ -136,7 +136,7 @@ class FlightsExportSpec extends CrunchTestLike {
 
         val exportStream = summaryForDaysCsvSource(startDate, 3, now, terminal, Option((summaryActorProvider, GetSummaries)), portStateToSummaries)
 
-        val value1 = exportStream.runWith(Sink.seq)(ActorMaterializer())
+        val value1 = exportStream.runWith(Sink.seq)
         val result = Await.result(value1, 1 second)
 
         val expected = List(

@@ -30,7 +30,8 @@ import scala.xml.{Node, NodeSeq}
 object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(client: BHXClientLike, pollFrequency: FiniteDuration, initialDelay: FiniteDuration)(implicit actorSystem: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
+  def apply(client: BHXClientLike, pollFrequency: FiniteDuration, initialDelay: FiniteDuration)
+           (implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Source[ArrivalsFeedResponse, Cancellable] = {
     var initialRequest = true
     val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelay, pollFrequency, NotUsed)
       .mapAsync(1)(_ => {
@@ -86,7 +87,7 @@ final class SoapActionHeader(action: String) extends ModeledCustomHeader[SoapAct
 object SoapActionHeader extends ModeledCustomHeaderCompanion[SoapActionHeader] {
   override val name = "SOAPAction"
 
-  override def parse(value: String) = Try(new SoapActionHeader(value))
+  override def parse(value: String): Try[SoapActionHeader] = Try(new SoapActionHeader(value))
 }
 
 trait BHXClientLike extends ScalaXmlSupport {
@@ -95,24 +96,22 @@ trait BHXClientLike extends ScalaXmlSupport {
   val bhxLiveFeedUser: String
   val soapEndPoint: String
 
-  def initialFlights(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] = {
+  def initialFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
 
     log.info(s"Making initial Live Feed Request")
     sendXMLRequest(fullRefreshXml(bhxLiveFeedUser))
   }
 
-  def updateFlights(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] = {
+  def updateFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
 
     log.info(s"Making update Feed Request")
-    sendXMLRequest(updateXml(bhxLiveFeedUser))
+    sendXMLRequest(updateXml()(bhxLiveFeedUser))
   }
 
-  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] = {
+  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
 
     implicit val xmlToResUM: Unmarshaller[NodeSeq, BHXFlightsResponse] = BHXFlight.unmarshaller
     implicit val resToBHXResUM: Unmarshaller[HttpResponse, BHXFlightsResponse] = BHXFlight.responseToAUnmarshaller
-
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
 
     val headers: List[HttpHeader] = List(
       SoapActionHeader("http://www.iata.org/IATA/2007/00/IRequestFlightService/RequestFlightData")
@@ -141,7 +140,7 @@ trait BHXClientLike extends ScalaXmlSupport {
 
   def fullRefreshXml: String => String = postXMLTemplate(fullRefresh = "1")
 
-  def updateXml: String => String = postXMLTemplate(fullRefresh = "0")
+  def updateXml(): String => String = postXMLTemplate(fullRefresh = "0")
 
   def postXMLTemplate(fullRefresh: String)(username: String): String = {
     val postXML =

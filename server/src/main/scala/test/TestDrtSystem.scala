@@ -6,7 +6,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Prop
 import akka.pattern.ask
 import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
 import akka.stream.scaladsl.Source
-import akka.stream.{KillSwitch, Materializer}
+import akka.stream.{ActorMaterializer, KillSwitch}
 import akka.util.Timeout
 import drt.auth.Role
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -28,7 +28,7 @@ import scala.language.postfixOps
 import scala.util.Success
 
 case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
-                        (implicit val materializer: Materializer,
+                        (implicit val materializer: ActorMaterializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem) extends DrtSystemInterface {
 
