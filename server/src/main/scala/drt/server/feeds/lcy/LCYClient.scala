@@ -37,7 +37,7 @@ final class SoapActionHeader(action: String) extends ModeledCustomHeader[SoapAct
 object SoapActionHeader extends ModeledCustomHeaderCompanion[SoapActionHeader] {
   override val name = "SOAPAction"
 
-  override def parse(value: String) = Try(new SoapActionHeader(value))
+  override def parse(value: String): Try[SoapActionHeader] = Try(new SoapActionHeader(value))
 }
 
 trait LcyClientSupport extends ScalaXmlSupport {
@@ -52,24 +52,22 @@ trait LcyClientSupport extends ScalaXmlSupport {
 
   def password: String
 
-  def initialFlights(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] = {
+  def initialFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
 
     log.info(s"Making initial Live Feed Request")
     sendXMLRequest(fullRefreshXml(lcyLiveFeedUser))
   }
 
-  def updateFlights(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] = {
+  def updateFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
 
     log.info(s"Making update Feed Request")
-    sendXMLRequest(updateXml(lcyLiveFeedUser))
+    sendXMLRequest(updateXml()(lcyLiveFeedUser))
   }
 
-  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] = {
+  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
 
     implicit val xmlToResUM: Unmarshaller[NodeSeq, LCYFlightsResponse] = LCYFlightTransform.unmarshaller
     implicit val resToLCYResUM: Unmarshaller[HttpResponse, LCYFlightsResponse] = LCYFlightTransform.responseToAUnmarshaller
-
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
 
     val headers: List[HttpHeader] = List(
       SoapActionHeader(""),
@@ -98,7 +96,7 @@ trait LcyClientSupport extends ScalaXmlSupport {
 
   def fullRefreshXml: String => String = postXMLTemplate(fullRefresh = "1")
 
-  def updateXml: String => String = postXMLTemplate(fullRefresh = "0")
+  def updateXml(): String => String = postXMLTemplate(fullRefresh = "0")
 
   def postXMLTemplate(fullRefresh: String)(username: String): String = {
     s"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://www.airport2020.com/RequestAIDX/">

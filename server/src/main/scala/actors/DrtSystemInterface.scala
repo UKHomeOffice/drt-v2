@@ -8,7 +8,7 @@ import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
-import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
@@ -136,7 +136,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         manifestRequestsSink: Sink[List[Arrival], NotUsed],
                         manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                         refreshArrivalsOnStart: Boolean,
-                        startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {
+                        startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch))
+                       (implicit system: ActorSystem, materializer: ActorMaterializer): CrunchSystem[Cancellable] = {
 
     val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
@@ -277,7 +278,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     }
   }
 
-  def liveArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] =
+  def liveArrivalsSource(portCode: PortCode)(implicit system: ActorSystem, materializer: ActorMaterializer): Source[ArrivalsFeedResponse, Cancellable] =
     portCode.iata match {
       case "LHR" =>
         val host = config.get[String]("feeds.lhr.sftp.live.host")
@@ -294,11 +295,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         val azureClient = LGWAzureClient(LGWFeed.serviceBusClient(lgwNamespace, lgwSasToKey, lgwServiceBusUri))
         LGWFeed(azureClient)(system).source()
       case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
-        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)(system)
+        BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)
       case "BHX" =>
         BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
       case "LCY" if !params.lcyLiveEndPointUrl.isEmpty =>
-        LCYFeed(LCYClient(new HttpClient, params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), 80 seconds, 1 milliseconds)(system)
+        LCYFeed(LCYClient(new HttpClient, params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), 80 seconds, 1 milliseconds)
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
         val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))

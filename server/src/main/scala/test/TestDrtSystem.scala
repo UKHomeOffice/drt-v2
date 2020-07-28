@@ -6,7 +6,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Prop
 import akka.pattern.ask
 import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
 import akka.stream.scaladsl.Source
-import akka.stream.{KillSwitch, Materializer}
+import akka.stream.{ActorMaterializer, KillSwitch}
 import akka.util.Timeout
 import drt.auth.Role
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -28,7 +28,7 @@ import scala.language.postfixOps
 import scala.util.Success
 
 case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
-                        (implicit val materializer: Materializer,
+                        (implicit val materializer: ActorMaterializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem) extends DrtSystemInterface {
 
@@ -87,7 +87,7 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
     })
   }
 
-  override def liveArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] = testFeed
+  override def liveArrivalsSource(portCode: PortCode)(implicit system: ActorSystem, materializer: ActorMaterializer): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 
   override def getRoles(config: Configuration,
                         headers: Headers,
@@ -97,7 +97,7 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
     restartActor ! StartTestSystem
   }
 
-  def startSystem: () => List[KillSwitch] = () => {
+  def startSystem(implicit system: ActorSystem, materializer: ActorMaterializer): () => List[KillSwitch] = () => {
     val (manifestRequestsSource, bridge1Ks, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
     val (manifestResponsesSource, bridge2Ks, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 

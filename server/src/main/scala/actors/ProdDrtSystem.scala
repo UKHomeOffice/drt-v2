@@ -4,7 +4,7 @@ import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.stream.{Materializer, OverflowStrategy}
+import akka.stream.{ActorMaterializer, OverflowStrategy}
 import drt.auth.{Role, Roles}
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -35,7 +35,7 @@ object PostgresTables extends {
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
 case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
-                        (implicit val materializer: Materializer,
+                        (implicit val materializer: ActorMaterializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem) extends DrtSystemInterface {
 

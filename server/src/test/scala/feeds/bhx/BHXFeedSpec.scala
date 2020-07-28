@@ -4,6 +4,7 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
@@ -14,6 +15,7 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSucc
 import services.SDate
 import services.crunch.CrunchTestLike
 
+import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.xml.{NodeSeq, XML}
@@ -33,7 +35,7 @@ class BHXFeedSpec extends CrunchTestLike {
     val username = sys.env("BHX_IATA_USERNAME")
 
     val bhxClient = BHXClient(username, endpoint)
-    Await.result(bhxClient.initialFlights(system), 30 seconds)
+    Await.result(bhxClient.initialFlights, 30 seconds)
 
     false
   }
@@ -195,10 +197,10 @@ class BHXFeedSpec extends CrunchTestLike {
 
   case class BHXMockClientWithUpdates(initialResponses: List[ArrivalsFeedResponse], updateResponses: List[ArrivalsFeedResponse]) extends BHXClientLike {
 
-    var mockInitialResponse = initialResponses
-    var mockUpdateResponses = updateResponses
+    var mockInitialResponse: immutable.Seq[ArrivalsFeedResponse] = initialResponses
+    var mockUpdateResponses: immutable.Seq[ArrivalsFeedResponse] = updateResponses
 
-    override def initialFlights(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] = mockInitialResponse match {
+    override def initialFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = mockInitialResponse match {
       case head :: tail =>
         mockInitialResponse = tail
         Future(head)
@@ -206,7 +208,7 @@ class BHXFeedSpec extends CrunchTestLike {
         Future(ArrivalsFeedFailure("No more mock esponses"))
     }
 
-    override def updateFlights(implicit actorSystem: ActorSystem): Future[ArrivalsFeedResponse] =
+    override def updateFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] =
       mockUpdateResponses match {
         case head :: tail =>
           mockUpdateResponses = tail

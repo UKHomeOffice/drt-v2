@@ -62,7 +62,6 @@ class LHRFeedSpec extends CrunchTestLike {
            |"4","QR005","Qatar Airways","DOH","Doha","22:00 09/03/2017","21:32 09/03/2017","21:33 09/03/2017","21:43 09/03/2017","21:45 09/03/2017","10","0","0","0""""
           .stripMargin
 
-      implicit val materializer: ActorMaterializer = ActorMaterializer()
       val csvGetters: Iterator[(Int) => String] = LHRFlightFeed.csvParserAsIteratorOfColumnGetter(csvString)
       val lhrFeed = LHRFlightFeed(csvGetters)
 
@@ -108,8 +107,6 @@ class LHRFeedSpec extends CrunchTestLike {
         """|Term","Flight No","Operator","From","Airport name","Scheduled","Estimated","Touchdown","Est Chocks","Act Chocks","Stand","Max pax","Act Pax","Conn pax"
            |"4","KL1033","KLM Royal Dutch Airlines","AMS","Amsterdam","20:50 09/03/2017","20:50 09/03/2017","","","","","","","""""
           .stripMargin
-
-      implicit val materializer: ActorMaterializer = ActorMaterializer()
 
       val csv: CSVParser = CSVParser.parse(csvString, CSVFormat.DEFAULT)
       val csvGetters: Iterator[(Int) => String] = csv.iterator().asScala.map((l: CSVRecord) => (i: Int) => l.get(i))
