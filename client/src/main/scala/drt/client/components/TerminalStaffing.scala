@@ -49,7 +49,7 @@ object TerminalStaffing {
       props.potShifts.render(shifts => {
         props.potFixedPoints.render(fixedPoints => {
           props.potStaffMovements.render((movements: StaffMovements) => {
-            val movementsForTheDay = movements.movementsForDay(props.viewMode.time)
+            val movementsForTheDay = movements.forDay(props.viewMode.time)
             <.div(
               <.div(^.className := "container",
                 <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminalName)), props.airportConfig, props.terminalName, props.loggedInUser))),

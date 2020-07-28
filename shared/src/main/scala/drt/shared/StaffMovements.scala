@@ -47,7 +47,7 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
     copy(movements = unexpiredPairsOfMovements)
   }
 
-  def movementsForDay(day: SDateLike): Seq[StaffMovement] = {
+  def forDay(day: SDateLike): Seq[StaffMovement] = {
     val startOfDayMillis = day.getLocalLastMidnight.millisSinceEpoch
     val endOfDayMillis = day.getLocalNextMidnight.millisSinceEpoch
 

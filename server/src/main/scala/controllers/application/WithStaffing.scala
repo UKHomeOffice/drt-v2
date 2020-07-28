@@ -158,9 +158,9 @@ trait WithStaffing {
 
     val eventualStaffMovements: Future[Seq[StaffMovement]] = staffMovementsReadActor.ask(GetState)
       .map {
-        case StaffMovements(movements) =>
+        case movements: StaffMovements =>
           staffMovementsReadActor ! PoisonPill
-          movements
+          movements.forDay(date)
       }
       .recoverWith {
         case _ =>
