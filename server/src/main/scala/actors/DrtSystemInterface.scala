@@ -58,7 +58,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 
 trait DrtSystemInterface extends UserRoleProviderLike {
-  implicit val materializer: Materializer
+  implicit val materializer: ActorMaterializer
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
 
@@ -136,8 +136,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         manifestRequestsSink: Sink[List[Arrival], NotUsed],
                         manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                         refreshArrivalsOnStart: Boolean,
-                        startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch))
-                       (implicit system: ActorSystem, materializer: ActorMaterializer): CrunchSystem[Cancellable] = {
+                        startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {
 
     val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
@@ -278,7 +277,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     }
   }
 
-  def liveArrivalsSource(portCode: PortCode)(implicit system: ActorSystem, materializer: ActorMaterializer): Source[ArrivalsFeedResponse, Cancellable] =
+  def liveArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] =
     portCode.iata match {
       case "LHR" =>
         val host = config.get[String]("feeds.lhr.sftp.live.host")

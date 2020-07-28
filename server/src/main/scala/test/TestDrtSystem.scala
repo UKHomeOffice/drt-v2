@@ -87,7 +87,7 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
     })
   }
 
-  override def liveArrivalsSource(portCode: PortCode)(implicit system: ActorSystem, materializer: ActorMaterializer): Source[ArrivalsFeedResponse, Cancellable] = testFeed
+  override def liveArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] = testFeed
 
   override def getRoles(config: Configuration,
                         headers: Headers,
