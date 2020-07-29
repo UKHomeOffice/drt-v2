@@ -34,6 +34,7 @@ class S3ManifestPoller(sourceQueue: SourceQueueWithComplete[ManifestsFeedRespons
     val eventualFileNameAndManifests = provider
       .manifestsFuture(startingFileName)
       .map(fetchedFilesAndManifests => {
+        log.info(f"Processing ${fetchedFilesAndManifests.size} manifests totalling ${fetchedFilesAndManifests.map(_._2.length).sum.toDouble / 1024}%.2f KBs")
         val (latestFileName, fetchedManifests) = if (fetchedFilesAndManifests.nonEmpty) {
           val lastSeen = fetchedFilesAndManifests.map { case (fileName, _) => fileName }.max
           val manifests = fetchedFilesAndManifests.map { case (_, manifest) => jsonStringToManifest(manifest) }.toSet
