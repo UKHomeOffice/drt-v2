@@ -24,9 +24,7 @@ class FixedPointsReadActor(pointInTime: SDateLike, val now: () => SDateLike) ext
 
   override def recovery: Recovery = {
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime.millisSinceEpoch)
-    val recovery = Recovery(fromSnapshot = criteria, replayMax = 250)
-    log.info(s"Recovery: $recovery")
-    recovery
+    Recovery(fromSnapshot = criteria, replayMax = 250)
   }
 
   override def onUpdateState(data: FixedPointAssignments): Unit = {}

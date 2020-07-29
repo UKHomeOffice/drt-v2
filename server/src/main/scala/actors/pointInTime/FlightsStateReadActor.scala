@@ -29,9 +29,7 @@ class FlightsStateReadActor(realNow: () => SDateLike,
 
   override def recovery: Recovery = {
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-    val recovery = Recovery(fromSnapshot = criteria, replayMax = snapshotInterval)
-    log.info(s"Recovery: $recovery")
-    recovery
+    Recovery(fromSnapshot = criteria, replayMax = snapshotInterval)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

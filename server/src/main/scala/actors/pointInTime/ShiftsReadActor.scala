@@ -30,8 +30,6 @@ class ShiftsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike) ext
 
   override def recovery: Recovery = {
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime.millisSinceEpoch)
-    val recovery = Recovery(fromSnapshot = criteria, replayMax = snapshotInterval)
-    log.info(s"Recovery: $recovery")
-    recovery
+    Recovery(fromSnapshot = criteria, replayMax = snapshotInterval)
   }
 }
