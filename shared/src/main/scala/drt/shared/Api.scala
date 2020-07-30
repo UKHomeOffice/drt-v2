@@ -931,13 +931,6 @@ object CrunchApi {
 
     override def isEmpty: Boolean = portDeskSlots.isEmpty
 
-    lazy val minutes: IMap[TQM, DeskStat] = for {
-      (tn, queueMinutes) <- portDeskSlots
-      (qn, deskStats) <- queueMinutes
-      (startMinute, deskStat) <- deskStats
-      minute <- startMinute until startMinute + 15 * oneMinuteMillis by oneMinuteMillis
-    } yield (TQM(tn, qn, minute), deskStat)
-
     lazy val deskStatMinutes: Iterable[DeskStatMinute] = for {
       (tn, queueMinutes) <- portDeskSlots
       (qn, deskStats) <- queueMinutes

@@ -168,28 +168,26 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
                        start: MillisSinceEpoch,
                        end: MillisSinceEpoch,
                        replyTo: ActorRef): Future[Option[PortStateUpdates]] = {
-    val (eventualFlights, eventualQueueMinutes, eventualStaffMinutes) = portStateComponentsRequest(GetUpdatesSince(since, start, end))
-
-    combineToPortStateUpdates(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).pipeTo(replyTo)
+    val request = GetUpdatesSince(since, start, end)
+    combineToPortStateUpdates(
+      requestFlights(request),
+      requestQueueMinutes(request),
+      requestStaffMinutes(request)
+    ).pipeTo(replyTo)
   }
 
-  def replyWithPortState(replyTo: ActorRef, request: PortStateRequest): Unit = {
-    val (eventualFlights, eventualQueueMinutes, eventualStaffMinutes) = portStateComponentsRequest(request)
-
-    combineToPortState(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).pipeTo(replyTo)
-  }
+  def replyWithPortState(replyTo: ActorRef, request: PortStateRequest): Unit =
+    combineToPortState(
+      requestFlights(request),
+      requestQueueMinutes(request),
+      requestStaffMinutes(request)
+    ).pipeTo(replyTo)
 
   def replyWithMinutesAsPortState(replyTo: ActorRef, request: PortStateRequest): Unit = {
-    val (eventualQueueMinutes, eventualStaffMinutes) = minuteComponentsRequest(request)
+    val (eventualQueueMinutes, eventualStaffMinutes) = (requestQueueMinutes(request), requestStaffMinutes(request))
 
     combineToPortState(Future(FlightsWithSplits.empty), eventualQueueMinutes, eventualStaffMinutes).pipeTo(replyTo)
   }
-
-  def portStateComponentsRequest(request: PortStateRequest): (Future[FlightsWithSplits], Future[MinutesContainer[CrunchMinute, TQM]], Future[MinutesContainer[StaffMinute, TM]]) =
-    (requestFlights(request), requestQueueMinutes(request), requestStaffMinutes(request))
-
-  def minuteComponentsRequest(request: PortStateRequest): (Future[MinutesContainer[CrunchMinute, TQM]], Future[MinutesContainer[StaffMinute, TM]]) =
-    (requestQueueMinutes(request), requestStaffMinutes(request))
 
   private def requestStaffMinutes(request: PortStateRequest): Future[MinutesContainer[StaffMinute, TM]] = {
     staffActorForRequest(request).ask(request).mapTo[MinutesContainer[StaffMinute, TM]].recoverWith {
