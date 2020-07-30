@@ -1,6 +1,6 @@
 package actors.minutes
 
-import actors.PointInTimeQuery
+import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, PointInTimeQuery}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
@@ -13,7 +13,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared.{MilliTimes, SDateLike, Terminals, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
 import services.graphstages.Crunch
 
 import scala.collection.immutable

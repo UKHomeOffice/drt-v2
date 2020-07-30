@@ -1,5 +1,6 @@
 package actors
 
+import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForDateRange, PointInTimeQuery}
 import actors.pointInTime.CrunchStateReadActor
 import akka.actor.{Actor, ActorRef, Props}
 import akka.testkit.TestProbe
@@ -9,7 +10,6 @@ import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.GetStateForDateRange
 import services.graphstages.Crunch
 
 import scala.concurrent.duration._

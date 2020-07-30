@@ -1,7 +1,7 @@
 package actors
 
+import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.acking.AckingReceiver.{Ack, StreamFailure}
-import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
@@ -11,7 +11,6 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import services.SDate
-import services.crunch.deskrecs.GetStateForDateRange
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext

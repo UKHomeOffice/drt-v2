@@ -1,6 +1,6 @@
 package services.crunch.deskrecs
 
-import actors.DateRangeLike
+import actors.PartitionedPortStateActor.GetFlights
 import actors.acking.AckingReceiver._
 import akka.actor.ActorRef
 import akka.pattern.ask
@@ -70,7 +70,7 @@ object RunnableDeskRecs {
                              (implicit executionContext: ExecutionContext,
                               timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] =
     portStateActor
-      .ask(GetFlightsForDateRange(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
+      .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
       .mapTo[FlightsWithSplits]
       .map(fs => (crunchStartMillis, fs))
       .recoverWith {
@@ -87,13 +87,3 @@ object RunnableDeskRecs {
     RunnableDeskRecs(portStateActor, portDeskRecs, maxDesksProvider).run()
   }
 }
-
-case class GetFlightsForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
-
-trait PortStateRequest
-
-case class GetStateForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
-
-case class GetStateForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike with PortStateRequest
-
-case class GetMinutesForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike with PortStateRequest

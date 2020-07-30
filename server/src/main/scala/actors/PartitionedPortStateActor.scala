@@ -1,6 +1,7 @@
 package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
+import actors.PartitionedPortStateActor.{DateRangeLike, GetFlights, GetFlightsForTerminalDateRange, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery, PortStateRequest}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily._
 import actors.pointInTime.CrunchStateReadActor
@@ -15,7 +16,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.crunch.deskrecs.{GetFlightsForDateRange, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange, PortStateRequest}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -45,6 +45,27 @@ object PartitionedPortStateActor {
                            expireAfterMillis: Int): Props = {
     Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to, replayMaxMessages))
   }
+
+  trait DateRangeLike {
+    val from: MillisSinceEpoch
+    val to: MillisSinceEpoch
+  }
+
+  trait PortStateRequest
+
+  case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
+
+  case class PointInTimeQuery(pointInTime: MillisSinceEpoch, query: DateRangeLike) extends PortStateRequest
+
+  case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
+
+  case class GetFlightsForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
+
+  case class GetStateForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
+
+  case class GetStateForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike with PortStateRequest
+
+  case class GetMinutesForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike with PortStateRequest
 }
 
 trait PartitionedPortStateActorLike {
@@ -132,7 +153,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     case PointInTimeQuery(millis, GetMinutesForTerminalDateRange(from, to, terminal)) =>
       replyWithMinutesAsPortState(sender(), PointInTimeQuery(millis, GetStateForTerminalDateRange(from, to, terminal)))
 
-    case PointInTimeQuery(pitMillis, GetFlightsForDateRange(from, to)) =>
+    case PointInTimeQuery(pitMillis, GetFlights(from, to)) =>
       flightsActor.ask(PointInTimeQuery(pitMillis, GetStateForDateRange(from, to))).pipeTo(sender())
 
     case PointInTimeQuery(pitMillis, GetFlightsForTerminalDateRange(from, to, terminal)) =>
@@ -153,7 +174,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     case GetUpdatesSince(since, start, end) =>
       replyWithUpdates(since, start, end, sender())
 
-    case GetFlightsForDateRange(from, to) =>
+    case GetFlights(from, to) =>
       flightsActor.ask(GetStateForDateRange(from, to)).pipeTo(sender())
 
     case GetFlightsForTerminalDateRange(from, to, terminal) =>

@@ -1,5 +1,6 @@
 package actors.minutes
 
+import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors.minutes.MinutesActorLike.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
@@ -9,7 +10,6 @@ import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.{Queues, SDateLike, TQM}
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.GetStateForTerminalDateRange
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

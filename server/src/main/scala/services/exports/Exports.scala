@@ -1,6 +1,6 @@
 package services.exports
 
-import actors.{DateRangeLike, GetFlightsForTerminalDateRange}
+import actors.PartitionedPortStateActor.{DateRangeLike, GetFlightsForTerminalDateRange, GetMinutesForTerminalDateRange}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
@@ -16,7 +16,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.HttpEntity
 import play.api.mvc.{ResponseHeader, Result}
 import services.SDate
-import services.crunch.deskrecs.{GetMinutesForTerminalDateRange, GetStateForTerminalDateRange}
 import services.exports.summaries.flights.TerminalFlightsSummaryLike.TerminalFlightsSummaryLikeGenerator
 import services.exports.summaries.queues.{QueuesSummary, TerminalQueuesSummary}
 import services.exports.summaries.{Summaries, TerminalSummaryLike}

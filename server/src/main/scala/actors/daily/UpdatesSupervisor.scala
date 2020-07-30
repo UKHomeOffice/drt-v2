@@ -2,22 +2,22 @@ package actors.daily
 
 import java.util.UUID
 
-import actors.GetUpdatesSince
+import actors.PartitionedPortStateActor.GetUpdatesSince
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.NotUsed
-import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props}
-import akka.pattern.{AskTimeoutException, AskableActorRef, ask, pipe}
+import akka.actor.{Actor, ActorRef, Cancellable, Props}
+import akka.pattern.{AskTimeoutException, ask, pipe}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinuteLike, MinutesContainer, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.Terminals.Terminal
-import drt.shared.{MilliTimes, SDateLike, TM, TQM, WithTimeAccessor}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
-import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 

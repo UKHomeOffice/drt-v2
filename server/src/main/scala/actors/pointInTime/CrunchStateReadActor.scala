@@ -1,6 +1,7 @@
 package actors.pointInTime
 
 import actors.FlightMessageConversion.flightWithSplitsFromMessage
+import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange}
 import actors.PortStateMessageConversion.{crunchMinuteFromMessage, staffMinuteFromMessage}
 import actors.Sizes.oneMegaByte
 import actors._
@@ -12,7 +13,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import server.protobuf.messages.CrunchState._
 import services.SDate
-import services.crunch.deskrecs.{GetFlightsForDateRange, GetStateForDateRange, GetStateForTerminalDateRange}
 
 case class GetCrunchMinutes(terminal: Terminal)
 
@@ -75,7 +75,7 @@ class CrunchStateReadActor(pointInTime: SDateLike,
       logInfo(s"Received GetStateForTerminalDateRange Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriodForTerminal(start, end, terminalName)
 
-    case GetFlightsForDateRange(start, end) =>
+    case GetFlights(start, end) =>
       logInfo(s"Received GetFlights Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! FlightsWithSplits(stateForPeriod(start, end).flights)
 

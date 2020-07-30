@@ -1,6 +1,6 @@
 package controllers.application.exports
 
-import actors.DateRangeLike
+import actors.PartitionedPortStateActor.DateRangeLike
 import actors.summaries.{FlightsSummaryActor, GetSummariesWithActualApi}
 import akka.actor.ActorRef
 import akka.util.ByteString

@@ -1,6 +1,7 @@
 package actors.pointInTime
 
-import actors.{FlightsStateActor, GetUpdatesSince}
+import actors.FlightsStateActor
+import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince}
 import akka.actor.Actor
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -10,7 +11,6 @@ import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.SDate
-import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
 
 trait FlightsDataLike extends Actor
 

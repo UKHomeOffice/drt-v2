@@ -1,5 +1,6 @@
 package actors
 
+import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince}
 import actors.acking.AckingReceiver.Ack
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
@@ -9,7 +10,6 @@ import drt.shared.{ApiFlightWithSplits, MilliTimes, SDateLike}
 import org.specs2.execute.{Failure, Result}
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

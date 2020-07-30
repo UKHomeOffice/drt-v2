@@ -1,6 +1,7 @@
 package controllers.application
 
-import actors.{GetFlightsForTerminalDateRange, GetState}
+import actors.GetState
+import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
 import akka.actor.Props
 import akka.pattern.ask
 import akka.stream.UniqueKillSwitch

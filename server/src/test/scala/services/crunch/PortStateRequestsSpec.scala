@@ -1,7 +1,8 @@
 package services.crunch
 
+import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince}
 import actors._
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
@@ -10,7 +11,6 @@ import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import services.SDate
-import services.crunch.deskrecs.{GetFlightsForDateRange, GetStateForDateRange, GetStateForTerminalDateRange}
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 
 import scala.concurrent.duration._
@@ -190,7 +190,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
                       ps: ActorRef): Future[FlightsWithSplits] = eventualAck.flatMap { _ =>
     val startMillis = now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = now().getLocalNextMidnight.millisSinceEpoch
-    ps.ask(GetFlightsForDateRange(startMillis, endMillis)).mapTo[FlightsWithSplits]
+    ps.ask(GetFlights(startMillis, endMillis)).mapTo[FlightsWithSplits]
   }
 
   def eventualPortState(eventualAck: Future[Any],

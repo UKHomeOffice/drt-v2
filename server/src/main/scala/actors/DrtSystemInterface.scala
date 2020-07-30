@@ -1,6 +1,7 @@
 package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
+import actors.PartitionedPortStateActor.GetFlights
 import actors.Sizes.oneMegaByte
 import actors.daily.PassengersActor
 import actors.queues.QueueLikeActor.UpdatedMillis
@@ -8,7 +9,7 @@ import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.{ActorMaterializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
@@ -364,7 +365,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def initialFlightsPortState(actor: ActorRef): Future[Option[PortState]] = {
     val from = now().getLocalLastMidnight.addDays(-1)
     val to = from.addDays(180)
-    val request = GetFlightsForDateRange(from.millisSinceEpoch, to.millisSinceEpoch)
+    val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
     actor
       .ask(request)(new Timeout(15 seconds)).mapTo[FlightsWithSplits]
       .map { fws =>
