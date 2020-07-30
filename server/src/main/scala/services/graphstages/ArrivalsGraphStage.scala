@@ -141,7 +141,7 @@ class ArrivalsGraphStage(name: String = "",
           forecastBaseArrivals = filteredArrivals
           toPush = mergeUpdatesFromAllSources()
       }
-      pushIfAvailable(toPush.map(arrivalsAdjustments(_)), outArrivalsDiff)
+      pushIfAvailable(toPush.map(arrivalsAdjustments(_, merged.keys)), outArrivalsDiff)
     }
 
     def updateArrivalsSource(existingArrivals: SortedMap[UniqueArrival, Arrival],
@@ -294,7 +294,7 @@ class ArrivalsGraphStage(name: String = "",
         Status = bestStatus(key),
         FeedSources = feedSources(key),
         PcpTime = Option(pcpArrivalTime(bestArrival).millisSinceEpoch)
-        )
+      )
     }
 
     def trustLiveDataThreshold: FiniteDuration = 3 hours
@@ -323,7 +323,7 @@ class ArrivalsGraphStage(name: String = "",
         forecastArrivals.get(uniqueArrival).map(_ => ForecastFeedSource),
         forecastBaseArrivals.get(uniqueArrival).map(_ => AclFeedSource),
         liveBaseArrivals.get(uniqueArrival).map(_ => LiveBaseFeedSource)
-        ).flatten.toSet
+      ).flatten.toSet
     }
   }
 
