@@ -1,7 +1,8 @@
 package actors
 
-import actors.PartitionedPortStateActor.GetStateForDateRange
+import actors.PartitionedPortStateActor.{GetStateForDateRange, queueUpdatesProps, staffUpdatesProps}
 import actors.acking.AckingReceiver.{Ack, StreamFailure}
+import actors.daily.{QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
@@ -21,7 +22,9 @@ object PartitionedPortStateTestActor {
     val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, 1000, now().addDays(-10))
     val queuesActor = lookups.queueMinutesActor
     val staffActor = lookups.staffMinutesActor
-    system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal)))
+    val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-queues")
+    val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-staff")
+    system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, now, airportConfig.queuesByTerminal)))
   }
 }
 
@@ -29,9 +32,23 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                                     flightsActor: ActorRef,
                                     queuesActor: ActorRef,
                                     staffActor: ActorRef,
+                                    queueUpdatesActor: ActorRef,
+                                    staffUpdatesActor: ActorRef,
                                     now: () => SDateLike,
                                     queues: Map[Terminal, Seq[Queue]])
-  extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, queues, InMemoryStreamingJournal, SDate("1970-01-01"), PartitionedPortStateActor.tempLegacyActorProps(1000)) {
+  extends PartitionedPortStateActor(
+    flightsActor,
+    queuesActor,
+    staffActor,
+    queueUpdatesActor,
+    staffUpdatesActor,
+    now,
+    queues,
+    InMemoryStreamingJournal,
+    SDate("1970-01-01"),
+    PartitionedPortStateActor.tempLegacyActorProps(1000)
+  ) {
+
   var state: PortState = PortState.empty
 
   override def receive: Receive = processMessage orElse {

@@ -221,34 +221,45 @@ object TestActors {
   object TestPartitionedPortStateActor {
     def apply(now: () => SDateLike,
               airportConfig: AirportConfig,
-              streamingJournal: StreamingJournalLike,
+              journalType: StreamingJournalLike,
               minuteLookups: MinuteLookupsLike)
              (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
       val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", now, expireAfterMillis, airportConfig.queuesByTerminal)))
       val queuesActor: ActorRef = minuteLookups.queueMinutesActor
       val staffActor: ActorRef = minuteLookups.staffMinutesActor
-      system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, airportConfig.queuesByTerminal, streamingJournal)))
+      val queueUpdates = system.actorOf(Props(new QueueTestUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, PartitionedPortStateActor.queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
+      val staffUpdates = system.actorOf(Props(new StaffTestUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, PartitionedPortStateActor.staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
+      system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, now, airportConfig.queuesByTerminal, journalType)))
     }
-  }
-
-  trait TestPartitionedPortStateActorLike extends PartitionedPortStateActorLike {
-    override val queueUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new QueueTestUpdatesSupervisor(now, terminals, queueUpdatesProps)))
-    override val staffUpdatesSupervisor: ActorRef = context.system.actorOf(Props(new StaffTestUpdatesSupervisor(now, terminals, staffUpdatesProps)))
   }
 
   class TestPartitionedPortStateActor(flightsActor: ActorRef,
                                       queuesActor: ActorRef,
                                       staffActor: ActorRef,
+                                      queueUpdatesActor: ActorRef,
+                                      staffUpdatesActor: ActorRef,
                                       now: () => SDateLike,
                                       queues: Map[Terminal, Seq[Queue]],
                                       journalType: StreamingJournalLike)
-    extends PartitionedPortStateActor(flightsActor, queuesActor, staffActor, now, queues, journalType, SDate("1970-01-01"), PartitionedPortStateActor.tempLegacyActorProps(1000)) with TestPartitionedPortStateActorLike {
+    extends PartitionedPortStateActor(
+      flightsActor,
+      queuesActor,
+      staffActor,
+      queueUpdatesActor,
+      staffUpdatesActor,
+      now,
+      queues,
+      journalType,
+      SDate("1970-01-01"),
+      PartitionedPortStateActor.tempLegacyActorProps(1000)
+    ) {
+
     val actorClearRequests = Map(
       flightsActor -> ResetData,
       queuesActor -> ResetData,
       staffActor -> ResetData,
-      queueUpdatesSupervisor -> PurgeAll,
-      staffUpdatesSupervisor -> PurgeAll
+      queueUpdatesActor -> PurgeAll,
+      staffUpdatesActor -> PurgeAll
     )
 
     def myReceive: Receive = {
