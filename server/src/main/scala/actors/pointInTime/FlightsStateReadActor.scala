@@ -14,16 +14,22 @@ import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRa
 
 trait FlightsDataLike extends Actor
 
-class FlightsStateReadActor(now: () => SDateLike, expireAfterMillis: Int, pointInTime: MillisSinceEpoch, queues: Map[Terminal, Seq[Queue]], legacyDataCutoff: SDateLike, replayMaxCrunchStateMessages: Int)
-  extends FlightsStateActor(now, expireAfterMillis, queues, legacyDataCutoff, replayMaxCrunchStateMessages) with FlightsDataLike {
+class FlightsStateReadActor(realNow: () => SDateLike,
+                            expireAfterMillis: Int,
+                            pointInTime: MillisSinceEpoch,
+                            queues: Map[Terminal, Seq[Queue]],
+                            legacyDataCutoff: SDateLike,
+                            replayMaxCrunchStateMessages: Int)
+  extends FlightsStateActor(() => SDate(pointInTime), expireAfterMillis, queues, legacyDataCutoff, replayMaxCrunchStateMessages)
+    with FlightsDataLike {
 
   override val log: Logger = LoggerFactory.getLogger(s"$getClass-${SDate(pointInTime).toISOString()}")
 
+  override val recoveryStartMillis: MillisSinceEpoch = realNow().millisSinceEpoch
+
   override def recovery: Recovery = {
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-    val recovery = Recovery(fromSnapshot = criteria, replayMax = snapshotInterval)
-    log.info(s"Recovery: $recovery")
-    recovery
+    Recovery(fromSnapshot = criteria, replayMax = snapshotInterval)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

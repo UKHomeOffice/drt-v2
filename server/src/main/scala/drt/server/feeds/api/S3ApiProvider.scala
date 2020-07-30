@@ -35,7 +35,7 @@ case class S3ApiProvider(awsCredentials: AWSCredentials, bucketName: String)(imp
   def manifestsFuture(latestFile: String): Future[Seq[(String, String)]] = {
     log.info(s"Requesting DQ zip files > ${latestFile.take(20)}")
     zipFiles(latestFile)
-      .mapAsync(64) { filename =>
+      .mapAsync(1) { filename =>
         log.info(s"Fetching $filename")
         val zipByteStream = s3Client.getFileAsStream(bucketName, filename)
         Future(fileNameAndContentFromZip(filename, zipByteStream))
