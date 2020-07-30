@@ -18,9 +18,10 @@ case class EdiArrivalsTerminalAdjustments(historicFlightTerminalMap: Map[String,
       applyHistoricTerminalRule(arrivalsDiff)
     )
 
-    val updated: Set[UniqueArrival] = arrivalsKeys.toSet -- updatedDiff.toUpdate.keys.toSet
+    val arrivalsBeforeUpdates: Set[UniqueArrival] = arrivalsKeys.toSet -- updatedDiff.toUpdate.keys.toSet
+    val arrivalsThatHaveMovedTerminals = arrivalsBeforeUpdates.flatMap(ua => arrivalsDiff.toUpdate.get(ua))
 
-    updatedDiff.copy(toRemove = updatedDiff.toRemove ++ updated.flatMap(ua => arrivalsDiff.toUpdate.get(ua)))
+    updatedDiff.copy(toRemove = updatedDiff.toRemove ++ arrivalsThatHaveMovedTerminals)
   }
 
   def applyHistoricTerminalRule(arrivalsDiff: ArrivalsDiff): ArrivalsDiff = arrivalsDiff

@@ -25,8 +25,8 @@ class EdiFlightAdjustmentsSpec extends Specification {
     val arrivalsDiff = toArrivalsDiff(arrivals)
 
     val expected = toArrivalsDiff(List(
-      arrival.copy(Terminal = Terminal("A1")),
-      arrival2.copy(Terminal = Terminal("A1"))
+      arrival,
+      arrival2
     ))
 
     val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
@@ -46,8 +46,8 @@ class EdiFlightAdjustmentsSpec extends Specification {
     val arrivalsDiff = toArrivalsDiff(List(arrival, arrival2))
 
     val expected = toArrivalsDiff(List(
-      arrival.copy(Terminal = Terminal("A1")),
-      arrival2.copy(Terminal = Terminal("A1"))
+      arrival,
+      arrival2
     ))
 
     val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
@@ -66,7 +66,7 @@ class EdiFlightAdjustmentsSpec extends Specification {
 
     val arrivalsDiff = toArrivalsDiff(List(arrival, arrival2))
 
-    val expected = toArrivalsDiff(List(arrival.copy(Terminal = Terminal("A2")), arrival2.copy(Terminal = Terminal("A1"))))
+    val expected = toArrivalsDiff(List(arrival.copy(Terminal = Terminal("A2")), arrival2))
 
     val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
 
@@ -82,8 +82,8 @@ class EdiFlightAdjustmentsSpec extends Specification {
     val arrivalsDiff = toArrivalsDiff(toRemove = arrivals)
 
     val expected = toArrivalsDiff(toRemove = List(
-      arrival.copy(Terminal = Terminal("A1")),
-      arrival2.copy(Terminal = Terminal("A1"))
+      arrival,
+      arrival2
     ))
 
     val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
@@ -102,8 +102,8 @@ class EdiFlightAdjustmentsSpec extends Specification {
     val arrivalsDiff = toArrivalsDiff(toRemove = List(arrival, arrival2))
 
     val expected = toArrivalsDiff(toRemove = List(
-      arrival.copy(Terminal = Terminal("A1")),
-      arrival2.copy(Terminal = Terminal("A1"))
+      arrival,
+      arrival2
     ))
 
     val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
@@ -127,7 +127,7 @@ class EdiFlightAdjustmentsSpec extends Specification {
     val arrivalsDiff = toArrivalsDiff(toRemove = List(arrival, arrival2))
 
     val expected = toArrivalsDiff(
-      toRemove = List(arrival.copy(Terminal = Terminal("A2")), arrival2.copy(Terminal = Terminal("A1")))
+      toRemove = List(arrival.copy(Terminal = Terminal("A2")), arrival2)
     )
 
     val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
@@ -156,7 +156,7 @@ class EdiFlightAdjustmentsSpec extends Specification {
 
       val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("A1"), schDt = "2020-07-17T14:00Z")
       val arrivalsDiff = toArrivalsDiff(List(arrival))
-      val expected = toArrivalsDiff(List(arrival.copy(Terminal = Terminal("A1"))))
+      val expected = toArrivalsDiff(List(arrival))
 
       val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff, Seq())
 
@@ -182,7 +182,7 @@ class EdiFlightAdjustmentsSpec extends Specification {
 
       val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("A1"), schDt = "2020-07-17T14:00Z")
       val arrivalsDiff = toArrivalsDiff(toRemove = List(arrival))
-      val expected = toArrivalsDiff(toRemove = List(arrival.copy(Terminal = Terminal("A1"))))
+      val expected = toArrivalsDiff(toRemove = List(arrival))
 
       val result = ediAdjustMentsWithNoHistoricMappingForFlight(arrivalsDiff, Seq())
 
@@ -201,7 +201,7 @@ class EdiFlightAdjustmentsSpec extends Specification {
         baggageReclaimId = Option("6")
       )
       val arrivalsDiff = toArrivalsDiff(List(arrival))
-      val expected = toArrivalsDiff(List(arrival.copy(Terminal = Terminal("A1"))))
+      val expected = toArrivalsDiff(List(arrival))
 
       val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff, Seq())
 
@@ -259,7 +259,7 @@ class EdiFlightAdjustmentsSpec extends Specification {
       baggageReclaimId = Option("6")
     )
     val arrivalsDiff = toArrivalsDiff(toRemove = List(arrival))
-    val expected = toArrivalsDiff(toRemove = List(arrival.copy(Terminal = Terminal("A1"))))
+    val expected = toArrivalsDiff(toRemove = List(arrival))
 
     val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff, Seq())
 
