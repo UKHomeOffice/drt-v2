@@ -1,6 +1,6 @@
 package services.exports
 
-import actors.{DateRangeLike, GetFlightsForTerminal}
+import actors.{DateRangeLike, GetFlightsForTerminalDateRange}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
@@ -16,7 +16,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import play.api.http.HttpEntity
 import play.api.mvc.{ResponseHeader, Result}
 import services.SDate
-import services.crunch.deskrecs.GetStateForTerminalDateRange
+import services.crunch.deskrecs.{GetMinutesForTerminalDateRange, GetStateForTerminalDateRange}
 import services.exports.summaries.flights.TerminalFlightsSummaryLike.TerminalFlightsSummaryLikeGenerator
 import services.exports.summaries.queues.{QueuesSummary, TerminalQueuesSummary}
 import services.exports.summaries.{Summaries, TerminalSummaryLike}
@@ -104,7 +104,7 @@ object Exports {
                                  (implicit ec: ExecutionContext): (SDateLike, SDateLike) => Future[TerminalSummaryLike] =
     (from: SDateLike, to: SDateLike) => {
       val minutes = from.millisSinceEpoch until to.millisSinceEpoch by summaryLengthMinutes * MilliTimes.oneMinuteMillis
-      portStateProvider(GetStateForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, terminal))
+      portStateProvider(GetMinutesForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, terminal))
         .mapTo[PortState]
         .recoverWith {
           case t =>
@@ -131,7 +131,7 @@ object Exports {
                                    flightsProvider: DateRangeLike => Future[Any])
                                   (from: SDateLike, to: SDateLike)
                                   (implicit ec: ExecutionContext): Future[TerminalSummaryLike] =
-    flightsProvider(GetFlightsForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
+    flightsProvider(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
       case flights: FlightsWithSplits =>
         val terminalFlights = flightsForTimeRange(flights, from, to)
         terminalFlightsSummaryGenerator(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)

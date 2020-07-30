@@ -47,7 +47,7 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val crunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
   override val deploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
 
-  override val lookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  override val lookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, legacyDataCutOff = now().addDays(-10))
 
   override val portStateActor: ActorRef = TestPartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config), lookups)
 

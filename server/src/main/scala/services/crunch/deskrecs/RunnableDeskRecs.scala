@@ -70,7 +70,7 @@ object RunnableDeskRecs {
                              (implicit executionContext: ExecutionContext,
                               timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] =
     portStateActor
-      .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
+      .ask(GetFlightsForDateRange(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
       .mapTo[FlightsWithSplits]
       .map(fs => (crunchStartMillis, fs))
       .recoverWith {
@@ -88,10 +88,12 @@ object RunnableDeskRecs {
   }
 }
 
-case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
+case class GetFlightsForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
 
 trait PortStateRequest
 
 case class GetStateForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
 
 case class GetStateForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike with PortStateRequest
+
+case class GetMinutesForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike with PortStateRequest

@@ -2,6 +2,7 @@ package services.crunch.deskrecs
 
 import actors.MinuteLookupsLike
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.daily.RequestAndTerminateActor
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
@@ -65,6 +66,10 @@ case class TestMinuteLookups(queueProbe: ActorRef,
                              queuesByTerminal: Map[Terminal, Seq[Queue]],
                              override val replayMaxCrunchStateMessages: Int)
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
+  override val legacyDataCutOff: SDateLike = now().addDays(-10)
+
+  override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
+
   override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queueProbe, now, queuesByTerminal.keys, queuesLookup, legacyQueuesLookup, updateCrunchMinutes)))
 
   override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(now, queuesByTerminal.keys, staffLookup, legacyStaffLookup, updateStaffMinutes)))

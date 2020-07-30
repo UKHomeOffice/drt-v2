@@ -82,7 +82,7 @@ class TestDrtActor extends Actor {
       else
         PortDeskLimits.fixed(tc.airportConfig)
 
-      val lookups: MinuteLookupsLike = TestMinuteLookups(system, tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal)
+      val lookups: MinuteLookupsLike = TestMinuteLookups(system, tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal, tc.now().addDays(-10))
 
       def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
         val today = tc.now()

@@ -364,7 +364,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def initialFlightsPortState(actor: ActorRef): Future[Option[PortState]] = {
     val from = now().getLocalLastMidnight.addDays(-1)
     val to = from.addDays(180)
-    val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
+    val request = GetFlightsForDateRange(from.millisSinceEpoch, to.millisSinceEpoch)
     actor
       .ask(request)(new Timeout(15 seconds)).mapTo[FlightsWithSplits]
       .map { fws =>

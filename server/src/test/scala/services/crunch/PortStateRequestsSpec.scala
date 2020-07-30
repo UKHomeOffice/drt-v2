@@ -10,7 +10,7 @@ import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import services.SDate
-import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
+import services.crunch.deskrecs.{GetFlightsForDateRange, GetStateForDateRange, GetStateForTerminalDateRange}
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 
 import scala.concurrent.duration._
@@ -25,7 +25,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxDays = 10
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
-  val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
+  val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval, myNow().addDays(-10))
 
   def partitionedPortStateActorProvider: () => ActorRef =
     () => PartitionedPortStateActor(myNow, airportConfig, InMemoryStreamingJournal, SDate("1970-01-01"), 1000, lookups)
@@ -190,7 +190,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
                       ps: ActorRef): Future[FlightsWithSplits] = eventualAck.flatMap { _ =>
     val startMillis = now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = now().getLocalNextMidnight.millisSinceEpoch
-    ps.ask(GetFlights(startMillis, endMillis)).mapTo[FlightsWithSplits]
+    ps.ask(GetFlightsForDateRange(startMillis, endMillis)).mapTo[FlightsWithSplits]
   }
 
   def eventualPortState(eventualAck: Future[Any],

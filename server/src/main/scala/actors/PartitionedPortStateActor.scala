@@ -15,7 +15,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange, PortStateRequest}
+import services.crunch.deskrecs.{GetFlightsForDateRange, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange, PortStateRequest}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -129,28 +129,34 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     case PointInTimeQuery(millis, request: GetStateForTerminalDateRange) =>
       replyWithPortState(sender(), PointInTimeQuery(millis, request))
 
-    case PointInTimeQuery(pitMillis, GetFlights(from, to)) =>
+    case PointInTimeQuery(millis, GetMinutesForTerminalDateRange(from, to, terminal)) =>
+      replyWithMinutesAsPortState(sender(), PointInTimeQuery(millis, GetStateForTerminalDateRange(from, to, terminal)))
+
+    case PointInTimeQuery(pitMillis, GetFlightsForDateRange(from, to)) =>
       flightsActor.ask(PointInTimeQuery(pitMillis, GetStateForDateRange(from, to))).pipeTo(sender())
 
-    case PointInTimeQuery(pitMillis, GetFlightsForTerminal(from, to, terminal)) =>
+    case PointInTimeQuery(pitMillis, GetFlightsForTerminalDateRange(from, to, terminal)) =>
       flightsActor.ask(PointInTimeQuery(pitMillis, GetStateForTerminalDateRange(from, to, terminal))).pipeTo(sender())
 
     case request: GetStateForDateRange =>
       if (PartitionedPortStateActor.isNonLegacyRequest(SDate(request.to), legacyDataCutoff))
         replyWithPortState(sender(), request)
       else
-        replyWithLegacyPortState(sender(), SDate(request.to).addHours(4), request)
+        replyWithLegacyPortState(sender(), pointInTime = SDate(request.to).addHours(4), request)
 
     case request: GetStateForTerminalDateRange =>
       replyWithPortState(sender(), request)
 
+    case GetMinutesForTerminalDateRange(from, to, terminal) =>
+      replyWithMinutesAsPortState(sender(), GetStateForTerminalDateRange(from, to, terminal))
+
     case GetUpdatesSince(since, start, end) =>
       replyWithUpdates(since, start, end, sender())
 
-    case GetFlights(from, to) =>
+    case GetFlightsForDateRange(from, to) =>
       flightsActor.ask(GetStateForDateRange(from, to)).pipeTo(sender())
 
-    case GetFlightsForTerminal(from, to, terminal) =>
+    case GetFlightsForTerminalDateRange(from, to, terminal) =>
       flightsActor.ask(GetStateForTerminalDateRange(from, to, terminal)).pipeTo(sender())
   }
 
@@ -173,17 +179,34 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     combineToPortState(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).pipeTo(replyTo)
   }
 
-  def portStateComponentsRequest(request: PortStateRequest): (Future[FlightsWithSplits], Future[MinutesContainer[CrunchMinute, TQM]], Future[MinutesContainer[StaffMinute, TM]]) = {
-    val eventualFlights = flightsActor.ask(request).mapTo[FlightsWithSplits].recoverWith {
-      case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
-    }
-    val eventualQueueMinutes = queueActorForRequest(request).ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]].recoverWith {
-      case t => throw new Exception(s"Error receiving MinutesContainer from the queues actors, for request $request", t)
-    }
-    val eventualStaffMinutes = staffActorForRequest(request).ask(request).mapTo[MinutesContainer[StaffMinute, TM]].recoverWith {
+  def replyWithMinutesAsPortState(replyTo: ActorRef, request: PortStateRequest): Unit = {
+    val (eventualQueueMinutes, eventualStaffMinutes) = minuteComponentsRequest(request)
+
+    combineToPortState(Future(FlightsWithSplits.empty), eventualQueueMinutes, eventualStaffMinutes).pipeTo(replyTo)
+  }
+
+  def portStateComponentsRequest(request: PortStateRequest): (Future[FlightsWithSplits], Future[MinutesContainer[CrunchMinute, TQM]], Future[MinutesContainer[StaffMinute, TM]]) =
+    (requestFlights(request), requestQueueMinutes(request), requestStaffMinutes(request))
+
+  def minuteComponentsRequest(request: PortStateRequest): (Future[MinutesContainer[CrunchMinute, TQM]], Future[MinutesContainer[StaffMinute, TM]]) =
+    (requestQueueMinutes(request), requestStaffMinutes(request))
+
+  private def requestStaffMinutes(request: PortStateRequest): Future[MinutesContainer[StaffMinute, TM]] = {
+    staffActorForRequest(request).ask(request).mapTo[MinutesContainer[StaffMinute, TM]].recoverWith {
       case t => throw new Exception(s"Error receiving MinutesContainer from the staff actors, for request $request", t)
     }
-    (eventualFlights, eventualQueueMinutes, eventualStaffMinutes)
+  }
+
+  private def requestQueueMinutes(request: PortStateRequest): Future[MinutesContainer[CrunchMinute, TQM]] = {
+    queueActorForRequest(request).ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]].recoverWith {
+      case t => throw new Exception(s"Error receiving MinutesContainer from the queues actors, for request $request", t)
+    }
+  }
+
+  private def requestFlights(request: PortStateRequest): Future[FlightsWithSplits] = {
+    flightsActor.ask(request).mapTo[FlightsWithSplits].recoverWith {
+      case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
+    }
   }
 
   def replyWithLegacyPortState(replyTo: ActorRef, pointInTime: SDateLike, message: DateRangeLike): Unit = {

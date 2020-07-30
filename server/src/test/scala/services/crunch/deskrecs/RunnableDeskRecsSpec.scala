@@ -39,7 +39,7 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long = 0L) exten
       log.error(s"Failed", t)
       probe.ref ! StreamFailure
 
-    case getFlights: GetFlights =>
+    case getFlights: GetFlightsForDateRange =>
       Thread.sleep(responseDelayMillis)
       sender() ! FlightsWithSplits(flightsToReturn.map(fws => (fws.unique, fws)))
       probe.ref ! getFlights
@@ -88,7 +88,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val expectedEnd = midnight20190101.addMinutes(30).millisSinceEpoch
 
     portStateProbe.fishForMessage(1 second) {
-      case GetFlights(start, end) => start == expectedStart && end == expectedEnd
+      case GetFlightsForDateRange(start, end) => start == expectedStart && end == expectedEnd
     }
 
     success
@@ -109,7 +109,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val expectedEnd = midnight20190101.addMinutes(30).millisSinceEpoch
 
     portStateProbe.fishForMessage(1 second) {
-      case GetFlights(start, end) => start == expectedStart && end == expectedEnd
+      case GetFlightsForDateRange(start, end) => start == expectedStart && end == expectedEnd
     }
     portStateProbe.fishForMessage(1 second) {
       case _: DeskRecMinutes => true

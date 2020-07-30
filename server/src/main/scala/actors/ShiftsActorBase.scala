@@ -32,7 +32,7 @@ trait DateRangeLike {
   val to: MillisSinceEpoch
 }
 
-case class GetFlightsForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
+case class GetFlightsForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
 
 case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
 

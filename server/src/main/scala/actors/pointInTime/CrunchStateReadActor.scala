@@ -12,7 +12,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import server.protobuf.messages.CrunchState._
 import services.SDate
-import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
+import services.crunch.deskrecs.{GetFlightsForDateRange, GetStateForDateRange, GetStateForTerminalDateRange}
 
 case class GetCrunchMinutes(terminal: Terminal)
 
@@ -75,11 +75,11 @@ class CrunchStateReadActor(pointInTime: SDateLike,
       logInfo(s"Received GetStateForTerminalDateRange Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriodForTerminal(start, end, terminalName)
 
-    case GetFlights(start, end) =>
+    case GetFlightsForDateRange(start, end) =>
       logInfo(s"Received GetFlights Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! FlightsWithSplits(stateForPeriod(start, end).flights)
 
-    case GetFlightsForTerminal(start, end, terminalName) =>
+    case GetFlightsForTerminalDateRange(start, end, terminalName) =>
       logInfo(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! FlightsWithSplits(stateForPeriodForTerminal(start, end, terminalName).flights)
 

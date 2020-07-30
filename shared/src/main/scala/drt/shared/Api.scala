@@ -470,6 +470,10 @@ trait SDateLike {
 
   def ddMMyyString: String = f"$getDate%02d/$getMonth%02d/${getFullYear - 2000}%02d"
 
+  def <(other: SDateLike): Boolean = millisSinceEpoch < other.millisSinceEpoch
+
+  def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
+
   /**
    * Days of the week 1 to 7 (Monday is 1)
    *
