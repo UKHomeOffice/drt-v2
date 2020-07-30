@@ -1,7 +1,7 @@
 package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
-import actors.PartitionedPortStateActor.{DateRangeLike, GetFlights, GetFlightsForTerminalDateRange, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery, PortStateRequest}
+import actors.PartitionedPortStateActor.{DateRangeLike, GetFlights, GetFlightsForTerminal, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery, PortStateRequest}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily._
 import actors.pointInTime.CrunchStateReadActor
@@ -59,7 +59,7 @@ object PartitionedPortStateActor {
 
   case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
 
-  case class GetFlightsForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
+  case class GetFlightsForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
 
   case class GetStateForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
 
@@ -156,7 +156,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     case PointInTimeQuery(pitMillis, GetFlights(from, to)) =>
       flightsActor.ask(PointInTimeQuery(pitMillis, GetStateForDateRange(from, to))).pipeTo(sender())
 
-    case PointInTimeQuery(pitMillis, GetFlightsForTerminalDateRange(from, to, terminal)) =>
+    case PointInTimeQuery(pitMillis, GetFlightsForTerminal(from, to, terminal)) =>
       flightsActor.ask(PointInTimeQuery(pitMillis, GetStateForTerminalDateRange(from, to, terminal))).pipeTo(sender())
 
     case request: GetStateForDateRange =>
@@ -177,7 +177,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     case GetFlights(from, to) =>
       flightsActor.ask(GetStateForDateRange(from, to)).pipeTo(sender())
 
-    case GetFlightsForTerminalDateRange(from, to, terminal) =>
+    case GetFlightsForTerminal(from, to, terminal) =>
       flightsActor.ask(GetStateForTerminalDateRange(from, to, terminal)).pipeTo(sender())
   }
 

@@ -1,6 +1,6 @@
 package actors
 
-import actors.PartitionedPortStateActor.{DateRangeLike, GetFlights, GetFlightsForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{DateRangeLike, GetFlights, GetFlightsForTerminal, GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
 import actors.PortStateMessageConversion._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
@@ -167,7 +167,7 @@ class FlightsStateActor(val now: () => SDateLike,
 
   def toLegacyMessage(message: DateRangeLike): DateRangeLike = message match {
     case GetStateForDateRange(from, to) => GetFlights(from, to)
-    case GetStateForTerminalDateRange(from, to, terminal) => GetFlightsForTerminalDateRange(from, to, terminal)
+    case GetStateForTerminalDateRange(from, to, terminal) => GetFlightsForTerminal(from, to, terminal)
   }
 
   def tempPointInTimeActor(pointInTime: SDateLike, message: DateRangeLike): ActorRef =
