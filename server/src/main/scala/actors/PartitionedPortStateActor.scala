@@ -189,23 +189,20 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     combineToPortState(Future(FlightsWithSplits.empty), eventualQueueMinutes, eventualStaffMinutes).pipeTo(replyTo)
   }
 
-  private def requestStaffMinutes(request: PortStateRequest): Future[MinutesContainer[StaffMinute, TM]] = {
+  private def requestStaffMinutes(request: PortStateRequest): Future[MinutesContainer[StaffMinute, TM]] =
     staffActorForRequest(request).ask(request).mapTo[MinutesContainer[StaffMinute, TM]].recoverWith {
       case t => throw new Exception(s"Error receiving MinutesContainer from the staff actors, for request $request", t)
     }
-  }
 
-  private def requestQueueMinutes(request: PortStateRequest): Future[MinutesContainer[CrunchMinute, TQM]] = {
+  private def requestQueueMinutes(request: PortStateRequest): Future[MinutesContainer[CrunchMinute, TQM]] =
     queueActorForRequest(request).ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]].recoverWith {
       case t => throw new Exception(s"Error receiving MinutesContainer from the queues actors, for request $request", t)
     }
-  }
 
-  private def requestFlights(request: PortStateRequest): Future[FlightsWithSplits] = {
+  private def requestFlights(request: PortStateRequest): Future[FlightsWithSplits] =
     flightsActor.ask(request).mapTo[FlightsWithSplits].recoverWith {
       case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
     }
-  }
 
   def replyWithLegacyPortState(replyTo: ActorRef, pointInTime: SDateLike, message: DateRangeLike): Unit = {
     val tempActor = tempPointInTimeActor(pointInTime, message)
