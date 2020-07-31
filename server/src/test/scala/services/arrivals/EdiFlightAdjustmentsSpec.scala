@@ -17,19 +17,19 @@ class EdiFlightAdjustmentsSpec extends Specification {
   }
 
   "Given an arrivals diff with a flight that has no baggage carousel then it should use the default A1" >> {
-    val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("T1"), schDt = "2020-07-17T14:00Z")
-    val arrival2 = ArrivalGenerator.arrival(iata = "TST200", terminal = Terminal("T1"), schDt = "2020-07-17T15:00Z")
+    val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("A1"), schDt = "2020-07-17T14:00Z")
+    val arrival2 = ArrivalGenerator.arrival(iata = "TST200", terminal = Terminal("A1"), schDt = "2020-07-17T15:00Z")
 
     val arrivals = List(arrival, arrival2)
 
     val arrivalsDiff = toArrivalsDiff(arrivals)
 
     val expected = toArrivalsDiff(List(
-      arrival.copy(Terminal = Terminal("A1")),
-      arrival2.copy(Terminal = Terminal("A1"))
+      arrival,
+      arrival2
     ))
 
-    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff)
+    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
 
     result === expected
 
@@ -37,84 +37,100 @@ class EdiFlightAdjustmentsSpec extends Specification {
 
   "Given an arrivals diff with a flight that has a baggage carousel that isn't 7 then it should default to A1" >> {
     val arrival = ArrivalGenerator.arrival(iata = "TST100",
-      terminal = Terminal("T1"),
+      terminal = Terminal("A1"),
       schDt = "2020-07-17T14:00Z",
       baggageReclaimId = Option("6")
     )
-    val arrival2 = ArrivalGenerator.arrival("TST200", "A1", "2020-07-17T15:00Z")
+    val arrival2 = ArrivalGenerator.arrival(iata ="TST200", terminal= Terminal("A1"), schDt = "2020-07-17T15:00Z")
 
     val arrivalsDiff = toArrivalsDiff(List(arrival, arrival2))
 
     val expected = toArrivalsDiff(List(
-      arrival.copy(Terminal = Terminal("A1")),
-      arrival2.copy(Terminal = Terminal("A1"))
+      arrival,
+      arrival2
     ))
 
-    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff)
+    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
 
     result === expected
   }
 
   "Given an arrivals diff with a flight that has baggage carousel 7 then it should be updated to A2 terminal" >> {
-    val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("T1"), schDt = "2020-07-17T14:00Z", baggageReclaimId = Option("7"))
-    val arrival2 = ArrivalGenerator.arrival(iata = "TST200", terminal = Terminal("T1"), schDt = "2020-07-17T15:00Z")
+    val arrival = ArrivalGenerator.arrival(
+      iata = "TST100",
+      terminal = Terminal("A1"),
+      schDt = "2020-07-17T14:00Z",
+      baggageReclaimId = Option("7")
+    )
+    val arrival2 = ArrivalGenerator.arrival(iata = "TST200", terminal = Terminal("A1"), schDt = "2020-07-17T15:00Z")
 
     val arrivalsDiff = toArrivalsDiff(List(arrival, arrival2))
 
-    val expected = toArrivalsDiff(List(arrival.copy(Terminal = Terminal("A2")), arrival2.copy(Terminal = Terminal("A1"))))
+    val expected = toArrivalsDiff(List(arrival.copy(Terminal = Terminal("A2")), arrival2))
 
-    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff)
+    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
 
     result === expected
   }
 
   "Given an arrivals diff with removals containing a flight with no baggage carousel then it should default to A1" >> {
-    val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("T1"), schDt = "2020-07-17T14:00Z")
-    val arrival2 = ArrivalGenerator.arrival(iata = "TST200", terminal = Terminal("T1"), schDt = "2020-07-17T15:00Z")
+    val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("A1"), schDt = "2020-07-17T14:00Z")
+    val arrival2 = ArrivalGenerator.arrival(iata = "TST200", terminal = Terminal("A1"), schDt = "2020-07-17T15:00Z")
 
     val arrivals = List(arrival, arrival2)
 
     val arrivalsDiff = toArrivalsDiff(toRemove = arrivals)
 
     val expected = toArrivalsDiff(toRemove = List(
-      arrival.copy(Terminal = Terminal("A1")),
-      arrival2.copy(Terminal = Terminal("A1"))
+      arrival,
+      arrival2
     ))
 
-    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff)
+    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
 
     result === expected
   }
 
   "Given an arrivals diff with removals containing a flight that has a baggage carousel that isn't 7 then it should default to A1" >> {
     val arrival = ArrivalGenerator.arrival(iata = "TST100",
-      terminal = Terminal("T1"),
+      terminal = Terminal("A1"),
       schDt = "2020-07-17T14:00Z",
       baggageReclaimId = Option("6")
     )
-    val arrival2 = ArrivalGenerator.arrival(iata = "TST200", terminal = Terminal("T1"), schDt = "2020-07-17T15:00Z")
+    val arrival2 = ArrivalGenerator.arrival(iata = "TST200", terminal = Terminal("A1"), schDt = "2020-07-17T15:00Z")
 
     val arrivalsDiff = toArrivalsDiff(toRemove = List(arrival, arrival2))
 
     val expected = toArrivalsDiff(toRemove = List(
-      arrival.copy(Terminal = Terminal("A1")),
-      arrival2.copy(Terminal = Terminal("A1"))
+      arrival,
+      arrival2
     ))
 
-    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff)
+    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
 
     result === expected
   }
 
   "Given an arrivals diff with removals containing a flight that has baggage carousel 7 then it should be updated to A2 terminal" >> {
-    val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("T1"), schDt = "2020-07-17T14:00Z", baggageReclaimId = Option("7"))
-    val arrival2 = ArrivalGenerator.arrival(iata = "TST200", terminal = Terminal("T1"), schDt = "2020-07-17T15:00Z")
+    val arrival = ArrivalGenerator.arrival(
+      iata = "TST100",
+      terminal = Terminal("A1"),
+      schDt = "2020-07-17T14:00Z",
+      baggageReclaimId = Option("7")
+    )
+    val arrival2 = ArrivalGenerator.arrival(
+      iata = "TST200",
+      terminal = Terminal("A1"),
+      schDt = "2020-07-17T15:00Z"
+    )
 
     val arrivalsDiff = toArrivalsDiff(toRemove = List(arrival, arrival2))
 
-    val expected = toArrivalsDiff(toRemove = List(arrival.copy(Terminal = Terminal("A2")), arrival2.copy(Terminal = Terminal("A1"))))
+    val expected = toArrivalsDiff(
+      toRemove = List(arrival.copy(Terminal = Terminal("A2")), arrival2)
+    )
 
-    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff)
+    val result = ediAdjusterWithNoHistoricMappings(arrivalsDiff, Seq())
 
     result === expected
   }
@@ -126,11 +142,11 @@ class EdiFlightAdjustmentsSpec extends Specification {
         Map("TST0100" -> Map("July" -> Terminal("A2")))
       )
 
-      val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("T1"), schDt = "2020-07-17T14:00Z")
+      val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("A1"), schDt = "2020-07-17T14:00Z")
       val arrivalsDiff = toArrivalsDiff(List(arrival))
       val expected = toArrivalsDiff(List(arrival.copy(Terminal = Terminal("A2"))))
 
-      val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff)
+      val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff, Seq())
 
       result === expected
     }
@@ -138,11 +154,11 @@ class EdiFlightAdjustmentsSpec extends Specification {
     "When an updated flight has no historic entry and no baggage carousel then it should default to A1" >> {
       val ediAdjustMentsWithHistoricMappingForFlight = EdiArrivalsTerminalAdjustments(Map())
 
-      val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("T1"), schDt = "2020-07-17T14:00Z")
+      val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("A1"), schDt = "2020-07-17T14:00Z")
       val arrivalsDiff = toArrivalsDiff(List(arrival))
-      val expected = toArrivalsDiff(List(arrival.copy(Terminal = Terminal("A1"))))
+      val expected = toArrivalsDiff(List(arrival))
 
-      val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff)
+      val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff, Seq())
 
       result === expected
     }
@@ -152,11 +168,11 @@ class EdiFlightAdjustmentsSpec extends Specification {
         Map("TST0100" -> Map("July" -> Terminal("A2")))
       )
 
-      val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("T1"), schDt = "2020-07-17T14:00Z")
+      val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("A1"), schDt = "2020-07-17T14:00Z")
       val arrivalsDiff = toArrivalsDiff(toRemove = List(arrival))
       val expected = toArrivalsDiff(toRemove = List(arrival.copy(Terminal = Terminal("A2"))))
 
-      val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff)
+      val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff, Seq())
 
       result === expected
     }
@@ -164,11 +180,11 @@ class EdiFlightAdjustmentsSpec extends Specification {
     "When a removed flight has no historic entry and no baggage carousel then it should default to A1" >> {
       val ediAdjustMentsWithNoHistoricMappingForFlight = EdiArrivalsTerminalAdjustments(Map())
 
-      val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("T1"), schDt = "2020-07-17T14:00Z")
+      val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("A1"), schDt = "2020-07-17T14:00Z")
       val arrivalsDiff = toArrivalsDiff(toRemove = List(arrival))
-      val expected = toArrivalsDiff(toRemove = List(arrival.copy(Terminal = Terminal("A1"))))
+      val expected = toArrivalsDiff(toRemove = List(arrival))
 
-      val result = ediAdjustMentsWithNoHistoricMappingForFlight(arrivalsDiff)
+      val result = ediAdjustMentsWithNoHistoricMappingForFlight(arrivalsDiff, Seq())
 
       result === expected
     }
@@ -180,14 +196,14 @@ class EdiFlightAdjustmentsSpec extends Specification {
 
       val arrival = ArrivalGenerator.arrival(
         iata = "TST100",
-        terminal = Terminal("T1"),
+        terminal = Terminal("A1"),
         schDt = "2020-07-17T14:00Z",
         baggageReclaimId = Option("6")
       )
       val arrivalsDiff = toArrivalsDiff(List(arrival))
-      val expected = toArrivalsDiff(List(arrival.copy(Terminal = Terminal("A1"))))
+      val expected = toArrivalsDiff(List(arrival))
 
-      val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff)
+      val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff, Seq())
 
       result === expected
     }
@@ -199,18 +215,38 @@ class EdiFlightAdjustmentsSpec extends Specification {
 
       val arrival = ArrivalGenerator.arrival(
         iata = "TST100",
-        terminal = Terminal("T1"),
+        terminal = Terminal("A1"),
         schDt = "2020-07-17T14:00Z",
         baggageReclaimId = Option("7")
       )
       val arrivalsDiff = toArrivalsDiff(List(arrival))
       val expected = toArrivalsDiff(List(arrival.copy(Terminal = Terminal("A2"))))
 
-      val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff)
+      val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff, Seq())
+
+      result === expected
+    }
+
+    "When a flight is updated the old version must be added to the removals in the diff" >> {
+      val ediAdjustMentsWithHistoricMappingForFlight = EdiArrivalsTerminalAdjustments(
+        Map("TST0100" -> Map("July" -> Terminal("A1")))
+      )
+
+      val arrival = ArrivalGenerator.arrival(
+        iata = "TST100",
+        terminal = Terminal("A1"),
+        schDt = "2020-07-17T14:00Z",
+        baggageReclaimId = Option("7")
+      )
+      val arrivalsDiff = toArrivalsDiff(List(arrival))
+      val expected = toArrivalsDiff(List(arrival.copy(Terminal = Terminal("A2"))), List(arrival))
+
+      val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff, Seq(arrival.unique))
 
       result === expected
     }
   }
+
   "When a removed flight has a historic entry of A2 and a baggage id of 6 it should adjust to A1" >> {
     val ediAdjustMentsWithHistoricMappingForFlight = EdiArrivalsTerminalAdjustments(
       Map("TST0100" -> Map("July" -> Terminal("A2")))
@@ -218,14 +254,14 @@ class EdiFlightAdjustmentsSpec extends Specification {
 
     val arrival = ArrivalGenerator.arrival(
       iata = "TST100",
-      terminal = Terminal("T1"),
+      terminal = Terminal("A1"),
       schDt = "2020-07-17T14:00Z",
       baggageReclaimId = Option("6")
     )
     val arrivalsDiff = toArrivalsDiff(toRemove = List(arrival))
-    val expected = toArrivalsDiff(toRemove = List(arrival.copy(Terminal = Terminal("A1"))))
+    val expected = toArrivalsDiff(toRemove = List(arrival))
 
-    val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff)
+    val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff, Seq())
 
     result === expected
   }
@@ -237,18 +273,17 @@ class EdiFlightAdjustmentsSpec extends Specification {
 
     val arrival = ArrivalGenerator.arrival(
       iata = "TST100",
-      terminal = Terminal("T1"),
+      terminal = Terminal("A1"),
       schDt = "2020-07-17T14:00Z",
       baggageReclaimId = Option("7")
     )
     val arrivalsDiff = toArrivalsDiff(toRemove = List(arrival))
     val expected = toArrivalsDiff(toRemove = List(arrival.copy(Terminal = Terminal("A2"))))
 
-    val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff)
+    val result = ediAdjustMentsWithHistoricMappingForFlight(arrivalsDiff, Seq())
 
     result === expected
   }
-
 
   "Given a CSV string with 1 flight, alternating terminals " >> {
     "When I apply the adjustments to an arrivals diff" >> {
@@ -259,8 +294,8 @@ class EdiFlightAdjustmentsSpec extends Specification {
              |TST200,1,100,0,0,0,A2,A1,A2,A1,A2,A1,A2,A1,A2,A1,A2,A1"""
             .stripMargin
 
-        val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("T1"), schDt = "2020-01-17T14:00Z")
-        val arrival2 = ArrivalGenerator.arrival(iata = "TST200", terminal = Terminal("T1"), schDt = "2020-01-17T14:00Z")
+        val arrival = ArrivalGenerator.arrival(iata = "TST100", terminal = Terminal("A1"), schDt = "2020-01-17T14:00Z")
+        val arrival2 = ArrivalGenerator.arrival(iata = "TST200", terminal = Terminal("A1"), schDt = "2020-01-17T14:00Z")
         val arrivalsDiff = toArrivalsDiff(updated = List(arrival), toRemove = List(arrival2))
 
         val expected = toArrivalsDiff(
@@ -272,7 +307,7 @@ class EdiFlightAdjustmentsSpec extends Specification {
           EdiArrivalTerminalCsvMapper.csvStringToMap(csvStringWithAlternatingTerminals)
         )
 
-        val result = ediAdjustments(arrivalsDiff)
+        val result = ediAdjustments(arrivalsDiff, Seq())
 
         result === expected
       }

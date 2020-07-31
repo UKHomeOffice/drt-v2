@@ -1,9 +1,7 @@
-package services
+package services.arrivals
 
-import drt.shared.PcpPax
-import drt.shared.{CarrierCode, VoyageNumber}
-import drt.shared.FlightCode
 import drt.shared.api.FlightCodeSuffix
+import drt.shared.{CarrierCode, FlightCode, PcpPax, VoyageNumber}
 import services.crunch.CrunchTestLike
 
 

@@ -182,7 +182,7 @@ class TestDrtActor extends Actor {
         optimiser = tc.cruncher,
         aclPaxAdjustmentDays = aclPaxAdjustmentDays,
         startDeskRecs = startDeskRecs,
-        arrivalsAdjustments = ArrivalsAdjustmentsNoop
+        arrivalsAdjustments = tc.arrivalsAdjustments
       ))
 
       replyTo ! CrunchGraphInputsAndProbes(

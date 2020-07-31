@@ -3,14 +3,14 @@ package services.arrivals
 import java.net.URL
 
 import drt.shared.Terminals.Terminal
-import drt.shared.{ArrivalsDiff, PortCode}
+import drt.shared.{ArrivalsDiff, PortCode, UniqueArrival}
 import org.slf4j.LoggerFactory
 
 import scala.util.{Failure, Success}
 
 trait ArrivalsAdjustmentsLike {
 
-  def apply(arrivalsDiff: ArrivalsDiff): ArrivalsDiff
+  def apply(arrivalsDiff: ArrivalsDiff, arrivalsKeys: Iterable[UniqueArrival]): ArrivalsDiff
 
 }
 
