@@ -12,16 +12,16 @@ case class EdiArrivalsTerminalAdjustments(historicFlightTerminalMap: Map[String,
 
   val defaultTerminal: Terminal = Terminal("A1")
 
-  override def apply(arrivalsDiff: ArrivalsDiff, arrivalsKeys: Iterable[UniqueArrival]): ArrivalsDiff = {
-    log.info(s"Adjusting terminals ${arrivalsDiff.toUpdate.size} updates and ${arrivalsDiff.toRemove.size} deletions")
-    val updatedDiff = applyBaggageReclaimIdRule(
-      applyHistoricTerminalRule(arrivalsDiff)
+  override def apply(originalArrivalsDiff: ArrivalsDiff, allArrivalKeys: Iterable[UniqueArrival]): ArrivalsDiff = {
+    log.info(s"Adjusting terminals ${originalArrivalsDiff.toUpdate.size} updates and ${originalArrivalsDiff.toRemove.size} deletions")
+    val arrivalsDiffWithTerminalUpdates = applyBaggageReclaimIdRule(
+      applyHistoricTerminalRule(originalArrivalsDiff)
     )
 
-    val arrivalsBeforeUpdates: Set[UniqueArrival] = arrivalsKeys.toSet -- updatedDiff.toUpdate.keys.toSet
-    val arrivalsThatHaveMovedTerminals = arrivalsBeforeUpdates.flatMap(ua => arrivalsDiff.toUpdate.get(ua))
+    val arrivalsWithoutTerminalUpdates: Set[UniqueArrival] = allArrivalKeys.toSet -- arrivalsDiffWithTerminalUpdates.toUpdate.keys.toSet
+    val arrivalsThatHaveMovedTerminals = arrivalsWithoutTerminalUpdates.flatMap(ua => originalArrivalsDiff.toUpdate.get(ua))
 
-    updatedDiff.copy(toRemove = updatedDiff.toRemove ++ arrivalsThatHaveMovedTerminals)
+    arrivalsDiffWithTerminalUpdates.copy(toRemove = arrivalsDiffWithTerminalUpdates.toRemove ++ arrivalsThatHaveMovedTerminals)
   }
 
   def applyHistoricTerminalRule(arrivalsDiff: ArrivalsDiff): ArrivalsDiff = arrivalsDiff

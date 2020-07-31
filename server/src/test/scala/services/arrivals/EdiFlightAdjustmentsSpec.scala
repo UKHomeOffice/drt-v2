@@ -41,7 +41,7 @@ class EdiFlightAdjustmentsSpec extends Specification {
       schDt = "2020-07-17T14:00Z",
       baggageReclaimId = Option("6")
     )
-    val arrival2 = ArrivalGenerator.arrival("TST200", "A1", "2020-07-17T15:00Z")
+    val arrival2 = ArrivalGenerator.arrival(iata ="TST200", terminal= Terminal("A1"), schDt = "2020-07-17T15:00Z")
 
     val arrivalsDiff = toArrivalsDiff(List(arrival, arrival2))
 
