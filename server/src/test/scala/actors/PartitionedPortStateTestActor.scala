@@ -1,6 +1,7 @@
 package actors
 
 import actors.PartitionedPortStateActor.{GetStateForDateRange, queueUpdatesProps, staffUpdatesProps}
+import actors.acking.Acking.AckingAsker
 import actors.acking.AckingReceiver.{Ack, StreamFailure}
 import actors.daily.{QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import akka.actor.{ActorRef, ActorSystem, Props}
@@ -66,7 +67,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
       }.foreach(_ => replyTo ! Ack)
   }
 
-  override def askThenAck(message: Any, replyTo: ActorRef, actor: ActorRef): Unit = {
+  override val askThenAck: AckingAsker = (actor: ActorRef, message: Any, replyTo: ActorRef) => {
     actor.ask(message).foreach { _ =>
       message match {
         case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.nonEmpty =>
