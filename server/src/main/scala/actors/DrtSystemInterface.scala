@@ -96,8 +96,13 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val baseArrivalsActor: ActorRef
   val forecastArrivalsActor: ActorRef
   val liveArrivalsActor: ActorRef
-
   val voyageManifestsActor: ActorRef
+
+  val flightsActor: ActorRef
+  val queuesActor: ActorRef
+  val staffActor: ActorRef
+  val queueUpdates: ActorRef
+  val staffUpdates: ActorRef
 
   def feedActors: List[ActorRef] = List(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 

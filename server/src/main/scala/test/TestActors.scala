@@ -218,21 +218,6 @@ object TestActors {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
-  object TestPartitionedPortStateActor {
-    def apply(now: () => SDateLike,
-              airportConfig: AirportConfig,
-              journalType: StreamingJournalLike,
-              minuteLookups: MinuteLookupsLike)
-             (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-      val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", now, expireAfterMillis, airportConfig.queuesByTerminal)))
-      val queuesActor: ActorRef = minuteLookups.queueMinutesActor
-      val staffActor: ActorRef = minuteLookups.staffMinutesActor
-      val queueUpdates = system.actorOf(Props(new QueueTestUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, PartitionedPortStateActor.queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
-      val staffUpdates = system.actorOf(Props(new StaffTestUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, PartitionedPortStateActor.staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
-      system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, now, airportConfig.queuesByTerminal, journalType)))
-    }
-  }
-
   class TestPartitionedPortStateActor(flightsActor: ActorRef,
                                       queuesActor: ActorRef,
                                       staffActor: ActorRef,

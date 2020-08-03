@@ -1,13 +1,13 @@
 package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
-import actors.PartitionedPortStateActor.{DateRangeLike, tempLegacyActorProps}
+import actors.PartitionedPortStateActor.DateRangeLike
 import actors.acking.Acking
 import actors.acking.Acking.AckingAsker
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily._
 import actors.pointInTime.CrunchStateReadActor
-import akka.actor.{Actor, ActorContext, ActorRef, ActorSystem, Props}
+import akka.actor.{Actor, ActorContext, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
@@ -24,21 +24,6 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 object PartitionedPortStateActor {
-  def apply(now: () => SDateLike,
-            airportConfig: AirportConfig,
-            journalType: StreamingJournalLike,
-            legacyDataCutoff: SDateLike,
-            replayMaxCrunchStateMessages: Int,
-            minuteLookups: MinuteLookupsLike)
-           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-    val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(now, expireAfterMillis, airportConfig.queuesByTerminal, legacyDataCutoff, replayMaxCrunchStateMessages)))
-    val queuesActor: ActorRef = minuteLookups.queueMinutesActor
-    val staffActor: ActorRef = minuteLookups.staffMinutesActor
-    val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
-    val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
-    system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, now, airportConfig.queuesByTerminal, journalType, legacyDataCutoff, tempLegacyActorProps(replayMaxCrunchStateMessages))))
-  }
-
   def queueUpdatesProps(now: () => SDateLike, journalType: StreamingJournalLike): (Terminal, SDateLike) => Props =
     (terminal: Terminal, day: SDateLike) => {
       Props(new TerminalDayQueuesUpdatesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType))
@@ -87,7 +72,6 @@ object PartitionedPortStateActor {
     request => actor.ask(request).mapTo[FlightsWithSplits].recoverWith {
       case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
     }
-
 
   def replyWithUpdatesFn(flights: FlightsRequester, queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
                         (implicit ec: ExecutionContext):
