@@ -51,7 +51,7 @@ object PartitionedPortStateActor {
 
   type FlightsRequester = PortStateRequest => Future[FlightsWithSplits]
 
-  type UpdatesRequester = (MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, ActorRef) => Future[Option[PortStateUpdates]]
+  type PortStateUpdatesRequester = (MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, ActorRef) => Future[Option[PortStateUpdates]]
 
   type PortStateRequester = (ActorRef, PortStateRequest) => Future[PortState]
 
@@ -74,8 +74,7 @@ object PartitionedPortStateActor {
     }
 
   def replyWithUpdatesFn(flights: FlightsRequester, queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
-                        (implicit ec: ExecutionContext):
-  (MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, ActorRef) => Future[Option[PortStateUpdates]] =
+                        (implicit ec: ExecutionContext): PortStateUpdatesRequester =
     (since: MillisSinceEpoch, start: MillisSinceEpoch, end: MillisSinceEpoch, replyTo: ActorRef) => {
       val request = GetUpdatesSince(since, start, end)
       combineToPortStateUpdates(
@@ -94,12 +93,8 @@ object PartitionedPortStateActor {
     ).pipeTo(replyTo)
 
   def replyWithMinutesAsPortStateFn(queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
-                                   (implicit ec: ExecutionContext): PortStateRequester = (replyTo: ActorRef, request: PortStateRequest) =>
-    combineToPortState(
-      Future(FlightsWithSplits.empty),
-      queueMins(request),
-      staffMins(request)
-    ).pipeTo(replyTo)
+                                   (implicit ec: ExecutionContext): PortStateRequester =
+    replyWithPortStateFn(_ => Future(FlightsWithSplits.empty), queueMins, staffMins)
 
   def replyWithLegacyPortStateFn(killActor: ActorRef)
                                 (implicit timeout: Timeout, ec: ExecutionContext, system: ActorContext): (ActorRef, ActorRef, DateRangeLike) => Future[Any] =
@@ -209,7 +204,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val requestStaffMinutes: StaffMinutesRequester = requestStaffMinutesFn(staffActor)
   val requestQueueMinutes: QueueMinutesRequester = requestQueueMinutesFn(queuesActor)
   val requestFlights: FlightsRequester = requestFlightsFn(flightsActor)
-  val replyWithUpdates: UpdatesRequester = replyWithUpdatesFn(requestFlights, requestQueueMinuteUpdates, requestStaffMinuteUpdates)
+  val replyWithUpdates: PortStateUpdatesRequester = replyWithUpdatesFn(requestFlights, requestQueueMinuteUpdates, requestStaffMinuteUpdates)
   val replyWithPortState: PortStateRequester = replyWithPortStateFn(requestFlights, requestQueueMinutes, requestStaffMinutes)
   val replyWithMinutesAsPortState: PortStateRequester = replyWithMinutesAsPortStateFn(requestQueueMinutes, requestStaffMinutes)
   val replyWithLegacyPortState = replyWithLegacyPortStateFn(killActor)
