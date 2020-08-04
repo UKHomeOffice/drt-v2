@@ -44,7 +44,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   def persistAndMaybeSnapshot(messageToPersist: GeneratedMessage, maybeAck: Option[(ActorRef, Any)] = None): Unit = {
     persist(messageToPersist) { message =>
       val messageBytes = message.serializedSize
-      log.info(s"Persisting $messageBytes bytes of ${message.getClass}")
+      log.debug(s"Persisting $messageBytes bytes of ${message.getClass}")
 
       context.system.eventStream.publish(message)
       bytesSinceSnapshotCounter += messageBytes
@@ -86,12 +86,23 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
       playSnapshotMessage(ss)
 
     case RecoveryCompleted =>
-      log.info(s"Recovery complete. Took ${now().millisSinceEpoch - recoveryStartMillis}ms. $messagesPersistedSinceSnapshotCounter messages replayed.")
+      logRecoveryTime()
       postRecoveryComplete()
 
     case event: GeneratedMessage =>
       bytesSinceSnapshotCounter += event.serializedSize
       messagesPersistedSinceSnapshotCounter += 1
       playRecoveryMessage(event)
+  }
+
+  private def logRecoveryTime(): Unit = {
+    val tookMs: MillisSinceEpoch = now().millisSinceEpoch - recoveryStartMillis
+    val message = s"Recovery complete. $messagesPersistedSinceSnapshotCounter messages replayed. Took ${tookMs}ms. "
+    if (tookMs < 250L)
+      log.debug(message)
+    else if (tookMs < 5000L)
+      log.warn(s"$message")
+    else
+      log.error(s"$message")
   }
 }

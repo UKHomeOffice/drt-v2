@@ -39,12 +39,11 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
 
   override def recovery: Recovery = maybePointInTime match {
-    case None => Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
+    case None =>
+      Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
     case Some(pointInTime) =>
       val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-      val recovery = Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
-      log.info(s"Recovery: $recovery")
-      recovery
+      Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
   }
 
   override def receiveCommand: Receive = {

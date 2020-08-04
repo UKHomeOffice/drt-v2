@@ -95,11 +95,7 @@ class CrunchStateReadActor(pointInTime: SDateLike,
 
   override def recovery: Recovery = {
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime.millisSinceEpoch)
-    val recovery = Recovery(
-      fromSnapshot = criteria,
-      replayMax = replayMaxMessages)
-    log.info(s"recovery: $recovery")
-    recovery
+    Recovery(fromSnapshot = criteria, replayMax = replayMaxMessages)
   }
 
   override def crunchDiffFromMessage(diffMessage: CrunchDiffMessage, x: MillisSinceEpoch): (Seq[UniqueArrival], Seq[ApiFlightWithSplits], Seq[CrunchMinute], Seq[StaffMinute]) = (

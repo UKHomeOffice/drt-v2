@@ -32,10 +32,7 @@ class ArrivalsReadActor(pointInTime: SDateLike, persistenceIdString: String, fee
 
   override def recovery: Recovery = {
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime.millisSinceEpoch)
-    val recovery = Recovery(fromSnapshot = criteria, replayMax = 10000)
-
-    log.info(s"Recovery: $recovery $persistenceId ${pointInTime.toISOString()}")
-    recovery
+    Recovery(fromSnapshot = criteria, replayMax = 10000)
   }
 
 }
