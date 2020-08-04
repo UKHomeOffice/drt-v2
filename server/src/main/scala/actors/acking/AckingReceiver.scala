@@ -24,8 +24,5 @@ object Acking {
 
   def askThenAck(implicit ec: ExecutionContext, timeout: Timeout): AckingAsker =
     (actor: ActorRef, message: Any, replyTo: ActorRef) =>
-      actor.ask(message).foreach { _ =>
-        println(s"Sending Ack to sender()")
-        replyTo ! Ack
-      }
+      actor.ask(message).foreach(_ => replyTo ! Ack)
 }

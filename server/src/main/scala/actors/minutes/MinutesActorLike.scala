@@ -56,7 +56,6 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
       handleLookups(terminal, SDate(startMillis), SDate(endMillis), Option(pit)).pipeTo(sender())
 
     case GetStateForDateRange(startMillis, endMillis) =>
-      println(s"got request for GetStateForDateRange")
       handleAllTerminalLookupsStream(startMillis, endMillis, None).pipeTo(sender())
 
     case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
