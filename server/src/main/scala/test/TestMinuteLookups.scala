@@ -16,8 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 case class TestMinuteLookups(system: ActorSystem,
                              now: () => SDateLike,
                              expireAfterMillis: Int,
-                             queuesByTerminal: Map[Terminal, Seq[Queue]],
-                             override val legacyDataCutOff: SDateLike)
+                             queuesByTerminal: Map[Terminal, Seq[Queue]])
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val replayMaxCrunchStateMessages = 1000
 
@@ -35,7 +34,7 @@ case class TestMinuteLookups(system: ActorSystem,
     actor.ask(ResetData).map(_ => actor ! PoisonPill)
   }
 
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(now, queuesByTerminal.keys, queuesLookup, legacyQueuesLookup, updateCrunchMinutes, resetQueuesData)))
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, resetQueuesData)))
 
-  override val staffMinutesActor: ActorRef = system.actorOf(Props(new TestStaffMinutesActor(now, queuesByTerminal.keys, staffLookup, legacyStaffLookup, updateStaffMinutes, resetStaffData)))
+  override val staffMinutesActor: ActorRef = system.actorOf(Props(new TestStaffMinutesActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes, resetStaffData)))
 }

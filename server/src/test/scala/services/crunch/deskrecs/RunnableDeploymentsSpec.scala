@@ -45,11 +45,9 @@ class MockPortStateActorForDeployments(probe: TestProbe, responseDelayMillis: Lo
 }
 
 class TestQueueMinutesActor(probe: ActorRef,
-                            now: () => SDateLike,
                             terminals: Iterable[Terminal],
                             lookup: MinutesLookup[CrunchMinute, TQM],
-                            lookupLegacy: MinutesLookup[CrunchMinute, TQM],
-                            updateMinutes: MinutesUpdate[CrunchMinute, TQM]) extends QueueMinutesActor(now, terminals, lookup, lookupLegacy, updateMinutes) {
+                            updateMinutes: MinutesUpdate[CrunchMinute, TQM]) extends QueueMinutesActor(terminals, lookup, updateMinutes) {
 
   override def receive: Receive = testReceives
 
@@ -67,13 +65,11 @@ case class TestMinuteLookups(queueProbe: ActorRef,
                              queuesByTerminal: Map[Terminal, Seq[Queue]],
                              override val replayMaxCrunchStateMessages: Int)
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
-  override val legacyDataCutOff: SDateLike = now().addDays(-10)
-
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
 
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queueProbe, now, queuesByTerminal.keys, queuesLookup, legacyQueuesLookup, updateCrunchMinutes)))
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queueProbe, queuesByTerminal.keys, queuesLookup, updateCrunchMinutes)))
 
-  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(now, queuesByTerminal.keys, staffLookup, legacyStaffLookup, updateStaffMinutes)))
+  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes)))
 }
 
 

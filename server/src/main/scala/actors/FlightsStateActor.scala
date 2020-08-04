@@ -29,20 +29,13 @@ import scala.language.postfixOps
 
 
 object FlightsStateActor {
-  def isNonLegacyRequest(pointInTime: SDateLike, legacyDataCutoff: SDateLike): Boolean =
-    pointInTime.millisSinceEpoch >= legacyDataCutoff.millisSinceEpoch
-
   def tempPitActorProps(pointInTime: SDateLike,
-                        message: DateRangeLike,
                         now: () => SDateLike,
                         queues: Map[Terminal, Seq[Queue]],
                         expireAfterMillis: Int,
                         legacyDataCutoff: SDateLike,
                         replayMaxCrunchStateMessages: Int): Props = {
-    if (isNonLegacyRequest(pointInTime, legacyDataCutoff))
-      Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch, queues, legacyDataCutoff, replayMaxCrunchStateMessages))
-    else
-      Props(new CrunchStateReadActor(pointInTime, expireAfterMillis, queues, message.from, message.to, replayMaxCrunchStateMessages))
+    Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch, queues, legacyDataCutoff, replayMaxCrunchStateMessages))
   }
 }
 
@@ -137,7 +130,13 @@ class FlightsStateActor(val now: () => SDateLike,
     case GetStateForDateRange(startMillis, endMillis) =>
       sender() ! state.window(startMillis, endMillis)
 
+    case GetFlights(startMillis, endMillis) =>
+      sender() ! state.window(startMillis, endMillis)
+
     case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
+      sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
+
+    case GetFlightsForTerminal(startMillis, endMillis, terminal) =>
       sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
 
     case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
@@ -158,20 +157,14 @@ class FlightsStateActor(val now: () => SDateLike,
   }
 
   def replyWithPointInTimeQuery(pointInTime: SDateLike, message: DateRangeLike): Unit = {
-    val finalMessage = if (isNonLegacyRequest(pointInTime, legacyDataCutoff)) message else toLegacyMessage(message)
-    val tempActor = tempPointInTimeActor(pointInTime, finalMessage)
+    val tempActor = tempPointInTimeActor(pointInTime)
     killActor
-      .ask(RequestAndTerminate(tempActor, finalMessage))
+      .ask(RequestAndTerminate(tempActor, message))
       .pipeTo(sender())
   }
 
-  def toLegacyMessage(message: DateRangeLike): DateRangeLike = message match {
-    case GetStateForDateRange(from, to) => GetFlights(from, to)
-    case GetStateForTerminalDateRange(from, to, terminal) => GetFlightsForTerminal(from, to, terminal)
-  }
-
-  def tempPointInTimeActor(pointInTime: SDateLike, message: DateRangeLike): ActorRef =
-    context.actorOf(tempPitActorProps(pointInTime, message, () => pointInTime, queues, expireAfterMillis, legacyDataCutoff, replayMaxCrunchStateMessages))
+  def tempPointInTimeActor(pointInTime: SDateLike): ActorRef =
+    context.actorOf(tempPitActorProps(pointInTime, () => pointInTime, queues, expireAfterMillis, legacyDataCutoff, replayMaxCrunchStateMessages))
 
   def handleDiff(flightUpdates: FlightsWithSplitsDiff): Unit = {
     val (updatedState, updatedMinutes) = flightUpdates.applyTo(state, now().millisSinceEpoch)

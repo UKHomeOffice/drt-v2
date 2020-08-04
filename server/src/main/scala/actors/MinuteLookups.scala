@@ -27,7 +27,6 @@ trait MinuteLookupsLike {
   val queuesByTerminal: Map[Terminal, Seq[Queue]]
   val replayMaxCrunchStateMessages: Int
   val requestAndTerminateActor: ActorRef
-  val legacyDataCutOff: SDateLike
 
   val updateCrunchMinutes: (Terminal, SDateLike, MinutesContainer[CrunchMinute, TQM]) => Future[MinutesContainer[CrunchMinute, TQM]] = (terminal: Terminal, date: SDateLike, container: MinutesContainer[CrunchMinute, TQM]) => {
     val actor = system.actorOf(TerminalDayQueuesActor.props(terminal, date, now))
@@ -48,13 +47,6 @@ trait MinuteLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
   }
 
-  val legacyQueuesLookup: MinutesLookup[CrunchMinute, TQM] = (terminal: Terminal, date: SDateLike, _: Option[MillisSinceEpoch]) => {
-    if (date > legacyDataCutOff) {
-      val actor = crunchStateReadActor(date)
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, GetCrunchMinutes(terminal))).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
-    } else Future(None)
-  }
-
   val staffLookup: MinutesLookup[StaffMinute, TM] = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
     val props = maybePit match {
       case None => TerminalDayStaffActor.props(terminal, date, now)
@@ -62,13 +54,6 @@ trait MinuteLookupsLike {
     }
     val actor = system.actorOf(props)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
-  }
-
-  val legacyStaffLookup: MinutesLookup[StaffMinute, TM] = (terminal: Terminal, date: SDateLike, _: Option[MillisSinceEpoch]) => {
-    if (date > legacyDataCutOff) {
-      val actor = crunchStateReadActor(date)
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, GetStaffMinutes(terminal))).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
-    } else Future(None)
   }
 
   def crunchStateReadActor(date: SDateLike): ActorRef = {
@@ -84,12 +69,11 @@ case class MinuteLookups(system: ActorSystem,
                          now: () => SDateLike,
                          expireAfterMillis: Int,
                          queuesByTerminal: Map[Terminal, Seq[Queue]],
-                         override val replayMaxCrunchStateMessages: Int,
-                         override val legacyDataCutOff: SDateLike)
+                         override val replayMaxCrunchStateMessages: Int)
                         (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "minutes-lookup-kill-actor")
 
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(now, queuesByTerminal.keys, queuesLookup, legacyQueuesLookup, updateCrunchMinutes)))
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes)))
 
-  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(now, queuesByTerminal.keys, staffLookup, legacyStaffLookup, updateStaffMinutes)))
+  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes)))
 }

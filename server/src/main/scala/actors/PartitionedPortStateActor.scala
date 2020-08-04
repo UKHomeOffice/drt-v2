@@ -55,6 +55,8 @@ object PartitionedPortStateActor {
 
   type PortStateRequester = (ActorRef, PortStateRequest) => Future[PortState]
 
+  type LegacyPortStateRequester = (ActorRef, ActorRef, DateRangeLike) => Future[Any]
+
   def requestQueueMinutesFn(actor: ActorRef)
                            (implicit timeout: Timeout, ec: ExecutionContext): QueueMinutesRequester =
     request => actor.ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]].recoverWith {
@@ -149,21 +151,26 @@ object PartitionedPortStateActor {
     val to: MillisSinceEpoch
   }
 
-  trait PortStateRequest
+  trait PortStateRequest extends DateRangeLike
 
-  case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
+  trait FlightsRequest extends DateRangeLike
 
-  case class PointInTimeQuery(pointInTime: MillisSinceEpoch, query: DateRangeLike) extends PortStateRequest
+  case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends PortStateRequest
 
-  case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
+  case class PointInTimeQuery(pointInTime: MillisSinceEpoch, query: DateRangeLike) extends PortStateRequest {
+    override val from: MillisSinceEpoch = query.from
+    override val to: MillisSinceEpoch = query.to
+  }
 
-  case class GetFlightsForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
+  case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch) extends FlightsRequest
 
-  case class GetStateForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
+  case class GetFlightsForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends FlightsRequest
 
-  case class GetStateForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike with PortStateRequest
+  case class GetStateForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends PortStateRequest
 
-  case class GetMinutesForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike with PortStateRequest
+  case class GetStateForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends PortStateRequest
+
+  case class GetMinutesForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends PortStateRequest
 
 }
 
@@ -207,7 +214,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val replyWithUpdates: PortStateUpdatesRequester = replyWithUpdatesFn(requestFlights, requestQueueMinuteUpdates, requestStaffMinuteUpdates)
   val replyWithPortState: PortStateRequester = replyWithPortStateFn(requestFlights, requestQueueMinutes, requestStaffMinutes)
   val replyWithMinutesAsPortState: PortStateRequester = replyWithMinutesAsPortStateFn(requestQueueMinutes, requestStaffMinutes)
-  val replyWithLegacyPortState = replyWithLegacyPortStateFn(killActor)
+  val replyWithLegacyPortState: LegacyPortStateRequester = replyWithLegacyPortStateFn(killActor)
   val askThenAck: AckingAsker = Acking.askThenAck
 
   def processMessage: Receive = {
@@ -242,48 +249,50 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
     case GetUpdatesSince(since, from, to) => replyWithUpdates(since, from, to, sender())
 
-    case PointInTimeQuery(millis, request: GetStateForDateRange) =>
-      if (PartitionedPortStateActor.isNonLegacyRequest(SDate(millis), legacyDataCutoff))
-        replyWithPortState(sender(), PointInTimeQuery(millis, request))
-      else {
-        val tempActor = context.actorOf(tempLegacyActorProps(SDate(millis), request, queues, expireAfterMillis))
-        replyWithLegacyPortState(tempActor, sender(), request)
-      }
+    case pitRequest@PointInTimeQuery(millis, request: GetStateForDateRange) =>
+      replyToPitDateRangeQuery(millis, replyWithPortState(sender(), pitRequest), request)
 
-    case PointInTimeQuery(millis, request: GetStateForTerminalDateRange) =>
-      replyWithPortState(sender(), PointInTimeQuery(millis, request))
+    case pitRequest@PointInTimeQuery(millis, request: GetStateForTerminalDateRange) =>
+      replyToPitDateRangeQuery(millis, replyWithPortState(sender(), pitRequest), request)
 
-    case PointInTimeQuery(millis, GetMinutesForTerminalDateRange(from, to, terminal)) =>
-      replyWithMinutesAsPortState(sender(), PointInTimeQuery(millis, GetStateForTerminalDateRange(from, to, terminal)))
+    case pitRequest@PointInTimeQuery(millis, request: GetMinutesForTerminalDateRange) =>
+      replyToPitDateRangeQuery(millis, replyWithMinutesAsPortState(sender(), pitRequest), request)
 
-    case PointInTimeQuery(pitMillis, GetFlights(from, to)) =>
-      flightsActor.ask(PointInTimeQuery(pitMillis, GetStateForDateRange(from, to))).pipeTo(sender())
-
-    case PointInTimeQuery(pitMillis, GetFlightsForTerminal(from, to, terminal)) =>
-      flightsActor.ask(PointInTimeQuery(pitMillis, GetStateForTerminalDateRange(from, to, terminal))).pipeTo(sender())
+    case pitRequest@PointInTimeQuery(millis, request: FlightsRequest) =>
+      replyToPitDateRangeQuery(millis, flightsActor.ask(pitRequest).pipeTo(sender()), request)
 
     case request: GetStateForDateRange =>
-      if (PartitionedPortStateActor.isNonLegacyRequest(SDate(request.to), legacyDataCutoff)) {
-        replyWithPortState(sender(), request)
-      } else {
-        val tempActor = context.actorOf(tempLegacyActorProps(SDate(request.to).addHours(4), request, queues, expireAfterMillis))
-        replyWithLegacyPortState(tempActor, sender(), request)
-      }
+      replyToDateRangeQuery(request, replyWithPortState(sender(), request), sender())
 
     case request: GetStateForTerminalDateRange =>
-      replyWithPortState(sender(), request)
+      replyToDateRangeQuery(request, replyWithPortState(sender(), request), sender())
 
-    case GetMinutesForTerminalDateRange(from, to, terminal) =>
-      replyWithMinutesAsPortState(sender(), GetStateForTerminalDateRange(from, to, terminal))
+    case request: GetMinutesForTerminalDateRange =>
+      replyToDateRangeQuery(request, replyWithMinutesAsPortState(sender(), request), sender())
 
-    case GetUpdatesSince(since, start, end) =>
-      replyWithUpdates(since, start, end, sender())
+    case request: FlightsRequest =>
+      replyToDateRangeQuery(request, flightsActor.ask(request).pipeTo(sender()), sender())
+  }
 
-    case GetFlights(from, to) =>
-      flightsActor.ask(GetStateForDateRange(from, to)).pipeTo(sender())
+  private def replyToPitDateRangeQuery(millis: MillisSinceEpoch,
+                                       nonLegacyQuery: => Future[Any],
+                                       legacyRequest: DateRangeLike): Future[Any] =
+    if (PartitionedPortStateActor.isNonLegacyRequest(SDate(millis), legacyDataCutoff))
+      nonLegacyQuery
+    else
+      replyWithLegacyPortStateLookup(millis, legacyRequest, sender())
 
-    case GetFlightsForTerminal(from, to, terminal) =>
-      flightsActor.ask(GetStateForTerminalDateRange(from, to, terminal)).pipeTo(sender())
+  private def replyToDateRangeQuery(request: DateRangeLike, currentLookupFn: => Future[Any], replyTo: ActorRef): Future[Any] =
+    if (PartitionedPortStateActor.isNonLegacyRequest(SDate(request.to), legacyDataCutoff))
+      currentLookupFn
+    else {
+      val pitMillis = SDate(request.to).addHours(4).millisSinceEpoch
+      replyWithLegacyPortStateLookup(pitMillis, request, replyTo)
+    }
+
+  private def replyWithLegacyPortStateLookup(millis: MillisSinceEpoch, request: DateRangeLike, replyTo: ActorRef): Future[Any] = {
+    val tempActor = context.actorOf(tempLegacyActorProps(SDate(millis), request, queues, expireAfterMillis))
+    replyWithLegacyPortState(tempActor, replyTo, request)
   }
 
   override def receive: Receive = processMessage orElse {

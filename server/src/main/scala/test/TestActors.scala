@@ -1,6 +1,5 @@
 package test
 
-import actors.DrtStaticParameters.expireAfterMillis
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
@@ -8,7 +7,7 @@ import actors.daily._
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
 import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
@@ -21,7 +20,7 @@ import services.SDate
 import slickdb.ArrivalTable
 
 import scala.collection.immutable.SortedSet
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 
 object TestActors {
@@ -198,23 +197,19 @@ object TestActors {
 
   }
 
-  class TestStaffMinutesActor(now: () => SDateLike,
-                              terminals: Iterable[Terminal],
+  class TestStaffMinutesActor(terminals: Iterable[Terminal],
                               lookup: MinutesLookup[StaffMinute, TM],
-                              lookupLegacy: MinutesLookup[StaffMinute, TM],
                               updateMinutes: MinutesUpdate[StaffMinute, TM],
                               val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends StaffMinutesActor(now, terminals, lookup, lookupLegacy, updateMinutes) with TestMinuteActorLike[StaffMinute, TM] {
+    extends StaffMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[StaffMinute, TM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
-  class TestQueueMinutesActor(now: () => SDateLike,
-                              terminals: Iterable[Terminal],
+  class TestQueueMinutesActor(terminals: Iterable[Terminal],
                               lookup: MinutesLookup[CrunchMinute, TQM],
-                              lookupLegacy: MinutesLookup[CrunchMinute, TQM],
                               updateMinutes: MinutesUpdate[CrunchMinute, TQM],
                               val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends QueueMinutesActor(now, terminals, lookup, lookupLegacy, updateMinutes) with TestMinuteActorLike[CrunchMinute, TQM] {
+    extends QueueMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[CrunchMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
