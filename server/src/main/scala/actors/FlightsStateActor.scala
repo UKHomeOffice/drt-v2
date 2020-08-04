@@ -104,7 +104,14 @@ class FlightsStateActor(val now: () => SDateLike,
 
   override def stateToMessage: GeneratedMessage = FlightMessageConversion.flightsToMessage(state.flights.toMap.values)
 
-  override def receiveCommand: Receive = {
+  override def receiveCommand: Receive =
+    standardRequests
+      .orElse(historicRequests)
+      .orElse(updatesRequests)
+      .orElse(adminRequests)
+      .orElse(unexpected)
+
+  private def adminRequests: Receive = {
     case SetCrunchQueueActor(actor) =>
       log.info(s"Received crunch queue actor")
       maybeUpdatesSubscriber = Option(actor)
@@ -115,18 +122,34 @@ class FlightsStateActor(val now: () => SDateLike,
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
+    case SaveSnapshotSuccess(SnapshotMetadata(_, _, _)) =>
+      log.info("Snapshot success")
+
+    case SaveSnapshotFailure(md, cause) =>
+      log.error(s"Save snapshot failure: $md", cause)
+  }
+
+  def unexpected: Receive = {
+    case unexpected => log.error(s"Received unexpected message $unexpected")
+  }
+
+  private def updatesRequests: PartialFunction[Any, Unit] = {
     case flightUpdates: FlightsWithSplitsDiff =>
       if (flightUpdates.nonEmpty)
         handleDiff(flightUpdates)
       else
         sender() ! Ack
+  }
 
+  private def historicRequests: Receive = {
     case PointInTimeQuery(pitMillis, request) =>
       replyWithPointInTimeQuery(SDate(pitMillis), request)
 
     case request: DateRangeLike if SDate(request.to).isHistoricDate(now()) =>
       replyWithDayViewQuery(request)
+  }
 
+  def standardRequests: Receive = {
     case GetStateForDateRange(startMillis, endMillis) =>
       sender() ! state.window(startMillis, endMillis)
 
@@ -141,14 +164,6 @@ class FlightsStateActor(val now: () => SDateLike,
 
     case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
       sender() ! state.window(startMillis, endMillis).updatedSince(sinceMillis)
-
-    case SaveSnapshotSuccess(SnapshotMetadata(_, _, _)) =>
-      log.info("Snapshot success")
-
-    case SaveSnapshotFailure(md, cause) =>
-      log.error(s"Save snapshot failure: $md", cause)
-
-    case unexpected => log.error(s"Received unexpected message $unexpected")
   }
 
   def replyWithDayViewQuery(message: DateRangeLike): Unit = {

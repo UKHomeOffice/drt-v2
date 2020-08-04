@@ -1,7 +1,6 @@
 package actors.pointInTime
 
 import actors.FlightsStateActor
-import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince}
 import akka.actor.Actor
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -35,18 +34,5 @@ class FlightsStateReadActor(now: () => SDateLike, expireAfterMillis: Int, pointI
       log.info(s"Got other message: ${other.getClass}")
   }
 
-  override def receiveCommand: Receive = {
-    case GetStateForDateRange(startMillis, endMillis) =>
-      log.debug(s"Received GetStateForDateRange request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")
-      sender() ! state.window(startMillis, endMillis)
-
-    case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
-      log.debug(s"Received GetStateForTerminalDateRange Request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()} for $terminal")
-      sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
-
-    case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
-      sender() ! state.window(startMillis, endMillis).updatedSince(sinceMillis)
-
-    case unexpected => log.error(s"Received unexpected message $unexpected")
-  }
+  override def receiveCommand: Receive = standardRequests orElse unexpected
 }

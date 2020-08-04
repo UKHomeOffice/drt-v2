@@ -83,11 +83,11 @@ class CrunchStateReadActor(pointInTime: SDateLike,
 
     case GetFlights(start, end) =>
       logInfo(s"Received GetFlights Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
-      sender() ! FlightsWithSplits(stateForPeriod(start, end).flights)
+      sender() ! FlightsWithSplits(stateForPeriod(start, end).flights.toList)
 
     case GetFlightsForTerminal(start, end, terminalName) =>
       logInfo(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
-      sender() ! FlightsWithSplits(stateForPeriodForTerminal(start, end, terminalName).flights)
+      sender() ! FlightsWithSplits(stateForPeriodForTerminal(start, end, terminalName).flights.toList)
 
     case u =>
       log.error(s"Received unexpected message $u")

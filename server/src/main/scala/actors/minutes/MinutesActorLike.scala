@@ -1,6 +1,6 @@
 package actors.minutes
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{DateRangeLike, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange, PointInTimeQuery, PortStateRequest, TerminalRequest}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
@@ -48,14 +48,14 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).pipeTo(sender())
 
-    case PointInTimeQuery(pit, GetStateForTerminalDateRange(startMillis, endMillis, terminal)) =>
-      handleLookups(terminal, SDate(startMillis), SDate(endMillis), Option(pit)).pipeTo(sender())
+    case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
+      handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).pipeTo(sender())
 
     case GetStateForDateRange(startMillis, endMillis) =>
       handleAllTerminalLookupsStream(startMillis, endMillis, None).pipeTo(sender())
 
-    case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
-      handleLookups(terminal, SDate(startMillis), SDate(endMillis), None).pipeTo(sender())
+    case request: DateRangeLike with TerminalRequest =>
+      handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).pipeTo(sender())
 
     case container: MinutesContainer[A, B] =>
       log.info(s"Adding ${container.minutes.size} minutes to requests queue")

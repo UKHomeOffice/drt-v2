@@ -11,6 +11,7 @@ import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
+import org.specs2.matcher.MatchResult
 import services.SDate
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 
@@ -28,7 +29,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
   val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
 
-  val legacyDataCutOff: SDateLike = SDate("1970-01-01")
+  val legacyDataCutOff: SDateLike = SDate("2020-01-01")
   val maxReplyMessages = 1000
   val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(myNow, expireAfterMillis, airportConfig.queuesByTerminal, legacyDataCutOff, maxReplyMessages)))
   val queuesActor: ActorRef = lookups.queueMinutesActor
@@ -187,6 +188,66 @@ class PortStateRequestsSpec extends CrunchTestLike {
         val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
 
         result === PortState(setUpdatedFlights(fws, myNow().millisSinceEpoch), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), setUpdatedSms(Seq(sm1), myNow().millisSinceEpoch))
+      }
+    }
+
+    "Requests and responses" >> {
+      val nonLegacyDate = legacyDataCutOff.addDays(1).millisSinceEpoch
+
+      "Current queries" >> {
+        "GetStateForDateRange(nonLegacyDate, nonLegacyDate) results in PortState.empty" >> {
+          Await.result(ps.ask(GetStateForDateRange(nonLegacyDate, nonLegacyDate)), 1 second) === PortState.empty
+        }
+        "GetStateForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1) results in PortState.empty" >> {
+          Await.result(ps.ask(GetStateForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)), 1 second) === PortState.empty
+        }
+        "GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1) results in PortState.empty" >> {
+          Await.result(ps.ask(GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)), 1 second) === PortState.empty
+        }
+        "GetFlights(nonLegacyDate, nonLegacyDate) results in FlightsWithSplits.empty" >> {
+          Await.result(ps.ask(GetFlights(nonLegacyDate, nonLegacyDate)), 1 second) === FlightsWithSplits.empty
+        }
+        "GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1) results in FlightsWithSplits.empty" >> {
+          Await.result(ps.ask(GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1)), 1 second) === FlightsWithSplits.empty
+        }
+      }
+
+      "Point in time queries" >> {
+        "PointInTimeQuery(nonLegacyDate, GetStateForDateRange(nonLegacyDate, nonLegacyDate)) results in PortState.empty" >> {
+          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetStateForDateRange(nonLegacyDate, nonLegacyDate))), 1 second) === PortState.empty
+        }
+        "PointInTimeQuery(nonLegacyDate, GetStateForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)) results in PortState.empty" >> {
+          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetStateForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1))), 1 second) === PortState.empty
+        }
+        "PointInTimeQuery(nonLegacyDate, GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)) results in PortState.empty" >> {
+          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1))), 1 second) === PortState.empty
+        }
+        "PointInTimeQuery(nonLegacyDate, GetFlights(nonLegacyDate, nonLegacyDate)) results in FlightsWithSplits.empty" >> {
+          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetFlights(nonLegacyDate, nonLegacyDate))), 1 second) === FlightsWithSplits.empty
+        }
+        "PointInTimeQuery(nonLegacyDate, GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1)) results in FlightsWithSplits.empty" >> {
+          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1))), 1 second) === FlightsWithSplits.empty
+        }
+      }
+
+      val legacyDate = legacyDataCutOff.addDays(-10).millisSinceEpoch
+
+      "Legacy data queries" >> {
+        "GetStateForDateRange(legacyDate, legacyDate) results in PortState.empty" >> {
+          Await.result(ps.ask(GetStateForDateRange(legacyDate, legacyDate)), 1 second) === PortState.empty
+        }
+        "GetStateForTerminalDateRange(legacyDate, legacyDate, T1) results in PortState.empty" >> {
+          Await.result(ps.ask(GetStateForTerminalDateRange(legacyDate, legacyDate, T1)), 1 second) === PortState.empty
+        }
+        "GetMinutesForTerminalDateRange(legacyDate, legacyDate, T1) results in PortState.empty" >> {
+          Await.result(ps.ask(GetMinutesForTerminalDateRange(legacyDate, legacyDate, T1)), 1 second) === PortState.empty
+        }
+        "GetFlights(legacyDate, legacyDate) results in FlightsWithSplits.empty" >> {
+          Await.result(ps.ask(GetFlights(legacyDate, legacyDate)), 1 second) === FlightsWithSplits.empty
+        }
+        "GetFlightsForTerminal(legacyDate, legacyDate, T1) results in FlightsWithSplits.empty" >> {
+          Await.result(ps.ask(GetFlightsForTerminal(legacyDate, legacyDate, T1)), 1 second) === FlightsWithSplits.empty
+        }
       }
     }
   }
