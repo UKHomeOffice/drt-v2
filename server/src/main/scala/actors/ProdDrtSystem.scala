@@ -61,7 +61,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
 
   val legacyFlightDataCutoff: SDateLike = SDate(config.get[String]("legacy-flight-data-cutoff"))
-  override val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval, legacyFlightDataCutoff)
+  override val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
 
   override val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(now, expireAfterMillis, airportConfig.queuesByTerminal, legacyFlightDataCutoff, airportConfig.portStateSnapshotInterval)))
   override val queuesActor: ActorRef = lookups.queueMinutesActor

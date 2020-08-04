@@ -3,7 +3,6 @@ package actors
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayQueuesActor, TerminalDayStaffActor}
 import actors.minutes.MinutesActorLike.MinutesLookup
 import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
-import actors.pointInTime.{CrunchStateReadActor, GetCrunchMinutes, GetStaffMinutes}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -11,7 +10,6 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, S
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, TM, TQM}
-import services.SDate
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -55,11 +53,7 @@ trait MinuteLookupsLike {
     val actor = system.actorOf(props)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
   }
-
-  def crunchStateReadActor(date: SDateLike): ActorRef = {
-    system.actorOf(Props(new CrunchStateReadActor(date.addHours(4), expireAfterMillis, queuesByTerminal, date.millisSinceEpoch, date.addDays(1).millisSinceEpoch, 1000)))
-  }
-
+  
   def queueMinutesActor: ActorRef
 
   def staffMinutesActor: ActorRef
