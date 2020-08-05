@@ -108,10 +108,10 @@ class FlightsStateActor(val now: () => SDateLike,
     standardRequests
       .orElse(historicRequests)
       .orElse(updatesRequests)
-      .orElse(adminRequests)
+      .orElse(utilityRequests)
       .orElse(unexpected)
 
-  private def adminRequests: Receive = {
+  private def utilityRequests: Receive = {
     case SetCrunchQueueActor(actor) =>
       log.info(s"Received crunch queue actor")
       maybeUpdatesSubscriber = Option(actor)

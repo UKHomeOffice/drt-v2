@@ -11,7 +11,6 @@ import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
-import org.specs2.matcher.MatchResult
 import services.SDate
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 
@@ -243,10 +242,10 @@ class PortStateRequestsSpec extends CrunchTestLike {
           Await.result(ps.ask(GetMinutesForTerminalDateRange(legacyDate, legacyDate, T1)), 1 second) === PortState.empty
         }
         "GetFlights(legacyDate, legacyDate) results in FlightsWithSplits.empty" >> {
-          Await.result(ps.ask(GetFlights(legacyDate, legacyDate)), 1 second) === FlightsWithSplits.empty
+          Await.result(ps.ask(GetFlights(legacyDate, legacyDate)), 1 second) === FlightsWithSplits(Map())
         }
         "GetFlightsForTerminal(legacyDate, legacyDate, T1) results in FlightsWithSplits.empty" >> {
-          Await.result(ps.ask(GetFlightsForTerminal(legacyDate, legacyDate, T1)), 1 second) === FlightsWithSplits.empty
+          Await.result(ps.ask(GetFlightsForTerminal(legacyDate, legacyDate, T1)), 1 second) === FlightsWithSplits(Map())
         }
       }
     }
