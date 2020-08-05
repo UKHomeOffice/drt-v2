@@ -14,7 +14,6 @@ import scala.util.{Success, Try}
 
 
 case class STNForecastFlightRow(scheduledDate: SDateLike,
-                                airline: String,
                                 flightCode: String = "",
                                 origin: String = "",
                                 internationalDomestic: String = "",
@@ -55,8 +54,7 @@ object STNForecastXLSExtractor {
       val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone("UTC")).getTime)
 
       STNForecastFlightRow(scheduledDate = scheduled,
-        airline = airline,
-        flightCode = s"$airline $flightNumberCell",
+        flightCode = s"$airline$flightNumberCell",
         origin = originCell.getOrElse(""),
         internationalDomestic = internationalDomesticCell.getOrElse(""),
         totalPax = totalCell.toInt,
