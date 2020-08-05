@@ -1,5 +1,6 @@
 package services.crunch.deskrecs
 
+import actors.PartitionedPortStateActor.GetFlights
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.{Actor, Props}
 import akka.testkit.TestProbe

@@ -48,8 +48,13 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val deploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
 
   override val lookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  override val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", now, expireAfterMillis, airportConfig.queuesByTerminal)))
+  override val queuesActor: ActorRef = lookups.queueMinutesActor
+  override val staffActor: ActorRef = lookups.staffMinutesActor
+  override val queueUpdates: ActorRef = system.actorOf(Props(new QueueTestUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, PartitionedPortStateActor.queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
+  override val staffUpdates: ActorRef = system.actorOf(Props(new StaffTestUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, PartitionedPortStateActor.staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
 
-  override val portStateActor: ActorRef = TestPartitionedPortStateActor(now, airportConfig, StreamingJournal.forConfig(config), lookups)
+  override val portStateActor: ActorRef = system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, now, airportConfig.queuesByTerminal, journalType)))
 
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
   val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")

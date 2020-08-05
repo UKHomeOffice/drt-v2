@@ -1,6 +1,6 @@
 package services.crunch.deskrecs
 
-import actors.DateRangeLike
+import actors.PartitionedPortStateActor.GetFlights
 import actors.acking.AckingReceiver._
 import akka.actor.ActorRef
 import akka.pattern.ask
@@ -87,11 +87,3 @@ object RunnableDeskRecs {
     RunnableDeskRecs(portStateActor, portDeskRecs, maxDesksProvider).run()
   }
 }
-
-case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
-
-trait PortStateRequest
-
-case class GetStateForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
-
-case class GetStateForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike with PortStateRequest

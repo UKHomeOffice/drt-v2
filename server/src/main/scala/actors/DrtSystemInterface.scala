@@ -1,6 +1,7 @@
 package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
+import actors.PartitionedPortStateActor.GetFlights
 import actors.Sizes.oneMegaByte
 import actors.daily.PassengersActor
 import actors.queues.QueueLikeActor.UpdatedMillis
@@ -8,7 +9,7 @@ import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.{ActorMaterializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
@@ -95,8 +96,13 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val baseArrivalsActor: ActorRef
   val forecastArrivalsActor: ActorRef
   val liveArrivalsActor: ActorRef
-
   val voyageManifestsActor: ActorRef
+
+  val flightsActor: ActorRef
+  val queuesActor: ActorRef
+  val staffActor: ActorRef
+  val queueUpdates: ActorRef
+  val staffUpdates: ActorRef
 
   def feedActors: List[ActorRef] = List(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 

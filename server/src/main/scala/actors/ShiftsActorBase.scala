@@ -5,13 +5,12 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
-import scalapb.GeneratedMessage
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import scalapb.GeneratedMessage
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
-import services.crunch.deskrecs.PortStateRequest
 import services.graphstages.Crunch
 import services.{OfferHandler, SDate}
 
@@ -24,17 +23,6 @@ case object GetState
 case object ClearState
 
 case object GetFeedStatuses
-
-case class PointInTimeQuery(pointInTime: MillisSinceEpoch, query: DateRangeLike) extends PortStateRequest
-
-trait DateRangeLike {
-  val from: MillisSinceEpoch
-  val to: MillisSinceEpoch
-}
-
-case class GetFlightsForTerminal(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends DateRangeLike
-
-case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike with PortStateRequest
 
 case object GetShifts
 

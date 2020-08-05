@@ -1,6 +1,7 @@
 package actors.pointInTime
 
 import actors.FlightMessageConversion.flightWithSplitsFromMessage
+import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminal, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange}
 import actors.PortStateMessageConversion.{crunchMinuteFromMessage, staffMinuteFromMessage}
 import actors.Sizes.oneMegaByte
 import actors._
@@ -12,7 +13,8 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import server.protobuf.messages.CrunchState._
 import services.SDate
-import services.crunch.deskrecs.{GetFlights, GetStateForDateRange, GetStateForTerminalDateRange}
+
+import scala.collection.immutable.SortedMap
 
 case class GetCrunchMinutes(terminal: Terminal)
 
@@ -74,6 +76,10 @@ class CrunchStateReadActor(pointInTime: SDateLike,
     case GetStateForTerminalDateRange(start, end, terminalName) =>
       logInfo(s"Received GetStateForTerminalDateRange Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! stateForPeriodForTerminal(start, end, terminalName)
+
+    case GetMinutesForTerminalDateRange(start, end, terminalName) =>
+      logInfo(s"Received GetMinutesForTerminalDateRange Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
+      sender() ! stateForPeriodForTerminal(start, end, terminalName).copy(flights = SortedMap())
 
     case GetFlights(start, end) =>
       logInfo(s"Received GetFlights Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")

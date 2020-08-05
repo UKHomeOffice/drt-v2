@@ -1,6 +1,6 @@
 package actors.minutes
 
-import actors.PointInTimeQuery
+import actors.PartitionedPortStateActor.{DateRangeLike, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange, PointInTimeQuery, PortStateRequest, TerminalRequest}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
@@ -10,10 +10,9 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.Terminals.Terminal
-import drt.shared.{MilliTimes, SDateLike, Terminals, WithTimeAccessor}
+import drt.shared.{SDateLike, Terminals, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
 import services.graphstages.Crunch
 
 import scala.collection.immutable
@@ -28,10 +27,8 @@ object MinutesActorLike {
 
 }
 
-abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
-                                                          terminals: Iterable[Terminal],
+abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Terminal],
                                                           lookup: MinutesLookup[A, B],
-                                                          lookupLegacy: MinutesLookup[A, B],
                                                           updateMinutes: MinutesUpdate[A, B]) extends Actor {
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
@@ -40,8 +37,6 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
 
   var updateRequestsQueue: List[(ActorRef, MinutesContainer[A, B])] = List()
   var processingRequest: Boolean = false
-
-  def isHistoric(date: SDateLike): Boolean = MilliTimes.isHistoric(now, date)
 
   override def receive: Receive = {
     case StreamInitialized => sender() ! Ack
@@ -53,14 +48,14 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).pipeTo(sender())
 
-    case PointInTimeQuery(pit, GetStateForTerminalDateRange(startMillis, endMillis, terminal)) =>
-      handleLookups(terminal, SDate(startMillis), SDate(endMillis), Option(pit)).pipeTo(sender())
+    case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
+      handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).pipeTo(sender())
 
     case GetStateForDateRange(startMillis, endMillis) =>
       handleAllTerminalLookupsStream(startMillis, endMillis, None).pipeTo(sender())
 
-    case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
-      handleLookups(terminal, SDate(startMillis), SDate(endMillis), None).pipeTo(sender())
+    case request: DateRangeLike with TerminalRequest =>
+      handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).pipeTo(sender())
 
     case container: MinutesContainer[A, B] =>
       log.info(s"Adding ${container.minutes.size} minutes to requests queue")
@@ -107,13 +102,8 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
                     maybePointInTime: Option[MillisSinceEpoch]): Future[MinutesContainer[A, B]] = {
     val eventualContainerWithBookmarks: Future[immutable.Seq[MinutesContainer[A, B]]] =
       Source(Crunch.utcDaysInPeriod(start, end).toList)
-        .mapAsync(1) {
-          case day if isHistoric(day) =>
-            log.debug(s"${day.toISOString()} is historic. Will use secondary source if primary data doesn't exist")
-            handleLookup(lookup(terminal, day, maybePointInTime), Option(() => lookupLegacy(terminal, day, maybePointInTime))).map(r => (day, r))
-          case day =>
-            log.debug(s"${day.toISOString()} is live. Look up live data from terminal/day actor")
-            handleLookup(lookup(terminal, day, maybePointInTime), None).map(r => (day, r))
+        .mapAsync(1) { day =>
+          handleLookup(lookup(terminal, day, maybePointInTime)).map(r => (day, r))
         }
         .collect {
           case (_, Some(container)) => container.window(start, end)
@@ -132,21 +122,14 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](now: () => SDateLike,
     }
   }
 
-  def handleLookup(eventualMaybeResult: Future[Option[MinutesContainer[A, B]]],
-                   maybeFallback: Option[() => Future[Option[MinutesContainer[A, B]]]]): Future[Option[MinutesContainer[A, B]]] =
+  def handleLookup(eventualMaybeResult: Future[Option[MinutesContainer[A, B]]]): Future[Option[MinutesContainer[A, B]]] =
     eventualMaybeResult.flatMap {
       case Some(minutes) =>
         log.debug(s"Got some minutes. Sending them")
         Future(Option(minutes))
       case None =>
-        maybeFallback match {
-          case None =>
-            log.debug(s"Got no minutes. Sending None")
-            Future(None)
-          case Some(fallback) =>
-            log.info(s"Got no minutes. Querying the fallback")
-            handleLookup(fallback(), None)
-        }
+        log.debug(s"Got no minutes. Sending None")
+        Future(None)
     }
 
   def updateByTerminalDayAndGetDiff(container: MinutesContainer[A, B]): Future[Option[MinutesContainer[A, B]]] = {

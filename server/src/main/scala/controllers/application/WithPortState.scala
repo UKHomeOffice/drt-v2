@@ -1,6 +1,6 @@
 package controllers.application
 
-import actors.{GetUpdatesSince, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince, PointInTimeQuery}
 import akka.pattern.ask
 import controllers.Application
 import drt.auth.DesksAndQueuesView
@@ -8,7 +8,6 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
-import services.crunch.deskrecs.GetStateForDateRange
 import upickle.default.write
 
 import scala.concurrent.Future

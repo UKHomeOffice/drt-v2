@@ -11,12 +11,10 @@ import drt.shared.{SDateLike, TQM}
 import scala.concurrent.Future
 import scala.language.postfixOps
 
-class QueueMinutesActor(now: () => SDateLike,
-                        terminals: Iterable[Terminal],
+class QueueMinutesActor(terminals: Iterable[Terminal],
                         lookup: MinutesLookup[CrunchMinute, TQM],
-                        lookupLegacy: MinutesLookup[CrunchMinute, TQM],
                         updateMinutes: MinutesUpdate[CrunchMinute, TQM])
-  extends MinutesActorLike(now, terminals, lookup, lookupLegacy, updateMinutes) {
+  extends MinutesActorLike(terminals, lookup, updateMinutes) {
 
   var maybeUpdatesSubscriber: Option[ActorRef] = None
 

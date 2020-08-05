@@ -287,4 +287,55 @@ class ServerSDateSpec extends Specification {
     }
   }
 
+  "Given two SDates with a second between them" >> {
+    "When I ask if the earlier one is less than the later one" >> {
+      "Then I should get true" >> {
+        val earlier = SDate("2020-01-01T12:00:00")
+        val later = SDate("2020-01-01T12:00:01")
+        (earlier < later) === true
+      }
+    }
+
+    "When I ask if the earlier one is greater than the later one" >> {
+      "Then I should get false" >> {
+        val earlier = SDate("2020-01-01T12:00:00")
+        val later = SDate("2020-01-01T12:00:01")
+        (earlier > later) === false
+      }
+    }
+
+    "When I ask if the later one is less than the earlier one" >> {
+      "Then I should get true" >> {
+        val earlier = SDate("2020-01-01T12:00:00")
+        val later = SDate("2020-01-01T12:00:01")
+        (later < earlier) === false
+      }
+    }
+
+    "When I ask if the later one is greater than the earlier one" >> {
+      "Then I should get false" >> {
+        val earlier = SDate("2020-01-01T12:00:00")
+        val later = SDate("2020-01-01T12:00:01")
+        (later > earlier) === true
+      }
+    }
+  }
+
+  "Given two SDates representing the same time" >> {
+    "When I ask if the first is less than the second" >> {
+      "Then I should get false" >> {
+        val first = SDate("2020-01-01T12:00:00")
+        val second = SDate("2020-01-01T12:00:00")
+        (first < second) === false
+      }
+    }
+    "When I ask if first is greater than the second" >> {
+      "Then I should get false" >> {
+        val first = SDate("2020-01-01T12:00:00")
+        val second = SDate("2020-01-01T12:00:00")
+        (first < second) === false
+      }
+    }
+  }
+
 }

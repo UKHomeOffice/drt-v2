@@ -1,6 +1,7 @@
 package test
 
 import actors.MinuteLookupsLike
+import actors.daily.RequestAndTerminateActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -19,6 +20,8 @@ case class TestMinuteLookups(system: ActorSystem,
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val replayMaxCrunchStateMessages = 1000
 
+  override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
+
   val resetQueuesData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
     val date = SDate(millis)
     val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)))
@@ -31,7 +34,7 @@ case class TestMinuteLookups(system: ActorSystem,
     actor.ask(ResetData).map(_ => actor ! PoisonPill)
   }
 
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(now, queuesByTerminal.keys, queuesLookup, legacyQueuesLookup, updateCrunchMinutes, resetQueuesData)))
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, resetQueuesData)))
 
-  override val staffMinutesActor: ActorRef = system.actorOf(Props(new TestStaffMinutesActor(now, queuesByTerminal.keys, staffLookup, legacyStaffLookup, updateStaffMinutes, resetStaffData)))
+  override val staffMinutesActor: ActorRef = system.actorOf(Props(new TestStaffMinutesActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes, resetStaffData)))
 }

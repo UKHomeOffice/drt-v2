@@ -1,6 +1,6 @@
 package controllers
 
-import actors.GetUpdatesSince
+import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince}
 import akka.pattern.ask
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import drt.shared.CrunchApi._
@@ -10,7 +10,6 @@ import drt.shared.Terminals.T1
 import drt.shared.{ApiFlightWithSplits, PortState}
 import play.api.Configuration
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.GetStateForDateRange
 import test.TestActors.ResetData
 import test.TestDrtSystem
 

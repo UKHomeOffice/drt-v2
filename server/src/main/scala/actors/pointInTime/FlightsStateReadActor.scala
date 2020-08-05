@@ -1,6 +1,6 @@
 package actors.pointInTime
 
-import actors.{FlightsStateActor, GetUpdatesSince}
+import actors.FlightsStateActor
 import akka.actor.Actor
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -10,7 +10,6 @@ import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.SDate
-import services.crunch.deskrecs.{GetStateForDateRange, GetStateForTerminalDateRange}
 
 trait FlightsDataLike extends Actor
 
@@ -41,18 +40,5 @@ class FlightsStateReadActor(realNow: () => SDateLike,
       log.info(s"Got other message: ${other.getClass}")
   }
 
-  override def receiveCommand: Receive = {
-    case GetStateForDateRange(startMillis, endMillis) =>
-      log.debug(s"Received GetStateForDateRange request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()}")
-      sender() ! state.window(startMillis, endMillis)
-
-    case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
-      log.debug(s"Received GetStateForTerminalDateRange Request from ${SDate(startMillis).toISOString()} to ${SDate(endMillis).toISOString()} for $terminal")
-      sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
-
-    case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
-      sender() ! state.window(startMillis, endMillis).updatedSince(sinceMillis)
-
-    case unexpected => log.error(s"Received unexpected message $unexpected")
-  }
+  override def receiveCommand: Receive = standardRequests orElse unexpected
 }

@@ -1,6 +1,7 @@
 package controllers.application
 
-import actors.{GetFlightsForTerminal, GetState}
+import actors.GetState
+import actors.PartitionedPortStateActor.GetFlightsForTerminal
 import akka.actor.Props
 import akka.pattern.ask
 import akka.stream.UniqueKillSwitch

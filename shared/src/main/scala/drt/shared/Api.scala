@@ -470,6 +470,10 @@ trait SDateLike {
 
   def ddMMyyString: String = f"$getDate%02d/$getMonth%02d/${getFullYear - 2000}%02d"
 
+  def <(other: SDateLike): Boolean = millisSinceEpoch < other.millisSinceEpoch
+
+  def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
+
   /**
    * Days of the week 1 to 7 (Monday is 1)
    *
@@ -926,13 +930,6 @@ object CrunchApi {
     override val asContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(deskStatMinutes)
 
     override def isEmpty: Boolean = portDeskSlots.isEmpty
-
-    lazy val minutes: IMap[TQM, DeskStat] = for {
-      (tn, queueMinutes) <- portDeskSlots
-      (qn, deskStats) <- queueMinutes
-      (startMinute, deskStat) <- deskStats
-      minute <- startMinute until startMinute + 15 * oneMinuteMillis by oneMinuteMillis
-    } yield (TQM(tn, qn, minute), deskStat)
 
     lazy val deskStatMinutes: Iterable[DeskStatMinute] = for {
       (tn, queueMinutes) <- portDeskSlots
