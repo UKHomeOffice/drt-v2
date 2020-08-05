@@ -8,7 +8,7 @@ import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.{ActorMaterializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
@@ -333,11 +333,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def forecastArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] = {
     val feed = portCode match {
-      case PortCode("LHR") => createArrivalFeed("LHR")
+      case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => createArrivalFeed
       case PortCode("BHX") => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
-      case PortCode("LGW") => createArrivalFeed("LGW")
-      case _ =>
-        system.log.info(s"No Forecast Feed defined.")
+      case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }
     feed
@@ -351,7 +349,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     ChromaForecastFeed(new ChromaFetcher[ChromaForecastFlight](feedType, ChromaFlightMarshallers.forecast) with ProdSendAndReceive)
   }
 
-  def createArrivalFeed(portCode:String): Source[ArrivalsFeedResponse, Cancellable] = {
+  def createArrivalFeed: Source[ArrivalsFeedResponse, Cancellable] = {
     implicit val timeout: Timeout = new Timeout(10 seconds)
     val arrivalFeed = ArrivalFeed(arrivalsImportActor)
     Source
