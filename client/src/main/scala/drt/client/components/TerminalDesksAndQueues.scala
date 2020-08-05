@@ -1,7 +1,6 @@
 package drt.client.components
 
 import diode.UseValueEq
-import diode.data.Pot
 import drt.auth.LoggedInUser
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
@@ -12,15 +11,15 @@ import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared.Queues.{EGate, Queue}
 import drt.shared._
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom
-import org.scalajs.dom.html.{Div, TableHeaderCell}
+import org.scalajs.dom.html.{Div, TableCell}
 import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 
+import scala.collection.immutable
 import scala.util.{Success, Try}
 
 
@@ -83,7 +82,7 @@ object TerminalDesksAndQueues {
         props.airportConfig.nonTransferQueues(terminal)
       }
 
-      def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean): List[VdomTagOf[TableHeaderCell]] = {
+      def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean) = {
         val queueColumnClass = queueColour(queueName)
         val queueColumnActualsClass = queueActualsColour(queueName)
         val headings = state.viewType match {

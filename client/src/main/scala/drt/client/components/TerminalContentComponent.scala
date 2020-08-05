@@ -15,11 +15,9 @@ import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
-import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
+import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
-
-import scala.util.Try
 
 object TerminalContentComponent {
 
@@ -51,18 +49,12 @@ object TerminalContentComponent {
   def airportWrapper(portCode: PortCode): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
   def originMapper(portCode: PortCode): VdomElement = {
-    Try {
-      vdomElementFromComponent(airportWrapper(portCode) { proxy: ModelProxy[Pot[AirportInfo]] =>
-        <.span(
-          proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode.toString)),
-          proxy().renderEmpty(<.span(portCode.toString))
-        )
-      })
-    }.recover {
-      case e =>
-        log.error(s"origin mapper error $e")
-        vdomElementFromTag(<.div(portCode.toString))
-    }.get
+    airportWrapper(portCode) { proxy: ModelProxy[Pot[AirportInfo]] =>
+      <.span(
+        proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode.toString)),
+        proxy().renderEmpty(<.span(portCode.toString))
+      )
+    }
   }
 
   class Backend() {

@@ -16,7 +16,7 @@ lazy val shared = (crossProject(JSPlatform, JVMPlatform).crossType(CrossType.Pur
     libraryDependencies ++= Settings.sharedDependencies.value,
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
-    )
+  )
   // set up settings specific to the JS project
   .jsConfigure(_ enablePlugins ScalaJSWeb)
 
@@ -48,26 +48,24 @@ lazy val client: Project = (project in file("client"))
     scalacOptions ++= elideOptions.value,
     jsDependencies ++= Settings.jsDependencies.value,
     // reactjs testing
-    requiresDOM := true,
     scalaJSStage in Test := FastOptStage,
-    emitSourceMaps in fullOptJS := true,
     // 'new style js dependencies with scalaBundler'
     npmDependencies in Compile ++= Settings.clientNpmDependences,
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
-    jsDependencies += RuntimeDOM % "test",
     useYarn := true,
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.defaultLocal,
+//    resolvers += "mvnrepository" at "http://mvnrepository.com/artifact/",
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     // use uTest framework for tests
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
     parallelExecution in Test := false,
     sources in doc in Compile := List()
-    )
+  )
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
   .enablePlugins(ScalaJSWeb)
@@ -124,12 +122,12 @@ lazy val server = (project in file("server"))
     LessKeys.compress in Assets := true,
     PB.targets in Compile := Seq(
       scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
-      ),
+    ),
     PB.deleteTargetDirectory := false,
     TwirlKeys.templateImports += "buildinfo._",
     parallelExecution in Test := false,
     sources in doc in Compile := List()
-    )
+  )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
 

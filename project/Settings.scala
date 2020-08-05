@@ -29,22 +29,22 @@ object Settings {
   object versions {
     val scala = "2.12.8"
     val scalaDom = "0.9.6"
-    val scalajsReact = "1.1.1"
-    val scalajsReactComponents = "0.8.0"
+    val scalajsReact = "1.7.5"
+    val scalajsReactComponents = "1.0.0-M2"
     val scalaJsScripts = "1.0.0"
     val scalaCSS = "0.5.5"
-    val scalaJsMomentJs = "0.9.2"
-    val autowire = "0.2.6"
-    val booPickle = "1.2.6"
-    val diode = "1.1.3"
-    val uTest = "0.6.3"
+    val scalaJsMomentJs = "0.10.4"
+    val autowire = "0.3.2"
+    val booPickle = "1.3.2"
+    val diode = "1.1.13"
+    val uTest = "0.7.2"
     val h2 = "1.4.197"
 
     val akka = "2.5.23"
     val akkaStreamContrib = "0.9"
 
     val specs2 = "4.6.0"
-    val react = "16.0.0"
+    val react = "16.13"
 
     val bootstrap = "3.3.6"
 
@@ -77,7 +77,7 @@ object Settings {
     val drtLib = "32"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
-    val uPickle = "0.6.7"
+    val uPickle = "1.2.0"
     val akkaHttp = "10.1.9"
     val slick = "3.3.2"
     val censorinus = "2.1.13"
@@ -85,10 +85,41 @@ object Settings {
 
   import versions._
 
+  val clientNpmDependences = Seq(
+    "react" -> react,
+    "react-dom" -> react,
+    "log4javascript" -> log4Javascript,
+    "bootstrap" -> bootstrap,
+    "react-handsontable" -> reactHandsontable,
+    "chart.js" -> "2.5",
+    "@tippyjs/react" -> "4.1.0",
+    "react-chartjs-2" -> "2.10.0",
+    "react-markdown" -> "4.0.6"
+  )
+
+  /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
+  val scalajsDependencies = Def.setting(Seq(
+    "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact,
+    "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact,
+    "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % Test,
+    "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
+    "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
+//    "com.olvind" %%% "scalajs-react-components" % scalajsReactComponents,
+    "io.suzaku" %%% "diode" % diode,
+    "io.suzaku" %%% "diode-react" % diode,
+    "org.scala-js" %%% "scalajs-dom" % scalaDom,
+//    "com.lihaoyi" %%% "pprint" % pprint,
+    "com.lihaoyi" %%% "utest" % uTest % Test,
+    "com.lihaoyi" %%% "upickle" % uPickle,
+    "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs
+  ))
+
+  val clientNpmDevDependencies = "expose-loader" -> exposeLoader
+
   /**
-    * These dependencies are shared between JS and JVM projects
-    * the special %%% function selects the correct version for each project
-    */
+   * These dependencies are shared between JS and JVM projects
+   * the special %%% function selects the correct version for each project
+   */
   val sharedDependencies = Def.setting(Seq(
     "com.lihaoyi" %%% "autowire" % autowire,
     "com.lihaoyi" %%% "upickle" % uPickle,
@@ -96,16 +127,6 @@ object Settings {
     "io.suzaku" %%% "boopickle" % booPickle
   ))
 
-  val clientNpmDependences = Seq(
-    "react" -> react,
-    "react-dom" -> react,
-    "log4javascript" -> log4Javascript,
-    "bootstrap" -> bootstrap,
-    "react-handsontable" -> reactHandsontable,
-    "react-markdown" -> "4.0.6"
-  )
-
-  val clientNpmDevDependencies = "expose-loader" -> exposeLoader
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
@@ -113,7 +134,7 @@ object Settings {
     "com.github.gphat" % "censorinus_2.12" % censorinus,
     "com.pauldijou" %% "jwt-core" % "4.0.0",
     "com.hierynomus" % "sshj" % sshJ,
-    "com.lihaoyi" %% "pprint" % pprint,
+//    "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
 
     "com.mfglabs" %% "commons-aws-s3" % awsCommons,
@@ -185,23 +206,6 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus
     ))
-
-  /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
-  val scalajsDependencies = Def.setting(Seq(
-    "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact,
-    "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact,
-    "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % Test,
-    "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
-    "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
-    "com.olvind" %%% "scalajs-react-components" % scalajsReactComponents,
-    "io.suzaku" %%% "diode" % diode,
-    "io.suzaku" %%% "diode-react" % diode,
-    "org.scala-js" %%% "scalajs-dom" % scalaDom,
-    "com.lihaoyi" %%% "pprint" % pprint,
-    "com.lihaoyi" %%% "utest" % uTest % Test,
-    "com.lihaoyi" %%% "upickle" % uPickle,
-    "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs
-  ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order
     * this is ignored now that we're using webpack via the sbt-bundle plugin */

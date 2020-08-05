@@ -6,11 +6,10 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{LiveBaseFeedSource, LiveFeedSource, SDateLike}
+import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{Callback, Reusability, ScalaComponent}
 
 object MultiDayExportComponent {
   val today: SDateLike = SDate.now()

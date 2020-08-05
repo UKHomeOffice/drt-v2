@@ -45,7 +45,7 @@ object FlightTableComponents {
 
   def originComponent(originMapper: String => String): js.Function = (props: js.Dynamic) => {
     val mod: TagMod = ^.title := originMapper(props.data.toString)
-    <.span(props.data.toString(), mod).render
+    <.span(props.data.toString(), mod)
   }
 
   def localDateTimeWithPopup(dt: Option[MillisSinceEpoch]): TagMod = {
@@ -53,7 +53,7 @@ object FlightTableComponents {
   }
 
   def localTimePopup(dt: MillisSinceEpoch): VdomElement = {
-    sdateLocalTimePopup(SDate(dt)).render
+    sdateLocalTimePopup(SDate(dt))
   }
 
   def millisToDisembark(pax: Int): Long = {

@@ -114,7 +114,7 @@ object AlertsPage {
         <.div(^.`class` := "row", ^.height := "10px"),
         <.div(^.`class` := "row",
           <.label(^.`for` := "alert-date-time", "Expires after", ^.`class` := "col-md-3"),
-          <.select(^.id := "alert-date-time", ^.default := defaultExpiryHours, ^.defaultValue := defaultExpiryHours, (12 to 72 by 12).map(h => <.option(^.value := h, s"$h hours")).toTagMod, ^.onChange ==> ((e: ReactEventFromInput) => setExpiryDateTimeFromHours(e.target.value)), ^.`class` := "col-md-3"),
+          <.select(^.id := "alert-date-time", ^.defaultValue := defaultExpiryHours, (12 to 72 by 12).map(h => <.option(^.value := h, s"$h hours")).toTagMod, ^.onChange ==> ((e: ReactEventFromInput) => setExpiryDateTimeFromHours(e.target.value)), ^.`class` := "col-md-3"),
           <.div(^.id := "expiry-error", ^.`class` := "col-md-6")
         ),
         <.div(^.`class` := "row", ^.height := "10px"),

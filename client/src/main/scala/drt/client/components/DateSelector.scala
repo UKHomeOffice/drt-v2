@@ -4,10 +4,9 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.SDateLike
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.{Div, Select}
 
 import scala.scalajs.js.Date
