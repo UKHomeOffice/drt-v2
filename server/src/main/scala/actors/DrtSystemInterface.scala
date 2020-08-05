@@ -339,11 +339,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def forecastArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] = {
     val feed = portCode match {
-      case PortCode("LHR") => createArrivalFeed("LHR")
+      case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => createArrivalFeed
       case PortCode("BHX") => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
-      case PortCode("LGW") => createArrivalFeed("LGW")
-      case _ =>
-        system.log.info(s"No Forecast Feed defined.")
+      case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }
     feed
@@ -357,7 +355,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     ChromaForecastFeed(new ChromaFetcher[ChromaForecastFlight](feedType, ChromaFlightMarshallers.forecast) with ProdSendAndReceive)
   }
 
-  def createArrivalFeed(portCode:String): Source[ArrivalsFeedResponse, Cancellable] = {
+  def createArrivalFeed: Source[ArrivalsFeedResponse, Cancellable] = {
     implicit val timeout: Timeout = new Timeout(10 seconds)
     val arrivalFeed = ArrivalFeed(arrivalsImportActor)
     Source

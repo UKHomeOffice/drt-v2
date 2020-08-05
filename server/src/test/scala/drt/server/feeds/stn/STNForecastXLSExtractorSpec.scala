@@ -1,8 +1,8 @@
 package drt.server.feeds.stn
 
 import drt.shared.Terminals.Terminal
-import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared._
 import org.specs2.mutable.Specification
 import services.SDate
 
@@ -14,16 +14,17 @@ class STNForecastXLSExtractorSpec extends Specification {
     val result = STNForecastXLSExtractor
       .rows(path)
       .map(r =>
-        (r.scheduledDate.millisSinceEpoch, r.flightCode, r.origin, r.internationalDomestic, r.totalPax, r.transferPax, r.terminal)
+        (r.scheduledDate.millisSinceEpoch, r.flightCode, r.origin, r.internationalDomestic, r.totalPax)
       )
       .toSet
 
 
     val expected = Set(
-      (SDate("2020-04-01T00:00").millisSinceEpoch, "TST 0001", "AGP", "I", 73, 73, "T1"),
-      (SDate("2020-04-01T00:00").millisSinceEpoch, "TST 0002", "NCE", "I", 74, 74, "T1"),
-      (SDate("2020-04-01T00:15").millisSinceEpoch, "TST 0003", "AGA", "I", 98, 98, "T1"),
-      (SDate("2020-04-01T00:50").millisSinceEpoch, "TST 0004", "LJU", "I", 43, 43, "T1")
+      (SDate("2020-08-04T00:00").millisSinceEpoch, "TST1001", "AGP", "INTERNATIONAL", 50),
+      (SDate("2020-08-04T01:15").millisSinceEpoch, "TST1002", "DLM", "INTERNATIONAL", 50),
+      (SDate("2020-08-04T07:05").millisSinceEpoch, "TST1003", "CGN", "INTERNATIONAL", 50),
+      (SDate("2020-08-04T07:20").millisSinceEpoch, "TST1005", "SXF", "INTERNATIONAL", 50)
+
     )
 
 
@@ -36,10 +37,10 @@ class STNForecastXLSExtractorSpec extends Specification {
     val result = STNForecastXLSExtractor(path)
 
     val expected = List(
-      Arrival(None, CarrierCode("TST"), VoyageNumber(1), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, None, Some(73), Some(73), None, None, PortCode("LGW"), Terminal("T1"), PortCode("AGP"), SDate("2020-04-01T00:00").millisSinceEpoch, None, Set(ForecastFeedSource), None, None),
-      Arrival(None, CarrierCode("TST"), VoyageNumber(2), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, None, Some(74), Some(74), None, None, PortCode("LGW"), Terminal("T1"), PortCode("NCE"), SDate("2020-04-01T00:00").millisSinceEpoch, None, Set(ForecastFeedSource), None, None),
-      Arrival(None, CarrierCode("TST"), VoyageNumber(3), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, None, Some(98), Some(98), None, None, PortCode("LGW"), Terminal("T1"), PortCode("AGA"), SDate("2020-04-01T00:15").millisSinceEpoch, None, Set(ForecastFeedSource), None, None),
-      Arrival(None, CarrierCode("TST"), VoyageNumber(4), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, None, Some(43), Some(43), None, None, PortCode("LGW"), Terminal("T1"), PortCode("LJU"), SDate("2020-04-01T00:50").millisSinceEpoch, None, Set(ForecastFeedSource), None, None))
+      Arrival(None, CarrierCode("TST"), VoyageNumber(1001), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, Some(100), Some(50), Some(0), None, None, PortCode("STN"), Terminal("T1"), PortCode("AGP"), SDate("2020-08-04T00:00").millisSinceEpoch, None, Set(ForecastFeedSource), None, None),
+      Arrival(None, CarrierCode("TST"), VoyageNumber(1002), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, Some(100), Some(50), Some(0), None, None, PortCode("STN"), Terminal("T1"), PortCode("DLM"), SDate("2020-08-04T01:15").millisSinceEpoch, None, Set(ForecastFeedSource), None, None),
+      Arrival(None, CarrierCode("TST"), VoyageNumber(1003), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, Some(100), Some(50), Some(0), None, None, PortCode("STN"), Terminal("T1"), PortCode("CGN"), SDate("2020-08-04T07:05").millisSinceEpoch, None, Set(ForecastFeedSource), None, None),
+      Arrival(None, CarrierCode("TST"), VoyageNumber(1005), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, Some(100), Some(50), Some(0), None, None, PortCode("STN"), Terminal("T1"), PortCode("SXF"), SDate("2020-08-04T07:20").millisSinceEpoch, None, Set(ForecastFeedSource), None, None))
 
     result === expected
   }

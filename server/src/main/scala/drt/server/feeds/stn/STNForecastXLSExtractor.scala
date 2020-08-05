@@ -1,14 +1,14 @@
 package drt.server.feeds.stn
 
+import java.util.TimeZone
+
 import drt.server.feeds.common.XlsExtractorUtil._
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, ForecastFeedSource, PortCode, SDateLike}
-import org.joda.time.format.DateTimeFormat
-import org.joda.time.{DateTime, DateTimeZone}
+import org.apache.poi.ss.usermodel.{Cell, DateUtil}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch.europeLondonId
 
 import scala.util.{Success, Try}
 
@@ -17,9 +17,8 @@ case class STNForecastFlightRow(scheduledDate: SDateLike,
                                 flightCode: String = "",
                                 origin: String = "",
                                 internationalDomestic: String = "",
-                                totalPax: Int = 0,
-                                transferPax: Int = 0,
-                                terminal: String = ""
+                                maxPax: Int = 0,
+                                totalPax: Int = 0
                                )
 
 object STNForecastXLSExtractor {
@@ -37,38 +36,35 @@ object STNForecastXLSExtractor {
 
     log.info(s"Extracting STN forecast flights from XLS Workbook located at $xlsFilePath")
 
-    val formatter = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm")
-
     val lgwWorkSheet = workbook(xlsFilePath)
 
-    val sheet = sheetMapByIndex(0, lgwWorkSheet)
-
+    val sheet = sheetMapByIndex(3, lgwWorkSheet)
     val arrivalRows: Seq[STNForecastFlightRow] = for {
-      rowNumber <- 1 to sheet.getLastRowNum
+      rowNumber <- 2 to sheet.getLastRowNum
       row = sheet.getRow(rowNumber)
-      if row.getCell(0) != null
+      if row.getCell(1) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
     } yield {
-      val terminalCell = numericCell(0, row).map(t => s"T${t.toInt}")
-      val scheduledCell = stringCell(1, row).getOrElse("")
-      val flightNumberCell = stringCell(2, row)
-      val airportCell = stringCell(3, row)
-      val internationalDomesticCell = stringCell(4, row)
-      val totalCell = numericCell(5, row).getOrElse(0.0)
-      val transferPaxCell = numericCell(6, row).getOrElse(0.0)
-      val scheduled = SDate(DateTime.parse(scheduledCell, formatter).getMillis, DateTimeZone.forID(europeLondonId))
+      val scheduledCell = numericCell(1, row).getOrElse(0.0)
+      val carrierCodeCell = stringCell(2, row).getOrElse("")
+      val flightNumberCell = stringCell(3, row).getOrElse("")
+      val originCell = stringCell(4, row)
+      val maxPaxCell = numericCell(5, row).getOrElse(0.0)
+      val totalCell = numericCell(6, row).getOrElse(0.0)
+      val internationalDomesticCell = stringCell(10, row)
+      val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone("UTC")).getTime)
 
       STNForecastFlightRow(scheduledDate = scheduled,
-        flightCode = flightNumberCell.getOrElse(""),
-        origin = airportCell.getOrElse(""),
+        flightCode = s"$carrierCodeCell$flightNumberCell",
+        origin = originCell.getOrElse(""),
         internationalDomestic = internationalDomesticCell.getOrElse(""),
         totalPax = totalCell.toInt,
-        transferPax = transferPaxCell.toInt,
-        terminalCell.getOrElse(""))
+        maxPax = maxPaxCell.toInt
+      )
     }
 
     log.info(s"Extracted ${arrivalRows.size} arrival rows from STN XLS Workbook")
 
-    arrivalRows.toList.filter(_.internationalDomestic == "I")
+    arrivalRows.toList.filter(_.internationalDomestic == "INTERNATIONAL")
   }
 
 
@@ -83,13 +79,13 @@ object STNForecastXLSExtractor {
         ActualChox = None,
         Gate = None,
         Stand = None,
-        MaxPax = None,
+        MaxPax = Some(flightRow.maxPax),
         ActPax = if (flightRow.totalPax == 0) None else Option(flightRow.totalPax),
-        TranPax = if (flightRow.totalPax == 0) None else Option(flightRow.transferPax),
+        TranPax = Some(0),
         RunwayID = None,
         BaggageReclaimId = None,
-        AirportID = PortCode("LGW"),
-        Terminal = Terminal(flightRow.terminal),
+        AirportID = PortCode("STN"),
+        Terminal = Terminal("T1"),
         rawICAO = flightRow.flightCode.replace(" ", ""),
         rawIATA = flightRow.flightCode.replace(" ", ""),
         Origin = PortCode(flightRow.origin),
