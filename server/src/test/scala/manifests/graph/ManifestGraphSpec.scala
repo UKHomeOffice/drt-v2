@@ -28,7 +28,6 @@ class ManifestGraphSpec extends CrunchTestLike {
   val scheduled: SDateLike = SDate("2019-03-06T12:00:00Z")
 
   "Given an arrival is sent into the ManifestGraph then we should find the manifest for that flight in the sink" >> {
-
     val testManifest = BestAvailableManifest(
       Historical,
       PortCode("STN"),
