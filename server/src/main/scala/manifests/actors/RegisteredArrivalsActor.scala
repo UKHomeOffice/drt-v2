@@ -45,9 +45,7 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case RegisteredArrivalsMessage(arrivalMessages) =>
-      log.debug(s"Got a recovery message containing ${arrivalMessages.length} arrivals")
       addRegisteredArrivalsFromMessages(arrivalMessages)
-      log.debug(s"Now ${state.arrivals.size} registered arrivals")
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
@@ -74,11 +72,12 @@ class RegisteredArrivalsActor(val initialSnapshotBytesThreshold: Int,
       state = state.copy(arrivals = Crunch.purgeExpired(state.arrivals ++ arrivalsToBeRegistered, ArrivalKey.atTime, now, expireAfterMillis.toInt))
   }
 
-  private def findUpdatesToPersist(newArrivals: SortedMap[ArrivalKey, Option[Long]]): SortedMap[ArrivalKey, Option[Long]] = newArrivals.filter {
-    case (arrivalToCheck, lastLookup) if hasChanged(arrivalToCheck, lastLookup) => true
-  }
+  private def findUpdatesToPersist(newArrivals: SortedMap[ArrivalKey, Option[Long]]): SortedMap[ArrivalKey, Option[Long]] =
+    newArrivals.filter {
+      case (arrivalToCheck, lastLookup) => lastUpdatedHasChanged(arrivalToCheck, lastLookup)
+    }
 
-  private def hasChanged(arrivalToCheck: ArrivalKey, lastLookup: Option[Long]): Boolean = {
+  private def lastUpdatedHasChanged(arrivalToCheck: ArrivalKey, lastLookup: Option[Long]): Boolean = {
     !state.arrivals.contains(arrivalToCheck) || state.arrivals(arrivalToCheck) != lastLookup
   }
 
