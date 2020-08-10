@@ -105,8 +105,8 @@ class FlightsStateActor(val now: () => SDateLike,
   override def stateToMessage: GeneratedMessage = FlightMessageConversion.flightsToMessage(state.flights.toMap.values)
 
   override def receiveCommand: Receive =
-    standardRequests
-      .orElse(historicRequests)
+    historicRequests
+      .orElse(standardRequests)
       .orElse(updatesRequests)
       .orElse(utilityRequests)
       .orElse(unexpected)
@@ -133,7 +133,7 @@ class FlightsStateActor(val now: () => SDateLike,
     case unexpected => log.error(s"Received unexpected message $unexpected")
   }
 
-  private def updatesRequests: PartialFunction[Any, Unit] = {
+  def updatesRequests: PartialFunction[Any, Unit] = {
     case flightUpdates: FlightsWithSplitsDiff =>
       if (flightUpdates.nonEmpty)
         handleDiff(flightUpdates)
@@ -141,7 +141,7 @@ class FlightsStateActor(val now: () => SDateLike,
         sender() ! Ack
   }
 
-  private def historicRequests: Receive = {
+  def historicRequests: Receive = {
     case PointInTimeQuery(pitMillis, request) =>
       replyWithPointInTimeQuery(SDate(pitMillis), request)
 
@@ -179,7 +179,7 @@ class FlightsStateActor(val now: () => SDateLike,
   }
 
   def tempPointInTimeActor(pointInTime: SDateLike): ActorRef =
-    context.actorOf(tempPitActorProps(pointInTime, () => pointInTime, queues, expireAfterMillis, legacyDataCutoff, replayMaxCrunchStateMessages))
+    context.actorOf(tempPitActorProps(pointInTime, now, queues, expireAfterMillis, legacyDataCutoff, replayMaxCrunchStateMessages))
 
   def handleDiff(flightUpdates: FlightsWithSplitsDiff): Unit = {
     val (updatedState, updatedMinutes) = flightUpdates.applyTo(state, now().millisSinceEpoch)
