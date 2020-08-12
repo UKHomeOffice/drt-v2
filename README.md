@@ -61,3 +61,11 @@ psql -U drt -W -h localhost aggregated
 alter user drt with password 'drt';
 ```
 You can create the relevant tables for the akka db using the akka-persistence-postgres.sql file in the resources folder and for the aggregated db using aggregated-arrivals.sql
+
+### NB - duplicate key insertion errors
+We've experienced the `nextval` for the ordering column become out of sync with the actual values. This results in permanent insertion errors until it's fixed
+To reset the value, first delete the deployment for the port in question to make sure there are no insertions going on (or lock the table as appropriate). Then issue the following SQL command:
+
+```SELECT setval('journal_ordering_seq', COALESCE((SELECT MAX(ordering)+1 FROM journal), 1), false);```
+
+This gets the values back in sync and resolves the duplicate key insertion errors. The mystery is how we ended up having them out of sync in the first place...
