@@ -83,12 +83,16 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
       log.info("Received PurgeExpired")
       val expiredToRemove = lastRequests.collect {
         case (tm, lastRequest) if now().millisSinceEpoch - lastRequest > MilliTimes.oneMinuteMillis =>
-          log.info(s"Shutting down streaming updates for ${tm._1}/${SDate(tm._2).toISODateOnly}")
-          streamingUpdateActors.get(tm).foreach(_ ! StopUpdates)
-          tm
+          (tm, streamingUpdateActors.get(tm))
       }
-      streamingUpdateActors = streamingUpdateActors -- expiredToRemove
-      lastRequests = lastRequests -- expiredToRemove
+      streamingUpdateActors = streamingUpdateActors -- expiredToRemove.keys
+      lastRequests = lastRequests -- expiredToRemove.keys
+      expiredToRemove.foreach {
+        case ((terminal, day), Some(actor)) =>
+          log.info(s"Shutting down streaming updates for $terminal/${SDate(day).toISODateOnly}")
+          actor ! StopUpdates
+        case _ =>
+      }
 
     case GetUpdatesSince(sinceMillis, fromMillis, toMillis) =>
       val replyTo = sender()
