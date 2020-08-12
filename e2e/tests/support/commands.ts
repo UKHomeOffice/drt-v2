@@ -145,6 +145,10 @@ Cypress.Commands.add('navigateToMenuItem', (itemName) => {
     .click(5, 5, { force: true })
 });
 
+Cypress.Commands.add('navigateFaqs', () => {
+  cy.visit('/#faqs')
+});
+
 Cypress.Commands.add('selectCurrentTab', () => {
   cy.get('#currentTab').click()
 })

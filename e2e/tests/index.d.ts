@@ -31,6 +31,7 @@ declare namespace Cypress {
         findAndClick(thing: string): Chainable<Element>;
         openAdjustmentDialogueForHour(direction: string, amount: number): Chainable<Element>;
         navigateHome(): Chainable<Element>;
+        navigateFaqs(): Chainable<Element>;
         navigateToMenuItem(id: string): Chainable<Element>;
         removeXMovements(count: number): Chainable<Element>;
         resetShifts(): Chainable<Element>;

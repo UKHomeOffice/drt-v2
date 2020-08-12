@@ -337,7 +337,13 @@ describe('Restrict access to endpoint by role', () => {
       endpoint: "/export/desk-rec-simulation",
       method: "GET",
       shouldBeGranted: false
-    }
+    },
+    {
+       roles: ["test","border-force-staff"],
+       endpoint: "/#faqs",
+       method: "GET",
+       shouldBeGranted: false
+     }
   ]
 
   describe('Restrict access by role', () => {
