@@ -40,10 +40,16 @@ class StaffUpdatesSupervisor(now: () => SDateLike,
                              updatesActorFactory: (Terminal, SDateLike) => Props)
   extends UpdatesSupervisor[StaffMinute, TM](now, terminals, updatesActorFactory)
 
+object UpdatesSupervisor {
+  case class UpdateLastRequest(terminal: Terminal, day: MillisSinceEpoch, lastRequestMillis: MillisSinceEpoch)
+}
+
 abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
                                                   terminals: List[Terminal],
                                                   updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  import UpdatesSupervisor._
 
   implicit val ex: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
@@ -77,12 +83,16 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
       log.info("Received PurgeExpired")
       val expiredToRemove = lastRequests.collect {
         case (tm, lastRequest) if now().millisSinceEpoch - lastRequest > MilliTimes.oneMinuteMillis =>
-          log.info(s"Shutting down streaming updates for ${tm._1}/${SDate(tm._2).toISODateOnly}")
-          streamingUpdateActors.get(tm).foreach(_ ! StopUpdates)
-          tm
+          (tm, streamingUpdateActors.get(tm))
       }
-      streamingUpdateActors = streamingUpdateActors -- expiredToRemove
-      lastRequests = lastRequests -- expiredToRemove
+      streamingUpdateActors = streamingUpdateActors -- expiredToRemove.keys
+      lastRequests = lastRequests -- expiredToRemove.keys
+      expiredToRemove.foreach {
+        case ((terminal, day), Some(actor)) =>
+          log.info(s"Shutting down streaming updates for $terminal/${SDate(day).toISODateOnly}")
+          actor ! StopUpdates
+        case _ =>
+      }
 
     case GetUpdatesSince(sinceMillis, fromMillis, toMillis) =>
       val replyTo = sender()
@@ -91,6 +101,9 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
       terminalsAndDaysUpdatesSource(terminalDays, sinceMillis)
         .runWith(Sink.fold(MinutesContainer.empty[A, B])(_ ++ _))
         .pipeTo(replyTo)
+
+    case UpdateLastRequest(terminal, day, lastRequestMillis) =>
+      lastRequests = lastRequests + ((terminal, day) -> lastRequestMillis)
   }
 
   def terminalDaysForPeriod(fromMillis: MillisSinceEpoch,
@@ -116,10 +129,13 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
     Source(terminalDays)
       .mapAsync(1) {
         case (terminal, day) =>
-          lastRequests = lastRequests + ((terminal, day) -> now().millisSinceEpoch)
           updatesActor(terminal, day)
             .ask(GetAllUpdatesSince(sinceMillis))
             .mapTo[MinutesContainer[A, B]]
+            .map { container =>
+              self ! UpdateLastRequest(terminal, day, now().millisSinceEpoch)
+              container
+            }
             .recoverWith {
               case t: AskTimeoutException =>
                 log.warn(s"Timed out waiting for updates. Actor may have already been terminated", t)
