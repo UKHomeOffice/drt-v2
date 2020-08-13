@@ -339,10 +339,10 @@ describe('Restrict access to endpoint by role', () => {
       shouldBeGranted: false
     },
     {
-       roles: ["test","border-force-staff"],
+       roles: [],
        endpoint: "/#faqs",
        method: "GET",
-       shouldBeGranted: false
+       shouldBeGranted: true
      }
   ]
 
