@@ -21,10 +21,10 @@ describe('Faqs page', () => {
             cy
               .asABorderForceOfficer()
               .navigateFaqs()
-              .get('a[href*="#faqs/DeskAndQueues"]')
+              .get('a[href*="#faqs/deskAndQueues"]')
               .click()
-              .get('.faqs')
               .then(() => {
+                cy.get('.faqs')
                 cy.contains("How are staff allocated if I select the ‘Available staff deployment’ radio button")
               });
     });
@@ -36,8 +36,8 @@ describe('Faqs page', () => {
               .navigateFaqs()
               .get('a[href*="#faqs/arrivals"]')
               .click()
-              .get('.faqs')
               .then(() => {
+                cy.get('.faqs')
                 cy.contains("What do the RAG colours mean for each flight?")
               });
     });
@@ -51,9 +51,9 @@ describe('Faqs page', () => {
               .navigateFaqs()
               .get('a[href*="#faqs/portConfiguration"]')
               .click()
-              .get('.faqs')
               .then(() => {
-                 cy.contains("What are the processing times for each split")
+                cy.get('.faqs')
+                cy.contains("What are the processing times for each split")
               });
 
     });
@@ -65,8 +65,8 @@ describe('Faqs page', () => {
               .navigateFaqs()
               .get('a[href*="#faqs/staff-movements"]')
               .click()
-              .get('.faqs')
               .then(() => {
+                cy.get('.faqs')
                 cy.contains("How do I can add fixed points/ Misc staff")
               });
 
@@ -79,8 +79,8 @@ describe('Faqs page', () => {
               .navigateFaqs()
               .get('a[href*="#faqs/monthly-staffing"]')
               .click()
-              .get('.faqs')
               .then(() => {
+                cy.get('.faqs')
                 cy.contains("How do I add my staff to the tool?")
               });
     });
