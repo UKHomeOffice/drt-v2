@@ -5,7 +5,7 @@ import java.util.UUID
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, AllFaqsPage, ContactPage, EditKeyCloakUserPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
+import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, FaqsPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -258,37 +258,37 @@ object SPAMain {
   def faqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#faqs", FaqsLoc) ~> renderR(_ => AllFaqsPage(""))
+    staticRoute("#faqs", FaqsLoc) ~> renderR(_ => FaqsPage(""))
   }
 
   def deskAndQueuesFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#faqs/DeskAndQueues", DeskAndQueuesLoc) ~> renderR(_ => AllFaqsPage("DeskAndQueues"))
+    staticRoute("#faqs/deskAndQueues", DeskAndQueuesLoc) ~> renderR(_ => FaqsPage("deskAndQueues"))
   }
 
   def arrivalsFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#faqs/arrivals", ArrivalsFaqsLoc) ~> renderR(_ => AllFaqsPage("arrivals"))
+    staticRoute("#faqs/arrivals", ArrivalsFaqsLoc) ~> renderR(_ => FaqsPage("arrivals"))
   }
 
   def portConfigurationFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#faqs/portConfiguration", PortConfigLoc) ~> renderR(_ => AllFaqsPage("portConfiguration"))
+    staticRoute("#faqs/portConfiguration", PortConfigLoc) ~> renderR(_ => FaqsPage("portConfiguration"))
   }
 
   def staffMovementsFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#faqs/staff-movements", StaffMovementsFaqsLoc) ~> renderR(_ => AllFaqsPage("staff-movements"))
+    staticRoute("#faqs/staff-movements", StaffMovementsFaqsLoc) ~> renderR(_ => FaqsPage("staff-movements"))
   }
 
   def monthlyStaffingFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#faqs/monthly-staffing", MonthlyStaffingFaqsLoc) ~> renderR(_ => AllFaqsPage("monthly-staffing"))
+    staticRoute("#faqs/monthly-staffing", MonthlyStaffingFaqsLoc) ~> renderR(_ => FaqsPage("monthly-staffing"))
   }
 
 

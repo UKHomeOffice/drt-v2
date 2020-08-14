@@ -1,7 +1,7 @@
 package drt.client.components
 
-import drt.auth.LoggedInUser
-import drt.client.SPAMain.{ContactUsLoc,FaqsLoc, Loc}
+import drt.auth.{FaqView, LoggedInUser}
+import drt.client.SPAMain.{ContactUsLoc, FaqsLoc, Loc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.shared.AirportConfig
@@ -23,7 +23,7 @@ object Navbar {
 
           <.div(^.className := "collapse navbar-collapse", MainMenu(ctl, page, feedStatusesPot.getOrElse(Seq()), airportConfig, loggedInUser.roles),
             <.ul(^.className := "nav navbar-nav navbar-right",
-              <.li(^.className := "faqs-link",ctl.link(FaqsLoc)(Icon.questionCircle, " ", "FAQs")),
+              if(loggedInUser.hasRole(FaqView)) <.li(^.className := "faqs-link",ctl.link(FaqsLoc)(Icon.questionCircle, " ", "FAQs")) else <.li(),
               <.li(^.className := "contact-us-link",ctl.link(ContactUsLoc)(Icon.envelope, " ", "Contact Us")),
               <.li(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value,
                 ^.onClick --> Callback(GoogleEventTracker.sendEvent(airportConfig.portCode.toString, "Log Out", loggedInUser.id))))

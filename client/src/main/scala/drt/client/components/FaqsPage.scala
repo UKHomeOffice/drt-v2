@@ -6,18 +6,15 @@ import drt.client.services.SPACircuit
 import drt.shared.AirportConfig
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.TagOf
-import japgolly.scalajs.react.vdom.html_<^.{VdomTagOf, _}
+import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html
-import org.scalajs.dom.html.Div
 
-sealed trait FaqsPage
-
-object AllFaqsPage extends FaqsPage {
+object FaqsPage {
 
   case class Props(showSection: String)
 
-  val desksAndQueuesDetails = FaqDetails("Desk and Queues", "#faqs/DeskAndQueues", List(
+  val desksAndQueuesDetails = FaqDetails("Desk and Queues", "#faqs/deskAndQueues", List(
     <.p(<.strong(s"Q. What does the ‘+’ and ‘-‘ buttons do under the available icon on the desks and queues tab?")),
     <.p(s"- The buttons allows you to add or subtract the amount of available staff for duties such as casework"),
     <.p(<.strong(s"Q. How are staff allocated if I select the ‘Available staff deployment’ radio button?")),
@@ -73,7 +70,7 @@ object AllFaqsPage extends FaqsPage {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FAQs")
     .render_P(props =>
       props.showSection match {
-        case "DeskAndQueues" => <.div(faqClassName, faqHeaderName,
+        case "deskAndQueues" => <.div(faqClassName, faqHeaderName,
           desksAndQueuesDetails.faqComponent,
           arrivalDetails.divComponent,
           portConfigurationDetails.divComponent,
@@ -124,11 +121,11 @@ case class FaqDetails(title: String, href: String, faqsList: Seq[TagOf[html.Para
 
   val faqComponent = FaqsComponent(s"- $title", faqsList)
 
-  val divComponent: VdomTagOf[Div] = <.div(<.a(<.strong(s"+ $title"), ^.href := href))
+  val divComponent = <.div(<.br(), <.a(<.strong(s"+ $title"), ^.href := href))
 
 }
 
-object FaqsComponent extends FaqsPage {
+object FaqsComponent {
 
   case class Props(header: String, faqsList: Seq[TagOf[html.Paragraph]])
 
@@ -136,7 +133,7 @@ object FaqsComponent extends FaqsPage {
     .render_P { props =>
       val faqsRCP = SPACircuit.connect(m => FaqsModel(m.airportConfig))
       <.div(
-        <.div(<.a(<.strong(s"${props.header}"), ^.href := "#faqs")),
+        <.div(<.br(), <.a(<.strong(s"${props.header}"), ^.href := "#faqs")),
         faqsRCP(faqsMP => {
           <.div(^.className := "faqs", faqsMP().airportConfig.renderReady(
             _ => {
