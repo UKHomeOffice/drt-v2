@@ -6,7 +6,7 @@ import drt.server.feeds.common.XlsExtractorUtil._
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, ForecastFeedSource, PortCode, SDateLike}
-import org.apache.poi.ss.usermodel.{Cell, DateUtil}
+import org.apache.poi.ss.usermodel.{Cell, DateUtil, Sheet}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
@@ -40,31 +40,24 @@ object LGWForecastXLSExtractor {
     log.info(s"Extracting LGW forecast flights from XLS Workbook located at $xlsFilePath")
     val lgwWorkSheet = workbook(xlsFilePath)
 
+    val sheet: Sheet = sheetMapByIndex(0, lgwWorkSheet)
 
-    val sheet = sheetMapByIndex(0, lgwWorkSheet)
-
-    val headingRow = sheet.getRow(0)
-
-    val headingIndexByName: Map[Option[String], Int] = (headingRow.getFirstCellNum to headingRow.getLastCellNum map { index =>
-      if (headingRow.getCell(index) != null && headingRow.getCell(1).getCellType != Cell.CELL_TYPE_BLANK) {
-        stringCell(index, headingRow) -> index
-      } else None -> index
-    }).toMap
+    val headingIndexByNameMap: Map[Option[String], Int] = headingIndexByName(sheet.getRow(0))
 
     val arrivalRows: Seq[LGWForecastFlightRow] = for {
       rowNumber <- 1 to sheet.getLastRowNum
       row = sheet.getRow(rowNumber)
-      if row.getCell(0) != null && headingRow.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
+      if row.getCell(0) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
     } yield {
       val terminalCell = "N"
-      val flightDateCell = numericCell(headingIndexByName(Some("Date")), row)
-      val flightTimeCell = numericCell(headingIndexByName(Some("Time (UTC)")), row)
-      val flightNumberCell = stringCell(headingIndexByName(Some("OpeFlightNo")), row)
-      val airportCell = stringCell(headingIndexByName(Some("Airport")), row)
-      val serviceCell = stringCell(headingIndexByName(Some("Service")), row)
-      val arrivalOrDepCell = stringCell(headingIndexByName(Some("ArrDep")), row)
-      val internationalDomesticCell = stringCell(headingIndexByName(Some("Dom/Int")), row)
-      val totalCell = numericCell(headingIndexByName(Some("Sum of Pax")), row)
+      val flightDateCell = numericCell(headingIndexByNameMap(Some("Date")), row)
+      val flightTimeCell = numericCell(headingIndexByNameMap(Some("Time (UTC)")), row)
+      val flightNumberCell = stringCell(headingIndexByNameMap(Some("OpeFlightNo")), row)
+      val airportCell = stringCell(headingIndexByNameMap(Some("Airport")), row)
+      val serviceCell = stringCell(headingIndexByNameMap(Some("Service")), row)
+      val arrivalOrDepCell = stringCell(headingIndexByNameMap(Some("ArrDep")), row)
+      val internationalDomesticCell = stringCell(headingIndexByNameMap(Some("Dom/Int")), row)
+      val totalCell = numericCell(headingIndexByNameMap(Some("Sum of Pax")), row)
 
       val scheduledCell = SDate(DateUtil.getJavaDate(flightDateCell.getOrElse(0.0) + flightTimeCell.getOrElse(0.0), TimeZone.getTimeZone("UTC")).getTime)
 

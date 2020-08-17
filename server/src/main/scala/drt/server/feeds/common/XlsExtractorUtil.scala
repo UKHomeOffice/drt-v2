@@ -2,7 +2,7 @@ package drt.server.feeds.common
 
 import java.util.Date
 
-import org.apache.poi.ss.usermodel.{Row, Sheet, Workbook}
+import org.apache.poi.ss.usermodel.{Cell, Row, Sheet, Workbook}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
 object XlsExtractorUtil {
@@ -20,5 +20,11 @@ object XlsExtractorUtil {
   val numericCell: (Int, Row) => Option[Double] = (index, row) => Option(row.getCell(index).getNumericCellValue)
 
   val dateCell: (Int, Row) => Date = (index, row) => row.getCell(index).getDateCellValue
+
+  val headingIndexByName: Row => Map[Option[String], Int] = headingRow => (headingRow.getFirstCellNum to headingRow.getLastCellNum map { index =>
+    if (headingRow.getCell(index) != null && headingRow.getCell(1).getCellType != Cell.CELL_TYPE_BLANK) {
+      stringCell(index, headingRow) -> index
+    } else None -> index
+  }).toMap
 
 }
