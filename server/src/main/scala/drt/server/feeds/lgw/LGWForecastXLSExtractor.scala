@@ -6,7 +6,7 @@ import drt.server.feeds.common.XlsExtractorUtil._
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, ForecastFeedSource, PortCode, SDateLike}
-import org.apache.poi.ss.usermodel.DateUtil
+import org.apache.poi.ss.usermodel.{Cell, DateUtil, Sheet}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
@@ -40,23 +40,24 @@ object LGWForecastXLSExtractor {
     log.info(s"Extracting LGW forecast flights from XLS Workbook located at $xlsFilePath")
     val lgwWorkSheet = workbook(xlsFilePath)
 
+    val sheet: Sheet = sheetMapByIndex(0, lgwWorkSheet)
 
-    val sheet = sheetMapByIndex(0, lgwWorkSheet)
+    val headingIndexByNameMap: Map[String, Int] = headingIndexByName(sheet.getRow(0))
 
     val arrivalRows: Seq[LGWForecastFlightRow] = for {
       rowNumber <- 1 to sheet.getLastRowNum
       row = sheet.getRow(rowNumber)
-      if row.getCell(0) != null
+      if row.getCell(0) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
     } yield {
       val terminalCell = "N"
-      val flightDateCell = numericCell(0, row)
-      val flightTimeCell = numericCell(1, row)
-      val flightNumberCell = stringCell(2, row)
-      val airportCell = stringCell(3, row)
-      val serviceCell = stringCell(4, row)
-      val arrivalOrDepCell = stringCell(5, row)
-      val internationalDomesticCell = stringCell(8, row)
-      val totalCell = numericCell(9, row)
+      val flightDateCell = numericCellOption(headingIndexByNameMap("Date"), row)
+      val flightTimeCell = numericCellOption(headingIndexByNameMap("Time (UTC)"), row)
+      val flightNumberCell = stringCellOption(headingIndexByNameMap("OpeFlightNo"), row)
+      val airportCell = stringCellOption(headingIndexByNameMap("Airport"), row)
+      val serviceCell = stringCellOption(headingIndexByNameMap("Service"), row)
+      val arrivalOrDepCell = stringCellOption(headingIndexByNameMap("ArrDep"), row)
+      val internationalDomesticCell = stringCellOption(headingIndexByNameMap("Dom/Int"), row)
+      val totalCell = numericCellOption(headingIndexByNameMap("Sum of Pax"), row)
 
       val scheduledCell = SDate(DateUtil.getJavaDate(flightDateCell.getOrElse(0.0) + flightTimeCell.getOrElse(0.0), TimeZone.getTimeZone("UTC")).getTime)
 
