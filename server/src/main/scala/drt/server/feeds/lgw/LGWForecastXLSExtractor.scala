@@ -42,7 +42,7 @@ object LGWForecastXLSExtractor {
 
     val sheet: Sheet = sheetMapByIndex(0, lgwWorkSheet)
 
-    val headingIndexByNameMap: Map[Option[String], Int] = headingIndexByName(sheet.getRow(0))
+    val headingIndexByNameMap: Map[String, Int] = headingIndexByName(sheet.getRow(0))
 
     val arrivalRows: Seq[LGWForecastFlightRow] = for {
       rowNumber <- 1 to sheet.getLastRowNum
@@ -50,14 +50,14 @@ object LGWForecastXLSExtractor {
       if row.getCell(0) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
     } yield {
       val terminalCell = "N"
-      val flightDateCell = numericCell(headingIndexByNameMap(Some("Date")), row)
-      val flightTimeCell = numericCell(headingIndexByNameMap(Some("Time (UTC)")), row)
-      val flightNumberCell = stringCell(headingIndexByNameMap(Some("OpeFlightNo")), row)
-      val airportCell = stringCell(headingIndexByNameMap(Some("Airport")), row)
-      val serviceCell = stringCell(headingIndexByNameMap(Some("Service")), row)
-      val arrivalOrDepCell = stringCell(headingIndexByNameMap(Some("ArrDep")), row)
-      val internationalDomesticCell = stringCell(headingIndexByNameMap(Some("Dom/Int")), row)
-      val totalCell = numericCell(headingIndexByNameMap(Some("Sum of Pax")), row)
+      val flightDateCell = numericCellOption(headingIndexByNameMap("Date"), row)
+      val flightTimeCell = numericCellOption(headingIndexByNameMap("Time (UTC)"), row)
+      val flightNumberCell = stringCellOption(headingIndexByNameMap("OpeFlightNo"), row)
+      val airportCell = stringCellOption(headingIndexByNameMap("Airport"), row)
+      val serviceCell = stringCellOption(headingIndexByNameMap("Service"), row)
+      val arrivalOrDepCell = stringCellOption(headingIndexByNameMap("ArrDep"), row)
+      val internationalDomesticCell = stringCellOption(headingIndexByNameMap("Dom/Int"), row)
+      val totalCell = numericCellOption(headingIndexByNameMap("Sum of Pax"), row)
 
       val scheduledCell = SDate(DateUtil.getJavaDate(flightDateCell.getOrElse(0.0) + flightTimeCell.getOrElse(0.0), TimeZone.getTimeZone("UTC")).getTime)
 

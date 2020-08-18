@@ -44,13 +44,13 @@ object STNForecastXLSExtractor {
       row = sheet.getRow(rowNumber)
       if row.getCell(1) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
     } yield {
-      val scheduledCell = numericCell(1, row).getOrElse(0.0)
-      val carrierCodeCell = stringCell(2, row).getOrElse("")
-      val flightNumberCell = stringCell(3, row).getOrElse("")
-      val originCell = stringCell(4, row)
-      val maxPaxCell = numericCell(5, row).getOrElse(0.0)
-      val totalCell = numericCell(6, row).getOrElse(0.0)
-      val internationalDomesticCell = stringCell(10, row)
+      val scheduledCell = numericCellOption(1, row).getOrElse(0.0)
+      val carrierCodeCell = stringCellOption(2, row).getOrElse("")
+      val flightNumberCell = stringCellOption(3, row).getOrElse("")
+      val originCell = stringCellOption(4, row)
+      val maxPaxCell = numericCellOption(5, row).getOrElse(0.0)
+      val totalCell = numericCellOption(6, row).getOrElse(0.0)
+      val internationalDomesticCell = stringCellOption(10, row)
       val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone("UTC")).getTime)
 
       STNForecastFlightRow(scheduledDate = scheduled,

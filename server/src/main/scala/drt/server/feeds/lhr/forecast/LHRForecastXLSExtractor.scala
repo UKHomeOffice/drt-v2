@@ -47,12 +47,12 @@ object LHRForecastXLSExtractor {
         row = sheet.getRow(rowNumber)
         if row.getCell(1) != null
       } yield {
-        val scheduledCell = numericCell(1, row).getOrElse(0.0)
-        val flightNumberCell = stringCell(2, row).getOrElse("")
-        val airportCell = stringCell(3, row).getOrElse("")
-        val internationalDomesticCell = stringCell(4, row).getOrElse("")
-        val totalCell = numericCell(5, row).getOrElse(0.0)
-        val transferPaxCell = numericCell(6, row).getOrElse(0.0)
+        val scheduledCell = numericCellOption(1, row).getOrElse(0.0)
+        val flightNumberCell = stringCellOption(2, row).getOrElse("")
+        val airportCell = stringCellOption(3, row).getOrElse("")
+        val internationalDomesticCell = stringCellOption(4, row).getOrElse("")
+        val totalCell = numericCellOption(5, row).getOrElse(0.0)
+        val transferPaxCell = numericCellOption(6, row).getOrElse(0.0)
         val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone(europeLondonId)).getTime)
         val terminal = s"T${sheetNumber + 1}"
 
