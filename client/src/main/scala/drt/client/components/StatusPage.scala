@@ -26,9 +26,11 @@ object StatusPage {
         <.div(
           <.h2("Feeds status"),
           feedStatusesPot.render((allFeedStatuses: Seq[FeedSourceStatuses]) => {
+            val isLive = allFeedStatuses.count(_.feedSource.name == "Port Live") > 0
             allFeedStatuses.map(feed => {
               <.div(^.className := s"feed-status ${feed.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)}",
                 <.h3(feed.feedSource.name),
+                <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isLive))),
                 {
                   val times = Seq(
                     (("Updated", "When we last received new data"), feed.feedStatuses.lastUpdatesAt),
@@ -71,10 +73,10 @@ object StatusPage {
     val hours = minutes / 60
     val days = hours / 24
 
-    if (minutes < 1) s"< 1 min"
-    else if (minutes <= 60) s"$minutes mins"
-    else if (hours <= 24) s"$hours hrs"
-    else s"$days days"
+    if (minutes < 1) s"< 1 min ago"
+    else if (minutes <= 60) s"$minutes mins ago"
+    else if (hours <= 24) s"$hours hrs ago"
+    else s"$days days ago"
   }
 
   def apply(): VdomElement = component(Props())

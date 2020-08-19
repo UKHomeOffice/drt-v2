@@ -382,10 +382,17 @@ object FeedSourceArrival {
 
 trait FeedSource {
   def name: String
+
+  def description(isLive: Boolean = false): String
 }
 
 case object ApiFeedSource extends FeedSource {
   def name: String = "API"
+
+  def description(isLive: Boolean) = if (isLive)
+    "Actual passenger nationality and age data when available."
+  else
+    "Actual passenger numbers and nationality data when available."
 
   override def toString: String = "ApiFeedSource"
 }
@@ -393,11 +400,15 @@ case object ApiFeedSource extends FeedSource {
 case object AclFeedSource extends FeedSource {
   def name: String = "ACL"
 
+  def description(isLive: Boolean) = "Flight schedule for up to 6 months."
+
   override def toString: String = "AclFeedSource"
 }
 
 case object ForecastFeedSource extends FeedSource {
   def name: String = "Port Forecast"
+
+  def description(isLive: Boolean) = "Updated forecast of passenger numbers."
 
   override def toString: String = "ForecastFeedSource"
 }
@@ -405,17 +416,26 @@ case object ForecastFeedSource extends FeedSource {
 case object LiveFeedSource extends FeedSource {
   def name: String = "Port Live"
 
+  def description(isLive: Boolean) = "Up-to-date passenger numbers, estimated and actual arrival times, gates and stands."
+
   override def toString: String = "LiveFeedSource"
 }
 
 case object LiveBaseFeedSource extends FeedSource {
   def name: String = "Cirium Live"
 
+  def description(isLive: Boolean) = if (isLive)
+    "Estimated & actual arrival time updates where not available from live feed."
+  else
+    "Estimated & actual arrival time updates."
+
   override def toString: String = "LiveBaseFeedSource"
 }
 
 case object UnknownFeedSource extends FeedSource {
   def name: String = "Unknown"
+
+  def description(isLive: Boolean) = ""
 
   override def toString: String = "UnknownFeedSource"
 }
