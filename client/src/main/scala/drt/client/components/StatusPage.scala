@@ -26,11 +26,11 @@ object StatusPage {
         <.div(
           <.h2("Feeds status"),
           feedStatusesPot.render((allFeedStatuses: Seq[FeedSourceStatuses]) => {
-            val isLive = allFeedStatuses.count(_.feedSource.name == "Port Live") > 0
+            val isLiveFeedAvailable = allFeedStatuses.count(_.feedSource.name == "Port Live") > 0
             allFeedStatuses.map(feed => {
               <.div(^.className := s"feed-status ${feed.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)}",
                 <.h3(feed.feedSource.name),
-                <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isLive))),
+                <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isLiveFeedAvailable))),
                 {
                   val times = Seq(
                     (("Updated", "When we last received new data"), feed.feedStatuses.lastUpdatesAt),
