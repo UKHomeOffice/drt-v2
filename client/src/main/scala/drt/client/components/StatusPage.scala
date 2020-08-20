@@ -5,7 +5,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess}
+import drt.shared.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, LiveFeedSource}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 
@@ -26,7 +26,7 @@ object StatusPage {
         <.div(
           <.h2("Feeds status"),
           feedStatusesPot.render((allFeedStatuses: Seq[FeedSourceStatuses]) => {
-            val isLiveFeedAvailable = allFeedStatuses.count(_.feedSource.name == "Port Live") > 0
+            val isLiveFeedAvailable = allFeedStatuses.count(_.feedSource.name == LiveFeedSource.name) > 0
             allFeedStatuses.map(feed => {
               <.div(^.className := s"feed-status ${feed.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)}",
                 <.h3(feed.feedSource.name),
