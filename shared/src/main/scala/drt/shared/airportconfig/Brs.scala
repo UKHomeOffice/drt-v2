@@ -53,7 +53,7 @@ object Brs extends AirportConfigLike {
         EeaDesk -> (1.0 - 0.7742)
       )))
     ),
-    feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, AclFeedSource),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map(T1 -> 9)
     )

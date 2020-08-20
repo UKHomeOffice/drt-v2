@@ -118,7 +118,7 @@ object Lhr extends AirportConfigLike {
     ),
     hasTransfer = true,
     maybeCiriumEstThresholdHours = Option(6),
-    feedSources = Seq(LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource, ApiFeedSource),
+    feedSources = Seq( ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map[Terminal, Int](
       T2 -> 36,
