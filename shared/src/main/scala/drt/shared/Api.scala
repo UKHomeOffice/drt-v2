@@ -382,10 +382,17 @@ object FeedSourceArrival {
 
 trait FeedSource {
   def name: String
+
+  val description: Boolean => String
 }
 
 case object ApiFeedSource extends FeedSource {
   def name: String = "API"
+
+  val description: Boolean => String = isLiveFeedAvailable => if (isLiveFeedAvailable)
+    "Actual passenger nationality and age data when available."
+  else
+    "Actual passenger numbers and nationality data when available."
 
   override def toString: String = "ApiFeedSource"
 }
@@ -393,29 +400,42 @@ case object ApiFeedSource extends FeedSource {
 case object AclFeedSource extends FeedSource {
   def name: String = "ACL"
 
+  val description: Boolean => String = _ => "Flight schedule for up to 6 months."
+
   override def toString: String = "AclFeedSource"
 }
 
 case object ForecastFeedSource extends FeedSource {
-  def name: String = "Port Forecast"
+  def name: String = "Port forecast"
+
+  val description: Boolean => String = _ => "Updated forecast of passenger numbers."
 
   override def toString: String = "ForecastFeedSource"
 }
 
 case object LiveFeedSource extends FeedSource {
-  def name: String = "Port Live"
+  def name: String = "Port live"
+
+  val description: Boolean => String = _ => "Up-to-date passenger numbers, estimated and actual arrival times, gates and stands."
 
   override def toString: String = "LiveFeedSource"
 }
 
 case object LiveBaseFeedSource extends FeedSource {
-  def name: String = "Cirium Live"
+  def name: String = "Cirium live"
+
+  val description: Boolean => String = isLiveFeedAvailable => if (isLiveFeedAvailable)
+    "Estimated and actual arrival time updates where not available from live feed."
+  else
+    "Estimated and actual arrival time updates."
 
   override def toString: String = "LiveBaseFeedSource"
 }
 
 case object UnknownFeedSource extends FeedSource {
   def name: String = "Unknown"
+
+  val description: Boolean => String = _ => ""
 
   override def toString: String = "UnknownFeedSource"
 }
@@ -475,10 +495,10 @@ trait SDateLike {
   def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
 
   /**
-   * Days of the week 1 to 7 (Monday is 1)
-   *
-   * @return
-   */
+    * Days of the week 1 to 7 (Monday is 1)
+    *
+    * @return
+    */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int
