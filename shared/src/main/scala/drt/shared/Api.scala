@@ -425,9 +425,9 @@ case object LiveBaseFeedSource extends FeedSource {
   def name: String = "Cirium Live"
 
   def description(isLive: Boolean) = if (isLive)
-    "Estimated & actual arrival time updates where not available from live feed."
+    "Estimated and actual arrival time updates where not available from live feed."
   else
-    "Estimated & actual arrival time updates."
+    "Estimated and actual arrival time updates."
 
   override def toString: String = "LiveBaseFeedSource"
 }
