@@ -26,9 +26,9 @@ object StatusPage {
         <.div(
           <.h2("Feeds status"),
           feedStatusesPot.render((allFeedStatuses: Seq[FeedSourceStatuses]) => {
-            val isLiveFeedAvailable = allFeedStatuses.count(_.feedSource.name == LiveFeedSource.name) > 0
+            val isLiveFeedAvailable = allFeedStatuses.count(_.feedSource == LiveFeedSource) > 0
 
-            val  allFeedStatusesSeq = allFeedStatuses.filter(_.feedSource.name == ApiFeedSource.name) ++ allFeedStatuses.filterNot(_.feedSource.name == ApiFeedSource.name)
+            val allFeedStatusesSeq = allFeedStatuses.filter(_.feedSource == ApiFeedSource) ++ allFeedStatuses.filterNot(_.feedSource == ApiFeedSource)
 
             allFeedStatusesSeq.map(feed => {
               <.div(^.className := s"feed-status ${feed.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)}",
