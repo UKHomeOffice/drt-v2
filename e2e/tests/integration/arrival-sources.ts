@@ -48,7 +48,7 @@ describe('Arrivals page', () => {
       .get('.arrivals__table__flight-code')
       .click()
       .get('.dashboard-arrivals-popup')
-      .contains('Port Live');
+      .contains('Port live');
   });
 
 });

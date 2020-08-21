@@ -50,7 +50,7 @@ object Lpl extends AirportConfigLike {
         B5JPlusNational -> List(Queues.EeaDesk -> 1.0)
       ))
     ),
-    feedSources = Seq(LiveBaseFeedSource, AclFeedSource, ApiFeedSource),
+    feedSources = Seq(ApiFeedSource,LiveBaseFeedSource, AclFeedSource),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map(T1 -> 8)
     )

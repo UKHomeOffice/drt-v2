@@ -5,7 +5,6 @@ import drt.shared.PaxTypes._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
 import ujson.Js.Value
 import upickle.Js
 import upickle.default._
@@ -256,7 +255,7 @@ case class AirportConfig(portCode: PortCode,
                          hasTransfer: Boolean = false,
                          maybeCiriumEstThresholdHours: Option[Int] = None,
                          maybeCiriumTaxiThresholdMinutes: Option[Int] = Option(20),
-                         feedSources: Seq[FeedSource] = Seq(LiveBaseFeedSource, LiveFeedSource, AclFeedSource, ApiFeedSource),
+                         feedSources: Seq[FeedSource] = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource),
                          desksByTerminal: Map[Terminal, Int],
                          queuePriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack, EGate),
                          assumedAdultsPerChild: Double = 1.0
@@ -424,7 +423,7 @@ object AirportConfigDefaults {
     SplitRatio(eeaNonMachineReadableToDesk, 0.1625),
     SplitRatio(visaNationalToDesk, 0.05),
     SplitRatio(nonVisaNationalToDesk, 0.05)
-    )
+  )
 
   val defaultQueueRatios: Map[PaxType, Seq[(Queue, Double)]] = Map(
     EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
@@ -434,7 +433,7 @@ object AirportConfigDefaults {
     VisaNational -> List(Queues.NonEeaDesk -> 1.0),
     B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
     B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-    )
+  )
 
   val defaultProcessingTimes: Map[PaxTypeAndQueue, Double] = Map(
     eeaMachineReadableToDesk -> 20d / 60,
@@ -442,5 +441,5 @@ object AirportConfigDefaults {
     eeaNonMachineReadableToDesk -> 50d / 60,
     visaNationalToDesk -> 90d / 60,
     nonVisaNationalToDesk -> 78d / 60
-    )
+  )
 }
