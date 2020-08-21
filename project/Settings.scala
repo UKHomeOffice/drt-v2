@@ -28,16 +28,16 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   object versions {
     val scala = "2.12.8"
-    val scalaDom = "0.9.6"
+    val scalaDom = "1.1.0"
     val scalajsReact = "1.7.5"
     val scalajsReactComponents = "1.0.0-M2"
     val scalaJsScripts = "1.0.0"
-    val scalaCSS = "0.5.5"
+    val scalaCSS = "0.6.1"
     val scalaJsMomentJs = "0.10.4"
     val autowire = "0.3.2"
     val booPickle = "1.3.2"
     val diode = "1.1.13"
-    val uTest = "0.7.2"
+    val uTest = "0.7.4"
     val h2 = "1.4.197"
 
     val akka = "2.5.23"
@@ -74,7 +74,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "48"
-    val drtLib = "32"
+    val drtLib = "34"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "1.2.0"
