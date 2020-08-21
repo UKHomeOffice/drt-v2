@@ -58,8 +58,9 @@ lazy val client: Project = (project in file("client"))
     skip in packageJSDependencies := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.defaultLocal,
-//    resolvers += "mvnrepository" at "http://mvnrepository.com/artifact/",
+    //    resolvers += "mvnrepository" at "http://mvnrepository.com/artifact/",
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
+    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // use uTest framework for tests
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
