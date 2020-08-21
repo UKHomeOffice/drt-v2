@@ -11,8 +11,8 @@ import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, FlightCodeSuffix}
-import ujson.Js.Value
-import upickle.Js
+import ujson.Value
+//import upickle.{Value => UpickleValue}
 import upickle.default._
 
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
@@ -109,7 +109,7 @@ object SplitStyle {
   }
 
   implicit val splitStyleReadWriter: ReadWriter[SplitStyle] =
-    readwriter[Js.Value].bimap[SplitStyle](
+    readwriter[Value].bimap[SplitStyle](
       feedSource => feedSource.toString,
       (s: Value) => apply(s.str)
     )
@@ -446,7 +446,7 @@ object FeedSource {
   def apply(feedSource: String): Option[FeedSource] = feedSources.find(fs => fs.toString == feedSource)
 
   implicit val feedSourceReadWriter: ReadWriter[FeedSource] =
-    readwriter[Js.Value].bimap[FeedSource](
+    readwriter[Value].bimap[FeedSource](
       feedSource => feedSource.toString,
       (s: Value) => apply(s.str).getOrElse(UnknownFeedSource)
     )

@@ -5,8 +5,9 @@ import drt.shared.PaxTypes._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
-import ujson.Js.Value
-import upickle.Js
+import drt.shared.api.Arrival
+import ujson.Value
+
 import upickle.default._
 
 import scala.collection.immutable.SortedMap
@@ -156,7 +157,7 @@ object PaxType {
   }
 
   implicit val paxTypeReaderWriter: ReadWriter[PaxType] =
-    readwriter[Js.Value].bimap[PaxType](paxType => paxType.cleanName, (s: Value) => PaxType(s"${s.str}$$"))
+    readwriter[Value].bimap[PaxType](paxType => paxType.cleanName, (s: Value) => PaxType(s"${s.str}$$"))
 }
 
 object PaxTypes {
