@@ -11,7 +11,7 @@ object HotTable {
 
   val log: Logger = LoggerFactory.getLogger("HotTable")
 
-  @JSImport("react-handsontable", JSImport.Default)
+  @JSImport("@handsontable/react", JSImport.Default)
   @js.native
   object HotTableComponent extends js.Object
 

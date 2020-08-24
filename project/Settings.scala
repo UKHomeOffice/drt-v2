@@ -2,9 +2,9 @@ import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
 import sbt._
 
 /**
-  * Application settings. Configure the build for your application here.
-  * You normally don't have to touch the actual build definition after this.
-  */
+ * Application settings. Configure the build for your application here.
+ * You normally don't have to touch the actual build definition after this.
+ */
 object Settings {
   /** The name of your application */
   val name = "DRTv2"
@@ -35,7 +35,7 @@ object Settings {
     val scalaCSS = "0.6.1"
     val scalaJsMomentJs = "0.10.4"
     val autowire = "0.3.2"
-    val booPickle = "1.3.2"
+    val booPickle = "1.3.3"
     val diode = "1.1.13"
     val uTest = "0.7.4"
     val h2 = "1.4.197"
@@ -68,7 +68,7 @@ object Settings {
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.3.0"
-    val reactHandsontable = "0.3.1"
+    val reactHandsontable = "3.1.2"
     val spark = "2.4.3"
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
@@ -90,7 +90,9 @@ object Settings {
     "react-dom" -> react,
     "log4javascript" -> log4Javascript,
     "bootstrap" -> bootstrap,
-    "react-handsontable" -> reactHandsontable,
+    "@handsontable/react" -> reactHandsontable,
+    "handsontable" -> "6.2.2",
+    "core-js" -> "3.6.5",
     "chart.js" -> "2.5",
     "@tippyjs/react" -> "4.1.0",
     "react-chartjs-2" -> "2.10.0",
@@ -104,11 +106,11 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % Test,
     "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
     "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
-//    "com.olvind" %%% "scalajs-react-components" % scalajsReactComponents,
+
     "io.suzaku" %%% "diode" % diode,
     "io.suzaku" %%% "diode-react" % diode,
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
-//    "com.lihaoyi" %%% "pprint" % pprint,
+
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs
@@ -123,7 +125,7 @@ object Settings {
   val sharedDependencies = Def.setting(Seq(
     "com.lihaoyi" %%% "autowire" % autowire,
     "com.lihaoyi" %%% "upickle" % uPickle,
-    "uk.gov.homeoffice" %% "drt-lib" % drtLib,
+    "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
     "io.suzaku" %%% "boopickle" % booPickle
   ))
 
@@ -134,7 +136,7 @@ object Settings {
     "com.github.gphat" % "censorinus_2.12" % censorinus,
     "com.pauldijou" %% "jwt-core" % "4.0.0",
     "com.hierynomus" % "sshj" % sshJ,
-//    "com.lihaoyi" %% "pprint" % pprint,
+    //    "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
 
     "com.mfglabs" %% "commons-aws-s3" % awsCommons,
@@ -205,9 +207,9 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus
-    ))
+  ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order
-    * this is ignored now that we're using webpack via the sbt-bundle plugin */
+   * this is ignored now that we're using webpack via the sbt-bundle plugin */
   val jsDependencies = Def.setting(Seq())
 }

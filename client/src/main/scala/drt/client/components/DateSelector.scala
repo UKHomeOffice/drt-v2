@@ -22,7 +22,7 @@ object DateSelector {
 
   val today: SDateLike = SDate.now()
 
-  def daysInMonth(month: Int, year: Int): Int = new Date(year, month, 0).getDate()
+  def daysInMonth(month: Int, year: Int): Int = new Date(year, month, 0).getDate().toInt
 
   def formRow(label: String, xs: TagMod*): TagOf[Div] = {
     <.div(^.className := "form-group row",

@@ -80,7 +80,7 @@ object SnapshotSelector {
           }.toTagMod)
       }
 
-      def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
+      def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate().toInt
 
       def isValidSnapshotDate = isLaterThanEarliest(state.snapshotDateTime) && isInPast
 
@@ -90,7 +90,7 @@ object SnapshotSelector {
         case (true, true) =>
           <.div(^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.spinner)
         case (false, true) =>
-          <.div (^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.checkCircleO)
+          <.div(^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.checkCircleO)
         case _ =>
           <.div(^.className := "col-sm-1 no-gutters", <.input.button(^.value := "Go", ^.disabled := !isValidSnapshotDate, ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime))
       }

@@ -169,7 +169,7 @@ object SPAMain {
   }
 
   val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc]
-    .buildConfig { dsl =>
+    .buildConfig { dsl: RouterConfigDsl[Loc, Unit] =>
       import dsl._
 
       val rule = homeRoute(dsl) |
@@ -315,7 +315,6 @@ object SPAMain {
 
   def terminalRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
-    import modules.AdditionalDsl._
 
     val requiredTerminalName = string("[a-zA-Z0-9]+")
     val requiredTopLevelTab = string("[a-zA-Z0-9]+")
@@ -351,7 +350,7 @@ object SPAMain {
   protected def getInstance(): this.type = this
 
   @JSExport
-  def main(): Unit = {
+  def main(args: Array[String]): Unit = {
     log.debug("Application starting")
 
     ErrorHandler.registerGlobalErrorHandler()

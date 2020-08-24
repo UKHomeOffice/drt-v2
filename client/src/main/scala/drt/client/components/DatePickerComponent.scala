@@ -64,7 +64,7 @@ object DatePickerComponent {
 
       def isCurrentSelection = state.selectedDateTime.ddMMyyString == props.terminalPageTab.dateFromUrlOrNow.ddMMyyString
 
-      def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
+      def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate().toInt
 
       def updateUrlWithDateCallback(date: Option[SDateLike]): Callback = {
         props.router.set(
