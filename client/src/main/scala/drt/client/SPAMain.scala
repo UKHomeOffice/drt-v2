@@ -276,7 +276,7 @@ object SPAMain {
   def portConfigurationFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#faqs/portConfiguration", PortConfigLoc) ~> renderR(_ => FaqsPage("portConfiguration"))
+    staticRoute("#faqs/portConfiguration", PortConfigurationFaqsLoc) ~> renderR(_ => FaqsPage("portConfiguration"))
   }
 
   def staffMovementsFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
