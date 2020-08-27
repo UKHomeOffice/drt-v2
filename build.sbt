@@ -1,3 +1,4 @@
+import Settings.versions.scalajsReact
 import com.typesafe.config._
 import sbt.Credentials
 import sbt.Keys.{credentials, _}
@@ -30,6 +31,20 @@ lazy val sharedJS = shared.js.settings(name := "sharedJS")
 
 // use eliding to drop some debug code in the production build
 lazy val elideOptions = settingKey[Seq[String]]("Set limit for elidable functions")
+
+lazy val clientMacrosJS: Project = (project in file("client-macros"))
+      .enablePlugins(ScalaJSPlugin)
+      .settings(
+          name := "clientMacrosJS",
+          version := Settings.version,
+          scalaVersion := Settings.versions.scala,
+          scalacOptions ++= Settings.scalacOptions,
+          libraryDependencies ++= Seq(
+              "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact withSources(),
+              "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact withSources()
+          )
+      )
+
 
 // instantiate the JS project for SBT with some additional settings
 lazy val client: Project = (project in file("client"))
@@ -71,7 +86,7 @@ lazy val client: Project = (project in file("client"))
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
   .enablePlugins(ScalaJSWeb)
-  .dependsOn(sharedJS)
+  .dependsOn(sharedJS, clientMacrosJS)
 
 // Client projects (just one in this case)
 lazy val clients = Seq(client)

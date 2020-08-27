@@ -206,7 +206,7 @@ object FlightTableRow {
 
       val flightCodeClass = if (props.hasArrivalSourcesAccess) "arrivals__table__flight-code arrivals__table__flight-code--clickable" else "arrivals__table__flight-code"
 
-      val flightCodeCell = if (props.hasArrivalSourcesAccess) <.div(
+      val flightCodeCell = if (props.hasArrivalSourcesAccess) <.span(
         ^.onClick --> Callback(SPACircuit.dispatch {
           props.viewMode match {
             case vm: ViewDay if vm.isHistoric(SDate.now()) =>
@@ -218,10 +218,20 @@ object FlightTableRow {
           }
         }),
         allCodes.mkString(" - "))
-      else <.div(allCodes.mkString(" - "))
+      else <.span(allCodes.mkString(" - "))
 
       val firstCells = List[TagMod](
-        <.td(^.className := flightCodeClass, flightCodeCell),
+
+        <.td(^.className := flightCodeClass, flightCodeCell,
+          ChartJSComponent.Bar(
+            Seq(
+              DataSet("First", Seq(1,2,3,2,3,2)),
+              DataSet("Second", Seq(5,7,8,5,3,2))
+            ),
+            Seq("one, two, three, four, five, six")
+          ),
+          TippyJSComponent("Here is a tip", interactive = true, <.span(Icon.infoCircle))
+        ),
         <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(

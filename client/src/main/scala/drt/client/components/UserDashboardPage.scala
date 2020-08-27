@@ -6,7 +6,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 
 object UserDashboardPage {
 
