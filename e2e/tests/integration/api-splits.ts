@@ -26,31 +26,66 @@ describe('API splits', () => {
     return Array(qty).fill(passengerProfile);
   }
 
-  it('should have 8 egates pax and 2 EEA queue pax when there are 10 UK Adults on board a flight', () => {
-    const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 10));
+  // it('should have 8 egates pax and 2 EEA queue pax when there are 10 UK Adults on board a flight', () => {
+  //   const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 10));
 
-    cy
-      .addFlight(
-        {
-          "ActPax": 10,
-          "SchDT": scheduledTime.format()
-        }
-      )
-      .asABorderForceOfficer()
-      .waitForFlightToAppear("TS0123")
-      .addManifest(apiManifest)
-      .get('.egate-queue-pax > span')
-      .contains("8")
-      .get('.eeadesk-queue-pax > span')
-      .contains("2")
-      ;
+  //   cy
+  //     .addFlight(
+  //       {
+  //         "ActPax": 10,
+  //         "SchDT": scheduledTime.format()
+  //       }
+  //     )
+  //     .asABorderForceOfficer()
+  //     .waitForFlightToAppear("TS0123")
+  //     .addManifest(apiManifest)
+  //     .get('.egate-queue-pax > span')
+  //     .contains("8")
+  //     .get('.eeadesk-queue-pax > span')
+  //     .contains("2")
+  //     ;
 
-  });
+  // });
 
-  it('should have 7 egates pax and 4 EEA queue pax when there are 10 UK Adults and 1 uk child on board a flight', () => {
+  // it('should have 7 egates pax and 4 EEA queue pax when there are 10 UK Adults and 1 uk child on board a flight', () => {
+  //   const ukAdults = ofPassengerProfile(passengerProfiles.ukPassport, 10);
+  //   const ukChildren = ofPassengerProfile(passengerProfiles.ukChild, 1);
+  //   const apiManifest = manifest(ukAdults.concat(ukChildren));
+
+  //   cy
+  //     .addFlight(
+  //       {
+  //         "ActPax": 11,
+  //         "SchDT": scheduledTime.format()
+  //       }
+  //     )
+  //     .asABorderForceOfficer()
+  //     .waitForFlightToAppear("TS0123")
+  //     .addManifest(apiManifest)
+  //     .get('.pax-api')
+  //     .get('.egate-queue-pax > span')
+  //     .contains("7")
+  //     .get('.eeadesk-queue-pax > span')
+  //     .contains("4")
+  //     ;
+
+  // });
+
+  it('add some data for testing', () => {
     const ukAdults = ofPassengerProfile(passengerProfiles.ukPassport, 10);
     const ukChildren = ofPassengerProfile(passengerProfiles.ukChild, 1);
-    const apiManifest = manifest(ukAdults.concat(ukChildren));
+    const visaNationals = ofPassengerProfile(passengerProfiles.visaNational, 7);
+    const b5JNationals = ofPassengerProfile(passengerProfiles.b5JNational, 4);
+    const nonVisaNationals = ofPassengerProfile(passengerProfiles.nonVisaNational, 2);
+
+    const apiManifest = manifest(
+      ukAdults
+        .concat(ukChildren)
+        .concat(visaNationals)
+        .concat(b5JNationals)
+        .concat(nonVisaNationals)
+    );
+
 
     cy
       .addFlight(

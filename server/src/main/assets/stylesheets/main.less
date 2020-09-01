@@ -4,6 +4,10 @@
 @import "popover-styles-staff-movement.less";
 @import 'handsontable.full.css';
 @import 'tippy.css';
+@import 'tippy-themes/light.css';
+@import 'tippy-themes/light-border.css';
+@import 'tippy-themes/material.css';
+@import 'tippy-themes/translucent.css';
 
 /////////////////
 // Custom navbar
@@ -1505,6 +1509,15 @@ th h2 {
 
 .arrivals__table__flight-code {
   white-space: nowrap
+}
+
+.arrivals__table__flight__chart-box {
+  min-width: 850px;
+}
+
+.arrivals__table__flight__chart-box__chart {
+  width: 30%;
+  float: left;
 }
 
 #arrivals td.queue-split {

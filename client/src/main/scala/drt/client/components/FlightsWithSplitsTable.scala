@@ -6,9 +6,10 @@ import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointI
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, ViewDay, ViewMode, ViewPointInTime}
+import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
+import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
@@ -17,6 +18,8 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, TableSection}
+
+import scala.scalajs.js
 
 object FlightsWithSplitsTable {
 
@@ -223,15 +226,30 @@ object FlightTableRow {
       val firstCells = List[TagMod](
 
         <.td(^.className := flightCodeClass, flightCodeCell,
-          ChartJSComponent.Bar(
-            Seq(
-              DataSet("First", Seq(1,2,3,2,3,2)),
-              DataSet("Second", Seq(5,7,8,5,3,2))
-            ),
-            Seq("one, two, three, four, five, six")
-          ),
-          TippyJSComponent("Here is a tip", interactive = true, <.span(Icon.infoCircle))
+          flightWithSplits.splits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages).map(
+            (splits: Splits) => {
+
+              val nationalityData: ChartData = ChartData.splitToNationalityChartData(splits.splits)
+              val paxTypeData: ChartData = ChartData.splitToPaxTypeData(splits.splits)
+
+              TippyJSComponent(
+                <.div(^.cls := "container arrivals__table__flight__chart-box",
+                  <.div(^.cls := "row",
+                  <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",  ChartJSComponent.HorizontalBar(
+                    "Nationality Breakdown",
+                    nationalityData.dataSets.map(d => DataSet(d.title, d.values)),
+                    nationalityData.dataSets.head.labels
+                  )),
+                  <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart", ChartJSComponent.HorizontalBar(
+                    "Passenger Types",
+                    paxTypeData.dataSets.map(d => DataSet(d.title, d.values)),
+                    paxTypeData.dataSets.head.labels
+                  ))
+                  )
+                ).rawElement, interactive = true, <.span(Icon.infoCircle))
+            })
         ),
+
         <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(

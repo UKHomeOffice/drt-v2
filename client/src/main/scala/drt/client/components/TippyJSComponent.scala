@@ -2,10 +2,9 @@ package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
 import japgolly.scalajs.react.Ref.Simple
+import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Children, JsComponent, Ref}
-import org.scalajs.dom.html
-import org.scalajs.dom.html.{Div, Input}
 import org.scalajs.dom.raw.HTMLElement
 
 import scala.scalajs.js
@@ -23,26 +22,41 @@ object TippyJSComponent {
 
   @js.native
   trait Props extends js.Object {
-    var content: String = js.native
+    var content: js.Any = js.native
     var interactive: Boolean = js.native
-    
+    var reference: js.Object = js.native
+    var theme: String = js.native
+    var maxWidth: js.Any = js.native
+    var trigger: String = js.native
+    var placement: String = js.native
+
   }
 
-  def props(content: String, interactive: Boolean): Props = {
+  def props(content: js.Object, interactive: Boolean): Props = {
     val p = (new js.Object).asInstanceOf[Props]
 
-    p.content = content
+
     p.interactive = interactive
-//    p.reference = ref.raw
+    p.content = content
+    p.theme = "light-border"
+    p.maxWidth = "None"
+    p.trigger = "click"
+    p.placement = "top-end"
     p
   }
 
   //  val component: Component[Props, HTMLElement, CtorType.PropsAndChildren] = JsForwardRefComponent[Props, Children.Varargs, HTMLElement](Tippy)
   val component = JsComponent[Props, Children.Varargs, Null](Tippy)
 
-  def apply(content: String, interactive: Boolean, trigger: VdomTagOf[HTMLElement]) = {
-
+//  def apply(content: String, interactive: Boolean, trigger: VdomTagOf[HTMLElement]) = {
+//
 //    trigger.withRef(elementRef)
+//    component(props(content, interactive))(trigger)
+//  }
+
+  def apply[A](content: js.Object, interactive: Boolean, trigger: VdomTagOf[HTMLElement]) = {
+
+
     component(props(content, interactive))(trigger)
   }
 
