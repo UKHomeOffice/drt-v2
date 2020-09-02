@@ -9,6 +9,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared._
 import drt.shared.api.Arrival
@@ -18,8 +19,9 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, TableSection}
+import org.scalajs.dom.window
 
-import scala.scalajs.js
+import scala.collection.immutable
 
 object FlightsWithSplitsTable {
 
@@ -229,22 +231,37 @@ object FlightTableRow {
           flightWithSplits.splits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages).map(
             (splits: Splits) => {
 
-              val nationalityData: ChartData = ChartData.splitToNationalityChartData(splits.splits)
-              val paxTypeData: ChartData = ChartData.splitToPaxTypeData(splits.splits)
+              val nationalityData: ChartData = ChartData(ChartData.splitToNationalityChartData(splits.splits))
+              val liveAPIPaxTypes = ChartData.splitToPaxTypeData(splits.splits, "Live API")
+                .copy(colour = "rgb(112,128,144)")
+
+              val paxTypeSplitComparison: Seq[ChartDataSet] = flightWithSplits
+                .splits
+                .find(_.source == SplitSources.Historical)
+                .map(s => ChartData.splitToPaxTypeData(s.splits, "Historic")).toSeq :+ liveAPIPaxTypes
+
+              val paxTypeData: ChartData = ChartData(paxTypeSplitComparison)
 
               TippyJSComponent(
                 <.div(^.cls := "container arrivals__table__flight__chart-box",
                   <.div(^.cls := "row",
-                  <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",  ChartJSComponent.HorizontalBar(
-                    "Nationality Breakdown",
-                    nationalityData.dataSets.map(d => DataSet(d.title, d.values)),
-                    nationalityData.dataSets.head.labels
-                  )),
-                  <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart", ChartJSComponent.HorizontalBar(
-                    "Passenger Types",
-                    paxTypeData.dataSets.map(d => DataSet(d.title, d.values)),
-                    paxTypeData.dataSets.head.labels
-                  ))
+                    <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
+                      ChartJSComponent.HorizontalBar(
+                        "Nationality Breakdown",
+                        nationalityData.dataSets.map(d => DataSet(d.title, d.values)),
+                        nationalityData.dataSets.head.labels,
+                        300,
+                        300
+                      )),
+                    <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
+                      ChartJSComponent.HorizontalBar(
+                        "Passenger Types",
+                        paxTypeData.dataSets.map(d => DataSet(d.title, d.values, d.colour)),
+                        paxTypeData.dataSets.head.labels,
+                        300,
+                        300,
+                        true
+                      ))
                   )
                 ).rawElement, interactive = true, <.span(Icon.infoCircle))
             })

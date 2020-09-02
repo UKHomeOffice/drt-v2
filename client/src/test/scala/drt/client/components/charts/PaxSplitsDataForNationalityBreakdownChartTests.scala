@@ -1,7 +1,7 @@
 package drt.client.components.charts
 
 import drt.client.services.ChartData.splitToNationalityChartData
-import drt.client.services.{ChartData, ChartDataSet}
+import drt.client.services.ChartDataSet
 import drt.shared.PaxTypes._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.{ApiPaxTypeAndQueueCount, Nationality, PaxTypes, Queues}
@@ -22,7 +22,8 @@ object PaxSplitsDataForNationalityBreakdownChartTests extends TestSuite {
 
         val result = splitToNationalityChartData(apiSplit)
 
-        val expected = ChartData(ChartDataSet("All Queues", List(("GBR", 1.0))))
+        val expected = ChartDataSet("All Queues", List(("GBR", 1.0)))
+
 
         assert(result == expected)
       }
@@ -40,7 +41,8 @@ object PaxSplitsDataForNationalityBreakdownChartTests extends TestSuite {
 
         val result = splitToNationalityChartData(apiSplit)
 
-        val expected = ChartData(ChartDataSet("All Queues", List(("GBR", 11.0))))
+        val expected = ChartDataSet("All Queues", List(("GBR", 11.0)))
+
 
         assert(result == expected)
       }
@@ -62,9 +64,8 @@ object PaxSplitsDataForNationalityBreakdownChartTests extends TestSuite {
 
         val result = splitToNationalityChartData(apiSplit)
 
-        val expected = ChartData(
-          List(ChartDataSet("All Queues", Vector(("AUS", 4.0), ("GBR", 17.0), ("MRU", 2.0), ("ZWE", 7.0))))
-        )
+        val expected = ChartDataSet("All Queues", Vector(("AUS", 4.0), ("GBR", 17.0), ("MRU", 2.0), ("ZWE", 7.0)))
+
 
         assert(result == expected)
       }
@@ -86,10 +87,10 @@ object PaxSplitsDataForNationalityBreakdownChartTests extends TestSuite {
 
         val result = splitToNationalityChartData(apiSplit)
 
-        val expected = ChartData(ChartDataSet("All Queues", List(
+        val expected = ChartDataSet("All Queues", List(
           ("GBR", 1.0),
           ("ITA", 1.0)
-        )))
+        ))
 
         assert(result == expected)
       }

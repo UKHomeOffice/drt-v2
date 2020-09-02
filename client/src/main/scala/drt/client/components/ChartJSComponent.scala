@@ -1,7 +1,6 @@
 package drt.client.components
 
 import clientmacros.tojs.JSMacro
-import drt.client.components.ChartJSComponent.component
 import drt.client.logger.{Logger, LoggerFactory}
 import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.{Children, JsComponent}
@@ -26,22 +25,22 @@ case class DataSet(properties: Map[String, js.Any]) {
   }
 
   val props: Dictionary[js.Any] = js.Dictionary(
-    "fill" -> false,
-    "lineTension" -> 0.1,
-    "backgroundColor" -> "rgba(52,52,52,0.4)",
-    "borderColor" -> "rgba(52,52,52,1)",
-    "borderCapStyle" -> "butt",
-    "borderDashOffset" -> 0.0,
-    "borderJoinStyle" -> "miter",
-    "pointBorderColor" -> "rgba(0,0,0,1)",
-    "pointBackgroundColor" -> "#fff",
-    "pointBorderWidth" -> 1,
-    "pointHoverRadius" -> 5,
-    "pointHoverBackgroundColor" -> "rgba(20,20,20,1)",
-    "pointHoverBorderColor" -> "rgba(10,10,10,1)",
-    "pointHoverBorderWidth" -> 2,
-    "pointRadius" -> 1,
-    "pointHitRadius" -> 10
+//    "fill" -> false,
+//    "lineTension" -> 0.1,
+//    "backgroundColor" -> "rgba(52,52,52,0.4)",
+//    "borderColor" -> "rgba(52,52,52,1)",
+//    "borderCapStyle" -> "butt",
+//    "borderDashOffset" -> 0.0,
+//    "borderJoinStyle" -> "miter",
+//    "pointBorderColor" -> "rgba(0,0,0,1)",
+//    "pointBackgroundColor" -> "#fff",
+//    "pointBorderWidth" -> 1,
+//    "pointHoverRadius" -> 5,
+//    "pointHoverBackgroundColor" -> "rgba(20,20,20,1)",
+//    "pointHoverBorderColor" -> "rgba(10,10,10,1)",
+//    "pointHoverBorderWidth" -> 2,
+//    "pointRadius" -> 1,
+//    "pointHitRadius" -> 10
   )
 
   def toJS: js.Dictionary[js.Any] = propertiesWithDefaults
@@ -62,10 +61,10 @@ case class ChartJSProps(
 
 
 object DataSet {
-  def apply(label: String, data: Seq[Double]): DataSet = {
+  def apply(label: String, data: Seq[Double]): DataSet = DataSet(Map("data" -> data.toJSArray, "label" -> label))
 
-    DataSet(Map("data" -> data.toJSArray, "label" -> label))
-  }
+  def apply(label: String, data: Seq[Double], colour: String): DataSet =
+    DataSet(Map("data" -> data.toJSArray, "label" -> label, "backgroundColor" -> colour))
 }
 
 object ChartJSComponent {
@@ -90,15 +89,20 @@ object ChartJSComponent {
 
     var data: js.Dictionary[js.Any] = js.native
     var options: js.Dictionary[js.Any] = js.native
+    var width: Int = js.native
+    var height: Int = js.native
   }
 
   private val component = JsComponent[Props, Children.None, Null](BarRaw)
 
   object Props {
-    def apply(data: js.Dictionary[js.Any], options: js.Dictionary[js.Any] = js.Dictionary.empty): Props = {
+    def apply(data: js.Dictionary[js.Any], options: js.Dictionary[js.Any] = js.Dictionary.empty, width: Int = 300, height: Int = 150): Props = {
       val props = (new js.Object).asInstanceOf[Props]
       props.data = data
       props.options = options
+      props.width = width
+      props.height = height
+
 
       props
     }
@@ -151,12 +155,12 @@ object ChartJSComponent {
         ),
         js.Dictionary(
           "scales" -> js.Dictionary("yAxes" ->
-              js.Array(
-                js.Dictionary("ticks" ->
-                  js.Dictionary("beginAtZero" -> true)
-                )
+            js.Array(
+              js.Dictionary("ticks" ->
+                js.Dictionary("beginAtZero" -> true)
               )
-            ),
+            )
+          ),
           "title" -> js.Dictionary(
             "display" -> true,
             "text" -> title
@@ -176,7 +180,7 @@ object ChartJSComponent {
 
     def apply(options: js.Dictionary[js.Any]): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] = component(Props(options))
 
-    def apply(title: String, dataSets: Seq[DataSet], labels: Seq[String]): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
+    def apply(title: String, dataSets: Seq[DataSet], labels: Seq[String], width: Int = 300, height: Int = 150, showLegend: Boolean = false): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
       component(Props(
         js.Dictionary(
           "datasets" -> dataSets.map(_.toJS).toJSArray,
@@ -184,22 +188,26 @@ object ChartJSComponent {
           "type" -> "bar"
         ),
         js.Dictionary(
-          "scales" -> js.Dictionary("yAxes" ->
-            js.Array(
-              js.Dictionary("ticks" ->
-                js.Dictionary("beginAtZero" -> true)
+          "scales" -> js.Dictionary(
+            "yAxes" ->
+              js.Array(
+                js.Dictionary("ticks" ->
+                  js.Dictionary("beginAtZero" -> true)
+                )
               )
-            )
           ),
           "title" -> js.Dictionary(
             "display" -> true,
             "text" -> title
           ),
           "legend" -> js.Dictionary(
-            "display" -> false
+            "display" -> showLegend
           )
-        )
-      ))  }
+        ),
+        width,
+        height
+      ))
+  }
 
   @JSImport("react-chartjs-2", "Pie")
   @js.native

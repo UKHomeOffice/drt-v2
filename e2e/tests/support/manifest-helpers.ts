@@ -77,6 +77,23 @@ const passengerProfiles = {
     }
 }
 
+const adultWithCountryCode = (countryCode: string): object => {
+    return {
+        "DocumentIssuingCountryCode": countryCode,
+        "PersonType": "P",
+        "DocumentLevel": "Primary",
+        "Age": 30,
+        "DisembarkationPortCode": "TST",
+        "InTransitFlag": "N",
+        "DisembarkationPortCountryCode": "TST",
+        "NationalityCountryEEAFlag": "",
+        "PassengerIdentifier": "",
+        "DocumentType": "P",
+        "PoavKey": "3",
+        "NationalityCountryCode": countryCode
+    }
+}
+
 
 const manifestForDateTime = (dateString, timeString, passengerList): object => {
     return {
@@ -111,4 +128,5 @@ export {
     manifestForDateTime,
     passengerList,
     passengerProfiles,
+    adultWithCountryCode,
 }

@@ -1,13 +1,12 @@
 package drt.client.services
 
-import drt.shared.{ApiPaxTypeAndQueueCount, PaxType, PaxTypes}
+import drt.shared.{ApiPaxTypeAndQueueCount, PaxTypes}
 
-case class ChartData(dataSets: List[ChartDataSet]) {
+case class ChartData(dataSets: Seq[ChartDataSet]) {
 
 }
 
-
-case class ChartDataSet(title: String, labelValues: Seq[(String, Double)]) {
+case class ChartDataSet(title: String, labelValues: Seq[(String, Double)], colour: String = "rgba(52,52,52,0.4)")  {
 
   def labels: Seq[String] = labelValues.map(_._1)
 
@@ -16,26 +15,24 @@ case class ChartDataSet(title: String, labelValues: Seq[(String, Double)]) {
 }
 
 object ChartData {
-  def splitToPaxTypeData(splits: Set[ApiPaxTypeAndQueueCount]) = ChartData({
-    ChartDataSet(
-      "Passenger Types",
-      splits
-        .foldLeft(Map[String, Double]())(
-          (acc: Map[String, Double], ptqc: ApiPaxTypeAndQueueCount) => {
-            val label = PaxTypes.displayName(ptqc.passengerType)
-            acc + (label -> (acc.getOrElse(label, 0.0) + ptqc.paxCount))
-          }
-        )
-        .toSeq
-        .sortBy {
-          case (paxType, _) => paxType
-        })
-  })
 
+  def splitToPaxTypeData(splits: Set[ApiPaxTypeAndQueueCount], legend: String = "Passenger Types"): ChartDataSet = ChartDataSet(
+    legend,
+    splits
+      .foldLeft(Map[String, Double]())(
+        (acc: Map[String, Double], ptqc: ApiPaxTypeAndQueueCount) => {
+          val label = PaxTypes.displayName(ptqc.passengerType)
+          acc + (label -> (acc.getOrElse(label, 0.0) + ptqc.paxCount))
+        }
+      )
+      .toSeq
+      .sortBy {
+        case (paxType, _) => paxType
+      })
 
   def apply(dataSet: ChartDataSet): ChartData = ChartData(List(dataSet))
 
-  def splitToNationalityChartData(splits: Set[ApiPaxTypeAndQueueCount]): ChartData = apply(
+  def splitToNationalityChartData(splits: Set[ApiPaxTypeAndQueueCount]) =
     ChartDataSet(
       "All Queues",
       splits
@@ -52,8 +49,6 @@ object ChartData {
         .sortBy {
           case (nat, _) => nat
         })
-  )
-
 
 }
 

@@ -21,7 +21,7 @@ object PaxSplitsDataForPaxTypeChartTests extends TestSuite {
 
         val result = ChartData.splitToPaxTypeData(apiSplit)
 
-        val expected = ChartData(ChartDataSet("Passenger Types", List(("EEA Machine Readable", 1.0))))
+        val expected = ChartDataSet("Passenger Types", List(("EEA Machine Readable", 1.0)))
 
         assert(result == expected)
       }
@@ -43,20 +43,17 @@ object PaxSplitsDataForPaxTypeChartTests extends TestSuite {
 
         val result = ChartData.splitToPaxTypeData(apiSplit)
 
-        val expected = ChartData(
-          List(
-            ChartDataSet(
-              "Passenger Types",
-              Seq(
-                ("B5J+ National", 4.0),
-                ("EEA Child", 1.0),
-                ("EEA Machine Readable", 10.0),
-                ("Non-Visa National", 2.0),
-                ("Visa National", 7.0)
-              ),
-            )
-          )
+        val expected = ChartDataSet(
+          "Passenger Types",
+          Seq(
+            ("B5J+ National", 4.0),
+            ("EEA Child", 1.0),
+            ("EEA Machine Readable", 10.0),
+            ("Non-Visa National", 2.0),
+            ("Visa National", 7.0)
+          ),
         )
+
 
         assert(result == expected)
       }
