@@ -33,17 +33,17 @@ lazy val sharedJS = shared.js.settings(name := "sharedJS")
 lazy val elideOptions = settingKey[Seq[String]]("Set limit for elidable functions")
 
 lazy val clientMacrosJS: Project = (project in file("client-macros"))
-      .enablePlugins(ScalaJSPlugin)
-      .settings(
-          name := "clientMacrosJS",
-          version := Settings.version,
-          scalaVersion := Settings.versions.scala,
-          scalacOptions ++= Settings.scalacOptions,
-          libraryDependencies ++= Seq(
-              "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact withSources(),
-              "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact withSources()
-          )
-      )
+  .enablePlugins(ScalaJSPlugin)
+  .settings(
+    name := "clientMacrosJS",
+    version := Settings.version,
+    scalaVersion := Settings.versions.scala,
+    scalacOptions ++= Settings.scalacOptions,
+    libraryDependencies ++= Seq(
+      "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact withSources(),
+      "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact withSources()
+    )
+  )
 
 
 // instantiate the JS project for SBT with some additional settings
@@ -114,6 +114,8 @@ lazy val server = (project in file("server"))
     dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.8.7",
     dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.8.7",
     dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.8.7",
+    dependencyOverrides += "io.netty" % "netty-all" % "4.0.56.Final",
+
     commands += ReleaseCmd,
     // connect to the client project
     scalaJSProjects := clients,

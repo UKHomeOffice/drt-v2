@@ -60,7 +60,7 @@ object Settings {
     val scalaCheck = "1.13.4"
     val akkaPersistenceInMemory = "2.5.15.2"
     val akkaPersistenceJdbc = "3.5.0"
-    val bluebus = "0.3.1-DRT"
+    val bluebus = "0.3.2-DRT"
     val postgres = "42.2.2"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
@@ -202,6 +202,8 @@ object Settings {
     "com.box" % "box-java-sdk" % "2.19.0",
     "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
     "org.bitbucket.b_c" % "jose4j" % "0.4.4",
+
+    "io.netty" % "netty-all" % "4.0.56.Final",
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,

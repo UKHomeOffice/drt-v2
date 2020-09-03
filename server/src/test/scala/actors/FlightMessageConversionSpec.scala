@@ -20,7 +20,7 @@ class FlightMessageConversionSpec extends Specification {
     Gate = Option("G1"),
     Stand = Option("S1"),
     MaxPax = Option(350),
-    ActPax = Option(122),œœ
+    ActPax = Option(122),
     TranPax = Option(10),
     RunwayID = Option("R1"),
     BaggageReclaimId = Option("B1"),
@@ -95,6 +95,7 @@ class FlightMessageConversionSpec extends Specification {
     )
     "When I convert it to a protobuf message and then back to an Arrival" >> {
       val fwsMessage = FlightMessageConversion.flightWithSplitsToMessage(fws)
+      println(fwsMessage)
       val restoredFWS = FlightMessageConversion.flightWithSplitsFromMessage(fwsMessage)
       "Then the converted Arrival should match the original" >> {
         restoredFWS === fws

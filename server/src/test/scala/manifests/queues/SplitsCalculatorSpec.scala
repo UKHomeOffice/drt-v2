@@ -68,14 +68,14 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             Queues.EeaDesk,
             3,
             Option(Map(Nationality(CountryCodes.UK) -> 2)),
-            Option(Map(PaxAge(35) -> 1))
+            Option(Map(PaxAge(35) -> 2))
           ),
           ApiPaxTypeAndQueueCount
           (PaxTypes.EeaMachineReadable,
             Queues.EGate,
             1,
             Option(Map(Nationality(CountryCodes.UK) -> 2)),
-            Option(Map(PaxAge(35) -> 1))
+            Option(Map(PaxAge(35) -> 2))
           )
         ),
         Historical,
@@ -111,14 +111,14 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             Queues.EeaDesk,
             3,
             Option(Map(Nationality(CountryCodes.USA) -> 2)),
-            Option(Map(PaxAge(35) -> 1))
+            Option(Map(PaxAge(35) -> 2))
           ),
           ApiPaxTypeAndQueueCount(
             PaxTypes.B5JPlusNational,
             Queues.EGate,
             1,
             Option(Map(Nationality(CountryCodes.USA) -> 2)),
-            Option(Map(PaxAge(35) -> 1))
+            Option(Map(PaxAge(35) -> 2))
           )
         ),
         Historical,
@@ -187,14 +187,14 @@ class SplitsCalculatorSpec extends CrunchTestLike {
           ApiPaxTypeAndQueueCount(
             PaxTypes.B5JPlusNational,
             Queues.EGate,
-            1,
+            0,
             Option(Map(Nationality(CountryCodes.USA) -> 1)),
             Option(Map(PaxAge(35) -> 1))
           ),
           ApiPaxTypeAndQueueCount(
             PaxTypes.B5JPlusNational,
             Queues.EeaDesk,
-            1,
+            2,
             Option(Map(Nationality(CountryCodes.USA) -> 1)),
             Option(Map(PaxAge(35) -> 1))
           ),

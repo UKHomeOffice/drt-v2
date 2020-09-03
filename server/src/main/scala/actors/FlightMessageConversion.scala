@@ -85,7 +85,8 @@ object FlightMessageConversion {
       paxType = Option(ptqc.passengerType.name),
       queueType = Option(ptqc.queueType.toString),
       paxValue = Option(ptqc.paxCount),
-      nationalities = splitNationalitiesToMessage(ptqc)
+      nationalities = splitNationalitiesToMessage(ptqc),
+      ages = splitAgesToMessage(ptqc)
     )
   }
 
@@ -93,6 +94,14 @@ object FlightMessageConversion {
     .nationalities
     .map(_.map {
       case (nat, count) => SplitNationalityCountMessage(Option(nat.code), Option(count))
+    })
+    .getOrElse(Seq())
+    .toSeq
+
+  def splitAgesToMessage(ptqc: ApiPaxTypeAndQueueCount): Seq[SplitAgeCountMessage] = ptqc
+    .ages
+    .map(_.map {
+      case (age, count) => SplitAgeCountMessage(Option(age.years), Option(count))
     })
     .getOrElse(Seq())
     .toSeq
