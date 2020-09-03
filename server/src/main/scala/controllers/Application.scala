@@ -106,19 +106,6 @@ trait AirportConfProvider extends AirportConfiguration {
   }
 }
 
-trait ProdPassengerSplitProviders {
-  self: AirportConfiguration =>
-
-  val csvSplitsProvider: SplitsProvider.SplitProvider = SplitsProvider.csvProvider
-
-  def egatePercentageProvider(apiFlight: Arrival): Double = {
-    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight.flightCodeString, MilliDate(apiFlight.Scheduled)), 0.6)
-  }
-
-  def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] =
-    Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight.flightCodeString, MilliDate(apiFlight.Scheduled)), 0d, 0d))
-}
-
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -171,8 +158,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithPortState
     with WithStaffing
     with WithVersion
-    with WithSimulations
-    with ProdPassengerSplitProviders {
+    with WithSimulations {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
   implicit val mat: ActorMaterializer = DrtActorSystem.mat

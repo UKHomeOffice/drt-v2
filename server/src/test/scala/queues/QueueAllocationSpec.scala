@@ -8,7 +8,6 @@ import drt.shared.{PaxTypes, _}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.specs2.mutable.Specification
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser.PaxAge
 import queueus._
 import services.SDate
 
@@ -46,7 +45,8 @@ class QueueAllocationSpec extends Specification {
     val expected = Splits(Set(ApiPaxTypeAndQueueCount(
       PaxTypes.EeaMachineReadable,
       Queues.EGate, 1,
-      Option(Map(Nationality("GBR") -> 1))
+      Option(Map(Nationality("GBR") -> 1)),
+      Option(Map(PaxAge(21) -> 1))
     )), Historical, None, PaxNumbers)
 
     val result = PaxTypeQueueAllocation(DefaultPaxTypeAllocator, testQueueAllocator).toSplits(T1, bestManifest)
@@ -72,8 +72,20 @@ class QueueAllocationSpec extends Specification {
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, Option(Map(Nationality("GBR") -> 1))),
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("ZAF") -> 1)))
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.EeaMachineReadable,
+          Queues.EGate,
+          1,
+          Option(Map(Nationality("GBR") -> 1)),
+          Option(Map(PaxAge(21) -> 1))
+        ),
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.VisaNational,
+          Queues.NonEeaDesk,
+          1,
+          Option(Map(Nationality("ZAF") -> 1)),
+          Option(Map(PaxAge(21) -> 1))
+        )
       ),
       Historical,
       None,
@@ -100,8 +112,20 @@ class QueueAllocationSpec extends Specification {
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EGate, 0.75, Option(Map(Nationality("USA") -> 0.75))),
-        ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EeaDesk, 0.25, Option(Map(Nationality("USA") -> 0.25)))
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.B5JPlusNational,
+          Queues.EGate,
+          0.75,
+          Option(Map(Nationality("USA") -> 0.75)),
+          Option(Map(PaxAge(21) -> 0.75))
+        ),
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.B5JPlusNational,
+          Queues.EeaDesk,
+          0.25,
+          Option(Map(Nationality("USA") -> 0.25)),
+          Option(Map(PaxAge(21) -> 0.25))
+        )
       ),
       Historical,
       None,
@@ -129,7 +153,13 @@ class QueueAllocationSpec extends Specification {
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNationalBelowEGateAge, Queues.EeaDesk, 1, Option(Map(Nationality("USA") -> 1)))
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.B5JPlusNationalBelowEGateAge,
+          Queues.EeaDesk,
+          1,
+          Option(Map(Nationality("USA") -> 1)),
+          Option(Map(PaxAge(11) -> 1))
+        )
       ),
       Historical,
       None,
@@ -161,7 +191,13 @@ class QueueAllocationSpec extends Specification {
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)))
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.EeaBelowEGateAge,
+          Queues.EeaDesk,
+          1,
+          Option(Map(Nationality("GBR") -> 1)),
+          Option(Map(PaxAge(11) -> 1))
+        )
       ),
       Historical,
       None,
@@ -194,8 +230,20 @@ class QueueAllocationSpec extends Specification {
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1))),
-        ApiPaxTypeAndQueueCount(PaxTypes.Transit, Queues.Transfer, 1, Option(Map(Nationality("GBR") -> 1)))
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.EeaBelowEGateAge,
+          Queues.EeaDesk,
+          1,
+          Option(Map(Nationality("GBR") -> 1)),
+          Option(Map(PaxAge(11) -> 1))
+        ),
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.Transit,
+          Queues.Transfer,
+          1,
+          Option(Map(Nationality("GBR") -> 1)),
+          Option(Map(PaxAge(11) -> 1))
+        )
       ),
       Historical,
       None,
@@ -229,8 +277,20 @@ class QueueAllocationSpec extends Specification {
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Option(Map(Nationality("ZWE") -> 0.1))),
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.9, Option(Map(Nationality("ZWE") -> 0.9)))
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.VisaNational,
+          Queues.FastTrack,
+          0.1,
+          Option(Map(Nationality("ZWE") -> 0.1)),
+          Option(Map(PaxAge(22) -> 0.1))
+        ),
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.VisaNational,
+          Queues.NonEeaDesk,
+          0.9,
+          Option(Map(Nationality("ZWE") -> 0.9)),
+          Option(Map(PaxAge(22) -> 0.9))
+        )
       ),
       Historical,
       None,
@@ -262,7 +322,13 @@ class QueueAllocationSpec extends Specification {
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("ZWE") -> 1)))
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.VisaNational,
+          Queues.NonEeaDesk,
+          1,
+          Option(Map(Nationality("ZWE") -> 1)),
+          Option(Map(PaxAge(22) -> 1))
+        )
       ),
       Historical,
       None,
@@ -294,8 +360,20 @@ class QueueAllocationSpec extends Specification {
 
     val expected = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.1, Option(Map(Nationality("ZWE") -> 0.1))),
-        ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 0.9, Option(Map(Nationality("ZWE") -> 0.9)))
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.VisaNational,
+          Queues.FastTrack,
+          0.1,
+          Option(Map(Nationality("ZWE") -> 0.1)),
+          Option(Map(PaxAge(22) -> 0.1))
+        ),
+        ApiPaxTypeAndQueueCount(
+          PaxTypes.VisaNational,
+          Queues.NonEeaDesk,
+          0.9,
+          Option(Map(Nationality("ZWE") -> 0.9)),
+          Option(Map(PaxAge(22) -> 0.9))
+        )
       ),
       Historical,
       None,

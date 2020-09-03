@@ -30,9 +30,6 @@ object VoyageManifestParser {
 
   case class EeaFlag(value: String)
 
-  case class PaxAge(years: Int) {
-    def isUnder(age: Int): Boolean = years < age
-  }
 
   case class PassengerInfoJson(DocumentType: Option[DocumentType],
                                DocumentIssuingCountryCode: Nationality,

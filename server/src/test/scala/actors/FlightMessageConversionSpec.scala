@@ -1,10 +1,10 @@
 package actors
 
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.Terminals.T1
+import drt.shared._
 import drt.shared.api.{Arrival, FlightCodeSuffix}
-import drt.shared.{AclFeedSource, ApiFeedSource, FeedSource, LiveFeedSource, Operator, PortCode}
 import org.specs2.mutable.Specification
-import server.protobuf.messages.FlightsMessage.FlightMessage
 
 class FlightMessageConversionSpec extends Specification {
 
@@ -20,7 +20,7 @@ class FlightMessageConversionSpec extends Specification {
     Gate = Option("G1"),
     Stand = Option("S1"),
     MaxPax = Option(350),
-    ActPax = Option(122),
+    ActPax = Option(122),œœ
     TranPax = Option(10),
     RunwayID = Option("R1"),
     BaggageReclaimId = Option("B1"),
@@ -33,7 +33,7 @@ class FlightMessageConversionSpec extends Specification {
     PcpTime = Option(10L),
     FeedSources = Set(AclFeedSource, LiveFeedSource),
     CarrierScheduled = Option(4L)
-    )
+  )
 
   "Given an Arrival with no suffix" >> {
     "When I convert it to a protobuf message and then back to an Arrival" >> {
@@ -63,6 +63,41 @@ class FlightMessageConversionSpec extends Specification {
       val restoredArrival = FlightMessageConversion.flightMessageToApiFlight(arrivalMessage)
       "Then the converted Arrival should match the original" >> {
         restoredArrival === arrivalWith0Pax
+      }
+    }
+  }
+
+  "Given a flight with splits containing API Splits" >> {
+    val fws = ApiFlightWithSplits(
+      arrival,
+      Set(
+        Splits(
+          Set(
+            ApiPaxTypeAndQueueCount(
+              PaxTypes.EeaMachineReadable,
+              Queues.EeaDesk,
+              10,
+              Option(Map(
+                Nationality("GBR") -> 8,
+                Nationality("ITA") -> 2
+              )),
+              Option(Map(
+                PaxAge(5) -> 5,
+                PaxAge(32) -> 5
+              ))
+            )
+          ),
+          SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+          Option(EventType("DC")
+        )
+      )
+    )
+    )
+    "When I convert it to a protobuf message and then back to an Arrival" >> {
+      val fwsMessage = FlightMessageConversion.flightWithSplitsToMessage(fws)
+      val restoredFWS = FlightMessageConversion.flightWithSplitsFromMessage(fwsMessage)
+      "Then the converted Arrival should match the original" >> {
+        restoredFWS === fws
       }
     }
   }

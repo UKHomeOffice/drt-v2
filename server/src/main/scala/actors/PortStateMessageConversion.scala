@@ -53,7 +53,7 @@ object PortStateMessageConversion {
       actDesks = cmm.actDesks,
       actWait = cmm.actWait,
       lastUpdated = cmm.lastUpdated
-      )
+    )
   }
 
   def staffMinuteFromMessage(smm: StaffMinuteMessage): StaffMinute = {
@@ -66,7 +66,7 @@ object PortStateMessageConversion {
       fixedPoints = smm.fixedPoints.getOrElse(0),
       movements = smm.movements.getOrElse(0),
       lastUpdated = smm.lastUpdated
-      )
+    )
   }
 
   def staffMinuteToMessage(sm: StaffMinute): StaffMinuteMessage = StaffMinuteMessage(
@@ -89,7 +89,7 @@ object PortStateMessageConversion {
       portState.flights.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
       portState.crunchMinutes.values.toList.map(crunchMinuteToMessage),
       portState.staffMinutes.values.toList.map(staffMinuteToMessage)
-      )
+    )
   }
 
   def splitMessageToApiSplits(sm: SplitMessage): Splits = {
@@ -99,16 +99,42 @@ object PortStateMessageConversion {
     }
 
     Splits(
-      sm.paxTypeAndQueueCount.map(ptqcm => ApiPaxTypeAndQueueCount(
-        PaxType(ptqcm.paxType.getOrElse("")),
-        Queue(ptqcm.queueType.getOrElse("")),
-        ptqcm.paxValue.getOrElse(0d),
-        None
-        )).toSet,
+      sm.paxTypeAndQueueCount.map(ptqcm => {
+        ApiPaxTypeAndQueueCount(
+          PaxType(ptqcm.paxType.getOrElse("")),
+          Queue(ptqcm.queueType.getOrElse("")),
+          ptqcm.paxValue.getOrElse(0d),
+          nationalitiesFromMessage(ptqcm),
+          passengerAgesFromMessage(ptqcm)
+        )
+      }).toSet,
       splitSource,
       sm.eventType.map(EventType(_)),
-      SplitStyle(sm.style.getOrElse(""))
-      )
+      SplitStyle(sm.style.getOrElse("")),
+
+    )
+  }
+
+   def nationalitiesFromMessage(ptqcm: PaxTypeAndQueueCountMessage) = {
+    ptqcm.nationalities.map(nc => {
+      nc.paxNationality -> nc.count
+    }).collect {
+      case (Some(nat), Some(count)) => Nationality(nat) -> count
+    }.toMap match {
+      case nats if nats.isEmpty => None
+      case nats => Option(nats)
+    }
+  }
+
+  def passengerAgesFromMessage(ptqcm: PaxTypeAndQueueCountMessage) = {
+    ptqcm.ages.map(pa => {
+      pa.paxAge -> pa.count
+    }).collect {
+      case (Some(age), Some(count)) => PaxAge(age) -> count
+    }.toMap match {
+      case ages if ages.isEmpty => None
+      case ages => Option(ages)
+    }
   }
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = CrunchMinuteMessage(
@@ -124,5 +150,5 @@ object PortStateMessageConversion {
     actDesks = cm.actDesks,
     actWait = cm.actWait,
     lastUpdated = cm.lastUpdated
-    )
+  )
 }

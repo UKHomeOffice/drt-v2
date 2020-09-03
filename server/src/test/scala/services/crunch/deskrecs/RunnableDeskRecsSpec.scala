@@ -64,8 +64,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
   val noDelay: Long = 0L
   val longDelay = 500L
   val historicSplits: Splits = Splits(Set(
-    ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None),
-    ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None)),
+    ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None, None),
+    ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None, None)),
                                       SplitSources.Historical, None, Percentage)
   val minutesToCrunch = 30
   val nowFromSDate: () => SDateLike = () => SDate.now()
@@ -245,7 +245,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = pcpOne, actPax = Option(25))
 
     val historicSplits = Splits(
-      Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100, None)),
+      Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100, None, None)),
       SplitSources.Historical, None, Percentage)
 
     val portStateProbe = TestProbe("port-state")
@@ -300,7 +300,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25))
 
     val historicSplits = Splits(
-      Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100, None)),
+      Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100, None, None)),
       SplitSources.Historical, None, Percentage)
 
     val noonMillis = SDate(noon).millisSinceEpoch

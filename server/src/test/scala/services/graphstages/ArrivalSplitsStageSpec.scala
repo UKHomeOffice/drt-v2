@@ -110,11 +110,12 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
 
     manifestsLiveInput.offer(manifests.map(BestAvailableManifest(_)).toList)
 
-    val terminalAverage = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 100.0, None)), SplitSources.TerminalAverage, None, Percentage)
+    val terminalAverage = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 100.0, None, None )), SplitSources.TerminalAverage, None, Percentage)
     val apiSplits = Splits(
       Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 1.6, Some(Map(Nationality("GBR") -> 0.8, Nationality("ITA") -> 0.8))),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 0.4, Some(Map(Nationality("GBR") -> 0.2, Nationality("ITA") -> 0.2)))),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 1.6, Some(Map(Nationality("GBR") -> 0.8, Nationality("ITA") -> 0.8)), Some(Map(PaxAge(22) -> 0.8))),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 0.4, Some(Map(Nationality("GBR") -> 0.2, Nationality("ITA") -> 0.2)), Some(Map(PaxAge(22) -> 0.2)))
+      ),
       SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)
 
     val expectedSplits = Set(terminalAverage, apiSplits)
@@ -127,9 +128,12 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     probe.fishForMessage(3 seconds) {
       case fs: FlightsWithSplitsDiff =>
         val fws = fs.flightsToUpdate.map(f => f.copy(lastUpdated = None))
+        println(fws)
+        println(expected)
         fws === expected
     }
 
     true
   }
 }
+

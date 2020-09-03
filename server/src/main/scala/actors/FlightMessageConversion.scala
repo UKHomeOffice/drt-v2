@@ -6,7 +6,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsMessage, PaxTypeAndQueueCountMessage, SplitMessage}
+import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightMessage, FlightStateSnapshotMessage}
 import services.SDate
 
@@ -21,7 +21,7 @@ object FlightMessageConversion {
     FlightStateSnapshotMessage(
       state.arrivals.values.map(apiFlightToFlightMessage).toSeq,
       maybeStatusMessages
-      )
+    )
   }
 
   def feedStatusesToMessage(statuses: FeedStatuses): Option[FeedStatusesMessage] = {
@@ -49,7 +49,7 @@ object FlightMessageConversion {
     lastSuccessAt = message.lastSuccessAt,
     lastFailureAt = message.lastFailureAt,
     lastUpdatesAt = message.lastUpdatesAt
-    )
+  )
 
   def feedStatusFromFeedStatusMessage(message: FeedStatusMessage): FeedStatus = {
     if (message.updates.isDefined)
@@ -69,7 +69,7 @@ object FlightMessageConversion {
     FlightMessageConversion.flightMessageToApiFlight(fm.flight.get),
     fm.splits.map(sm => splitMessageToApiSplits(sm)).toSet,
     lastUpdated = fm.lastUpdated
-    )
+  )
 
   def apiSplitsToMessage(s: Splits): SplitMessage = {
     SplitMessage(
@@ -77,16 +77,25 @@ object FlightMessageConversion {
       source = Option(s.source.toString),
       eventType = s.maybeEventType.map(_.toString),
       style = Option(s.splitStyle.name)
-      )
+    )
   }
 
   def paxTypeAndQueueCountToMessage(ptqc: ApiPaxTypeAndQueueCount): PaxTypeAndQueueCountMessage = {
     PaxTypeAndQueueCountMessage(
-      Option(ptqc.passengerType.name),
-      Option(ptqc.queueType.toString),
-      Option(ptqc.paxCount)
-      )
+      paxType = Option(ptqc.passengerType.name),
+      queueType = Option(ptqc.queueType.toString),
+      paxValue = Option(ptqc.paxCount),
+      nationalities = splitNationalitiesToMessage(ptqc)
+    )
   }
+
+  def splitNationalitiesToMessage(ptqc: ApiPaxTypeAndQueueCount): Seq[SplitNationalityCountMessage] = ptqc
+    .nationalities
+    .map(_.map {
+      case (nat, count) => SplitNationalityCountMessage(Option(nat.code), Option(count))
+    })
+    .getOrElse(Seq())
+    .toSeq
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
@@ -113,7 +122,7 @@ object FlightMessageConversion {
       actualChox = apiFlight.ActualChox.filter(_ != 0),
       carrierScheduled = apiFlight.CarrierScheduled,
       apiPax = apiFlight.ApiPax
-      )
+    )
   }
 
   def millisOptionFromArrivalDateString(datetime: String): Option[Long] = datetime match {
@@ -152,7 +161,7 @@ object FlightMessageConversion {
       FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet,
       CarrierScheduled = flightMessage.carrierScheduled,
       ApiPax = flightMessage.apiPax
-      )
+    )
   }
 
   def apiFlightDateTime(millisOption: Option[Long]): String = millisOption match {

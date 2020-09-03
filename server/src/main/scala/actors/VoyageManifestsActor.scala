@@ -16,7 +16,7 @@ import services.SDate
 import services.graphstages.Crunch
 
 import scala.collection.immutable.SortedMap
-import scala.util.Try
+import scala.util.{Success, Try}
 
 case class VoyageManifestState(manifests: SortedMap[MilliDate, VoyageManifest],
                                latestZipFilename: String,
@@ -201,13 +201,20 @@ class VoyageManifestsActor(val initialSnapshotBytesThreshold: Int,
       DocumentType = m.documentType.map(DocumentType(_)),
       DocumentIssuingCountryCode = Nationality(m.documentIssuingCountryCode.getOrElse("")),
       EEAFlag = EeaFlag(m.eeaFlag.getOrElse("")),
-      Age = m.age.flatMap(ageString => Try(ageString.toInt).toOption.map(PaxAge)),
+      Age = paxAgeFromMessage(m),
       DisembarkationPortCode = m.disembarkationPortCode.map(PortCode(_)),
       InTransitFlag = InTransit(m.inTransitFlag.getOrElse("")),
       DisembarkationPortCountryCode = m.disembarkationPortCountryCode.map(Nationality(_)),
       NationalityCountryCode = m.nationalityCountryCode.map(Nationality(_)),
       PassengerIdentifier = m.passengerIdentifier
     )
+  }
+
+  private def paxAgeFromMessage(m: PassengerInfoJsonMessage) = {
+    m.age.map(ageString => Try(ageString.toInt)) match {
+      case Some(Success(age)) => Option(PaxAge(age))
+      case _ => None
+    }
   }
 
   def voyageManifestFromMessage(m: VoyageManifestMessage): VoyageManifest = {

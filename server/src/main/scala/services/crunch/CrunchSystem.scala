@@ -40,7 +40,6 @@ case class CrunchProps[FR](
                             logLabel: String = "",
                             airportConfig: AirportConfig,
                             pcpArrival: Arrival => MilliDate,
-                            historicalSplitsProvider: SplitProvider,
                             portStateActor: ActorRef,
                             maxDaysToCrunch: Int,
                             expireAfterMillis: Int,

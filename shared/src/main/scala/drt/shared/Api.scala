@@ -129,10 +129,21 @@ object Nationality {
   implicit val rw: ReadWriter[Nationality] = macroRW
 }
 
-case class ApiPaxTypeAndQueueCount(passengerType: PaxType,
-                                   queueType: Queue,
-                                   paxCount: Double,
-                                   nationalities: Option[IMap[Nationality, Double]])
+case class PaxAge(years: Int) {
+  def isUnder(age: Int): Boolean = years < age
+}
+
+object PaxAge {
+  implicit val rw: ReadWriter[PaxAge] = macroRW
+}
+
+case class ApiPaxTypeAndQueueCount(
+                                    passengerType: PaxType,
+                                    queueType: Queue,
+                                    paxCount: Double,
+                                    nationalities: Option[IMap[Nationality, Double]],
+                                    ages: Option[IMap[PaxAge, Double]]
+                                  )
 
 object ApiPaxTypeAndQueueCount {
   implicit val rw: ReadWriter[ApiPaxTypeAndQueueCount] = macroRW
@@ -495,10 +506,10 @@ trait SDateLike {
   def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
 
   /**
-    * Days of the week 1 to 7 (Monday is 1)
-    *
-    * @return
-    */
+   * Days of the week 1 to 7 (Monday is 1)
+   *
+   * @return
+   */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int
