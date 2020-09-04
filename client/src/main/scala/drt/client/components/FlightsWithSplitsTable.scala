@@ -19,9 +19,6 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, TableSection}
-import org.scalajs.dom.window
-
-import scala.collection.immutable
 
 object FlightsWithSplitsTable {
 
@@ -234,13 +231,14 @@ object FlightTableRow {
               val nationalityData: ChartData = ChartData(ChartData.splitToNationalityChartData(splits.splits))
               val liveAPIPaxTypes = ChartData.splitToPaxTypeData(splits.splits, "Live API")
                 .copy(colour = "rgb(112,128,144)")
-
               val paxTypeSplitComparison: Seq[ChartDataSet] = flightWithSplits
                 .splits
                 .find(_.source == SplitSources.Historical)
                 .map(s => ChartData.splitToPaxTypeData(s.splits, "Historic")).toSeq :+ liveAPIPaxTypes
 
               val paxTypeData: ChartData = ChartData(paxTypeSplitComparison)
+
+              val ageData: ChartData = ChartData(ChartData.splitDataToAgeRanges(splits.splits))
 
               TippyJSComponent(
                 <.div(^.cls := "container arrivals__table__flight__chart-box",
@@ -256,11 +254,23 @@ object FlightTableRow {
                     <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
                       ChartJSComponent.HorizontalBar(
                         "Passenger Types",
-                        paxTypeData.dataSets.map(d => DataSet(d.title, d.values, d.colour)),
+                        paxTypeData.dataSets.map(cd =>
+                          cd.copy(
+                            labelValues = ChartData.applySplitsToTotal(cd.labelValues, props.pcpPaxFn(flight)
+                            ))
+                        ).map(d => DataSet(d.title, d.values, d.colour)),
                         paxTypeData.dataSets.head.labels,
                         300,
                         300,
-                        true
+                        showLegend = true
+                      )),
+                    <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
+                      ChartJSComponent.HorizontalBar(
+                        "Age Breakdown",
+                        ageData.dataSets.map(d => DataSet(d.title, d.values)),
+                        ageData.dataSets.head.labels,
+                        300,
+                        300
                       ))
                   )
                 ).rawElement, interactive = true, <.span(Icon.infoCircle))
