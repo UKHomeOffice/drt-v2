@@ -47,6 +47,24 @@ Each port has their own instance. The feeds are chose at application start based
 ### Setting up Postgres locally
 
 ```
+## Linux
+To enable non-system account logins you'll need to edit some configuration:
+
+sudo vim /etc/postgresql/12/main/pg_hba.conf
+
+Change the following line;
+
+local   all             all                                     peer
+to
+local   all             all                                     md5
+
+
+To access postgress before you've set up any additional accounts you'll need to use it like this;
+
+sudo -u postgres psql
+
+The following commands also have to be prefixed with 'sudo -u postgres';
+
 createuser ltn
 createdb -O ltn ltn
 psql -U ltn -W -h localhost ltn
