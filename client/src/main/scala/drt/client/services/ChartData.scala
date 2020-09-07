@@ -71,7 +71,7 @@ object ChartData {
     def apply(bottom: Int): AgeRange = AgeRange(bottom, None)
   }
 
-  def splitDataToAgeRanges(splits: Set[ApiPaxTypeAndQueueCount]) = {
+  def splitDataToAgeRanges(splits: Set[ApiPaxTypeAndQueueCount]): ChartDataSet = {
     val ageRanges = List(
       AgeRange(0, 11),
       AgeRange(12, 24),

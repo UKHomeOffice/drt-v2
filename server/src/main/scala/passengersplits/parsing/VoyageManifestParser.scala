@@ -7,7 +7,7 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat}
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 object VoyageManifestParser {
   def parseVoyagePassengerInfo(content: String): Try[VoyageManifest] = {
@@ -113,8 +113,8 @@ object VoyageManifestParser {
         case None => JsNumber(-1)
       }
 
-      def read(value: JsValue): Option[PaxAge] = value match {
-        case num: JsNumber if num.value >= 0 => Option(PaxAge(num.value.toInt))
+      def read(value: JsValue): Option[PaxAge] = Try(value.convertTo[String].toInt) match {
+        case Success(num) if num > 0 => Option(PaxAge(num))
         case _ => None
       }
     }

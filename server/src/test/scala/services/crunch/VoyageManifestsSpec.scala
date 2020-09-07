@@ -9,6 +9,7 @@ import drt.shared.Terminals.T1
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{DqManifests, ManifestsFeedSuccess}
 import services.SDate
@@ -420,6 +421,66 @@ class VoyageManifestsSpec extends CrunchTestLike {
     }
 
     success
+  }
+
+  "Given a voyage manifest json string I should get back a correctly parsed VoyageManifest" >> {
+    val manifestString =
+      """|{
+         |    "EventCode": "DC",
+         |    "DeparturePortCode": "AMS",
+         |    "VoyageNumberTrailingLetter": "",
+         |    "ArrivalPortCode": "TST",
+         |    "DeparturePortCountryCode": "MAR",
+         |    "VoyageNumber": "0123",
+         |    "VoyageKey": "key",
+         |    "ScheduledDateOfDeparture": "2020-09-07",
+         |    "ScheduledDateOfArrival": "2020-09-07",
+         |    "CarrierType": "AIR",
+         |    "CarrierCode": "TS",
+         |    "ScheduledTimeOfDeparture": "06:30:00",
+         |    "ScheduledTimeOfArrival": "09:30:00",
+         |    "FileId": "fileID",
+         |    "PassengerList": [
+         |        {
+         |            "DocumentIssuingCountryCode": "GBR",
+         |            "PersonType": "P",
+         |            "DocumentLevel": "Primary",
+         |            "Age": "30",
+         |            "DisembarkationPortCode": "TST",
+         |            "InTransitFlag": "N",
+         |            "DisembarkationPortCountryCode": "TST",
+         |            "NationalityCountryEEAFlag": "EEA",
+         |            "PassengerIdentifier": "id",
+         |            "DocumentType": "P",
+         |            "PoavKey": "1",
+         |            "NationalityCountryCode": "GBR"
+         |         }
+         |    ]
+         |}""".stripMargin
+    val result = VoyageManifestParser.parseVoyagePassengerInfo(manifestString).get
+
+    val expected = VoyageManifest(
+      EventCode = EventType("DC"),
+      ArrivalPortCode = PortCode("TST"),
+      DeparturePortCode = PortCode("AMS"),
+      VoyageNumber = VoyageNumber(123),
+      CarrierCode = CarrierCode("TS"),
+      ScheduledDateOfArrival = ManifestDateOfArrival("2020-09-07"),
+      ScheduledTimeOfArrival = ManifestTimeOfArrival("09:30:00"),
+      PassengerList = List(PassengerInfoJson(
+        DocumentType = Option(DocumentType("P")),
+        DocumentIssuingCountryCode = Nationality("GBR"),
+        EEAFlag = EeaFlag("EEA"),
+        Age = Option(PaxAge(30)),
+        DisembarkationPortCode = Option(PortCode("TST")),
+        InTransitFlag = InTransit("N"),
+        DisembarkationPortCountryCode = Some(Nationality("TST")),
+        NationalityCountryCode = Some(Nationality("GBR")),
+        PassengerIdentifier = Option("id")
+      ))
+    )
+
+    result === expected
   }
 }
 
