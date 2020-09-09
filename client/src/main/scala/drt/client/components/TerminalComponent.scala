@@ -4,17 +4,17 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.auth.{LoggedInUser, StaffEdit}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
+import drt.client.components.TooltipComponent._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
-import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
 
 object TerminalComponent {
 
@@ -130,7 +130,8 @@ object TerminalComponent {
                       ))
                     }),
                   <.li(^.className := snapshotDataClass,
-                    <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot"), ^.onClick --> {
+                    <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot", " ", snapshotTooltip),
+                    ^.onClick --> {
                       GoogleEventTracker.sendEvent(terminalName, "click", "Snapshot")
                       props.router.set(props.terminalPageTab.copy(
                         mode = "snapshot",
@@ -140,14 +141,16 @@ object TerminalComponent {
                     }
                   ),
                   <.li(^.className := planningClass,
-                    <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"), ^.onClick --> {
+                    <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"),
+                    ^.onClick --> {
                       GoogleEventTracker.sendEvent(terminalName, "click", "Planning")
                       props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
                     }
                   ),
                   if (loggedInUser.roles.contains(StaffEdit))
                     <.li(^.className := staffingClass,
-                      <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing"), ^.onClick --> {
+                      <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip),
+                      ^.onClick --> {
                         GoogleEventTracker.sendEvent(terminalName, "click", "Monthly Staffing")
                         props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
                       }
