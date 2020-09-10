@@ -43,13 +43,7 @@ object ProdFeedRequester extends FeedRequesterLike {
 
   override def send(request: HttpRequest)
                    (implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[HttpResponse] =
-    Http()
-      .singleRequest(request)
-      .recover {
-        case t =>
-          log.error("Failed to make HTTP request", t)
-          HttpResponse(StatusCodes.InternalServerError)
-      }
+    Http().singleRequest(request)
 }
 
 case class MagFeed(key: String,
@@ -93,6 +87,10 @@ case class MagFeed(key: String,
     Source(0 to 1000 by 100)
       .mapAsync(parallelism = 10) { pageFrom =>
         requestArrivalsPage(start, pageFrom, size = 100)
+          .recover { case t =>
+            log.error("Failed to fetch arrivals page", t)
+            Failure(t)
+          }
       }
       .mapConcat {
         case Success(magArrivals) =>
