@@ -27,19 +27,29 @@ import scala.util.{Failure, Success, Try}
 
 
 trait FeedRequesterLike {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String
 
-  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse]
+  def send(request: HttpRequest)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[HttpResponse]
 }
 
 object ProdFeedRequester extends FeedRequesterLike {
   override def sendTokenRequest(header: String,
                                 claim: String,
                                 key: String,
-                                algorithm: JwtAlgorithm): String = Jwt.encode(header: String, claim: String, key: String, algorithm: JwtAlgorithm)
+                                algorithm: JwtAlgorithm): String =
+    Try(Jwt.encode(header: String, claim: String, key: String, algorithm: JwtAlgorithm)).getOrElse("")
 
   override def send(request: HttpRequest)
-                   (implicit actorSystem: ActorSystem): Future[HttpResponse] = Http().singleRequest(request)
+                   (implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[HttpResponse] =
+    Http()
+      .singleRequest(request)
+      .recover {
+        case t =>
+          log.error("Failed to make HTTP request", t)
+          HttpResponse(StatusCodes.InternalServerError)
+      }
 }
 
 case class MagFeed(key: String,
@@ -66,7 +76,7 @@ case class MagFeed(key: String,
 
   java.security.Security.addProvider(
     new org.bouncycastle.jce.provider.BouncyCastleProvider()
-    )
+  )
 
   def newToken: String = feedRequester.sendTokenRequest(header = header, claim = claim, key = key, algorithm = JwtAlgorithm.RS256)
 
@@ -112,7 +122,7 @@ case class MagFeed(key: String,
       uri = Uri(uri),
       headers = List(RawHeader("Authorization", s"Bearer $token")),
       entity = HttpEntity.Empty
-      )
+    )
 
     val eventualArrivals = feedRequester
       .send(request)
@@ -193,7 +203,7 @@ object MagFeed {
     Scheduled = SDate(ma.arrival.scheduled).millisSinceEpoch,
     PcpTime = None,
     FeedSources = Set(LiveFeedSource)
-    )
+  )
 
   case class IataIcao(iata: String, icao: String)
 

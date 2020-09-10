@@ -25,7 +25,7 @@ object MockFeedRequester extends FeedRequesterLike {
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = Future(mockResponse)
+  def send(request: HttpRequest)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[HttpResponse] = Future(mockResponse)
 }
 
 case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extends FeedRequesterLike {
@@ -36,7 +36,7 @@ case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extend
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = {
+  def send(request: HttpRequest)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[HttpResponse] = {
     causeException()
     Future(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]")))
   }
