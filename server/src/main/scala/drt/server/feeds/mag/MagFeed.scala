@@ -31,7 +31,7 @@ trait FeedRequesterLike {
 
   def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String
 
-  def send(request: HttpRequest)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[HttpResponse]
+  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse]
 }
 
 object ProdFeedRequester extends FeedRequesterLike {
@@ -42,7 +42,7 @@ object ProdFeedRequester extends FeedRequesterLike {
     Try(Jwt.encode(header: String, claim: String, key: String, algorithm: JwtAlgorithm)).getOrElse("")
 
   override def send(request: HttpRequest)
-                   (implicit actorSystem: ActorSystem, ec: ExecutionContext): Future[HttpResponse] =
+                   (implicit actorSystem: ActorSystem): Future[HttpResponse] =
     Http().singleRequest(request)
 }
 
