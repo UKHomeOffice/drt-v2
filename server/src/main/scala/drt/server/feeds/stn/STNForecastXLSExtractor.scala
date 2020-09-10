@@ -10,8 +10,7 @@ import org.apache.poi.ss.usermodel.{Cell, DateUtil}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
-import scala.util.{Success, Try}
-
+import scala.util.{Failure, Success, Try}
 
 case class STNForecastFlightRow(scheduledDate: SDateLike,
                                 flightCode: String = "",
@@ -38,33 +37,44 @@ object STNForecastXLSExtractor {
 
     val lgwWorkSheet = workbook(xlsFilePath)
 
-    val sheet = sheetMapByIndex(3, lgwWorkSheet)
-    val arrivalRows: Seq[STNForecastFlightRow] = for {
+    val sheet = sheetMapByName("Arrivals by flight", lgwWorkSheet)
+
+    val headingIndexByNameMap: Map[String, Int] = headingIndexByName(sheet.getRow(1))
+
+    val arrivalRowsTry: Seq[Try[STNForecastFlightRow]] = for {
       rowNumber <- 2 to sheet.getLastRowNum
       row = sheet.getRow(rowNumber)
       if row.getCell(1) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
     } yield {
-      val scheduledCell = numericCellOption(1, row).getOrElse(0.0)
-      val carrierCodeCell = stringCellOption(2, row).getOrElse("")
-      val flightNumberCell = stringCellOption(3, row).getOrElse("")
-      val originCell = stringCellOption(4, row)
-      val maxPaxCell = numericCellOption(5, row).getOrElse(0.0)
-      val totalCell = numericCellOption(6, row).getOrElse(0.0)
-      val internationalDomesticCell = stringCellOption(10, row)
-      val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone("UTC")).getTime)
+      Try {
+        val scheduledCell = numericCellOption(headingIndexByNameMap("SCHEDULED TIME& DATE"), row).getOrElse(0.0)
+        val carrierCodeCell = stringCellOption(headingIndexByNameMap("AIRLINE"), row).getOrElse("")
+        val flightNumberCell = stringCellOption(headingIndexByNameMap("FLIGHT NUMBER"), row).getOrElse("")
+        val originCell = stringCellOption(headingIndexByNameMap("DESTINATION / ORIGIN"), row)
+        val maxPaxCell = numericCellOption(headingIndexByNameMap("FLIGHT CAPACITY"), row).getOrElse(0.0)
+        val totalCell = numericCellOption(headingIndexByNameMap("FLIGHT FORECAST"), row).getOrElse(0.0)
+        val internationalDomesticCell = stringCellOption(headingIndexByNameMap("TYPE"), row)
+        val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone("UTC")).getTime)
 
-      STNForecastFlightRow(scheduledDate = scheduled,
-        flightCode = s"$carrierCodeCell$flightNumberCell",
-        origin = originCell.getOrElse(""),
-        internationalDomestic = internationalDomesticCell.getOrElse(""),
-        totalPax = totalCell.toInt,
-        maxPax = maxPaxCell.toInt
-      )
+        STNForecastFlightRow(scheduledDate = scheduled,
+          flightCode = s"$carrierCodeCell$flightNumberCell",
+          origin = originCell.getOrElse(""),
+          internationalDomestic = internationalDomesticCell.getOrElse(""),
+          totalPax = totalCell.toInt,
+          maxPax = maxPaxCell.toInt
+        )
+      }
     }
+
+    val arrivalRows = arrivalRowsTry.toList.flatMap {
+      case Success(a) => Some(a)
+      case Failure(e) => log.error(s"Invalid data ${e.getMessage}")
+        None
+    }.filter(_.internationalDomestic == "INTERNATIONAL")
 
     log.info(s"Extracted ${arrivalRows.size} arrival rows from STN XLS Workbook")
 
-    arrivalRows.toList.filter(_.internationalDomestic == "INTERNATIONAL")
+    arrivalRows
   }
 
 
