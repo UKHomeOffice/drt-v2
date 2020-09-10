@@ -68,7 +68,7 @@ object STNForecastXLSExtractor {
 
     val arrivalRows = arrivalRowsTry.toList.flatMap {
       case Success(a) => Some(a)
-      case Failure(e) => log.error(s"Invalid data ${e.getMessage}")
+      case Failure(e) => log.warn(s"Invalid data ${e.getMessage}")
         None
     }.filter(_.internationalDomestic == "INTERNATIONAL")
 
