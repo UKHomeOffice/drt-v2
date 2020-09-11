@@ -90,7 +90,7 @@ object TerminalDesksAndQueues {
           case ViewDeps =>
             val h = List(<.th(
               ^.title := "Suggested deployment given available staff",
-              s"Dep ${deskUnitLabel(queueName)}", ^.className := queueColumnClass)
+              s"Dep ${deskUnitLabel(queueName)}", " ", depTooltip(queueName) ,^.className := queueColumnClass)
             )
             if (showWaitColumn)
               h :+ <.th(^.title := "Wait times with suggested deployments", "Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
@@ -116,7 +116,7 @@ object TerminalDesksAndQueues {
 
         List(queueSubHeadings,
           <.th(^.className := "non-pcp", "Misc", " ", miscTooltip, ^.title := "Miscellaneous staff"),
-          <.th(^.className := "non-pcp", "Moves", ^.title := "Staff movements"),
+          <.th(^.className := "non-pcp", "Moves"," ", movesTooltip, ^.title := "Staff movements"),
           <.th(^.className := "total-deployed", "Rec", " ", recToolTip, ^.title := "Total staff recommended for desks"),
           <.th(^.className := "total-deployed", "Dep", ^.title := "Total staff deployed based on assignments entered"),
           <.th(^.className := "total-deployed", "Avail", " ", availTooltip, ^.colSpan := 2, ^.title := "Total staff available based on staff entered"))

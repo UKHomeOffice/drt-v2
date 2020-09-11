@@ -130,10 +130,7 @@ object FlightsWithSplitsTable {
 
     val queueDisplayNames = queues.map { q =>
       val queueName: String = Queues.queueDisplayNames(q)
-      if (queueName == "e-Gates")
-        <.th(queueName, " ", splitsTableTooltip)
-      else
-        <.th(queueName)
+      <.th(queueName, " ", splitsTableTooltip)
     }.toTagMod
 
     val transferPaxTh = <.th("Transfer Pax")

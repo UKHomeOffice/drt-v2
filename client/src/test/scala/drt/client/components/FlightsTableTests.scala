@@ -104,8 +104,8 @@ object FlightsTableTests extends TestSuite {
           <.th("Est PCP"),
           <.th("Est PCP Pax"),
           <.th("e-Gates"," ",splitsTableTooltip),
-          <.th("EEA"),
-          <.th("Non-EEA"),
+          <.th("EEA"," ",splitsTableTooltip),
+          <.th("Non-EEA"," ",splitsTableTooltip),
           <.th("Transfer Pax")
         ))
 
@@ -274,8 +274,8 @@ object FlightsTableTests extends TestSuite {
           <.th("Est PCP"),
           <.th("Est PCP Pax"),
           <.th("e-Gates"," ",splitsTableTooltip),
-          <.th("EEA"),
-          <.th("Non-EEA")
+          <.th("EEA"," ",splitsTableTooltip),
+          <.th("Non-EEA"," ",splitsTableTooltip)
         ))
 
       val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"

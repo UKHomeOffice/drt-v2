@@ -1996,8 +1996,8 @@ div.access-restricted {
   width: 320px;
   background-color: #555;
   color: #fff;
-  text-align: center;
-  padding: 5px 0;
+  text-align: left;
+  padding: 5px 5px;
   border-radius: 6px;
   font-size: 12px;
   /* Position the tooltip text */
@@ -2026,6 +2026,47 @@ div.access-restricted {
 
 /* Show the tooltip text when you mouse over the tooltip container */
 .tooltipFaq:hover .tooltipText {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Tooltip text right edge */
+.tooltipFaq .tooltipTextR {
+  visibility: hidden;
+  width: 320px;
+  background-color: #555;
+  color: #fff;
+  text-align: left;
+  padding: 5px 5px;
+  border-radius: 6px;
+  font-size: 12px;
+  /* Position the tooltip text */
+  position: absolute;
+  z-index: 1;
+  bottom: 125%;
+  right: 50%;
+  margin-left: -60px;
+
+  /* Fade in tooltip */
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+
+/* Tooltip arrow */
+.tooltipFaq .tooltipTextR::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  right: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: #555 transparent transparent transparent;
+}
+
+/* Show the tooltip text when you mouse over the tooltip container for right edge */
+.tooltipFaq:hover .tooltipTextR {
   visibility: visible;
   opacity: 1;
 }

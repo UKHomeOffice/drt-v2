@@ -121,7 +121,7 @@ object TerminalComponent {
                     }
                   ),
                   <.li(^.className := currentClass,
-                    <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current"), ^.onClick --> {
+                    <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current", " ", currentTooltip), ^.onClick --> {
                       GoogleEventTracker.sendEvent(terminalName, "click", "Current")
                       props.router.set(props.terminalPageTab.copy(
                         mode = "current",

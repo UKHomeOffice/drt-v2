@@ -53,7 +53,7 @@ object PortConfigDetails {
                   defaultPaxSplits(config.terminalPaxTypeQueueAllocation(tn))
                 ),
                 <.div(^.className := "container config-container",
-                  <.h4("Walktimes", " ", walktimesTooltip),
+                  <.h4("Walktimes", " ", walkTimesTooltip),
                   defaultWalktime(config.defaultWalkTimeMillis(tn))
                 )
               )
