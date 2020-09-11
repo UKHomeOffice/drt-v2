@@ -33,7 +33,7 @@ object PaxDeltas {
                      maxDays: Int,
                      averageDays: Int,
                      now: () => SDateLike): Seq[Option[Double]] = {
-    val startDay = now().addDays(-1).getLocalLastMidnight
+    val startDay = now().addDays(-1).getUtcLastMidnight
 
     maybePctDeltasRecursive(maxDays, averageDays, dailyPaxNosByDay, startDay, 0, 0)
   }

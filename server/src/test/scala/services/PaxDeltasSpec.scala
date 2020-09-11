@@ -4,13 +4,14 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import org.specs2.mutable.Specification
 import services.PaxDeltas.maybePctDeltas
+import services.graphstages.Crunch
 
 class PaxDeltasSpec extends Specification {
-  val now: () => SDateLike = () => SDate("2020-04-01").getLocalLastMidnight
-  val todayMinus1: MillisSinceEpoch = now().addDays(-1).millisSinceEpoch
-  val todayMinus2: MillisSinceEpoch = now().addDays(-2).millisSinceEpoch
-  val todayMinus3: MillisSinceEpoch = now().addDays(-3).millisSinceEpoch
-  val todayMinus4: MillisSinceEpoch = now().addDays(-4).millisSinceEpoch
+  val now: () => SDateLike = () => SDate("2020-04-01", Crunch.utcTimeZone)
+  val todayMinus1: MillisSinceEpoch = SDate("2020-03-31", Crunch.utcTimeZone).millisSinceEpoch
+  val todayMinus2: MillisSinceEpoch = SDate("2020-03-30", Crunch.utcTimeZone).millisSinceEpoch
+  val todayMinus3: MillisSinceEpoch = SDate("2020-03-29", Crunch.utcTimeZone).millisSinceEpoch
+  val todayMinus4: MillisSinceEpoch = SDate("2020-03-28", Crunch.utcTimeZone).millisSinceEpoch
   val maxDays = 14
 
   "Given 2 days worth of daily pax counts for yesterday" >> {

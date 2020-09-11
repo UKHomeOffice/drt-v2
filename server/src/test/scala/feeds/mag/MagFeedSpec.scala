@@ -3,7 +3,7 @@ package feeds.mag
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import com.typesafe.config.{Config, ConfigFactory}
-import drt.server.feeds.mag.{FeedRequesterLike, MagFeed}
+import drt.server.feeds.mag.{FeedRequesterLike, MagFeed, ProdFeedRequester}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PortCode
 import pdi.jwt.JwtAlgorithm
@@ -105,6 +105,18 @@ class MagFeedSpec extends CrunchTestLike {
   "Given a mock feed requester that throws an exception " +
     "I should get an ArrivalsFeedFailure response" >> {
     val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockExceptionThrowingFeedRequester(() => new Exception("I'm throwing an exception")))
+
+    val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1 second) match {
+      case ArrivalsFeedFailure(_, _) => true
+      case _ => false
+    }
+
+    isFeedFailure must_== true
+  }
+
+  "Given a prod feed requester and empty feed parameters " +
+    "I should get an ArrivalsFeedFailure response" >> {
+    val exceptionFeed = MagFeed("", "", "", "", () => SDate.now(), PortCode("MAN"), ProdFeedRequester)
 
     val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1 second) match {
       case ArrivalsFeedFailure(_, _) => true
