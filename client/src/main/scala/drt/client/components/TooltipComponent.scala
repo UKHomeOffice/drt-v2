@@ -11,17 +11,17 @@ object TooltipComponent {
   val tooltipR: String => VdomTagOf[Span] = text =>
     <.span(^.className := "tooltipFaq",
       Icon.infoCircle,
-      <.span(^.className := "tooltipTextR",text))
+      <.span(^.className := "tooltipText tooltipText-right",text))
 
   val tooltip: String => VdomTagOf[Span] = text =>
     <.span(^.className := "tooltipFaq",
       Icon.infoCircle,
-      <.span(^.className := "tooltipText", text))
+      <.span(^.className := "tooltipText tooltipText-left", text))
 
   val tooltipPTag: Seq[TagOf[html.Paragraph]] => VdomTagOf[Span] = text =>
     <.span(^.className := "tooltipFaq",
       Icon.infoCircle,
-      <.span(^.className := "tooltipText", text.toTagMod))
+      <.span(^.className := "tooltipText tooltipText-left", text.toTagMod))
 
   val depTooltip: Queue => VdomTagOf[Span] = queue => if (queue == EGate) depBanksTooltip else depDesksTooltip
 
