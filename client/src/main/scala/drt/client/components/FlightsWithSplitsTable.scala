@@ -5,6 +5,7 @@ import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
+import drt.client.components.TooltipComponent._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewDay, ViewMode, ViewPointInTime}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -120,12 +121,17 @@ object FlightsWithSplitsTable {
         case (label, _) => label != "Est Chox" || props.hasEstChox
       }
       .map {
+        case (label, None) if label == "Flight" => <.th(label, " ", wbrFlightColorTooltip)
         case (label, None) => <.th(label)
+        case (label, Some(className)) if className == "status" => <.th(label, " ", arrivalStatusTooltip, ^.className := className)
         case (label, Some(className)) => <.th(label, ^.className := className)
       }
       .toTagMod
 
-    val queueDisplayNames = queues.map(q => <.th(Queues.queueDisplayNames(q))).toTagMod
+    val queueDisplayNames = queues.map { q =>
+      val queueName: String = Queues.queueDisplayNames(q)
+      <.th(queueName, " ", splitsTableTooltip)
+    }.toTagMod
 
     val transferPaxTh = <.th("Transfer Pax")
 
