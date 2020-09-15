@@ -673,6 +673,8 @@ object FlightsApi {
     def --(toRemove: Iterable[UniqueArrival]): FlightsWithSplits = FlightsWithSplits(flights.toMap -- toRemove)
 
     def ++(toUpdate: Iterable[(UniqueArrival, ApiFlightWithSplits)]): FlightsWithSplits = FlightsWithSplits(flights.toMap ++ toUpdate)
+
+    def ++(other: FlightsWithSplits): FlightsWithSplits = FlightsWithSplits(flights ++ other.flights)
   }
 
   object FlightsWithSplits {
@@ -709,15 +711,15 @@ object FlightsApi {
     }
 
     lazy val terminals: Set[Terminal] = flightsToUpdate.map(_.apiFlight.Terminal).toSet ++ arrivalsToRemove.map(_.Terminal).toSet
+
+    def ++(other: FlightsWithSplitsDiff): FlightsWithSplitsDiff =
+      FlightsWithSplitsDiff(flightsToUpdate ++ other.flightsToUpdate, arrivalsToRemove ++ other.arrivalsToRemove)
   }
 
+  object FlightsWithSplitsDiff {
+    val empty: FlightsWithSplitsDiff = FlightsWithSplitsDiff(List(), List())
+  }
 }
-
-//object FlightsWithSplitsDiff {
-//
-//  val empty: FlightsWithSplitsDiff = FlightsWithSplitsDiff(List(), List())
-//
-//}
 
 object PassengerSplits {
   type PaxTypeAndQueueCounts = Seq[ApiPaxTypeAndQueueCount]

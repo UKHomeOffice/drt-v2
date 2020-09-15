@@ -25,7 +25,7 @@ object MinutesActorLike {
   type FlightsLookup = (Terminals.Terminal, SDateLike, Option[MillisSinceEpoch]) => Future[Option[FlightsWithSplits]]
 
   type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A, B]]
-  type FlightsUpdate = (Terminals.Terminal, SDateLike, FlightsWithSplitsDiff) => Future[FlightsWithSplits]
+  type FlightsUpdate = (Terminals.Terminal, SDateLike, FlightsWithSplitsDiff) => Future[Set[MillisSinceEpoch]]
 
   case object ProcessNextUpdateRequest
 
