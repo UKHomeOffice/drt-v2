@@ -1,6 +1,5 @@
 package actors.queues
 
-import actors.acking.AckingReceiver.Ack
 import actors.queues.QueueLikeActor.{ReadyToEmit, Tick, UpdatedMillis}
 import actors.{RecoveryActorLike, SetDaysQueueSource, StreamingJournalLike}
 import akka.actor.Cancellable
@@ -30,7 +29,7 @@ object QueueLikeActor {
 
 }
 
-abstract class QueueLikeActor(val now: () => SDateLike, val journalType: StreamingJournalLike, crunchOffsetMinutes: Int) extends RecoveryActorLike {
+abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int) extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val maybeSnapshotInterval: Option[Int] = Option(500)

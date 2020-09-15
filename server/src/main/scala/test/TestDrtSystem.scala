@@ -45,7 +45,7 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val staffMovementsActor: ActorRef = system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new TestAggregatedArrivalsActor()))
   override val crunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
-  override val deploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
+  override val deploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
 
   override val lookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   override val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", now, expireAfterMillis, airportConfig.queuesByTerminal)))

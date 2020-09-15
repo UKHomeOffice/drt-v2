@@ -4,6 +4,6 @@ import actors.StreamingJournalLike
 import drt.shared.SDateLike
 
 
-class DeploymentQueueActor(now: () => SDateLike, journalType: StreamingJournalLike, crunchOffsetMinutes: Int) extends QueueLikeActor(now, journalType, crunchOffsetMinutes) {
+class DeploymentQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int) extends QueueLikeActor(now, crunchOffsetMinutes) {
   override val persistenceId: String = "deployment-queue"
 }

@@ -5,6 +5,7 @@ import java.util.UUID
 import drt.auth.LoggedInUser
 import drt.shared.CrunchApi._
 import drt.shared.EventTypes.{CI, DC, InvalidEventType}
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.MilliTimes.{oneDayMillis, oneMinuteMillis}
 import drt.shared.Queues.Queue
@@ -722,6 +723,12 @@ object FlightsApi {
   }
 
 }
+
+//object FlightsWithSplitsDiff {
+//
+//  val empty: FlightsWithSplitsDiff = FlightsWithSplitsDiff(List(), List())
+//
+//}
 
 object PassengerSplits {
   type PaxTypeAndQueueCounts = Seq[ApiPaxTypeAndQueueCount]

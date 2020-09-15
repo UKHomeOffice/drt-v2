@@ -69,7 +69,7 @@ class TestDrtActor extends Actor {
       val snapshotInterval = 1
       val manifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(oneMegaByte, tc.now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval))))
       val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(tc.now, journalType, tc.airportConfig.crunchOffsetMinutes)))
-      val deploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(tc.now, journalType, tc.airportConfig.crunchOffsetMinutes)))
+      val deploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes)))
       val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(tc.now, expireAfterMillis, tc.airportConfig.queuesByTerminal, SDate("1970-01-01"), 1000)))
 
       val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsActor, tc.now, tc.airportConfig)
