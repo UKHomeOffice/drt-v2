@@ -153,8 +153,8 @@ object TestActors {
     override def receive: Receive = reset orElse super.receive
   }
 
-  class TestDeploymentQueueActor(now: () => SDateLike, journalType: StreamingJournalLike, crunchOffsetMinutes: Int)
-    extends DeploymentQueueActor(now, journalType, crunchOffsetMinutes) {
+  class TestDeploymentQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int)
+    extends DeploymentQueueActor(now, crunchOffsetMinutes) {
     def reset: Receive = {
       case ResetData =>
         readyToEmit = true
