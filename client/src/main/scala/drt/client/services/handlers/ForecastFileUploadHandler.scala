@@ -34,14 +34,15 @@ class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) ex
     case FileUploadStatus(fileUploadState: FileUploadState) =>
       updated(Ready(fileUploadState))
 
+    case FileUploadInProgress() =>
+      updated(Ready(FileUploadState(state = "uploadInProgress", message = "File upload in progress")))
 
     case ForecastFileUploadAction(portCode: String, formData: FormData) =>
-
       val request = new dom.XMLHttpRequest()
       val promisedRequest = Promise[dom.XMLHttpRequest]()
 
-      request.onreadystatechange = { (e: dom.Event) =>
-        if (request.readyState.toInt == 4) {
+      request.onreadystatechange = { _ =>
+        if (request.readyState == 4) {
           if ((request.status >= 200 && request.status < 300) || request.status == 304)
             promisedRequest.success(request)
           else
@@ -60,12 +61,13 @@ class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) ex
         log.info(s"Uploading file response ${rMessage.message}")
         FileUploadStatus(FileUploadState(state = "uploaded", message = rMessage.message))
       }.recoverWith {
-        case e =>
-          log.error(s"failed to upload $e")
-          Future(FileUploadStatus(FileUploadState(state = "error", message = e.getMessage)))
+        case e: Throwable =>
+          log.error(s"Failed to upload file $e")
+          Future.successful(FileUploadStatus(FileUploadState(state = "error", message = "Error while uploading file. Please check the file has correct content & format or Please contact DRT team with the file.")))
       })
 
       effectOnly(apiCallEffect)
+
   }
 
 
