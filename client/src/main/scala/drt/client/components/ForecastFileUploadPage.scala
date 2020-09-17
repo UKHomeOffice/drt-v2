@@ -1,12 +1,12 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.{ForecastFileUploadAction, ResetFileUpload}
+import drt.client.actions.Actions.{FileUploadingInProgress, ForecastFileUploadAction, ResetFileUpload}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.shared.AirportConfig
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent, _}
 import org.scalajs.dom
 import org.scalajs.dom.html.Div
@@ -32,6 +32,16 @@ object ForecastFileUploadPage {
         <.input(^.`type` := "button", ^.value := "Upload", ^.onClick ==> onSubmit(portCode)))
     )
 
+  val uploadingInProgress: String => VdomTagOf[Div] = { message =>
+    <.div(
+      heading,
+      <.br(),
+      <.div(s"Upload status : $message"),
+      <.br(),
+      <.span("Uploading ....."),
+    )
+  }
+
   val uploadResult: String => VdomTagOf[Div] = (message: String) =>
     <.div(
       heading,
@@ -53,11 +63,13 @@ object ForecastFileUploadPage {
               <.div(fileUploadStateMP().fileUploadState.render(details => {
                 details.state match {
                   case "uploaded" | "error" => uploadResult(details.message)
+                  case "uploading" => uploadingInProgress(details.message)
                   case _ => upload(airportConfig.portCode.iata)
                 }
               }))
             })
-        )}
+        )
+      }
       )
     }.componentDidMount(_ => Callback {
     GoogleEventTracker.sendPageView(s"forecastFileUpload")
@@ -73,10 +85,10 @@ object ForecastFileUploadPage {
   }
 
   def onSubmit(portCode: String)(e: ReactEventFromInput): Callback = {
+    SPACircuit.dispatch(FileUploadingInProgress())
     e.preventDefaultCB >> Callback {
       val tFormElement = e.target.parentNode.domCast[HTMLFormElement]
       val tFormData: FormData = new dom.FormData(tFormElement)
-
       SPACircuit.dispatch(ForecastFileUploadAction(portCode, tFormData))
     }
   }
