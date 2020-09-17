@@ -63,7 +63,7 @@ object ForecastFileUploadPage {
               <.div(fileUploadStateMP().fileUploadState.render(details => {
                 details.state match {
                   case "uploaded" | "error" => uploadResult(details.message)
-                  case "uploading" => uploadingInProgress(details.message)
+                  case "uploadInProgress" => uploadingInProgress(details.message)
                   case _ => upload(airportConfig.portCode.iata)
                 }
               }))
