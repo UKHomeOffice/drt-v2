@@ -22,7 +22,7 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object MinutesActorLike {
   type MinutesLookup[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, Option[MillisSinceEpoch]) => Future[Option[MinutesContainer[A, B]]]
-  type FlightsLookup = (Terminals.Terminal, SDateLike, Option[MillisSinceEpoch]) => Future[Option[FlightsWithSplits]]
+  type FlightsLookup = (Terminals.Terminal, SDateLike, Option[MillisSinceEpoch]) => Future[FlightsWithSplits]
 
   type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A, B]]
   type FlightsUpdate = (Terminals.Terminal, SDateLike, FlightsWithSplitsDiff) => Future[Set[MillisSinceEpoch]]

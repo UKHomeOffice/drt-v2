@@ -19,7 +19,11 @@ import scala.collection.mutable
 
 case class UpdateStats(updatesCount: Int, additionsCount: Int)
 
-
+/**
+ *
+ * @todo We can get rid of the state in this graph stage, and just send splits through to the FlightsRouterActor which
+ *       can handle the storage of Splits and flights.
+ */
 class ArrivalSplitsGraphStage(name: String = "",
                               optionalInitialFlights: Option[FlightsWithSplitsDiff],
                               splitsCalculator: SplitsCalculator,
@@ -272,6 +276,11 @@ class ArrivalSplitsGraphStage(name: String = "",
     def isNewManifestForFlight(flightWithSplits: ApiFlightWithSplits, newSplits: Splits): Boolean =
       !flightWithSplits.splits.contains(newSplits)
 
+    /**
+     * @todo move codeshare processing to the arrivals graph stage
+     *
+     * @param arrivalsDiff
+     */
     def updateCodeSharesFromDiff(arrivalsDiff: ArrivalsDiff): Unit = arrivalsDiff.toUpdate
       .foreach { case (_, arrival) =>
         val csKey = CodeShareKeyOrderedByDupes[ArrivalKey](arrival.Scheduled, arrival.Terminal, arrival.Origin, Set())

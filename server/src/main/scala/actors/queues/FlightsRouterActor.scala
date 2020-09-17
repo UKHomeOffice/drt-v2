@@ -1,6 +1,6 @@
 package actors.queues
 
-import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForDateRange, PointInTimeQuery, TerminalRequest}
+import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
@@ -21,12 +21,12 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 
-abstract class FlightsLikeActor(
-                                 updatesSubscriber: ActorRef,
-                                 terminals: Iterable[Terminal],
-                                 lookup: FlightsLookup,
-                                 updateMinutes: FlightsUpdate
-                               ) extends Actor with ActorLogging {
+class FlightsRouterActor(
+                          updatesSubscriber: ActorRef,
+                          terminals: Iterable[Terminal],
+                          lookup: FlightsLookup,
+                          updateMinutes: FlightsUpdate
+                        ) extends Actor with ActorLogging {
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
@@ -50,11 +50,20 @@ abstract class FlightsLikeActor(
     case GetStateForDateRange(startMillis, endMillis) =>
       handleAllTerminalLookupsStream(startMillis, endMillis, None).pipeTo(sender())
 
+    case GetFlights(startMillis, endMillis) =>
+      self.forward(GetStateForDateRange(startMillis, endMillis))
+
     case request: DateRangeLike with TerminalRequest =>
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).pipeTo(sender())
 
+    /**
+     * @todo - replace this with streaming stuff
+     */
+    case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
+    //sender() ! state.window(startMillis, endMillis).updatedSince(sinceMillis)
+
     case container: FlightsWithSplitsDiff =>
-      log.info(s"Adding ${container.flightsToUpdate} flight updates and ${container.arrivalsToRemove} removals to requests queue")
+      log.info(s"Adding ${container.flightsToUpdate.size} flight updates and ${container.arrivalsToRemove.size} removals to requests queue")
       updateRequestsQueue = (sender(), container) :: updateRequestsQueue
       self ! ProcessNextUpdateRequest
 
@@ -69,7 +78,7 @@ abstract class FlightsLikeActor(
         }
       }
 
-    case u => log.warning(s"Got an unexpected message: $u")
+    case unexpected => log.warning(s"Got an unexpected message: $unexpected")
   }
 
   def handleAllTerminalLookupsStream(startMillis: MillisSinceEpoch,
@@ -106,11 +115,8 @@ abstract class FlightsLikeActor(
           lookup(terminal, day, maybePointInTime).map(r => (day, r))
         }
         .collect {
-          case (_, Some(container)) =>
-            container.window(start.millisSinceEpoch, end.millisSinceEpoch)
-          case (day, None) =>
-            log.info(s"No flights found for for ${day.toISOString()}")
-            FlightsWithSplits.empty
+          case (_, flightsWithSplits) =>
+            flightsWithSplits.window(start.millisSinceEpoch, end.millisSinceEpoch)
         }
         .fold(FlightsWithSplits.empty) {
           case (soFarContainer, dayContainer) => soFarContainer ++ dayContainer
