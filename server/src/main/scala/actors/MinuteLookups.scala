@@ -18,7 +18,7 @@ import scala.language.postfixOps
 trait MinuteLookupsLike {
   val system: ActorSystem
   implicit val ec: ExecutionContext
-  implicit val timeout: Timeout = new Timeout(60 seconds)
+  implicit val timeout: Timeout = new Timeout(60 hours)
 
   val now: () => SDateLike
   val expireAfterMillis: Int

@@ -1,35 +1,34 @@
 package actors
 
-import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayFlightActor, TerminalDayQueuesActor}
-import actors.minutes.MinutesActorLike.{FlightsLookup, MinutesLookup}
-import actors.minutes.QueueMinutesActor
+import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayFlightActor}
+import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import actors.queues.FlightsRouterActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.Queue
+import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, TQM}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 trait FlightLookupsLike {
   val system: ActorSystem
   implicit val ec: ExecutionContext
-  implicit val timeout: Timeout = new Timeout(60 seconds)
+  implicit val timeout: Timeout = new Timeout(60 hours)
 
   val now: () => SDateLike
   val requestAndTerminateActor: ActorRef
 
-  val updateFlights: (Terminal, SDateLike, FlightsWithSplitsDiff) => Future[Set[MillisSinceEpoch]] =
-    (terminal: Terminal, date: SDateLike, diff: FlightsWithSplitsDiff) => {
-      val actor = system.actorOf(TerminalDayFlightActor.props(terminal, date, now))
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[Set[MillisSinceEpoch]]
-    }
+  val updateFlights: FlightsUpdate = (terminal: Terminal, date: SDateLike, diff: FlightsWithSplitsDiff) => {
+    val actor = system.actorOf(TerminalDayFlightActor.props(terminal, date, now))
+    system.log.info(s"About to update $terminal $date with ${diff.flightsToUpdate.size} flights")
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[Set[MillisSinceEpoch]]
+  }
 
 
   val flightsLookup: FlightsLookup = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {

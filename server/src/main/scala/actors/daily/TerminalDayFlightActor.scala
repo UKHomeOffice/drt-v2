@@ -39,9 +39,11 @@ class TerminalDayFlightActor(
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
+
   var state: FlightsWithSplits = FlightsWithSplits.empty
 
   override def persistenceId: String = f"terminal-flights-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
+  log.info(s"*** $persistenceId")
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
@@ -58,7 +60,7 @@ class TerminalDayFlightActor(
 
   override def receiveCommand: Receive = {
     case diff: FlightsWithSplitsDiff =>
-      log.debug(s"Received FlightsWithSplits for persistence")
+      log.info(s"Received FlightsWithSplits for persistence ${diff.flightsToUpdate.size}")
       updateAndPersistDiff(diff)
 
     case GetState =>

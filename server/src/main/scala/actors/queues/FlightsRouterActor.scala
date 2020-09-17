@@ -25,7 +25,7 @@ class FlightsRouterActor(
                           updatesSubscriber: ActorRef,
                           terminals: Iterable[Terminal],
                           lookup: FlightsLookup,
-                          updateMinutes: FlightsUpdate
+                          updateFlights: FlightsUpdate
                         ) extends Actor with ActorLogging {
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
@@ -48,6 +48,7 @@ class FlightsRouterActor(
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).pipeTo(sender())
 
     case GetStateForDateRange(startMillis, endMillis) =>
+      log.info(s"**** $startMillis, $endMillis")
       handleAllTerminalLookupsStream(startMillis, endMillis, None).pipeTo(sender())
 
     case GetFlights(startMillis, endMillis) =>
@@ -131,7 +132,9 @@ class FlightsRouterActor(
 
   def updateByTerminalDayAndGetDiff(container: FlightsWithSplitsDiff): Future[Set[MillisSinceEpoch]] = {
     val eventualUpdatedMinutesDiff: Source[Set[MillisSinceEpoch], NotUsed] = Source(groupByTerminalAndDay(container)).mapAsync(1) {
-      case ((terminal, day), updates) => handleUpdateAndGetDiff(terminal, day, updates)
+      case ((terminal, day), updates) =>
+        log.info(s"handleUpdateAndGetDiff($terminal, $day, ${updates.flightsToUpdate.size})")
+        handleUpdateAndGetDiff(terminal, day, updates)
     }
     combineEventualDiffsStream(eventualUpdatedMinutesDiff)
   }
@@ -142,7 +145,11 @@ class FlightsRouterActor(
     val removals: Map[(Terminal, SDateLike), List[Arrival]] = container.arrivalsToRemove
       .groupBy(arrival => (arrival.Terminal, SDate(arrival.Scheduled).getUtcLastMidnight))
 
-    (updates.keys ++ removals.keys)
+    log.info(s"*** updates keys ${updates.keys} ${updates.values.size}")
+    log.info(s"*** removals keys ${removals.keys} ${removals.values.size}")
+    val keys = updates.keys ++ removals.keys
+    log.info(s"All the keys: $keys")
+    keys
       .map { terminalDay =>
         val diff = FlightsWithSplitsDiff(updates.getOrElse(terminalDay, List()), removals.getOrElse(terminalDay, List()))
         (terminalDay, diff)
@@ -183,5 +190,5 @@ class FlightsRouterActor(
   def handleUpdateAndGetDiff(terminal: Terminal,
                              day: SDateLike,
                              flightsDiffForTerminalDay: FlightsWithSplitsDiff): Future[Set[MillisSinceEpoch]] =
-    updateMinutes(terminal, day, flightsDiffForTerminalDay)
+    updateFlights(terminal, day, flightsDiffForTerminalDay)
 }
