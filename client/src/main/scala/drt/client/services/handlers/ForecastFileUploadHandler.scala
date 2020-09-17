@@ -34,7 +34,7 @@ class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) ex
     case FileUploadStatus(fileUploadState: FileUploadState) =>
       updated(Ready(fileUploadState))
 
-    case FileUploadingInProgress() =>
+    case FileUploadInProgress() =>
       updated(Ready(FileUploadState(state = "uploading", message = "File upload in progress")))
 
     case ForecastFileUploadAction(portCode: String, formData: FormData) =>

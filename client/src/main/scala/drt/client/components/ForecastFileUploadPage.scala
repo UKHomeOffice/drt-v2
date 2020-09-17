@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.{FileUploadingInProgress, ForecastFileUploadAction, ResetFileUpload}
+import drt.client.actions.Actions.{FileUploadInProgress, ForecastFileUploadAction, ResetFileUpload}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.shared.AirportConfig
@@ -85,7 +85,7 @@ object ForecastFileUploadPage {
   }
 
   def onSubmit(portCode: String)(e: ReactEventFromInput): Callback = {
-    SPACircuit.dispatch(FileUploadingInProgress())
+    SPACircuit.dispatch(FileUploadInProgress())
     e.preventDefaultCB >> Callback {
       val tFormElement = e.target.parentNode.domCast[HTMLFormElement]
       val tFormData: FormData = new dom.FormData(tFormElement)
