@@ -3,6 +3,7 @@ package actors.queues
 import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate, ProcessNextUpdateRequest}
+import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.pattern.pipe
@@ -93,11 +94,11 @@ class FlightsRouterActor(
   }
 
   def handleUpdatesAndAck(container: FlightsWithSplitsDiff,
-                          replyTo: ActorRef): Future[Set[MillisSinceEpoch]] = {
+                          replyTo: ActorRef): Future[Seq[MillisSinceEpoch]] = {
     processingRequest = true
     val eventualUpdatesDiff = updateByTerminalDayAndGetDiff(container)
     eventualUpdatesDiff
-      .map(updatedMillis => updatesSubscriber ! updatedMillis)
+      .map(updatedMillis => updatesSubscriber ! UpdatedMillis(updatedMillis))
       .onComplete { _ =>
         processingRequest = false
         replyTo ! Ack
@@ -130,12 +131,14 @@ class FlightsRouterActor(
     }
   }
 
-  def updateByTerminalDayAndGetDiff(container: FlightsWithSplitsDiff): Future[Set[MillisSinceEpoch]] = {
-    val eventualUpdatedMinutesDiff: Source[Set[MillisSinceEpoch], NotUsed] = Source(groupByTerminalAndDay(container)).mapAsync(1) {
-      case ((terminal, day), updates) =>
-        log.info(s"handleUpdateAndGetDiff($terminal, $day, ${updates.flightsToUpdate.size})")
-        handleUpdateAndGetDiff(terminal, day, updates)
-    }
+  def updateByTerminalDayAndGetDiff(container: FlightsWithSplitsDiff): Future[Seq[MillisSinceEpoch]] = {
+    val eventualUpdatedMinutesDiff: Source[Seq[MillisSinceEpoch], NotUsed] =
+      Source(groupByTerminalAndDay(container))
+        .mapAsync(1) {
+          case ((terminal, day), updates) =>
+            log.info(s"handleUpdateAndGetDiff($terminal, $day, ${updates.flightsToUpdate.size})")
+            handleUpdateAndGetDiff(terminal, day, updates)
+        }
     combineEventualDiffsStream(eventualUpdatedMinutesDiff)
   }
 
@@ -145,10 +148,7 @@ class FlightsRouterActor(
     val removals: Map[(Terminal, SDateLike), List[Arrival]] = container.arrivalsToRemove
       .groupBy(arrival => (arrival.Terminal, SDate(arrival.Scheduled).getUtcLastMidnight))
 
-    log.info(s"*** updates keys ${updates.keys} ${updates.values.size}")
-    log.info(s"*** removals keys ${removals.keys} ${removals.values.size}")
     val keys = updates.keys ++ removals.keys
-    log.info(s"All the keys: $keys")
     keys
       .map { terminalDay =>
         val diff = FlightsWithSplitsDiff(updates.getOrElse(terminalDay, List()), removals.getOrElse(terminalDay, List()))
@@ -172,23 +172,23 @@ class FlightsRouterActor(
       }
   }
 
-  private def combineEventualDiffsStream(eventualUpdatedMinutesDiff: Source[Set[MillisSinceEpoch], NotUsed]): Future[Set[MillisSinceEpoch]] = {
+  private def combineEventualDiffsStream(eventualUpdatedMinutesDiff: Source[Seq[MillisSinceEpoch], NotUsed]): Future[Seq[MillisSinceEpoch]] = {
     eventualUpdatedMinutesDiff
-      .fold(Set[MillisSinceEpoch]())(_ ++ _)
+      .fold(Seq[MillisSinceEpoch]())(_ ++ _)
       .runWith(Sink.seq)
       .map {
         case containers if containers.nonEmpty => containers.reduce(_ ++ _)
-        case _ => Set[MillisSinceEpoch]()
+        case _ => Seq[MillisSinceEpoch]()
       }
-      .recoverWith {
+      .recover {
         case t =>
-          log.error("Failed to combine containers", t)
-          Future(Set[MillisSinceEpoch]())
+          log.error(t, "Failed to combine containers")
+          Seq[MillisSinceEpoch]()
       }
   }
 
   def handleUpdateAndGetDiff(terminal: Terminal,
                              day: SDateLike,
-                             flightsDiffForTerminalDay: FlightsWithSplitsDiff): Future[Set[MillisSinceEpoch]] =
+                             flightsDiffForTerminalDay: FlightsWithSplitsDiff): Future[Seq[MillisSinceEpoch]] =
     updateFlights(terminal, day, flightsDiffForTerminalDay)
 }
