@@ -43,7 +43,7 @@ class TerminalDayFlightActor(
   var state: FlightsWithSplits = FlightsWithSplits.empty
 
   override def persistenceId: String = f"terminal-flights-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
-  log.info(s"*** $persistenceId")
+
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
@@ -75,18 +75,8 @@ class TerminalDayFlightActor(
     state = updatedState
 
     val replyToAndMessage = Option(sender(), minutesToUpdate)
-    persistAndMaybeSnapshot(diffMessageForFlights(diff), replyToAndMessage)
+    persistAndMaybeSnapshot(FlightMessageConversion.flightWithSplitsDiffToMessage(diff), replyToAndMessage)
   }
-
-  def diffMessageForFlights(flightsWithSplitsDiff: FlightsWithSplitsDiff): FlightsWithSplitsDiffMessage =
-    FlightsWithSplitsDiffMessage(
-      createdAt = Option(now().millisSinceEpoch),
-      removals = flightsWithSplitsDiff.arrivalsToRemove.map { arrival =>
-        val ua = arrival.unique
-        UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled))
-      },
-      updates = flightsWithSplitsDiff.flightsToUpdate.map(FlightMessageConversion.flightWithSplitsToMessage)
-    )
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: FlightsWithSplitsDiffMessage => handleDiffMessage(diff)

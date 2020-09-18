@@ -51,10 +51,43 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsStateActor(None, Sizes.oneMegaByte, "crunch-live-state-actor", now, expireAfterMillis, airportConfig.queuesByTerminal)))
   override val queuesActor: ActorRef = lookups.queueMinutesActor
   override val staffActor: ActorRef = lookups.staffMinutesActor
-  override val queueUpdates: ActorRef = system.actorOf(Props(new QueueTestUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, PartitionedPortStateActor.queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
-  override val staffUpdates: ActorRef = system.actorOf(Props(new StaffTestUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, PartitionedPortStateActor.staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
+  override val queueUpdates: ActorRef = system.actorOf(Props(
+    new QueueTestUpdatesSupervisor(
+      now,
+      airportConfig.queuesByTerminal.keys.toList,
+      PartitionedPortStateActor.queueUpdatesProps(now, journalType)
+    )),
+    "updates-supervisor-queues")
+  override val staffUpdates: ActorRef = system.actorOf(Props(
+    new StaffTestUpdatesSupervisor(
+      now,
+      airportConfig.queuesByTerminal.keys.toList,
+      PartitionedPortStateActor.staffUpdatesProps(now, journalType)
+    )
+  ), "updates-supervisor-staff")
+  override val flightUpdates: ActorRef = system.actorOf(Props(
+    new TestFlightUpdatesSupervisor(
+      now,
+      airportConfig.queuesByTerminal.keys.toList,
+      PartitionedPortStateActor.flightUpdatesProps(now, journalType)
+    )
+  ), "updates-supervisor-flight")
 
-  override val portStateActor: ActorRef = system.actorOf(Props(new TestPartitionedPortStateActor(flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, now, airportConfig.queuesByTerminal, journalType)))
+  override val portStateActor: ActorRef = system.actorOf(
+    Props(
+      new TestPartitionedPortStateActor(
+        flightsActor,
+        queuesActor,
+        staffActor,
+        queueUpdates,
+        staffUpdates,
+        flightUpdates,
+        now,
+        airportConfig.queuesByTerminal,
+        journalType
+      )
+    )
+  )
 
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
   val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")

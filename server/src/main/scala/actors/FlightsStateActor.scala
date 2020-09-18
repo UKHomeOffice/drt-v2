@@ -181,15 +181,15 @@ class FlightsStateActor(val now: () => SDateLike,
   def tempPointInTimeActor(pointInTime: SDateLike): ActorRef =
     context.actorOf(tempPitActorProps(pointInTime, now, queues, expireAfterMillis, legacyDataCutoff, replayMaxCrunchStateMessages))
 
-  def handleDiff(flightUpdates: FlightsWithSplitsDiff): Unit = {
-    val (updatedState, updatedMinutes) = flightUpdates.applyTo(state, now().millisSinceEpoch)
+  def handleDiff(flightsWithSplitsDiff: FlightsWithSplitsDiff): Unit = {
+    val (updatedState, updatedMinutes) = flightsWithSplitsDiff.applyTo(state, now().millisSinceEpoch)
     state = updatedState
     purgeExpired()
 
     if (updatedMinutes.nonEmpty)
       maybeUpdatesSubscriber.foreach(_ ! UpdatedMillis(updatedMinutes))
 
-    val diffMsg = diffMessageForFlights(flightUpdates.flightsToUpdate, flightUpdates.arrivalsToRemove)
+    val diffMsg = FlightMessageConversion.flightWithSplitsDiffToMessage(flightsWithSplitsDiff)
     persistAndMaybeSnapshot(diffMsg, Option((sender(), Ack)))
   }
 

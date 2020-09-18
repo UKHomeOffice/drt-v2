@@ -2,7 +2,7 @@ package services.crunch
 
 import actors.PartitionedPortStateActor._
 import actors._
-import actors.daily.{QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import controllers.ArrivalGenerator
@@ -35,6 +35,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val staffActor: ActorRef = lookups.staffMinutesActor
   val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-queues")
   val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-staff")
+  val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-flight")
 
   def actorProvider: () => ActorRef = () => {
     system.actorOf(Props(new PartitionedPortStateActor(
@@ -43,6 +44,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       staffActor,
       queueUpdates,
       staffUpdates,
+      flightUpdates,
       myNow,
       airportConfig.queuesByTerminal,
       InMemoryStreamingJournal,
@@ -82,6 +84,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
       "Then I should see the flight I sent it in the port state" >> {
         val sinceMillis = myNow().addMinutes(-1).millisSinceEpoch
+
         val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1 second)
 
         result === Option(PortStateUpdates(myNow().millisSinceEpoch, setUpdatedFlights(fws, myNow().millisSinceEpoch).toSet, Set(), Set()))

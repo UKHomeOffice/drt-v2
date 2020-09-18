@@ -38,6 +38,7 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
   val staffActor: ActorRef = system.actorOf(Props(new DummyActor))
   val queueUpdatesActor: ActorRef = system.actorOf(Props(new DummyActor))
   val staffUpdatesActor: ActorRef = system.actorOf(Props(new DummyActor))
+  val flightUpdatesActor: ActorRef = system.actorOf(Props(new DummyActor))
   val cutOff = "2020-07-06T12:00"
   val myNow: () => SDateLike = () => SDate(cutOff)
   val queues: Map[Terminal, Seq[Queue]] = defaultAirportConfig.queuesByTerminal
@@ -52,10 +53,22 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
   }
 
   "Given a PartitionedPortStateActor, a legacy data cutoff off of 2020-07-06T12:00" >> {
-    "Legacy requests">> {
+    "Legacy requests" >> {
       "When I request GetStateForDateRange wrapped in a PointInTimeQuery for 2020-07-06T11:59 (one minute before the cutoff)" >> {
         "I should see that the unwrapped request is forwarded to the CrunchStateReadActor" >> {
-          val portStateActor = system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, queueUpdatesActor, staffUpdatesActor, myNow, queues, journalType, legacyDataCutoff, tempLegacyActorProps)))
+          val portStateActor = system.actorOf(Props(new PartitionedPortStateActor(
+            flightsActor,
+            queuesActor,
+            staffActor,
+            queueUpdatesActor,
+            staffUpdatesActor,
+            flightUpdatesActor,
+            myNow,
+            queues,
+            journalType,
+            legacyDataCutoff,
+            tempLegacyActorProps
+          )))
           val beforeCutoff = SDate(cutOff).addMinutes(-1)
           val rangeStart = SDate("2020-10-10")
           val rangeEnd = rangeStart.addDays(1)
@@ -69,7 +82,19 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
 
       "When I request GetStateForDateRange with an end date whose last local midnight is before the legacy cutoff" >> {
         "I should see that the request is forwarded to the CrunchStateReadActor" >> {
-          val portStateActor = system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, queueUpdatesActor, staffUpdatesActor, myNow, queues, journalType, legacyDataCutoff, tempLegacyActorProps)))
+          val portStateActor = system.actorOf(Props(new PartitionedPortStateActor(
+            flightsActor,
+            queuesActor,
+            staffActor,
+            queueUpdatesActor,
+            staffUpdatesActor,
+            flightUpdatesActor,
+            myNow,
+            queues,
+            journalType,
+            legacyDataCutoff,
+            tempLegacyActorProps
+          )))
           val rangeStart = SDate("2020-07-05T00:00", Crunch.utcTimeZone)
           val rangeEnd = SDate("2020-07-06T11:59", Crunch.utcTimeZone)
           val message = GetStateForDateRange(rangeStart.millisSinceEpoch, rangeEnd.millisSinceEpoch)
@@ -83,7 +108,19 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
     "Non-legacy requests" >> {
       "When I request GetStateForDateRange wrapped in a PointInTimeQuery for 2020-07-06T12:00 (matching the cutoff)" >> {
         "I should see that no request is forwarded to the CrunchStateReadActor" >> {
-          val portStateActor = system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, queueUpdatesActor, staffUpdatesActor, myNow, queues, journalType, legacyDataCutoff, tempLegacyActorProps)))
+          val portStateActor = system.actorOf(Props(new PartitionedPortStateActor(
+            flightsActor,
+            queuesActor,
+            staffActor,
+            queueUpdatesActor,
+            staffUpdatesActor,
+            flightUpdatesActor,
+            myNow,
+            queues,
+            journalType,
+            legacyDataCutoff,
+            tempLegacyActorProps
+          )))
           val rangeStart = SDate("2020-10-10")
           val rangeEnd = rangeStart.addDays(1)
           val dateRangeMessage = GetStateForDateRange(rangeStart.millisSinceEpoch, rangeEnd.millisSinceEpoch)
@@ -96,7 +133,19 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
 
       "When I request GetStateForDateRange with an end date whose last local midnight is before the legacy cutoff" >> {
         "I should see that no request is forwarded to the CrunchStateReadActor" >> {
-          val portStateActor = system.actorOf(Props(new PartitionedPortStateActor(flightsActor, queuesActor, staffActor, queueUpdatesActor, staffUpdatesActor, myNow, queues, journalType, legacyDataCutoff, tempLegacyActorProps)))
+          val portStateActor = system.actorOf(Props(new PartitionedPortStateActor(
+            flightsActor,
+            queuesActor,
+            staffActor,
+            queueUpdatesActor,
+            staffUpdatesActor,
+            flightUpdatesActor,
+            myNow,
+            queues,
+            journalType,
+            legacyDataCutoff,
+            tempLegacyActorProps
+          )))
           val rangeStart = SDate("2020-07-06T00:00", Crunch.utcTimeZone)
           val rangeEnd = SDate("2020-07-07T12:59", Crunch.utcTimeZone)
           val message = GetStateForDateRange(rangeStart.millisSinceEpoch, rangeEnd.millisSinceEpoch)

@@ -1,9 +1,9 @@
 package actors
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, queueUpdatesProps, staffUpdatesProps}
+import actors.PartitionedPortStateActor.{GetStateForDateRange, flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.acking.Acking.AckingAsker
 import actors.acking.AckingReceiver.{Ack, StreamFailure}
-import actors.daily.{QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
@@ -25,7 +25,8 @@ object PartitionedPortStateTestActor {
     val staffActor = lookups.staffMinutesActor
     val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-queues")
     val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-staff")
-    system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, now, airportConfig.queuesByTerminal)))
+    val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-flight")
+    system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, now, airportConfig.queuesByTerminal)))
   }
 }
 
@@ -35,6 +36,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                                     staffActor: ActorRef,
                                     queueUpdatesActor: ActorRef,
                                     staffUpdatesActor: ActorRef,
+                                    flightUpdatesActor: ActorRef,
                                     now: () => SDateLike,
                                     queues: Map[Terminal, Seq[Queue]])
   extends PartitionedPortStateActor(
@@ -43,6 +45,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     staffActor,
     queueUpdatesActor,
     staffUpdatesActor,
+    flightUpdatesActor,
     now,
     queues,
     InMemoryStreamingJournal,

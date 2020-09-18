@@ -103,6 +103,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val staffActor: ActorRef
   val queueUpdates: ActorRef
   val staffUpdates: ActorRef
+  val flightUpdates: ActorRef
 
   def feedActors: List[ActorRef] = List(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 

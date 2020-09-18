@@ -218,6 +218,7 @@ object TestActors {
                                       staffActor: ActorRef,
                                       queueUpdatesActor: ActorRef,
                                       staffUpdatesActor: ActorRef,
+                                      flightUpdatesActor: ActorRef,
                                       now: () => SDateLike,
                                       queues: Map[Terminal, Seq[Queue]],
                                       journalType: StreamingJournalLike)
@@ -227,6 +228,7 @@ object TestActors {
       staffActor,
       queueUpdatesActor,
       staffUpdatesActor,
+      flightUpdatesActor,
       now,
       queues,
       journalType,
@@ -239,7 +241,8 @@ object TestActors {
       queuesActor -> ResetData,
       staffActor -> ResetData,
       queueUpdatesActor -> PurgeAll,
-      staffUpdatesActor -> PurgeAll
+      staffUpdatesActor -> PurgeAll,
+      flightUpdatesActor -> PurgeAll
     )
 
     def myReceive: Receive = {
@@ -316,9 +319,28 @@ object TestActors {
     extends TestUpdatesSupervisor[StaffMinute, TM](now, terminals, updatesActorFactory)
 
   abstract class TestUpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
-                                                        terminals: List[Terminal],
-                                                        updatesActorFactory: (Terminal, SDateLike) => Props)
+                                                                 terminals: List[Terminal],
+                                                                 updatesActorFactory: (Terminal, SDateLike) => Props)
     extends UpdatesSupervisor(now, terminals, updatesActorFactory) {
+    def testReceive: Receive = {
+      case PurgeAll =>
+        val replyTo = sender()
+        log.info(s"Received PurgeAll")
+        Future.sequence(streamingUpdateActors.values.map(actor => killActor.ask(Terminate(actor)))).foreach { _ =>
+          streamingUpdateActors = Map()
+          lastRequests = Map()
+          replyTo ! Ack
+        }
+    }
+
+    override def receive: Receive = testReceive orElse super.receive
+  }
+
+  class TestFlightUpdatesSupervisor(now: () => SDateLike,
+                                    terminals: List[Terminal],
+                                    updatesActorFactory: (Terminal, SDateLike) => Props)
+    extends FlightUpdatesSupervisor(now, terminals, updatesActorFactory) {
+
     def testReceive: Receive = {
       case PurgeAll =>
         val replyTo = sender()

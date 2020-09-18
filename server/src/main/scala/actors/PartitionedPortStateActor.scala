@@ -34,6 +34,11 @@ object PartitionedPortStateActor {
       Props(new TerminalDayStaffUpdatesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType))
     }
 
+  def flightUpdatesProps(now: () => SDateLike, journalType: StreamingJournalLike): (Terminal, SDateLike) => Props =
+    (terminal: Terminal, day: SDateLike) => {
+      Props(new TerminalDayFlightUpdatesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType))
+    }
+
   def isNonLegacyRequest(pointInTime: SDateLike, legacyDataCutoff: SDateLike): Boolean =
     pointInTime.millisSinceEpoch >= legacyDataCutoff.millisSinceEpoch
 
@@ -195,6 +200,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
                                 staffActor: ActorRef,
                                 queueUpdatesActor: ActorRef,
                                 staffUpdatesActor: ActorRef,
+                                flightUpdatesActor: ActorRef,
                                 val now: () => SDateLike,
                                 val queues: Map[Terminal, Seq[Queue]],
                                 val journalType: StreamingJournalLike,
@@ -212,10 +218,11 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
   val requestStaffMinuteUpdates: StaffMinutesRequester = requestStaffMinutesFn(staffUpdatesActor)
   val requestQueueMinuteUpdates: QueueMinutesRequester = requestQueueMinutesFn(queueUpdatesActor)
+  val requestFlightUpdates: FlightsRequester = requestFlightsFn(flightUpdatesActor)
   val requestStaffMinutes: StaffMinutesRequester = requestStaffMinutesFn(staffActor)
   val requestQueueMinutes: QueueMinutesRequester = requestQueueMinutesFn(queuesActor)
   val requestFlights: FlightsRequester = requestFlightsFn(flightsActor)
-  val replyWithUpdates: PortStateUpdatesRequester = replyWithUpdatesFn(requestFlights, requestQueueMinuteUpdates, requestStaffMinuteUpdates)
+  val replyWithUpdates: PortStateUpdatesRequester = replyWithUpdatesFn(requestFlightUpdates, requestQueueMinuteUpdates, requestStaffMinuteUpdates)
   val replyWithPortState: PortStateRequester = replyWithPortStateFn(requestFlights, requestQueueMinutes, requestStaffMinutes)
   val replyWithMinutesAsPortState: PortStateRequester = replyWithMinutesAsPortStateFn(requestQueueMinutes, requestStaffMinutes)
   val replyWithLegacyPortState: LegacyPortStateRequester = replyWithLegacyPortStateFn(killActor)

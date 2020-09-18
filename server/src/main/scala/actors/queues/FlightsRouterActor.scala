@@ -12,8 +12,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
-import drt.shared.{ApiFlightWithSplits, SDateLike}
+import drt.shared.{ApiFlightWithSplits, SDateLike, UniqueArrival}
 import services.SDate
 import services.graphstages.Crunch
 
@@ -145,8 +144,8 @@ class FlightsRouterActor(
   def groupByTerminalAndDay(container: FlightsWithSplitsDiff): Map[(Terminal, SDateLike), FlightsWithSplitsDiff] = {
     val updates: Map[(Terminal, SDateLike), List[ApiFlightWithSplits]] = container.flightsToUpdate
       .groupBy(flightWithSplits => (flightWithSplits.apiFlight.Terminal, SDate(flightWithSplits.apiFlight.Scheduled).getUtcLastMidnight))
-    val removals: Map[(Terminal, SDateLike), List[Arrival]] = container.arrivalsToRemove
-      .groupBy(arrival => (arrival.Terminal, SDate(arrival.Scheduled).getUtcLastMidnight))
+    val removals: Map[(Terminal, SDateLike), List[UniqueArrival]] = container.arrivalsToRemove
+      .groupBy(ua => (ua.terminal, SDate(ua.scheduled).getUtcLastMidnight))
 
     val keys = updates.keys ++ removals.keys
     keys
