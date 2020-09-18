@@ -1,7 +1,7 @@
 package actors
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps, tempLegacyActorProps}
-import actors.daily.{QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
@@ -70,7 +70,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val staffActor: ActorRef = lookups.staffMinutesActor
   override val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
   override val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
-  override val flightUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
+  override val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
 
   log.info(s"Legacy flight data cutoff: ${legacyFlightDataCutoff.toISOString()}")
 
