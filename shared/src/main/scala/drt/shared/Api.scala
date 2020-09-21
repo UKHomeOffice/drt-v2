@@ -541,6 +541,8 @@ trait SDateLike {
 
   def toLocalDate: LocalDate
 
+  def toUtcDate: UtcDate
+
   def toISODateOnly: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d"
 
   def toHoursAndMinutes: String = f"${getHours()}%02d:${getMinutes()}%02d"
@@ -721,6 +723,15 @@ object FlightsApi {
 
     def ++(other: FlightsWithSplitsDiff): FlightsWithSplitsDiff =
       FlightsWithSplitsDiff(flightsToUpdate ++ other.flightsToUpdate, arrivalsToRemove ++ other.arrivalsToRemove)
+
+    def window(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch) = {
+
+      FlightsWithSplitsDiff(flightsToUpdate.filter(fws =>
+        startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis
+      ), arrivalsToRemove.filter(ua =>
+        startMillis <= ua.scheduled && ua.scheduled <= endMillis
+      ))
+    }
   }
 
   object FlightsWithSplitsDiff {

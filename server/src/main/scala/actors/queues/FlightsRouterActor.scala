@@ -44,7 +44,7 @@ class FlightsRouterActor(
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).pipeTo(sender())
 
-    case q@PointInTimeQuery(pit, GetFlights(startMillis, endMillis)) =>
+    case PointInTimeQuery(pit, GetFlights(startMillis, endMillis)) =>
       self.forward(PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)))
 
     case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
@@ -60,12 +60,6 @@ class FlightsRouterActor(
 
     case request: DateRangeLike with TerminalRequest =>
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).pipeTo(sender())
-
-    /**
-     * @todo - replace this with streaming stuff
-     */
-    case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
-    //sender() ! state.window(startMillis, endMillis).updatedSince(sinceMillis)
 
     case container: FlightsWithSplitsDiff =>
       log.info(s"Adding ${container.flightsToUpdate.size} flight updates and ${container.arrivalsToRemove.size} removals to requests queue")

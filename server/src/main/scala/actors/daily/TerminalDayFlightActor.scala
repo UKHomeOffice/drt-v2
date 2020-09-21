@@ -71,6 +71,7 @@ class TerminalDayFlightActor(
   }
 
   def updateAndPersistDiff(diff: FlightsWithSplitsDiff): Unit = {
+
     val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch)
     state = updatedState
 
