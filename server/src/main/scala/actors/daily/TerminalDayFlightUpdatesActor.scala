@@ -34,10 +34,10 @@ class TerminalDayFlightUpdatesActor(
 
   var state: FlightsWithSplits = FlightsWithSplits.empty
 
-  val startUpdatesStream: MillisSinceEpoch => Unit = (nr: MillisSinceEpoch) => if (maybeKillSwitch.isEmpty) {
+  val startUpdatesStream: MillisSinceEpoch => Unit = (sequenceNumber: Long) => if (maybeKillSwitch.isEmpty) {
     val (_, killSwitch) = PersistenceQuery(context.system)
       .readJournalFor[journalType.ReadJournalType](journalType.id)
-      .eventsByPersistenceId(persistenceId, nr, Long.MaxValue)
+      .eventsByPersistenceId(persistenceId, sequenceNumber, Long.MaxValue)
       .viaMat(KillSwitches.single)(Keep.both)
       .toMat(Sink.actorRefWithAck(self, StreamInitialized, Ack, StreamCompleted))(Keep.left)
       .run()
@@ -96,7 +96,7 @@ class TerminalDayFlightUpdatesActor(
 
   def purgeOldUpdates(): Unit = {
     state = state.copy(flights = state.flights.collect {
-      case f@(ua, ApiFlightWithSplits(_, _, Some(updated))) if updated <= expireBeforeMillis => f
+      case f@(_, ApiFlightWithSplits(_, _, Some(updated))) if updated >= expireBeforeMillis => f
     })
   }
 

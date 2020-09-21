@@ -282,6 +282,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       replyToDateRangeQuery(request, replyWithMinutesAsPortState(sender(), request), sender())
 
     case request: FlightsRequest =>
+      log.info(s"Received Flights request $request")
       replyToDateRangeQuery(request, flightsActor.ask(request).pipeTo(sender()), sender())
   }
 

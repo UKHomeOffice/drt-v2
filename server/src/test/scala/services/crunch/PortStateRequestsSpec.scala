@@ -5,6 +5,7 @@ import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
+import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -27,10 +28,11 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
   val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
+  val flightLookups: FlightLookups = FlightLookups(system, myNow, airportConfig.queuesByTerminal, TestProbe("subscriber").ref)
 
   val legacyDataCutOff: SDateLike = SDate("2020-01-01")
   val maxReplyMessages = 1000
-  val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(myNow, expireAfterMillis, airportConfig.queuesByTerminal, legacyDataCutOff, maxReplyMessages)))
+  val flightsActor: ActorRef = flightLookups.flightsActor
   val queuesActor: ActorRef = lookups.queueMinutesActor
   val staffActor: ActorRef = lookups.staffMinutesActor
   val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-queues")
@@ -59,7 +61,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
   def flightsWithSplits(params: Iterable[(String, String, Terminal)]): List[ApiFlightWithSplits] = params.map { case (_, scheduled, _) =>
     val flight = ArrivalGenerator.arrival("BA1000", schDt = scheduled, terminal = T1)
-    ApiFlightWithSplits(flight, Set())
+    ApiFlightWithSplits(flight, Set(), Option(myNow().millisSinceEpoch))
   }.toList
 
   s"Given an empty PartitionedPortStateActor" >> {
@@ -74,7 +76,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       "Then I should see the flight I sent it" >> {
         val result = Await.result(eventualFlights(eventualAck, myNow, ps), 1 second)
 
-        result === FlightsWithSplits(flightsToMap(myNow, fws))
+        result === FlightsWithSplits(flightsToIterable(myNow, fws))
       }
     }
 
@@ -100,7 +102,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       "Then I should see both flights I sent it" >> {
         val result = Await.result(eventualFlights(eventualAck, myNow, ps), 1 second)
 
-        result === FlightsWithSplits(flightsToMap(myNow, fws1 ++ fws2))
+        result === FlightsWithSplits(flightsToIterable(myNow, fws1 ++ fws2))
       }
     }
 
@@ -296,8 +298,8 @@ class PortStateRequestsSpec extends CrunchTestLike {
     ps.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis)).mapTo[Option[PortStateUpdates]]
   }
 
-  def flightsToMap(now: () => SDateLike,
-                   flights: Seq[ApiFlightWithSplits]): Map[UniqueArrival, ApiFlightWithSplits] = flights.map { fws1 =>
+  def flightsToIterable(now: () => SDateLike,
+                        flights: Seq[ApiFlightWithSplits]): Iterable[(UniqueArrival, ApiFlightWithSplits)] = flights.map { fws1 =>
     fws1.unique -> fws1.copy(lastUpdated = Option(now().millisSinceEpoch))
-  }.toMap
+  }
 }

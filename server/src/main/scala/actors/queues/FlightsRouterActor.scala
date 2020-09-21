@@ -44,6 +44,9 @@ class FlightsRouterActor(
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).pipeTo(sender())
 
+    case q@PointInTimeQuery(pit, GetFlights(startMillis, endMillis)) =>
+      self.forward(PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)))
+
     case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).pipeTo(sender())
 
@@ -52,6 +55,7 @@ class FlightsRouterActor(
       handleAllTerminalLookupsStream(startMillis, endMillis, None).pipeTo(sender())
 
     case GetFlights(startMillis, endMillis) =>
+      log.info("Received get flights")
       self.forward(GetStateForDateRange(startMillis, endMillis))
 
     case request: DateRangeLike with TerminalRequest =>
