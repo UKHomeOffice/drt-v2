@@ -51,11 +51,9 @@ class FlightsRouterActor(
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).pipeTo(sender())
 
     case GetStateForDateRange(startMillis, endMillis) =>
-      log.info(s"**** $startMillis, $endMillis")
       handleAllTerminalLookupsStream(startMillis, endMillis, None).pipeTo(sender())
 
     case GetFlights(startMillis, endMillis) =>
-      log.info("Received get flights")
       self.forward(GetStateForDateRange(startMillis, endMillis))
 
     case request: DateRangeLike with TerminalRequest =>
@@ -159,7 +157,7 @@ class FlightsRouterActor(
       .fold(FlightsWithSplits.empty)(_ ++ _)
       .runWith(Sink.seq)
       .map {
-        case containers if containers.nonEmpty => containers.reduce(_ ++ _)
+        case flightsWithSplitses if flightsWithSplitses.nonEmpty => flightsWithSplitses.reduce(_ ++ _)
         case _ => FlightsWithSplits.empty
       }
       .recoverWith {

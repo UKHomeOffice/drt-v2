@@ -30,8 +30,6 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
   val myNow: () => SDateLike = () => date
 
   "Given a terminal-day flight actor for a day which does not have any data" >> {
-    val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
-
 
     "When I send a flight to persist which lies within the day, and then ask for its state I should see the flight" >> {
       val arrival = flightWithSplitsForDayAndTerminal(date)
