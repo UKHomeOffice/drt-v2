@@ -56,6 +56,9 @@ class FlightsRouterActor(
     case GetFlights(startMillis, endMillis) =>
       self.forward(GetStateForDateRange(startMillis, endMillis))
 
+    case request: GetScheduledFlightsForTerminal =>
+      handleLookups(request.terminal, request.start, request.end, None).pipeTo(sender())
+
     case request: DateRangeLike with TerminalRequest =>
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).pipeTo(sender())
 
