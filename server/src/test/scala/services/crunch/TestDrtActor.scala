@@ -108,7 +108,6 @@ class TestDrtActor extends Actor {
 
         if (tc.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 
-        portStateActor ! SetCrunchQueueActor(crunchQueueActor)
         portStateActor ! SetDeploymentQueueActor(deploymentQueueActor)
         (deskRecsKillSwitch, deploymentsKillSwitch)
       }

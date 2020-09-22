@@ -112,10 +112,6 @@ class FlightsStateActor(val now: () => SDateLike,
       .orElse(unexpected)
 
   private def utilityRequests: Receive = {
-    case SetCrunchQueueActor(actor) =>
-      log.info(s"Received crunch queue actor")
-      maybeUpdatesSubscriber = Option(actor)
-
     case StreamInitialized => sender() ! Ack
 
     case StreamCompleted => log.info(s"Stream completed")

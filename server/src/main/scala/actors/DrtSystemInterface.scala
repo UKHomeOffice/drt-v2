@@ -235,7 +235,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 
-    portStateActor ! SetCrunchQueueActor(crunchQueueActor)
     portStateActor ! SetDeploymentQueueActor(deploymentQueueActor)
 
     (deskRecsKillSwitch, deploymentsKillSwitch)

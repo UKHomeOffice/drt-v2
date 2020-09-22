@@ -229,10 +229,6 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val askThenAck: AckingAsker = Acking.askThenAck
 
   def processMessage: Receive = {
-    case msg: SetCrunchQueueActor =>
-      log.info(s"Received crunch queue actor")
-      flightsActor ! msg
-
     case msg: SetDeploymentQueueActor =>
       log.info(s"Received deployment queue actor")
       queuesActor ! msg
