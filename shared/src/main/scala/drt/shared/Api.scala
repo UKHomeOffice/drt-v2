@@ -15,7 +15,6 @@ import ujson.Js.Value
 import upickle.Js
 import upickle.default._
 
-import scala.collection.immutable
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
 import scala.util.matching.Regex
@@ -724,14 +723,17 @@ object FlightsApi {
     def ++(other: FlightsWithSplitsDiff): FlightsWithSplitsDiff =
       FlightsWithSplitsDiff(flightsToUpdate ++ other.flightsToUpdate, arrivalsToRemove ++ other.arrivalsToRemove)
 
-    def window(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch) = {
-
+    def window(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): FlightsWithSplitsDiff =
       FlightsWithSplitsDiff(flightsToUpdate.filter(fws =>
         startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis
       ), arrivalsToRemove.filter(ua =>
         startMillis <= ua.scheduled && ua.scheduled <= endMillis
       ))
-    }
+
+    def forTerminal(terminal: Terminal): FlightsWithSplitsDiff = FlightsWithSplitsDiff(
+      flightsToUpdate.filter(_.apiFlight.Terminal == terminal),
+      arrivalsToRemove.filter(_.terminal == terminal)
+    )
   }
 
   object FlightsWithSplitsDiff {

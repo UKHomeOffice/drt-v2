@@ -6,8 +6,8 @@ import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
-import drt.shared.{SDateLike, UniqueArrival}
 import drt.shared.Terminals.Terminal
+import drt.shared.{SDateLike, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
@@ -37,6 +37,9 @@ class TerminalDayFlightActor(
     case Some(pit) => f"@${SDate(pit).toISOString()}"
   }
 
+  val firstMinuteOfDay = SDate(year, month, day, 0, 0)
+  val lastMinuteOfDay = firstMinuteOfDay.addDays(1).addMinutes(-1)
+
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
 
@@ -60,8 +63,16 @@ class TerminalDayFlightActor(
 
   override def receiveCommand: Receive = {
     case diff: FlightsWithSplitsDiff =>
-      log.info(s"Received FlightsWithSplits for persistence ${diff.flightsToUpdate.size}")
-      updateAndPersistDiff(diff)
+
+      val filteredDiff = diff.forTerminal(terminal)
+        .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
+
+      if (diff == filteredDiff)
+        log.info(s"Received FlightsWithSplits for persistence ${diff.flightsToUpdate.size}")
+      else
+        logDifferences(diff, filteredDiff)
+
+      updateAndPersistDiff(filteredDiff)
 
     case GetState =>
       log.debug(s"Received GetState")
@@ -69,6 +80,12 @@ class TerminalDayFlightActor(
 
     case m => log.warn(s"Got unexpected message: $m")
   }
+
+  def logDifferences(diff: FlightsWithSplitsDiff, filteredDiff: FlightsWithSplitsDiff): Unit = log.error(
+    s"Received flights for wrong day or terminal " +
+      s"${diff.flightsToUpdate.size} flights sent in ${filteredDiff.flightsToUpdate.size} persisted," +
+      s"${diff.arrivalsToRemove} removals sent in ${filteredDiff.arrivalsToRemove.size} persisted"
+  )
 
   def updateAndPersistDiff(diff: FlightsWithSplitsDiff): Unit = {
 
