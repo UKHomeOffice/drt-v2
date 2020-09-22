@@ -52,12 +52,12 @@ object LGWForecastXLSExtractor {
       val terminalCell = "N"
       val flightDateCell = numericCellOption(headingIndexByNameMap("Date"), row)
       val flightTimeCell = numericCellOption(headingIndexByNameMap("Time (UTC)"), row)
-      val flightNumberCell = stringCellOption(headingIndexByNameMap("OpeFlightNo"), row)
+      val flightNumberCell = stringCellOption(headingIndexByNameMap("FlightNo"), row)
       val airportCell = stringCellOption(headingIndexByNameMap("Airport"), row)
       val serviceCell = stringCellOption(headingIndexByNameMap("Service"), row)
       val arrivalOrDepCell = stringCellOption(headingIndexByNameMap("ArrDep"), row)
       val internationalDomesticCell = stringCellOption(headingIndexByNameMap("Dom/Int"), row)
-      val totalCell = numericCellOption(headingIndexByNameMap("Sum of Pax"), row)
+      val totalCell = numericCellOption(headingIndexByNameMap("Forecast Pax"), row)
 
       val scheduledCell = SDate(DateUtil.getJavaDate(flightDateCell.getOrElse(0.0) + flightTimeCell.getOrElse(0.0), TimeZone.getTimeZone("UTC")).getTime)
 
