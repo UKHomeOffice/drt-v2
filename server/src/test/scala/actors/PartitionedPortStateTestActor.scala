@@ -60,14 +60,8 @@ class PartitionedPortStateTestActor(probe: ActorRef,
       log.info(s"Stream shut down")
 
     case ps: PortState =>
-      val replyTo = sender()
       log.info(s"Setting initial port state")
       state = ps
-      flightsActor.ask(FlightsWithSplitsDiff(ps.flights.values.toList, List())).flatMap { _ =>
-        queuesActor.ask(MinutesContainer(ps.crunchMinutes.values)).flatMap { _ =>
-          staffActor.ask(MinutesContainer(ps.staffMinutes.values))
-        }
-      }.foreach(_ => replyTo ! Ack)
   }
 
   override val askThenAck: AckingAsker = (actor: ActorRef, message: Any, replyTo: ActorRef) => {
@@ -77,7 +71,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
 
           actor.ask(GetStateForDateRange(flightsWithSplitsDiff.updateMinutes.min, flightsWithSplitsDiff.updateMinutes.max)).mapTo[FlightsWithSplits].foreach {
             case FlightsWithSplits(flights) =>
-              val updatedFlights: SortedMap[UniqueArrival, ApiFlightWithSplits] = SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights
+              val updatedFlights = (state.flights -- flightsWithSplitsDiff.arrivalsToRemove) ++ flightsWithSplitsDiff.flightsToUpdate.map(fws => (fws.unique, fws))
               state = state.copy(flights = updatedFlights)
               sendStateToProbe()
           }

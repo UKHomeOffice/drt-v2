@@ -71,8 +71,6 @@ class ApplicationRestartSpec extends CrunchTestLike {
       maxDaysToCrunch = daysToCrunch
     ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalLive)), SDate.now()))
-
     crunch.portStateTestProbe.expectNoMessage(2 second)
 
     success
