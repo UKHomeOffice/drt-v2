@@ -654,10 +654,13 @@ object FlightsApi {
       val inWindow = flights.filter {
         case (_, fws) =>
           val pcpRange = fws.apiFlight.pcpRange()
-          startMillis <= pcpRange.min && pcpRange.max <= endMillis
+          (startMillis <= pcpRange.min && pcpRange.max <= endMillis) ||
+          (startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis)
       }
       FlightsWithSplits(inWindow)
     }
+
+
 
     def forTerminal(terminal: Terminal): FlightsWithSplits = {
       val inTerminal = flights.filter {

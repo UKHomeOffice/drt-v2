@@ -1,7 +1,7 @@
 package actors.minutes
 
 import actors.ArrivalGenerator
-import actors.PartitionedPortStateActor.{GetFlightsForTerminal, GetScheduledFlightsForTerminal, GetStateForTerminalDateRange}
+import actors.PartitionedPortStateActor.{GetFlightsForTerminalEffectingRange, GetScheduledFlightsForTerminal, GetStateForTerminalDateRange}
 import actors.minutes.MinutesActorLike.FlightsLookup
 import actors.queues.FlightsRouterActor
 import akka.actor.{ActorRef, Props}
@@ -28,12 +28,16 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
     var params: List[(Terminal, UtcDate, Option[MillisSinceEpoch])] = List()
 
-    def lookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup =
+    def lookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup = {
+      val byDay = mockData.flights.groupBy {
+        case (_, fws) => SDate(fws.apiFlight.Scheduled).toUtcDate
+      }
       (t: Terminal, d: UtcDate, pit: Option[MillisSinceEpoch]) => {
         params = params :+ (t, d, pit)
 
-        Future(mockData)
+        Future(FlightsWithSplits(byDay.getOrElse(d, List())))
       }
+    }
   }
 
   val flightWithSplits: ApiFlightWithSplits = ArrivalGenerator.flightWithSplitsForDayAndTerminal(date)
@@ -71,6 +75,21 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         }
       }
 
+      "Given a lookup with a flight scheduled on 2020-09-22 with a PCP time on 2020-9-23" >> {
+        val fws = ApiFlightWithSplits(
+          ArrivalGenerator.arrival(schDt = "2020-09-22T23:00", pcpDt = "2020-09-23T00:30"),
+          Set()
+        )
+        val flights = FlightsWithSplits(Iterable((fws.unique, fws)))
+
+        "When I ask for flights on 2020-09-22 I should get the  flight back" >> {
+          val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates)))
+          val eventualResult = cmActor.ask(GetScheduledFlightsForTerminal(utcDate, T1)).mapTo[FlightsWithSplits]
+          val result = Await.result(eventualResult, 1 second)
+
+          result === flights
+        }
+      }
 
       "Given I make a request for flights on a particular day" >> {
 
@@ -96,10 +115,78 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get that flight back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates)))
-        val eventualResult = cmActor.ask(GetFlightsForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
+        val eventualResult = cmActor.ask(GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
         val result = Await.result(eventualResult, 1 second)
 
         result === flights
+      }
+    }
+
+    "Given multiple flights scheduled on multiple days within the range" >> {
+      val fws1 = ArrivalGenerator.flightWithSplitsForDayAndTerminal(SDate("2020-09-22T01:00Z"), T1)
+      val fws2 = ArrivalGenerator.flightWithSplitsForDayAndTerminal(SDate("2020-09-23T01:00Z"), T1)
+      val fws3 = ArrivalGenerator.flightWithSplitsForDayAndTerminal(SDate("2020-09-24T01:00Z"), T1)
+      val flights = FlightsWithSplits(Iterable(
+        (fws1.unique, fws1),
+        (fws2.unique, fws2),
+        (fws3.unique, fws3),
+      ))
+
+      val from = SDate("2020-09-22T00:00Z")
+      val to = SDate("2020-09-25T00:00Z")
+
+      "Then I should get all the flights back" >> {
+        val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates)))
+        val eventualResult = cmActor.ask(GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
+        val result = Await.result(eventualResult, 1 second)
+
+        result === flights
+      }
+    }
+
+    "Given multiple flights scheduled on days insider and outside the requested range" >> {
+      val fws1 = ArrivalGenerator.flightWithSplitsForDayAndTerminal(SDate("2020-09-21T01:00Z"), T1)
+      val fws2 = ArrivalGenerator.flightWithSplitsForDayAndTerminal(SDate("2020-09-23T01:00Z"), T1)
+      val fws3 = ArrivalGenerator.flightWithSplitsForDayAndTerminal(SDate("2020-09-25T01:00Z"), T1)
+      val flights = FlightsWithSplits(Iterable(
+        (fws1.unique, fws1),
+        (fws2.unique, fws2),
+        (fws3.unique, fws3),
+      ))
+
+      val from = SDate("2020-09-22T00:00Z")
+      val to = SDate("2020-09-24T00:00Z")
+
+      "Then I should only get back flights within the requested range" >> {
+        val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates)))
+        val eventualResult = cmActor.ask(GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
+        val result = Await.result(eventualResult, 1 second)
+
+        val expected = FlightsWithSplits(Iterable((fws2.unique, fws2)))
+        result === expected
+      }
+    }
+
+    "Given a flight with a Scheduled time before the range and a PCP time within the range" >> {
+      val fws1 = ApiFlightWithSplits(
+          ArrivalGenerator.arrival(schDt = "2020-09-22T23:00", pcpDt = "2020-09-23T00:30"),
+        Set()
+      )
+
+      val flights = FlightsWithSplits(Iterable(
+        (fws1.unique, fws1)
+      ))
+
+      val from = SDate("2020-09-23T00:00Z")
+      val to = SDate("2020-09-24T00:00Z")
+
+      "Then I should get back that flight" >> {
+        val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates)))
+        val eventualResult = cmActor.ask(GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
+        val result = Await.result(eventualResult, 1 second)
+
+        val expected = FlightsWithSplits(Iterable((fws1.unique, fws1)))
+        result === expected
       }
     }
   }

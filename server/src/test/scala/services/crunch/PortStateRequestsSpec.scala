@@ -212,7 +212,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
           Await.result(ps.ask(GetFlights(nonLegacyDate, nonLegacyDate)), 1 second) === FlightsWithSplits.empty
         }
         "GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1) results in FlightsWithSplits.empty" >> {
-          Await.result(ps.ask(GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1)), 1 second) === FlightsWithSplits.empty
+          Await.result(ps.ask(GetFlightsForTerminalEffectingRange(nonLegacyDate, nonLegacyDate, T1)), 1 second) === FlightsWithSplits.empty
         }
       }
 
@@ -230,7 +230,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
           Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetFlights(nonLegacyDate, nonLegacyDate))), 1 second) === FlightsWithSplits.empty
         }
         "PointInTimeQuery(nonLegacyDate, GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1)) results in FlightsWithSplits.empty" >> {
-          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1))), 1 second) === FlightsWithSplits.empty
+          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetFlightsForTerminalEffectingRange(nonLegacyDate, nonLegacyDate, T1))), 1 second) === FlightsWithSplits.empty
         }
       }
 
@@ -250,7 +250,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
           Await.result(ps.ask(GetFlights(legacyDate, legacyDate)), 1 second) === FlightsWithSplits(Map())
         }
         "GetFlightsForTerminal(legacyDate, legacyDate, T1) results in FlightsWithSplits.empty" >> {
-          Await.result(ps.ask(GetFlightsForTerminal(legacyDate, legacyDate, T1)), 1 second) === FlightsWithSplits(Map())
+          Await.result(ps.ask(GetFlightsForTerminalEffectingRange(legacyDate, legacyDate, T1)), 1 second) === FlightsWithSplits(Map())
         }
       }
     }

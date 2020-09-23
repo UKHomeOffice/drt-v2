@@ -1,7 +1,7 @@
 package controllers.application
 
 import actors.GetState
-import actors.PartitionedPortStateActor.GetFlightsForTerminal
+import actors.PartitionedPortStateActor.GetFlightsForTerminalEffectingRange
 import akka.actor.Props
 import akka.pattern.ask
 import akka.stream.UniqueKillSwitch
@@ -41,7 +41,7 @@ trait WithSimulations {
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
 
             val date = SDate(simulationParams.date)
-            val eventualFlightsWithSplits: Future[FlightsWithSplits] = (ctrl.portStateActor ? GetFlightsForTerminal(
+            val eventualFlightsWithSplits: Future[FlightsWithSplits] = (ctrl.portStateActor ? GetFlightsForTerminalEffectingRange(
               date.getLocalLastMidnight.millisSinceEpoch,
               date.getLocalNextMidnight.millisSinceEpoch,
               simulationParams.terminal

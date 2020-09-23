@@ -60,7 +60,7 @@ class FlightsRouterActor(
       handleLookups(request.terminal, request.start, request.end, None).pipeTo(sender())
 
     case request: DateRangeLike with TerminalRequest =>
-      handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).pipeTo(sender())
+      flightsEffectingDateRange(request.from, request.to, request.terminal).pipeTo(sender())
 
     case container: FlightsWithSplitsDiff =>
       log.info(s"Adding ${container.flightsToUpdate.size} flight updates and ${container.arrivalsToRemove.size} removals to requests queue")
@@ -79,6 +79,13 @@ class FlightsRouterActor(
       }
 
     case unexpected => log.warning(s"Got an unexpected message: $unexpected")
+  }
+
+  private def flightsEffectingDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) = {
+    handleLookups(terminal, SDate(from).addDays(-2), SDate(to).addDays(1), None)
+      .map(fws => {
+        fws.window(from, to)
+      })
   }
 
   def handleAllTerminalLookupsStream(startMillis: MillisSinceEpoch,
@@ -109,14 +116,11 @@ class FlightsRouterActor(
                     start: SDateLike,
                     end: SDateLike,
                     maybePointInTime: Option[MillisSinceEpoch]): Future[FlightsWithSplits] = {
+
     val eventualContainer: Future[immutable.Seq[FlightsWithSplits]] =
       Source(Crunch.utcDatesInPeriod(start, end))
         .mapAsync(1) { day =>
-          lookup(terminal, day, maybePointInTime).map(r => (day, r))
-        }
-        .collect {
-          case (_, flightsWithSplits) =>
-            flightsWithSplits.window(start.millisSinceEpoch, end.millisSinceEpoch)
+          lookup(terminal, day, maybePointInTime)
         }
         .fold(FlightsWithSplits.empty) {
           case (soFarContainer, dayContainer) => soFarContainer ++ dayContainer
