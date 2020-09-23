@@ -6,7 +6,7 @@ import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
-import drt.shared.SDateLike
+import drt.shared.{SDateLike, UtcDate}
 import drt.shared.Terminals.Terminal
 import services.SDate
 import test.TestActors.{ResetData, TestFlightsRouterActor, TestTerminalDayFlightActor}
@@ -20,11 +20,18 @@ case class TestFlightLookups(system: ActorSystem,
                             (implicit val ec: ExecutionContext) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-flights-lookup-kill-actor")
 
-  val resetFlightsData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
-    val date = SDate(millis)
-    val actor = system.actorOf(Props(new TestTerminalDayFlightActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)))
+  val resetFlightsData: (Terminal, UtcDate) => Future[Unit] = (terminal: Terminal, date: UtcDate) => {
+
+    val actor = system.actorOf(Props(new TestTerminalDayFlightActor(date.year, date.month, date.day, terminal, now)))
     actor.ask(ResetData).map(_ => actor ! PoisonPill)
   }
 
-  override val flightsActor: ActorRef = system.actorOf(Props(new TestFlightsRouterActor(updatesSubscriber, queuesByTerminal.keys, flightsLookup, updateFlights, resetFlightsData)))
+  override val flightsActor: ActorRef = system.actorOf(
+    Props(
+      new TestFlightsRouterActor(
+        updatesSubscriber,
+        queuesByTerminal.keys,
+        flightsLookup,
+        updateFlights, resetFlightsData
+      )))
 }

@@ -12,6 +12,7 @@ import services._
 
 import scala.collection.immutable.{Map, SortedMap, SortedSet}
 import scala.collection.{immutable, mutable}
+import scala.util.{Failure, Success, Try}
 
 object Crunch {
   val paxOffPerMinute: Int = 20
@@ -350,6 +351,17 @@ object Crunch {
       .map(SDate(_).getUtcLastMidnight)
       .distinct
       .sortBy(_.millisSinceEpoch)
+      .toList
+  }
+
+  def utcDatesInPeriod(start: SDateLike, end: SDateLike): List[UtcDate] = {
+    val startForTimeZone = SDate(start, Crunch.utcTimeZone)
+    val endForTimeZone = SDate(end, Crunch.utcTimeZone)
+
+    (startForTimeZone.millisSinceEpoch to endForTimeZone.millisSinceEpoch by MilliTimes.oneHourMillis)
+      .map(SDate(_).toUtcDate)
+      .distinct
+      .sorted
       .toList
   }
 }

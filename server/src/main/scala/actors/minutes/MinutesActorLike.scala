@@ -11,7 +11,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, Terminals, WithTimeAccessor}
+import drt.shared.{SDateLike, Terminals, UtcDate, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch
@@ -22,10 +22,10 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object MinutesActorLike {
   type MinutesLookup[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, Option[MillisSinceEpoch]) => Future[Option[MinutesContainer[A, B]]]
-  type FlightsLookup = (Terminals.Terminal, SDateLike, Option[MillisSinceEpoch]) => Future[FlightsWithSplits]
+  type FlightsLookup = (Terminals.Terminal, UtcDate, Option[MillisSinceEpoch]) => Future[FlightsWithSplits]
 
   type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A, B]]
-  type FlightsUpdate = (Terminals.Terminal, SDateLike, FlightsWithSplitsDiff) => Future[Seq[MillisSinceEpoch]]
+  type FlightsUpdate = (Terminals.Terminal, UtcDate, FlightsWithSplitsDiff) => Future[Seq[MillisSinceEpoch]]
 
   case object ProcessNextUpdateRequest
 

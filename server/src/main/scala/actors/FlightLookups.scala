@@ -9,7 +9,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.Queue
-import drt.shared.SDateLike
+import drt.shared.{SDateLike, UtcDate}
 import drt.shared.Terminals.Terminal
 
 import scala.concurrent.ExecutionContext
@@ -24,14 +24,14 @@ trait FlightLookupsLike {
   val now: () => SDateLike
   val requestAndTerminateActor: ActorRef
 
-  val updateFlights: FlightsUpdate = (terminal: Terminal, date: SDateLike, diff: FlightsWithSplitsDiff) => {
+  val updateFlights: FlightsUpdate = (terminal: Terminal, date: UtcDate, diff: FlightsWithSplitsDiff) => {
     val actor = system.actorOf(TerminalDayFlightActor.props(terminal, date, now))
     system.log.info(s"About to update $terminal $date with ${diff.flightsToUpdate.size} flights")
     requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[Seq[MillisSinceEpoch]]
   }
 
 
-  val flightsLookup: FlightsLookup = (terminal: Terminal, date: SDateLike, maybePit: Option[MillisSinceEpoch]) => {
+  val flightsLookup: FlightsLookup = (terminal: Terminal, date: UtcDate, maybePit: Option[MillisSinceEpoch]) => {
     val props = maybePit match {
       case None => TerminalDayFlightActor.props(terminal, date, now)
       case Some(pointInTime) => TerminalDayFlightActor.propsPointInTime(terminal, date, now, pointInTime)

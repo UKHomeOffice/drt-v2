@@ -8,7 +8,7 @@ import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, T2, Terminal}
-import drt.shared.{SDateLike, TQM}
+import drt.shared.{SDateLike, TQM, UtcDate}
 import services.SDate
 import services.crunch.CrunchTestLike
 
@@ -35,7 +35,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
       val arrival = flightWithSplitsForDayAndTerminal(date)
       val flightsWithSplits = FlightsWithSplitsDiff(List(arrival), List())
 
-      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
       val result = Await.result(eventual, 1 second)
@@ -48,7 +48,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
       val arrival = flightWithSplitsForDayAndTerminal(otherDate)
       val flightsWithSplits = FlightsWithSplitsDiff(List(arrival), List())
 
-      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
       val result = Await.result(eventual, 1 second)
@@ -63,7 +63,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
       val outside = flightWithSplitsForDayAndTerminal(otherDate)
       val flightsWithSplits = FlightsWithSplitsDiff(List(inside, outside), List())
 
-      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
       val result = Await.result(eventual, 1 second)
@@ -80,7 +80,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
 
       val flightsWithSplits = FlightsWithSplitsDiff(List(correctTerminal, wrongTerminal), List())
 
-      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
+      val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
       val result = Await.result(eventual, 1 second)
@@ -97,7 +97,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
     }
   }
 
-  private def actorForTerminalAndDate(terminal: Terminal, date: SDateLike): ActorRef = {
-    system.actorOf(TerminalDayFlightActor.props(terminal, date, () => date))
+  private def actorForTerminalAndDate(terminal: Terminal, date: UtcDate): ActorRef = {
+    system.actorOf(TerminalDayFlightActor.props(terminal, date, () => SDate(date)))
   }
 }

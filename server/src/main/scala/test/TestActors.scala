@@ -248,15 +248,15 @@ object TestActors {
                                terminals: Iterable[Terminal],
                                lookup: FlightsLookup,
                                updateMinutes: FlightsUpdate,
-                               val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
+                               val resetData: (Terminal, UtcDate) => Future[Any])
     extends FlightsRouterActor(subscriber, terminals, lookup, updateMinutes) {
     override def receive: Receive = resetReceive orElse super.receive
 
-    var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
+    var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
 
     private def addToTerminalDays(container: FlightsWithSplitsDiff): Unit = {
       groupByTerminalAndDay(container).keys.foreach {
-        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date.millisSinceEpoch))
+        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date))
       }
     }
 

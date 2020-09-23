@@ -2,10 +2,16 @@ package drt.shared
 
 import scala.util.{Success, Try}
 
-case class UtcDate(year: Int, month: Int, day: Int) {
-  def toISOString = f"$year-$month%02d-$day%02d"
+case class UtcDate(year: Int, month: Int, day: Int) extends Ordered[UtcDate] {
+
+  lazy val toISOString = f"$year-$month%02d-$day%02d"
 
   override def toString: String = toISOString
+
+  override def compare(that: UtcDate): Int =
+    if (toISOString < that.toISOString) -1
+    else if (toISOString > that.toISOString) 1
+    else 0
 }
 
 case object UtcDate {

@@ -12,7 +12,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
-import drt.shared.{ApiFlightWithSplits, SDateLike, UniqueArrival}
+import drt.shared.{ApiFlightWithSplits, SDateLike, UniqueArrival, UtcDate}
 import services.SDate
 import services.graphstages.Crunch
 
@@ -110,7 +110,7 @@ class FlightsRouterActor(
                     end: SDateLike,
                     maybePointInTime: Option[MillisSinceEpoch]): Future[FlightsWithSplits] = {
     val eventualContainer: Future[immutable.Seq[FlightsWithSplits]] =
-      Source(Crunch.utcDaysInPeriod(start, end).toList)
+      Source(Crunch.utcDatesInPeriod(start, end))
         .mapAsync(1) { day =>
           lookup(terminal, day, maybePointInTime).map(r => (day, r))
         }
@@ -140,11 +140,11 @@ class FlightsRouterActor(
     combineEventualDiffsStream(eventualUpdatedMinutesDiff)
   }
 
-  def groupByTerminalAndDay(container: FlightsWithSplitsDiff): Map[(Terminal, SDateLike), FlightsWithSplitsDiff] = {
-    val updates: Map[(Terminal, SDateLike), List[ApiFlightWithSplits]] = container.flightsToUpdate
-      .groupBy(flightWithSplits => (flightWithSplits.apiFlight.Terminal, SDate(flightWithSplits.apiFlight.Scheduled).getUtcLastMidnight))
-    val removals: Map[(Terminal, SDateLike), List[UniqueArrival]] = container.arrivalsToRemove
-      .groupBy(ua => (ua.terminal, SDate(ua.scheduled).getUtcLastMidnight))
+  def groupByTerminalAndDay(container: FlightsWithSplitsDiff): Map[(Terminal, UtcDate), FlightsWithSplitsDiff] = {
+    val updates: Map[(Terminal, UtcDate), List[ApiFlightWithSplits]] = container.flightsToUpdate
+      .groupBy(flightWithSplits => (flightWithSplits.apiFlight.Terminal, SDate(flightWithSplits.apiFlight.Scheduled).toUtcDate))
+    val removals: Map[(Terminal, UtcDate), List[UniqueArrival]] = container.arrivalsToRemove
+      .groupBy(ua => (ua.terminal, SDate(ua.scheduled).toUtcDate))
 
     val keys = updates.keys ++ removals.keys
     keys
@@ -165,7 +165,7 @@ class FlightsRouterActor(
       }
       .recoverWith {
         case t =>
-          log.error("Failed to combine containers", t)
+          log.error(t, "Failed to combine containers")
           Future(FlightsWithSplits.empty)
       }
   }
@@ -186,7 +186,7 @@ class FlightsRouterActor(
   }
 
   def handleUpdateAndGetDiff(terminal: Terminal,
-                             day: SDateLike,
+                             day: UtcDate,
                              flightsDiffForTerminalDay: FlightsWithSplitsDiff): Future[Seq[MillisSinceEpoch]] =
     updateFlights(terminal, day, flightsDiffForTerminalDay)
 }

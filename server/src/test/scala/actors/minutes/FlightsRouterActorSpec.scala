@@ -26,20 +26,21 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
   object MockLookup {
 
-    var params: List[(Terminal, SDateLike, Option[MillisSinceEpoch])] = List()
+    var params: List[(Terminal, UtcDate, Option[MillisSinceEpoch])] = List()
 
-    def lookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup = (t: Terminal, d: SDateLike, pit: Option[MillisSinceEpoch]) => {
-      params =  params :+ (t, d, pit)
+    def lookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup =
+      (t: Terminal, d: UtcDate, pit: Option[MillisSinceEpoch]) => {
+        params = params :+ (t, d, pit)
 
-      Future(mockData)
-    }
+        Future(mockData)
+      }
   }
 
   val flightWithSplits: ApiFlightWithSplits = ArrivalGenerator.flightWithSplitsForDayAndTerminal(date)
   val flightsWithSplits: FlightsWithSplits = FlightsWithSplits(Iterable((flightWithSplits.unique, flightWithSplits)))
 
-  val noopUpdates: (Terminal, SDateLike, FlightsWithSplitsDiff) => Future[Seq[MillisSinceEpoch]] =
-    (_: Terminal, _: SDateLike, _: FlightsWithSplitsDiff) => Future(Seq[MillisSinceEpoch]())
+  val noopUpdates: (Terminal, UtcDate, FlightsWithSplitsDiff) => Future[Seq[MillisSinceEpoch]] =
+    (_: Terminal, _: UtcDate, _: FlightsWithSplitsDiff) => Future(Seq[MillisSinceEpoch]())
 
   "When I ask for FlightsWithSplits" >> {
     "Given a lookup with some data" >> {
@@ -79,7 +80,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
           Await.ready(eventualResult, 1 second)
 
-          MockLookup.params === List((T1, SDate(utcDate), None))
+          MockLookup.params === List((T1, utcDate, None))
         }
       }
     }

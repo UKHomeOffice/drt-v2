@@ -7,7 +7,7 @@ import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, UniqueArrival}
+import drt.shared.{SDateLike, UniqueArrival, UtcDate}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
@@ -16,11 +16,11 @@ import services.SDate
 
 
 object TerminalDayFlightActor {
-  def props(terminal: Terminal, date: SDateLike, now: () => SDateLike): Props =
-    Props(new TerminalDayFlightActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, None))
+  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
+    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None))
 
-  def propsPointInTime(terminal: Terminal, date: SDateLike, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayFlightActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, Option(pointInTime)))
+  def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
+    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
 }
 
 class TerminalDayFlightActor(
