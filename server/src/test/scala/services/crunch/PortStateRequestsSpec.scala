@@ -28,7 +28,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
   val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
-  val flightLookups: FlightLookups = FlightLookups(system, myNow, airportConfig.queuesByTerminal, TestProbe("subscriber").ref)
+  val flightLookups: FlightLookups = FlightLookups(system, myNow, airportConfig.queuesByTerminal, TestProbe("subscriber").ref, SDate("2000-01-01T00:00Z"), FlightsStateActor.tempPitActorProps)
 
   val legacyDataCutOff: SDateLike = SDate("2020-01-01")
   val maxReplyMessages = 1000

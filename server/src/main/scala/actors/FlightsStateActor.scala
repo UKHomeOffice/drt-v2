@@ -1,10 +1,10 @@
 package actors
 
-import actors.PartitionedPortStateActor.{DateRangeLike, GetFlights, GetFlightsForTerminalEffectingRange, GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
+import actors.PartitionedPortStateActor._
 import actors.PortStateMessageConversion._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
-import actors.pointInTime.{CrunchStateReadActor, FlightsStateReadActor}
+import actors.pointInTime.FlightsStateReadActor
 import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.actor._
 import akka.pattern.{ask, pipe}
@@ -13,8 +13,6 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
@@ -29,10 +27,8 @@ import scala.language.postfixOps
 
 
 object FlightsStateActor {
-  def tempPitActorProps(pointInTime: SDateLike,
-                        now: () => SDateLike,
-                        expireAfterMillis: Int): Props = {
-    Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch))
+  def tempPitActorProps(pointInTime: SDateLike, expireAfterMillis: Int): Props = {
+    Props(new FlightsStateReadActor(expireAfterMillis, pointInTime.millisSinceEpoch))
   }
 }
 
@@ -168,8 +164,8 @@ class FlightsStateActor(val now: () => SDateLike,
       .pipeTo(sender())
   }
 
-  def tempPointInTimeActor(pointInTime: SDateLike): ActorRef =
-    context.actorOf(tempPitActorProps(pointInTime, now, expireAfterMillis))
+  def tempPointInTimeActor(pointInTime: SDateLike): ActorRef = context
+    .actorOf(tempPitActorProps(pointInTime, expireAfterMillis))
 
   def handleDiff(flightsWithSplitsDiff: FlightsWithSplitsDiff): Unit = {
     val (updatedState, updatedMinutes) = flightsWithSplitsDiff.applyTo(state, now().millisSinceEpoch)

@@ -1,5 +1,6 @@
 package test
 
+import actors.PartitionedPortStateActor.DateRangeLike
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
@@ -220,13 +221,14 @@ object TestActors {
   }
 
 
-
   class TestFlightsRouterActor(subscriber: ActorRef,
                                terminals: Iterable[Terminal],
                                lookup: FlightsLookup,
                                updateMinutes: FlightsUpdate,
                                val resetData: (Terminal, UtcDate) => Future[Any])
-    extends FlightsRouterActor(subscriber, terminals, lookup, updateMinutes, SDate("2000-01-01T00:00Z"), ) {
+    extends FlightsRouterActor(subscriber, terminals, lookup, updateMinutes, SDate("2000-01-01T00:00Z"),
+      (_: SDateLike, _: Int) => Props(new DummyActor())
+    ) {
     override def receive: Receive = resetReceive orElse super.receive
 
     var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
@@ -246,7 +248,6 @@ object TestActors {
       case ResetData =>
         Future
           .sequence(terminalDaysUpdated.map { case (t, d) =>
-//            println(s"\n\n**Sending ResetData to $t / ${SDate(d).toISOString()}")
             resetData(t, d)
           })
           .map { _ =>
@@ -332,12 +333,8 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestFlightsStateActor(initialMaybeSnapshotInterval: Option[Int],
-                              initialSnapshotBytesThreshold: Int,
-                              name: String,
-                              now: () => SDateLike,
-                              expireAfterMillis: Int,
-                              queues: Map[Terminal, Seq[Queue]]) extends FlightsStateActor(now, expireAfterMillis, queues, SDate("1970-01-01"), 1000) with Resettable {
+  class TestFlightsStateActor(now: () => SDateLike) extends
+    FlightsStateActor(now, expireAfterMillis = 1000) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

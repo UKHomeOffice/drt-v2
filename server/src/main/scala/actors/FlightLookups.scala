@@ -1,5 +1,6 @@
 package actors
 
+import actors.PartitionedPortStateActor.DateRangeLike
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayFlightActor}
 import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import actors.queues.FlightsRouterActor
@@ -47,12 +48,14 @@ trait FlightLookupsLike {
 case class FlightLookups(system: ActorSystem,
                          now: () => SDateLike,
                          queuesByTerminal: Map[Terminal, Seq[Queue]],
-                         updatesSubscriber: ActorRef
+                         updatesSubscriber: ActorRef,
+                         flightsByDayStorageSwitchoverDate: SDateLike,
+                         tempLegacyActorProps: (SDateLike, Int) => Props
                         )(implicit val ec: ExecutionContext) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
 
   override val flightsActor: ActorRef = system.actorOf(
-    Props(new FlightsRouterActor(updatesSubscriber, queuesByTerminal.keys, flightsLookup, updateFlights))
+    Props(new FlightsRouterActor(updatesSubscriber, queuesByTerminal.keys, flightsLookup, updateFlights, flightsByDayStorageSwitchoverDate, tempLegacyActorProps))
   )
 
 }

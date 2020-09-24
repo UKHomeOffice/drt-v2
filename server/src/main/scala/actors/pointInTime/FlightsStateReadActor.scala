@@ -11,7 +11,7 @@ import services.SDate
 
 trait FlightsDataLike extends Actor
 
-class FlightsStateReadActor(realNow: () => SDateLike,
+class FlightsStateReadActor(
                             expireAfterMillis: Int,
                             pointInTime: MillisSinceEpoch)
   extends FlightsStateActor(() => SDate(pointInTime), expireAfterMillis)
@@ -19,7 +19,7 @@ class FlightsStateReadActor(realNow: () => SDateLike,
 
   override val log: Logger = LoggerFactory.getLogger(s"$getClass-${SDate(pointInTime).toISOString()}")
 
-  override val recoveryStartMillis: MillisSinceEpoch = realNow().millisSinceEpoch
+  override val recoveryStartMillis: MillisSinceEpoch = System.currentTimeMillis()
 
   override def recovery: Recovery = {
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)

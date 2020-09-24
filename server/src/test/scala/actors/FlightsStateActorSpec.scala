@@ -14,7 +14,7 @@ class MockFlightsStateActor(historicProbe: ActorRef,
                             expireAfterMillis: Int,
                             queues: Map[Terminal, Seq[Queue]],
                             legacyDataCutoff: SDateLike,
-                            replayMaxCrunchStateMessages: Int) extends FlightsStateActor(now, expireAfterMillis, queues, legacyDataCutoff, replayMaxCrunchStateMessages) {
+                            replayMaxCrunchStateMessages: Int) extends FlightsStateActor(now, expireAfterMillis) {
   override def historicRequests: Receive = {
     case _ => historicProbe ! true
   }

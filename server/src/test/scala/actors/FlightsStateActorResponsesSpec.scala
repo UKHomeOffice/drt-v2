@@ -6,7 +6,7 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.{T1, T2}
-import drt.shared.{ApiFlightWithSplits, MilliTimes, SDateLike}
+import drt.shared.{ApiFlightWithSplits, SDateLike}
 import org.specs2.execute.{Failure, Result}
 import services.SDate
 import services.crunch.CrunchTestLike
@@ -24,7 +24,7 @@ class FlightsStateActorResponsesSpec extends CrunchTestLike {
 
   val legacyDataCutoff: SDateLike = SDate("1970-01-01")
 
-  def actor: ActorRef = system.actorOf(Props(new FlightsStateActor(myNow, MilliTimes.oneDayMillis, Map(), legacyDataCutoff, 1000)))
+  def actor: ActorRef = system.actorOf(Props(new FlightsStateActor(myNow,1000)))
 
   val messagesAndResponseTypes: Map[Any, (PartialFunction[Any, Result], Any)] = Map(
     GetStateForTerminalDateRange(0L, 1L, T1) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),

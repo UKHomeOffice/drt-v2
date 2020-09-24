@@ -32,7 +32,7 @@ class FlightsRouterActor(
                           lookup: FlightsLookup,
                           updateFlights: FlightsUpdate,
                           flightsByDayStorageSwitchoverDate: SDateLike,
-                          tempLegacyActorProps: (SDateLike, DateRangeLike, Int) => Props
+                          tempLegacyActorProps: (SDateLike, Int) => Props
                         ) extends Actor with ActorLogging {
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
@@ -104,7 +104,7 @@ class FlightsRouterActor(
     if (PartitionedPortStateActor.isNonLegacyRequest(SDate(millis), flightsByDayStorageSwitchoverDate))
       nonLegacyQuery
     else {
-      val tempActor = context.actorOf(tempLegacyActorProps(SDate(millis), legacyRequest, expireAfterMillis))
+      val tempActor = context.actorOf(tempLegacyActorProps(SDate(millis), expireAfterMillis))
       forwardRequestToLegacyFlightStateActor(tempActor, sender(), legacyRequest)
     }
 
@@ -113,7 +113,7 @@ class FlightsRouterActor(
       currentLookupFn
     else {
       val pitMillis = SDate(request.to).addHours(4).millisSinceEpoch
-      val tempActor = context.actorOf(tempLegacyActorProps(SDate(pitMillis), request, expireAfterMillis))
+      val tempActor = context.actorOf(tempLegacyActorProps(SDate(pitMillis), expireAfterMillis))
       forwardRequestToLegacyFlightStateActor(tempActor, sender(), request)
     }
 
