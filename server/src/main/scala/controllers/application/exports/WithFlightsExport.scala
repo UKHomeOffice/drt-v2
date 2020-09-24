@@ -49,11 +49,25 @@ trait WithFlightsExport extends ExportToCsv {
     }
   }
 
-  def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String,
-                                              terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+//  def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: MillisSinceEpoch,
+//                                              terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+//    Action.apply {
+//      implicit request => exportPointInTimeView(terminalName, pointInTime)
+//    }
+//  }
+
+  def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDayString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {
     Action.apply {
-      implicit request => exportPointInTimeView(terminalName, pointInTime)
+      implicit request => {
+        LocalDate.parse(localDayString) match {
+          case Some(localDate) =>
+            exportPointInTimeView(terminalName,localDate, pointInTime)
+          case _ =>
+            BadRequest("Invalid date format for export day.")
+        }
+      }
     }
+
   }
 
   def exportFlightsWithSplitsBetweenTimeStampsCSV(startMillis: String,
@@ -138,10 +152,10 @@ trait WithFlightsExport extends ExportToCsv {
     exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryForDate)
   }
 
-  private def exportPointInTimeView(terminalName: String, pointInTime: String)
+  private def exportPointInTimeView(terminalName: String, day: LocalDate, pointInTime: MillisSinceEpoch)
                                    (implicit request: Request[AnyContent]): Result = {
-    val pit = SDate(pointInTime.toLong)
-    val start = pit.getLocalLastMidnight
+    val pit = SDate(pointInTime)
+    val start = SDate(day)
     val end = start.addDays(1).addMinutes(-1)
     val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(Option(pit.millisSinceEpoch)))
     exportToCsv(start, end, "flights", terminal(terminalName), None, summaryForDate)}
