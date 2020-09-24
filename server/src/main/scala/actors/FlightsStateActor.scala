@@ -31,19 +31,13 @@ import scala.language.postfixOps
 object FlightsStateActor {
   def tempPitActorProps(pointInTime: SDateLike,
                         now: () => SDateLike,
-                        queues: Map[Terminal, Seq[Queue]],
-                        expireAfterMillis: Int,
-                        legacyDataCutoff: SDateLike,
-                        replayMaxCrunchStateMessages: Int): Props = {
-    Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch, queues, legacyDataCutoff, replayMaxCrunchStateMessages))
+                        expireAfterMillis: Int): Props = {
+    Props(new FlightsStateReadActor(now, expireAfterMillis, pointInTime.millisSinceEpoch))
   }
 }
 
 class FlightsStateActor(val now: () => SDateLike,
-                        expireAfterMillis: Int,
-                        queues: Map[Terminal, Seq[Queue]],
-                        legacyDataCutoff: SDateLike,
-                        replayMaxCrunchStateMessages: Int)
+                        expireAfterMillis: Int)
   extends PersistentActor with RecoveryActorLike with PersistentDrtActor[FlightsWithSplits] {
 
   import FlightsStateActor._
@@ -175,7 +169,7 @@ class FlightsStateActor(val now: () => SDateLike,
   }
 
   def tempPointInTimeActor(pointInTime: SDateLike): ActorRef =
-    context.actorOf(tempPitActorProps(pointInTime, now, queues, expireAfterMillis, legacyDataCutoff, replayMaxCrunchStateMessages))
+    context.actorOf(tempPitActorProps(pointInTime, now, expireAfterMillis))
 
   def handleDiff(flightsWithSplitsDiff: FlightsWithSplitsDiff): Unit = {
     val (updatedState, updatedMinutes) = flightsWithSplitsDiff.applyTo(state, now().millisSinceEpoch)

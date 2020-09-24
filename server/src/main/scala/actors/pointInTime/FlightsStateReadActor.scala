@@ -4,9 +4,7 @@ import actors.FlightsStateActor
 import akka.actor.Actor
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues.Queue
 import drt.shared.SDateLike
-import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.SDate
@@ -15,11 +13,8 @@ trait FlightsDataLike extends Actor
 
 class FlightsStateReadActor(realNow: () => SDateLike,
                             expireAfterMillis: Int,
-                            pointInTime: MillisSinceEpoch,
-                            queues: Map[Terminal, Seq[Queue]],
-                            legacyDataCutoff: SDateLike,
-                            replayMaxCrunchStateMessages: Int)
-  extends FlightsStateActor(() => SDate(pointInTime), expireAfterMillis, queues, legacyDataCutoff, replayMaxCrunchStateMessages)
+                            pointInTime: MillisSinceEpoch)
+  extends FlightsStateActor(() => SDate(pointInTime), expireAfterMillis)
     with FlightsDataLike {
 
   override val log: Logger = LoggerFactory.getLogger(s"$getClass-${SDate(pointInTime).toISOString()}")

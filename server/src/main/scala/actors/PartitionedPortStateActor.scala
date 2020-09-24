@@ -103,7 +103,7 @@ object PartitionedPortStateActor {
                                    (implicit ec: ExecutionContext): PortStateRequester =
     replyWithPortStateFn(_ => Future(FlightsWithSplits.empty), queueMins, staffMins)
 
-  def replyWithLegacyPortStateFn(killActor: ActorRef)
+  def forwardRequestAndKillActor(killActor: ActorRef)
                                 (implicit timeout: Timeout, ec: ExecutionContext, system: ActorContext): (ActorRef, ActorRef, DateRangeLike) => Future[Any] =
     (tempActor: ActorRef, replyTo: ActorRef, message: DateRangeLike) => {
       killActor
@@ -221,7 +221,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
-  implicit val timeout: Timeout = new Timeout(60 hours)
+  implicit val timeout: Timeout = new Timeout(60 seconds)
 
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
 
@@ -234,7 +234,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val replyWithUpdates: PortStateUpdatesRequester = replyWithUpdatesFn(requestFlightUpdates, requestQueueMinuteUpdates, requestStaffMinuteUpdates)
   val replyWithPortState: PortStateRequester = replyWithPortStateFn(requestFlights, requestQueueMinutes, requestStaffMinutes)
   val replyWithMinutesAsPortState: PortStateRequester = replyWithMinutesAsPortStateFn(requestQueueMinutes, requestStaffMinutes)
-  val replyWithLegacyPortState: LegacyPortStateRequester = replyWithLegacyPortStateFn(killActor)
+  val replyWithLegacyPortState: LegacyPortStateRequester = forwardRequestAndKillActor(killActor)
   val askThenAck: AckingAsker = Acking.askThenAck
 
   def processMessage: Receive = {

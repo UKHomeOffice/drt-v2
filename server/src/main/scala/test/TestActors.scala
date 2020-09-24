@@ -7,7 +7,7 @@ import actors.daily._
 import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate, MinutesLookup, MinutesUpdate}
 import actors.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
 import actors.queues.{CrunchQueueActor, DeploymentQueueActor, FlightsRouterActor}
-import akka.actor.{ActorRef, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
@@ -197,37 +197,6 @@ object TestActors {
 
   }
 
-  //  trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends FlightsRouterActor {
-  //    val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
-  //    var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
-  //
-  //    private def addToTerminalDays(container: MinutesContainer[A, B]): Unit = {
-  //      groupByTerminalAndDay(container).keys.foreach {
-  //        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date.millisSinceEpoch))
-  //      }
-  //    }
-  //
-  //    def resetReceive: Receive = {
-  //      case container: MinutesContainer[A, B] =>
-  //        val replyTo = sender()
-  //        addToTerminalDays(container)
-  //        handleUpdatesAndAck(container, replyTo)
-  //
-  //      case ResetData =>
-  //        Future
-  //          .sequence(terminalDaysUpdated.map { case (t, d) =>
-  //            println(s"\n\n**Sending ResetData to $t / ${SDate(d).toISOString()}")
-  //            resetData(t, d)
-  //          })
-  //          .map { _ =>
-  //            terminalDaysUpdated = Set()
-  //            Ack
-  //          }
-  //          .pipeTo(sender())
-  //    }
-  //
-  //  }
-
   class TestStaffMinutesActor(terminals: Iterable[Terminal],
                               lookup: MinutesLookup[StaffMinute, TM],
                               updateMinutes: MinutesUpdate[StaffMinute, TM],
@@ -244,12 +213,20 @@ object TestActors {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
+  class DummyActor extends Actor {
+    override def receive: Receive = {
+      case _ =>
+    }
+  }
+
+
+
   class TestFlightsRouterActor(subscriber: ActorRef,
                                terminals: Iterable[Terminal],
                                lookup: FlightsLookup,
                                updateMinutes: FlightsUpdate,
                                val resetData: (Terminal, UtcDate) => Future[Any])
-    extends FlightsRouterActor(subscriber, terminals, lookup, updateMinutes) {
+    extends FlightsRouterActor(subscriber, terminals, lookup, updateMinutes, SDate("2000-01-01T00:00Z"), ) {
     override def receive: Receive = resetReceive orElse super.receive
 
     var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()

@@ -57,17 +57,17 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
       "When I request GetStateForDateRange wrapped in a PointInTimeQuery for 2020-07-06T11:59 (one minute before the cutoff)" >> {
         "I should see that the unwrapped request is forwarded to the CrunchStateReadActor" >> {
           val portStateActor = system.actorOf(Props(new PartitionedPortStateActor(
-            flightsActor,
-            queuesActor,
-            staffActor,
-            queueUpdatesActor,
-            staffUpdatesActor,
-            flightUpdatesActor,
-            myNow,
-            queues,
-            journalType,
-            legacyDataCutoff,
-            tempLegacyActorProps
+            flightsActor = flightsActor,
+            queuesActor = queuesActor,
+            staffActor = staffActor,
+            queueUpdatesActor = queueUpdatesActor,
+            staffUpdatesActor = staffUpdatesActor,
+            flightUpdatesActor = flightUpdatesActor,
+            now = myNow,
+            queues = queues,
+            journalType = journalType,
+            legacyDataCutoff = legacyDataCutoff,
+            tempLegacyActorProps = tempLegacyActorProps
           )))
           val beforeCutoff = SDate(cutOff).addMinutes(-1)
           val rangeStart = SDate("2020-10-10")
