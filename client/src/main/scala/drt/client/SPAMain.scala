@@ -340,7 +340,7 @@ object SPAMain {
 
   def exportViewUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
     case view: ViewPointInTime =>
-      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.millis}/$terminal")
+      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/${view.time.toLocalDate}/${view.millis}/$terminal")
     case view =>
       SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.millisSinceEpoch}/${view.dayEnd.millisSinceEpoch}/$terminal")
   }
