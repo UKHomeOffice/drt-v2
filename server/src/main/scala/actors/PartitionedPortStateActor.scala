@@ -175,7 +175,7 @@ object PartitionedPortStateActor {
 
   case class GetFlightsForTerminalEffectingRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends FlightsRequest with TerminalRequest
 
-  case class GetScheduledFlightsForTerminal(utcDate: UtcDate, terminal: Terminal) extends FlightsRequest {
+  case class GetScheduledFlightsForTerminal(utcDate: UtcDate, terminal: Terminal) extends FlightsRequest with TerminalRequest {
     val start: SDateLike = SDate(utcDate)
     val end: SDateLike = start.addDays(1).addMinutes(-1)
     override val from: MillisSinceEpoch = start.millisSinceEpoch

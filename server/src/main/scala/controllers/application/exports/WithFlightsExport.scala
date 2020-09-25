@@ -67,8 +67,20 @@ trait WithFlightsExport extends ExportToCsv {
         }
       }
     }
-
   }
+
+//  def exportFlightsWithSplitsForDayTimeCSV(localDayString: String, terminalName: String): Action[AnyContent] = {
+//    Action.apply {
+//      implicit request => {
+//        LocalDate.parse(localDayString) match {
+//          case Some(localDate) =>
+//            exportPointInTimeView(terminalName,localDate, pointInTime)
+//          case _ =>
+//            BadRequest("Invalid date format for export day.")
+//        }
+//      }
+//    }
+//  }
 
   def exportFlightsWithSplitsBetweenTimeStampsCSV(startMillis: String,
                                                   endMillis: String,
@@ -158,5 +170,14 @@ trait WithFlightsExport extends ExportToCsv {
     val start = SDate(day)
     val end = start.addDays(1).addMinutes(-1)
     val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(Option(pit.millisSinceEpoch)))
-    exportToCsv(start, end, "flights", terminal(terminalName), None, summaryForDate)}
+    exportToCsv(start, end, "flights", terminal(terminalName), None, summaryForDate)
+  }
+
+  private def exportDayView(terminalName: String, day: LocalDate)
+                                   (implicit request: Request[AnyContent]): Result = {
+    val start = SDate(day)
+    val end = start.addDays(1).addMinutes(-1)
+    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(None))
+    exportToCsv(start, end, "flights", terminal(terminalName), None, summaryForDate)
+  }
 }

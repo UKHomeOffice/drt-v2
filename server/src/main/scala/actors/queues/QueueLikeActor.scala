@@ -117,6 +117,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
     }
 
   def updateState(days: Iterable[MillisSinceEpoch]): Unit = {
+    log.info(s"Adding ${days.size} days to queue. Queue now contains: ${queuedDays.map(SDate(_).toISODateOnly).mkString(", ")}")
     queuedDays = queuedDays ++ days
   }
 

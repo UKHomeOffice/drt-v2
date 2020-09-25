@@ -660,7 +660,12 @@ object FlightsApi {
       FlightsWithSplits(inWindow)
     }
 
-
+    def scheduledWindow(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): FlightsWithSplits = {
+      val inWindow = flights.filter {
+        case (_, fws) => startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis
+      }
+      FlightsWithSplits(inWindow)
+    }
 
     def forTerminal(terminal: Terminal): FlightsWithSplits = {
       val inTerminal = flights.filter {

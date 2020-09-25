@@ -150,6 +150,9 @@ class FlightsStateActor(val now: () => SDateLike,
 
     case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
       sender() ! state.window(startMillis, endMillis).updatedSince(sinceMillis)
+
+    case request: GetScheduledFlightsForTerminal =>
+      sender() ! state.forTerminal(request.terminal).scheduledWindow(request.from, request.to)
   }
 
   def replyWithDayViewQuery(message: DateRangeLike): Unit = {
