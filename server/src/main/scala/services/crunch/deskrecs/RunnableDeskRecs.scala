@@ -76,7 +76,7 @@ object RunnableDeskRecs {
       .recoverWith {
         case t =>
           log.error("Failed to fetch flights from PortStateActor", t)
-          Future((crunchStartMillis, FlightsWithSplits(List())))
+          Future((crunchStartMillis, FlightsWithSplits.empty))
       }
 
   def start(portStateActor: ActorRef,

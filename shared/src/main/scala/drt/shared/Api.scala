@@ -688,6 +688,8 @@ object FlightsApi {
 
   object FlightsWithSplits {
     val empty: FlightsWithSplits = FlightsWithSplits(Iterable())
+
+    def apply(flights: Seq[ApiFlightWithSplits]): FlightsWithSplits = new FlightsWithSplits(flights.map(fws => (fws.unique, fws)))
   }
 
   case class FlightsWithSplitsDiff(flightsToUpdate: List[ApiFlightWithSplits], arrivalsToRemove: List[UniqueArrival]) {
