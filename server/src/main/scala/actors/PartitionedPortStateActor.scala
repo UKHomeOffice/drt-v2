@@ -7,9 +7,12 @@ import actors.acking.Acking.AckingAsker
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily._
 import actors.pointInTime.CrunchStateReadActor
+import actors.queues.FlightsRouterActor
+import akka.NotUsed
 import akka.actor.{Actor, ActorContext, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -54,7 +57,9 @@ object PartitionedPortStateActor {
 
   type StaffMinutesRequester = PortStateRequest => Future[MinutesContainer[StaffMinute, TM]]
 
-  type FlightsRequester = PortStateRequest => Future[FlightsWithSplits]
+  type FlightsRequester = PortStateRequest => Future[Source[FlightsWithSplits, NotUsed]]
+
+  type FlightUpdatesRequester = PortStateRequest => Future[FlightsWithSplits]
 
   type PortStateUpdatesRequester = (MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, ActorRef) => Future[Option[PortStateUpdates]]
 
@@ -76,11 +81,17 @@ object PartitionedPortStateActor {
 
   def requestFlightsFn(actor: ActorRef)
                       (implicit timeout: Timeout, ec: ExecutionContext): FlightsRequester =
+    request => actor.ask(request).mapTo[Source[FlightsWithSplits, NotUsed]].recoverWith {
+      case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
+    }
+
+  def requestFlightUpdatesFn(actor: ActorRef)
+                            (implicit timeout: Timeout, ec: ExecutionContext): FlightUpdatesRequester =
     request => actor.ask(request).mapTo[FlightsWithSplits].recoverWith {
       case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
     }
 
-  def replyWithUpdatesFn(flights: FlightsRequester, queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
+  def replyWithUpdatesFn(flights: FlightUpdatesRequester, queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
                         (implicit ec: ExecutionContext): PortStateUpdatesRequester =
     (since: MillisSinceEpoch, start: MillisSinceEpoch, end: MillisSinceEpoch, replyTo: ActorRef) => {
       val request = GetUpdatesSince(since, start, end)
@@ -92,7 +103,7 @@ object PartitionedPortStateActor {
     }
 
   def replyWithPortStateFn(flights: FlightsRequester, queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
-                          (implicit ec: ExecutionContext): PortStateRequester = (replyTo: ActorRef, request: PortStateRequest) =>
+                          (implicit ec: ExecutionContext, mat: ActorMaterializer): PortStateRequester = (replyTo: ActorRef, request: PortStateRequest) =>
     combineToPortState(
       flights(request),
       queueMins(request),
@@ -100,8 +111,8 @@ object PartitionedPortStateActor {
     ).pipeTo(replyTo)
 
   def replyWithMinutesAsPortStateFn(queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
-                                   (implicit ec: ExecutionContext): PortStateRequester =
-    replyWithPortStateFn(_ => Future(FlightsWithSplits.empty), queueMins, staffMins)
+                                   (implicit ec: ExecutionContext, mat: ActorMaterializer): PortStateRequester =
+    replyWithPortStateFn(_ => Future(Source(List[FlightsWithSplits]())), queueMins, staffMins)
 
   def forwardRequestAndKillActor(killActor: ActorRef)
                                 (implicit timeout: Timeout, ec: ExecutionContext, system: ActorContext): (ActorRef, ActorRef, DateRangeLike) => Future[Any] =
@@ -143,13 +154,15 @@ object PartitionedPortStateActor {
         }
     }
 
-  def combineToPortState(eventualFlights: Future[FlightsWithSplits],
+  def combineToPortState(flightsStream: Future[Source[FlightsWithSplits, NotUsed]],
                          eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
                          eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
-                        (implicit ec: ExecutionContext): Future[PortState] =
+                        (implicit ec: ExecutionContext, mat: ActorMaterializer): Future[PortState] = {
+    val eventualFlights = flightsStream.flatMap(_.runWith(Sink.seq).map(_.fold(FlightsWithSplits.empty)(_ ++ _)))
     stateAsTuple(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).map {
       case (fs, cms, sms) => PortState(fs, cms, sms)
     }
+  }
 
   trait DateRangeLike {
     val from: MillisSinceEpoch
@@ -185,7 +198,6 @@ object PartitionedPortStateActor {
   case class GetStateForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends PortStateRequest
 
   case class GetStateForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends PortStateRequest with TerminalRequest
-
 
 
   case class GetMinutesForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends PortStateRequest with TerminalRequest
@@ -227,7 +239,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
   val requestStaffMinuteUpdates: StaffMinutesRequester = requestStaffMinutesFn(staffUpdatesActor)
   val requestQueueMinuteUpdates: QueueMinutesRequester = requestQueueMinutesFn(queueUpdatesActor)
-  val requestFlightUpdates: FlightsRequester = requestFlightsFn(flightUpdatesActor)
+  val requestFlightUpdates: FlightUpdatesRequester = requestFlightUpdatesFn(flightUpdatesActor)
   val requestStaffMinutes: StaffMinutesRequester = requestStaffMinutesFn(staffActor)
   val requestQueueMinutes: QueueMinutesRequester = requestQueueMinutesFn(queuesActor)
   val requestFlights: FlightsRequester = requestFlightsFn(flightsActor)
@@ -235,6 +247,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val replyWithPortState: PortStateRequester = replyWithPortStateFn(requestFlights, requestQueueMinutes, requestStaffMinutes)
   val replyWithMinutesAsPortState: PortStateRequester = replyWithMinutesAsPortStateFn(requestQueueMinutes, requestStaffMinutes)
   val replyWithLegacyPortState: LegacyPortStateRequester = forwardRequestAndKillActor(killActor)
+  val replyWithLegacyFlights: (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] = FlightsRouterActor.forwardRequestAndKillActor(killActor)
   val askThenAck: AckingAsker = Acking.askThenAck
 
   def processMessage: Receive = {
@@ -278,33 +291,42 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       replyToPitDateRangeQuery(millis, flightsActor.ask(pitRequest).pipeTo(sender()), request)
 
     case request: GetStateForDateRange =>
-      replyToDateRangeQuery(request, replyWithPortState(sender(), request), sender())
+      replyToDateRangeQuery(request, replyWithPortState(sender(), request))
 
     case request: GetStateForTerminalDateRange =>
-      replyToDateRangeQuery(request, replyWithPortState(sender(), request), sender())
+      replyToDateRangeQuery(request, replyWithPortState(sender(), request))
 
     case request: GetMinutesForTerminalDateRange =>
-      replyToDateRangeQuery(request, replyWithMinutesAsPortState(sender(), request), sender())
+      replyToDateRangeQuery(request, replyWithMinutesAsPortState(sender(), request))
 
     case request: FlightsRequest =>
       log.info(s"Received Flights request $request")
-      replyToDateRangeQuery(request, flightsActor.ask(request).pipeTo(sender()), sender())
+      replyWithStream(request, flightsActor.ask(request), sender())
   }
 
   private def replyToPitDateRangeQuery(millis: MillisSinceEpoch,
                                        nonLegacyQuery: => Future[Any],
                                        legacyRequest: DateRangeLike): Future[Any] =
     if (PartitionedPortStateActor.isNonLegacyRequest(SDate(millis), legacyDataCutoff))
-      nonLegacyQuery
+      nonLegacyQuery.pipeTo(sender())
     else
       replyWithLegacyPortStateLookup(millis, legacyRequest, sender())
 
-  private def replyToDateRangeQuery(request: DateRangeLike, currentLookupFn: => Future[Any], replyTo: ActorRef): Future[Any] =
+  private def replyToDateRangeQuery(request: DateRangeLike, currentLookupFn: => Future[Any]): Future[Any] =
     if (PartitionedPortStateActor.isNonLegacyRequest(SDate(request.to), legacyDataCutoff))
-      currentLookupFn
+      currentLookupFn.pipeTo(sender())
     else {
       val pitMillis = SDate(request.to).addHours(4).millisSinceEpoch
-      replyWithLegacyPortStateLookup(pitMillis, request, replyTo)
+      replyWithLegacyPortStateLookup(pitMillis, request, sender())
+    }
+
+  private def replyWithStream(request: DateRangeLike, currentLookupFn: => Future[Any], replyTo: ActorRef): Unit =
+    if (PartitionedPortStateActor.isNonLegacyRequest(SDate(request.to), legacyDataCutoff))
+      currentLookupFn.pipeTo(sender())
+    else {
+      val pitMillis = SDate(request.to).addHours(4)
+      val tempActor = context.actorOf(tempLegacyActorProps(pitMillis, request, queues, expireAfterMillis))
+      replyWithLegacyFlights(tempActor, replyTo, request)
     }
 
   private def replyWithLegacyPortStateLookup(millis: MillisSinceEpoch, request: DateRangeLike, replyTo: ActorRef): Future[Any] = {

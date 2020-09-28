@@ -126,6 +126,9 @@ object SDate {
 
   def now(dtz: DateTimeZone): JodaSDate = JodaSDate(new DateTime(dtz))
 
+  def apply(y: Int, m: Int, d: Int): SDateLike =
+    implicits.jodaToSDate(new DateTime(y, m, d, 0, 0, DateTimeZone.UTC))
+
   def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike =
     implicits.jodaToSDate(new DateTime(y, m, d, h, mm, DateTimeZone.UTC))
 

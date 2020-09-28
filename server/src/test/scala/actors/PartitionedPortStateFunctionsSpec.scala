@@ -1,18 +1,19 @@
 package actors
 
-import actors.PartitionedPortStateActor.{FlightsRequester, GetStateForDateRange, PortStateRequest, PortStateRequester, PortStateUpdatesRequester, QueueMinutesRequester, StaffMinutesRequester}
+import actors.PartitionedPortStateActor._
 import akka.actor.{Actor, ActorRef, Props}
+import akka.stream.scaladsl.Source
 import akka.testkit.{ImplicitSender, TestProbe}
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PortStateUpdates, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PortStateUpdates, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.T1
 import drt.shared.{ApiFlightWithSplits, PortState, TM, TQM}
 import services.crunch.CrunchTestLike
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{Await, Future}
+import scala.util.Try
 
 class MockRequestHandler(response: Any) extends Actor {
   override def receive: Receive = {
@@ -193,7 +194,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
   private def makeReplyWithPortState(flights: FlightsWithSplits,
                                      queues: MinutesContainer[CrunchMinute, TQM],
                                      staff: MinutesContainer[StaffMinute, TM]): PortStateRequester = {
-    val mockFlightsRequester = (_: PortStateRequest) => Future(flights)
+    val mockFlightsRequester = (_: PortStateRequest) => Future(Source(List(flights)))
     val mockQueuesRequester = (_: PortStateRequest) => Future(queues)
     val mockStaffRequester = (_: PortStateRequest) => Future(staff)
     PartitionedPortStateActor.replyWithPortStateFn(mockFlightsRequester, mockQueuesRequester, mockStaffRequester)

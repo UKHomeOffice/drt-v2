@@ -4,27 +4,71 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor
 import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.daily.RequestAndTerminateActor
+import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate, ProcessNextUpdateRequest}
 import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import akka.pattern.pipe
+import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
-import drt.shared.{ApiFlightWithSplits, SDateLike, UniqueArrival, UtcDate}
+import drt.shared._
 import services.SDate
-import services.graphstages.Crunch
 
-import scala.collection.immutable
+import scala.collection.immutable.NumericRange
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
+object FlightsRouterActor {
+  def utcDateRangeSource(start: SDateLike, end: SDateLike): Source[UtcDate, NotUsed] = {
+    val lookupStartMillis = start.addDays(-2).millisSinceEpoch
+    val lookupEndMillis = end.addDays(1).millisSinceEpoch
+    val daysRangeMillis = lookupStartMillis to lookupEndMillis by MilliTimes.oneDayMillis
+    Source(daysRangeMillis).map(SDate(_).toUtcDate)
+  }
+
+  def scheduledInRange(start: SDateLike, end: SDateLike, scheduled: MillisSinceEpoch): Boolean = {
+    val scheduledDate = SDate(scheduled)
+    start <= scheduledDate && scheduledDate <= end
+  }
+
+  def pcpFallsInRange(start: SDateLike, end: SDateLike, pcpRange: NumericRange[MillisSinceEpoch]): Boolean = {
+    val pcpRangeStart = SDate(pcpRange.min)
+    val pcpRangeEnd = SDate(pcpRange.max)
+    val pcpStartInRange = start <= pcpRangeStart && pcpRangeStart <= end
+    val pcpEndInRange = start <= pcpRangeEnd && pcpRangeEnd <= end
+    pcpStartInRange || pcpEndInRange
+  }
+
+  def flightsByDaySource(flightsForDayAndTerminal: FlightsLookup)
+                        (start: SDateLike, end: SDateLike, terminal: Terminal, maybePit: Option[MillisSinceEpoch])
+                        (implicit ec: ExecutionContext): Source[FlightsWithSplits, NotUsed] =
+    utcDateRangeSource(start, end)
+      .mapAsync(1) { date =>
+        flightsForDayAndTerminal(terminal, date, maybePit).map {
+          case FlightsWithSplits(flights) =>
+            FlightsWithSplits(flights.filter { case (_, fws) =>
+              val scheduledMatches = scheduledInRange(start, end, fws.apiFlight.Scheduled)
+              val pcpMatches = pcpFallsInRange(start, end, fws.apiFlight.pcpRange())
+              scheduledMatches || pcpMatches
+            })
+        }
+      }
+
+  def forwardRequestAndKillActor(killActor: ActorRef)(implicit ec: ExecutionContext, timeout: Timeout): (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] =
+    (tempActor: ActorRef, replyTo: ActorRef, message: DateRangeLike) => {
+      killActor
+        .ask(RequestAndTerminate(tempActor, message))
+        .mapTo[FlightsWithSplits]
+        .map(fwss => Source(List(fwss)))
+        .pipeTo(replyTo)
+    }
+}
 
 class FlightsRouterActor(
                           updatesSubscriber: ActorRef,
@@ -43,9 +87,7 @@ class FlightsRouterActor(
   var updateRequestsQueue: List[(ActorRef, FlightsWithSplitsDiff)] = List()
   var processingRequest: Boolean = false
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
-
-  val forwardRequestToLegacyFlightStateActor: (ActorRef, ActorRef, DateRangeLike) => Future[Any] =
-    PartitionedPortStateActor.forwardRequestAndKillActor(killActor)
+  val forwardRequestAndKillActor: (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] = FlightsRouterActor.forwardRequestAndKillActor(killActor)
 
   override def receive: Receive = {
     case StreamInitialized => sender() ! Ack
@@ -57,49 +99,33 @@ class FlightsRouterActor(
     case PointInTimeQuery(pit, request@GetStateForDateRange(startMillis, endMillis)) =>
       replyToPitDateRangeQuery(
         pit,
-        handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).pipeTo(sender()),
+        handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)),
         request
       )
 
     case PointInTimeQuery(pit, GetFlights(startMillis, endMillis)) =>
       self.forward(PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)))
 
-    case PointInTimeQuery(pit, request: GetScheduledFlightsForTerminal) =>
-      replyToPitDateRangeQuery(
-        pit,
-        handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).pipeTo(sender()),
-        request
-      )
-
     case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
       replyToPitDateRangeQuery(
         pit,
-        flightsEffectingDateRange(request.from, request.to, request.terminal, Option(pit)).pipeTo(sender()),
+        handleLookups(SDate(request.from), SDate(request.to), request.terminal, Option(pit)),
         request
       )
 
     case request@GetStateForDateRange(startMillis, endMillis) =>
       replyToDateRangeQuery(
         request,
-        handleAllTerminalLookupsStream(startMillis, endMillis, None).pipeTo(sender()),
-        sender()
+        handleAllTerminalLookupsStream(startMillis, endMillis, None)
       )
 
     case GetFlights(startMillis, endMillis) =>
       self.forward(GetStateForDateRange(startMillis, endMillis))
 
-    case request: GetScheduledFlightsForTerminal =>
-      replyToDateRangeQuery(
-        request,
-        handleLookups(request.terminal, request.start, request.end, None).pipeTo(sender()),
-        sender()
-      )
-
     case request: DateRangeLike with TerminalRequest =>
       replyToDateRangeQuery(
         request,
-        flightsEffectingDateRange(request.from, request.to, request.terminal, None).pipeTo(sender()),
-        sender()
+        handleLookups(SDate(request.from), SDate(request.to), request.terminal, None)
       )
 
     case container: FlightsWithSplitsDiff =>
@@ -110,8 +136,8 @@ class FlightsRouterActor(
     case ProcessNextUpdateRequest =>
       if (!processingRequest) {
         updateRequestsQueue match {
-          case (replyTo, container) :: tail =>
-            handleUpdatesAndAck(container, replyTo)
+          case (replyTo, flightsWithSplitsDiff) :: tail =>
+            handleUpdatesAndAck(flightsWithSplitsDiff, replyTo)
             updateRequestsQueue = tail
           case Nil =>
             log.debug("Update requests queue is empty. Nothing to do")
@@ -121,49 +147,34 @@ class FlightsRouterActor(
     case unexpected => log.warning(s"Got an unexpected message: $unexpected")
   }
 
-
   def replyToPitDateRangeQuery(millis: MillisSinceEpoch,
-                               nonLegacyQuery: => Future[Any],
-                               legacyRequest: DateRangeLike): Future[Any] =
+                               nonLegacyQuery: => Source[FlightsWithSplits, NotUsed],
+                               legacyRequest: DateRangeLike): Unit =
     if (PartitionedPortStateActor.isNonLegacyRequest(SDate(millis), flightsByDayStorageSwitchoverDate))
-      nonLegacyQuery
-    else {
+      sender() ! nonLegacyQuery
+    else
       replyWithLegacyData(millis, legacyRequest)
-    }
 
   private def replyWithLegacyData(millis: MillisSinceEpoch, legacyRequest: DateRangeLike) = {
     val tempActor = context.actorOf(tempLegacyActorProps(SDate(millis), expireAfterMillis))
-    forwardRequestToLegacyFlightStateActor(tempActor, sender(), legacyRequest)
+    forwardRequestAndKillActor(tempActor, sender(), legacyRequest)
   }
 
-  def replyToDateRangeQuery(request: DateRangeLike, currentLookupFn: => Future[Any], replyTo: ActorRef): Future[Any] =
+  def replyToDateRangeQuery(request: DateRangeLike, currentLookupFn: => Source[FlightsWithSplits, NotUsed]): Unit =
     if (PartitionedPortStateActor.isNonLegacyRequest(SDate(request.to), flightsByDayStorageSwitchoverDate))
-      currentLookupFn
+      sender() ! currentLookupFn
     else {
       val pitMillis = SDate(request.to).addHours(4).millisSinceEpoch
       replyWithLegacyData(pitMillis, request)
     }
 
-  def flightsEffectingDateRange(
-                                 from: MillisSinceEpoch,
-                                 to: MillisSinceEpoch,
-                                 terminal: Terminal,
-                                 maybePointInTime: Option[MillisSinceEpoch]
-                               ): Future[FlightsWithSplits] =
-    handleLookups(terminal, SDate(from).addDays(-2), SDate(to).addDays(1), maybePointInTime)
-      .map(fws => {
-        fws.window(from, to)
-      })
-
   def handleAllTerminalLookupsStream(startMillis: MillisSinceEpoch,
                                      endMillis: MillisSinceEpoch,
-                                     maybePit: Option[MillisSinceEpoch]): Future[FlightsWithSplits] = {
-    val eventualFlightsForAllTerminals = Source(terminals.toList)
-      .mapAsync(1) { terminal =>
-        handleLookups(terminal, SDate(startMillis), SDate(endMillis), maybePit)
+                                     maybePit: Option[MillisSinceEpoch]): Source[FlightsWithSplits, NotUsed] =
+    Source(terminals.toList)
+      .flatMapConcat { terminal =>
+        handleLookups(SDate(startMillis), SDate(endMillis), terminal, maybePit)
       }
-    combineEventualFlightsStream(eventualFlightsForAllTerminals)
-  }
 
   def handleUpdatesAndAck(container: FlightsWithSplitsDiff,
                           replyTo: ActorRef): Future[Seq[MillisSinceEpoch]] = {
@@ -179,26 +190,7 @@ class FlightsRouterActor(
     eventualUpdatesDiff
   }
 
-  def handleLookups(terminal: Terminal,
-                    start: SDateLike,
-                    end: SDateLike,
-                    maybePointInTime: Option[MillisSinceEpoch]): Future[FlightsWithSplits] = {
-
-    val eventualContainer: Future[immutable.Seq[FlightsWithSplits]] =
-      Source(Crunch.utcDatesInPeriod(start, end))
-        .mapAsync(1) { day =>
-          lookup(terminal, day, maybePointInTime)
-        }
-        .fold(FlightsWithSplits.empty) {
-          case (soFarContainer, dayContainer) => soFarContainer ++ dayContainer
-        }
-        .runWith(Sink.seq)
-
-    eventualContainer.map {
-      case cs if cs.nonEmpty => cs.reduce(_ ++ _)
-      case _ => FlightsWithSplits.empty
-    }
-  }
+  val handleLookups: (SDateLike, SDateLike, Terminal, Option[MillisSinceEpoch]) => Source[FlightsWithSplits, NotUsed] = FlightsRouterActor.flightsByDaySource(lookup)
 
   def updateByTerminalDayAndGetDiff(container: FlightsWithSplitsDiff): Future[Seq[MillisSinceEpoch]] = {
     val eventualUpdatedMinutesDiff: Source[Seq[MillisSinceEpoch], NotUsed] =
@@ -224,21 +216,6 @@ class FlightsRouterActor(
         (terminalDay, diff)
       }
       .toMap
-  }
-
-  private def combineEventualFlightsStream(eventualFlights: Source[FlightsWithSplits, NotUsed]): Future[FlightsWithSplits] = {
-    eventualFlights
-      .fold(FlightsWithSplits.empty)(_ ++ _)
-      .runWith(Sink.seq)
-      .map {
-        case flightsWithSplitses if flightsWithSplitses.nonEmpty => flightsWithSplitses.reduce(_ ++ _)
-        case _ => FlightsWithSplits.empty
-      }
-      .recoverWith {
-        case t =>
-          log.error(t, "Failed to combine containers")
-          Future(FlightsWithSplits.empty)
-      }
   }
 
   private def combineEventualDiffsStream(eventualUpdatedMinutesDiff: Source[Seq[MillisSinceEpoch], NotUsed]): Future[Seq[MillisSinceEpoch]] = {

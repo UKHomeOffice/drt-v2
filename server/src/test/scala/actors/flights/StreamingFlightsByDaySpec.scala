@@ -1,67 +1,24 @@
 package actors.flights
 
 import actors.ArrivalGenerator
-import akka.NotUsed
-import akka.stream.scaladsl.{Sink, Source}
+import actors.queues.FlightsRouterActor
+import actors.queues.FlightsRouterActor.scheduledInRange
+import akka.stream.scaladsl.Sink
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.{ApiFlightWithSplits, MilliTimes, UniqueArrival, UtcDate}
+import drt.shared.Terminals.{T1, Terminal}
+import drt.shared.{ApiFlightWithSplits, UtcDate}
 import services.SDate
 import services.crunch.CrunchTestLike
 
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 class StreamingFlightsByDaySpec extends CrunchTestLike {
-  def earlyOnTimeAndLate(utcDate: UtcDate): FlightsWithSplits = FlightsWithSplits(List(
-    ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = midday(utcDate), pcpDt = dayBefore(utcDate), actPax = Option(100)), Set()),
-    ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = midday(utcDate), pcpDt = midday(utcDate), actPax = Option(100)), Set()),
-    ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = midday(utcDate), pcpDt = dayAfter(utcDate), actPax = Option(100)), Set())))
-
-  private def midday(utcDate: UtcDate): String = SDate(utcDate).addHours(12).toISOString()
-
-  private def dayBefore(utcDate: UtcDate): String = SDate(utcDate).addHours(-1).toISOString()
-
-  private def dayAfter(utcDate: UtcDate): String = SDate(utcDate).addHours(25).toISOString()
-
-  "Given map of UtcDate to flights spanning several days, each containing flights that have pcp times the day before, after or on time" >> {
-    def september(day: Int) = UtcDate(2020, 9, day)
-
-    val earlyOnTimeAndLateFlights: Map[UtcDate, FlightsWithSplits] = (1 to 10)
-      .map { day =>
-        val date = september(day)
-        date -> earlyOnTimeAndLate(date)
-      }.toMap
-
-    "When asking for flights for dates 3rd to 5th" >> {
-      "I should see the late pcp from 2nd, all 3 flights from the 3rd, 4th, 5th, and the early flight from the 6th" >> {
-        val flights: Source[Iterable[(UniqueArrival, ApiFlightWithSplits)], NotUsed] = flightsByDaySource(earlyOnTimeAndLateFlights, UtcDate(2020, 9, 3), UtcDate(2020, 9, 5))
-      }
-    }
-  }
-
-  private def flightsByDaySource(flights: Map[UtcDate, FlightsWithSplits], start: UtcDate, end: UtcDate): Source[Iterable[(UniqueArrival, ApiFlightWithSplits)], NotUsed] =
-    utcDateRangeSource(start, end)
-      .map { date =>
-        flights.get(date) match {
-          case Some(FlightsWithSplits(flights)) =>
-            flights.filter { case (_, fws) =>
-              val scheduledDate = SDate(fws.apiFlight.Scheduled).toUtcDate
-              val pcpRangeStart = SDate(fws.apiFlight.pcpRange().min).toUtcDate
-              val pcpRangeEnd = SDate(fws.apiFlight.pcpRange().max).toUtcDate
-              val scheduledInRange = start <= scheduledDate && scheduledDate <= end
-              val pcpStartInRange = start <= pcpRangeStart && pcpRangeStart <= end
-              val pcpEndInRange = start <= pcpRangeEnd && pcpRangeEnd <= end
-              val onlyPcpInRange = !scheduledInRange && (pcpStartInRange || pcpEndInRange)
-              scheduledInRange || onlyPcpInRange
-            }
-          case None => Iterable()
-        }
-      }
-
   "When I ask for a Source of query dates" >> {
     "Given a start date of 2020-09-10 and end date of 2020-09-11" >> {
       "I should get 2 days before (2020-09-08) to 1 day after (2020-09-12)" >> {
-        val result = Await.result(utcDateRangeSource(UtcDate(2020, 9, 10), UtcDate(2020, 9, 11)).runWith(Sink.seq), 1 second)
+        val result = Await.result(FlightsRouterActor.utcDateRangeSource(SDate(2020, 9, 10), SDate(2020, 9, 11)).runWith(Sink.seq), 1 second)
         val expected = Seq(
           UtcDate(2020, 9, 8),
           UtcDate(2020, 9, 9),
@@ -75,10 +32,67 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     }
   }
 
-  private def utcDateRangeSource(start: UtcDate, end: UtcDate): Source[UtcDate, NotUsed] = {
-    val lookupStartMillis = SDate(start).addDays(-2).millisSinceEpoch
-    val lookupEndMillis = SDate(end).addDays(1).millisSinceEpoch
-    val daysRangeMillis = lookupStartMillis to lookupEndMillis by MilliTimes.oneDayMillis
-    Source(daysRangeMillis).map(SDate(_).toUtcDate)
+  "Given a flight scheduled on 2020-09-28" >> {
+    "When I ask if it's scheduled on 2020-09-28" >> {
+      "Then I should get a true response" >> {
+        val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-28T12:00Z", actPax = Option(100)), Set())
+        val result = scheduledInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.Scheduled)
+        result === true
+      }
+    }
+  }
+
+  "Given a flight scheduled on 2020-09-29 with pax at the pcp a day earlier" >> {
+    "When I ask if its pcp range falls within 2020-09-28" >> {
+      "Then I should get a true response" >> {
+        val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-29T12:00Z", pcpDt = "2020-09-28T12:00Z", actPax = Option(100)), Set())
+        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange())
+        result === true
+      }
+    }
+  }
+
+  "Given a flight scheduled on 2020-09-27 with pax at the pcp a day later" >> {
+    "When I ask if its pcp range falls within 2020-09-28" >> {
+      "Then I should get a true response" >> {
+        val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-27T12:00Z", pcpDt = "2020-09-28T12:00Z", actPax = Option(100)), Set())
+        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange())
+        result === true
+      }
+    }
+  }
+
+  "Given map of UtcDate to flights spanning several days, each containing flights that have pcp times the day before, after or on time" >> {
+    val flight0109 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-01T12:00Z", pcpDt = "2020-09-01T12:00Z", actPax = Option(100)), Set())
+    val flight0209onTime = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-02T23:00Z", pcpDt = "2020-09-02T23:00Z", actPax = Option(100)), Set())
+    val flight0209Late = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-02T23:10Z", pcpDt = "2020-09-03T01:00Z", actPax = Option(100)), Set())
+    val flight0309 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-03T12:00Z", pcpDt = "2020-09-03T12:00Z", actPax = Option(100)), Set())
+    val flight0409 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-04T12:00Z", pcpDt = "2020-09-04T12:00Z", actPax = Option(100)), Set())
+    val flight0509OnTime = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T01:00Z", pcpDt = "2020-09-05T01:00Z", actPax = Option(100)), Set())
+    val flight0509Early = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T01:10Z", pcpDt = "2020-09-04T23:50Z", actPax = Option(100)), Set())
+    val flight0609 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-06T12:00Z", pcpDt = "2020-09-06T12:00Z", actPax = Option(100)), Set())
+
+    val earlyOnTimeAndLateFlights = (_: Terminal, utcDate: UtcDate, _: Option[MillisSinceEpoch]) =>
+      Future(Map(
+        UtcDate(2020, 9, 1) -> FlightsWithSplits(Seq(flight0109)),
+        UtcDate(2020, 9, 2) -> FlightsWithSplits(Seq(flight0209onTime, flight0209Late)),
+        UtcDate(2020, 9, 3) -> FlightsWithSplits(Seq(flight0309)),
+        UtcDate(2020, 9, 4) -> FlightsWithSplits(Seq(flight0409)),
+        UtcDate(2020, 9, 5) -> FlightsWithSplits(Seq(flight0509OnTime, flight0509Early)),
+        UtcDate(2020, 9, 6) -> FlightsWithSplits(Seq(flight0609))
+      ).getOrElse(utcDate, FlightsWithSplits.empty))
+
+
+    "When asking for flights for dates 3rd to 4th" >> {
+      "I should see the late pcp from 2nd, all 3 flights from the 3rd, 4th, and the early flight from the 5th" >> {
+        val startDate = SDate(2020, 9, 3)
+        val endDate = SDate(2020, 9, 4, 23, 59)
+        val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights)(startDate, endDate, T1, None)
+        val flightsSortedByPcp = flights.map(_.flights.map(_._2).toIterable).runWith(Sink.seq).map(_.flatten.sortBy(_.apiFlight.pcpRange().min))
+        val result = Await.result(flightsSortedByPcp, 1 second)
+        val expected = Iterable(flight0209Late, flight0309, flight0409, flight0509Early)
+        result === expected
+      }
+    }
   }
 }

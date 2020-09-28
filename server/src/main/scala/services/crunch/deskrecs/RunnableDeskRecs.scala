@@ -2,6 +2,7 @@ package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetFlights
 import actors.acking.AckingReceiver._
+import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream._
@@ -28,6 +29,7 @@ object RunnableDeskRecs {
             portDeskRecs: DesksAndWaitsPortProviderLike,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
            (implicit executionContext: ExecutionContext,
+            materializer: Materializer,
             timeout: Timeout = new Timeout(60 seconds)): RunnableGraph[(SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -68,11 +70,21 @@ object RunnableDeskRecs {
   private def flightsToCrunch(portStateActor: ActorRef)
                              (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
                              (implicit executionContext: ExecutionContext,
+                              materializer: Materializer,
                               timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] =
     portStateActor
       .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
-      .mapTo[FlightsWithSplits]
-      .map(fs => (crunchStartMillis, fs))
+      .map { x =>
+        println(s"****** Got a $x")
+        x
+      }
+      .mapTo[Source[FlightsWithSplits, NotUsed]]
+      .flatMap { fs =>
+        fs.runWith(Sink.seq).map { fwss =>
+          val combined = fwss.fold(FlightsWithSplits.empty)(_ ++ _)
+          (crunchStartMillis, combined)
+        }
+      }
       .recoverWith {
         case t =>
           log.error("Failed to fetch flights from PortStateActor", t)
