@@ -188,17 +188,9 @@ object PartitionedPortStateActor {
 
   case class GetFlightsForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends FlightsRequest with TerminalRequest
 
-  case class GetScheduledFlightsForTerminal(utcDate: UtcDate, terminal: Terminal) extends FlightsRequest with TerminalRequest {
-    val start: SDateLike = SDate(utcDate)
-    val end: SDateLike = start.addDays(1).addMinutes(-1)
-    override val from: MillisSinceEpoch = start.millisSinceEpoch
-    override val to: MillisSinceEpoch = end.millisSinceEpoch
-  }
-
   case class GetStateForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends PortStateRequest
 
   case class GetStateForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends PortStateRequest with TerminalRequest
-
 
   case class GetMinutesForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends PortStateRequest with TerminalRequest
 
