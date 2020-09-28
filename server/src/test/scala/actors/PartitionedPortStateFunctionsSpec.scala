@@ -1,6 +1,7 @@
 package actors
 
 import actors.PartitionedPortStateActor._
+import actors.queues.FlightsRouterActor
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.scaladsl.Source
 import akka.testkit.{ImplicitSender, TestProbe}
@@ -63,9 +64,10 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
   "Given a flights requester with a mock flights actor" >> {
     "When the mock is set to return an empty FlightsWithSplits" >> {
-      val requestQueueMinutes: FlightsRequester = PartitionedPortStateActor.requestFlightsFn(mockResponseActor(emptyFlights))
+      val requestQueueMinutes: FlightsRequester = PartitionedPortStateActor.requestFlightsFn(mockResponseActor(Source(List(emptyFlights))))
       "Then I should see the empty container in the future" >> {
-        val result = Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1 second)
+        val eventualResult: Future[FlightsWithSplits] = FlightsRouterActor.runAndCombine(requestQueueMinutes(GetStateForDateRange(0L, 0L)))
+        val result = Await.result(eventualResult, 1 second)
         result === emptyFlights
       }
     }

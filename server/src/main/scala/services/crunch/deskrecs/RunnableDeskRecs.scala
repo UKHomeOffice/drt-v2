@@ -80,10 +80,10 @@ object RunnableDeskRecs {
       }
       .mapTo[Source[FlightsWithSplits, NotUsed]]
       .flatMap { fs =>
-        fs.runWith(Sink.seq).map { fwss =>
-          println(s"***** This FlightsWithSplits contains: ${fwss.map(_.flights)}")
-          val combined = fwss.fold(FlightsWithSplits.empty)(_ ++ _)
-          (crunchStartMillis, combined)
+        fs.runWith(Sink.reduce[FlightsWithSplits](_ ++ _)).map { fws =>
+          println(s"***** This FlightsWithSplits contains: ${fws.flights}")
+
+          (crunchStartMillis, fws)
         }
       }
       .recoverWith {

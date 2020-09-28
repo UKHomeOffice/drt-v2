@@ -198,7 +198,10 @@ class FlightsRouterActor(
     eventualUpdatesDiff
   }
 
-  val handleLookups: (SDateLike, SDateLike, Terminal, Option[MillisSinceEpoch]) => Source[FlightsWithSplits, NotUsed] = FlightsRouterActor.flightsByDaySource(lookup)
+  val handleLookups: (SDateLike, SDateLike, Terminal, Option[MillisSinceEpoch]) => Source[FlightsWithSplits, NotUsed] = {
+
+    FlightsRouterActor.flightsByDaySource(lookup)
+  }
 
   def updateByTerminalDayAndGetDiff(container: FlightsWithSplitsDiff): Future[Seq[MillisSinceEpoch]] = {
     val eventualUpdatedMinutesDiff: Source[Seq[MillisSinceEpoch], NotUsed] =

@@ -3,8 +3,11 @@ package services.crunch
 import actors.PartitionedPortStateActor._
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.queues.FlightsRouterActor
+import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
@@ -209,10 +212,10 @@ class PortStateRequestsSpec extends CrunchTestLike {
           Await.result(ps.ask(GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)), 1 second) === PortState.empty
         }
         "GetFlights(nonLegacyDate, nonLegacyDate) results in FlightsWithSplits.empty" >> {
-          Await.result(ps.ask(GetFlights(nonLegacyDate, nonLegacyDate)), 1 second) === FlightsWithSplits.empty
+          Await.result(FlightsRouterActor.runAndCombine(ps.ask(GetFlights(nonLegacyDate, nonLegacyDate)).mapTo(Source[FlightsWithSplits, NotUsed])), 1 second) === FlightsWithSplits.empty
         }
         "GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1) results in FlightsWithSplits.empty" >> {
-          Await.result(ps.ask(GetFlightsForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)), 1 second) === FlightsWithSplits.empty
+          Await.result(FlightsRouterActor.runAndCombine(ps.ask(GetFlightsForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1))), 1 second) === FlightsWithSplits.empty
         }
       }
 
@@ -270,7 +273,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
                       ps: ActorRef): Future[FlightsWithSplits] = eventualAck.flatMap { _ =>
     val startMillis = now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = now().getLocalNextMidnight.millisSinceEpoch
-    ps.ask(GetFlights(startMillis, endMillis)).mapTo[FlightsWithSplits]
+    FlightsRouterActor.runAndCombine(ps.ask(GetFlights(startMillis, endMillis)).mapTo[Source[FlightsWithSplits, NotUsed]])
   }
 
   def eventualPortState(eventualAck: Future[Any],
