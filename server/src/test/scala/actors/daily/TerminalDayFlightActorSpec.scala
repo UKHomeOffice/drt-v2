@@ -53,7 +53,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
       val result = Await.result(eventual, 1 second)
 
-      result === FlightsWithSplits(Map())
+      result === FlightsWithSplits.empty
     }
 
     "When I send flights to persist which lie both inside and outside the day, " +

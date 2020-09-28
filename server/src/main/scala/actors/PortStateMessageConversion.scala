@@ -53,7 +53,7 @@ object PortStateMessageConversion {
       actDesks = cmm.actDesks,
       actWait = cmm.actWait,
       lastUpdated = cmm.lastUpdated
-      )
+    )
   }
 
   def staffMinuteFromMessage(smm: StaffMinuteMessage): StaffMinute = {
@@ -66,7 +66,7 @@ object PortStateMessageConversion {
       fixedPoints = smm.fixedPoints.getOrElse(0),
       movements = smm.movements.getOrElse(0),
       lastUpdated = smm.lastUpdated
-      )
+    )
   }
 
   def staffMinuteToMessage(sm: StaffMinute): StaffMinuteMessage = StaffMinuteMessage(
@@ -77,10 +77,11 @@ object PortStateMessageConversion {
     movements = Option(sm.movements),
     lastUpdated = sm.lastUpdated)
 
-  def flightsFromMessages(flightMessages: Seq[FlightWithSplitsMessage]): Seq[(UniqueArrival, ApiFlightWithSplits)] = flightMessages.map(message => {
-    val fws = flightWithSplitsFromMessage(message)
-    (fws.unique, fws)
-  })
+  def flightsFromMessages(flightMessages: Seq[FlightWithSplitsMessage]): Map[UniqueArrival, ApiFlightWithSplits] =
+    flightMessages.map(message => {
+      val fws = flightWithSplitsFromMessage(message)
+      (fws.unique, fws)
+    }).toMap
 
   def portStateToSnapshotMessage(portState: PortState): CrunchStateSnapshotMessage = {
     CrunchStateSnapshotMessage(
@@ -89,7 +90,7 @@ object PortStateMessageConversion {
       portState.flights.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
       portState.crunchMinutes.values.toList.map(crunchMinuteToMessage),
       portState.staffMinutes.values.toList.map(staffMinuteToMessage)
-      )
+    )
   }
 
   def splitMessageToApiSplits(sm: SplitMessage): Splits = {
@@ -104,11 +105,11 @@ object PortStateMessageConversion {
         Queue(ptqcm.queueType.getOrElse("")),
         ptqcm.paxValue.getOrElse(0d),
         None
-        )).toSet,
+      )).toSet,
       splitSource,
       sm.eventType.map(EventType(_)),
       SplitStyle(sm.style.getOrElse(""))
-      )
+    )
   }
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = CrunchMinuteMessage(
@@ -124,5 +125,5 @@ object PortStateMessageConversion {
     actDesks = cm.actDesks,
     actWait = cm.actWait,
     lastUpdated = cm.lastUpdated
-    )
+  )
 }

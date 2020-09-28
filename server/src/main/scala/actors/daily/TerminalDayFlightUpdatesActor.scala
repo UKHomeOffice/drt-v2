@@ -89,7 +89,7 @@ class TerminalDayFlightUpdatesActor(
     state = FlightsWithSplits(message.flightWithSplits.map(fwsm => {
       val fws = FlightMessageConversion.flightWithSplitsFromMessage(fwsm)
       (fws.apiFlight.unique, fws)
-    }).toList)
+    }).toMap)
   }
 
   def expireBeforeMillis: MillisSinceEpoch = now().millisSinceEpoch - MilliTimes.oneMinuteMillis

@@ -74,10 +74,6 @@ object RunnableDeskRecs {
                               timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] =
     portStateActor
       .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
-      .map { x =>
-        println(s"****** Got a $x")
-        x
-      }
       .mapTo[Source[FlightsWithSplits, NotUsed]]
       .flatMap { fs =>
         fs.runWith(Sink.reduce[FlightsWithSplits](_ ++ _)).map { fws =>

@@ -5,6 +5,7 @@ import actors.PartitionedPortStateActor.GetFlights
 import actors.acking.AckingReceiver.{Ack, StreamInitialized}
 import akka.actor.{Actor, ActorLogging}
 import akka.pattern.pipe
+import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.PaxTypes._
@@ -118,7 +119,7 @@ class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor with Ac
 
   override def receive: Receive = {
     case GetFlights(_, _) =>
-      sender() ! fws
+      sender() ! Source(List(fws))
 
     case GetState =>
       val replyTo = sender()
