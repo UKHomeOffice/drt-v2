@@ -1,6 +1,6 @@
 package actors
 
-import actors.PartitionedPortStateActor.{GetFlightsForTerminalEffectingRange, GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince}
+import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince}
 import actors.acking.AckingReceiver.Ack
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
@@ -28,7 +28,7 @@ class FlightsStateActorResponsesSpec extends CrunchTestLike {
 
   val messagesAndResponseTypes: Map[Any, (PartialFunction[Any, Result], Any)] = Map(
     GetStateForTerminalDateRange(0L, 1L, T1) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),
-    GetFlightsForTerminalEffectingRange(0L, 1L, T1) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),
+    GetFlightsForTerminalDateRange(0L, 1L, T1) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),
     GetUpdatesSince(0L, 0L, 1L) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),
     GetStateForDateRange(0L, 1L) -> (({ case _: FlightsWithSplits => success }, classOf[FlightsWithSplits])),
     FlightsWithSplitsDiff(List(), List()) -> (({ case Ack => success }, Ack))

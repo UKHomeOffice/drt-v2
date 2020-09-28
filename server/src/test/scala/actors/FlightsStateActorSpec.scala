@@ -1,6 +1,6 @@
 package actors
 
-import actors.PartitionedPortStateActor.{GetFlightsForTerminalEffectingRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, PointInTimeQuery}
 import akka.actor.{ActorRef, Props}
 import akka.testkit.TestProbe
 import drt.shared.Queues.Queue
@@ -30,12 +30,12 @@ class FlightsStateActorSpec extends CrunchTestLike {
   "Given a mock FlightsStateActor" >> {
     "Then I should see the historic receive partial function called" >> {
       "When I send a PointInTimeQuery" >> {
-        mock ! PointInTimeQuery(historicDate.millisSinceEpoch, GetFlightsForTerminalEffectingRange(historicDate.millisSinceEpoch, historicDate.millisSinceEpoch, T1))
+        mock ! PointInTimeQuery(historicDate.millisSinceEpoch, GetFlightsForTerminalDateRange(historicDate.millisSinceEpoch, historicDate.millisSinceEpoch, T1))
         historicProbe.expectMsg(true)
       }
 
       "When I send a query for an historic date" >> {
-        mock ! GetFlightsForTerminalEffectingRange(historicDate.millisSinceEpoch, historicDate.millisSinceEpoch, T1)
+        mock ! GetFlightsForTerminalDateRange(historicDate.millisSinceEpoch, historicDate.millisSinceEpoch, T1)
         historicProbe.expectMsg(true)
       }
     }

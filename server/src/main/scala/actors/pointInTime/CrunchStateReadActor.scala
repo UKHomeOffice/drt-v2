@@ -1,7 +1,7 @@
 package actors.pointInTime
 
 import actors.FlightMessageConversion.flightWithSplitsFromMessage
-import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalEffectingRange, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange}
+import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange}
 import actors.PortStateMessageConversion.{crunchMinuteFromMessage, staffMinuteFromMessage}
 import actors.Sizes.oneMegaByte
 import actors._
@@ -85,7 +85,7 @@ class CrunchStateReadActor(pointInTime: SDateLike,
       logInfo(s"Received GetFlights Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! FlightsWithSplits(stateForPeriod(start, end).flights)
 
-    case GetFlightsForTerminalEffectingRange(start, end, terminalName) =>
+    case GetFlightsForTerminalDateRange(start, end, terminalName) =>
       logInfo(s"Received GetFlightsForTerminal Request from ${SDate(start).toISOString()} to ${SDate(end).toISOString()}")
       sender() ! FlightsWithSplits(stateForPeriodForTerminal(start, end, terminalName).flights)
 

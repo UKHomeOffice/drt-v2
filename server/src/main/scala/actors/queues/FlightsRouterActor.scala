@@ -68,6 +68,11 @@ object FlightsRouterActor {
         .map(fwss => Source(List(fwss)))
         .pipeTo(replyTo)
     }
+
+  def runAndCombine(source: Future[Source[FlightsWithSplits, NotUsed]])(implicit mat: ActorMaterializer, ec: ExecutionContext): Future[FlightsWithSplits] = source
+    .flatMap(
+      _.runWith(Sink.reduce[FlightsWithSplits](_ ++ _))
+    )
 }
 
 class FlightsRouterActor(

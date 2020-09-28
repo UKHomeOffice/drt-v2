@@ -145,7 +145,7 @@ class FlightsStateActor(val now: () => SDateLike,
     case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
       sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
 
-    case GetFlightsForTerminalEffectingRange(startMillis, endMillis, terminal) =>
+    case GetFlightsForTerminalDateRange(startMillis, endMillis, terminal) =>
       sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
 
     case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>

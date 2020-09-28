@@ -1,11 +1,14 @@
 package actors.minutes
 
-import actors.PartitionedPortStateActor.{GetFlightsForTerminalEffectingRange, GetScheduledFlightsForTerminal, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, GetScheduledFlightsForTerminal, PointInTimeQuery}
 import actors.minutes.MinutesActorLike.FlightsLookup
 import actors.queues.FlightsRouterActor
 import actors.{ArrivalGenerator, DrtStaticParameters}
+import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.ask
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
@@ -31,6 +34,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
   val flightsWithSplits: FlightsWithSplits = FlightsWithSplits(Iterable((flightWithSplits.unique, flightWithSplits)))
 
   val testProbe: TestProbe = TestProbe()
+
+  implicit val mat: ActorMaterializer = ActorMaterializer.create(system)
 
   class DummyActor extends Actor {
     override def receive: Receive = {
@@ -83,10 +88,12 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
         "I should get the one flight back" >> {
           val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
-          val eventualResult = cmActor.ask(GetScheduledFlightsForTerminal(utcDate, T1)).mapTo[FlightsWithSplits]
-          val result = Await.result(eventualResult, 1 second)
+          val eventualResult = cmActor.ask(GetScheduledFlightsForTerminal(utcDate, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
+
+          val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
           result === flights
+
         }
       }
     }
@@ -103,29 +110,10 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val flights = FlightsWithSplits(Iterable((fws.unique, fws)))
 
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
-        val eventualResult = cmActor.ask(GetScheduledFlightsForTerminal(utcDate, T1)).mapTo[FlightsWithSplits]
-        val result = Await.result(eventualResult, 1 second)
+        val eventualResult = cmActor.ask(GetScheduledFlightsForTerminal(utcDate, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
         result === flights
-      }
-    }
-
-    "Given a lookup with a flight scheduled on 2020-09-22 with a PCP time on 2020-9-23" >> {
-
-      val utcDate = UtcDate(2020, 9, 23)
-
-      val fws = ApiFlightWithSplits(
-        ArrivalGenerator.arrival(schDt = "2020-09-22T23:00", pcpDt = "2020-09-23T00:30"),
-        Set()
-      )
-      val flights = FlightsWithSplits(Iterable((fws.unique, fws)))
-
-      "When I ask for flights on 2020-09-23 I should not get the  flight back" >> {
-        val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
-        val eventualResult = cmActor.ask(GetScheduledFlightsForTerminal(utcDate, T1)).mapTo[FlightsWithSplits]
-        val result = Await.result(eventualResult, 1 second)
-
-        result === FlightsWithSplits.empty
       }
     }
 
@@ -135,7 +123,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Only the day requested should be queried once" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(), noopUpdates, legacyCutOffDate, testActorProps)))
-        val eventualResult = cmActor.ask(GetScheduledFlightsForTerminal(utcDate, T1)).mapTo[FlightsWithSplits]
+        val eventualResult = cmActor.ask(GetScheduledFlightsForTerminal(utcDate, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
 
         Await.ready(eventualResult, 1 second)
 
@@ -149,7 +137,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Only the day requested should be queried once" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(), noopUpdates, legacyCutOffDate, testActorProps)))
-        val eventualResult = cmActor.ask(GetScheduledFlightsForTerminal(utcDate, T1)).mapTo[FlightsWithSplits]
+        val eventualResult = cmActor.ask(GetScheduledFlightsForTerminal(utcDate, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
 
         Await.ready(eventualResult, 1 second)
 
@@ -166,7 +154,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val query = GetScheduledFlightsForTerminal(utcDate, T1)
         val pointInTime = SDate("2020-09-22T00:00").millisSinceEpoch
         val potRequest = PointInTimeQuery(pointInTime, query)
-        val eventualResult = cmActor.ask(potRequest).mapTo[FlightsWithSplits]
+        val eventualResult = cmActor.ask(potRequest).mapTo[Source[FlightsWithSplits, NotUsed]]
 
         Await.ready(eventualResult, 1 second)
 
@@ -190,7 +178,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
         val query = GetScheduledFlightsForTerminal(UtcDate(2020, 8, 31), T1)
 
-        cmActor.ask(query).mapTo[FlightsWithSplits]
+        cmActor.ask(query).mapTo[Source[FlightsWithSplits, NotUsed]]
 
         testProbe.expectMsg(query)
 
@@ -212,8 +200,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get that flight back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
-        val eventualResult = cmActor.ask(GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
-        val result = Await.result(eventualResult, 1 second)
+        val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
         result === flights
       }
@@ -234,8 +222,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get all the flights back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
-        val eventualResult = cmActor.ask(GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
-        val result = Await.result(eventualResult, 1 second)
+        val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
         result === flights
       }
@@ -256,8 +244,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should only get back flights within the requested range" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
-        val eventualResult = cmActor.ask(GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
-        val result = Await.result(eventualResult, 1 second)
+        val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
         val expected = FlightsWithSplits(Iterable((fws2.unique, fws2)))
         result === expected
@@ -279,8 +267,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
-        val eventualResult = cmActor.ask(GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
-        val result = Await.result(eventualResult, 1 second)
+        val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
         val expected = FlightsWithSplits(Iterable((fws1.unique, fws1)))
         result === expected
@@ -302,8 +290,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
-        val eventualResult = cmActor.ask(GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
-        val result = Await.result(eventualResult, 1 second)
+        val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
         val expected = FlightsWithSplits(Iterable((fws1.unique, fws1)))
         result === expected
@@ -325,8 +313,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
-        val eventualResult = cmActor.ask(GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
-        val result = Await.result(eventualResult, 1 second)
+        val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
         val expected = FlightsWithSplits(Iterable((fws1.unique, fws1)))
         result === expected
@@ -348,8 +336,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
-        val eventualResult = cmActor.ask(GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[FlightsWithSplits]
-        val result = Await.result(eventualResult, 1 second)
+        val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
         val expected = FlightsWithSplits(Iterable((fws1.unique, fws1)))
         result === expected
@@ -368,10 +356,10 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get that flight back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
-        val request = GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
+        val request = GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
         val pitQuery = PointInTimeQuery(SDate("2020-09-22").millisSinceEpoch, request)
-        val eventualResult = cmActor.ask(pitQuery).mapTo[FlightsWithSplits]
-        val result = Await.result(eventualResult, 1 second)
+        val eventualResult = cmActor.ask(pitQuery).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
         result === flights
       }
@@ -391,8 +379,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(flights), noopUpdates, legacyCutOffDate, testActorProps)))
         val request = GetScheduledFlightsForTerminal(utcDate, T1)
         val pitQuery = PointInTimeQuery(SDate("2020-09-22").millisSinceEpoch, request)
-        val eventualResult = cmActor.ask(pitQuery).mapTo[FlightsWithSplits]
-        val result = Await.result(eventualResult, 1 second)
+        val eventualResult = cmActor.ask(pitQuery).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
         result === FlightsWithSplits.empty
       }
@@ -409,8 +397,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val to = SDate("2020-08-23T00:00Z")
 
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(), noopUpdates, legacyCutOffDate, testActorProps)))
-        val request = GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
-        cmActor.ask(request).mapTo[FlightsWithSplits]
+        val request = GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
+        cmActor.ask(request).mapTo[Source[FlightsWithSplits, NotUsed]]
 
         testProbe.expectMsg(request)
 
@@ -437,12 +425,12 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           )
         ))
 
-        val query = GetFlightsForTerminalEffectingRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
+        val query = GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
         val pointInTimeRequest = PointInTimeQuery(
           pit,
           query
         )
-        cmActor.ask(pointInTimeRequest).mapTo[FlightsWithSplits]
+        cmActor.ask(pointInTimeRequest).mapTo[Source[FlightsWithSplits, NotUsed]]
 
         testProbe.expectMsg(query)
 
@@ -474,7 +462,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           pit,
           query
         )
-        cmActor.ask(pointInTimeRequest).mapTo[FlightsWithSplits]
+        cmActor.ask(pointInTimeRequest).mapTo[Source[FlightsWithSplits, NotUsed]]
 
         testProbe.expectMsg(query)
 
