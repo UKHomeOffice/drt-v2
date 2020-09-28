@@ -173,7 +173,10 @@ class FlightsRouterActor(
                                      maybePit: Option[MillisSinceEpoch]): Source[FlightsWithSplits, NotUsed] =
     Source(terminals.toList)
       .flatMapConcat { terminal =>
-        handleLookups(SDate(startMillis), SDate(endMillis), terminal, maybePit)
+        handleLookups(SDate(startMillis), SDate(endMillis), terminal, maybePit).map { fws =>
+          println(s"****** In source: ${fws.flights}")
+          fws
+        }
       }
 
   def handleUpdatesAndAck(container: FlightsWithSplitsDiff,

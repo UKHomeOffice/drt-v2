@@ -81,6 +81,7 @@ object RunnableDeskRecs {
       .mapTo[Source[FlightsWithSplits, NotUsed]]
       .flatMap { fs =>
         fs.runWith(Sink.seq).map { fwss =>
+          println(s"***** This FlightsWithSplits contains: ${fwss.map(_.flights)}")
           val combined = fwss.fold(FlightsWithSplits.empty)(_ ++ _)
           (crunchStartMillis, combined)
         }
