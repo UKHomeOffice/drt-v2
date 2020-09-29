@@ -2,7 +2,7 @@ package actors
 
 import actors.PartitionedPortStateActor.DateRangeLike
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayFlightActor}
-import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
+import actors.minutes.MinutesActorLike.{FlightsInRangeLookup, FlightsLookup, FlightsUpdate}
 import actors.queues.FlightsRouterActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
@@ -13,7 +13,7 @@ import drt.shared.Queues.Queue
 import drt.shared.{SDateLike, UtcDate}
 import drt.shared.Terminals.Terminal
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -41,6 +41,11 @@ trait FlightLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[FlightsWithSplits]
   }
 
+  val flightsInRangeLookup:FlightsInRangeLookup = (t: Terminal, start: UtcDate, end: UtcDate, pit: Option[MillisSinceEpoch]) => {
+
+    Future(FlightsWithSplits.empty)
+  }
+
   def flightsActor: ActorRef
 
 }
@@ -55,7 +60,7 @@ case class FlightLookups(system: ActorSystem,
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
 
   override val flightsActor: ActorRef = system.actorOf(
-    Props(new FlightsRouterActor(updatesSubscriber, queuesByTerminal.keys, flightsLookup, updateFlights, flightsByDayStorageSwitchoverDate, tempLegacyActorProps))
+    Props(new FlightsRouterActor(updatesSubscriber, queuesByTerminal.keys, flightsLookup, flightsInRangeLookup, updateFlights, flightsByDayStorageSwitchoverDate, tempLegacyActorProps))
   )
 
 }

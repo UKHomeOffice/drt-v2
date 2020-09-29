@@ -76,11 +76,7 @@ object RunnableDeskRecs {
       .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
       .mapTo[Source[FlightsWithSplits, NotUsed]]
       .flatMap { fs =>
-        fs.runWith(Sink.reduce[FlightsWithSplits](_ ++ _)).map { fws =>
-          println(s"***** This FlightsWithSplits contains: ${fws.flights}")
-
-          (crunchStartMillis, fws)
-        }
+        fs.runWith(Sink.reduce[FlightsWithSplits](_ ++ _)).map(fws => (crunchStartMillis, fws))
       }
       .recoverWith {
         case t =>

@@ -5,7 +5,7 @@ import actors.PartitionedPortStateActor
 import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
-import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate, ProcessNextUpdateRequest}
+import actors.minutes.MinutesActorLike.{FlightsInRangeLookup, FlightsLookup, FlightsUpdate, ProcessNextUpdateRequest}
 import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
@@ -45,12 +45,12 @@ object FlightsRouterActor {
     pcpStartInRange || pcpEndInRange
   }
 
-  def flightsByDaySource(flightsForDayAndTerminal: FlightsLookup)
+  def flightsByDaySource(flightsLookupByDay: FlightsLookup, flightsLookupByRange: FlightsInRangeLookup)
                         (start: SDateLike, end: SDateLike, terminal: Terminal, maybePit: Option[MillisSinceEpoch])
                         (implicit ec: ExecutionContext): Source[FlightsWithSplits, NotUsed] =
     utcDateRangeSource(start, end)
       .mapAsync(1) { date =>
-        flightsForDayAndTerminal(terminal, date, maybePit).map {
+        flightsLookupByDay(terminal, date, maybePit).map {
           case FlightsWithSplits(flights) =>
             FlightsWithSplits(flights.filter { case (_, fws) =>
               val scheduledMatches = scheduledInRange(start, end, fws.apiFlight.Scheduled)
@@ -78,7 +78,8 @@ object FlightsRouterActor {
 class FlightsRouterActor(
                           updatesSubscriber: ActorRef,
                           terminals: Iterable[Terminal],
-                          lookup: FlightsLookup,
+                          flightsByDayLookup: FlightsLookup,
+                          flightsInRangeLegacyLookup: FlightsInRangeLookup,
                           updateFlights: FlightsUpdate,
                           flightsByDayStorageSwitchoverDate: SDateLike,
                           tempLegacyActorProps: (SDateLike, Int) => Props
@@ -87,7 +88,6 @@ class FlightsRouterActor(
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = new Timeout(60 seconds)
-
 
   var updateRequestsQueue: List[(ActorRef, FlightsWithSplitsDiff)] = List()
   var processingRequest: Boolean = false
@@ -195,7 +195,7 @@ class FlightsRouterActor(
 
   val handleLookups: (SDateLike, SDateLike, Terminal, Option[MillisSinceEpoch]) => Source[FlightsWithSplits, NotUsed] = {
 
-    FlightsRouterActor.flightsByDaySource(lookup)
+    FlightsRouterActor.flightsByDaySource(flightsByDayLookup, flightsInRangeLegacyLookup)
   }
 
   def updateByTerminalDayAndGetDiff(container: FlightsWithSplitsDiff): Future[Seq[MillisSinceEpoch]] = {

@@ -75,11 +75,19 @@ trait WithFlightsExport extends ExportToCsv {
 //    }
 //  }
 
-  def exportFlightsWithSplitsBetweenTimeStampsCSV(startMillis: Long,
-                                                  endMillis: Long,
+  def exportFlightsWithSplitsBetweenTimeStampsCSV(startLocalDate: String,
+                                                  endLocalDate: String,
                                                   terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action.apply {
-      implicit request => exportEndOfDayView(startMillis, endMillis, terminalName)
+      implicit request => {
+
+        (LocalDate.parse(startLocalDate), LocalDate.parse(endLocalDate)) match {
+          case (Some(start), Some(end)) =>
+            exportEndOfDayView(SDate(start).millisSinceEpoch, SDate(end).millisSinceEpoch, terminalName)
+          case _ =>
+            BadRequest("")
+        }
+      }
     }
   }
 
@@ -174,3 +182,4 @@ trait WithFlightsExport extends ExportToCsv {
     exportToCsv(start, end, "flights", terminal(terminalName), None, summaryForDate)
   }
 }
+

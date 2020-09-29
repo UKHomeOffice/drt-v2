@@ -34,7 +34,7 @@ POST          /fixed-points                                        controllers.A
 
 GET           /export/desks/:start/:end/:terminalName              controllers.Application.exportDesksAndQueuesBetweenTimeStampsCSV(start, end, terminalName)
 GET           /export/desks/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName)
-GET           /export/arrivals/:start/:end/:terminalName           controllers.Application.exportFlightsWithSplitsBetweenTimeStampsCSV(start: Long, end: Long, terminalName: String)
+GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName  controllers.Application.exportFlightsWithSplitsBetweenTimeStampsCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
 GET           /export/arrivals/snapshot/:localDay/:pointInTime/:terminalName  controllers.Application.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDay: String, pointInTime: Long, terminalName: String)
 
 GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource        controllers.Application.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)

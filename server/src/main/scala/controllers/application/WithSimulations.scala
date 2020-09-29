@@ -2,10 +2,12 @@ package controllers.application
 
 import actors.GetState
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
+import actors.queues.FlightsRouterActor
+import akka.NotUsed
 import akka.actor.Props
 import akka.pattern.ask
 import akka.stream.UniqueKillSwitch
-import akka.stream.scaladsl.SourceQueueWithComplete
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.util.Timeout
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming
@@ -41,13 +43,13 @@ trait WithSimulations {
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
 
             val date = SDate(simulationParams.date)
-            val eventualFlightsWithSplits: Future[FlightsWithSplits] = (ctrl.portStateActor ? GetFlightsForTerminalDateRange(
+            val eventualFlightsWithSplitsStream: Future[Source[FlightsWithSplits, NotUsed]] = (ctrl.portStateActor ? GetFlightsForTerminalDateRange(
               date.getLocalLastMidnight.millisSinceEpoch,
               date.getLocalNextMidnight.millisSinceEpoch,
               simulationParams.terminal
-            )).mapTo[FlightsWithSplits]
+            )).mapTo[Source[FlightsWithSplits, NotUsed]]
 
-            eventualFlightsWithSplits.map { fws =>
+            FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
 
               retrieveSimulationDesks(simulationParams, simulationConfig, date, fws)
             }.flatten

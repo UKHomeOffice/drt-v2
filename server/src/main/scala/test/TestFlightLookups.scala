@@ -32,6 +32,7 @@ case class TestFlightLookups(system: ActorSystem,
         updatesSubscriber,
         queuesByTerminal.keys,
         flightsLookup,
+        flightsInRangeLookup,
         updateFlights, resetFlightsData
       )))
 }

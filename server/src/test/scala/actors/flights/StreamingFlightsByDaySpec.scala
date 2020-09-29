@@ -1,6 +1,7 @@
 package actors.flights
 
 import actors.ArrivalGenerator
+import actors.minutes.MockLookup
 import actors.queues.FlightsRouterActor
 import actors.queues.FlightsRouterActor.scheduledInRange
 import akka.stream.scaladsl.Sink
@@ -87,10 +88,38 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
       "I should see the late pcp from 2nd, all 3 flights from the 3rd, 4th, and the early flight from the 5th" >> {
         val startDate = SDate(2020, 9, 3)
         val endDate = SDate(2020, 9, 4, 23, 59)
-        val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights)(startDate, endDate, T1, None)
+        val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights, MockLookup.lookupRange())(startDate, endDate, T1, None)
         val flightsSortedByPcp = flights.map(_.flights.map(_._2).toIterable).runWith(Sink.seq).map(_.flatten.sortBy(_.apiFlight.pcpRange().min))
         val result = Await.result(flightsSortedByPcp, 1 second)
         val expected = Iterable(flight0209Late, flight0309, flight0409, flight0509Early)
+        result === expected
+      }
+    }
+  }
+
+  "When asking for flights spanning different storage legacy mechanisms" >> {
+    val legacyCutOffDate = SDate(2020, 9, 4)
+    val startDate = SDate(2020, 9, 3)
+    val endDate = SDate(2020, 9, 5, 23, 59)
+
+    "Given a request for flights in a range that spans Legacy and By-Day storage" >> {
+      val flight0309 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-03T12:00Z"), Set())
+      val flight0409 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-04T12:00Z"), Set())
+      val flight0509 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T12:00Z"), Set())
+
+      "Then I should get back a stream of FlightsWithSplits spanning these dates" >> {
+        val nonLegacyFlights = FlightsWithSplits(List(flight0409, flight0509))
+        val legacyFlights = FlightsWithSplits(List(flight0309))
+        val flights = FlightsRouterActor
+          .flightsByDaySource(
+            MockLookup.lookup(nonLegacyFlights),
+            MockLookup.lookupRange(legacyFlights)
+          )(startDate, endDate, T1, None)
+
+        val flightsSortedByPcp = flights.map(_.flights.map(_._2).toIterable).runWith(Sink.seq).map(_.flatten.sortBy(_.apiFlight.pcpRange().min))
+        val result = Await.result(flightsSortedByPcp, 1 second)
+        val expected = Iterable(flight0309, flight0409, flight0509)
+
         result === expected
       }
     }
