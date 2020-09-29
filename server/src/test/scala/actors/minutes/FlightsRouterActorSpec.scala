@@ -7,8 +7,9 @@ import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
+import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.{T1, Terminal}
@@ -212,14 +213,16 @@ class FlightsRouterActorSpec extends CrunchTestLike {
     "Given a request for flights scheduled on a date before the cut off date" >> {
       "That request should be forwarded to the FlightState actor" >> {
 
-        val from = SDate("2020-08-23T00:00Z")
+        val from = SDate("2020-08-21T00:00Z")
         val to = SDate("2020-08-23T00:00Z")
 
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), MockLookup.lookup(), MockLookup.lookupRange(), noopUpdates, legacyCutOffDate)))
         val request = GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
-        cmActor.ask(request).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result = cmActor.ask(request)(Timeout(5 minutes)).mapTo[Source[FlightsWithSplits, NotUsed]]
 
-        MockLookup.paramsLookupInRange === List((T1, from.toUtcDate, to.toUtcDate, Option(to.getLocalNextMidnight.addHours(4))))
+        Await.result(result.flatMap(s => s.runWith(Sink.seq)), 1 second)
+
+        MockLookup.paramsLookupInRange === List((T1, from.addDays(-2).toUtcDate, to.addDays(1).toUtcDate, None))
       }
     }
 
@@ -246,9 +249,11 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           pit,
           query
         )
-        cmActor.ask(pointInTimeRequest).mapTo[Source[FlightsWithSplits, NotUsed]]
+        val result = cmActor.ask(pointInTimeRequest).mapTo[Source[FlightsWithSplits, NotUsed]]
 
-        MockLookup.paramsLookupInRange === List((T1, from.toUtcDate, to.toUtcDate, Option(pit)))
+        Await.result(result.flatMap(s => s.runWith(Sink.seq)), 1 second)
+
+        MockLookup.paramsLookupInRange === List((T1, from.addDays(-2).toUtcDate, to.addDays(1).toUtcDate, Option(pit)))
       }
     }
 

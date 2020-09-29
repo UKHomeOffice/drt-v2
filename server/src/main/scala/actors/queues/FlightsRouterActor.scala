@@ -93,8 +93,10 @@ object FlightsRouterActor {
 
     queries
       .mapAsync(1) {
-        case Query(date) => flightsLookupByDay(terminal, date, maybePit)
-        case query: LegacyQuery => flightsLookupByRange(terminal, query.start, query.`end`, maybePit)
+        case Query(date) =>
+          flightsLookupByDay(terminal, date, maybePit)
+        case query: LegacyQuery =>
+          flightsLookupByRange(terminal, query.start, query.`end`, maybePit)
       }
       .map {
         case FlightsWithSplits(flights) =>
