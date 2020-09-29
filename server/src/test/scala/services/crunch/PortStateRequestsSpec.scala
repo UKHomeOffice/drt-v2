@@ -3,6 +3,7 @@ package services.crunch
 import actors.PartitionedPortStateActor._
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.pointInTime.CrunchStateReadActor
 import actors.queues.FlightsRouterActor
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
@@ -31,7 +32,10 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
   val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
-  val flightLookups: FlightLookups = FlightLookups(system, myNow, airportConfig.queuesByTerminal, TestProbe("subscriber").ref, SDate("2000-01-01T00:00Z"), FlightsStateActor.tempPitActorProps)
+
+  val dummyLegacy1ActorProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
+
+  val flightLookups: FlightLookups = FlightLookups(system, myNow, airportConfig.queuesByTerminal, TestProbe("subscriber").ref, SDate("2000-01-01T00:00Z"), dummyLegacy1ActorProps, FlightsStateActor.tempPitActorProps)
 
   val legacyDataCutOff: SDateLike = SDate("2020-01-01")
   val maxReplyMessages = 1000

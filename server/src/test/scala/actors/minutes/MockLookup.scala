@@ -15,7 +15,13 @@ object MockLookup {
   var paramsLookup: List[(Terminal, UtcDate, Option[MillisSinceEpoch])] = List()
   var paramsLookupInRange: List[(Terminal, UtcDate, UtcDate, Option[MillisSinceEpoch])] = List()
 
+  def reset(): Unit = {
+    paramsLookup = List()
+    paramsLookupInRange = List()
+  }
+
   def lookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup = {
+    reset()
     val byDay: Map[UtcDate, Map[UniqueArrival, ApiFlightWithSplits]] = mockData.flights.groupBy {
       case (_, fws) => SDate(fws.apiFlight.Scheduled).toUtcDate
     }
@@ -28,7 +34,6 @@ object MockLookup {
 
   def lookupRange(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsInRangeLookup = {
     (t: Terminal, start: UtcDate, end: UtcDate, pit: Option[MillisSinceEpoch]) => {
-      println(s"******** hello $t, $start, $end, $pit")
       paramsLookupInRange = paramsLookupInRange :+ (t, start, end, pit)
 
       Future(mockData)

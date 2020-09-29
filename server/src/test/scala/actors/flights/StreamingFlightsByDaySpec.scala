@@ -3,13 +3,13 @@ package actors.flights
 import actors.ArrivalGenerator
 import actors.minutes.MockLookup
 import actors.queues.FlightsRouterActor
-import actors.queues.FlightsRouterActor.{LegacyQuery, Query, QueryLike, scheduledInRange}
+import actors.queues.FlightsRouterActor._
 import akka.NotUsed
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{ApiFlightWithSplits, SDateLike, UtcDate}
+import drt.shared.{ApiFlightWithSplits, UtcDate}
 import services.SDate
 import services.crunch.CrunchTestLike
 
@@ -38,14 +38,15 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
   "Given a collection of UtcDates and a legacy data cutoff date" >> {
     "When I ask for the dates to be converted to the appropriate query types (legacy/non-legacy)" >> {
       "I should see all the legacy dates in the first query, and the non-legacy dates after" >> {
-        val legacyDateCutoff = UtcDate(2020, 9, 10)
+        val legacyDate1Cutoff = UtcDate(2020, 1, 1)
+        val legacyDate2Cutoff = UtcDate(2020, 9, 10)
         val dates = FlightsRouterActor.utcDateRange(SDate(2020, 9, 10), SDate(2020, 9, 11))
 
-        val stream = FlightsRouterActor.queryStream(legacyDateCutoff, dates)
+        val stream = FlightsRouterActor.queryStream(legacyDate1Cutoff, legacyDate2Cutoff, dates)
 
         val result = Await.result(stream.runWith(Sink.seq), 1 second)
         val expected = Iterable(
-          LegacyQuery(Seq(UtcDate(2020, 9, 8), UtcDate(2020, 9, 9))),
+          Legacy2Query(Seq(UtcDate(2020, 9, 8), UtcDate(2020, 9, 9))),
           Query(UtcDate(2020, 9, 10)),
           Query(UtcDate(2020, 9, 11)),
           Query(UtcDate(2020, 9, 12))
@@ -56,17 +57,41 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     }
   }
 
-  "Given a collection of UtcDates and a legacy data cutoff date" >> {
-    "When I ask for the dates to converted to legacy/non-legacy queries for a point in time before the legacy cutoff" >> {
-      "I should see a single legacy query containing all the dates" >> {
-        val legacyDateCutoff = UtcDate(2020, 9, 10)
-        val pointInTime = SDate(2020, 9, 9, 23, 0)
-        val dates = FlightsRouterActor.utcDateRange(SDate(2020, 9, 10), SDate(2020, 9, 11))
-        val stream = FlightsRouterActor.queryStreamForPointInTime(legacyDateCutoff, dates, pointInTime)
+  "Given a collection of UtcDates spanning 2 days of legacy1 data, 2 days of legacy2 data, and 2 days of non-legacy data" >> {
+    "When I ask for the dates to be converted to the appropriate query types (legacy1/legacy2/non-legacy)" >> {
+      "I should see 2 legacy1 queries, 1 legacy2 query (with 2 days), and 2 non-legacy queries" >> {
+        val legacy1DateCutoff = UtcDate(2020, 9, 10)
+        val legacy2DateCutoff = UtcDate(2020, 9, 12)
+        val dates = FlightsRouterActor.utcDateRange(SDate(2020, 9, 10), SDate(2020, 9, 12))
+
+        val stream = queryStream(legacy1DateCutoff, legacy2DateCutoff, dates)
 
         val result = Await.result(stream.runWith(Sink.seq), 1 second)
         val expected = Iterable(
-          LegacyQuery(Seq(UtcDate(2020, 9, 8), UtcDate(2020, 9, 9), UtcDate(2020, 9, 10), UtcDate(2020, 9, 11), UtcDate(2020, 9, 12)))
+          Legacy1Query(UtcDate(2020, 9, 8)),
+          Legacy1Query(UtcDate(2020, 9, 9)),
+          Legacy2Query(Seq(UtcDate(2020, 9, 10), UtcDate(2020, 9, 11))),
+          Query(UtcDate(2020, 9, 12)),
+          Query(UtcDate(2020, 9, 13))
+        )
+
+        result === expected
+      }
+    }
+  }
+
+  "Given a collection of UtcDates and a legacy data cutoff date" >> {
+    "When I ask for the dates to converted to legacy/non-legacy queries for a point in time before the legacy cutoff" >> {
+      "I should see a single legacy query containing all the dates" >> {
+        val legacyDate1Cutoff = UtcDate(2020, 1, 1)
+        val legacyDate2Cutoff = UtcDate(2020, 9, 10)
+        val pointInTime = SDate(2020, 9, 9, 23, 0)
+        val dates = FlightsRouterActor.utcDateRange(SDate(2020, 9, 10), SDate(2020, 9, 11))
+        val stream = FlightsRouterActor.queryStreamForPointInTime(legacyDate1Cutoff, legacyDate2Cutoff, dates, pointInTime)
+
+        val result = Await.result(stream.runWith(Sink.seq), 1 second)
+        val expected = Iterable(
+          Legacy2Query(Seq(UtcDate(2020, 9, 8), UtcDate(2020, 9, 9), UtcDate(2020, 9, 10), UtcDate(2020, 9, 11), UtcDate(2020, 9, 12)))
         )
 
         result === expected
@@ -77,10 +102,11 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
   "Given a collection of UtcDates and a legacy data cutoff date" >> {
     "When I ask for the dates to converted to legacy/non-legacy queries for a point in time after the legacy cutoff" >> {
       "I should see a non-legacy query for each date" >> {
-        val legacyDateCutoff = UtcDate(2020, 9, 8)
+        val legacyDate1Cutoff = UtcDate(2020, 1, 1)
+        val legacyDate2Cutoff = UtcDate(2020, 9, 8)
         val pointInTime = SDate(2020, 9, 9, 23, 0)
         val dates = FlightsRouterActor.utcDateRange(SDate(2020, 9, 10), SDate(2020, 9, 11))
-        val stream = FlightsRouterActor.queryStreamForPointInTime(legacyDateCutoff, dates, pointInTime)
+        val stream = FlightsRouterActor.queryStreamForPointInTime(legacyDate1Cutoff, legacyDate2Cutoff, dates, pointInTime)
 
         val result = Await.result(stream.runWith(Sink.seq), 1 second)
         val expected = Iterable(
@@ -136,6 +162,8 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     val flight0509Early = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T01:10Z", pcpDt = "2020-09-04T23:50Z", actPax = Option(100)), Set())
     val flight0609 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-06T12:00Z", pcpDt = "2020-09-06T12:00Z", actPax = Option(100)), Set())
 
+    val dummyByDayLookup = (_: Terminal, utcDate: UtcDate, _: Option[MillisSinceEpoch]) => Future(FlightsWithSplits.empty)
+
     val earlyOnTimeAndLateFlights = (_: Terminal, utcDate: UtcDate, _: Option[MillisSinceEpoch]) =>
       Future(Map(
         UtcDate(2020, 9, 1) -> FlightsWithSplits(Seq(flight0109)),
@@ -150,17 +178,17 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
       "I should see the late pcp from 2nd, all 3 flights from the 3rd, 4th, and the early flight from the 5th" >> {
         val startDate = SDate(2020, 9, 3)
         val endDate = SDate(2020, 9, 4, 23, 59)
-        val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights, MockLookup.lookupRange(), UtcDate(1970, 1, 1))(startDate, endDate, T1, None)
-        val flightsSortedByPcp = flights.map(_.flights.values.toIterable).runWith(Sink.seq).map(_.flatten.sortBy(_.apiFlight.pcpRange().min))
-        val result = Await.result(flightsSortedByPcp, 1 second)
-        val expected = Iterable(flight0209Late, flight0309, flight0409, flight0509Early)
+        val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights, dummyByDayLookup, MockLookup.lookupRange(), UtcDate(1970, 1, 1), UtcDate(1970, 1, 1))(startDate, endDate, T1, None)
+        val result = Await.result(FlightsRouterActor.runAndCombine(Future(flights)), 1 second)
+        val expected = FlightsWithSplits(Seq(flight0209Late, flight0309, flight0409, flight0509Early))
         result === expected
       }
     }
   }
 
   "When asking for flights spanning different storage legacy mechanisms" >> {
-    val legacyCutOffDate = UtcDate(2020, 9, 4)
+    val legacy1CutOffDate = UtcDate(2020, 1, 1)
+    val legacy2CutOffDate = UtcDate(2020, 9, 4)
     val startDate = SDate(2020, 9, 3)
     val endDate = SDate(2020, 9, 5, 23, 59)
 
@@ -175,13 +203,14 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
         val flights = FlightsRouterActor
           .flightsByDaySource(
             MockLookup.lookup(nonLegacyFlights),
+            MockLookup.lookup(),
             MockLookup.lookupRange(legacyFlights),
-            legacyCutOffDate
+            legacy1CutOffDate,
+            legacy2CutOffDate
           )(startDate, endDate, T1, None)
 
-        val flightsSortedByPcp = flights.map(_.flights.values.toIterable).runWith(Sink.seq).map(_.flatten.sortBy(_.apiFlight.pcpRange().min))
-        val result = Await.result(flightsSortedByPcp, 1 second)
-        val expected = Iterable(flight0309, flight0409, flight0509)
+        val result = Await.result(FlightsRouterActor.runAndCombine(Future(flights)), 1 second)
+        val expected = FlightsWithSplits(Seq(flight0309, flight0409, flight0509))
 
         result === expected
       }

@@ -31,7 +31,11 @@ object FlightsRouterActor {
     override def compare(that: QueryLike): Int = start.compare(that.start)
   }
 
-  case class LegacyQuery(dates: Seq[UtcDate]) extends QueryLike {
+  case class Legacy1Query(date: UtcDate) extends QueryLike {
+    override lazy val start: UtcDate = date
+  }
+
+  case class Legacy2Query(dates: Seq[UtcDate]) extends QueryLike {
     override lazy val start: UtcDate = if (dates.nonEmpty) dates.min else UtcDate(1970, 1, 1)
     val end: UtcDate = if (dates.nonEmpty) dates.max else UtcDate(2999, 12, 31)
   }
@@ -47,12 +51,14 @@ object FlightsRouterActor {
     daysRangeMillis.map(SDate(_).toUtcDate)
   }
 
-  def queryStream(legacyDateCutoff: UtcDate, dates: Seq[UtcDate]): Source[QueryLike, NotUsed] = {
+  def queryStream(legacy1DateCutoff: UtcDate, legacy2DateCutoff: UtcDate, dates: Seq[UtcDate]): Source[QueryLike, NotUsed] = {
     val grouped: List[QueryLike] = dates
-      .groupBy(d => d < legacyDateCutoff)
+      .groupBy(d => (d < legacy1DateCutoff, d < legacy2DateCutoff))
       .collect {
-        case (isLegacy, dates) if isLegacy && dates.nonEmpty =>
-          immutable.Iterable(LegacyQuery(dates))
+        case ((isLegacy1, _), dates) if isLegacy1 && dates.nonEmpty =>
+          dates.map(Legacy1Query).to[immutable.Iterable]
+        case ((_, isLegacy2), dates) if isLegacy2 && dates.nonEmpty =>
+          immutable.Iterable(Legacy2Query(dates))
         case (_, dates) =>
           dates.map(Query).to[immutable.Iterable]
       }
@@ -61,9 +67,10 @@ object FlightsRouterActor {
     Source(grouped.sorted)
   }
 
-  def queryStreamForPointInTime(legacyDateCutoff: UtcDate, dates: Seq[UtcDate], pointInTime: SDateLike): Source[QueryLike, NotUsed] = {
+  def queryStreamForPointInTime(legacy1DateCutoff: UtcDate, legacy2DateCutoff: UtcDate, dates: Seq[UtcDate], pointInTime: SDateLike): Source[QueryLike, NotUsed] = {
     val queries: List[QueryLike] =
-      if (pointInTime < SDate(legacyDateCutoff)) List(LegacyQuery(dates))
+      if (pointInTime < SDate(legacy1DateCutoff)) dates.map(Legacy1Query).toList
+      else if (pointInTime < SDate(legacy2DateCutoff)) List(Legacy2Query(dates))
       else dates.map(Query).toList
 
     Source(queries)
@@ -82,21 +89,29 @@ object FlightsRouterActor {
     pcpStartInRange || pcpEndInRange
   }
 
-  def flightsByDaySource(flightsLookupByDay: FlightsLookup, flightsLookupByRange: FlightsInRangeLookup, legacyDataCutoff: UtcDate)
-                        (start: SDateLike, end: SDateLike, terminal: Terminal, maybePit: Option[MillisSinceEpoch])
-                        (implicit ec: ExecutionContext): Source[FlightsWithSplits, NotUsed] = {
+  def flightsByDaySource(flightsLookupByDay: FlightsLookup,
+                         flightsLookupByDayLegacy1: FlightsLookup,
+                         flightsLookupByRangeLegacy2: FlightsInRangeLookup,
+                         legacy1DataCutoff: UtcDate,
+                         legacy2DataCutoff: UtcDate)
+                        (start: SDateLike,
+                         end: SDateLike,
+                         terminal: Terminal,
+                         maybePit: Option[MillisSinceEpoch]): Source[FlightsWithSplits, NotUsed] = {
     val dates = utcDateRange(start, end)
     val queries = maybePit match {
-      case Some(pointInTime) => queryStreamForPointInTime(legacyDataCutoff, dates, SDate(pointInTime))
-      case None => queryStream(legacyDataCutoff, dates)
+      case Some(pointInTime) => queryStreamForPointInTime(legacy1DataCutoff, legacy2DataCutoff, dates, SDate(pointInTime))
+      case None => queryStream(legacy1DataCutoff, legacy2DataCutoff, dates)
     }
 
     queries
       .mapAsync(1) {
         case Query(date) =>
           flightsLookupByDay(terminal, date, maybePit)
-        case query: LegacyQuery =>
-          flightsLookupByRange(terminal, query.start, query.`end`, maybePit)
+        case Legacy1Query(date) =>
+          flightsLookupByDayLegacy1(terminal, date, maybePit)
+        case query: Legacy2Query =>
+          flightsLookupByRangeLegacy2(terminal, query.start, query.`end`, maybePit)
       }
       .map {
         case FlightsWithSplits(flights) =>
@@ -127,8 +142,10 @@ class FlightsRouterActor(
                           updatesSubscriber: ActorRef,
                           terminals: Iterable[Terminal],
                           flightsByDayLookup: FlightsLookup,
-                          flightsInRangeLegacyLookup: FlightsInRangeLookup,
+                          flightsInRangeLegacy1Lookup: FlightsLookup,
+                          flightsInRangeLegacy2Lookup: FlightsInRangeLookup,
                           updateFlights: FlightsUpdate,
+                          flightsStateStorageSwitchoverDate: SDateLike,
                           flightsByDayStorageSwitchoverDate: SDateLike
                         ) extends Actor with ActorLogging {
 
@@ -205,9 +222,13 @@ class FlightsRouterActor(
     eventualUpdatesDiff
   }
 
-  val handleLookups: (SDateLike, SDateLike, Terminal, Option[MillisSinceEpoch]) => Source[FlightsWithSplits, NotUsed] = {
-    FlightsRouterActor.flightsByDaySource(flightsByDayLookup, flightsInRangeLegacyLookup, flightsByDayStorageSwitchoverDate.toUtcDate)
-  }
+  val handleLookups: (SDateLike, SDateLike, Terminal, Option[MillisSinceEpoch]) => Source[FlightsWithSplits, NotUsed] =
+    FlightsRouterActor.flightsByDaySource(
+      flightsByDayLookup,
+      flightsInRangeLegacy1Lookup,
+      flightsInRangeLegacy2Lookup,
+      flightsStateStorageSwitchoverDate.toUtcDate,
+      flightsByDayStorageSwitchoverDate.toUtcDate)
 
   def updateByTerminalDayAndGetDiff(container: FlightsWithSplitsDiff): Future[Seq[MillisSinceEpoch]] = {
     val eventualUpdatedMinutesDiff: Source[Seq[MillisSinceEpoch], NotUsed] =

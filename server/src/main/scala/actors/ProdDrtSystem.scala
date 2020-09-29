@@ -1,7 +1,8 @@
 package actors
 
-import actors.PartitionedPortStateActor.{DateRangeLike, flightUpdatesProps, queueUpdatesProps, staffUpdatesProps, tempLegacyActorProps}
+import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps, tempLegacyActorProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.pointInTime.CrunchStateReadActor
 import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
@@ -68,8 +69,22 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     case Failure(t) =>
       val error = "Incorrect date format for flights-by-day-cutoff-date"
       log.error(error, t)
-     throw new Exception(error)
+      throw new Exception(error)
   }
+
+  val legacy1ActorProps: (SDateLike, Int) => Props =
+    (pointInTime: SDateLike, expireAfterMillis: Int) =>
+      Props(new CrunchStateReadActor(
+        pointInTime,
+        expireAfterMillis,
+        airportConfig.queuesByTerminal,
+        pointInTime.addDays(-2).millisSinceEpoch,
+        pointInTime.millisSinceEpoch,
+        airportConfig.portStateSnapshotInterval))
+
+  val legacy2ActorProps: (SDateLike, Int) => Props =
+    (pointInTime: SDateLike, expireAfterMillis: Int) =>
+      FlightsStateActor.tempPitActorProps(pointInTime, expireAfterMillis)
 
   val flightLookups: FlightLookups = FlightLookups(
     system,
@@ -77,7 +92,8 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     airportConfig.queuesByTerminal,
     crunchQueueActor,
     flightsByDayCutoffDate,
-    (pointInTime: SDateLike, expireAfterMillis: Int) => FlightsStateActor.tempPitActorProps(pointInTime, expireAfterMillis)
+    legacy1ActorProps,
+    legacy2ActorProps
   )
   override val flightsActor: ActorRef = flightLookups.flightsActor
   override val queuesActor: ActorRef = lookups.queueMinutesActor

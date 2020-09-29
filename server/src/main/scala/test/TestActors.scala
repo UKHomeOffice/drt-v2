@@ -223,11 +223,12 @@ object TestActors {
 
   class TestFlightsRouterActor(subscriber: ActorRef,
                                terminals: Iterable[Terminal],
-                               lookup: FlightsLookup,
-                               lookupByRange: FlightsInRangeLookup,
+                               byDayLookup: FlightsLookup,
+                               byDayLookupLegacy: FlightsLookup,
+                               byRangeLookup: FlightsInRangeLookup,
                                updateMinutes: FlightsUpdate,
                                val resetData: (Terminal, UtcDate) => Future[Any])
-    extends FlightsRouterActor(subscriber, terminals, lookup, lookupByRange, updateMinutes, SDate("2000-01-01T00:00Z")) {
+    extends FlightsRouterActor(subscriber, terminals, byDayLookup, byDayLookupLegacy, byRangeLookup, updateMinutes, SDate("2000-01-01T00:00Z"), SDate("2000-01-01T00:00Z")) {
     override def receive: Receive = resetReceive orElse super.receive
 
     var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()

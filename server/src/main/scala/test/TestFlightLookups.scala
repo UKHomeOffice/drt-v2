@@ -24,13 +24,17 @@ case class TestFlightLookups(system: ActorSystem,
     actor.ask(ResetData).map(_ => actor ! PoisonPill)
   }
 
+  private val dummyProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
+
   override val flightsActor: ActorRef = system.actorOf(
     Props(
       new TestFlightsRouterActor(
         updatesSubscriber,
         queuesByTerminal.keys,
-        flightsLookup,
-        flightsInRangeLookup((_: SDateLike, _: Int) => Props()),
-        updateFlights, resetFlightsData
+        flightsByDayLookup,
+        flightsBayDayLookupLegacy(dummyProps),
+        flightsInRangeLookup(dummyProps),
+        updateFlights,
+        resetFlightsData
       )))
 }
