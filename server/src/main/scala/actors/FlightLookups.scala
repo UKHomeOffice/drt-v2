@@ -1,6 +1,6 @@
 package actors
 
-import actors.PartitionedPortStateActor.DateRangeLike
+import actors.PartitionedPortStateActor.{DateRangeLike, GetFlightsForTerminalDateRange}
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayFlightActor}
 import actors.minutes.MinutesActorLike.{FlightsInRangeLookup, FlightsLookup, FlightsUpdate}
 import actors.queues.FlightsRouterActor
@@ -12,6 +12,7 @@ import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.Queue
 import drt.shared.{SDateLike, UtcDate}
 import drt.shared.Terminals.Terminal
+import services.SDate
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -31,7 +32,6 @@ trait FlightLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[Seq[MillisSinceEpoch]]
   }
 
-
   val flightsLookup: FlightsLookup = (terminal: Terminal, date: UtcDate, maybePit: Option[MillisSinceEpoch]) => {
     val props = maybePit match {
       case None => TerminalDayFlightActor.props(terminal, date, now)
@@ -41,9 +41,16 @@ trait FlightLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[FlightsWithSplits]
   }
 
-  val flightsInRangeLookup:FlightsInRangeLookup = (t: Terminal, start: UtcDate, end: UtcDate, pit: Option[MillisSinceEpoch]) => {
-
-    Future(FlightsWithSplits.empty)
+  def flightsInRangeLookup(legacyActorProps: (SDateLike, Int) => Props): FlightsInRangeLookup = (terminal: Terminal, start: UtcDate, end: UtcDate, maybePit: Option[MillisSinceEpoch]) => {
+    val props = maybePit match {
+      case Some(pointInTime) => legacyActorProps(SDate(pointInTime), DrtStaticParameters.expireAfterMillis)
+      case None =>
+        val pointInTime = SDate(`end`).getLocalNextMidnight.addHours(4).millisSinceEpoch
+        legacyActorProps(SDate(pointInTime), DrtStaticParameters.expireAfterMillis)
+    }
+    val actor = system.actorOf(props)
+    val request = GetFlightsForTerminalDateRange(SDate(start).millisSinceEpoch, SDate(`end`).millisSinceEpoch, terminal)
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, request)).mapTo[FlightsWithSplits]
   }
 
   def flightsActor: ActorRef
@@ -60,7 +67,7 @@ case class FlightLookups(system: ActorSystem,
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
 
   override val flightsActor: ActorRef = system.actorOf(
-    Props(new FlightsRouterActor(updatesSubscriber, queuesByTerminal.keys, flightsLookup, flightsInRangeLookup, updateFlights, flightsByDayStorageSwitchoverDate, tempLegacyActorProps))
+    Props(new FlightsRouterActor(updatesSubscriber, queuesByTerminal.keys, flightsLookup, flightsInRangeLookup(tempLegacyActorProps), updateFlights, flightsByDayStorageSwitchoverDate))
   )
 
 }

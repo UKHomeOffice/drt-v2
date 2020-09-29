@@ -4,11 +4,9 @@ import actors.FlightLookupsLike
 import actors.daily.RequestAndTerminateActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
-import drt.shared.{SDateLike, UtcDate}
 import drt.shared.Terminals.Terminal
-import services.SDate
+import drt.shared.{SDateLike, UtcDate}
 import test.TestActors.{ResetData, TestFlightsRouterActor, TestTerminalDayFlightActor}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,7 +30,7 @@ case class TestFlightLookups(system: ActorSystem,
         updatesSubscriber,
         queuesByTerminal.keys,
         flightsLookup,
-        flightsInRangeLookup,
+        flightsInRangeLookup((_: SDateLike, _: Int) => Props()),
         updateFlights, resetFlightsData
       )))
 }

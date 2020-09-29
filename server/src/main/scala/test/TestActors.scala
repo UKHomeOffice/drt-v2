@@ -227,9 +227,7 @@ object TestActors {
                                lookupByRange: FlightsInRangeLookup,
                                updateMinutes: FlightsUpdate,
                                val resetData: (Terminal, UtcDate) => Future[Any])
-    extends FlightsRouterActor(subscriber, terminals, lookup, lookupByRange, updateMinutes, SDate("2000-01-01T00:00Z"),
-      (_: SDateLike, _: Int) => Props(new DummyActor())
-    ) {
+    extends FlightsRouterActor(subscriber, terminals, lookup, lookupByRange, updateMinutes, SDate("2000-01-01T00:00Z")) {
     override def receive: Receive = resetReceive orElse super.receive
 
     var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
