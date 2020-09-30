@@ -91,11 +91,11 @@ object FlightsTableTests extends TestSuite {
       def thead(timeline: Boolean = false): TagOf[TableSection] = <.thead(
         <.tr(
           if (timeline) <.th("Timeline") else TagMod(""),
-          <.th("Flight"," ", wbrFlightColorTooltip),
+          <.th("Flight", " ", wbrFlightColorTooltip),
           <.th("Origin"),
           <.th("Country", ^.className := "country"),
           <.th("Gate / Stand", ^.className := "gate-stand"),
-          <.th("Status"," ", arrivalStatusTooltip, ^.className := "status"),
+          <.th("Status", " ", arrivalStatusTooltip, ^.className := "status"),
           <.th("Sch"),
           <.th("Est"),
           <.th("Act"),
@@ -103,9 +103,9 @@ object FlightsTableTests extends TestSuite {
           <.th("Act Chox"),
           <.th("Est PCP"),
           <.th("Est PCP Pax"),
-          <.th("e-Gates"," ",splitsTableTooltip),
-          <.th("EEA"," ",splitsTableTooltip),
-          <.th("Non-EEA"," ",splitsTableTooltip),
+          <.th("e-Gates", " ", splitsTableTooltip),
+          <.th("EEA", " ", splitsTableTooltip),
+          <.th("Non-EEA", " ", splitsTableTooltip),
           <.th("Transfer Pax")
         ))
 
@@ -146,7 +146,7 @@ object FlightsTableTests extends TestSuite {
                 <.td(<.div(testFlight.TranPax.get, ^.className := "right"))))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true)),
+          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true, false)),
           staticComponent(expected)())
       }
 
@@ -186,7 +186,7 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.div(testFlight.TranPax.get, ^.className := "right"))))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(Option(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true)),
+          ArrivalsTable(Option(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true, false)),
           staticComponent(expected)())
       }
 
@@ -226,7 +226,7 @@ object FlightsTableTests extends TestSuite {
 
           val table = ArrivalsTable(timelineComponent = None,
             originMapper = port => originMapperComponent(port)
-          )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true))
+          )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true, true))
 
           assertRenderedComponentsAreEqual(table, staticComponent(expected)())
         }
@@ -261,11 +261,11 @@ object FlightsTableTests extends TestSuite {
       def thead(timeline: Boolean = false): TagOf[TableSection] = <.thead(
         <.tr(
           if (timeline) <.th("Timeline") else TagMod(""),
-          <.th("Flight"," ", wbrFlightColorTooltip),
+          <.th("Flight", " ", wbrFlightColorTooltip),
           <.th("Origin"),
           <.th("Country", ^.className := "country"),
           <.th("Gate / Stand", ^.className := "gate-stand"),
-          <.th("Status"," ", arrivalStatusTooltip, ^.className := "status"),
+          <.th("Status", " ", arrivalStatusTooltip, ^.className := "status"),
           <.th("Sch"),
           <.th("Est"),
           <.th("Act"),
@@ -273,9 +273,9 @@ object FlightsTableTests extends TestSuite {
           <.th("Act Chox"),
           <.th("Est PCP"),
           <.th("Est PCP Pax"),
-          <.th("e-Gates"," ",splitsTableTooltip),
-          <.th("EEA"," ",splitsTableTooltip),
-          <.th("Non-EEA"," ",splitsTableTooltip)
+          <.th("e-Gates", " ", splitsTableTooltip),
+          <.th("EEA", " ", splitsTableTooltip),
+          <.th("Non-EEA", " ", splitsTableTooltip)
         ))
 
       val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
@@ -314,7 +314,7 @@ object FlightsTableTests extends TestSuite {
                 <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = false)),
+          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = false, false)),
           staticComponent(expected)())
       }
 

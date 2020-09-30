@@ -5,6 +5,7 @@ import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
+import drt.client.components.TerminalDesksAndQueues.Backend
 import drt.client.components.TooltipComponent._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewDay, ViewMode, ViewPointInTime}
@@ -30,20 +31,22 @@ object FlightsWithSplitsTable {
                    hasArrivalSourcesAccess: Boolean,
                    viewMode: ViewMode,
                    pcpPaxFn: Arrival => Int,
-                   hasTransfer: Boolean
+                   hasTransfer: Boolean,
+                   filterEmptyFlights: Boolean
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     (props.flightsWithSplits, props.arrivalSources).hashCode()
   })
 
+  val emptyFlight : Arrival => Boolean = apiFlight => apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0)
+
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
                     originMapper: PortCode => VdomNode = portCode => portCode.toString,
-                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
+                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalsTable")
     .render_P(props => {
-
-      val flightsWithSplits = props.flightsWithSplits
+      val flightsWithSplits = if(props.filterEmptyFlights) props.flightsWithSplits.filter(fs => emptyFlight(fs.apiFlight)) else props.flightsWithSplits
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits)
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
       val isTimeLineSupplied = timelineComponent.isDefined
@@ -61,7 +64,6 @@ object FlightsWithSplitsTable {
               )
             case _ => <.div()
           },
-
           <.div(^.id := "toStick", ^.className := "container sticky",
             <.table(
               ^.id := "sticky",

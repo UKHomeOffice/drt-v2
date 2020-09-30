@@ -34,7 +34,9 @@ case class Arrival(Operator: Option[Operator],
                    PcpTime: Option[MillisSinceEpoch],
                    FeedSources: Set[FeedSource],
                    CarrierScheduled: Option[MillisSinceEpoch],
-                   ApiPax: Option[Int]
+                   ApiPax: Option[Int],
+                   ServiceType: Option[String],
+                   LoadFactor: Option[Double]
                   ) extends WithUnique[UniqueArrival] {
   val paxOffPerMinute = 20
 
@@ -135,7 +137,9 @@ object Arrival {
             PcpTime: Option[MillisSinceEpoch],
             FeedSources: Set[FeedSource],
             CarrierScheduled: Option[MillisSinceEpoch] = None,
-            ApiPax: Option[Int] = None
+            ApiPax: Option[Int] = None,
+            ServiceType: Option[String] = None,
+            LoadFactor: Option[Double] = None
            ): Arrival = {
     val (carrierCode: CarrierCode, voyageNumber: VoyageNumber, maybeSuffix: Option[FlightCodeSuffix]) = {
       val bestCode = (rawIATA, rawICAO) match {
@@ -171,7 +175,9 @@ object Arrival {
       PcpTime = PcpTime,
       FeedSources = FeedSources,
       CarrierScheduled = CarrierScheduled,
-      ApiPax = ApiPax
-      )
+      ApiPax = ApiPax,
+      ServiceType = ServiceType,
+      LoadFactor = LoadFactor
+    )
   }
 }
