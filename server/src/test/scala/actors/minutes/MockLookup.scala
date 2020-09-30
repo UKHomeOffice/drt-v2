@@ -9,19 +9,15 @@ import services.SDate
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-object MockLookup {
+case class MockLookup() {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
   var paramsLookup: List[(Terminal, UtcDate, Option[MillisSinceEpoch])] = List()
-  var paramsLookupInRange: List[(Terminal, UtcDate, UtcDate, Option[MillisSinceEpoch])] = List()
-
-  def reset(): Unit = {
-    paramsLookup = List()
-    paramsLookupInRange = List()
-  }
+  var paramsLegacyDayLookup: List[(Terminal, UtcDate, Option[MillisSinceEpoch])] = List()
+  var paramsLegacyLookupInRange: List[(Terminal, UtcDate, UtcDate, Option[MillisSinceEpoch])] = List()
 
   def lookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup = {
-    reset()
+
     val byDay: Map[UtcDate, Map[UniqueArrival, ApiFlightWithSplits]] = mockData.flights.groupBy {
       case (_, fws) => SDate(fws.apiFlight.Scheduled).toUtcDate
     }
@@ -32,9 +28,21 @@ object MockLookup {
     }
   }
 
-  def lookupRange(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsInRangeLookup = {
+  def legacyLookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup = {
+
+    val byDay: Map[UtcDate, Map[UniqueArrival, ApiFlightWithSplits]] = mockData.flights.groupBy {
+      case (_, fws) => SDate(fws.apiFlight.Scheduled).toUtcDate
+    }
+    (t: Terminal, d: UtcDate, pit: Option[MillisSinceEpoch]) => {
+      paramsLegacyDayLookup = paramsLegacyDayLookup :+ (t, d, pit)
+
+      Future(FlightsWithSplits(byDay.getOrElse(d, Map())))
+    }
+  }
+
+  def legacyLookupDateRange(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsInRangeLookup = {
     (t: Terminal, start: UtcDate, end: UtcDate, pit: Option[MillisSinceEpoch]) => {
-      paramsLookupInRange = paramsLookupInRange :+ (t, start, end, pit)
+      paramsLegacyLookupInRange = paramsLegacyLookupInRange :+ (t, start, end, pit)
 
       Future(mockData)
     }

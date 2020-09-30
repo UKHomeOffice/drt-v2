@@ -31,13 +31,26 @@ object FlightsRouterActor {
     override def compare(that: QueryLike): Int = start.compare(that.start)
   }
 
+  /**
+   * Legacy 1 data is stored in the CrunchStateActor and contains a mix of arrival and crunch data
+   *
+   * @param date
+   */
   case class Legacy1Query(date: UtcDate) extends QueryLike {
     override lazy val start: UtcDate = date
   }
 
+  /**
+   * Legacy 2 data is stored in the FlightStateActor and contains only flight data stored in 6 month batches
+   *
+   * @param dates
+   */
   case class Legacy2Query(dates: Seq[UtcDate]) extends QueryLike {
-    override lazy val start: UtcDate = if (dates.nonEmpty) dates.min else UtcDate(1970, 1, 1)
-    val end: UtcDate = if (dates.nonEmpty) dates.max else UtcDate(2999, 12, 31)
+    if (dates.isEmpty)
+      throw new Exception("Trying to make a legacy 2 query with no dates in range")
+
+    override lazy val start: UtcDate = dates.min
+    val end: UtcDate = dates.max
   }
 
   case class Query(date: UtcDate) extends QueryLike {
@@ -69,8 +82,10 @@ object FlightsRouterActor {
 
   def queryStreamForPointInTime(legacy1DateCutoff: UtcDate, legacy2DateCutoff: UtcDate, dates: Seq[UtcDate], pointInTime: SDateLike): Source[QueryLike, NotUsed] = {
     val queries: List[QueryLike] =
-      if (pointInTime < SDate(legacy1DateCutoff)) dates.map(Legacy1Query).toList
-      else if (pointInTime < SDate(legacy2DateCutoff)) List(Legacy2Query(dates))
+      if (pointInTime < SDate(legacy1DateCutoff))
+        dates.map(Legacy1Query).toList
+      else if (pointInTime < SDate(legacy2DateCutoff))
+        List(Legacy2Query(dates))
       else dates.map(Query).toList
 
     Source(queries)
@@ -99,6 +114,7 @@ object FlightsRouterActor {
                          terminal: Terminal,
                          maybePit: Option[MillisSinceEpoch]): Source[FlightsWithSplits, NotUsed] = {
     val dates = utcDateRange(start, end)
+
     val queries = maybePit match {
       case Some(pointInTime) => queryStreamForPointInTime(legacy1DataCutoff, legacy2DataCutoff, dates, SDate(pointInTime))
       case None => queryStream(legacy1DataCutoff, legacy2DataCutoff, dates)

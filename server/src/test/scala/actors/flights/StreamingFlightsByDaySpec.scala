@@ -178,7 +178,9 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
       "I should see the late pcp from 2nd, all 3 flights from the 3rd, 4th, and the early flight from the 5th" >> {
         val startDate = SDate(2020, 9, 3)
         val endDate = SDate(2020, 9, 4, 23, 59)
-        val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights, dummyByDayLookup, MockLookup.lookupRange(), UtcDate(1970, 1, 1), UtcDate(1970, 1, 1))(startDate, endDate, T1, None)
+        val mockLookup = MockLookup()
+
+        val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights, dummyByDayLookup, mockLookup.legacyLookupDateRange(), UtcDate(1970, 1, 1), UtcDate(1970, 1, 1))(startDate, endDate, T1, None)
         val result = Await.result(FlightsRouterActor.runAndCombine(Future(flights)), 1 second)
         val expected = FlightsWithSplits(Seq(flight0209Late, flight0309, flight0409, flight0509Early))
         result === expected
@@ -198,13 +200,14 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
       val flight0509 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T12:00Z"), Set())
 
       "Then I should get back a stream of FlightsWithSplits spanning these dates" >> {
+        val mockLookup = MockLookup()
         val nonLegacyFlights = FlightsWithSplits(List(flight0409, flight0509))
         val legacyFlights = FlightsWithSplits(List(flight0309))
         val flights = FlightsRouterActor
           .flightsByDaySource(
-            MockLookup.lookup(nonLegacyFlights),
-            MockLookup.lookup(),
-            MockLookup.lookupRange(legacyFlights),
+            mockLookup.lookup(nonLegacyFlights),
+            mockLookup.lookup(),
+            mockLookup.legacyLookupDateRange(legacyFlights),
             legacy1CutOffDate,
             legacy2CutOffDate
           )(startDate, endDate, T1, None)
