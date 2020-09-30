@@ -1,20 +1,25 @@
 package controllers.application.exports
 
-import actors.PartitionedPortStateActor.DateRangeLike
+import actors.PartitionedPortStateActor.{DateRangeLike, GetFlightsForTerminalDateRange, PointInTimeQuery}
 import actors.summaries.{FlightsSummaryActor, GetSummariesWithActualApi}
+import akka.NotUsed
 import akka.actor.ActorRef
+import akka.pattern.ask
+import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import controllers.Application
+import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
 import drt.auth.{ApiView, ApiViewPortCsv, ArrivalSource, ArrivalsAndSplitsView}
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, _}
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
-import services.exports.Exports
 import services.exports.summaries.flights.{ArrivalFeedExport, TerminalFlightsSummary, TerminalFlightsWithActualApiSummary}
 import services.exports.summaries.{GetSummaries, TerminalSummaryLike}
+import services.exports.{Exports, StreamingFlightsExport}
 import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.concurrent.Future
@@ -50,44 +55,52 @@ trait WithFlightsExport extends ExportToCsv {
   }
 
   def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDayString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {
-    Action.apply {
-      implicit request => {
+    Action.async {
+      _ =>
         LocalDate.parse(localDayString) match {
           case Some(localDate) =>
-            exportPointInTimeView(terminalName,localDate, pointInTime)
+            val startDate = SDate(localDate)
+            val endDate = startDate.addDays(1).addMinutes(-1)
+            val terminal = Terminal(terminalName)
+            flightsRequestToCsv(pointInTime, startDate, endDate, terminal)
           case _ =>
-            BadRequest("Invalid date format for export day.")
+            Future(BadRequest("Invalid date format for export day."))
         }
+    }
+  }
+
+  private def flightsRequestToCsv(pointInTime: MillisSinceEpoch,
+                                  startDate: SDateLike,
+                                  endDate: SDateLike,
+                                  terminal: Terminal): Future[Result] = {
+    val request = GetFlightsForTerminalDateRange(startDate.millisSinceEpoch, endDate.millisSinceEpoch, terminal)
+    val pitRequest = PointInTimeQuery(pointInTime, request)
+    ctrl.portStateActor.ask(pitRequest).mapTo[Source[FlightsWithSplits, NotUsed]].map { flightsStream =>
+      val csvStream = StreamingFlightsExport(ctrl.pcpPaxFn).toCsvStream(flightsStream)
+      val fileName = makeFileName("flights", terminal, startDate, endDate, airportConfig.portCode)
+      Try(sourceToCsvResponse(csvStream, fileName)) match {
+        case Success(value) => value
+        case Failure(t) =>
+          log.error("Failed to get CSV export", t)
+          BadRequest("Failed to get CSV export")
       }
     }
   }
 
-//  def exportFlightsWithSplitsForDayTimeCSV(localDayString: String, terminalName: String): Action[AnyContent] = {
-//    Action.apply {
-//      implicit request => {
-//        LocalDate.parse(localDayString) match {
-//          case Some(localDate) =>
-//            exportPointInTimeView(terminalName,localDate, pointInTime)
-//          case _ =>
-//            BadRequest("Invalid date format for export day.")
-//        }
-//      }
-//    }
-//  }
-
-  def exportFlightsWithSplitsBetweenTimeStampsCSV(startLocalDate: String,
-                                                  endLocalDate: String,
-                                                  terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
-    Action.apply {
-      implicit request => {
-
+  def exportFlightsWithSplitsForDateRangeCSV(startLocalDate: String,
+                                             endLocalDate: String,
+                                             terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+    Action.async {
+      _ =>
         (LocalDate.parse(startLocalDate), LocalDate.parse(endLocalDate)) match {
           case (Some(start), Some(end)) =>
-            exportEndOfDayView(SDate(start).millisSinceEpoch, SDate(end).millisSinceEpoch, terminalName)
+            val startDate = SDate(start)
+            val endDate = SDate(end).addDays(1).addMinutes(-1)
+            val terminal = Terminal(terminalName)
+            flightsRequestToCsv(now().millisSinceEpoch, startDate, endDate, terminal)
           case _ =>
-            BadRequest("")
+            Future(BadRequest("Invalid date format for start or end date"))
         }
-      }
     }
   }
 
@@ -132,8 +145,7 @@ trait WithFlightsExport extends ExportToCsv {
         NotFound(s"Unknown feed source $feedSourceString")
     })
   }
-
-
+  
   private def summaryProviderByRole(terminal: Terminal, flightsProvider: DateRangeLike => Future[Any])
                                    (implicit request: Request[AnyContent]): (SDateLike, SDateLike) => Future[TerminalSummaryLike] = {
     val flightSummariesFromPortState =
@@ -151,35 +163,6 @@ trait WithFlightsExport extends ExportToCsv {
 
   private val summaryActorProvider: (SDateLike, Terminal) => ActorRef = (date: SDateLike, terminal: Terminal) => {
     system.actorOf(FlightsSummaryActor.props(date, terminal, ctrl.pcpPaxFn, now))
-  }
-
-  private def summariesRequest(implicit request: Request[AnyContent]): Any =
-    if (canAccessActualApi(request)) GetSummariesWithActualApi
-    else GetSummaries
-
-  private def exportEndOfDayView(startMillis: Long, endMillis: Long, terminalName: String)
-                                (implicit request: Request[AnyContent]): Result = {
-    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(None))
-    val start = SDate(startMillis)
-    val end = SDate(endMillis)
-    exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryForDate)
-  }
-
-  private def exportPointInTimeView(terminalName: String, day: LocalDate, pointInTime: MillisSinceEpoch)
-                                   (implicit request: Request[AnyContent]): Result = {
-    val pit = SDate(pointInTime)
-    val start = SDate(day)
-    val end = start.addDays(1).addMinutes(-1)
-    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(Option(pit.millisSinceEpoch)))
-    exportToCsv(start, end, "flights", terminal(terminalName), None, summaryForDate)
-  }
-
-  private def exportDayView(terminalName: String, day: LocalDate)
-                                   (implicit request: Request[AnyContent]): Result = {
-    val start = SDate(day)
-    val end = start.addDays(1).addMinutes(-1)
-    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(None))
-    exportToCsv(start, end, "flights", terminal(terminalName), None, summaryForDate)
   }
 }
 

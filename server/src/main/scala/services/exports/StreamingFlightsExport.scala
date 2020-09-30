@@ -17,14 +17,13 @@ case class StreamingFlightsExport(pcpPaxFn: Arrival => Int) {
 
   val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
 
-  def toCSV(flightsStream: Source[FlightsApi.FlightsWithSplits, NotUsed]): Source[String, NotUsed] = {
+  def toCsvStream(flightsStream: Source[FlightsApi.FlightsWithSplits, NotUsed]): Source[String, NotUsed] = {
     flightsStream.map(fws => {
       uniqueArrivalsWithCodeShares(fws.flights.values.toSeq).map{
         case (fws, _) => flightWithSplitsToCsvRow(queueNames, fws).mkString(",") + "\n"
       }.mkString("")
     }).prepend(Source(List(csvHeader)))
   }
-
 
   val csvHeader: String =
     rawArrivalHeadings + ",PCP Pax," +

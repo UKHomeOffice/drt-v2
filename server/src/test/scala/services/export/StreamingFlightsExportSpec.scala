@@ -192,7 +192,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   "Given a list of arrivals with splits we should get back a CSV of arrival data using live feed numbers when available" >> {
 
     val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
-      .toCSV(Source(List(FlightsWithSplits(flights))))
+      .toCsvStream(Source(List(FlightsWithSplits(flights))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString("\n")
 
@@ -209,7 +209,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   "Given a list of arrivals with splits we should get back a CSV of arrival data with unique entry for code Share Arrival flight" >> {
 
     val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
-      .toCSV(Source(List(FlightsWithSplits(codeShareFlights))))
+      .toCsvStream(Source(List(FlightsWithSplits(codeShareFlights))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString("\n")
 
