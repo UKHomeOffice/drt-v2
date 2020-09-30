@@ -3,7 +3,7 @@ package actors.queues
 import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
-import actors.minutes.MinutesActorLike.{FlightsInRangeLookup, FlightsLookup, FlightsUpdate, ProcessNextUpdateRequest}
+import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate, ProcessNextUpdateRequest}
 import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
@@ -43,14 +43,10 @@ object FlightsRouterActor {
   /**
    * Legacy 2 data is stored in the FlightStateActor and contains only flight data stored in 6 month batches
    *
-   * @param dates
+   * @param date
    */
-  case class Legacy2Query(dates: Seq[UtcDate]) extends QueryLike {
-    if (dates.isEmpty)
-      throw new Exception("Trying to make a legacy 2 query with no dates in range")
-
-    override lazy val start: UtcDate = dates.min
-    val end: UtcDate = dates.max
+  case class Legacy2Query(date: UtcDate) extends QueryLike {
+    override lazy val start: UtcDate = date
   }
 
   case class Query(date: UtcDate) extends QueryLike {
@@ -69,9 +65,9 @@ object FlightsRouterActor {
       .groupBy(d => (d < legacy1DateCutoff, d < legacy2DateCutoff))
       .collect {
         case ((isLegacy1, _), dates) if isLegacy1 && dates.nonEmpty =>
-          dates.map(Legacy1Query).to[immutable.Iterable]
+          dates.map(Legacy1Query).toList
         case ((_, isLegacy2), dates) if isLegacy2 && dates.nonEmpty =>
-          immutable.Iterable(Legacy2Query(dates))
+          dates.map(Legacy2Query).toList
         case (_, dates) =>
           dates.map(Query).to[immutable.Iterable]
       }
@@ -85,7 +81,7 @@ object FlightsRouterActor {
       if (pointInTime < SDate(legacy1DateCutoff))
         dates.map(Legacy1Query).toList
       else if (pointInTime < SDate(legacy2DateCutoff))
-        List(Legacy2Query(dates))
+        dates.map(Legacy2Query).toList
       else dates.map(Query).toList
 
     Source(queries)
@@ -106,7 +102,7 @@ object FlightsRouterActor {
 
   def flightsByDaySource(flightsLookupByDay: FlightsLookup,
                          flightsLookupByDayLegacy1: FlightsLookup,
-                         flightsLookupByRangeLegacy2: FlightsInRangeLookup,
+                         flightsLookupByDayLegacy2: FlightsLookup,
                          legacy1DataCutoff: UtcDate,
                          legacy2DataCutoff: UtcDate)
                         (start: SDateLike,
@@ -127,7 +123,7 @@ object FlightsRouterActor {
         case Legacy1Query(date) =>
           flightsLookupByDayLegacy1(terminal, date, maybePit)
         case query: Legacy2Query =>
-          flightsLookupByRangeLegacy2(terminal, query.start, query.`end`, maybePit)
+          flightsLookupByDayLegacy2(terminal, query.start, maybePit)
       }
       .map {
         case FlightsWithSplits(flights) =>
@@ -159,7 +155,7 @@ class FlightsRouterActor(
                           terminals: Iterable[Terminal],
                           flightsByDayLookup: FlightsLookup,
                           flightsInRangeLegacy1Lookup: FlightsLookup,
-                          flightsInRangeLegacy2Lookup: FlightsInRangeLookup,
+                          flightsInRangeLegacy2Lookup: FlightsLookup,
                           updateFlights: FlightsUpdate,
                           flightsStateStorageSwitchoverDate: SDateLike,
                           flightsByDayStorageSwitchoverDate: SDateLike

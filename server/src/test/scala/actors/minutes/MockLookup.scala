@@ -1,6 +1,6 @@
 package actors.minutes
 
-import actors.minutes.MinutesActorLike.{FlightsInRangeLookup, FlightsLookup}
+import actors.minutes.MinutesActorLike.FlightsLookup
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
@@ -13,8 +13,8 @@ case class MockLookup() {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
   var paramsLookup: List[(Terminal, UtcDate, Option[MillisSinceEpoch])] = List()
-  var paramsLegacyDayLookup: List[(Terminal, UtcDate, Option[MillisSinceEpoch])] = List()
-  var paramsLegacyLookupInRange: List[(Terminal, UtcDate, UtcDate, Option[MillisSinceEpoch])] = List()
+  var paramsLegacy1Lookup: List[(Terminal, UtcDate, Option[MillisSinceEpoch])] = List()
+  var paramsLegacy2Lookup: List[(Terminal, UtcDate, Option[MillisSinceEpoch])] = List()
 
   def lookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup = {
 
@@ -23,28 +23,30 @@ case class MockLookup() {
     }
     (t: Terminal, d: UtcDate, pit: Option[MillisSinceEpoch]) => {
       paramsLookup = paramsLookup :+ (t, d, pit)
-
       Future(FlightsWithSplits(byDay.getOrElse(d, Map())))
     }
   }
 
-  def legacyLookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup = {
+  def legacy1Lookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup = {
+    val byDay: Map[UtcDate, Map[UniqueArrival, ApiFlightWithSplits]] = mockData.flights.groupBy {
+      case (_, fws) => SDate(fws.apiFlight.Scheduled).toUtcDate
+    }
+
+    (t: Terminal, d: UtcDate, pit: Option[MillisSinceEpoch]) => {
+      paramsLegacy1Lookup = paramsLegacy1Lookup :+ (t, d, pit)
+      Future(FlightsWithSplits(byDay.getOrElse(d, Map())))
+    }
+  }
+
+  def legacy2Lookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup = {
 
     val byDay: Map[UtcDate, Map[UniqueArrival, ApiFlightWithSplits]] = mockData.flights.groupBy {
       case (_, fws) => SDate(fws.apiFlight.Scheduled).toUtcDate
     }
+
     (t: Terminal, d: UtcDate, pit: Option[MillisSinceEpoch]) => {
-      paramsLegacyDayLookup = paramsLegacyDayLookup :+ (t, d, pit)
-
+      paramsLegacy2Lookup = paramsLegacy2Lookup :+ (t, d, pit)
       Future(FlightsWithSplits(byDay.getOrElse(d, Map())))
-    }
-  }
-
-  def legacyLookupDateRange(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsInRangeLookup = {
-    (t: Terminal, start: UtcDate, end: UtcDate, pit: Option[MillisSinceEpoch]) => {
-      paramsLegacyLookupInRange = paramsLegacyLookupInRange :+ (t, start, end, pit)
-
-      Future(mockData)
     }
   }
 }

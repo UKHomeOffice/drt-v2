@@ -1,11 +1,10 @@
 package test
 
-import actors.PartitionedPortStateActor.DateRangeLike
 import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily._
-import actors.minutes.MinutesActorLike.{FlightsInRangeLookup, FlightsLookup, FlightsUpdate, MinutesLookup, MinutesUpdate}
+import actors.minutes.MinutesActorLike._
 import actors.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
 import actors.queues.{CrunchQueueActor, DeploymentQueueActor, FlightsRouterActor}
 import akka.actor.{Actor, ActorRef, Props}
@@ -225,7 +224,7 @@ object TestActors {
                                terminals: Iterable[Terminal],
                                byDayLookup: FlightsLookup,
                                byDayLookupLegacy: FlightsLookup,
-                               byRangeLookup: FlightsInRangeLookup,
+                               byRangeLookup: FlightsLookup,
                                updateMinutes: FlightsUpdate,
                                val resetData: (Terminal, UtcDate) => Future[Any])
     extends FlightsRouterActor(subscriber, terminals, byDayLookup, byDayLookupLegacy, byRangeLookup, updateMinutes, SDate("2000-01-01T00:00Z"), SDate("2000-01-01T00:00Z")) {

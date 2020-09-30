@@ -4,8 +4,7 @@ import actors.ArrivalGenerator
 import actors.minutes.MockLookup
 import actors.queues.FlightsRouterActor
 import actors.queues.FlightsRouterActor._
-import akka.NotUsed
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Sink
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.{T1, Terminal}
@@ -13,7 +12,6 @@ import drt.shared.{ApiFlightWithSplits, UtcDate}
 import services.SDate
 import services.crunch.CrunchTestLike
 
-import scala.collection.immutable
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 
@@ -46,7 +44,8 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
 
         val result = Await.result(stream.runWith(Sink.seq), 1 second)
         val expected = Iterable(
-          Legacy2Query(Seq(UtcDate(2020, 9, 8), UtcDate(2020, 9, 9))),
+          Legacy2Query(UtcDate(2020, 9, 8)),
+          Legacy2Query(UtcDate(2020, 9, 9)),
           Query(UtcDate(2020, 9, 10)),
           Query(UtcDate(2020, 9, 11)),
           Query(UtcDate(2020, 9, 12))
@@ -70,7 +69,8 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
         val expected = Iterable(
           Legacy1Query(UtcDate(2020, 9, 8)),
           Legacy1Query(UtcDate(2020, 9, 9)),
-          Legacy2Query(Seq(UtcDate(2020, 9, 10), UtcDate(2020, 9, 11))),
+          Legacy2Query(UtcDate(2020, 9, 10)),
+          Legacy2Query(UtcDate(2020, 9, 11)),
           Query(UtcDate(2020, 9, 12)),
           Query(UtcDate(2020, 9, 13))
         )
@@ -90,8 +90,12 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
         val stream = FlightsRouterActor.queryStreamForPointInTime(legacyDate1Cutoff, legacyDate2Cutoff, dates, pointInTime)
 
         val result = Await.result(stream.runWith(Sink.seq), 1 second)
-        val expected = Iterable(
-          Legacy2Query(Seq(UtcDate(2020, 9, 8), UtcDate(2020, 9, 9), UtcDate(2020, 9, 10), UtcDate(2020, 9, 11), UtcDate(2020, 9, 12)))
+        val expected = Seq(
+          Legacy2Query(UtcDate(2020, 9, 8)),
+          Legacy2Query(UtcDate(2020, 9, 9)),
+          Legacy2Query(UtcDate(2020, 9, 10)),
+          Legacy2Query(UtcDate(2020, 9, 11)),
+          Legacy2Query(UtcDate(2020, 9, 12))
         )
 
         result === expected
@@ -180,7 +184,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
         val endDate = SDate(2020, 9, 4, 23, 59)
         val mockLookup = MockLookup()
 
-        val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights, dummyByDayLookup, mockLookup.legacyLookupDateRange(), UtcDate(1970, 1, 1), UtcDate(1970, 1, 1))(startDate, endDate, T1, None)
+        val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights, dummyByDayLookup, mockLookup.legacy1Lookup(), UtcDate(1970, 1, 1), UtcDate(1970, 1, 1))(startDate, endDate, T1, None)
         val result = Await.result(FlightsRouterActor.runAndCombine(Future(flights)), 1 second)
         val expected = FlightsWithSplits(Seq(flight0209Late, flight0309, flight0409, flight0509Early))
         result === expected
@@ -207,7 +211,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
           .flightsByDaySource(
             mockLookup.lookup(nonLegacyFlights),
             mockLookup.lookup(),
-            mockLookup.legacyLookupDateRange(legacyFlights),
+            mockLookup.legacy1Lookup(legacyFlights),
             legacy1CutOffDate,
             legacy2CutOffDate
           )(startDate, endDate, T1, None)

@@ -2,7 +2,7 @@ package actors
 
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayFlightActor}
-import actors.minutes.MinutesActorLike.{FlightsInRangeLookup, FlightsLookup, FlightsUpdate}
+import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import actors.queues.FlightsRouterActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
@@ -41,7 +41,7 @@ trait FlightLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[FlightsWithSplits]
   }
 
-  def flightsBayDayLookupLegacy(legacyActorProps: (SDateLike, Int) => Props): FlightsLookup = (terminal: Terminal, date: UtcDate, maybePit: Option[MillisSinceEpoch]) => {
+  def flightsByDayLookupLegacy(legacyActorProps: (SDateLike, Int) => Props): FlightsLookup = (terminal: Terminal, date: UtcDate, maybePit: Option[MillisSinceEpoch]) => {
     val props = maybePit match {
       case Some(pointInTime) => legacyActorProps(SDate(pointInTime), DrtStaticParameters.expireAfterMillis)
       case None =>
@@ -51,20 +51,6 @@ trait FlightLookupsLike {
     val actor = system.actorOf(props)
     val startMillis = SDate(date).millisSinceEpoch
     val endMillis = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
-    val request = GetFlightsForTerminalDateRange(startMillis, endMillis, terminal)
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, request)).mapTo[FlightsWithSplits]
-  }
-
-  def flightsInRangeLookup(legacyActorProps: (SDateLike, Int) => Props): FlightsInRangeLookup = (terminal: Terminal, start: UtcDate, end: UtcDate, maybePit: Option[MillisSinceEpoch]) => {
-    val props = maybePit match {
-      case Some(pointInTime) => legacyActorProps(SDate(pointInTime), DrtStaticParameters.expireAfterMillis)
-      case None =>
-        val pointInTime = SDate(`end`).getLocalNextMidnight.addHours(4).millisSinceEpoch
-        legacyActorProps(SDate(pointInTime), DrtStaticParameters.expireAfterMillis)
-    }
-    val actor = system.actorOf(props)
-    val startMillis = SDate(start).millisSinceEpoch
-    val endMillis = SDate(`end`).addDays(1).addMinutes(-1).millisSinceEpoch
     val request = GetFlightsForTerminalDateRange(startMillis, endMillis, terminal)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, request)).mapTo[FlightsWithSplits]
   }
@@ -88,8 +74,8 @@ case class FlightLookups(system: ActorSystem,
       updatesSubscriber,
       queuesByTerminal.keys,
       flightsByDayLookup,
-      flightsBayDayLookupLegacy(tempLegacy1ActorProps),
-      flightsInRangeLookup(tempLegacy2ActorProps),
+      flightsByDayLookupLegacy(tempLegacy1ActorProps),
+      flightsByDayLookupLegacy(tempLegacy2ActorProps),
       updateFlights,
       flightsByDayStorageSwitchoverDate,
       flightsByDayStorageSwitchoverDate))

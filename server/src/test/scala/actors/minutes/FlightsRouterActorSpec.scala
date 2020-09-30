@@ -65,8 +65,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacyLookup(),
-          mockLookup.legacyLookupDateRange(),
+          mockLookup.legacy2Lookup(),
+          mockLookup.legacy1Lookup(),
           noopUpdates,
           legacy1CutOffDate,
           legacy2CutOffDate
@@ -95,8 +95,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacyLookup(),
-          mockLookup.legacyLookupDateRange(),
+          mockLookup.legacy2Lookup(),
+          mockLookup.legacy1Lookup(),
           noopUpdates,
           legacy1CutOffDate,
           legacy2CutOffDate
@@ -125,8 +125,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacyLookup(),
-          mockLookup.legacyLookupDateRange(),
+          mockLookup.legacy2Lookup(),
+          mockLookup.legacy1Lookup(),
           noopUpdates,
           legacy1CutOffDate,
           legacy2CutOffDate
@@ -158,8 +158,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacyLookup(),
-          mockLookup.legacyLookupDateRange(),
+          mockLookup.legacy2Lookup(),
+          mockLookup.legacy1Lookup(),
           noopUpdates,
           legacy1CutOffDate,
           legacy2CutOffDate
@@ -191,8 +191,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacyLookup(),
-          mockLookup.legacyLookupDateRange(),
+          mockLookup.legacy2Lookup(),
+          mockLookup.legacy1Lookup(),
           noopUpdates,
           legacy1CutOffDate,
           legacy2CutOffDate
@@ -224,8 +224,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacyLookup(),
-          mockLookup.legacyLookupDateRange(),
+          mockLookup.legacy2Lookup(),
+          mockLookup.legacy1Lookup(),
           noopUpdates,
           legacy1CutOffDate,
           legacy2CutOffDate
@@ -257,8 +257,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacyLookup(),
-          mockLookup.legacyLookupDateRange(),
+          mockLookup.legacy2Lookup(),
+          mockLookup.legacy1Lookup(),
           noopUpdates,
           legacy1CutOffDate,
           legacy2CutOffDate
@@ -289,8 +289,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacyLookup(),
-          mockLookup.legacyLookupDateRange(),
+          mockLookup.legacy2Lookup(),
+          mockLookup.legacy1Lookup(),
           noopUpdates,
           legacy1CutOffDate,
           legacy2CutOffDate
@@ -318,17 +318,33 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
         val mockLookup = MockLookup()
 
-        val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(TestProbe().ref, Seq(T1), mockLookup.lookup(), mockLookup.legacyLookup(), mockLookup.legacyLookupDateRange(), noopUpdates, legacy1CutOffDate, legacy2CutOffDate)))
+        val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
+          TestProbe().ref,
+          Seq(T1),
+          mockLookup.lookup(),
+          mockLookup.legacy2Lookup(),
+          mockLookup.legacy1Lookup(),
+          noopUpdates,
+          legacy1CutOffDate,
+          legacy2CutOffDate
+        )))
         val request = GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
         val result = cmActor.ask(request)(Timeout(5 minutes)).mapTo[Source[FlightsWithSplits, NotUsed]]
 
         Await.result(result.flatMap(s => s.runWith(Sink.seq)), 1 second)
 
-        mockLookup.paramsLegacyLookupInRange === List((T1, from.addDays(-2).toUtcDate, to.addDays(1).toUtcDate, None))
+        mockLookup.paramsLegacy1Lookup === List(
+          (T1, UtcDate(2020,8, 19), None),
+          (T1, UtcDate(2020,8, 20), None),
+          (T1, UtcDate(2020,8, 21), None),
+          (T1, UtcDate(2020,8, 22), None),
+          (T1, UtcDate(2020,8, 23), None),
+          (T1, UtcDate(2020,8, 24), None)
+        )
       }
     }
 
-    "Given a request for flights falling within a range at a point in time before the legacy cutoff date" >> {
+    "Given a request for flspights falling within a range at a point in time before the legacy cutoff date" >> {
       "That request should be forwarded to the FlightState actor" >> {
         val from = SDate("2020-08-23T00:00Z")
         val to = SDate("2020-08-23T00:00Z")
@@ -342,8 +358,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
             TestProbe().ref,
             Seq(T1),
             mockLookup.lookup(),
-            mockLookup.legacyLookup(),
-            mockLookup.legacyLookupDateRange(),
+            mockLookup.legacy2Lookup(),
+            mockLookup.legacy1Lookup(),
             noopUpdates,
             legacy1CutOffDate,
             legacy2CutOffDate
@@ -359,7 +375,12 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
         Await.result(result.flatMap(s => s.runWith(Sink.seq)), 1 second)
 
-        mockLookup.paramsLegacyLookupInRange === List((T1, from.addDays(-2).toUtcDate, to.addDays(1).toUtcDate, Option(pit)))
+        mockLookup.paramsLegacy1Lookup === List(
+          (T1, UtcDate(2020,8, 21), Option(pit)),
+          (T1, UtcDate(2020,8, 22), Option(pit)),
+          (T1, UtcDate(2020,8, 23), Option(pit)),
+          (T1, UtcDate(2020,8, 24), Option(pit)),
+        )
       }
     }
   }
@@ -380,8 +401,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
             TestProbe().ref,
             Seq(T1),
             mockLookup.lookup(),
-            mockLookup.legacyLookup(),
-            mockLookup.legacyLookupDateRange(),
+            mockLookup.legacy2Lookup(),
+            mockLookup.legacy1Lookup(),
             noopUpdates,
             legacy1CutOffDate,
             legacy2CutOffDate
@@ -392,13 +413,13 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
         Await.result(result.flatMap(s => s.runWith(Sink.seq)), 1 second)
 
-        mockLookup.paramsLegacyDayLookup === List(
+        mockLookup.paramsLegacy2Lookup === List(
           (T1, from.addDays(-2).toUtcDate, None),
           (T1, from.addDays(-1).toUtcDate, None),
           (T1, from.toUtcDate, None),
           (T1, from.addDays(1).toUtcDate, None),
         )
-        mockLookup.paramsLegacyLookupInRange === Nil
+        mockLookup.paramsLegacy1Lookup === Nil
         mockLookup.paramsLookup === Nil
       }
     }
@@ -418,8 +439,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
             TestProbe().ref,
             Seq(T1),
             mockLookup.lookup(),
-            mockLookup.legacyLookup(),
-            mockLookup.legacyLookupDateRange(),
+            mockLookup.legacy2Lookup(),
+            mockLookup.legacy1Lookup(),
             noopUpdates,
             legacy1CutOffDate,
             legacy2CutOffDate
@@ -430,12 +451,13 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
         Await.result(result.flatMap(s => s.runWith(Sink.seq)), 1 second)
 
-        mockLookup.paramsLegacyDayLookup === List(
+        mockLookup.paramsLegacy2Lookup === List(
           (T1, UtcDate(2020, 8, 31), None),
           (T1, UtcDate(2020, 9, 1), None),
         )
-        mockLookup.paramsLegacyLookupInRange === List(
-          (T1, UtcDate(2020, 9, 2), UtcDate(2020, 9, 3), None)
+        mockLookup.paramsLegacy1Lookup === List(
+          (T1, UtcDate(2020, 9, 2), None),
+          (T1, UtcDate(2020, 9, 3), None),
         )
         mockLookup.paramsLookup === List(
           (T1, UtcDate(2020, 9, 4), None),
