@@ -371,9 +371,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val to = from.addDays(180)
     val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
     FlightsRouterActor.runAndCombine(actor
-      .ask(request)(new Timeout(15 hours)).mapTo[Source[FlightsWithSplits, NotUsed]])
+      .ask(request)(new Timeout(15 seconds)).mapTo[Source[FlightsWithSplits, NotUsed]])
       .map { fws =>
-        Option(PortState(fws.flights.toMap.values, Iterable(), Iterable()))
+        Option(PortState(fws.flights.values, Iterable(), Iterable()))
       }
   }
 

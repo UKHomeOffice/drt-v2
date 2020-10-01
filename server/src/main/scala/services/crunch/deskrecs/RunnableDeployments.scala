@@ -35,7 +35,7 @@ object RunnableDeployments {
             minutesToCrunch: Int,
             portDeskRecs: DesksAndWaitsPortProviderLike)
            (implicit executionContext: ExecutionContext,
-            timeout: Timeout = new Timeout(60 hours)): RunnableGraph[(SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch)] = {
+            timeout: Timeout = new Timeout(60 seconds)): RunnableGraph[(SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val daysSourceQueue = Source.queue[MillisSinceEpoch](1, OverflowStrategy.backpressure).async

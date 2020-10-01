@@ -5,7 +5,7 @@ import drt.shared.Queues.{EGate, Queue}
 import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.{OptimizerConfig, OptimizerCrunchResult, TryCrunch}
+import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, NumericRange}
 import scala.util.{Failure, Success}
@@ -54,7 +54,7 @@ case class DesksAndWaitsTerminalProvider(slas: Map[Queue, Int],
 
           queueWork match {
             case noWork if noWork.isEmpty || noWork.max == 0 =>
-              log.info(s"No workload to crunch. Filling with min desks and zero wait times")
+              log.info(s"No workload to crunch for $queue on ${SDate(minuteMillis.min).toISOString()}. Filling with min desks and zero wait times")
               queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0))))
             case someWork =>
               cruncher(someWork, minDesks, maxDesks, OptimizerConfig(slas(queue))) match {

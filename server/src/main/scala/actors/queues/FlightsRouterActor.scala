@@ -26,9 +26,9 @@ import scala.language.postfixOps
 object FlightsRouterActor {
 
   sealed trait QueryLike extends Ordered[QueryLike] {
-    val start: UtcDate
+    val date: UtcDate
 
-    override def compare(that: QueryLike): Int = start.compare(that.start)
+    override def compare(that: QueryLike): Int = date.compare(that.date)
   }
 
   /**
@@ -36,22 +36,16 @@ object FlightsRouterActor {
    *
    * @param date
    */
-  case class Legacy1Query(date: UtcDate) extends QueryLike {
-    override lazy val start: UtcDate = date
-  }
+  case class Legacy1Query(date: UtcDate) extends QueryLike
 
   /**
    * Legacy 2 data is stored in the FlightStateActor and contains only flight data stored in 6 month batches
    *
    * @param date
    */
-  case class Legacy2Query(date: UtcDate) extends QueryLike {
-    override lazy val start: UtcDate = date
-  }
+  case class Legacy2Query(date: UtcDate) extends QueryLike
 
-  case class Query(date: UtcDate) extends QueryLike {
-    override lazy val start: UtcDate = date
-  }
+  case class Query(date: UtcDate) extends QueryLike
 
   def utcDateRange(start: SDateLike, end: SDateLike): Seq[UtcDate] = {
     val lookupStartMillis = start.addDays(-2).millisSinceEpoch
@@ -122,8 +116,8 @@ object FlightsRouterActor {
           flightsLookupByDay(terminal, date, maybePit)
         case Legacy1Query(date) =>
           flightsLookupByDayLegacy1(terminal, date, maybePit)
-        case query: Legacy2Query =>
-          flightsLookupByDayLegacy2(terminal, query.start, maybePit)
+        case Legacy2Query(date) =>
+          flightsLookupByDayLegacy2(terminal, date, maybePit)
       }
       .map {
         case FlightsWithSplits(flights) =>

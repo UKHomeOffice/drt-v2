@@ -48,7 +48,10 @@ object RunnableDeskRecs {
             .map(min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch)
             .mapAsync(1) { crunchStartMillis =>
               log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString()}")
-              flightsToCrunch(portStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
+              flightsSource(portStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis).map(s => (crunchStartMillis, s))
+            }
+            .flatMapConcat {
+              case (startMillis, source) => source.fold(FlightsWithSplits.empty)(_ ++ _).map(fws => (startMillis, fws))
             }
             .map { case (crunchStartMillis, flights) =>
               val crunchEndMillis = SDate(crunchStartMillis).addMinutes(portDeskRecs.minutesToCrunch).millisSinceEpoch
@@ -57,8 +60,12 @@ object RunnableDeskRecs {
               log.info(s"Crunching ${flights.flights.size} flights, ${minuteMillis.length} minutes (${SDate(crunchStartMillis).toISOString()} to ${SDate(crunchEndMillis).toISOString()})")
 
               val loads = portDeskRecs.flightsToLoads(flights, crunchStartMillis)
+              log.info(s"Finished calculating loads")
 
-              portDeskRecs.loadsToDesks(minuteMillis, loads, maxDesksProviders)
+              val dr = portDeskRecs.loadsToDesks(minuteMillis, loads, maxDesksProviders)
+              log.info(s"Finished crunching")
+
+              dr
             } ~> killSwitch ~> deskRecsSink
 
           ClosedShape
@@ -67,21 +74,34 @@ object RunnableDeskRecs {
     RunnableGraph.fromGraph(graph).addAttributes(Attributes.inputBuffer(1, 1))
   }
 
-  private def flightsToCrunch(portStateActor: ActorRef)
-                             (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
-                             (implicit executionContext: ExecutionContext,
-                              materializer: Materializer,
-                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] =
+//  private def flightsToCrunch(portStateActor: ActorRef)
+//                             (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
+//                             (implicit executionContext: ExecutionContext,
+//                              materializer: Materializer,
+//                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] =
+//    portStateActor
+//      .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
+//      .mapTo[Source[FlightsWithSplits, NotUsed]]
+//      .flatMap { fs =>
+//        fs.runWith(Sink.reduce[FlightsWithSplits](_ ++ _)).map(fws => (crunchStartMillis, fws))
+//      }
+//      .recoverWith {
+//        case t =>
+//          log.error("Failed to fetch flights from PortStateActor", t)
+//          Future((crunchStartMillis, FlightsWithSplits.empty))
+//      }
+
+  private def flightsSource(portStateActor: ActorRef)
+                           (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
+                           (implicit executionContext: ExecutionContext,
+                            timeout: Timeout): Future[Source[FlightsWithSplits, NotUsed]] =
     portStateActor
       .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
       .mapTo[Source[FlightsWithSplits, NotUsed]]
-      .flatMap { fs =>
-        fs.runWith(Sink.reduce[FlightsWithSplits](_ ++ _)).map(fws => (crunchStartMillis, fws))
-      }
-      .recoverWith {
+      .recover {
         case t =>
           log.error("Failed to fetch flights from PortStateActor", t)
-          Future((crunchStartMillis, FlightsWithSplits.empty))
+          Source[FlightsWithSplits](List())
       }
 
   def start(portStateActor: ActorRef,

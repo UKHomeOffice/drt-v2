@@ -114,7 +114,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
         .collect {
           case (_, Some(container)) => container.window(start, end)
           case (day, None) =>
-            log.info(s"No minutes found for for ${day.toISOString()}")
+            log.debug(s"No minutes found for for ${day.toISOString()}")
             MinutesContainer.empty[A, B]
         }
         .fold(MinutesContainer[A, B](Seq())) {

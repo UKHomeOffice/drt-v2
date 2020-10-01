@@ -71,7 +71,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
     case ReadyToEmit =>
       readyToEmit = true
-      log.debug(s"Got a ReadyToEmit. Will emit if I have something in the queue")
+      log.info(s"Got a ReadyToEmit. Will emit if I have something in the queue")
       emitNextDayIfReady()
 
     case SetDaysQueueSource(source) =>
@@ -103,7 +103,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
   def emitNextDayIfReady(): Unit = if (readyToEmit)
     queuedDays.headOption match {
       case Some(day) =>
-        log.debug(s"Emitting ${SDate(day, Crunch.europeLondonTimeZone).toISODateOnly}")
+        log.info(s"Emitting ${SDate(day, Crunch.europeLondonTimeZone).toISODateOnly}. ${queuedDays.size - 1} Days left in queue")
         readyToEmit = false
         maybeDaysQueueSource.foreach { sourceQueue =>
           sourceQueue.offer(day).foreach { _ =>

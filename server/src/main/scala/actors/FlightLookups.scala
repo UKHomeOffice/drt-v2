@@ -21,7 +21,7 @@ import scala.language.postfixOps
 trait FlightLookupsLike {
   val system: ActorSystem
   implicit val ec: ExecutionContext
-  implicit val timeout: Timeout = new Timeout(60 hours)
+  implicit val timeout: Timeout = new Timeout(60 seconds)
 
   val now: () => SDateLike
   val requestAndTerminateActor: ActorRef
