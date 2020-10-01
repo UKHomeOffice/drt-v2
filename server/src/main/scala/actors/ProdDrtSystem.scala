@@ -61,7 +61,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
   override val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
 
-  val legacyFlightDataCutoff: SDateLike = SDate(config.get[String]("legacy-flight-data-cutoff"))
+  val legacyPortStateCutOffDate: SDateLike = SDate(config.get[String]("legacy-flight-data-cutoff"))
   override val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
 
   val flightsByDayCutoffDate: SDateLike = SDate.tryParseString(config.get[String]("flights-by-day-cutoff-date")) match {
@@ -91,6 +91,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     now,
     airportConfig.queuesByTerminal,
     crunchQueueActor,
+    legacyPortStateCutOffDate,
     flightsByDayCutoffDate,
     legacy1ActorProps,
     legacy2ActorProps
@@ -102,7 +103,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
   override val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
 
-  log.info(s"Legacy flight data cutoff: ${legacyFlightDataCutoff.toISOString()}")
+  log.info(s"Legacy flight data cutoff: ${legacyPortStateCutOffDate.toISOString()}")
 
   override val portStateActor: ActorRef = system.actorOf(Props(new PartitionedPortStateActor(
     flightsActor,
@@ -114,7 +115,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     now,
     airportConfig.queuesByTerminal,
     journalType,
-    legacyFlightDataCutoff,
+    legacyPortStateCutOffDate,
     tempLegacyActorProps(airportConfig.portStateSnapshotInterval))))
 
   val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)

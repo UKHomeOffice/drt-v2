@@ -157,8 +157,8 @@ class FlightsRouterActor(
                           flightsInRangeLegacy1Lookup: FlightsLookup,
                           flightsInRangeLegacy2Lookup: FlightsLookup,
                           updateFlights: FlightsUpdate,
-                          flightsStateStorageSwitchoverDate: SDateLike,
-                          flightsByDayStorageSwitchoverDate: SDateLike
+                          legacy1Date: SDateLike,
+                          legacy2Date: SDateLike
                         ) extends Actor with ActorLogging {
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
@@ -239,8 +239,8 @@ class FlightsRouterActor(
       flightsByDayLookup,
       flightsInRangeLegacy1Lookup,
       flightsInRangeLegacy2Lookup,
-      flightsStateStorageSwitchoverDate.toUtcDate,
-      flightsByDayStorageSwitchoverDate.toUtcDate)
+      legacy1Date.toUtcDate,
+      legacy2Date.toUtcDate)
 
   def updateByTerminalDayAndGetDiff(container: FlightsWithSplitsDiff): Future[Seq[MillisSinceEpoch]] = {
     val eventualUpdatedMinutesDiff: Source[Seq[MillisSinceEpoch], NotUsed] =

@@ -14,7 +14,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
   import controllers.ArrivalGenerator.arrival
 
-  val flightWithAllTypesOfAPISplit = ApiFlightWithSplits(
+  val flightWithAllTypesOfAPISplit: ApiFlightWithSplits = ApiFlightWithSplits(
     arrival(
       iata = "SA324",
       icao = "SA0324",
@@ -50,6 +50,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 13, None)
         ), SplitRatiosNs.SplitSources.Historical, None))
   )
+
   val flightWithAllTypesOfAPISplitAndNoLiveNos = ApiFlightWithSplits(
     arrival(
       iata = "SA324",
@@ -86,6 +87,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 13, None)
         ), SplitRatiosNs.SplitSources.Historical, None))
   )
+
   val flightWithoutFastTrackApiSplits: ApiFlightWithSplits = ApiFlightWithSplits(
     arrival(
       iata = "SA325",
@@ -108,6 +110,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 1, None)
       ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)))
   )
+
   val flights: Seq[ApiFlightWithSplits] = List(
     flightWithAllTypesOfAPISplit,
     flightWithoutFastTrackApiSplits,
@@ -132,6 +135,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)))
     )
   )
+
   val flightsIncludingOneWithNoPaxNos = List(
     flightWithAllTypesOfAPISplitAndNoLiveNos,
     flightWithoutFastTrackApiSplits,
@@ -158,7 +162,6 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         ), SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)))
     )
   )
-
 
   val codeShareFlights = List(
     flightWithAllTypesOfAPISplit,
@@ -187,13 +190,12 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     )
   )
 
-
   "Given a list of arrivals with splits we should get back a CSV of arrival data using live feed numbers when available" >> {
 
     val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
       .toCsvStream(Source(List(FlightsWithSplits(flights))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString("\n")
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
       """|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
@@ -210,7 +212,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
       .toCsvStream(Source(List(FlightsWithSplits(codeShareFlights))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString("\n")
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
       """|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
@@ -226,7 +228,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
       .toCsvStream(Source(List(FlightsWithSplits(List(flightWithAllTypesOfAPISplit)))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString("\n")
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
       """|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
@@ -234,7 +236,6 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
          |""".stripMargin
 
     result === expected
-
   }
 
   "When asking for Actual API Split Data" >> {
@@ -260,8 +261,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
       .toCsvStreamWithActualApi(Source(List(FlightsWithSplits(flightsIncludingOneWithNoPaxNos))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString("\n")
-
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
       s"""|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track,API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable),API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates
@@ -277,7 +277,26 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
       .toCsvStreamWithActualApi(Source(List(FlightsWithSplits(codeShareFlights))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString("\n")
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+
+    val expected =
+      s"""|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track,API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable),API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates
+          |SA0325,SA0325,JHC,/,UNK,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,0.0,0.0,3.0,3.0,0.0,0.0,1.0,0.0,0.0,3.0
+          |SA0326,SA0326,JHB,/,UNK,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,,0.0,0.0,30.0,30.0,0.0,0.0,10.0,0.0,0.0,30.0
+          |""".stripMargin
+
+    result === expected
+  }
+
+  "Given a source of flights containing empty days and days with flights, then I should still get a CSV result" >> {
+    val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
+      .toCsvStreamWithActualApi(Source(List(
+        FlightsWithSplits.empty,
+        FlightsWithSplits.empty,
+        FlightsWithSplits(codeShareFlights))
+      ))
+
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
       s"""|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track,API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable),API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates

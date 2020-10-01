@@ -63,7 +63,8 @@ case class FlightLookups(system: ActorSystem,
                          now: () => SDateLike,
                          queuesByTerminal: Map[Terminal, Seq[Queue]],
                          updatesSubscriber: ActorRef,
-                         flightsByDayStorageSwitchoverDate: SDateLike,
+                         legacy1Date: SDateLike,
+                         legacy2Date: SDateLike,
                          tempLegacy1ActorProps: (SDateLike, Int) => Props,
                          tempLegacy2ActorProps: (SDateLike, Int) => Props
                         )(implicit val ec: ExecutionContext) extends FlightLookupsLike {
@@ -77,7 +78,11 @@ case class FlightLookups(system: ActorSystem,
       flightsByDayLookupLegacy(tempLegacy1ActorProps),
       flightsByDayLookupLegacy(tempLegacy2ActorProps),
       updateFlights,
-      flightsByDayStorageSwitchoverDate,
-      flightsByDayStorageSwitchoverDate))
+      legacy1Date,
+      legacy2Date))
+
+    /**
+     * @todo make the legacy 2 date correct
+     */
   )
 }

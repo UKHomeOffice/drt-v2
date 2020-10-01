@@ -5,13 +5,12 @@ import akka.stream.scaladsl.Source
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
+import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
-import drt.shared._
 import services.SDate
 import services.exports.summaries.flights.TerminalFlightsSummary
 import services.exports.summaries.flights.TerminalFlightsSummary.rawArrivalHeadings
-import services.exports.summaries.flights.TerminalFlightsWithActualApiSummary.actualAPISplitsForFlightInHeadingOrder
 import services.graphstages.Crunch
 
 case class StreamingFlightsExport(pcpPaxFn: Arrival => Int) {
@@ -23,7 +22,7 @@ case class StreamingFlightsExport(pcpPaxFn: Arrival => Int) {
       uniqueArrivalsWithCodeShares(fws.flights.values.toSeq).map {
         case (fws, _) => flightWithSplitsToCsvRow(queueNames, fws).mkString(",") + "\n"
       }.mkString
-    }).prepend(Source(List(csvHeader)))
+    }).prepend(Source(List(csvHeader + "\n")))
   }
 
   def toCsvStreamWithActualApi(flightsStream: Source[FlightsApi.FlightsWithSplits, NotUsed]): Source[String, NotUsed] = {
@@ -34,7 +33,7 @@ case class StreamingFlightsExport(pcpPaxFn: Arrival => Int) {
             actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadingsForFlights).toList
           rowFields.mkString(",") + "\n"
       }.mkString
-    }).prepend(Source(List(csvHeader + "," + actualApiHeadingsForFlights.mkString(","))))
+    }).prepend(Source(List(csvHeader + "," + actualApiHeadingsForFlights.mkString(",") + "\n")))
   }
 
   val csvHeader: String =

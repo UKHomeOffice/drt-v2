@@ -75,8 +75,11 @@ trait WithFlightsExport extends ExportToCsv {
                                   terminal: Terminal): Future[Result] = {
     val request = GetFlightsForTerminalDateRange(startDate.millisSinceEpoch, endDate.millisSinceEpoch, terminal)
     val pitRequest = PointInTimeQuery(pointInTime, request)
-    ctrl.portStateActor.ask(pitRequest).mapTo[Source[FlightsWithSplits, NotUsed]].map { flightsStream =>
+    ctrl.flightsActor.ask(pitRequest).mapTo[Source[FlightsWithSplits, NotUsed]].map { flightsStream =>
+      log.info(s"******* What's this?: $flightsStream")
       val csvStream = StreamingFlightsExport(ctrl.pcpPaxFn).toCsvStream(flightsStream)
+      log.info(s"***** csvSream $csvStream")
+      csvStream.map(s => s"********* csv line: $s")
       val fileName = makeFileName("flights", terminal, startDate, endDate, airportConfig.portCode)
       Try(sourceToCsvResponse(csvStream, fileName)) match {
         case Success(value) => value
