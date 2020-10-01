@@ -62,7 +62,6 @@ object CsvFileStreaming {
       body = HttpEntity.Chunked(exportSource.collect {
         case s if s.nonEmpty => s
       }.map(c => {
-        println(s"***** here's a chunk $c")
         HttpChunk.Chunk(writeable.transform(c))
       }), writeable.contentType))
   }
