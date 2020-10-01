@@ -338,10 +338,14 @@ object SPAMain {
     else s"$pathToThisApp/$relativeUrl"
   }
 
-  def exportViewUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
-    case view: ViewPointInTime =>
+  def exportViewUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal, passengerOnly: Boolean): String = (viewMode, exportType) match {
+    case (view: ViewPointInTime, ExportArrivals) =>
+      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.millis}/$terminal/$passengerOnly")
+    case (view: ViewPointInTime, _) =>
       SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.millis}/$terminal")
-    case view =>
+    case (view, ExportArrivals) =>
+      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.millisSinceEpoch}/${view.dayEnd.millisSinceEpoch}/$terminal/$passengerOnly")
+    case (view, _) =>
       SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.millisSinceEpoch}/${view.dayEnd.millisSinceEpoch}/$terminal")
   }
 

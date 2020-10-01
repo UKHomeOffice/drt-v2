@@ -33,7 +33,7 @@ trait WithFlightsExport extends ExportToCsv {
         Try(SDate(year, month, day, 0, 0, europeLondonTimeZone)) match {
           case Success(start) =>
             val summaryFromPortState: (SDateLike, SDateLike) => Future[TerminalSummaryLike] =
-              Exports.flightSummariesFromPortState(TerminalFlightsWithActualApiSummary.generator)(terminal, ctrl.pcpPaxFn, queryFromPortStateFn(None))
+              Exports.flightSummariesFromPortState(TerminalFlightsWithActualApiSummary.generator)(terminal, false, ctrl.pcpPaxFn, queryFromPortStateFn(None))
             exportToCsv(
               start = start,
               end = start,
@@ -50,17 +50,19 @@ trait WithFlightsExport extends ExportToCsv {
   }
 
   def exportFlightsWithSplitsAtPointInTimeCSV(pointInTime: String,
-                                              terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+                                              terminalName: String,
+                                              filterPassengerFlight : String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action.apply {
-      implicit request => exportPointInTimeView(terminalName, pointInTime)
+      implicit request => exportPointInTimeView(terminalName, pointInTime, filterPassengerFlight.toBoolean)
     }
   }
 
   def exportFlightsWithSplitsBetweenTimeStampsCSV(startMillis: String,
                                                   endMillis: String,
-                                                  terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+                                                  terminalName: String,
+                                                  filterPassengerFlight: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action.apply {
-      implicit request => exportEndOfDayView(startMillis, endMillis, terminalName)
+      implicit request => exportEndOfDayView(startMillis, endMillis, terminalName,filterPassengerFlight.toBoolean)
     }
   }
 
@@ -107,7 +109,7 @@ trait WithFlightsExport extends ExportToCsv {
   }
 
 
-  private def summaryProviderByRole(terminal: Terminal, flightsProvider: DateRangeLike => Future[Any])
+  private def summaryProviderByRole(terminal: Terminal,filterPassengerFlight:Boolean,flightsProvider: DateRangeLike => Future[Any])
                                    (implicit request: Request[AnyContent]): (SDateLike, SDateLike) => Future[TerminalSummaryLike] = {
     val flightSummariesFromPortState =
       if (canAccessActualApi(request))
@@ -115,7 +117,7 @@ trait WithFlightsExport extends ExportToCsv {
       else
         Exports.flightSummariesFromPortState(TerminalFlightsSummary.generator) _
 
-    flightSummariesFromPortState(terminal, ctrl.pcpPaxFn, flightsProvider)
+    flightSummariesFromPortState(terminal,filterPassengerFlight, ctrl.pcpPaxFn, flightsProvider)
   }
 
   private def canAccessActualApi(request: Request[AnyContent]) = {
@@ -130,19 +132,19 @@ trait WithFlightsExport extends ExportToCsv {
     if (canAccessActualApi(request)) GetSummariesWithActualApi
     else GetSummaries
 
-  private def exportEndOfDayView(startMillis: String, endMillis: String, terminalName: String)
+  private def exportEndOfDayView(startMillis: String, endMillis: String, terminalName: String, filterPassengerFlight:Boolean)
                                 (implicit request: Request[AnyContent]): Result = {
-    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(None))
+    val summaryForDate = summaryProviderByRole(Terminal(terminalName), filterPassengerFlight, queryFromPortStateFn(None))
     val start = SDate(startMillis.toLong)
     val end = SDate(endMillis.toLong)
     exportToCsv(start, end, "flights", terminal(terminalName), Option(summaryActorProvider, summariesRequest), summaryForDate)
   }
 
-  private def exportPointInTimeView(terminalName: String, pointInTime: String)
+  private def exportPointInTimeView(terminalName: String, pointInTime: String, passengerOnly:Boolean)
                                    (implicit request: Request[AnyContent]): Result = {
     val pit = SDate(pointInTime.toLong)
     val start = pit.getLocalLastMidnight
     val end = start.addDays(1).addMinutes(-1)
-    val summaryForDate = summaryProviderByRole(Terminal(terminalName), queryFromPortStateFn(Option(pit.millisSinceEpoch)))
+    val summaryForDate = summaryProviderByRole(Terminal(terminalName), passengerOnly, queryFromPortStateFn(Option(pit.millisSinceEpoch)))
     exportToCsv(start, end, "flights", terminal(terminalName), None, summaryForDate)}
 }

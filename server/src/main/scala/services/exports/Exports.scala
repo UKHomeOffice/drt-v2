@@ -124,15 +124,20 @@ object Exports {
     Summaries.terminalSummaryForPeriod(crunchMinutes, staffMinutes, queues, SDate(millis), summaryLengthMinutes)
   }
 
+
+  val passengerFlights : Arrival => Boolean = apiFlight => apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0)
+
+
   def flightSummariesFromPortState(terminalFlightsSummaryGenerator: TerminalFlightsSummaryLikeGenerator)
                                   (terminal: Terminal,
+                                   filterPassengerFlight: Boolean,
                                    pcpPaxFn: Arrival => Int,
                                    flightsProvider: DateRangeLike => Future[Any])
                                   (from: SDateLike, to: SDateLike)
                                   (implicit ec: ExecutionContext): Future[TerminalSummaryLike] =
     flightsProvider(GetFlightsForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
       case flights: FlightsWithSplits =>
-        val terminalFlights = flightsForTimeRange(flights, from, to)
+        val terminalFlights = if (filterPassengerFlight) flightsForTimeRange(flights, from, to).filter(fs => passengerFlights(fs.apiFlight)) else  flightsForTimeRange(flights, from, to)
         terminalFlightsSummaryGenerator(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
     }
 

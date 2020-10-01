@@ -40,7 +40,7 @@ object TerminalContentComponent {
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])]
                   )
 
-  case class State(activeTab: String, showExportDialogue: Boolean = false, filterEmptyFlight: Boolean = false)
+  case class State(activeTab: String, showExportDialogue: Boolean = false, filterPassengerFlights: Boolean = false)
 
 
   def viewStartAndEnd(day: SDateLike, range: TimeRangeHours): (SDateLike, SDateLike) = {
@@ -69,9 +69,9 @@ object TerminalContentComponent {
 
   class Backend(backendScope: BackendScope[Props, State]) {
 
-    def toggleArrivalEmpty(e: ReactEventFromInput) = {
+    def filterPassengerFlightsToggle(e: ReactEventFromInput) = {
       val newValue: Boolean = e.target.checked
-      backendScope.modState(_.copy(filterEmptyFlight = newValue))
+      backendScope.modState(_.copy(filterPassengerFlights = newValue))
     }
 
     def render(props: Props, state: State): TagOf[Div] = {
@@ -135,22 +135,22 @@ object TerminalContentComponent {
               ),
               <.div(^.className := "exports",
                 if (state.activeTab == "arrivals") {
-                  <.div(^.className := s"toggle-arrival",
-                    <.input.checkbox(^.checked := state.filterEmptyFlight, ^.onChange ==> toggleArrivalEmpty, ^.id := "toggle-arrival"),
-                    <.label(^.`for` := "toggle-arrival", "Toggle Arrival"),
+                  <.div(^.className := s"filter-arrival",
+                    <.input.checkbox(^.checked := state.filterPassengerFlights, ^.onChange ==> filterPassengerFlightsToggle, ^.id := "toggle-arrival"),
+                    <.label(^.`for` := "toggle-arrival", "Filter passenger flights"),
                   )
                 } else "",
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
                   ExportArrivals,
-                  SPAMain.exportViewUrl(ExportArrivals, props.terminalPageTab.viewMode, terminal)
+                  SPAMain.exportViewUrl(ExportArrivals, props.terminalPageTab.viewMode, terminal,state.filterPassengerFlights)
                 ),
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
                   ExportDesks,
-                  SPAMain.exportViewUrl(ExportDesks, props.terminalPageTab.viewMode, terminal)
+                  SPAMain.exportViewUrl(ExportDesks, props.terminalPageTab.viewMode, terminal,state.filterPassengerFlights)
                 ),
                 displayForRole(
                   exportLink(
@@ -203,7 +203,7 @@ object TerminalContentComponent {
                       props.viewMode,
                       PcpPax.bestPaxEstimateWithApi,
                       props.airportConfig.hasTransfer,
-                      state.filterEmptyFlight
+                      state.filterPassengerFlights
                     )
                   )
                 } else ""
