@@ -226,7 +226,7 @@ object FlightsTableTests extends TestSuite {
 
           val table = ArrivalsTable(timelineComponent = None,
             originMapper = port => originMapperComponent(port)
-          )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true, true))
+          )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true, false))
 
           assertRenderedComponentsAreEqual(table, staticComponent(expected)())
         }

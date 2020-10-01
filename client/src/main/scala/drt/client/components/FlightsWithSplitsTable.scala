@@ -32,21 +32,21 @@ object FlightsWithSplitsTable {
                    viewMode: ViewMode,
                    pcpPaxFn: Arrival => Int,
                    hasTransfer: Boolean,
-                   filterEmptyFlights: Boolean
+                   filterPassengerFlights: Boolean
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
     (props.flightsWithSplits, props.arrivalSources).hashCode()
   })
 
-  val emptyFlight : Arrival => Boolean = apiFlight => apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0)
+  val passengerFlightsFilter : Arrival => Boolean = apiFlight => apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0)
 
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
                     originMapper: PortCode => VdomNode = portCode => portCode.toString,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalsTable")
     .render_P(props => {
-      val flightsWithSplits = if(props.filterEmptyFlights) props.flightsWithSplits.filter(fs => emptyFlight(fs.apiFlight)) else props.flightsWithSplits
+      val flightsWithSplits = if(props.filterPassengerFlights) props.flightsWithSplits.filter(fs => passengerFlightsFilter(fs.apiFlight)) else props.flightsWithSplits
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits)
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
       val isTimeLineSupplied = timelineComponent.isDefined
