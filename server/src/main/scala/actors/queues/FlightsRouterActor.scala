@@ -190,7 +190,6 @@ class FlightsRouterActor(
       sender() ! handleLookups(SDate(request.from), SDate(request.to), request.terminal, None)
 
     case container: FlightsWithSplitsDiff =>
-      log.info(s"Adding ${container.flightsToUpdate.size} flight updates and ${container.arrivalsToRemove.size} removals to requests queue")
       updateRequestsQueue = (sender(), container) :: updateRequestsQueue
       self ! ProcessNextUpdateRequest
 
@@ -241,7 +240,6 @@ class FlightsRouterActor(
       Source(groupByTerminalAndDay(container))
         .mapAsync(1) {
           case ((terminal, day), updates) =>
-            log.info(s"handleUpdateAndGetDiff($terminal, $day, ${updates.flightsToUpdate.size})")
             handleUpdateAndGetDiff(terminal, day, updates)
         }
     combineEventualDiffsStream(eventualUpdatedMinutesDiff)

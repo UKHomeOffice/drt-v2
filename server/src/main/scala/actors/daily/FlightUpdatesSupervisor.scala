@@ -56,7 +56,7 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
                          day: SDateLike): ActorRef = streamingUpdateActors.get((terminal, day.millisSinceEpoch)) match {
     case Some(existing) => existing
     case None =>
-      log.info(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly}")
+      log.debug(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly}")
       val actor = context.system.actorOf(updatesActorFactory(terminal, day), s"flight-updates-actor-$terminal-${day.toISOString()}-${UUID.randomUUID().toString}")
       streamingUpdateActors = streamingUpdateActors + ((terminal, day.millisSinceEpoch) -> actor)
       lastRequests = lastRequests + ((terminal, day.millisSinceEpoch) -> now().millisSinceEpoch)
@@ -65,7 +65,6 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
 
   override def receive: Receive = {
     case PurgeExpired =>
-      log.info("Received PurgeExpired")
       val expiredToRemove = lastRequests.collect {
         case (tm, lastRequest) if now().millisSinceEpoch - lastRequest > MilliTimes.oneMinuteMillis =>
           (tm, streamingUpdateActors.get(tm))

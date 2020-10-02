@@ -68,7 +68,7 @@ class TerminalDayFlightActor(
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
 
       if (diff == filteredDiff)
-        log.info(s"Received FlightsWithSplits for persistence ${diff.flightsToUpdate.size}")
+        log.info(s"Received FlightsWithSplits for persistence")
       else
         logDifferences(diff, filteredDiff)
 
@@ -102,7 +102,6 @@ class TerminalDayFlightActor(
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case FlightsWithSplitsMessage(flightMessages) =>
-      log.info(s"Processing snapshot message")
       setStateFromSnapshot(flightMessages)
   }
 

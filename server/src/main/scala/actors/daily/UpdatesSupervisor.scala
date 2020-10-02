@@ -80,7 +80,6 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
 
   override def receive: Receive = {
     case PurgeExpired =>
-      log.info("Received PurgeExpired")
       val expiredToRemove = lastRequests.collect {
         case (tm, lastRequest) if now().millisSinceEpoch - lastRequest > MilliTimes.oneMinuteMillis =>
           (tm, streamingUpdateActors.get(tm))

@@ -70,7 +70,6 @@ class FlightsStateActor(val now: () => SDateLike,
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case FlightsWithSplitsMessage(flightMessages) =>
-      log.info(s"Processing snapshot message")
       setStateFromSnapshot(flightMessages)
   }
 
