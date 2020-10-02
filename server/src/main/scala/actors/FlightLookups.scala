@@ -4,9 +4,11 @@ import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayFlightActor}
 import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import actors.queues.FlightsRouterActor
+import actors.summaries.FlightsCacheActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
+import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.Queue
@@ -55,6 +57,22 @@ trait FlightLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, request)).mapTo[FlightsWithSplits]
   }
 
+  def cachedLookup(lookup: FlightsLookup, now: () => SDateLike)(implicit system: ActorSystem): FlightsLookup = (terminal: Terminal, date: UtcDate, maybePit: Option[MillisSinceEpoch]) => {
+    maybePit match {
+      case None =>
+        val cacheActor = system.actorOf(Props(new FlightsCacheActor(date, terminal, now)))
+        cacheActor.ask(GetState).mapTo[Option[FlightsWithSplits]].flatMap {
+          case None =>
+            lookup(terminal, date, None).map { fws =>
+              cacheActor ! fws
+              fws
+            }
+          case Some(fws) => Future(fws)
+        }
+      case Some(pointInTime) => lookup(terminal, date, Option(pointInTime))
+    }
+  }
+
   def flightsActor: ActorRef
 
 }
@@ -75,14 +93,10 @@ case class FlightLookups(system: ActorSystem,
       updatesSubscriber,
       queuesByTerminal.keys,
       flightsByDayLookup,
-      flightsByDayLookupLegacy(tempLegacy1ActorProps),
-      flightsByDayLookupLegacy(tempLegacy2ActorProps),
+      cachedLookup(flightsByDayLookupLegacy(tempLegacy1ActorProps), now)(system),
+      cachedLookup(flightsByDayLookupLegacy(tempLegacy2ActorProps), now)(system),
       updateFlights,
       legacy1Date,
       legacy2Date))
-
-    /**
-     * @todo make the legacy 2 date correct
-     */
   )
 }
