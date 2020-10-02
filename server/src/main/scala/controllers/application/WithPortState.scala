@@ -7,7 +7,6 @@ import drt.auth.DesksAndQueuesView
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, Request}
-import services.SDate
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -23,16 +22,11 @@ trait WithPortState {
 
       val maybeSinceMillis = request.queryString.get("since").flatMap(_.headOption.map(_.toLong))
 
-      val maybePointInTime = if (endMillis < SDate.now().millisSinceEpoch) {
-        val oneHourMillis = 1000 * 60 * 60
-        Option(endMillis + oneHourMillis * 2)
-      } else None
-
       val eventualUpdates = maybeSinceMillis match {
         case None =>
-          futurePortState(maybePointInTime, GetStateForDateRange(startMillis, endMillis)).map(r => Ok(write(r)))
+          portStateForDates(startMillis, endMillis).map(r => Ok(write(r)))
         case Some(sinceMillis) =>
-          futureUpdates(GetUpdatesSince(sinceMillis, startMillis, endMillis)).map(r => Ok(write(r)))
+          portStateUpdatesForRange(startMillis, endMillis, sinceMillis).map(r => Ok(write(r)))
       }
 
       eventualUpdates
@@ -44,12 +38,26 @@ trait WithPortState {
     }
   }
 
+  private def portStateUpdatesForRange(startMillis: MillisSinceEpoch,
+                                       endMillis: MillisSinceEpoch,
+                                       sinceMillis: MillisSinceEpoch): Future[Option[PortStateUpdates]] =
+    ctrl.portStateActor
+      .ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))
+      .mapTo[Option[PortStateUpdates]]
+
+  private def portStateForDates(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): Future[PortState] =
+    ctrl.portStateActor
+      .ask(GetStateForDateRange(startMillis, endMillis))
+      .mapTo[PortState]
+
   def getCrunchSnapshot(pointInTime: MillisSinceEpoch): Action[AnyContent] = authByRole(DesksAndQueuesView) {
     Action.async { request: Request[AnyContent] =>
       val startMillis = request.queryString.get("start").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
       val endMillis = request.queryString.get("end").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
 
-      val futureState = futurePortState(Option(pointInTime), GetStateForDateRange(startMillis, endMillis))
+      val futureState = ctrl.portStateActor
+        .ask(PointInTimeQuery(pointInTime, GetStateForDateRange(startMillis, endMillis)))
+        .mapTo[PortState]
 
       futureState
         .map { updates => Ok(write(updates)) }
@@ -60,16 +68,4 @@ trait WithPortState {
         }
     }
   }
-
-  def futurePortState(maybePointInTime: Option[MillisSinceEpoch], request: GetStateForDateRange): Future[PortState] = {
-    val finalMessage = maybePointInTime match {
-      case Some(pit) => PointInTimeQuery(pit, request)
-      case _ => request
-    }
-    ctrl.portStateActor.ask(finalMessage).mapTo[PortState]
-  }
-
-  def futureUpdates(request: GetUpdatesSince): Future[Option[PortStateUpdates]] =
-    ctrl.portStateActor.ask(request).mapTo[Option[PortStateUpdates]]
-
 }
