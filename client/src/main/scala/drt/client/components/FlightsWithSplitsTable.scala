@@ -5,7 +5,6 @@ import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
-import drt.client.components.TerminalDesksAndQueues.Backend
 import drt.client.components.TooltipComponent._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewDay, ViewMode, ViewPointInTime}
@@ -25,6 +24,13 @@ object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = Arrival => Int
 
+  val acl_arrival_status = ArrivalStatus("ACL Forecast")
+
+  val passengerFlights: Arrival => Boolean = apiFlight =>
+      (apiFlight.Status != acl_arrival_status) ||
+      (apiFlight.Status == acl_arrival_status && apiFlight.ServiceType.isEmpty) ||
+      (apiFlight.Status == acl_arrival_status && apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0))
+
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],
                    queueOrder: Seq[Queue], hasEstChox: Boolean,
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
@@ -39,14 +45,13 @@ object FlightsWithSplitsTable {
     (props.flightsWithSplits, props.arrivalSources).hashCode()
   })
 
-  val passengerFlightsFilter : Arrival => Boolean = apiFlight => apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0)
 
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
                     originMapper: PortCode => VdomNode = portCode => portCode.toString,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalsTable")
     .render_P(props => {
-      val flightsWithSplits = if(props.filterPassengerFlights) props.flightsWithSplits.filter(fs => passengerFlightsFilter(fs.apiFlight)) else props.flightsWithSplits
+      val flightsWithSplits = if (props.filterPassengerFlights) props.flightsWithSplits.filter(fs => passengerFlights(fs.apiFlight)) else props.flightsWithSplits
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits)
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
       val isTimeLineSupplied = timelineComponent.isDefined

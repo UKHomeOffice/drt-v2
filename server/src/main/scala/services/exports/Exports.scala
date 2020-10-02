@@ -29,6 +29,13 @@ import scala.concurrent.{ExecutionContext, Future}
 object Exports {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  val acl_arrival_status = ArrivalStatus("ACL Forecast")
+
+  val passengerFlights : Arrival => Boolean = apiFlight =>
+    (apiFlight.Status != acl_arrival_status) ||
+    (apiFlight.Status == acl_arrival_status && apiFlight.ServiceType.isEmpty)  ||
+    (apiFlight.Status == acl_arrival_status && apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0))
+
   def summaryForDaysCsvSource(startDate: SDateLike,
                               numberOfDays: Int,
                               now: () => SDateLike,
@@ -123,10 +130,6 @@ object Exports {
                      staffMinutes: immutable.SortedMap[TM, CrunchApi.StaffMinute]): Seq[QueuesSummary] = minutes.map { millis =>
     Summaries.terminalSummaryForPeriod(crunchMinutes, staffMinutes, queues, SDate(millis), summaryLengthMinutes)
   }
-
-
-  val passengerFlights : Arrival => Boolean = apiFlight => apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0)
-
 
   def flightSummariesFromPortState(terminalFlightsSummaryGenerator: TerminalFlightsSummaryLikeGenerator)
                                   (terminal: Terminal,
