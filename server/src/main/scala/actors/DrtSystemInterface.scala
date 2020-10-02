@@ -366,9 +366,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2 minutes)
 
-  def initialFlightsPortState(actor: ActorRef): Future[Option[PortState]] = {
+  def initialFlightsPortState(actor: ActorRef, forecastMaxDays: Int): Future[Option[PortState]] = {
     val from = now().getLocalLastMidnight.addDays(-1)
-    val to = from.addDays(180)
+    val to = from.addDays(forecastMaxDays)
     val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
     FlightsRouterActor.runAndCombine(actor
       .ask(request)(new Timeout(15 seconds)).mapTo[Source[FlightsWithSplits, NotUsed]])

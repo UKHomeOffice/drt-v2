@@ -37,6 +37,9 @@ object Optimiser {
       fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toIndexedSeq
 
+    indexedMinDesks.indices.foreach(i => if (indexedMinDesks(i) > bestMaxDesks(i)) println(s"${indexedMinDesks(i)} > ${bestMaxDesks(i)} @ $i"))
+    indexedMinDesks.indices.foreach(i => if (indexedMinDesks(i) < 0 || bestMaxDesks(i) < 0) println(s"${indexedMinDesks(i)} or ${bestMaxDesks(i)} is < 0 @ $i"))
+
     for {
       desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla)
       processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq())

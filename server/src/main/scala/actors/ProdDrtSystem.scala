@@ -140,7 +140,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
-      val maybeLivePortState = if (usePartitionedPortState) initialFlightsPortState(portStateActor) else initialStateFuture[PortState](portStateActor)
+      val maybeLivePortState = if (usePartitionedPortState) initialFlightsPortState(portStateActor, params.forecastMaxDays) else initialStateFuture[PortState](portStateActor)
       val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
