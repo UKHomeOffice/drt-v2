@@ -194,10 +194,9 @@ class FlightsStateActor(val now: () => SDateLike,
   }
 
   def diffMessageForFlights(updates: List[ApiFlightWithSplits],
-                            removals: List[Arrival]): FlightsWithSplitsDiffMessage = FlightsWithSplitsDiffMessage(
+                            removals: List[UniqueArrival]): FlightsWithSplitsDiffMessage = FlightsWithSplitsDiffMessage(
     createdAt = Option(now().millisSinceEpoch),
-    removals = removals.map { arrival =>
-      val ua = arrival.unique
+    removals = removals.map { ua =>
       UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled))
     },
     updates = updates.map(FlightMessageConversion.flightWithSplitsToMessage)

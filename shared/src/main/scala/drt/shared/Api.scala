@@ -495,10 +495,10 @@ trait SDateLike {
   def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
 
   /**
-    * Days of the week 1 to 7 (Monday is 1)
-    *
-    * @return
-    */
+   * Days of the week 1 to 7 (Monday is 1)
+   *
+   * @return
+   */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int
@@ -539,6 +539,8 @@ trait SDateLike {
   def toLocalDateTimeString(): String
 
   def toLocalDate: LocalDate
+
+  def toUtcDate: UtcDate
 
   def toISODateOnly: String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d"
 
@@ -643,7 +645,7 @@ object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flights: Iterable[(UniqueArrival, ApiFlightWithSplits)]) {
+  case class FlightsWithSplits(flights: Map[UniqueArrival, ApiFlightWithSplits]) {
     def scheduledSince(sinceMillis: MillisSinceEpoch): FlightsWithSplits = FlightsWithSplits(flights.filter {
       case (UniqueArrival(_, _, scheduledMillis), _) => scheduledMillis >= sinceMillis
     })
@@ -652,7 +654,15 @@ object FlightsApi {
       val inWindow = flights.filter {
         case (_, fws) =>
           val pcpRange = fws.apiFlight.pcpRange()
-          startMillis <= pcpRange.min && pcpRange.max <= endMillis
+          (startMillis <= pcpRange.min && pcpRange.max <= endMillis) ||
+          (startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis)
+      }
+      FlightsWithSplits(inWindow)
+    }
+
+    def scheduledWindow(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): FlightsWithSplits = {
+      val inWindow = flights.filter {
+        case (_, fws) => startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis
       }
       FlightsWithSplits(inWindow)
     }
@@ -672,29 +682,33 @@ object FlightsApi {
     def --(toRemove: Iterable[UniqueArrival]): FlightsWithSplits = FlightsWithSplits(flights.toMap -- toRemove)
 
     def ++(toUpdate: Iterable[(UniqueArrival, ApiFlightWithSplits)]): FlightsWithSplits = FlightsWithSplits(flights.toMap ++ toUpdate)
+
+    def ++(other: FlightsWithSplits): FlightsWithSplits = FlightsWithSplits(flights ++ other.flights)
   }
 
   object FlightsWithSplits {
-    val empty: FlightsWithSplits = FlightsWithSplits(Iterable())
+    val empty: FlightsWithSplits = FlightsWithSplits(Map[UniqueArrival, ApiFlightWithSplits]())
+
+    def apply(flights: Seq[ApiFlightWithSplits]): FlightsWithSplits = new FlightsWithSplits(flights.map(fws => (fws.unique, fws)).toMap)
   }
 
-  case class FlightsWithSplitsDiff(flightsToUpdate: List[ApiFlightWithSplits], arrivalsToRemove: List[Arrival]) {
+  case class FlightsWithSplitsDiff(flightsToUpdate: List[ApiFlightWithSplits], arrivalsToRemove: List[UniqueArrival]) {
     def isEmpty: Boolean = flightsToUpdate.isEmpty && arrivalsToRemove.isEmpty
 
     def nonEmpty: Boolean = !isEmpty
 
-    val removalMinutes: Seq[MillisSinceEpoch] = arrivalsToRemove.flatMap(_.pcpRange())
     val updateMinutes: Seq[MillisSinceEpoch] = flightsToUpdate.flatMap(_.apiFlight.pcpRange())
 
     def applyTo(flightsWithSplits: FlightsWithSplits,
                 nowMillis: MillisSinceEpoch): (FlightsWithSplits, Seq[MillisSinceEpoch]) = {
       val updated = flightsWithSplits.flights ++ flightsToUpdate.map(f => (f.apiFlight.unique, f.copy(lastUpdated = Option(nowMillis))))
-      val minusRemovals = updated.toMap -- arrivalsToRemove.map(_.unique)
+      val minusRemovals = updated -- arrivalsToRemove
 
-      val asMap = flightsWithSplits.flights.toMap
+      val asMap: IMap[UniqueArrival, ApiFlightWithSplits] = flightsWithSplits.flights
 
       val minutesFromRemovalsInExistingState: List[MillisSinceEpoch] = arrivalsToRemove
-        .flatMap(r => asMap.get(r.unique).map(_.apiFlight.pcpRange().toList).getOrElse(List()))
+        .flatMap(r => asMap.get(r).map(_.apiFlight.pcpRange().toList).getOrElse(List()))
+
       val minutesFromExistingStateUpdatedFlights = flightsToUpdate
         .flatMap { fws =>
           asMap.get(fws.unique) match {
@@ -702,12 +716,38 @@ object FlightsApi {
             case Some(f) => f.apiFlight.pcpRange()
           }
         }
-      val updatedMinutesFromFlights = removalMinutes ++ minutesFromRemovalsInExistingState ++ updateMinutes ++ minutesFromExistingStateUpdatedFlights
+
+      val removalMinutes: Seq[MillisSinceEpoch] = arrivalsToRemove.flatMap(ua => {
+        asMap.get(ua).toList.flatMap(_.apiFlight.pcpRange())
+      })
+
+      val updatedMinutesFromFlights = removalMinutes ++ minutesFromRemovalsInExistingState ++ updateMinutes ++
+        minutesFromExistingStateUpdatedFlights
 
       (FlightsWithSplits(minusRemovals), updatedMinutesFromFlights)
     }
 
-    lazy val terminals: Set[Terminal] = flightsToUpdate.map(_.apiFlight.Terminal).toSet ++ arrivalsToRemove.map(_.Terminal).toSet
+    lazy val terminals: Set[Terminal] = flightsToUpdate.map(_.apiFlight.Terminal).toSet ++
+      arrivalsToRemove.map(_.terminal).toSet
+
+    def ++(other: FlightsWithSplitsDiff): FlightsWithSplitsDiff =
+      FlightsWithSplitsDiff(flightsToUpdate ++ other.flightsToUpdate, arrivalsToRemove ++ other.arrivalsToRemove)
+
+    def window(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): FlightsWithSplitsDiff =
+      FlightsWithSplitsDiff(flightsToUpdate.filter(fws =>
+        startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis
+      ), arrivalsToRemove.filter(ua =>
+        startMillis <= ua.scheduled && ua.scheduled <= endMillis
+      ))
+
+    def forTerminal(terminal: Terminal): FlightsWithSplitsDiff = FlightsWithSplitsDiff(
+      flightsToUpdate.filter(_.apiFlight.Terminal == terminal),
+      arrivalsToRemove.filter(_.terminal == terminal)
+    )
+  }
+
+  object FlightsWithSplitsDiff {
+    val empty: FlightsWithSplitsDiff = FlightsWithSplitsDiff(List(), List())
   }
 
 }

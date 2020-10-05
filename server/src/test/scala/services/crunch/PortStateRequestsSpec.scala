@@ -242,10 +242,10 @@ class PortStateRequestsSpec extends CrunchTestLike {
           Await.result(ps.ask(GetMinutesForTerminalDateRange(legacyDate, legacyDate, T1)), 1 second) === PortState.empty
         }
         "GetFlights(legacyDate, legacyDate) results in FlightsWithSplits.empty" >> {
-          Await.result(ps.ask(GetFlights(legacyDate, legacyDate)), 1 second) === FlightsWithSplits(Map())
+          Await.result(ps.ask(GetFlights(legacyDate, legacyDate)), 1 second) === FlightsWithSplits.empty
         }
         "GetFlightsForTerminal(legacyDate, legacyDate, T1) results in FlightsWithSplits.empty" >> {
-          Await.result(ps.ask(GetFlightsForTerminal(legacyDate, legacyDate, T1)), 1 second) === FlightsWithSplits(Map())
+          Await.result(ps.ask(GetFlightsForTerminal(legacyDate, legacyDate, T1)), 1 second) === FlightsWithSplits.empty
         }
       }
     }

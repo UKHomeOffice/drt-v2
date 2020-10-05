@@ -202,7 +202,7 @@ object RunnableCrunch {
           arrivalSplits.out ~> arrivalSplitsFanOut
                                arrivalSplitsFanOut ~> flightsWithSplitsSink
                                arrivalSplitsFanOut
-                                 .map(_.arrivalsToRemove.map(a => RemoveFlight(a.unique)).toList)
+                                 .map(_.arrivalsToRemove.map(a => RemoveFlight(a)).toList)
                                  .conflateWithSeed(List(_)) { case (acc, incoming) =>
                                     log.info(s"${acc.length + incoming.length} conflated arrivals for removal sink")
                                     acc :+ incoming }

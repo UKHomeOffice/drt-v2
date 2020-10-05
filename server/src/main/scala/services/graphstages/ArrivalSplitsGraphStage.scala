@@ -262,7 +262,7 @@ class ArrivalSplitsGraphStage(name: String = "",
           Metrics.counter(s"$stageName.arrivals-with-splits.updates", arrivalsWithSplitsDiff.values.size)
           Metrics.counter(s"$stageName.arrivals-with-splits.removals", arrivalsToRemove.size)
 
-          push(outArrivalsWithSplits, FlightsWithSplitsDiff(arrivalsWithSplitsDiff.values.toList, arrivalsToRemove.toList))
+          push(outArrivalsWithSplits, FlightsWithSplitsDiff(arrivalsWithSplitsDiff.values.toList, arrivalsToRemove.map(_.unique).toList))
           arrivalsWithSplitsDiff = Map()
           arrivalsToRemove = Set()
         } else log.debug(s"No updated arrivals with splits to push")
