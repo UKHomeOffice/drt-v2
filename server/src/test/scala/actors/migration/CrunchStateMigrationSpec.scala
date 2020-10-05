@@ -15,8 +15,8 @@ class CrunchStateMigrationSpec extends CrunchTestLike {
   case class FlightMessageMigration(
                                      sequenceId: Long,
                                      createdAt: MillisSinceEpoch,
+                                     flightRemovalsMessage: Seq[UniqueArrivalMessage],
                                      flightsUpdateMessages: Seq[FlightWithSplitsMessage],
-                                     flightRemovalsMessage: Seq[UniqueArrivalMessage]
                                    )
 
   /**
@@ -46,12 +46,16 @@ class CrunchStateMigrationSpec extends CrunchTestLike {
 
         val eventsSource = Source(events).map{
           case EventEnvelope(_, _, sequenceNr, CrunchDiffMessage(Some(createdAt), _, removals, updates, _, _, _, _)) =>
-            FlightMessageMigration(sequenceNr, createdAt, updates, removals)
+            FlightMessageMigration(sequenceNr, createdAt, removals, updates)
 
         }
         eventsSource.runWith(Sink.actorRef(testProbe.ref, "complete"))
 
-        testProbe.expectMsg()
+        val expected = FlightMessageMigration(1, createdAt, Seq(removal), Seq(fwsMsg))
+
+        testProbe.expectMsg(expected)
+        testProbe.expectMsg("complete")
+
         success
       }
     }
