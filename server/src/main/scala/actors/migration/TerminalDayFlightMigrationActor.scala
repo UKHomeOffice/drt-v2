@@ -3,32 +3,37 @@ package actors.migration
 import actors.PortStateMessageConversion.flightsFromMessages
 import actors.acking.AckingReceiver.Ack
 import actors.{FlightMessageConversion, RecoveryActorLike, Sizes}
+import akka.actor.Props
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, UniqueArrival}
+import drt.shared.{SDateLike, UniqueArrival, UtcDate}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 
+object TerminalDayFlightMigrationActor {
+  def props(terminal: String, date: UtcDate, now: () => SDateLike): Props =
+    Props(new TerminalDayFlightMigrationActor(date.year, date.month, date.day, terminal, now))
+}
 
 class TerminalDayFlightMigrationActor(
                                        year: Int,
                                        month: Int,
                                        day: Int,
-                                       terminal: Terminal,
+                                       terminal: String,
                                        val now: () => SDateLike
                                      ) extends RecoveryActorLike {
   val firstMinuteOfDay: SDateLike = SDate(year, month, day, 0, 0)
   val lastMinuteOfDay: SDateLike = firstMinuteOfDay.addDays(1).addMinutes(-1)
 
-  override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d")
+  override val log: Logger = LoggerFactory.getLogger(f"$getClass-${terminal.toLowerCase}-$year%04d-$month%02d-$day%02d")
 
   var state: FlightsWithSplits = FlightsWithSplits.empty
 
-  override def persistenceId: String = f"terminal-flights-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
+  override def persistenceId: String = f"terminal-flights-${terminal.toLowerCase}-$year-$month%02d-$day%02d"
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
