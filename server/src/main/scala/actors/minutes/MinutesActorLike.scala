@@ -13,6 +13,7 @@ import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, Terminals, UtcDate, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
+import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.SDate
 import services.graphstages.Crunch
 
@@ -28,6 +29,7 @@ object MinutesActorLike {
 
   type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A, B]]
   type FlightsUpdate = (Terminals.Terminal, UtcDate, FlightsWithSplitsDiff) => Future[Seq[MillisSinceEpoch]]
+  type FlightsMigrationUpdate = (String, UtcDate, FlightsWithSplitsDiffMessage) => Future[Any]
 
   case object ProcessNextUpdateRequest
 

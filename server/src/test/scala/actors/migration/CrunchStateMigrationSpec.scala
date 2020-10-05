@@ -12,12 +12,7 @@ import services.crunch.CrunchTestLike
 
 class CrunchStateMigrationSpec extends CrunchTestLike {
 
-  case class FlightMessageMigration(
-                                     sequenceId: Long,
-                                     createdAt: MillisSinceEpoch,
-                                     flightRemovalsMessage: Seq[UniqueArrivalMessage],
-                                     flightsUpdateMessages: Seq[FlightWithSplitsMessage],
-                                   )
+
 
   /**
    * Considerations
