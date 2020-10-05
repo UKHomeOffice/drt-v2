@@ -19,7 +19,8 @@ import play.api.mvc.{Action, AnyContent, InjectedController, Session}
 import services.SDate
 import spray.json._
 import test.TestActors.ResetData
-import test.TestDrtSystem
+import test.{TestDrtSystem, TestFlightMarshallers}
+import test.TestFlight.TestLiveFlight
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
@@ -28,6 +29,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.Success
+import test.TestFlightParserProtocol._
 
 @Singleton
 class TestController @Inject()(val config: Configuration) extends InjectedController with AirportConfProvider {
@@ -86,6 +88,44 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
             FeedSources = Set(LiveFeedSource),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
             )
+          saveArrival(arrival).map(_ => Created)
+        case None =>
+          Future(BadRequest(s"Unable to parse JSON: ${request.body.asText}"))
+      }
+  }
+
+  def addTestArrival(): Action[AnyContent] = Action.async {
+    request =>
+      request.body.asJson.map(s => s.toString.parseJson.convertTo[TestLiveFlight]) match {
+        case Some(flight) =>
+          val walkTimeMinutes = 4
+          val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
+          val actPax = Some(flight.ActPax).filter(_ != 0)
+          val arrival = Arrival(
+            Operator = flight.Operator,
+            Status = flight.Status,
+            Estimated = Some(SDate(flight.EstDT).millisSinceEpoch),
+            Actual = Some(SDate(flight.ActDT).millisSinceEpoch),
+            EstimatedChox = Some(SDate(flight.EstChoxDT).millisSinceEpoch),
+            ActualChox = Some(SDate(flight.ActChoxDT).millisSinceEpoch),
+            Gate = Some(flight.Gate),
+            Stand = Some(flight.Stand),
+            MaxPax = Some(flight.MaxPax).filter(_ != 0),
+            ActPax = actPax,
+            TranPax = if (actPax.isEmpty) None else Some(flight.TranPax),
+            RunwayID = Some(flight.RunwayID),
+            BaggageReclaimId = Some(flight.BaggageReclaimId),
+            AirportID = PortCode(flight.AirportID),
+            Terminal = Terminal(flight.Terminal),
+            rawICAO = flight.ICAO,
+            rawIATA = flight.IATA,
+            Origin = PortCode(flight.Origin),
+            PcpTime = Some(pcpTime),
+            FeedSources = Set(LiveFeedSource),
+            Scheduled = SDate(flight.SchDT).millisSinceEpoch,
+            ServiceType = Some(flight.ServiceType),
+            LoadFactor = Some(flight.LoadFactor)
+          )
           saveArrival(arrival).map(_ => Created)
         case None =>
           Future(BadRequest(s"Unable to parse JSON: ${request.body.asText}"))

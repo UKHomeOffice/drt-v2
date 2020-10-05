@@ -76,6 +76,8 @@ POST          /data/feed/:feedType/:portCode                       controllers.A
 # Test related
 POST          /test/arrival                                        test.controllers.TestController.addArrival
 
+POST          /test/arrival/data                                   test.controllers.TestController.addTestArrival
+
 POST          /test/arrivals/:forDate                              test.controllers.TestController.addArrivals(forDate)
 
 POST          /test/manifest                                       test.controllers.TestController.addManifest
