@@ -69,4 +69,6 @@ object TooltipComponent {
   val arrivalStatusTooltip = tooltip("When no status is provided to DRT in any feeds an Unknown status (UNK) is displayed.")
 
   val apiDataTooltip = tooltip("Live API data should become available for all flights soon after they depart. However, there are occasionally circumstances where live API data is not made available.")
+
+  val passengerFlightsTooltip = tooltip("Filter is based on availability of service type and load factor provided by feeds. This is at moment provided by ACL feed so filter works when flight status is 'ACL Forecast'.")
 }

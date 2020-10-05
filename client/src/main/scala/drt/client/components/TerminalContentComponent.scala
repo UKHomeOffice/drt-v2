@@ -137,7 +137,7 @@ object TerminalContentComponent {
                 if (state.activeTab == "arrivals") {
                   <.div(^.className := s"filter-arrival",
                     <.input.checkbox(^.checked := state.filterPassengerFlights, ^.onChange ==> filterPassengerFlightsToggle, ^.id := "toggle-arrival"),
-                    <.label(^.`for` := "toggle-arrival", "Passenger flights only"),
+                    <.label(^.`for` := "toggle-arrival", "Passenger flights only"," ", passengerFlightsTooltip),
                   )
                 } else "",
                 exportLink(
