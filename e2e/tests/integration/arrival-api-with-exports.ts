@@ -54,10 +54,25 @@ describe('Arrivals CSV Export', () => {
     "13,37,1,";
   const actApiData = "4.0,6.0,5.0,0.0,0.0,0.0,7.0,10.0,0.0,19.0";
 
+  const dataWithoutActACLForecastApi = "TS0123,TS0123,AMS,46/44R,ACL Forecast," +
+    schDateLocal + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
+    totalPax + "," + totalPax + "," +
+    eGatePax + "," + eeaDesk + "," + nonEEADesk + ",," +
+    ",,,," +
+    "13,37,1,";
+  const actApiACLForecastData = "4.0,6.0,5.0,0.0,0.0,0.0,7.0,10.0,0.0,19.0";
+
   const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
+  const dataWithActACLForecastApi = dataWithoutActACLForecastApi + "," + actApiACLForecastData;
+
   const csvWithNoApiSplits = headersWithoutActApi + "\n" + dataWithoutActApi + "\n";
+
   const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
+
+  const csvWithAPISplitsNoData =  headersWithActApi + "\n" +  "\n" + "\n";
+
+  const csvWithACLForecastAPISplitsData =  headersWithActApi + "\n" +  dataWithActACLForecastApi + "\n";
 
   it('Does not show API splits in the flights export for regular users', () => {
     cy
@@ -113,5 +128,70 @@ describe('Arrivals CSV Export', () => {
         })
       })
   });
+
+
+    it('No Export flights according when clicked passenger filters for users with api:view permission', () => {
+      cy
+      .addTestFlight(
+        {
+          "Status" : "ACL Forecast",
+          "SchDT": todayAtUtcString(0, 55),
+          "EstDT": todayAtUtcString(1, 5),
+          "EstChoxDT": todayAtUtcString(1, 11),
+          "ActDT": todayAtUtcString(1, 7),
+          "ActChoxDT": todayAtUtcString(1, 12),
+          "ServiceType" : "J",
+          "LoadFactor" : 0
+        }
+      )
+      .asABorderForceOfficer()
+      .waitForFlightToAppear("TS0123")
+      .addManifest(manifest(passengerList(24, 10, 7, 10)))
+      .get('.pax-api')
+      .asABorderForceOfficerWithRoles(["api:view"])
+      .get("#toggle-arrival").click()
+      .get('#export-day-arrivals')
+      .then((el) => {
+          const href = el.prop('href')
+          cy.request({
+            method: 'GET',
+            url: href,
+          }).then((resp) => {
+            expect(resp.body).to.equal(csvWithAPISplitsNoData, "No data in export file for Zero load factor")
+          })
+        })
+    });
+
+    it('Export flights according when clicked passenger filters for users with api:view permission', () => {
+          cy
+          .addTestFlight(
+            {
+              "Status" : "ACL Forecast",
+              "SchDT": todayAtUtcString(0, 55),
+              "EstDT": todayAtUtcString(1, 5),
+              "EstChoxDT": todayAtUtcString(1, 11),
+              "ActDT": todayAtUtcString(1, 7),
+              "ActChoxDT": todayAtUtcString(1, 12),
+              "ServiceType" : "J",
+              "LoadFactor" : 1.0
+            }
+          )
+          .asABorderForceOfficer()
+          .waitForFlightToAppear("TS0123")
+          .addManifest(manifest(passengerList(24, 10, 7, 10)))
+          .get('.pax-api')
+          .asABorderForceOfficerWithRoles(["api:view"])
+          .get("#toggle-arrival").click()
+          .get('#export-day-arrivals')
+          .then((el) => {
+              const href = el.prop('href')
+              cy.request({
+                method: 'GET',
+                url: href,
+              }).then((resp) => {
+                expect(resp.body).to.equal(csvWithACLForecastAPISplitsData, "Data in export file for non zero load factor")
+              })
+            })
+        });
 });
 
