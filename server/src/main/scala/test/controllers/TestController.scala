@@ -3,8 +3,6 @@ package test.controllers
 import akka.pattern.ask
 import akka.util.Timeout
 import controllers.{AirportConfProvider, DrtActorSystem}
-import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
-import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.Implicits._
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
@@ -19,8 +17,9 @@ import play.api.mvc.{Action, AnyContent, InjectedController, Session}
 import services.SDate
 import spray.json._
 import test.TestActors.ResetData
-import test.{TestDrtSystem, TestFlightMarshallers}
+import test.TestDrtSystem
 import test.TestFlight.TestLiveFlight
+import test.TestFlightParserProtocol._
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
@@ -29,7 +28,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.Success
-import test.TestFlightParserProtocol._
 
 @Singleton
 class TestController @Inject()(val config: Configuration) extends InjectedController with AirportConfProvider {
