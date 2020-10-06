@@ -14,7 +14,7 @@ describe('Arrivals page filter passenger flight', () => {
 
   it('Filter flight by passenger flight only when LoadFactor is zero and valid service type', () => {
     cy
-      .addTestFlight(
+      .addFlight(
         {
           "Status" : "ACL Forecast",
           "SchDT": todayAtUtcString(0, 55),
@@ -36,7 +36,7 @@ describe('Arrivals page filter passenger flight', () => {
 
   it('Not Filter flight by passenger flight when LoadFactor is not zero and valid service type', () => {
     cy
-      .addTestFlight(
+      .addFlight(
           {
             "Status" : "ACL Forecast",
             "SchDT": todayAtUtcString(0, 55),
@@ -57,7 +57,7 @@ describe('Arrivals page filter passenger flight', () => {
 
   it('Not Filter flight by passenger flight for ACL Forecast when LoadFactor is not zero and invalid service type', () => {
     cy
-    .addTestFlight(
+    .addFlight(
       {
         "Status" : "ACL Forecast",
         "SchDT": todayAtUtcString(0, 55),
@@ -148,7 +148,7 @@ describe('Arrivals filter passenger flight CSV Export', () => {
 
     it('should not include flights when the filter passenger toggle is selected and zero load factor with passenger service type', () => {
       cy
-      .addTestFlight(
+      .addFlight(
         {
           "Status" : "ACL Forecast",
           "SchDT": todayAtUtcString(0, 55),
@@ -180,7 +180,7 @@ describe('Arrivals filter passenger flight CSV Export', () => {
 
     it('should include passenger flights when the filter passenger toggle is selected and non-zero load factor with passenger service type ', () => {
           cy
-          .addTestFlight(
+          .addFlight(
             {
               "Status" : "ACL Forecast",
               "SchDT": todayAtUtcString(0, 55),

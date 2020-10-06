@@ -3,7 +3,6 @@
 declare namespace Cypress {
     interface Chainable {
         addFlight(flight: object): Chainable<Element>;
-        addTestFlight(flight: object): Chainable<Element>;
         addManifest(manifest: object): Chainable<Element>;
         addShiftForToday(): Chainable<Element>;
         adjustMinutes(minutes: number): Chainable<Element>;

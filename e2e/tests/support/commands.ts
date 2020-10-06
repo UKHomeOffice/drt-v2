@@ -118,35 +118,6 @@ Cypress.Commands.add('addFlight', (params) => {
     "ICAO": "TS123",
     "IATA": "TS123",
     "Origin": "AMS",
-    "SchDT": todayAtString(12, 0)
-  };
-
-  const flightPayload = Object.assign({}, defaults, params);
-
-  cy.request('POST', '/test/arrival', flightPayload);
-});
-
-Cypress.Commands.add('addTestFlight', (params) => {
-  const defaults = {
-    "Operator": "TestAir",
-    "Status": "On Chox",
-    "EstDT": todayAtString(12, 0),
-    "ActDT": todayAtString(12, 0),
-    "EstChoxDT": todayAtString(12, 0),
-    "ActChoxDT": todayAtString(12, 0),
-    "Gate": "46",
-    "Stand": "44R",
-    "MaxPax": 78,
-    "ActPax": 51,
-    "TranPax": 0,
-    "RunwayID": "05L",
-    "FlightID": 100,
-    "BaggageReclaimId": "05",
-    "AirportID": "MAN",
-    "Terminal": "T1",
-    "ICAO": "TS123",
-    "IATA": "TS123",
-    "Origin": "AMS",
     "SchDT": todayAtString(12, 0),
     "ServiceType" : "J",
     "LoadFactor" : 1
@@ -154,7 +125,7 @@ Cypress.Commands.add('addTestFlight', (params) => {
 
   const flightPayload = Object.assign({}, defaults, params);
 
-  cy.request('POST', '/test/arrival/data', flightPayload);
+  cy.request('POST', '/test/arrival', flightPayload);
 });
 
 Cypress.Commands.add('deleteData', () => {
