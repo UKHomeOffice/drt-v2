@@ -18,6 +18,8 @@ import scala.concurrent.duration._
 
 case object StartMigration
 
+case object MigrationStatus
+
 case object StopMigration
 
 case class FlightMessageMigration(
@@ -79,6 +81,8 @@ class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRo
       startUpdatesStream(lastProcessedSequenceNumber + 1)
     case StopMigration =>
       maybeKillSwitch.map(_.shutdown())
+    case MigrationStatus =>
+      sender() ! lastProcessedSequenceNumber
     case StreamInitialized =>
       sender() ! Ack
     case StreamCompleted =>

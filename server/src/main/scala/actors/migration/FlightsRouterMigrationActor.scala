@@ -19,11 +19,11 @@ import scala.language.postfixOps
 
 
 object FlightsRouterMigrationActor {
-  def updateFlights(requestAndTerminateActor: ActorRef, now: () => SDateLike,
-                    propsForTerminalDate: (String, UtcDate, () => SDateLike) => Props)
+  def updateFlights(requestAndTerminateActor: ActorRef,
+                    propsForTerminalDateFn: (String, UtcDate) => Props)
                    (implicit system: ActorSystem, timeout: Timeout): FlightsMigrationUpdate =
     (terminal: String, date: UtcDate, diff: FlightsWithSplitsDiffMessage) => {
-      val actor = system.actorOf(propsForTerminalDate(terminal, date, now))
+      val actor = system.actorOf(propsForTerminalDateFn(terminal, date))
       system.log.info(s"About to update $terminal $date with ${diff.updates.size} flights")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, diff))
     }

@@ -17,43 +17,42 @@ import services.crunch.CrunchTestLike
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
+object PersistMessageForIdActor {
+  def props(idToPersist: String) = Props(new PersistMessageForIdActor(idToPersist))
+}
+
+class PersistMessageForIdActor(idToPersist: String) extends PersistentActor {
+  override def receiveRecover: Receive = {
+    case _ => Unit
+  }
+
+  override def receiveCommand: Receive = {
+    case message: GeneratedMessage =>
+      val replyTo = sender()
+      persist(message)((message) => {
+        context.system.eventStream.publish(message)
+        replyTo ! Ack
+      })
+
+  }
+
+  override def persistenceId: String = idToPersist
+}
+
+class DummyActor(probe: ActorRef, terminal: String, date: UtcDate) extends Actor {
+
+  override def receive: Receive = {
+    case message => probe ! (terminal, date, message)
+  }
+}
+
+object DummyActor {
+
+  def props(probe: ActorRef)(terminal: String, date: UtcDate) =
+    Props(new DummyActor(probe, terminal, date))
+}
 
 class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
-
-  object PersistMessageForIdActor {
-    def props(idToPersist: String) = Props(new PersistMessageForIdActor(idToPersist))
-  }
-
-  class PersistMessageForIdActor(idToPersist: String) extends PersistentActor {
-    override def receiveRecover: Receive = {
-      case _ => Unit
-    }
-
-    override def receiveCommand: Receive = {
-      case message: GeneratedMessage =>
-        val replyTo = sender()
-        persist(message)((message) => {
-          context.system.eventStream.publish(message)
-          replyTo ! Ack
-        })
-
-    }
-
-    override def persistenceId: String = idToPersist
-  }
-
-  class DummyActor(probe: ActorRef, terminal: String, date: UtcDate) extends Actor {
-
-    override def receive: Receive = {
-      case message => probe ! (terminal, date, message)
-    }
-  }
-
-  object DummyActor {
-
-    def props(probe: ActorRef)(terminal: String, date: UtcDate, now: () => SDateLike) =
-      Props(new DummyActor(probe, terminal, date))
-  }
 
   /**
    * Considerations
@@ -73,33 +72,35 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
       "I should see each type of data sent as a protobuf message to the TerminalDayFlightMigrationActor" >> {
         val createdAt = SDate("2020-10-01T00:00").millisSinceEpoch
         val scheduled = SDate("2020-10-02T12:10")
+
         val removalMessage = UniqueArrivalMessage(Option(1), Option("T1"), Option(scheduled.millisSinceEpoch))
 
-        val flight = FlightMessage(terminal = Option("T1"), scheduled = Option(scheduled.millisSinceEpoch))
-        val fwsMsg = FlightWithSplitsMessage(Option(flight))
-        val message = CrunchDiffMessage(Option(createdAt), None, Seq(removalMessage), Seq(fwsMsg))
+        val flightMessage = FlightMessage(terminal = Option("T1"), scheduled = Option(scheduled.millisSinceEpoch))
+        val fwsMsg = FlightWithSplitsMessage(Option(flightMessage))
 
-        val persistActor = system.actorOf(PersistMessageForIdActor.props(FlightsMigrationActor.legacyPersistenceId))
-        Await.result(persistActor ? message, 1 second)
+        val crunchDiffMessage = CrunchDiffMessage(Option(createdAt), None, Seq(removalMessage), Seq(fwsMsg))
+
+        setMigrationData(crunchDiffMessage)
 
         val testProbe = TestProbe()
         val requestAndTerminateActor = system.actorOf(Props(new RequestAndTerminateActor))
+
         val updateFlightsFn = FlightsRouterMigrationActor
-          .updateFlights(requestAndTerminateActor, () => SDate.now(), DummyActor.props(testProbe.ref))
+          .updateFlights(requestAndTerminateActor, DummyActor.props(testProbe.ref))
 
-
-        val flightsRouterMigrationActor = system.actorOf(Props(new FlightsRouterMigrationActor(updateFlightsFn)))
-        val flightsMigrationActor = system
-          .actorOf(FlightsMigrationActor.props(InMemoryStreamingJournal, flightsRouterMigrationActor))
-
-        flightsMigrationActor ! StartMigration
-
+        val migrator = FlightsMigrator(updateFlightsFn, InMemoryStreamingJournal)
+        migrator.start()
         val expectedMessage = FlightsWithSplitsDiffMessage(Some(createdAt), Vector(removalMessage), Vector(fwsMsg))
 
         testProbe.expectMsg(("T1", UtcDate(2020, 10, 2), expectedMessage))
         success
       }
     }
+  }
+
+  private def setMigrationData(message: CrunchDiffMessage) = {
+    val persistActor = system.actorOf(PersistMessageForIdActor.props(FlightsMigrationActor.legacyPersistenceId))
+    Await.result(persistActor ? message, 1 second)
   }
 }
 

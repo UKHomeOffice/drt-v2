@@ -21,8 +21,8 @@ import scala.concurrent.ExecutionContextExecutor
 object TerminalDayFlightMigrationActor {
   val snapshotTable: AkkaPersistenceSnapshotTable = AkkaPersistenceSnapshotTable(PostgresTables)
 
-  def props(terminal: String, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayFlightMigrationActor(date.year, date.month, date.day, terminal, now, snapshotTable))
+  def props(terminal: String, date: UtcDate): Props =
+    Props(new TerminalDayFlightMigrationActor(date.year, date.month, date.day, terminal, snapshotTable))
 
   case class RemoveSnapshotUpdate(sequenceNumber: Long)
 }
@@ -32,12 +32,13 @@ class TerminalDayFlightMigrationActor(
                                        month: Int,
                                        day: Int,
                                        terminal: String,
-                                       val now: () => SDateLike,
                                        snapshotTable: AkkaPersistenceSnapshotTable
                                      ) extends RecoveryActorLike {
   import snapshotTable.tables.profile.api._
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
+
+  val now: () => SDateLike = () => SDate.now()
 
   val firstMinuteOfDay: SDateLike = SDate(year, month, day, 0, 0)
   val lastMinuteOfDay: SDateLike = firstMinuteOfDay.addDays(1).addMinutes(-1)
