@@ -64,14 +64,20 @@ class TerminalDayFlightMigrationActor(
       log.info(s"Successfully saved snapshot")
       createdAtForSnapshot.get(sequenceNr) match {
         case Some(createdAt) =>
-          log.info(s"Going to update the timestamp from ${SDate(timestamp).toISOString()} to ${SDate(createdAt).toISOString()}")
+          log.info(s"Going to update the timestamp from ${SDate(timestamp).toISOString()} to ${SDate(createdAt).toISOString()} for $persistenceId / $sequenceNr")
           createdAtForSnapshot = createdAtForSnapshot - sequenceNr
           val updateQuery: SQLActionBuilder =
             sql"""UPDATE snapshot
                     SET created=$createdAt
                   WHERE persistence_id=$persistenceId
                     AND sequence_number=$sequenceNr"""
-          snapshotTable.db.run(updateQuery.asUpdate)
+          snapshotTable.db.run(updateQuery.asUpdate).onComplete { _ =>
+            maybeAckAfterSnapshot.foreach {
+              case (replyTo, ackMsg) =>
+                replyTo ! ackMsg
+                maybeAckAfterSnapshot = None
+            }
+          }
       }
 
     case m => log.warn(s"Got unexpected message: $m")

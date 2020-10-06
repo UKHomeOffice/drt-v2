@@ -2,6 +2,7 @@ package actors.migration
 
 import actors.StreamingJournalLike
 import actors.daily.RequestAndTerminateActor
+import actors.migration.FlightsMigrationActor.MigrationStatus
 import actors.minutes.MinutesActorLike.FlightsMigrationUpdate
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.util.Timeout
@@ -14,11 +15,10 @@ case class FlightsMigrator(
                              journalType: StreamingJournalLike
                            )(implicit system: ActorSystem, timeout: Timeout) {
 
-  def status(): Future[Long] = flightsMigrationActor.ask(MigrationStatus).mapTo[Long]
+  def status(): Future[MigrationStatus] = flightsMigrationActor.ask(GetMigrationStatus).mapTo[MigrationStatus]
 
-  val flightsRouterMigrationActor: ActorRef = system.actorOf(Props(new FlightsRouterMigrationActor(updateFlightsFn)))
-  val flightsMigrationActor: ActorRef = system
-    .actorOf(FlightsMigrationActor.props(journalType, flightsRouterMigrationActor))
+  val flightsRouterMigrationActor: ActorRef = system.actorOf(Props(new FlightsRouterMigrationActor(updateFlightsFn)), "FlightsRouterMigrationActor")
+  val flightsMigrationActor: ActorRef = system.actorOf(FlightsMigrationActor.props(journalType, flightsRouterMigrationActor), "FlightsMigrationActor")
 
   def start(): Unit = flightsMigrationActor ! StartMigration
 

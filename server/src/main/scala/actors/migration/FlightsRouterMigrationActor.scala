@@ -1,5 +1,7 @@
 package actors.migration
 
+import java.util.UUID
+
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.RequestAndTerminate
 import actors.minutes.MinutesActorLike.{FlightsMigrationUpdate, ProcessNextUpdateRequest}
@@ -13,6 +15,7 @@ import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWit
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 
+import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -23,7 +26,7 @@ object FlightsRouterMigrationActor {
                     propsForTerminalDateFn: (String, UtcDate) => Props)
                    (implicit system: ActorSystem, timeout: Timeout): FlightsMigrationUpdate =
     (terminal: String, date: UtcDate, diff: FlightsWithSplitsDiffMessage) => {
-      val actor = system.actorOf(propsForTerminalDateFn(terminal, date))
+      val actor = system.actorOf(propsForTerminalDateFn(terminal, date), s"migration-flights-$terminal-$date-${UUID.randomUUID().toString}")
       system.log.info(s"About to update $terminal $date with ${diff.updates.size} flights")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, diff))
     }
@@ -67,18 +70,19 @@ class FlightsRouterMigrationActor(updateFlights: FlightsMigrationUpdate) extends
     updateByTerminalDayAndGetAck(flightMessageMigration)
       .onComplete { _ =>
         processingRequest = false
+        log.info(s"** acking back to flights migration actor ($replyTo)")
         replyTo ! Ack
         self ! ProcessNextUpdateRequest
       }
   }
 
-  def updateByTerminalDayAndGetAck(container: FlightMessageMigration): Future[Unit] =
+  def updateByTerminalDayAndGetAck(container: FlightMessageMigration): Future[immutable.Seq[Any]] =
     Source(groupByTerminalAndDay(container))
       .mapAsync(1) {
         case ((terminal, day), splitsDiffMessage) =>
           updateFlights(terminal, day, splitsDiffMessage)
       }
-      .runWith(Sink.seq).map(_ => Unit)
+      .runWith(Sink.seq)
 
   def groupByTerminalAndDay(flightMessageMigration: FlightMessageMigration): Map[(String, UtcDate), FlightsWithSplitsDiffMessage] = {
     val updates: Map[(String, UtcDate), Seq[FlightWithSplitsMessage]] = flightMessageMigration.flightsUpdateMessages

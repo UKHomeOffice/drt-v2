@@ -8,13 +8,14 @@ import akka.actor.{ActorRef, Props}
 import controllers.Application
 import drt.auth.Debug
 import play.api.mvc.{Action, AnyContent}
+import services.SDate
 
 
 trait WithMigrations {
 
   self: Application =>
 
-  lazy val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor))
+  lazy val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor), "migration-request-and-terminate")
   lazy val flightsUpdateFn: FlightsMigrationUpdate = FlightsRouterMigrationActor
     .updateFlights(requestAndTerminateActor, TerminalDayFlightMigrationActor.props)
 
@@ -28,12 +29,11 @@ trait WithMigrations {
     }
   }
 
-
   def flightMigrationStatus(): Action[AnyContent] = authByRole(Debug) {
     Action.async {
-      flightsMigrator.status().map(number =>
+      flightsMigrator.status().map(status =>
 
-        Ok(s"We are on sequence $number")
+        Ok(s"Sequence no ${status.seqNr}, created at: ${SDate(status.createdAt).toISOString()}")
       )
     }
   }
