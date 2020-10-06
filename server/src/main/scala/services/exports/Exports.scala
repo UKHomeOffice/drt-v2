@@ -31,10 +31,10 @@ object Exports {
 
   val acl_arrival_status = ArrivalStatus("ACL Forecast")
 
-  val passengerFlights : Arrival => Boolean = apiFlight =>
+  val passengerFlights: Arrival => Boolean = apiFlight =>
     (apiFlight.Status != acl_arrival_status) ||
-    (apiFlight.Status == acl_arrival_status && apiFlight.ServiceType.isEmpty)  ||
-    (apiFlight.Status == acl_arrival_status && apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0))
+      (apiFlight.Status == acl_arrival_status && apiFlight.ServiceType.isEmpty) ||
+      (apiFlight.Status == acl_arrival_status && apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0))
 
   def summaryForDaysCsvSource(startDate: SDateLike,
                               numberOfDays: Int,
@@ -133,14 +133,13 @@ object Exports {
 
   def flightSummariesFromPortState(terminalFlightsSummaryGenerator: TerminalFlightsSummaryLikeGenerator)
                                   (terminal: Terminal,
-                                   filterPassengerFlight: Boolean,
                                    pcpPaxFn: Arrival => Int,
-                                   flightsProvider: DateRangeLike => Future[Any])
-                                  (from: SDateLike, to: SDateLike)
-                                  (implicit ec: ExecutionContext): Future[TerminalSummaryLike] =
+                                   flightsProvider: DateRangeLike => Future[Any],
+                                   filterPassengerFlight: Boolean = false)
+                                  (from: SDateLike, to: SDateLike)(implicit ec: ExecutionContext): Future[TerminalSummaryLike] =
     flightsProvider(GetFlightsForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
       case flights: FlightsWithSplits =>
-        val terminalFlights = if (filterPassengerFlight) flightsForTimeRange(flights, from, to).filter(fs => passengerFlights(fs.apiFlight)) else  flightsForTimeRange(flights, from, to)
+        val terminalFlights = if (filterPassengerFlight) flightsForTimeRange(flights, from, to).filter(fs => passengerFlights(fs.apiFlight)) else flightsForTimeRange(flights, from, to)
         terminalFlightsSummaryGenerator(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)
     }
 

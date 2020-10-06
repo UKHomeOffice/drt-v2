@@ -164,7 +164,7 @@ object TerminalContentComponent {
                   StaffMovementsExport,
                   props.loggedInUser
                 ),
-                MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
+                MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser,state.filterPassengerFlights))),
             <.div(^.className := "tab-content",
               <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
                 if (state.activeTab == "desksAndQueues") {
