@@ -131,5 +131,5 @@ object MultiDayExportComponent {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser, filterPassengerFlights: Boolean): VdomElement = component(Props(terminal, selectedDate, loggedInUser: LoggedInUser, filterPassengerFlights))
+  def apply(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser, filterPassengerFlights: Boolean = false): VdomElement = component(Props(terminal, selectedDate, loggedInUser: LoggedInUser, filterPassengerFlights))
 }

@@ -70,5 +70,5 @@ object TooltipComponent {
 
   val apiDataTooltip = tooltip("Live API data should become available for all flights soon after they depart. However, there are occasionally circumstances where live API data is not made available.")
 
-  val passengerFlightsTooltip = tooltip("Filter is based on availability of service type and load factor provided by feeds. This is at moment provided by ACL feed so filter works when flight status is 'ACL Forecast'.")
+  val passengerFlightsTooltip = tooltip("This filter removes previously scheduled passenger flights which have been repurposed as non-passenger arrivals (e.g. freight or repositioning flights) and will therefore have no passengers presenting at the PCP")
 }

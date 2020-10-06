@@ -24,12 +24,8 @@ object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = Arrival => Int
 
-  val acl_arrival_status = ArrivalStatus("ACL Forecast")
-
-  val passengerFlights: Arrival => Boolean = apiFlight =>
-      (apiFlight.Status != acl_arrival_status) ||
-      (apiFlight.Status == acl_arrival_status && apiFlight.ServiceType.isEmpty) ||
-      (apiFlight.Status == acl_arrival_status && apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0))
+  val passengerFlightsFilter: Arrival => Boolean = apiFlight => apiFlight.ServiceType.isEmpty ||
+    (apiFlight.LoadFactor.exists(_ != 0) && apiFlight.ServiceType.exists(s => List("J", "S", "Q", "G", "B", "R", "C", "L") contains s) && apiFlight.MaxPax.exists(_ != 0))
 
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],
                    queueOrder: Seq[Queue], hasEstChox: Boolean,
@@ -38,7 +34,7 @@ object FlightsWithSplitsTable {
                    viewMode: ViewMode,
                    pcpPaxFn: Arrival => Int,
                    hasTransfer: Boolean,
-                   filterPassengerFlights: Boolean
+                   filterPassengerFlights: Boolean = false
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
@@ -51,7 +47,11 @@ object FlightsWithSplitsTable {
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalsTable")
     .render_P(props => {
-      val flightsWithSplits = if (props.filterPassengerFlights) props.flightsWithSplits.filter(fs => passengerFlights(fs.apiFlight)) else props.flightsWithSplits
+
+      val flightsWithSplits = if (props.filterPassengerFlights)
+        props.flightsWithSplits.filter(fs => passengerFlightsFilter(fs.apiFlight))
+      else props.flightsWithSplits
+
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits)
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
       val isTimeLineSupplied = timelineComponent.isDefined
