@@ -4,6 +4,8 @@ import actors.PortStateMessageConversion.flightsFromMessages
 import actors.acking.AckingReceiver.Ack
 import actors.{FlightMessageConversion, RecoveryActorLike, Sizes}
 import akka.actor.Props
+import akka.persistence.{SaveSnapshotSuccess, SnapshotMetadata}
+import akka.persistence.SnapshotProtocol.SaveSnapshot
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
@@ -45,7 +47,14 @@ class TerminalDayFlightMigrationActor(
       handleDiffMessage(diff)
       persistAndMaybeSnapshot(diff, Option((sender(), Ack)))
 
+    case SaveSnapshotSuccess(metadata) =>
+
+
     case m => log.warn(s"Got unexpected message: $m")
+  }
+
+  def saveSnapshot(snapshot: Any): Unit = {
+    snapshotStore ! SaveSnapshot(SnapshotMetadata(snapshotterId, snapshotSequenceNr), snapshot)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

@@ -3,7 +3,7 @@ package actors.migration
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.RequestAndTerminate
 import actors.minutes.MinutesActorLike.{FlightsMigrationUpdate, ProcessNextUpdateRequest}
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
@@ -19,10 +19,11 @@ import scala.language.postfixOps
 
 
 object FlightsRouterMigrationActor {
-  def updateFlights(requestAndTerminateActor: ActorRef, now: () => SDateLike)
+  def updateFlights(requestAndTerminateActor: ActorRef, now: () => SDateLike,
+                    propsForTerminalDate: (String, UtcDate, () => SDateLike) => Props)
                    (implicit system: ActorSystem, timeout: Timeout): FlightsMigrationUpdate =
     (terminal: String, date: UtcDate, diff: FlightsWithSplitsDiffMessage) => {
-      val actor = system.actorOf(TerminalDayFlightMigrationActor.props(terminal, date, now))
+      val actor = system.actorOf(propsForTerminalDate(terminal, date, now))
       system.log.info(s"About to update $terminal $date with ${diff.updates.size} flights")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, diff))
     }
