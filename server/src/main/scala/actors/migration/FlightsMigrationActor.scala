@@ -10,7 +10,7 @@ import akka.persistence._
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage}
@@ -49,7 +49,9 @@ object FlightsMigrationActor {
 class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRouterActor: ActorRef)
   extends PersistentActor with ActorLogging {
 
-  val maxBufferSize: Int = ConfigFactory.load().getInt("jdbc-read-journal.max-buffer-size")
+  private val config: Config = ConfigFactory.load()
+  val maxBufferSize: Int = config.getInt("jdbc-read-journal.max-buffer-size")
+  val queryInterval: Int = config.getInt("migration.query-interval-ms")
 
   override val persistenceId = "crunch-state-migration"
 
@@ -109,7 +111,7 @@ class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRo
     case StreamCompleted if isRunning =>
       maybeKillSwitch = None
       log.info(s"Received stream completed message. Restarting from ${state.seqNr + 1}")
-      after(250 milliseconds, context.system.scheduler)(Future(startUpdatesStream(state.seqNr + 1)))
+      after(queryInterval milliseconds, context.system.scheduler)(Future(startUpdatesStream(state.seqNr + 1)))
 
     case StreamCompleted if !isRunning =>
       maybeKillSwitch = None
