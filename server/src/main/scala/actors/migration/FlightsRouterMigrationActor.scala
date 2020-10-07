@@ -57,6 +57,7 @@ class FlightsRouterMigrationActor(updateFlights: FlightsMigrationUpdate) extends
           case (replyTo, flightMessageMigration) :: tail =>
             handleUpdatesAndAck(flightMessageMigration, replyTo)
             updateRequestsQueue = tail
+            log.info(s"Processing latest migration ${updateRequestsQueue.size} left to process.")
           case Nil =>
             log.debug("Update requests queue is empty. Nothing to do")
         }

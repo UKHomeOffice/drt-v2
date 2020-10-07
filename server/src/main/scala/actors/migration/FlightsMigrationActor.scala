@@ -8,7 +8,7 @@ import akka.pattern._
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence.{PersistentActor, RecoveryCompleted, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer}
 import akka.stream.scaladsl.{Keep, Sink}
-import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
+import akka.stream.{ActorMaterializer, KillSwitches, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage}
