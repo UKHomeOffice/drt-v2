@@ -212,7 +212,9 @@ object AclFeed {
         Origin = fields(AclColIndex.Origin),
         Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(shared.AclFeedSource)
+        FeedSources = Set(shared.AclFeedSource),
+        LoadFactor = Option(fields(AclColIndex.LoadFactor).toDouble),
+        ServiceType = Option(fields(AclColIndex.FlightType))
       )
     }
   }

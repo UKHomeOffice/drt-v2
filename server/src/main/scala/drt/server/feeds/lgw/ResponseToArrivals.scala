@@ -57,7 +57,9 @@ case class ResponseToArrivals(data: String) {
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None,
-      ApiPax = None
+      ApiPax = None,
+      ServiceType = None,
+      LoadFactor = None
       )
     log.debug(s"parsed arrival: $arrival")
     arrival

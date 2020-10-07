@@ -118,7 +118,9 @@ Cypress.Commands.add('addFlight', (params) => {
     "ICAO": "TS123",
     "IATA": "TS123",
     "Origin": "AMS",
-    "SchDT": todayAtString(12, 0)
+    "SchDT": todayAtString(12, 0),
+    "ServiceType" : "J",
+    "LoadFactor" : 1
   };
 
   const flightPayload = Object.assign({}, defaults, params);

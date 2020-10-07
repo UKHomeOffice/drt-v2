@@ -1,0 +1,2 @@
+ALTER TABLE arrival ADD COLUMN servicetype VARCHAR;
+ALTER TABLE arrival ADD COLUMN loadfactor NUMERIC(5,3);

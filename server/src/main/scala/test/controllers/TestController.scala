@@ -3,8 +3,6 @@ package test.controllers
 import akka.pattern.ask
 import akka.util.Timeout
 import controllers.{AirportConfProvider, DrtActorSystem}
-import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
-import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.Implicits._
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
@@ -20,6 +18,8 @@ import services.SDate
 import spray.json._
 import test.TestActors.ResetData
 import test.TestDrtSystem
+import test.TestFlight.TestLiveFlight
+import test.TestFlightParserProtocol._
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
@@ -58,7 +58,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
 
   def addArrival(): Action[AnyContent] = Action.async {
     request =>
-      request.body.asJson.map(s => s.toString.parseJson.convertTo[ChromaLiveFlight]) match {
+      request.body.asJson.map(s => s.toString.parseJson.convertTo[TestLiveFlight]) match {
         case Some(flight) =>
           val walkTimeMinutes = 4
           val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
@@ -84,8 +84,10 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
             Origin = PortCode(flight.Origin),
             PcpTime = Some(pcpTime),
             FeedSources = Set(LiveFeedSource),
-            Scheduled = SDate(flight.SchDT).millisSinceEpoch
-            )
+            Scheduled = SDate(flight.SchDT).millisSinceEpoch,
+            ServiceType = Option(flight.ServiceType),
+            LoadFactor = Option(flight.LoadFactor)
+          )
           saveArrival(arrival).map(_ => Created)
         case None =>
           Future(BadRequest(s"Unable to parse JSON: ${request.body.asText}"))

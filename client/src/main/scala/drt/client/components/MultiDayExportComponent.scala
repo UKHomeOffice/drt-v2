@@ -6,7 +6,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{LiveBaseFeedSource, LiveFeedSource, SDateLike}
+import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
@@ -18,7 +18,8 @@ object MultiDayExportComponent {
 
   case class Props(terminal: Terminal,
                    selectedDate: SDateLike,
-                   loggedInUser: LoggedInUser)
+                   loggedInUser: LoggedInUser,
+                   filterPassengerFlights: Boolean)
 
   case class State(startDay: Int,
                    startMonth: Int,
@@ -77,7 +78,7 @@ object MultiDayExportComponent {
                   scope.modState(_.copy(endDay = d.getDate(), endMonth = d.getMonth(), endYear = d.getFullYear()))
                 }),
                 if (state.startMillis > state.endMillis)
-                    <.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date.")
+                  <.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date.")
                 else
                   EmptyVdom,
 
@@ -87,7 +88,7 @@ object MultiDayExportComponent {
                     if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
                       <.a("Export Arrivals",
                         ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/arrivals/${state.startMillis}/${state.endMillis}/${props.terminal}"),
+                        ^.href := SPAMain.absoluteUrl(s"export/arrivals/${state.startMillis}/${state.endMillis}/${props.terminal}/${props.filterPassengerFlights}"),
                         ^.target := "_blank",
                         ^.onClick --> {
                           Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
@@ -130,5 +131,5 @@ object MultiDayExportComponent {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(terminal, selectedDate, loggedInUser: LoggedInUser))
+  def apply(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser, filterPassengerFlights: Boolean = false): VdomElement = component(Props(terminal, selectedDate, loggedInUser: LoggedInUser, filterPassengerFlights))
 }

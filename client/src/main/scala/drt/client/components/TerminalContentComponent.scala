@@ -6,6 +6,7 @@ import drt.auth._
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
+import drt.client.components.TooltipComponent._
 import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -16,9 +17,9 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
-import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
-import TooltipComponent._
+
 import scala.util.Try
 
 object TerminalContentComponent {
@@ -36,10 +37,11 @@ object TerminalContentComponent {
                    loggedInUser: LoggedInUser,
                    minuteTicker: Int,
                    featureFlags: Pot[Map[String, Boolean]],
-                   arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
+                   arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])]
                   )
 
-  case class State(activeTab: String, showExportDialogue: Boolean = false)
+  case class State(activeTab: String, showExportDialogue: Boolean = false, filterPassengerFlights: Boolean = false)
+
 
   def viewStartAndEnd(day: SDateLike, range: TimeRangeHours): (SDateLike, SDateLike) = {
     val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
@@ -65,14 +67,20 @@ object TerminalContentComponent {
     }.get
   }
 
-  class Backend() {
+  class Backend(backendScope: BackendScope[Props, State]) {
 
-    val arrivalsTableComponent: Component[FlightsWithSplitsTable.Props, Unit, Unit, CtorType.Props] = FlightsWithSplitsTable.ArrivalsTable(
-      None,
-      originMapper,
-      splitsGraphComponentColoured)
+    def filterPassengerFlightsToggle(e: ReactEventFromInput) = {
+      val newValue: Boolean = e.target.checked
+      backendScope.modState(_.copy(filterPassengerFlights = newValue))
+    }
 
     def render(props: Props, state: State): TagOf[Div] = {
+
+      val arrivalsTableComponent: Component[FlightsWithSplitsTable.Props, Unit, Unit, CtorType.Props] = FlightsWithSplitsTable.ArrivalsTable(
+        None,
+        originMapper,
+        splitsGraphComponentColoured)
+
       val terminal = props.terminalPageTab.terminal
       val queueOrder: Seq[Queue] = props.airportConfig.queueTypeSplitOrder(terminal)
 
@@ -112,7 +120,7 @@ object TerminalContentComponent {
                     props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
                   }),
                 <.li(^.className := staffingActive,
-                  <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements"," ", staffMovementsTabTooltip), ^.onClick --> {
+                  <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", " ", staffMovementsTabTooltip), ^.onClick --> {
                     GoogleEventTracker.sendEvent(terminalName, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
                   }),
@@ -126,17 +134,23 @@ object TerminalContentComponent {
                 )
               ),
               <.div(^.className := "exports",
+                if (state.activeTab == "arrivals") {
+                  <.div(^.className := s"filter-arrival",
+                    <.input.checkbox(^.checked := state.filterPassengerFlights, ^.onChange ==> filterPassengerFlightsToggle, ^.id := "toggle-non-passenger-flights-filter"),
+                    <.label(^.`for` := "toggle-non-passenger-flights-filter", "Passenger flights only"," ", passengerFlightsTooltip),
+                  )
+                } else "",
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
                   ExportArrivals,
-                  SPAMain.exportViewUrl(ExportArrivals, props.terminalPageTab.viewMode, terminal)
+                  SPAMain.exportViewUrl(ExportArrivals, props.terminalPageTab.viewMode, terminal,state.filterPassengerFlights)
                 ),
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
                   ExportDesks,
-                  SPAMain.exportViewUrl(ExportDesks, props.terminalPageTab.viewMode, terminal)
+                  SPAMain.exportViewUrl(ExportDesks, props.terminalPageTab.viewMode, terminal,state.filterPassengerFlights)
                 ),
                 displayForRole(
                   exportLink(
@@ -150,7 +164,7 @@ object TerminalContentComponent {
                   StaffMovementsExport,
                   props.loggedInUser
                 ),
-                MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
+                MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser,state.filterPassengerFlights))),
             <.div(^.className := "tab-content",
               <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
                 if (state.activeTab == "desksAndQueues") {
@@ -188,7 +202,8 @@ object TerminalContentComponent {
                       props.loggedInUser.hasRole(ArrivalSource),
                       props.viewMode,
                       PcpPax.bestPaxEstimateWithApi,
-                      props.airportConfig.hasTransfer
+                      props.airportConfig.hasTransfer,
+                      state.filterPassengerFlights
                     )
                   )
                 } else ""
@@ -196,7 +211,6 @@ object TerminalContentComponent {
               displayForRole(
                 <.div(^.id := "simluations", ^.className := s"tab-pane in $simulationsActive", {
                   if (state.activeTab == "simulations") {
-
                     SimulateArrivalsComponent(props.viewMode.dayStart.toLocalDate, props.terminalPageTab.terminal, props.airportConfig)
                   } else "not rendering"
                 }),
