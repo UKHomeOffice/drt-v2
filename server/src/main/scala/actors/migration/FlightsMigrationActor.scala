@@ -6,16 +6,19 @@ import actors.migration.FlightsMigrationActor.{MigrationStatus, Processed}
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.pattern._
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
-import akka.persistence.{PersistentActor, RecoveryCompleted, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer}
+import akka.persistence._
 import akka.stream.scaladsl.{Keep, Sink}
-import akka.stream.{ActorMaterializer, KillSwitches, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import akka.util.Timeout
+import com.typesafe.config.ConfigFactory
+import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
+import scala.language.postfixOps
 
 case object StartMigration
 
@@ -46,12 +49,15 @@ object FlightsMigrationActor {
 class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRouterActor: ActorRef)
   extends PersistentActor with ActorLogging {
 
+  val maxBufferSize: Int = ConfigFactory.load().getInt("jdbc-read-journal.max-buffer-size")
+
   override val persistenceId = "crunch-state-migration"
 
   val legacyPersistenceId: String = FlightsMigrationActor.legacyPersistenceId
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
   var state: MigrationStatus = MigrationStatus(0L, 0L)
+  var isRunning: Boolean = false
 
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = Timeout(1 second)
@@ -61,7 +67,7 @@ class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRo
     log.info(s"Starting event stream from seq no $nr")
     val (_, killSwitch) = PersistenceQuery(context.system)
       .readJournalFor[journalType.ReadJournalType](journalType.id)
-      .eventsByPersistenceId(legacyPersistenceId, nr, Long.MaxValue)
+      .currentEventsByPersistenceId(legacyPersistenceId, nr, nr + maxBufferSize - 1)
       .viaMat(KillSwitches.single)(Keep.both)
       .toMat(Sink.actorRefWithAck(self, StreamInitialized, Ack, StreamCompleted))(Keep.left)
       .run()
@@ -83,20 +89,38 @@ class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRo
 
   override def receiveCommand: Receive = {
     case StartMigration =>
-      startUpdatesStream(state.seqNr + 1)
+      if (!isRunning) {
+        isRunning = true
+        startUpdatesStream(state.seqNr + 1)
+      }
+
     case StopMigration =>
-      maybeKillSwitch.map(_.shutdown())
+      if (isRunning) {
+        isRunning = false
+        maybeKillSwitch.map(_.shutdown())
+      }
+
     case GetMigrationStatus =>
       sender() ! state
+
     case StreamInitialized =>
       sender() ! Ack
-    case StreamCompleted =>
-      log.info(s"Received stream completed message.")
-      sender() ! Ack
+
+    case StreamCompleted if isRunning =>
+      maybeKillSwitch = None
+      log.info(s"Received stream completed message. Restarting from ${state.seqNr + 1}")
+      after(250 milliseconds, context.system.scheduler)(Future(startUpdatesStream(state.seqNr + 1)))
+
+    case StreamCompleted if !isRunning =>
+      maybeKillSwitch = None
+      log.info(s"Received stream completed message")
+
     case _: SaveSnapshotSuccess =>
       log.info(s"Snapshot saved successfully")
+
     case SaveSnapshotFailure(_, t) =>
       log.error(t, s"Snapshot saving failed")
+
     case EventEnvelope(_, _, sequenceNr, CrunchDiffMessage(Some(createdAt), _, removals, updates, _, _, _, _)) =>
       log.info(s"received a message to migrate $createdAt")
       val replyTo = sender()
@@ -105,6 +129,7 @@ class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRo
           log.info(s"Got ack from terminal day actor. Persisting latest sequence number processed ($sequenceNr)")
           self ! Processed(sequenceNr, createdAt, replyTo)
         }
+
     case Processed(seqNr, createdAt, replyTo) =>
       persist(seqNr) { processedSeqNr =>
         context.system.eventStream.publish(processedSeqNr)
@@ -113,6 +138,7 @@ class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRo
         state = MigrationStatus(processedSeqNr, createdAt)
         replyTo ! Ack
       }
+
     case unexpected =>
       log.info(s"Got this unexpected message $unexpected")
   }
