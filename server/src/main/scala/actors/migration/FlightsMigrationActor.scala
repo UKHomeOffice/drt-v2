@@ -75,7 +75,7 @@ class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRo
     case RecoveryCompleted =>
       log.info(s"Recovered migration at ${state.seqNr} sequence number")
 
-    case recoveredLastProcessed: Int =>
+    case recoveredLastProcessed: Long =>
       state = state.copy(seqNr = recoveredLastProcessed)
 
     case unexpected => log.error(s"Received unexpected recovery message: $unexpected")
