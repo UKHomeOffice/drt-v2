@@ -39,6 +39,39 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
   "Given and Arrivals Graph Stage" should {
     val airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1))
 
+    "When I send an acl arrival with a defined service type followed by a live arrival with no service type" >> {
+      "Then I should find the merged arrival keeps the service type from the acl arrival" >> {
+
+        val scheduled = "2020-10-08T10:00"
+        val aclArrival = arrival(iata = "BA0001", schDt = scheduled, terminal = T1, actPax = Option(100), origin = PortCode("JFK"), serviceType = Option("A"))
+        val liveArrivalStatus = ArrivalStatus("from live feed")
+        val liveArrival = arrival(iata = "BA0001", schDt = scheduled, terminal = T1, serviceType = None, status = liveArrivalStatus)
+        val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(airportConfig = airportConfig, now = () => SDate(scheduled)))
+
+        offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(aclArrival))))
+
+        crunch.portStateTestProbe.fishForMessage(5 seconds) {
+          case ps: PortState =>
+            println(s"flights: ${ps.flights.values}")
+            ps.flights.values.toList.exists(_.apiFlight.ServiceType == Option("A"))
+        }
+
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(liveArrival))))
+
+        crunch.portStateTestProbe.fishForMessage(5 seconds) {
+          case ps: PortState => ps.flights.values.toList.exists(fws =>
+            fws.apiFlight.ServiceType == Option("A") && fws.apiFlight.Status == liveArrivalStatus
+          )
+        }
+
+        success
+      }
+    }
+  }
+
+  "Given and Arrivals Graph Stage" should {
+    val airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1))
+
     "a third arrival with an update to the chox time will change the arrival" >> {
       val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(airportConfig = airportConfig, now = () => dateNow, initialPortState = initialPortState, initialLiveArrivals = initialLiveArrivals))
       val arrival_v3_with_an_update_to_chox_time: Arrival = arrival_v2_with_chox_time.copy(ActualChox = Option(SDate("2017-01-01T10:30Z").millisSinceEpoch), Stand = Option("I will update"))
@@ -60,8 +93,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       val voyageManifests: ManifestsFeedResponse = ManifestsFeedSuccess(DqManifests("", Set(
         VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("10:25"), List(
           PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
-          ))
-        )))
+        ))
+      )))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
 
@@ -82,7 +115,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       val aclFlight: Flights = Flights(List(
         ArrivalGenerator.arrival(iata = "BA0002", schDt = forecastScheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
-        ))
+      ))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
