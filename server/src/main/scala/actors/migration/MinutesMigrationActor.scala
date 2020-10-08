@@ -1,6 +1,6 @@
 package actors.migration
 
-import actors.{PostgresTables, StreamingJournalLike}
+import actors.StreamingJournalLike
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.migration.FlightsMigrationActor.{MigrationStatus, Processed}
 import akka.actor.{ActorLogging, ActorRef, Props}
@@ -13,16 +13,11 @@ import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
-import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
-import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
-import slick.jdbc.SQLActionBuilder
-import slickdb.AkkaPersistenceSnapshotTable
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, FlightsWithSplitsDiffMessage}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.Success
 
 case class CrunchMinutesMessageMigration(
                                           sequenceId: Long,
@@ -33,10 +28,13 @@ case class CrunchMinutesMessageMigration(
 object MinutesMigrationActor {
   val legacyPersistenceId = "crunch-state"
 
-  val snapshotTable: AkkaPersistenceSnapshotTable = AkkaPersistenceSnapshotTable(PostgresTables)
-
-  def props(journalType: StreamingJournalLike, flightMigrationRouterActor: ActorRef, legacyPersistenceId: String): Props =
-    Props(new MinutesMigrationActor(journalType, snapshotTable, flightMigrationRouterActor, legacyPersistenceId))
+  def props(
+             journalType: StreamingJournalLike,
+             firstSequenceNumber: Long,
+             flightMigrationRouterActor: ActorRef,
+             legacyPersistenceId: String
+           ): Props =
+    Props(new MinutesMigrationActor(journalType, firstSequenceNumber, flightMigrationRouterActor, legacyPersistenceId))
 
   case class Processed(seqNr: Long, createdAt: MillisSinceEpoch, replyTo: ActorRef)
 
@@ -46,12 +44,11 @@ object MinutesMigrationActor {
 
 
 class MinutesMigrationActor(journalType: StreamingJournalLike,
-                            snapshotTable: AkkaPersistenceSnapshotTable,
-                            flightMigrationRouterActor: ActorRef,
-                            legacyPersistenceId: String)
+                            firstSequenceNumber: Long,
+                            minuteMigrationRouterActor: ActorRef,
+                            legacyPersistenceId: String
+                           )
   extends PersistentActor with ActorLogging {
-
-  import snapshotTable.tables.profile.api._
 
   private val config: Config = ConfigFactory.load()
   val maxBufferSize: Int = config.getInt("jdbc-read-journal.max-buffer-size")
@@ -59,22 +56,9 @@ class MinutesMigrationActor(journalType: StreamingJournalLike,
 
   override val persistenceId = s"$legacyPersistenceId-migration"
 
-  override def preStart(): Unit = {
-    val query: SQLActionBuilder =
-      sql"""SELECT MIN(sequence_number)
-            FROM journal
-            WHERE persistence_id=$legacyPersistenceId
-        """
-    snapshotTable.db.run(query.as[Int]).onComplete {
-      case Success(ints) => ints.headOption.foreach { minSeqNr =>
-        log.info(s"First sequence number for $legacyPersistenceId is $minSeqNr")
-        state = state.copy(seqNr = minSeqNr - 1)
-      }
-    }
-  }
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
-  var state: MigrationStatus = MigrationStatus(0L, 0L, false)
+  var state: MigrationStatus = MigrationStatus(firstSequenceNumber, 0L, false)
 
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = Timeout(1 second)
@@ -139,19 +123,19 @@ class MinutesMigrationActor(journalType: StreamingJournalLike,
     case SaveSnapshotFailure(_, t) =>
       log.error(t, s"Snapshot saving failed")
 
-    case EventEnvelope(_, _, sequenceNr, CrunchDiffMessage(Some(createdAt), _, removals, updates, _, _, _, _)) =>
-      log.info(s"received a message to migrate $createdAt")
+    case EventEnvelope(_, _, sequenceNr, cdm: CrunchDiffMessage) =>
+
       val replyTo = sender()
-      flightMigrationRouterActor.ask(FlightMessageMigration(sequenceNr, createdAt, removals, updates))
+      minuteMigrationRouterActor.ask(cdm)
         .onComplete { _ =>
           log.info(s"Got ack from terminal day actor. Persisting latest sequence number processed ($sequenceNr)")
-          self ! Processed(sequenceNr, createdAt, replyTo)
+          self ! Processed(sequenceNr, cdm.crunchMinutesToUpdate.map(_.lastUpdated).max.getOrElse(0L), replyTo)
         }
 
     case EventEnvelope(_, _, sequenceNr, FlightsWithSplitsDiffMessage(Some(createdAt), removals, updates)) =>
       log.info(s"received a message to migrate $createdAt")
       val replyTo = sender()
-      flightMigrationRouterActor.ask(FlightMessageMigration(sequenceNr, createdAt, removals, updates))
+      minuteMigrationRouterActor.ask(FlightMessageMigration(sequenceNr, createdAt, removals, updates))
         .onComplete { _ =>
           log.info(s"Got ack from terminal day actor. Persisting latest sequence number processed ($sequenceNr)")
           self ! Processed(sequenceNr, createdAt, replyTo)

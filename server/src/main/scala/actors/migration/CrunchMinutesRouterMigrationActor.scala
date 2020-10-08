@@ -12,7 +12,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.CrunchState.CrunchMinutesMessage
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinutesMessage}
 import services.SDate
 
 import scala.collection.immutable
@@ -36,7 +36,7 @@ class CrunchMinutesRouterMigrationActor(updateMinutes: CrunchMinutesMigrationUpd
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  var updateRequestsQueue: List[(ActorRef, CrunchMinutesMessageMigration)] = List()
+  var updateRequestsQueue: List[(ActorRef, CrunchDiffMessage)] = List()
   var processingRequest: Boolean = false
 
   override def receive: Receive = {
@@ -46,8 +46,8 @@ class CrunchMinutesRouterMigrationActor(updateMinutes: CrunchMinutesMigrationUpd
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
-    case container: CrunchMinutesMessageMigration =>
-      log.info(s"Adding ${container.minutesMessages.size} minutes to requests queue")
+    case container: CrunchDiffMessage =>
+      log.info(s"Adding ${container.crunchMinutesToUpdate.size} minutes to requests queue")
       updateRequestsQueue = (sender(), container) :: updateRequestsQueue
       self ! ProcessNextUpdateRequest
 
@@ -65,7 +65,7 @@ class CrunchMinutesRouterMigrationActor(updateMinutes: CrunchMinutesMigrationUpd
     case u => log.warn(s"Got an unexpected message: $u")
   }
 
-  def handleUpdatesAndAck(container: CrunchMinutesMessageMigration,
+  def handleUpdatesAndAck(container: CrunchDiffMessage,
                           replyTo: ActorRef): Unit = {
     processingRequest = true
     updateByTerminalDayAndGetAck(container)
@@ -77,13 +77,13 @@ class CrunchMinutesRouterMigrationActor(updateMinutes: CrunchMinutesMigrationUpd
       }
   }
 
-  def updateByTerminalDayAndGetAck(container: CrunchMinutesMessageMigration): Future[immutable.Seq[Any]] =
+  def updateByTerminalDayAndGetAck(container: CrunchDiffMessage): Future[immutable.Seq[Any]] =
     Source(groupByTerminalAndDay(container)).mapAsync(1) {
       case ((terminal, day), terminalDayMinutes) => updateMinutes(terminal, day, terminalDayMinutes)
     }.runWith(Sink.seq)
 
-  def groupByTerminalAndDay(migration: CrunchMinutesMessageMigration): Map[(String, SDateLike), CrunchMinutesMessage] =
-    migration.minutesMessages
+  def groupByTerminalAndDay(migration: CrunchDiffMessage ): Map[(String, SDateLike), CrunchMinutesMessage] =
+    migration.crunchMinutesToUpdate
       .groupBy(msg => (msg.getTerminalName, SDate(msg.getMinute).getUtcLastMidnight))
       .map {
         case (terminalDay, msgs) => (terminalDay, CrunchMinutesMessage(msgs))
