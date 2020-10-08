@@ -1,6 +1,6 @@
 package actors.migration
 
-import actors.StreamingJournalLike
+import actors.{PostgresTables, StreamingJournalLike}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.migration.FlightsMigrationActor.{MigrationStatus, Processed}
 import akka.actor.{ActorLogging, ActorRef, Props}
@@ -15,10 +15,13 @@ import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
+import slick.jdbc.SQLActionBuilder
+import slickdb.AkkaPersistenceSnapshotTable
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.util.Success
 
 case object StartMigration
 
@@ -37,8 +40,10 @@ object FlightsMigrationActor {
   val legacy1PersistenceId = "crunch-state"
   val legacy2PersistenceId = "flights-state-actor"
 
+  val snapshotTable: AkkaPersistenceSnapshotTable = AkkaPersistenceSnapshotTable(PostgresTables)
+
   def props(journalType: StreamingJournalLike, flightMigrationRouterActor: ActorRef, legacyPersistenceId: String): Props =
-    Props(new FlightsMigrationActor(journalType, flightMigrationRouterActor, legacyPersistenceId))
+    Props(new FlightsMigrationActor(journalType, snapshotTable, flightMigrationRouterActor, legacyPersistenceId))
 
   case class Processed(seqNr: Long, createdAt: MillisSinceEpoch, replyTo: ActorRef)
 
@@ -47,15 +52,33 @@ object FlightsMigrationActor {
 }
 
 
-class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRouterActor: ActorRef, legacyPersistenceId: String)
+class FlightsMigrationActor(journalType: StreamingJournalLike,
+                            snapshotTable: AkkaPersistenceSnapshotTable,
+                            flightMigrationRouterActor: ActorRef,
+                            legacyPersistenceId: String)
   extends PersistentActor with ActorLogging {
+
+  import snapshotTable.tables.profile.api._
 
   private val config: Config = ConfigFactory.load()
   val maxBufferSize: Int = config.getInt("jdbc-read-journal.max-buffer-size")
-  println(s"maxBufferSize: $maxBufferSize")
   val queryInterval: Int = config.getInt("migration.query-interval-ms")
 
   override val persistenceId = s"$legacyPersistenceId-migration"
+
+  override def preStart(): Unit = {
+    val query: SQLActionBuilder =
+      sql"""SELECT MIN(sequence_number)
+            FROM journal
+            WHERE persistence_id=$legacyPersistenceId
+        """
+    snapshotTable.db.run(query.as[Int]).onComplete {
+      case Success(ints) => ints.headOption.foreach { minSeqNr =>
+        log.info(s"First sequence number for $legacyPersistenceId is $minSeqNr")
+        state = state.copy(seqNr = minSeqNr - 1)
+      }
+    }
+  }
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
   var state: MigrationStatus = MigrationStatus(0L, 0L, false)
