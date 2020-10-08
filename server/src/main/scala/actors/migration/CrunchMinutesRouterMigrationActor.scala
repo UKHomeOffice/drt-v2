@@ -1,11 +1,16 @@
 package actors.migration
 
+import java.util.UUID
+
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.daily.RequestAndTerminate
 import actors.minutes.MinutesActorLike.{CrunchMinutesMigrationUpdate, ProcessNextUpdateRequest}
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.shared.{SDateLike, WithTimeAccessor}
+import akka.util.Timeout
+import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.CrunchMinutesMessage
 import services.SDate
@@ -13,6 +18,17 @@ import services.SDate
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
+
+object CrunchMinutesRouterMigrationActor {
+  def updateMinutes(requestAndTerminateActor: ActorRef,
+                    propsForTerminalDateFn: (String, SDateLike) => Props)
+                   (implicit system: ActorSystem, timeout: Timeout): CrunchMinutesMigrationUpdate =
+    (terminal: String, date: SDateLike, diff: CrunchMinutesMessage) => {
+      val actor = system.actorOf(propsForTerminalDateFn(terminal, date), s"migration-flights-$terminal-$date-${UUID.randomUUID().toString}")
+      system.log.info(s"About to update $terminal $date with ${diff.minutes.size} flights")
+      requestAndTerminateActor.ask(RequestAndTerminate(actor, diff))
+    }
+}
 
 class CrunchMinutesRouterMigrationActor(updateMinutes: CrunchMinutesMigrationUpdate) extends Actor {
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
