@@ -293,7 +293,9 @@ class ArrivalsGraphStage(name: String = "",
         TranPax = transPax,
         Status = bestStatus(key),
         FeedSources = feedSources(key),
-        PcpTime = Option(pcpArrivalTime(bestArrival).millisSinceEpoch)
+        PcpTime = Option(pcpArrivalTime(bestArrival).millisSinceEpoch),
+        ServiceType = baseArrival.ServiceType,
+        LoadFactor = baseArrival.LoadFactor,
       )
     }
 
