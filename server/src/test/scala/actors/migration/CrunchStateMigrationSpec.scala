@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.ask
 import akka.persistence.PersistentActor
 import akka.testkit.{ImplicitSender, TestProbe}
-import drt.shared.{SDateLike, UtcDate}
+import drt.shared.UtcDate
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
 import server.protobuf.messages.FlightsMessage.{FlightMessage, UniqueArrivalMessage}
@@ -88,7 +88,7 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
         val updateFlightsFn = FlightsRouterMigrationActor
           .updateFlights(requestAndTerminateActor, DummyActor.props(testProbe.ref))
 
-        val migrator = FlightsMigrator(updateFlightsFn, InMemoryStreamingJournal, FlightsMigrationActor.legacy1PersistenceId)()
+        val migrator = FlightsMigrator(updateFlightsFn, InMemoryStreamingJournal, FlightsMigrationActor.legacy1PersistenceId, 0L)
         migrator.start()
         val expectedMessage = FlightsWithSplitsDiffMessage(Some(createdAt), Vector(removalMessage), Vector(fwsMsg))
 

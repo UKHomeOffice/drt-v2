@@ -1,6 +1,6 @@
 package controllers.application
 
-import actors.DbStreamingJournal
+import actors.{DbStreamingJournal, PostgresTables}
 import actors.daily.RequestAndTerminateActor
 import actors.migration._
 import actors.minutes.MinutesActorLike.FlightsMigrationUpdate
@@ -10,6 +10,11 @@ import drt.auth.Debug
 import play.api.http.HttpEntity
 import play.api.mvc.{Action, AnyContent, ResponseHeader, Result}
 import services.SDate
+import slick.jdbc.SQLActionBuilder
+import slickdb.AkkaPersistenceSnapshotTable
+
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 
 
 trait WithMigrations {
@@ -20,8 +25,21 @@ trait WithMigrations {
   lazy val flightsUpdateFn: FlightsMigrationUpdate = FlightsRouterMigrationActor
     .updateFlights(requestAndTerminateActor, TerminalDayFlightMigrationActor.props)
 
-  lazy val legacy1FlightsMigrator: FlightsMigrator = FlightsMigrator(flightsUpdateFn, DbStreamingJournal, FlightsMigrationActor.legacy1PersistenceId)
-  lazy val legacy2FlightsMigrator: FlightsMigrator = FlightsMigrator(flightsUpdateFn, DbStreamingJournal, FlightsMigrationActor.legacy2PersistenceId)
+  def firstSequenceNumber(legacyPersistenceId: String): Long = {
+    val table = AkkaPersistenceSnapshotTable(PostgresTables)
+    import table.tables.profile.api._
+
+    val query: SQLActionBuilder =
+      sql"""SELECT MIN(sequence_number)
+            FROM journal
+            WHERE persistence_id=$legacyPersistenceId
+        """
+    val eventualInts = table.db.run(query.as[Long])
+    Await.result(eventualInts.map(_.headOption.getOrElse(0L)), 1 second)
+  }
+
+  lazy val legacy1FlightsMigrator: FlightsMigrator = FlightsMigrator(flightsUpdateFn, DbStreamingJournal, FlightsMigrationActor.legacy1PersistenceId, firstSequenceNumber(FlightsMigrationActor.legacy1PersistenceId))
+  lazy val legacy2FlightsMigrator: FlightsMigrator = FlightsMigrator(flightsUpdateFn, DbStreamingJournal, FlightsMigrationActor.legacy2PersistenceId, firstSequenceNumber(FlightsMigrationActor.legacy2PersistenceId))
 
   def startFlightMigration(legacyType: Int): Action[AnyContent] = authByRole(Debug) {
     Action {
