@@ -1,6 +1,5 @@
 package services.crunch
 
-import actors.FlightMessageConversion
 import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.arrival
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
@@ -11,14 +10,12 @@ import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
 import drt.shared.Terminals.T1
 import drt.shared._
 import drt.shared.api.Arrival
-import org.specs2.matcher.Scope
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
+import server.feeds._
 import services.SDate
 
 import scala.collection.immutable.{List, SortedMap}
-import scala.collection.mutable
 import scala.concurrent.duration._
 
 class ArrivalsGraphStageSpec extends CrunchTestLike {
@@ -52,7 +49,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
         crunch.portStateTestProbe.fishForMessage(5 seconds) {
           case ps: PortState =>
-            println(s"flights: ${ps.flights.values}")
             ps.flights.values.toList.exists(_.apiFlight.ServiceType == Option("A"))
         }
 
@@ -67,7 +63,37 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         success
       }
     }
+
+    "When I send a live arrival with no service type followed by an acl arrival with a defined service type " >> {
+      "Then I should find the merged arrival keeps the service type from the acl arrival" >> {
+
+        val scheduled = "2020-10-08T10:00"
+        val liveArrivalStatus = ArrivalStatus("from live feed")
+        val aclArrival = arrival(iata = "BA0001", schDt = scheduled, terminal = T1, actPax = Option(100), origin = PortCode("JFK"), serviceType = Option("A"))
+        val liveArrival = arrival(iata = "BA0001", schDt = scheduled, terminal = T1, serviceType = None, status = liveArrivalStatus)
+        val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(airportConfig = airportConfig, now = () => SDate(scheduled)))
+
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(liveArrival))))
+
+        crunch.portStateTestProbe.fishForMessage(5 seconds) {
+          case ps: PortState =>
+            ps.flights.values.toList.exists(_.apiFlight.ServiceType == None)
+        }
+
+        offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(aclArrival))))
+
+
+        crunch.portStateTestProbe.fishForMessage(5 seconds) {
+          case ps: PortState => ps.flights.values.toList.exists(fws =>
+            fws.apiFlight.ServiceType == Option("A") && fws.apiFlight.Status == liveArrivalStatus
+          )
+        }
+
+        success
+      }
+    }
   }
+
 
   "Given and Arrivals Graph Stage" should {
     val airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1))
