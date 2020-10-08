@@ -88,7 +88,7 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
         val updateFlightsFn = FlightsRouterMigrationActor
           .updateFlights(requestAndTerminateActor, DummyActor.props(testProbe.ref))
 
-        val migrator = FlightsMigrator(updateFlightsFn, InMemoryStreamingJournal)
+        val migrator = FlightsMigrator(updateFlightsFn, InMemoryStreamingJournal, FlightsMigrationActor.legacy1PersistenceId)()
         migrator.start()
         val expectedMessage = FlightsWithSplitsDiffMessage(Some(createdAt), Vector(removalMessage), Vector(fwsMsg))
 
@@ -99,7 +99,7 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
   }
 
   private def setMigrationData(message: CrunchDiffMessage) = {
-    val persistActor = system.actorOf(PersistMessageForIdActor.props(FlightsMigrationActor.legacyPersistenceId))
+    val persistActor = system.actorOf(PersistMessageForIdActor.props(FlightsMigrationActor.legacy1PersistenceId))
     Await.result(persistActor ? message, 1 second)
   }
 }

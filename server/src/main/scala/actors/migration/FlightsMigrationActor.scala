@@ -5,15 +5,15 @@ import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.migration.FlightsMigrationActor.{MigrationStatus, Processed}
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.pattern._
-import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence._
+import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage}
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 
 import scala.concurrent.ExecutionContextExecutor
@@ -34,39 +34,38 @@ case class FlightMessageMigration(
                                  )
 
 object FlightsMigrationActor {
-  val legacyPersistenceId = "crunch-state"
+  val legacy1PersistenceId = "crunch-state"
+  val legacy2PersistenceId = "flights-state-actor"
 
-  def props(journalType: StreamingJournalLike, flightMigrationRouterActor: ActorRef): Props =
-    Props(new FlightsMigrationActor(journalType, flightMigrationRouterActor))
+  def props(journalType: StreamingJournalLike, flightMigrationRouterActor: ActorRef, legacyPersistenceId: String): Props =
+    Props(new FlightsMigrationActor(journalType, flightMigrationRouterActor, legacyPersistenceId))
 
   case class Processed(seqNr: Long, createdAt: MillisSinceEpoch, replyTo: ActorRef)
 
-  case class MigrationStatus(seqNr: Long, createdAt: MillisSinceEpoch)
+  case class MigrationStatus(seqNr: Long, createdAt: MillisSinceEpoch, isRunning: Boolean)
 
 }
 
 
-class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRouterActor: ActorRef)
+class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRouterActor: ActorRef, legacyPersistenceId: String)
   extends PersistentActor with ActorLogging {
 
   private val config: Config = ConfigFactory.load()
   val maxBufferSize: Int = config.getInt("jdbc-read-journal.max-buffer-size")
+  println(s"maxBufferSize: $maxBufferSize")
   val queryInterval: Int = config.getInt("migration.query-interval-ms")
 
-  override val persistenceId = "crunch-state-migration"
-
-  val legacyPersistenceId: String = FlightsMigrationActor.legacyPersistenceId
+  override val persistenceId = s"$legacyPersistenceId-migration"
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
-  var state: MigrationStatus = MigrationStatus(0L, 0L)
-  var isRunning: Boolean = false
+  var state: MigrationStatus = MigrationStatus(0L, 0L, false)
 
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = Timeout(1 second)
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
-  val startUpdatesStream: Long => Unit = (nr: Long) => if (maybeKillSwitch.isEmpty) {
-    log.info(s"Starting event stream from seq no $nr")
+  val startUpdatesStream: Long => Unit = (nr: Long) => if (maybeKillSwitch.isEmpty && state.isRunning) {
+    log.info(s"Starting event stream for $legacyPersistenceId from seq no $nr")
     val (_, killSwitch) = PersistenceQuery(context.system)
       .readJournalFor[journalType.ReadJournalType](journalType.id)
       .currentEventsByPersistenceId(legacyPersistenceId, nr, nr + maxBufferSize - 1)
@@ -91,29 +90,30 @@ class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRo
 
   override def receiveCommand: Receive = {
     case StartMigration =>
-      if (!isRunning) {
-        isRunning = true
+      if (!state.isRunning) {
+        state = state.copy(isRunning = true)
         startUpdatesStream(state.seqNr + 1)
       }
 
     case StopMigration =>
-      if (isRunning) {
-        isRunning = false
+      if (state.isRunning) {
+        state = state.copy(isRunning = false)
         maybeKillSwitch.map(_.shutdown())
       }
 
     case GetMigrationStatus =>
+      log.info(s"Sending back state: $state")
       sender() ! state
 
     case StreamInitialized =>
       sender() ! Ack
 
-    case StreamCompleted if isRunning =>
+    case StreamCompleted if state.isRunning =>
       maybeKillSwitch = None
       log.info(s"Received stream completed message. Restarting from ${state.seqNr + 1}")
       after(queryInterval milliseconds, context.system.scheduler)(Future(startUpdatesStream(state.seqNr + 1)))
 
-    case StreamCompleted if !isRunning =>
+    case StreamCompleted if !state.isRunning =>
       maybeKillSwitch = None
       log.info(s"Received stream completed message")
 
@@ -132,12 +132,21 @@ class FlightsMigrationActor(journalType: StreamingJournalLike, flightMigrationRo
           self ! Processed(sequenceNr, createdAt, replyTo)
         }
 
+    case EventEnvelope(_, _, sequenceNr, FlightsWithSplitsDiffMessage(Some(createdAt), removals, updates)) =>
+      log.info(s"received a message to migrate $createdAt")
+      val replyTo = sender()
+      flightMigrationRouterActor.ask(FlightMessageMigration(sequenceNr, createdAt, removals, updates))
+        .onComplete { _ =>
+          log.info(s"Got ack from terminal day actor. Persisting latest sequence number processed ($sequenceNr)")
+          self ! Processed(sequenceNr, createdAt, replyTo)
+        }
+
     case Processed(seqNr, createdAt, replyTo) =>
       persist(seqNr) { processedSeqNr =>
         context.system.eventStream.publish(processedSeqNr)
         if (processedSeqNr % 100 == 0) saveSnapshot(processedSeqNr)
         log.info(s"Processed $legacyPersistenceId seq no $processedSeqNr - acking back to stream")
-        state = MigrationStatus(processedSeqNr, createdAt)
+        state = state.copy(seqNr = processedSeqNr, createdAt = createdAt)
         replyTo ! Ack
       }
 

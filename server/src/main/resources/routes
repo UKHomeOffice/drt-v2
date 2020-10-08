@@ -44,8 +44,8 @@ GET           /export/users                                        controllers.A
 GET           /export/staff-movements/:pointInTime/:terminal       controllers.Application.exportStaffMovements(terminal: String, pointInTime: Long)
 GET           /export/desk-rec-simulation                          controllers.Application.simulationImport
 
-GET           /migrations/flights/start                            controllers.Application.startFlightMigration
-GET           /migrations/flights/stop                             controllers.Application.stopFlightMigration
+POST          /migrations/flights/:legacyType/start                controllers.Application.startFlightMigration(legacyType: Int)
+POST          /migrations/flights/:legacyType/stop                 controllers.Application.stopFlightMigration(legacyType: Int)
 GET           /migrations/flights                                  controllers.Application.flightMigrationStatus
 
 # Map static resources from the /public folder to the /assets URL path

@@ -10,15 +10,12 @@ import akka.pattern.ask
 
 import scala.concurrent.Future
 
-case class FlightsMigrator(
-                             updateFlightsFn: FlightsMigrationUpdate,
-                             journalType: StreamingJournalLike
-                           )(implicit system: ActorSystem, timeout: Timeout) {
+case class FlightsMigrator(updateFlightsFn: FlightsMigrationUpdate, journalType: StreamingJournalLike, legacyPersistenceId: String)(implicit system: ActorSystem, timeout: Timeout) {
+
+  val flightsRouterMigrationActor: ActorRef = system.actorOf(Props(new FlightsRouterMigrationActor(updateFlightsFn)), s"FlightsRouterMigrationActor$legacyPersistenceId")
+  val flightsMigrationActor: ActorRef = system.actorOf(FlightsMigrationActor.props(journalType, flightsRouterMigrationActor, legacyPersistenceId), s"FlightsMigrationActor$legacyPersistenceId")
 
   def status(): Future[MigrationStatus] = flightsMigrationActor.ask(GetMigrationStatus).mapTo[MigrationStatus]
-
-  val flightsRouterMigrationActor: ActorRef = system.actorOf(Props(new FlightsRouterMigrationActor(updateFlightsFn)), "FlightsRouterMigrationActor")
-  val flightsMigrationActor: ActorRef = system.actorOf(FlightsMigrationActor.props(journalType, flightsRouterMigrationActor), "FlightsMigrationActor")
 
   def start(): Unit = flightsMigrationActor ! StartMigration
 
