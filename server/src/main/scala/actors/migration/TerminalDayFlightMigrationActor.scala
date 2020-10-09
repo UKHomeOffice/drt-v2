@@ -77,7 +77,6 @@ class TerminalDayFlightMigrationActor(
                 maybeAckAfterSnapshot = None
             }
           }
-
       }
 
     case m => log.warn(s"Got unexpected message: $m")

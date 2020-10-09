@@ -1,18 +1,17 @@
 package actors.migration
 
-import actors.PortStateMessageConversion.flightsFromMessages
+import actors.PortStateMessageConversion.{crunchMinuteFromMessage, crunchMinuteToMessage}
 import actors.acking.AckingReceiver.Ack
-import actors.{FlightMessageConversion, PostgresTables, RecoveryActorLike, Sizes}
+import actors.{PostgresTables, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{SaveSnapshotSuccess, SnapshotMetadata}
-import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.{SDateLike, UniqueArrival, UtcDate}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
+import drt.shared.{SDateLike, TQM, UtcDate}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
-import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
+import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import services.SDate
+import services.graphstages.Crunch
 import slickdb.AkkaPersistenceSnapshotTable
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -42,15 +41,16 @@ class TerminalDayCrunchMinutesMigrationActor(
 
   val now: () => SDateLike = () => SDate.now()
 
-  val firstMinuteOfDay: SDateLike = SDate(year, month, day, 0, 0)
-  val lastMinuteOfDay: SDateLike = firstMinuteOfDay.addDays(1).addMinutes(-1)
+  val firstMinute: SDateLike = SDate(year, month, day, 0, 0, Crunch.utcTimeZone)
+  val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
+  val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-${terminal.toLowerCase}-$year%04d-$month%02d-$day%02d")
 
-  var state: FlightsWithSplits = FlightsWithSplits.empty
+  var state: Map[TQM, CrunchMinute] = Map()
   var createdAtForSnapshot: Map[Long, MillisSinceEpoch] = Map()
 
-  override def persistenceId: String = f"terminal-flights-${terminal.toLowerCase}-$year-$month%02d-$day%02d"
+  override def persistenceId: String = f"terminal-queues-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
@@ -58,9 +58,15 @@ class TerminalDayCrunchMinutesMigrationActor(
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def receiveCommand: Receive = {
-    case diff: FlightsWithSplitsDiffMessage =>
-      createdAtForSnapshot = createdAtForSnapshot + (lastSequenceNr + 1 -> diff.createdAt.getOrElse(0L))
-      persistAndMaybeSnapshot(diff, Option((sender(), Ack)))
+    case messageMigration: CrunchMinutesMessageMigration =>
+      if (messageMigration.minutesMessages.nonEmpty) {
+
+        state = state ++ minuteMessagesToKeysAndMinutes(messageMigration.minutesMessages)
+        createdAtForSnapshot = createdAtForSnapshot + (lastSequenceNr + 1 -> messageMigration.createdAt)
+        persistAndMaybeSnapshot(CrunchMinutesMessage(messageMigration.minutesMessages), Option((sender(), Ack)))
+      }
+      else
+        sender() ! Ack
 
     case SaveSnapshotSuccess(SnapshotMetadata(persistenceId, sequenceNr, timestamp)) =>
       log.info(s"Successfully saved snapshot")
@@ -80,26 +86,28 @@ class TerminalDayCrunchMinutesMigrationActor(
     case m => log.warn(s"Got unexpected message: $m")
   }
 
-  override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case diff: FlightsWithSplitsDiffMessage => handleDiffMessage(diff)
-  }
-
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case FlightsWithSplitsMessage(flightMessages) => setStateFromSnapshot(flightMessages)
+    case CrunchMinutesMessage(minuteMessages) => state = minuteMessagesToKeysAndMinutes(minuteMessages).toMap
   }
 
-  override def stateToMessage: GeneratedMessage = FlightMessageConversion.flightsToMessage(state.flights.values)
-
-  def handleDiffMessage(diff: FlightsWithSplitsDiffMessage): Unit = {
-    state = state -- diff.removals.map(uniqueArrivalFromMessage)
-    state = state ++ flightsFromMessages(diff.updates)
-    log.debug(s"Recovery: state contains ${state.flights.size} flights")
+  override def processRecoveryMessage: PartialFunction[Any, Unit] = {
+    case CrunchMinutesMessage(minuteMessages) =>
+      log.debug(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
+      state = state ++ minuteMessagesToKeysAndMinutes(minuteMessages)
   }
 
-  def uniqueArrivalFromMessage(uam: UniqueArrivalMessage): UniqueArrival =
-    UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled)
+  override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)
 
-  def setStateFromSnapshot(flightMessages: Seq[FlightWithSplitsMessage]): Unit = {
-    state = FlightsWithSplits(flightsFromMessages(flightMessages))
-  }
+  private def minuteMessagesToKeysAndMinutes(messages: Seq[CrunchMinuteMessage]): Iterable[(TQM, CrunchMinute)] =
+    messages
+      .filter { cmm =>
+        val minuteMillis = cmm.minute.getOrElse(0L)
+        firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
+      }
+      .map { cmm =>
+        val cm = crunchMinuteFromMessage(cmm)
+        (cm.key, cm)
+      }
+
+
 }

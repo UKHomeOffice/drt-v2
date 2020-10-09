@@ -88,7 +88,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   def containerToMessage(differences: Iterable[VAL]): GeneratedMessage
 
-  def updatesToApply(allUpdates: Iterable[(INDEX, VAL)]): Iterable[(INDEX, VAL)] =
+  def  updatesToApply(allUpdates: Iterable[(INDEX, VAL)]): Iterable[(INDEX, VAL)] =
     maybePointInTime match {
       case None => allUpdates
       case Some(pit) => allUpdates.filter {

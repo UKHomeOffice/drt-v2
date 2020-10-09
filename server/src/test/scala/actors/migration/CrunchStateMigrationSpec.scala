@@ -124,7 +124,7 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
           LegacyStreamingJournalMigrationActor.legacy1PersistenceId,
           0L
         )
-        
+
         migrator.start()
 
         val expectedMessage = CrunchMinutesMessageMigration(createdAt, Vector(crunchMinute))
