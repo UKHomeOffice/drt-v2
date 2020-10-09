@@ -4,7 +4,7 @@ import actors.PortStateMessageConversion.flightsFromMessages
 import actors.acking.AckingReceiver.Ack
 import actors.{FlightMessageConversion, PostgresTables, RecoveryActorLike, Sizes}
 import akka.actor.Props
-import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotMetadata, SnapshotSelectionCriteria}
+import akka.persistence.{SaveSnapshotSuccess, SnapshotMetadata}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{SDateLike, UniqueArrival, UtcDate}
@@ -13,7 +13,6 @@ import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
-import slick.jdbc.SQLActionBuilder
 import slickdb.AkkaPersistenceSnapshotTable
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -25,6 +24,7 @@ object TerminalDayFlightMigrationActor {
     Props(new TerminalDayFlightMigrationActor(date.year, date.month, date.day, terminal, snapshotTable))
 
   case class RemoveSnapshotUpdate(sequenceNumber: Long)
+
 }
 
 class TerminalDayFlightMigrationActor(
@@ -40,7 +40,7 @@ class TerminalDayFlightMigrationActor(
 
   val now: () => SDateLike = () => SDate.now()
 
-  def updateSnapshotDate: (String, MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch) => Future[Int] =
+  val updateSnapshotDate: (String, MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch) => Future[Int] =
     LegacyStreamingJournalMigrationActor.updateSnapshotDateForTable(snapshotTable)
 
   val firstMinuteOfDay: SDateLike = SDate(year, month, day, 0, 0)
@@ -62,7 +62,7 @@ class TerminalDayFlightMigrationActor(
     case diff: FlightsWithSplitsDiffMessage =>
       createdAtForSnapshot = createdAtForSnapshot + (lastSequenceNr + 1 -> diff.createdAt.getOrElse(0L))
       handleDiffMessage(diff)
-      persistAndMaybeSnapshot(diff, Option((sender(), Ack)))
+      persistAndMaybeSnapshotWithAck(diff, Option((sender(), Ack)))
 
     case SaveSnapshotSuccess(SnapshotMetadata(persistenceId, sequenceNr, timestamp)) =>
       log.info(s"Successfully saved snapshot")
@@ -70,13 +70,7 @@ class TerminalDayFlightMigrationActor(
         case Some(createdAt) =>
           createdAtForSnapshot = createdAtForSnapshot - sequenceNr
           updateSnapshotDate(persistenceId, sequenceNr, timestamp, createdAt)
-            .onComplete { _ =>
-            maybeAckAfterSnapshot.foreach {
-              case (replyTo, ackMsg) =>
-                replyTo ! ackMsg
-                maybeAckAfterSnapshot = None
-            }
-          }
+            .onComplete(_ => ackIfRequired())
       }
 
     case m => log.warn(s"Got unexpected message: $m")

@@ -3,7 +3,7 @@ package actors.daily
 import actors.PortStateMessageConversion.flightsFromMessages
 import actors.{FlightMessageConversion, GetState, RecoveryActorLike, Sizes}
 import akka.actor.Props
-import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
@@ -63,7 +63,6 @@ class TerminalDayFlightActor(
 
   override def receiveCommand: Receive = {
     case diff: FlightsWithSplitsDiff =>
-
       val filteredDiff = diff.forTerminal(terminal)
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
 
@@ -73,6 +72,9 @@ class TerminalDayFlightActor(
         logDifferences(diff, filteredDiff)
 
       updateAndPersistDiff(filteredDiff)
+
+    case _: SaveSnapshotSuccess =>
+      ackIfRequired()
 
     case GetState =>
       log.debug(s"Received GetState")
@@ -88,12 +90,11 @@ class TerminalDayFlightActor(
   )
 
   def updateAndPersistDiff(diff: FlightsWithSplitsDiff): Unit = {
-
     val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch)
     state = updatedState
 
     val replyToAndMessage = Option(sender(), minutesToUpdate)
-    persistAndMaybeSnapshot(FlightMessageConversion.flightWithSplitsDiffToMessage(diff), replyToAndMessage)
+    persistAndMaybeSnapshotWithAck(FlightMessageConversion.flightWithSplitsDiffToMessage(diff), replyToAndMessage)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

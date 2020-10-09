@@ -18,12 +18,10 @@ case class LegacyMigrator(
                           )(implicit system: ActorSystem, timeout: Timeout) {
 
   val flightsRouterMigrationActor: ActorRef = system.actorOf(
-    Props(new FlightsRouterMigrationActor(updateFlightsFn)),
-    s"FlightsRouterMigrationActor$legacyPersistenceId"
+    Props(new FlightsRouterMigrationActor(updateFlightsFn)), s"FlightsRouterMigrationActor$legacyPersistenceId"
   )
   val crunchMinutesMigratorActor: ActorRef = system.actorOf(
-    Props(new CrunchMinutesRouterMigrationActor(updateCrunchMinutesFn)),
-    s"CrunchMinutesRouterMigrationActor$legacyPersistenceId"
+    Props(new CrunchMinutesRouterMigrationActor(updateCrunchMinutesFn)), s"CrunchMinutesRouterMigrationActor$legacyPersistenceId"
   )
   val migrationActor: ActorRef = system.actorOf(
     Props(new LegacyStreamingJournalMigrationActor(

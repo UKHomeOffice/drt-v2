@@ -34,7 +34,7 @@ class TerminalDayCrunchMinutesMigrationActor(
                                               snapshotTable: AkkaPersistenceSnapshotTable
                                             ) extends RecoveryActorLike {
 
-  def updateSnapshotDate: (String, MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch) => Future[Int] =
+  val updateSnapshotDate: (String, MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch) => Future[Int] =
     LegacyStreamingJournalMigrationActor.updateSnapshotDateForTable(snapshotTable)
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
@@ -60,13 +60,11 @@ class TerminalDayCrunchMinutesMigrationActor(
   override def receiveCommand: Receive = {
     case messageMigration: CrunchMinutesMessageMigration =>
       if (messageMigration.minutesMessages.nonEmpty) {
-
         state = state ++ minuteMessagesToKeysAndMinutes(messageMigration.minutesMessages)
         createdAtForSnapshot = createdAtForSnapshot + (lastSequenceNr + 1 -> messageMigration.createdAt)
-        persistAndMaybeSnapshot(CrunchMinutesMessage(messageMigration.minutesMessages), Option((sender(), Ack)))
+        persistAndMaybeSnapshotWithAck(CrunchMinutesMessage(messageMigration.minutesMessages), Option((sender(), Ack)))
       }
-      else
-        sender() ! Ack
+      else sender() ! Ack
 
     case SaveSnapshotSuccess(SnapshotMetadata(persistenceId, sequenceNr, timestamp)) =>
       log.info(s"Successfully saved snapshot")
@@ -74,13 +72,7 @@ class TerminalDayCrunchMinutesMigrationActor(
         case Some(createdAt) =>
           createdAtForSnapshot = createdAtForSnapshot - sequenceNr
           updateSnapshotDate(persistenceId, sequenceNr, timestamp, createdAt)
-            .onComplete { _ =>
-              maybeAckAfterSnapshot.foreach {
-                case (replyTo, ackMsg) =>
-                  replyTo ! ackMsg
-                  maybeAckAfterSnapshot = None
-              }
-            }
+            .onComplete(_ => ackIfRequired())
       }
 
     case m => log.warn(s"Got unexpected message: $m")

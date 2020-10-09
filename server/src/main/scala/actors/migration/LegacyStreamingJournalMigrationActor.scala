@@ -13,8 +13,8 @@ import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
-import org.slf4j.LoggerFactory
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
+import org.slf4j.{Logger, LoggerFactory}
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 import slick.jdbc.SQLActionBuilder
@@ -37,8 +37,10 @@ case class FlightMessageMigration(
                                    flightsUpdateMessages: Seq[FlightWithSplitsMessage],
                                  )
 
+case class CrunchMinutesMessageMigration(createdAt: MillisSinceEpoch, minutesMessages: Seq[CrunchMinuteMessage])
+
 object LegacyStreamingJournalMigrationActor {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
   val legacy1PersistenceId = "crunch-state"
   val legacy2PersistenceId = "flights-state-actor"
 
@@ -46,20 +48,22 @@ object LegacyStreamingJournalMigrationActor {
 
   case class MigrationStatus(seqNr: Long, createdAt: MillisSinceEpoch, isRunning: Boolean)
 
-  def updateSnapshotDateForTable(table: AkkaPersistenceSnapshotTable)(persistenceId: String, sequenceNr: MillisSinceEpoch, timestamp: MillisSinceEpoch, createdAt: MillisSinceEpoch) = {
+  def updateSnapshotDateForTable(table: AkkaPersistenceSnapshotTable)
+                                (persistenceId: String,
+                                 sequenceNr: MillisSinceEpoch,
+                                 timestamp: MillisSinceEpoch,
+                                 createdAt: MillisSinceEpoch): Future[Int] = {
     import table.tables.profile.api._
     log.info(s"Going to update the timestamp from ${SDate(timestamp).toISOString()} to ${SDate(createdAt).toISOString()} for $persistenceId / $sequenceNr")
 
     val updateQuery: SQLActionBuilder =
       sql"""UPDATE snapshot
-                    SET created=$createdAt
-                  WHERE persistence_id=$persistenceId
-                    AND sequence_number=$sequenceNr"""
+              SET created=$createdAt
+            WHERE persistence_id=$persistenceId
+              AND sequence_number=$sequenceNr"""
     table.db.run(updateQuery.asUpdate)
   }
-
 }
-
 
 class LegacyStreamingJournalMigrationActor(journalType: StreamingJournalLike,
                                            firstSequenceNumber: Long,
@@ -75,7 +79,7 @@ class LegacyStreamingJournalMigrationActor(journalType: StreamingJournalLike,
   override val persistenceId = s"$legacyPersistenceId-migration"
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
-  var state: MigrationStatus = MigrationStatus(firstSequenceNumber, 0L, false)
+  var state: MigrationStatus = MigrationStatus(firstSequenceNumber, 0L, isRunning = false)
 
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
   implicit val timeout: Timeout = Timeout(1 second)

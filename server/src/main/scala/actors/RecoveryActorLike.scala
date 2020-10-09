@@ -24,6 +24,13 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   var bytesSinceSnapshotCounter = 0
   var maybeAckAfterSnapshot: Option[(ActorRef, Any)] = None
 
+  def ackIfRequired(): Unit = {
+    maybeAckAfterSnapshot.foreach {
+      case (replyTo, msg) => replyTo ! msg
+    }
+    maybeAckAfterSnapshot = None
+  }
+
   def unknownMessage: PartialFunction[Any, Unit] = {
     case unknown => logUnknown(unknown)
   }
@@ -42,7 +49,9 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   def stateToMessage: GeneratedMessage
 
-  def persistAndMaybeSnapshot(messageToPersist: GeneratedMessage, maybeAck: Option[(ActorRef, Any)] = None): Unit = {
+  def persistAndMaybeSnapshot(message: GeneratedMessage): Unit = persistAndMaybeSnapshotWithAck(message, None)
+
+  def persistAndMaybeSnapshotWithAck(messageToPersist: GeneratedMessage, maybeAck: Option[(ActorRef, Any)]): Unit = {
     persist(messageToPersist) { message =>
       val messageBytes = message.serializedSize
       log.debug(s"Persisting $messageBytes bytes of ${message.getClass}")

@@ -122,8 +122,9 @@ class FlightsStateActor(val now: () => SDateLike,
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
-    case SaveSnapshotSuccess(SnapshotMetadata(_, _, _)) =>
+    case _: SaveSnapshotSuccess =>
       log.info("Snapshot success")
+      ackIfRequired()
 
     case SaveSnapshotFailure(md, cause) =>
       log.error(s"Save snapshot failure: $md", cause)
@@ -190,7 +191,7 @@ class FlightsStateActor(val now: () => SDateLike,
       maybeUpdatesSubscriber.foreach(_ ! UpdatedMillis(updatedMinutes))
 
     val diffMsg = diffMessageForFlights(flightUpdates.flightsToUpdate, flightUpdates.arrivalsToRemove)
-    persistAndMaybeSnapshot(diffMsg, Option((sender(), Ack)))
+    persistAndMaybeSnapshotWithAck(diffMsg, Option((sender(), Ack)))
   }
 
   def diffMessageForFlights(updates: List[ApiFlightWithSplits],
