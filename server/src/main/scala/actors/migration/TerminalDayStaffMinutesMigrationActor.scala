@@ -1,32 +1,33 @@
 package actors.migration
 
-import actors.PortStateMessageConversion.{crunchMinuteFromMessage, crunchMinuteToMessage}
+import actors.PortStateMessageConversion.{staffMinuteFromMessage, staffMinuteToMessage}
 import actors.acking.AckingReceiver.Ack
 import actors.{PostgresTables, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{SaveSnapshotSuccess, SnapshotMetadata}
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import drt.shared.{SDateLike, TQM, UtcDate}
+import drt.shared.CrunchApi.{StaffMinute, MillisSinceEpoch}
+import drt.shared.{SDateLike, TM, UtcDate}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
+import server.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
 import services.SDate
 import services.graphstages.Crunch
 import slickdb.AkkaPersistenceSnapshotTable
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-object TerminalDayCrunchMinutesMigrationActor {
+
+object TerminalDayStaffMinutesMigrationActor {
   val snapshotTable: AkkaPersistenceSnapshotTable = AkkaPersistenceSnapshotTable(PostgresTables)
 
   def props(terminal: String, date: UtcDate): Props =
-    Props(new TerminalDayCrunchMinutesMigrationActor(date.year, date.month, date.day, terminal, snapshotTable))
+    Props(new TerminalDayStaffMinutesMigrationActor(date.year, date.month, date.day, terminal, snapshotTable))
 
   case class RemoveSnapshotUpdate(sequenceNumber: Long)
 
 }
 
-class TerminalDayCrunchMinutesMigrationActor(
+class TerminalDayStaffMinutesMigrationActor(
                                               year: Int,
                                               month: Int,
                                               day: Int,
@@ -47,10 +48,10 @@ class TerminalDayCrunchMinutesMigrationActor(
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-${terminal.toLowerCase}-$year%04d-$month%02d-$day%02d")
 
-  var state: Map[TQM, CrunchMinute] = Map()
+  var state: Map[TM, StaffMinute] = Map()
   var createdAtForSnapshot: Map[Long, MillisSinceEpoch] = Map()
 
-  override def persistenceId: String = f"terminal-queues-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
+  override def persistenceId: String = f"terminal-staff-${terminal.toLowerCase}-$year-$month%02d-$day%02d"
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
@@ -58,11 +59,12 @@ class TerminalDayCrunchMinutesMigrationActor(
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def receiveCommand: Receive = {
-    case messageMigration: CrunchMinutesMessageMigration =>
+    case messageMigration: StaffMinutesMessageMigration =>
+      log.info(s"Received StaffMinutesMessageMigration with ${messageMigration.minutesMessages.size} staff minutes")
       if (messageMigration.minutesMessages.nonEmpty) {
         state = state ++ minuteMessagesToKeysAndMinutes(messageMigration.minutesMessages)
         createdAtForSnapshot = createdAtForSnapshot + (lastSequenceNr + 1 -> messageMigration.createdAt)
-        persistAndMaybeSnapshotWithAck(CrunchMinutesMessage(messageMigration.minutesMessages), Option((sender(), Ack)))
+        persistAndMaybeSnapshotWithAck(StaffMinutesMessage(messageMigration.minutesMessages), Option((sender(), Ack)))
       }
       else sender() ! Ack
 
@@ -79,25 +81,25 @@ class TerminalDayCrunchMinutesMigrationActor(
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case CrunchMinutesMessage(minuteMessages) => state = minuteMessagesToKeysAndMinutes(minuteMessages).toMap
+    case StaffMinutesMessage(minuteMessages) => state = minuteMessagesToKeysAndMinutes(minuteMessages).toMap
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case CrunchMinutesMessage(minuteMessages) =>
+    case StaffMinutesMessage(minuteMessages) =>
       log.debug(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
       state = state ++ minuteMessagesToKeysAndMinutes(minuteMessages)
   }
 
-  override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)
+  override def stateToMessage: GeneratedMessage = StaffMinutesMessage(state.values.map(staffMinuteToMessage).toSeq)
 
-  private def minuteMessagesToKeysAndMinutes(messages: Seq[CrunchMinuteMessage]): Iterable[(TQM, CrunchMinute)] =
+  private def minuteMessagesToKeysAndMinutes(messages: Seq[StaffMinuteMessage]): Iterable[(TM, StaffMinute)] =
     messages
       .filter { cmm =>
         val minuteMillis = cmm.minute.getOrElse(0L)
         firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
       }
       .map { cmm =>
-        val cm = crunchMinuteFromMessage(cmm)
+        val cm = staffMinuteFromMessage(cmm)
         (cm.key, cm)
       }
 

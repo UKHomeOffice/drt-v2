@@ -2,7 +2,7 @@ package actors.migration
 
 import actors.StreamingJournalLike
 import actors.migration.LegacyStreamingJournalMigrationActor.MigrationStatus
-import actors.minutes.MinutesActorLike.{CrunchMinutesMigrationUpdate, FlightsMigrationUpdate}
+import actors.minutes.MinutesActorLike.{CrunchMinutesMigrationUpdate, FlightsMigrationUpdate, StaffMinutesMigrationUpdate}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -12,6 +12,7 @@ import scala.concurrent.Future
 case class LegacyMigrator(
                            updateFlightsFn: FlightsMigrationUpdate,
                            updateCrunchMinutesFn: CrunchMinutesMigrationUpdate,
+                           updateStaffMinutesFn: StaffMinutesMigrationUpdate,
                            journalType: StreamingJournalLike,
                            legacyPersistenceId: String,
                            firstSequenceNumber: Long
@@ -23,12 +24,16 @@ case class LegacyMigrator(
   val crunchMinutesMigratorActor: ActorRef = system.actorOf(
     Props(new CrunchMinutesRouterMigrationActor(updateCrunchMinutesFn)), s"CrunchMinutesRouterMigrationActor$legacyPersistenceId"
   )
+  val staffMinutesMigratorActor: ActorRef = system.actorOf(
+    Props(new StaffMinutesRouterMigrationActor(updateStaffMinutesFn)), s"StaffMinutesRouterMigrationActor$legacyPersistenceId"
+  )
   val migrationActor: ActorRef = system.actorOf(
     Props(new LegacyStreamingJournalMigrationActor(
       journalType,
       firstSequenceNumber,
       flightsRouterMigrationActor,
       crunchMinutesMigratorActor,
+      staffMinutesMigratorActor,
       legacyPersistenceId
     )),
     s"FlightsMigrationActor$legacyPersistenceId"

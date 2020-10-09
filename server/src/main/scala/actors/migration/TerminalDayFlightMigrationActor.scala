@@ -60,9 +60,11 @@ class TerminalDayFlightMigrationActor(
 
   override def receiveCommand: Receive = {
     case diff: FlightsWithSplitsDiffMessage =>
-      createdAtForSnapshot = createdAtForSnapshot + (lastSequenceNr + 1 -> diff.createdAt.getOrElse(0L))
-      handleDiffMessage(diff)
-      persistAndMaybeSnapshotWithAck(diff, Option((sender(), Ack)))
+      if (diff.updates.nonEmpty || diff.removals.nonEmpty) {
+        createdAtForSnapshot = createdAtForSnapshot + (lastSequenceNr + 1 -> diff.createdAt.getOrElse(0L))
+        handleDiffMessage(diff)
+        persistAndMaybeSnapshotWithAck(diff, Option((sender(), Ack)))
+      } else sender() ! Ack
 
     case SaveSnapshotSuccess(SnapshotMetadata(persistenceId, sequenceNr, timestamp)) =>
       log.info(s"Successfully saved snapshot")

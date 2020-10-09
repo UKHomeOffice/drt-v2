@@ -1,15 +1,10 @@
 package actors.migration
 
-import java.util.UUID
-
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.daily.RequestAndTerminate
-import actors.minutes.MinutesActorLike.{CrunchMinutesMigrationUpdate, ProcessNextUpdateRequest}
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.ask
+import actors.minutes.MinutesActorLike.{StaffMinutesMigrationUpdate, ProcessNextUpdateRequest}
+import akka.actor.{Actor, ActorRef}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
-import akka.util.Timeout
 import drt.shared.UtcDate
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -18,13 +13,13 @@ import scala.collection.immutable
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 
-class CrunchMinutesRouterMigrationActor(updateMinutes: CrunchMinutesMigrationUpdate) extends Actor {
+class StaffMinutesRouterMigrationActor(updateMinutes: StaffMinutesMigrationUpdate) extends Actor {
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
   implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  var updateRequestsQueue: List[(ActorRef, CrunchMinutesMessageMigration)] = List()
+  var updateRequestsQueue: List[(ActorRef, StaffMinutesMessageMigration)] = List()
   var processingRequest: Boolean = false
 
   override def receive: Receive = {
@@ -34,7 +29,7 @@ class CrunchMinutesRouterMigrationActor(updateMinutes: CrunchMinutesMigrationUpd
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
-    case container: CrunchMinutesMessageMigration =>
+    case container: StaffMinutesMessageMigration =>
       log.info(s"Adding ${container.minutesMessages.size} minutes to requests queue")
       updateRequestsQueue = (sender(), container) :: updateRequestsQueue
       self ! ProcessNextUpdateRequest
@@ -53,27 +48,27 @@ class CrunchMinutesRouterMigrationActor(updateMinutes: CrunchMinutesMigrationUpd
     case u => log.warn(s"Got an unexpected message: $u")
   }
 
-  def handleUpdatesAndAck(container: CrunchMinutesMessageMigration,
+  def handleUpdatesAndAck(container: StaffMinutesMessageMigration,
                           replyTo: ActorRef): Unit = {
     processingRequest = true
     updateByTerminalDayAndGetAck(container)
       .onComplete { _ =>
         processingRequest = false
-        log.info(s"** acking back to crunch minutes migration actor ($replyTo)")
+        log.info(s"** acking back to staff minutes migration actor ($replyTo)")
         replyTo ! Ack
         self ! ProcessNextUpdateRequest
       }
   }
 
-  def updateByTerminalDayAndGetAck(container: CrunchMinutesMessageMigration): Future[immutable.Seq[Any]] =
+  def updateByTerminalDayAndGetAck(container: StaffMinutesMessageMigration): Future[immutable.Seq[Any]] =
     Source(groupByTerminalAndDay(container)).mapAsync(1) {
       case ((terminal, day), terminalDayMinutes) => updateMinutes(terminal, day, terminalDayMinutes)
     }.runWith(Sink.seq)
 
-  def groupByTerminalAndDay(migration: CrunchMinutesMessageMigration ): Map[(String, UtcDate), CrunchMinutesMessageMigration] =
+  def groupByTerminalAndDay(migration: StaffMinutesMessageMigration ): Map[(String, UtcDate), StaffMinutesMessageMigration] =
     migration.minutesMessages
       .groupBy(msg => (msg.getTerminalName, SDate(msg.getMinute).toUtcDate))
       .map {
-        case (terminalDay, msgs) => (terminalDay, CrunchMinutesMessageMigration(migration.createdAt, msgs))
+        case (terminalDay, msgs) => (terminalDay, StaffMinutesMessageMigration(migration.createdAt, msgs))
       }
 }

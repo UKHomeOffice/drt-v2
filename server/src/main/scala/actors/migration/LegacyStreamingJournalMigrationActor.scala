@@ -14,7 +14,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinuteMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, StaffMinuteMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 import slick.jdbc.SQLActionBuilder
@@ -38,6 +38,8 @@ case class FlightMessageMigration(
                                  )
 
 case class CrunchMinutesMessageMigration(createdAt: MillisSinceEpoch, minutesMessages: Seq[CrunchMinuteMessage])
+
+case class StaffMinutesMessageMigration(createdAt: MillisSinceEpoch, minutesMessages: Seq[StaffMinuteMessage])
 
 object LegacyStreamingJournalMigrationActor {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -69,6 +71,7 @@ class LegacyStreamingJournalMigrationActor(journalType: StreamingJournalLike,
                                            firstSequenceNumber: Long,
                                            flightMigrationRouterActor: ActorRef,
                                            crunchMinutesMigrationRouterActor: ActorRef,
+                                           staffMinutesMigrationRouterActor: ActorRef,
                                            legacyPersistenceId: String)
   extends PersistentActor with ActorLogging {
 
@@ -144,28 +147,23 @@ class LegacyStreamingJournalMigrationActor(journalType: StreamingJournalLike,
     case SaveSnapshotFailure(_, t) =>
       log.error(t, s"Snapshot saving failed")
 
-    case EventEnvelope(_, _, sequenceNr, cdm@CrunchDiffMessage(Some(createdAt), _, removals, updates, crunchMinutesToUpdate, staffMinutesToUpdate, _, _)) =>
+    case EventEnvelope(_, _, sequenceNr, CrunchDiffMessage(Some(createdAt), _, removals, updates, crunchMinutesToUpdate, staffMinutesToUpdate, _, _)) =>
       log.info(s"received a message to migrate $createdAt")
       val replyTo = sender()
 
       Future.sequence(
         List(
           flightMigrationRouterActor.ask(FlightMessageMigration(sequenceNr, createdAt, removals, updates)),
-          crunchMinutesMigrationRouterActor.ask(CrunchMinutesMessageMigration(createdAt, crunchMinutesToUpdate))
+          crunchMinutesMigrationRouterActor.ask(CrunchMinutesMessageMigration(createdAt, crunchMinutesToUpdate)),
+          staffMinutesMigrationRouterActor.ask(StaffMinutesMessageMigration(createdAt, staffMinutesToUpdate))
         ))
-        .onComplete { _ =>
-          log.info(s"Got ack from terminal day actor. Persisting latest sequence number processed ($sequenceNr)")
-          self ! Processed(sequenceNr, createdAt, replyTo)
-        }
+        .onComplete(_ => sendProcessed(sequenceNr, createdAt, replyTo))
 
     case EventEnvelope(_, _, sequenceNr, FlightsWithSplitsDiffMessage(Some(createdAt), removals, updates)) =>
       log.info(s"received a message to migrate $createdAt")
       val replyTo = sender()
       flightMigrationRouterActor.ask(FlightMessageMigration(sequenceNr, createdAt, removals, updates))
-        .onComplete { _ =>
-          log.info(s"Got ack from terminal day actor. Persisting latest sequence number processed ($sequenceNr)")
-          self ! Processed(sequenceNr, createdAt, replyTo)
-        }
+        .onComplete(_ => sendProcessed(sequenceNr, createdAt, replyTo))
 
     case Processed(seqNr, createdAt, replyTo) =>
       persist(seqNr) { processedSeqNr =>
@@ -178,5 +176,10 @@ class LegacyStreamingJournalMigrationActor(journalType: StreamingJournalLike,
 
     case unexpected =>
       log.info(s"Got this unexpected message $unexpected")
+  }
+
+  private def sendProcessed(sequenceNr: MillisSinceEpoch, createdAt: MillisSinceEpoch, replyTo: ActorRef): Unit = {
+    log.info(s"Got ack from terminal day actor. Persisting latest sequence number processed ($sequenceNr)")
+    self ! Processed(sequenceNr, createdAt, replyTo)
   }
 }
