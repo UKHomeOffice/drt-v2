@@ -25,7 +25,7 @@ case class LegacyMigrator(
     Props(new CrunchMinutesRouterMigrationActor(updateCrunchMinutesFn)),
     s"CrunchMinutesRouterMigrationActor$legacyPersistenceId"
   )
-  val flightsMigrationActor: ActorRef = system.actorOf(
+  val migrationActor: ActorRef = system.actorOf(
     Props(new LegacyStreamingJournalMigrationActor(
       journalType,
       firstSequenceNumber,
@@ -36,10 +36,10 @@ case class LegacyMigrator(
     s"FlightsMigrationActor$legacyPersistenceId"
   )
 
-  def status(): Future[MigrationStatus] = flightsMigrationActor.ask(GetMigrationStatus).mapTo[MigrationStatus]
+  def status(): Future[MigrationStatus] = migrationActor.ask(GetMigrationStatus).mapTo[MigrationStatus]
 
-  def start(): Unit = flightsMigrationActor ! StartMigration
+  def start(): Unit = migrationActor ! StartMigration
 
-  def stop(): Unit = flightsMigrationActor ! StopMigration
+  def stop(): Unit = migrationActor ! StopMigration
 
 }

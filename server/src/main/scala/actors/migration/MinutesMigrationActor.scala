@@ -19,11 +19,7 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-case class CrunchMinutesMessageMigration(
-                                          sequenceId: Long,
-                                          createdAt: MillisSinceEpoch,
-                                          minutesMessages: Seq[CrunchMinuteMessage],
-                                        )
+case class CrunchMinutesMessageMigration(createdAt: MillisSinceEpoch, minutesMessages: Seq[CrunchMinuteMessage])
 
 object MinutesMigrationActor {
   val legacyPersistenceId = "crunch-state"

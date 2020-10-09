@@ -31,11 +31,11 @@ object FlightsRouterMigrationActor {
       requestAndTerminateActor.ask(RequestAndTerminate(actor, diff))
     }
   def updateCrunchMinutes(requestAndTerminateActor: ActorRef,
-                    propsForTerminalDateFn: (String, SDateLike) => Props)
+                    propsForTerminalDateFn: (String, UtcDate) => Props)
                    (implicit system: ActorSystem, timeout: Timeout): CrunchMinutesMigrationUpdate =
-    (terminal: String, date: SDateLike, cms: CrunchMinutesMessage) => {
+    (terminal: String, date: UtcDate, cms: CrunchMinutesMessageMigration) => {
       val actor = system.actorOf(propsForTerminalDateFn(terminal, date), s"migration-crunch-minutes-$terminal-$date-${UUID.randomUUID().toString}")
-      system.log.info(s"About to update $terminal $date with ${cms.minutes.size} minutes")
+      system.log.info(s"About to update $terminal $date with ${cms.minutesMessages.size} minutes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, cms))
     }
 }

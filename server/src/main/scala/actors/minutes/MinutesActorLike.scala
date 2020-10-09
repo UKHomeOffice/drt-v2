@@ -2,6 +2,7 @@ package actors.minutes
 
 import actors.PartitionedPortStateActor.{DateRangeLike, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange, PointInTimeQuery, PortStateRequest, TerminalRequest}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.migration.CrunchMinutesMessageMigration
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef}
@@ -26,7 +27,7 @@ object MinutesActorLike {
   type FlightsLookup = (Terminals.Terminal, UtcDate, Option[MillisSinceEpoch]) => Future[FlightsWithSplits]
 
   type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A, B]]
-  type CrunchMinutesMigrationUpdate = (String, SDateLike, CrunchMinutesMessage) => Future[Any]
+  type CrunchMinutesMigrationUpdate = (String, UtcDate, CrunchMinutesMessageMigration) => Future[Any]
   type StaffMinutesMigrationUpdate = (String, SDateLike, StaffMinutesMessage) => Future[Any]
   type FlightsUpdate = (Terminals.Terminal, UtcDate, FlightsWithSplitsDiff) => Future[Seq[MillisSinceEpoch]]
   type FlightsMigrationUpdate = (String, UtcDate, FlightsWithSplitsDiffMessage) => Future[Any]

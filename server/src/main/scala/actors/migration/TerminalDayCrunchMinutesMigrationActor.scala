@@ -7,34 +7,36 @@ import akka.actor.Props
 import akka.persistence.{SaveSnapshotSuccess, SnapshotMetadata}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.{SDateLike, UniqueArrival}
+import drt.shared.{SDateLike, UniqueArrival, UtcDate}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
-import slick.jdbc.SQLActionBuilder
 import slickdb.AkkaPersistenceSnapshotTable
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object TerminalDayCrunchMinutesMigrationActor {
   val snapshotTable: AkkaPersistenceSnapshotTable = AkkaPersistenceSnapshotTable(PostgresTables)
 
-  def props(terminal: String, date: SDateLike): Props =
-    Props(new TerminalDayFlightMigrationActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, snapshotTable))
+  def props(terminal: String, date: UtcDate): Props =
+    Props(new TerminalDayFlightMigrationActor(date.year, date.month, date.day, terminal, snapshotTable))
 
   case class RemoveSnapshotUpdate(sequenceNumber: Long)
+
 }
 
 class TerminalDayCrunchMinutesMigrationActor(
-                                       year: Int,
-                                       month: Int,
-                                       day: Int,
-                                       terminal: String,
-                                       snapshotTable: AkkaPersistenceSnapshotTable
-                                     ) extends RecoveryActorLike {
-  import snapshotTable.tables.profile.api._
+                                              year: Int,
+                                              month: Int,
+                                              day: Int,
+                                              terminal: String,
+                                              snapshotTable: AkkaPersistenceSnapshotTable
+                                            ) extends RecoveryActorLike {
+
+  def updateSnapshotDate: (String, MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch) => Future[Int] =
+    LegacyStreamingJournalMigrationActor.updateSnapshotDateForTable(snapshotTable)
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
@@ -64,20 +66,15 @@ class TerminalDayCrunchMinutesMigrationActor(
       log.info(s"Successfully saved snapshot")
       createdAtForSnapshot.get(sequenceNr) match {
         case Some(createdAt) =>
-          log.info(s"Going to update the timestamp from ${SDate(timestamp).toISOString()} to ${SDate(createdAt).toISOString()} for $persistenceId / $sequenceNr")
           createdAtForSnapshot = createdAtForSnapshot - sequenceNr
-          val updateQuery: SQLActionBuilder =
-            sql"""UPDATE snapshot
-                    SET created=$createdAt
-                  WHERE persistence_id=$persistenceId
-                    AND sequence_number=$sequenceNr"""
-          snapshotTable.db.run(updateQuery.asUpdate).onComplete { _ =>
-            maybeAckAfterSnapshot.foreach {
-              case (replyTo, ackMsg) =>
-                replyTo ! ackMsg
-                maybeAckAfterSnapshot = None
+          updateSnapshotDate(persistenceId, sequenceNr, timestamp, createdAt)
+            .onComplete { _ =>
+              maybeAckAfterSnapshot.foreach {
+                case (replyTo, ackMsg) =>
+                  replyTo ! ackMsg
+                  maybeAckAfterSnapshot = None
+              }
             }
-          }
       }
 
     case m => log.warn(s"Got unexpected message: $m")

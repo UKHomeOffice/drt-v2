@@ -47,11 +47,8 @@ class DummyActor(probe: ActorRef, terminal: String, date: SDateLike) extends Act
 }
 
 object DummyActor {
-  def propsUtcDate(probe: ActorRef)(terminal: String, date: UtcDate) =
+  def props(probe: ActorRef)(terminal: String, date: UtcDate) =
     Props(new DummyActor(probe, terminal, SDate(date)))
-
-  def propsSDate(probe: ActorRef)(terminal: String, date: SDateLike) =
-    Props(new DummyActor(probe, terminal, date))
 }
 
 class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
@@ -100,7 +97,7 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
   private def flightsUpdateFn(flightsTestProbe: TestProbe) = {
     val requestAndTerminateActor = system.actorOf(Props(new RequestAndTerminateActor))
     val updateFlightsFn = FlightsRouterMigrationActor
-      .updateFlights(requestAndTerminateActor, DummyActor.propsUtcDate(flightsTestProbe.ref))
+      .updateFlights(requestAndTerminateActor, DummyActor.props(flightsTestProbe.ref))
     updateFlightsFn
   }
 
@@ -109,7 +106,6 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
       "I should see them sent as a protobuf message to the terminal day actor" >> {
 
         val createdAt = SDate("2020-10-01T00:00").millisSinceEpoch
-        val scheduled = SDate("2020-10-02T12:10")
 
         val minuteTime = SDate("2020-09-10T00:00Z")
         val crunchMinute = CrunchMinuteMessage(Option("T1"), Option("Eea"), Option(minuteTime.millisSinceEpoch))
@@ -128,9 +124,10 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
           LegacyStreamingJournalMigrationActor.legacy1PersistenceId,
           0L
         )
+        
         migrator.start()
-        migrator.start()
-        val expectedMessage = CrunchMinutesMessage(Vector(crunchMinute))
+
+        val expectedMessage = CrunchMinutesMessageMigration(createdAt, Vector(crunchMinute))
 
         minutesTestProbe.expectMsg(("T1", minuteTime, expectedMessage))
         success
@@ -141,7 +138,7 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
   private def crunchMinutesUpdateFn(minutesTestProbe: TestProbe) = {
     val requestAndTerminateActor = system.actorOf(Props(new RequestAndTerminateActor))
     val updateMinutesFn = CrunchMinutesRouterMigrationActor
-      .updateMinutes(requestAndTerminateActor, DummyActor.propsSDate(minutesTestProbe.ref))
+      .updateMinutes(requestAndTerminateActor, DummyActor.props(minutesTestProbe.ref))
     updateMinutesFn
   }
 

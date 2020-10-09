@@ -16,7 +16,7 @@ import services.SDate
 import slick.jdbc.SQLActionBuilder
 import slickdb.AkkaPersistenceSnapshotTable
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object TerminalDayFlightMigrationActor {
   val snapshotTable: AkkaPersistenceSnapshotTable = AkkaPersistenceSnapshotTable(PostgresTables)
@@ -34,11 +34,14 @@ class TerminalDayFlightMigrationActor(
                                        terminal: String,
                                        snapshotTable: AkkaPersistenceSnapshotTable
                                      ) extends RecoveryActorLike {
-  import snapshotTable.tables.profile.api._
+
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
   val now: () => SDateLike = () => SDate.now()
+
+  def updateSnapshotDate: (String, MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch) => Future[Int] =
+    LegacyStreamingJournalMigrationActor.updateSnapshotDateForTable(snapshotTable)
 
   val firstMinuteOfDay: SDateLike = SDate(year, month, day, 0, 0)
   val lastMinuteOfDay: SDateLike = firstMinuteOfDay.addDays(1).addMinutes(-1)
@@ -58,26 +61,23 @@ class TerminalDayFlightMigrationActor(
   override def receiveCommand: Receive = {
     case diff: FlightsWithSplitsDiffMessage =>
       createdAtForSnapshot = createdAtForSnapshot + (lastSequenceNr + 1 -> diff.createdAt.getOrElse(0L))
+      handleDiffMessage(diff)
       persistAndMaybeSnapshot(diff, Option((sender(), Ack)))
 
     case SaveSnapshotSuccess(SnapshotMetadata(persistenceId, sequenceNr, timestamp)) =>
       log.info(s"Successfully saved snapshot")
       createdAtForSnapshot.get(sequenceNr) match {
         case Some(createdAt) =>
-          log.info(s"Going to update the timestamp from ${SDate(timestamp).toISOString()} to ${SDate(createdAt).toISOString()} for $persistenceId / $sequenceNr")
           createdAtForSnapshot = createdAtForSnapshot - sequenceNr
-          val updateQuery: SQLActionBuilder =
-            sql"""UPDATE snapshot
-                    SET created=$createdAt
-                  WHERE persistence_id=$persistenceId
-                    AND sequence_number=$sequenceNr"""
-          snapshotTable.db.run(updateQuery.asUpdate).onComplete { _ =>
+          updateSnapshotDate(persistenceId, sequenceNr, timestamp, createdAt)
+            .onComplete { _ =>
             maybeAckAfterSnapshot.foreach {
               case (replyTo, ackMsg) =>
                 replyTo ! ackMsg
                 maybeAckAfterSnapshot = None
             }
           }
+
       }
 
     case m => log.warn(s"Got unexpected message: $m")

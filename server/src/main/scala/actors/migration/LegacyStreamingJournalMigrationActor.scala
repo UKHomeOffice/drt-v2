@@ -13,8 +13,12 @@ import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
+import org.slf4j.LoggerFactory
 import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
+import services.SDate
+import slick.jdbc.SQLActionBuilder
+import slickdb.AkkaPersistenceSnapshotTable
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
@@ -34,12 +38,25 @@ case class FlightMessageMigration(
                                  )
 
 object LegacyStreamingJournalMigrationActor {
+  val log = LoggerFactory.getLogger(getClass)
   val legacy1PersistenceId = "crunch-state"
   val legacy2PersistenceId = "flights-state-actor"
 
   case class Processed(seqNr: Long, createdAt: MillisSinceEpoch, replyTo: ActorRef)
 
   case class MigrationStatus(seqNr: Long, createdAt: MillisSinceEpoch, isRunning: Boolean)
+
+  def updateSnapshotDateForTable(table: AkkaPersistenceSnapshotTable)(persistenceId: String, sequenceNr: MillisSinceEpoch, timestamp: MillisSinceEpoch, createdAt: MillisSinceEpoch) = {
+    import table.tables.profile.api._
+    log.info(s"Going to update the timestamp from ${SDate(timestamp).toISOString()} to ${SDate(createdAt).toISOString()} for $persistenceId / $sequenceNr")
+
+    val updateQuery: SQLActionBuilder =
+      sql"""UPDATE snapshot
+                    SET created=$createdAt
+                  WHERE persistence_id=$persistenceId
+                    AND sequence_number=$sequenceNr"""
+    table.db.run(updateQuery.asUpdate)
+  }
 
 }
 
@@ -130,7 +147,7 @@ class LegacyStreamingJournalMigrationActor(journalType: StreamingJournalLike,
       Future.sequence(
         List(
           flightMigrationRouterActor.ask(FlightMessageMigration(sequenceNr, createdAt, removals, updates)),
-          crunchMinutesMigrationRouterActor.ask(cdm)
+          crunchMinutesMigrationRouterActor.ask(CrunchMinutesMessageMigration(createdAt, crunchMinutesToUpdate))
         ))
         .onComplete { _ =>
           log.info(s"Got ack from terminal day actor. Persisting latest sequence number processed ($sequenceNr)")
