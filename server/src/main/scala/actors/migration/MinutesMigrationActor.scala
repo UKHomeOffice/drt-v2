@@ -2,7 +2,7 @@ package actors.migration
 
 import actors.StreamingJournalLike
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
-import actors.migration.FlightsMigrationActor.{MigrationStatus, Processed}
+import actors.migration.LegacyStreamingJournalMigrationActor.{MigrationStatus, Processed}
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.pattern._
 import akka.persistence._

@@ -1,7 +1,7 @@
 package actors.migration
 
 import actors.StreamingJournalLike
-import actors.migration.FlightsMigrationActor.MigrationStatus
+import actors.migration.LegacyStreamingJournalMigrationActor.MigrationStatus
 import actors.minutes.MinutesActorLike.CrunchMinutesMigrationUpdate
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask

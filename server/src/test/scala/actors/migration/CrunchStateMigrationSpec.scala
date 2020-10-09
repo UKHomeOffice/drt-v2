@@ -3,6 +3,7 @@ package actors.migration
 import actors.InMemoryStreamingJournal
 import actors.acking.AckingReceiver.Ack
 import actors.daily.RequestAndTerminateActor
+import actors.minutes.MinutesActorLike.{CrunchMinutesMigrationUpdate, FlightsMigrationUpdate}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.ask
 import akka.persistence.PersistentActor
@@ -83,20 +84,24 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
 
         setMigrationData(crunchDiffMessage)
 
-        val testProbe = TestProbe()
-        val requestAndTerminateActor = system.actorOf(Props(new RequestAndTerminateActor))
+        val flightsTestProbe = TestProbe()
+        val updateFlightsFn: FlightsMigrationUpdate = flightsUpdateFn(flightsTestProbe)
 
-        val updateFlightsFn = FlightsRouterMigrationActor
-          .updateFlights(requestAndTerminateActor, DummyActor.propsUtcDate(testProbe.ref))
-
-        val migrator = FlightsMigrator(updateFlightsFn, InMemoryStreamingJournal, FlightsMigrationActor.legacy1PersistenceId, 0L)
+        val migrator = LegacyMigrator(updateFlightsFn, crunchMinutesUpdateFn(TestProbe()), InMemoryStreamingJournal, LegacyStreamingJournalMigrationActor.legacy1PersistenceId, 0L)
         migrator.start()
         val expectedMessage = FlightsWithSplitsDiffMessage(Some(createdAt), Vector(removalMessage), Vector(fwsMsg))
 
-        testProbe.expectMsg(("T1", SDate(2020, 10, 2), expectedMessage))
+        flightsTestProbe.expectMsg(("T1", SDate(2020, 10, 2), expectedMessage))
         success
       }
     }
+  }
+
+  private def flightsUpdateFn(flightsTestProbe: TestProbe) = {
+    val requestAndTerminateActor = system.actorOf(Props(new RequestAndTerminateActor))
+    val updateFlightsFn = FlightsRouterMigrationActor
+      .updateFlights(requestAndTerminateActor, DummyActor.propsUtcDate(flightsTestProbe.ref))
+    updateFlightsFn
   }
 
   "Given a stream of EventEnvelopes containing legacy CrunchDiffMessages with crunch minutes" >> {
@@ -113,29 +118,35 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
 
         setMigrationData(crunchDiffMessage)
 
-        val testProbe = TestProbe()
-        val requestAndTerminateActor = system.actorOf(Props(new RequestAndTerminateActor))
+        val minutesTestProbe = TestProbe()
+        val updateMinutesFn: CrunchMinutesMigrationUpdate = crunchMinutesUpdateFn(minutesTestProbe)
 
-        val updateMinutesFn = CrunchMinutesRouterMigrationActor
-          .updateMinutes(requestAndTerminateActor, DummyActor.propsSDate(testProbe.ref))
-
-        val migrator = MinutesMigrator(
+        val migrator = LegacyMigrator(
+          flightsUpdateFn(TestProbe()),
           updateMinutesFn,
           InMemoryStreamingJournal,
-          MinutesMigrationActor.legacyPersistenceId,
+          LegacyStreamingJournalMigrationActor.legacy1PersistenceId,
           0L
         )
         migrator.start()
+        migrator.start()
         val expectedMessage = CrunchMinutesMessage(Vector(crunchMinute))
 
-        testProbe.expectMsg(("T1", minuteTime, expectedMessage))
+        minutesTestProbe.expectMsg(("T1", minuteTime, expectedMessage))
         success
       }
     }
   }
 
+  private def crunchMinutesUpdateFn(minutesTestProbe: TestProbe) = {
+    val requestAndTerminateActor = system.actorOf(Props(new RequestAndTerminateActor))
+    val updateMinutesFn = CrunchMinutesRouterMigrationActor
+      .updateMinutes(requestAndTerminateActor, DummyActor.propsSDate(minutesTestProbe.ref))
+    updateMinutesFn
+  }
+
   private def setMigrationData(message: CrunchDiffMessage) = {
-    val persistActor = system.actorOf(PersistMessageForIdActor.props(FlightsMigrationActor.legacy1PersistenceId))
+    val persistActor = system.actorOf(PersistMessageForIdActor.props(LegacyStreamingJournalMigrationActor.legacy1PersistenceId))
     Await.result(persistActor ? message, 1 second)
   }
 }

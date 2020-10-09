@@ -4,14 +4,14 @@ import java.util.UUID
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.RequestAndTerminate
-import actors.minutes.MinutesActorLike.{FlightsMigrationUpdate, ProcessNextUpdateRequest}
+import actors.minutes.MinutesActorLike.{CrunchMinutesMigrationUpdate, FlightsMigrationUpdate, ProcessNextUpdateRequest}
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared._
-import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinutesMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 
@@ -29,6 +29,14 @@ object FlightsRouterMigrationActor {
       val actor = system.actorOf(propsForTerminalDateFn(terminal, date), s"migration-flights-$terminal-$date-${UUID.randomUUID().toString}")
       system.log.info(s"About to update $terminal $date with ${diff.updates.size} flights")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, diff))
+    }
+  def updateCrunchMinutes(requestAndTerminateActor: ActorRef,
+                    propsForTerminalDateFn: (String, SDateLike) => Props)
+                   (implicit system: ActorSystem, timeout: Timeout): CrunchMinutesMigrationUpdate =
+    (terminal: String, date: SDateLike, cms: CrunchMinutesMessage) => {
+      val actor = system.actorOf(propsForTerminalDateFn(terminal, date), s"migration-crunch-minutes-$terminal-$date-${UUID.randomUUID().toString}")
+      system.log.info(s"About to update $terminal $date with ${cms.minutes.size} minutes")
+      requestAndTerminateActor.ask(RequestAndTerminate(actor, cms))
     }
 }
 

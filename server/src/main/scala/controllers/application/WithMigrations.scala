@@ -3,7 +3,7 @@ package controllers.application
 import actors.{DbStreamingJournal, PostgresTables}
 import actors.daily.RequestAndTerminateActor
 import actors.migration._
-import actors.minutes.MinutesActorLike.FlightsMigrationUpdate
+import actors.minutes.MinutesActorLike.{CrunchMinutesMigrationUpdate, FlightsMigrationUpdate}
 import akka.actor.{ActorRef, Props}
 import controllers.Application
 import drt.auth.Debug
@@ -25,6 +25,9 @@ trait WithMigrations {
   lazy val flightsUpdateFn: FlightsMigrationUpdate = FlightsRouterMigrationActor
     .updateFlights(requestAndTerminateActor, TerminalDayFlightMigrationActor.props)
 
+  lazy val crunchMinutesUpdateFn: CrunchMinutesMigrationUpdate = FlightsRouterMigrationActor
+    .updateCrunchMinutes(requestAndTerminateActor, TerminalDayCrunchMinutesMigrationActor.props)
+
   def firstSequenceNumber(legacyPersistenceId: String): Long = {
     val table = AkkaPersistenceSnapshotTable(PostgresTables)
     import table.tables.profile.api._
@@ -38,8 +41,8 @@ trait WithMigrations {
     Await.result(eventualInts.map(_.headOption.getOrElse(0L)), 1 second)
   }
 
-  lazy val legacy1FlightsMigrator: FlightsMigrator = FlightsMigrator(flightsUpdateFn, DbStreamingJournal, FlightsMigrationActor.legacy1PersistenceId, firstSequenceNumber(FlightsMigrationActor.legacy1PersistenceId))
-  lazy val legacy2FlightsMigrator: FlightsMigrator = FlightsMigrator(flightsUpdateFn, DbStreamingJournal, FlightsMigrationActor.legacy2PersistenceId, firstSequenceNumber(FlightsMigrationActor.legacy2PersistenceId))
+  lazy val legacy1FlightsMigrator: LegacyMigrator = LegacyMigrator(flightsUpdateFn, crunchMinutesUpdateFn, DbStreamingJournal, LegacyStreamingJournalMigrationActor.legacy1PersistenceId, firstSequenceNumber(LegacyStreamingJournalMigrationActor.legacy1PersistenceId))
+  lazy val legacy2FlightsMigrator: LegacyMigrator = LegacyMigrator(flightsUpdateFn, crunchMinutesUpdateFn, DbStreamingJournal, LegacyStreamingJournalMigrationActor.legacy2PersistenceId, firstSequenceNumber(LegacyStreamingJournalMigrationActor.legacy2PersistenceId))
 
   def startFlightMigration(legacyType: Int): Action[AnyContent] = authByRole(Debug) {
     Action {
