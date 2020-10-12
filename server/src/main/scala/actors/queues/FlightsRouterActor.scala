@@ -31,20 +31,6 @@ object FlightsRouterActor {
     override def compare(that: QueryLike): Int = date.compare(that.date)
   }
 
-  /**
-   * Legacy 1 data is stored in the CrunchStateActor and contains a mix of arrival and crunch data
-   *
-   * @param date
-   */
-  case class Legacy1Query(date: UtcDate) extends QueryLike
-
-  /**
-   * Legacy 2 data is stored in the FlightStateActor and contains only flight data stored in 6 month batches
-   *
-   * @param date
-   */
-  case class Legacy2Query(date: UtcDate) extends QueryLike
-
   case class Query(date: UtcDate) extends QueryLike
 
   def utcDateRange(start: SDateLike, end: SDateLike): Seq[UtcDate] = {

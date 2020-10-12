@@ -7,17 +7,15 @@ import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdat
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import services.SDate
 
-import scala.collection.immutable.SortedMap
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 object PartitionedPortStateTestActor {
   def apply(testProbe: TestProbe, flightsActor: ActorRef, now: () => SDateLike, airportConfig: AirportConfig)
@@ -50,10 +48,8 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     flightUpdatesActor,
     now,
     queues,
-    InMemoryStreamingJournal,
-    SDate("1970-01-01"),
-    PartitionedPortStateActor.tempLegacyActorProps(1000)
-  ) {
+    InMemoryStreamingJournal)
+{
 
   var state: PortState = PortState.empty
 

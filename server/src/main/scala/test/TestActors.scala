@@ -273,10 +273,8 @@ object TestActors {
       flightUpdatesActor,
       now,
       queues,
-      journalType,
-      SDate("1970-01-01"),
-      PartitionedPortStateActor.tempLegacyActorProps(1000)
-    ) {
+      journalType)
+  {
 
     val actorClearRequests = Map(
       flightsActor -> ResetData,
@@ -326,32 +324,6 @@ object TestActors {
                                    terminal: Terminal,
                                    now: () => SDateLike) extends TerminalDayFlightActor(year, month, day, terminal, now, None) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-  }
-
-  class TestFlightsStateActor(now: () => SDateLike) extends
-    FlightsStateActor(now, expireAfterMillis = 1000) with Resettable {
-    override def resetState(): Unit = state = FlightsWithSplits.empty
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-  }
-
-  class TestCrunchStateActor(name: String,
-                             portQueues: Map[Terminal, Seq[Queue]],
-                             override val now: () => SDateLike,
-                             expireAfterMillis: Int,
-                             purgePreviousSnapshots: Boolean)
-    extends CrunchStateActor(
-      initialMaybeSnapshotInterval = None,
-      initialSnapshotBytesThreshold = oneMegaByte,
-      name = name,
-      portQueues = portQueues,
-      now = now,
-      expireAfterMillis = expireAfterMillis,
-      purgePreviousSnapshots = purgePreviousSnapshots,
-      forecastMaxMillis = () => now().addDays(2).millisSinceEpoch) with Resettable {
-    override def resetState(): Unit = state = PortState.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }

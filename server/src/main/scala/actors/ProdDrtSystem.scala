@@ -1,8 +1,7 @@
 package actors
 
-import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps, tempLegacyActorProps}
+import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
-import actors.pointInTime.CrunchStateReadActor
 import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
@@ -64,28 +63,6 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   override val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
 
-  val flightsByDayCutoffDate: SDateLike = SDate.tryParseString(config.get[String]("flights-by-day-cutoff-date")) match {
-    case Success(d) => d
-    case Failure(t) =>
-      val error = "Incorrect date format for flights-by-day-cutoff-date"
-      log.error(error, t)
-      throw new Exception(error)
-  }
-
-  val legacy1ActorProps: (SDateLike, Int) => Props =
-    (pointInTime: SDateLike, expireAfterMillis: Int) =>
-      Props(new CrunchStateReadActor(
-        pointInTime,
-        expireAfterMillis,
-        airportConfig.queuesByTerminal,
-        pointInTime.addDays(-2).millisSinceEpoch,
-        pointInTime.millisSinceEpoch,
-        airportConfig.portStateSnapshotInterval))
-
-  val legacy2ActorProps: (SDateLike, Int) => Props =
-    (pointInTime: SDateLike, expireAfterMillis: Int) =>
-      FlightsStateActor.tempPitActorProps(pointInTime, expireAfterMillis)
-
   val flightLookups: FlightLookups = FlightLookups(
     system,
     now,
@@ -99,9 +76,6 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
   override val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
 
-
-  val legacyPortStateCutOffDate = SDate("2000-01-01T00:00:00Z")
-
   override val portStateActor: ActorRef = system.actorOf(Props(new PartitionedPortStateActor(
     flightsActor,
     queuesActor,
@@ -111,9 +85,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     flightUpdates,
     now,
     airportConfig.queuesByTerminal,
-    journalType,
-    legacyPortStateCutOffDate,
-    tempLegacyActorProps(airportConfig.portStateSnapshotInterval))))
+    journalType)))
 
   val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 

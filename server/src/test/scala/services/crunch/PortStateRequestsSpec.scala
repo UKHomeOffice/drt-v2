@@ -3,7 +3,6 @@ package services.crunch
 import actors.PartitionedPortStateActor._
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
-import actors.pointInTime.CrunchStateReadActor
 import actors.queues.FlightsRouterActor
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
@@ -56,9 +55,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       flightUpdates,
       myNow,
       airportConfig.queuesByTerminal,
-      InMemoryStreamingJournal,
-      legacyDataCutOff,
-      tempLegacyActorProps(1000))))
+      InMemoryStreamingJournal)))
   }
 
   def resetData(terminal: Terminal, day: SDateLike): Unit = {
