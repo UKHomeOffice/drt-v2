@@ -39,7 +39,6 @@ describe('API splits', () => {
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .addManifest(apiManifest)
-      .get('.pax-api')
       .get('.egate-queue-pax > span')
       .contains("8")
       .get('.eeadesk-queue-pax > span')

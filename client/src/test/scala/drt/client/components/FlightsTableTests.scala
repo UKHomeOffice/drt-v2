@@ -91,11 +91,11 @@ object FlightsTableTests extends TestSuite {
       def thead(timeline: Boolean = false): TagOf[TableSection] = <.thead(
         <.tr(
           if (timeline) <.th("Timeline") else TagMod(""),
-          <.th("Flight", " ", wbrFlightColorTooltip),
+          <.th("Flight"," ", wbrFlightColorTooltip),
           <.th("Origin"),
           <.th("Country", ^.className := "country"),
           <.th("Gate / Stand", ^.className := "gate-stand"),
-          <.th("Status", " ", arrivalStatusTooltip, ^.className := "status"),
+          <.th("Status"," ", arrivalStatusTooltip, ^.className := "status"),
           <.th("Sch"),
           <.th("Est"),
           <.th("Act"),
@@ -103,9 +103,9 @@ object FlightsTableTests extends TestSuite {
           <.th("Act Chox"),
           <.th("Est PCP"),
           <.th("Est PCP Pax"),
-          <.th("e-Gates", " ", splitsTableTooltip),
-          <.th("EEA", " ", splitsTableTooltip),
-          <.th("Non-EEA", " ", splitsTableTooltip),
+          <.th("e-Gates"," ",splitsTableTooltip),
+          <.th("EEA"," ",splitsTableTooltip),
+          <.th("Non-EEA"," ",splitsTableTooltip),
           <.th("Transfer Pax")
         ))
 
@@ -261,11 +261,11 @@ object FlightsTableTests extends TestSuite {
       def thead(timeline: Boolean = false): TagOf[TableSection] = <.thead(
         <.tr(
           if (timeline) <.th("Timeline") else TagMod(""),
-          <.th("Flight", " ", wbrFlightColorTooltip),
+          <.th("Flight"," ", wbrFlightColorTooltip),
           <.th("Origin"),
           <.th("Country", ^.className := "country"),
           <.th("Gate / Stand", ^.className := "gate-stand"),
-          <.th("Status", " ", arrivalStatusTooltip, ^.className := "status"),
+          <.th("Status"," ", arrivalStatusTooltip, ^.className := "status"),
           <.th("Sch"),
           <.th("Est"),
           <.th("Act"),
@@ -273,9 +273,9 @@ object FlightsTableTests extends TestSuite {
           <.th("Act Chox"),
           <.th("Est PCP"),
           <.th("Est PCP Pax"),
-          <.th("e-Gates", " ", splitsTableTooltip),
-          <.th("EEA", " ", splitsTableTooltip),
-          <.th("Non-EEA", " ", splitsTableTooltip)
+          <.th("e-Gates"," ",splitsTableTooltip),
+          <.th("EEA"," ",splitsTableTooltip),
+          <.th("Non-EEA"," ",splitsTableTooltip)
         ))
 
       val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
