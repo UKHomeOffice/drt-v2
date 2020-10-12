@@ -7,6 +7,7 @@ import actors.{DbStreamingJournal, PostgresTables}
 import akka.actor.{ActorRef, Props}
 import controllers.Application
 import drt.auth.Debug
+import drt.shared.SDateLike
 import play.api.http.HttpEntity
 import play.api.mvc.{Action, AnyContent, ResponseHeader, Result}
 import services.SDate
@@ -21,15 +22,17 @@ trait WithMigrations {
 
   self: Application =>
 
+  val legacyFlightDataCutoff: SDateLike = SDate(config.get[String]("legacy-flight-data-cutoff"))
+
   lazy val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor), "migration-request-and-terminate")
   lazy val flightsUpdateFn: FlightsMigrationUpdate = FlightsRouterMigrationActor
     .updateFlights(requestAndTerminateActor, TerminalDayFlightMigrationActor.props)
 
   lazy val crunchMinutesUpdateFn: CrunchMinutesMigrationUpdate = FlightsRouterMigrationActor
-    .updateCrunchMinutes(requestAndTerminateActor, TerminalDayCrunchMinutesMigrationActor.props)
+    .updateCrunchMinutes(legacyFlightDataCutoff, requestAndTerminateActor, TerminalDayCrunchMinutesMigrationActor.props)
 
   lazy val staffMinutesUpdateFn: StaffMinutesMigrationUpdate = FlightsRouterMigrationActor
-    .updateStaffMinutes(requestAndTerminateActor, TerminalDayStaffMinutesMigrationActor.props)
+    .updateStaffMinutes(legacyFlightDataCutoff, requestAndTerminateActor, TerminalDayStaffMinutesMigrationActor.props)
 
   def firstSequenceNumber(legacyPersistenceId: String): Long = {
     val table = AkkaPersistenceSnapshotTable(PostgresTables)

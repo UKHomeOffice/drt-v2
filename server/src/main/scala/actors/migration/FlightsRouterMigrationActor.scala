@@ -11,13 +11,13 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared._
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, CrunchMinutesMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
+import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 
 import scala.collection.immutable
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 
@@ -31,22 +31,26 @@ object FlightsRouterMigrationActor {
       requestAndTerminateActor.ask(RequestAndTerminate(actor, diff))
     }
 
-  def updateCrunchMinutes(requestAndTerminateActor: ActorRef,
+  def updateCrunchMinutes(legacyCutoffDate: SDateLike, requestAndTerminateActor: ActorRef,
                           propsForTerminalDateFn: (String, UtcDate) => Props)
-                         (implicit system: ActorSystem, timeout: Timeout): CrunchMinutesMigrationUpdate =
+                         (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): CrunchMinutesMigrationUpdate =
     (terminal: String, date: UtcDate, cms: CrunchMinutesMessageMigration) => {
-      val actor = system.actorOf(propsForTerminalDateFn(terminal, date), s"migration-crunch-minutes-$terminal-$date-${UUID.randomUUID().toString}")
-      system.log.info(s"About to update $terminal $date with ${cms.minutesMessages.size} minutes")
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, cms))
+      if (date < legacyCutoffDate.toUtcDate) {
+        val actor = system.actorOf(propsForTerminalDateFn(terminal, date), s"migration-crunch-minutes-$terminal-$date-${UUID.randomUUID().toString}")
+        system.log.info(s"About to update $terminal $date with ${cms.minutesMessages.size} minutes")
+        requestAndTerminateActor.ask(RequestAndTerminate(actor, cms))
+      } else Future(Ack)
     }
 
-  def updateStaffMinutes(requestAndTerminateActor: ActorRef,
-                          propsForTerminalDateFn: (String, UtcDate) => Props)
-                         (implicit system: ActorSystem, timeout: Timeout): StaffMinutesMigrationUpdate =
+  def updateStaffMinutes(legacyCutoffDate: SDateLike, requestAndTerminateActor: ActorRef,
+                         propsForTerminalDateFn: (String, UtcDate) => Props)
+                        (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): StaffMinutesMigrationUpdate =
     (terminal: String, date: UtcDate, cms: StaffMinutesMessageMigration) => {
-      val actor = system.actorOf(propsForTerminalDateFn(terminal, date), s"migration-staff-minutes-$terminal-$date-${UUID.randomUUID().toString}")
-      system.log.info(s"About to update $terminal $date with ${cms.minutesMessages.size} minutes")
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, cms))
+      if (date < legacyCutoffDate.toUtcDate) {
+        val actor = system.actorOf(propsForTerminalDateFn(terminal, date), s"migration-staff-minutes-$terminal-$date-${UUID.randomUUID().toString}")
+        system.log.info(s"About to update $terminal $date with ${cms.minutesMessages.size} minutes")
+        requestAndTerminateActor.ask(RequestAndTerminate(actor, cms))
+      } else Future(Ack)
     }
 }
 

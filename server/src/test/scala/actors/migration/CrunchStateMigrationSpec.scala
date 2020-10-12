@@ -53,6 +53,8 @@ object DummyActor {
 
 class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
 
+  val legacyCutoffDate = SDate("2020-12-31T10:00:00Z")
+
   /**
    * Considerations
    * 1) We need to retain the `createdAt` part so that the non-legacy actors use it rather than using now()
@@ -84,7 +86,14 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
         val flightsTestProbe = TestProbe()
         val updateFlightsFn: FlightsMigrationUpdate = flightsUpdateFn(flightsTestProbe)
 
-        val migrator = LegacyMigrator(updateFlightsFn, crunchMinutesUpdateFn(TestProbe()), InMemoryStreamingJournal, LegacyStreamingJournalMigrationActor.legacy1PersistenceId, 0L)
+        val migrator = LegacyMigrator(
+          updateFlightsFn,
+          crunchMinutesUpdateFn(TestProbe(), legacyCutoffDate),
+          staffMinutesUpdateFn(TestProbe(), legacyCutoffDate),
+          InMemoryStreamingJournal,
+          LegacyStreamingJournalMigrationActor.legacy1PersistenceId,
+          0L
+        )
         migrator.start()
         val expectedMessage = FlightsWithSplitsDiffMessage(Some(createdAt), Vector(removalMessage), Vector(fwsMsg))
 
@@ -94,12 +103,6 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
     }
   }
 
-  private def flightsUpdateFn(flightsTestProbe: TestProbe) = {
-    val requestAndTerminateActor = system.actorOf(Props(new RequestAndTerminateActor))
-    val updateFlightsFn = FlightsRouterMigrationActor
-      .updateFlights(requestAndTerminateActor, DummyActor.props(flightsTestProbe.ref))
-    updateFlightsFn
-  }
 
   "Given a stream of EventEnvelopes containing legacy CrunchDiffMessages with crunch minutes" >> {
     "When I ask for them to be re-persisted as non-legacy data" >> {
@@ -115,11 +118,12 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
         setMigrationData(crunchDiffMessage)
 
         val minutesTestProbe = TestProbe()
-        val updateMinutesFn: CrunchMinutesMigrationUpdate = crunchMinutesUpdateFn(minutesTestProbe)
+        val updateMinutesFn: CrunchMinutesMigrationUpdate = crunchMinutesUpdateFn(minutesTestProbe, legacyCutoffDate)
 
         val migrator = LegacyMigrator(
           flightsUpdateFn(TestProbe()),
           updateMinutesFn,
+          staffMinutesUpdateFn(TestProbe(), legacyCutoffDate),
           InMemoryStreamingJournal,
           LegacyStreamingJournalMigrationActor.legacy1PersistenceId,
           0L
@@ -135,10 +139,108 @@ class CrunchStateMigrationSpec extends CrunchTestLike with ImplicitSender {
     }
   }
 
-  private def crunchMinutesUpdateFn(minutesTestProbe: TestProbe) = {
+  "Given a stream of EventEnvelopes containing legacy CrunchDiffMessages with staff minutes" >> {
+    "When I ask for them to be re-persisted as non-legacy data" >> {
+      "I should see them sent as a protobuf message to the terminal day actor" >> {
+
+        val createdAt = SDate("2020-10-01T00:00").millisSinceEpoch
+
+        val minuteTime = SDate("2020-09-10T00:00Z")
+        val staffMinuteMessage = StaffMinuteMessage(Option("T1"), Option(minuteTime.millisSinceEpoch), Option(1))
+
+        val crunchDiffMessage = CrunchDiffMessage(Option(createdAt), None, Seq(), Seq(), Seq(), Seq(staffMinuteMessage))
+
+        setMigrationData(crunchDiffMessage)
+
+        val minutesTestProbe = TestProbe()
+
+        val migrator = LegacyMigrator(
+          flightsUpdateFn(TestProbe()),
+          crunchMinutesUpdateFn(TestProbe(), legacyCutoffDate),
+          staffMinutesUpdateFn(minutesTestProbe, legacyCutoffDate),
+          InMemoryStreamingJournal,
+          LegacyStreamingJournalMigrationActor.legacy1PersistenceId,
+          0L
+        )
+
+        migrator.start()
+
+        val expectedMessage = StaffMinutesMessageMigration(createdAt, Vector(staffMinuteMessage))
+
+        minutesTestProbe.expectMsg(("T1", minuteTime, expectedMessage))
+        success
+      }
+    }
+  }
+
+  "Given legacy data for a date on or since the new storage mechanism began" >> {
+    "When I ask for them to be re-persisted as non-legacy data" >> {
+      "Those days should be ignored for Crunch and Staff minutes but not for flights" >> {
+        val legacyCutoffDate = SDate("2020-10-10T10:00:00Z")
+        val createdAt = SDate("2020-10-01T00:00").millisSinceEpoch
+        val scheduled = SDate("2020-10-10T09:00:00Z")
+
+        val removalMessage = UniqueArrivalMessage(Option(1), Option("T1"), Option(scheduled.millisSinceEpoch))
+
+        val flightMessage = FlightMessage(terminal = Option("T1"), scheduled = Option(scheduled.millisSinceEpoch))
+        val fwsMsg = FlightWithSplitsMessage(Option(flightMessage))
+
+        val staffMinuteMessage = StaffMinuteMessage(Option("T1"), Option(scheduled.millisSinceEpoch), Option(1))
+
+        val crunchMinute = CrunchMinuteMessage(Option("T1"), Option("Eea"), Option(scheduled.millisSinceEpoch))
+
+        val crunchDiffMessage = CrunchDiffMessage(Option(createdAt),
+          None,
+          Seq(removalMessage),
+          Seq(fwsMsg),
+          Seq(crunchMinute),
+          Seq(staffMinuteMessage)
+        )
+
+        setMigrationData(crunchDiffMessage)
+
+        val flightsTestProbe = TestProbe()
+        val crunchMinutesTestProbe = TestProbe()
+        val staffMinutesTestProbe = TestProbe()
+        val updateFlightsFn: FlightsMigrationUpdate = flightsUpdateFn(flightsTestProbe)
+
+        val migrator = LegacyMigrator(
+          updateFlightsFn,
+          crunchMinutesUpdateFn(crunchMinutesTestProbe, legacyCutoffDate),
+          staffMinutesUpdateFn(staffMinutesTestProbe, legacyCutoffDate),
+          InMemoryStreamingJournal,
+          LegacyStreamingJournalMigrationActor.legacy1PersistenceId,
+          0L
+        )
+        migrator.start()
+        val expectedMessage = FlightsWithSplitsDiffMessage(Some(createdAt), Vector(removalMessage), Vector(fwsMsg))
+
+        staffMinutesTestProbe.expectNoMessage(500 millis)
+        crunchMinutesTestProbe.expectNoMessage(500 millis)
+        flightsTestProbe.expectMsg(("T1", SDate(2020, 10, 10), expectedMessage))
+        success
+      }
+    }
+  }
+
+  private def flightsUpdateFn(flightsTestProbe: TestProbe) = {
     val requestAndTerminateActor = system.actorOf(Props(new RequestAndTerminateActor))
-    val updateMinutesFn = CrunchMinutesRouterMigrationActor
-      .updateMinutes(requestAndTerminateActor, DummyActor.props(minutesTestProbe.ref))
+    val updateFlightsFn = FlightsRouterMigrationActor
+      .updateFlights(requestAndTerminateActor, DummyActor.props(flightsTestProbe.ref))
+    updateFlightsFn
+  }
+
+  private def crunchMinutesUpdateFn(minutesTestProbe: TestProbe, legacyDate: SDateLike) = {
+    val requestAndTerminateActor = system.actorOf(Props(new RequestAndTerminateActor))
+    val updateMinutesFn = FlightsRouterMigrationActor
+      .updateCrunchMinutes(legacyDate, requestAndTerminateActor, DummyActor.props(minutesTestProbe.ref))
+    updateMinutesFn
+  }
+
+  private def staffMinutesUpdateFn(minutesTestProbe: TestProbe, legacyDate: SDateLike) = {
+    val requestAndTerminateActor = system.actorOf(Props(new RequestAndTerminateActor))
+    val updateMinutesFn = FlightsRouterMigrationActor
+      .updateStaffMinutes(legacyDate, requestAndTerminateActor, DummyActor.props(minutesTestProbe.ref))
     updateMinutesFn
   }
 
