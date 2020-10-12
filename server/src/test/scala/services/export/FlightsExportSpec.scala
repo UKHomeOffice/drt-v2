@@ -1,6 +1,7 @@
 package services.`export`
 
 import akka.actor.{ActorRef, Props}
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator

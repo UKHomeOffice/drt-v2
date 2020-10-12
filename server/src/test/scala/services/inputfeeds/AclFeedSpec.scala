@@ -47,7 +47,7 @@ class AclFeedSpec extends CrunchTestLike {
                                   EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Option(180), ActPax = Option(149),
                                   TranPax = None, RunwayID = None, BaggageReclaimId = None, AirportID = PortCode("LHR"), Terminal = T2,
                                   rawICAO = "4U0460", rawIATA = "4U0460", Origin = PortCode("CGN"), FeedSources = Set(shared.AclFeedSource),
-                                  Scheduled = 1507878600000L, PcpTime = None,ServiceType = Option("J"),LoadFactor = Option(0.827777802944183)))
+                                  Scheduled = 1507878600000L, PcpTime = None))
 
       arrivals === expected
     }
@@ -111,9 +111,7 @@ class AclFeedSpec extends CrunchTestLike {
           Origin = PortCode("CGN"),
           FeedSources = Set(shared.AclFeedSource),
           Scheduled = 1507878600000L,
-          PcpTime = None,
-          ServiceType = Option("J"),
-          LoadFactor = Option(0)))
+          PcpTime = None))
 
       arrivals === expected
     }
@@ -149,9 +147,7 @@ class AclFeedSpec extends CrunchTestLike {
           Origin = PortCode("CGN"),
           FeedSources = Set(shared.AclFeedSource),
           Scheduled = 1507878600000L,
-          PcpTime = None,
-          ServiceType = Option("J"),
-          LoadFactor = Option(0)))
+          PcpTime = None))
 
       arrivals === expected
     }

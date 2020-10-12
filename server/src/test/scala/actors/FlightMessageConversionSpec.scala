@@ -2,8 +2,9 @@ package actors
 
 import drt.shared.Terminals.T1
 import drt.shared.api.{Arrival, FlightCodeSuffix}
-import drt.shared.{AclFeedSource, LiveFeedSource, Operator, PortCode}
+import drt.shared.{AclFeedSource, ApiFeedSource, FeedSource, LiveFeedSource, Operator, PortCode}
 import org.specs2.mutable.Specification
+import server.protobuf.messages.FlightsMessage.FlightMessage
 
 class FlightMessageConversionSpec extends Specification {
 
@@ -31,10 +32,8 @@ class FlightMessageConversionSpec extends Specification {
     Scheduled = 1L,
     PcpTime = Option(10L),
     FeedSources = Set(AclFeedSource, LiveFeedSource),
-    CarrierScheduled = Option(4L),
-    ServiceType = Option("J"),
-    LoadFactor = Option(1)
-  )
+    CarrierScheduled = Option(4L)
+    )
 
   "Given an Arrival with no suffix" >> {
     "When I convert it to a protobuf message and then back to an Arrival" >> {

@@ -54,25 +54,10 @@ describe('Arrivals CSV Export', () => {
     "13,37,1,";
   const actApiData = "4.0,6.0,5.0,0.0,0.0,0.0,7.0,10.0,0.0,19.0";
 
-  const dataWithoutActACLForecastApi = "TS0123,TS0123,AMS,46/44R,ACL Forecast," +
-    schDateLocal + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
-    totalPax + "," + totalPax + "," +
-    eGatePax + "," + eeaDesk + "," + nonEEADesk + ",," +
-    ",,,," +
-    "13,37,1,";
-  const actApiACLForecastData = "4.0,6.0,5.0,0.0,0.0,0.0,7.0,10.0,0.0,19.0";
-
   const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
-  const dataWithActACLForecastApi = dataWithoutActACLForecastApi + "," + actApiACLForecastData;
-
   const csvWithNoApiSplits = headersWithoutActApi + "\n" + dataWithoutActApi + "\n";
-
   const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
-
-  const csvWithAPISplitsNoData =  headersWithActApi + "\n" +  "\n" + "\n";
-
-  const csvWithACLForecastAPISplitsData =  headersWithActApi + "\n" +  dataWithActACLForecastApi + "\n";
 
   it('Does not show API splits in the flights export for regular users', () => {
     cy
@@ -128,6 +113,5 @@ describe('Arrivals CSV Export', () => {
         })
       })
   });
-
 });
 

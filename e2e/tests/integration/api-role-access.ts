@@ -6,7 +6,7 @@ describe('Restrict access to endpoint by role', () => {
   const todayDateString = moment().format("YYYY-MM-DD");
   const todayString = todayDateString + "T00:00:00Z";
   const millis = moment(todayString).unix() * 1000;
-  const filterPassengerFlight = false;
+
   const testCases = [
     {
       roles: ["test"],
@@ -208,7 +208,7 @@ describe('Restrict access to endpoint by role', () => {
     },
     {
       roles: ["test", "arrivals-and-splits:view"],
-      endpoint: "/export/arrivals/" + millis + "/T1/" + filterPassengerFlight ,
+      endpoint: "/export/arrivals/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: true
     },
@@ -226,25 +226,25 @@ describe('Restrict access to endpoint by role', () => {
     },
     {
       roles: ["test"],
-      endpoint: "/export/arrivals/" + millis + "/T1/"+filterPassengerFlight,
+      endpoint: "/export/arrivals/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: false
     },
     {
       roles: ["test", "arrivals-and-splits:view"],
-      endpoint: "/export/arrivals/" + millis + "/" + millis + "/T1/" + filterPassengerFlight,
+      endpoint: "/export/arrivals/" + millis + "/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: true
     },
     {
       roles: ["test"],
-      endpoint: "/export/arrivals/" + millis + "/" + millis + "/T1/" + filterPassengerFlight,
+      endpoint: "/export/arrivals/" + millis + "/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: false
     },
     {
       roles: ["test"],
-      endpoint: "/export/arrivals/" + millis + "/T1/" + filterPassengerFlight,
+      endpoint: "/export/arrivals/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: false
     },
