@@ -181,7 +181,6 @@ Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
     .get("#currentTab").click()
     .get("#arrivalsTab").click()
     .choose24Hours()
-    .get("#toggle-non-passenger-flights-filter").click()
     .get("#arrivals")
     .contains(flightCode);
 })

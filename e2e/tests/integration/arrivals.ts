@@ -151,7 +151,6 @@ describe('Arrivals page', () => {
         "MaxPax": 0,
       })
       .asABorderForceOfficer()
-      .get("#toggle-non-passenger-flights-filter").click()
       .waitForFlightToAppear("TS0123")
       .get(totalPaxSelector)
       .contains("0")
