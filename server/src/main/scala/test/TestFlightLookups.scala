@@ -32,8 +32,6 @@ case class TestFlightLookups(system: ActorSystem,
         updatesSubscriber,
         queuesByTerminal.keys,
         flightsByDayLookup,
-        flightsByDayLookupLegacy(dummyProps),
-        flightsByDayLookupLegacy(dummyProps),
         updateFlights,
         resetFlightsData
       )))

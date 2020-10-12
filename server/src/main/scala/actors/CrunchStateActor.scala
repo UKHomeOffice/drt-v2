@@ -74,7 +74,8 @@ class CrunchStateActor(initialMaybeSnapshotInterval: Option[Int],
   override def receiveCommand: Receive = {
 
     case GetState =>
-      log.debug(s"Received GetState request. Replying with PortState containing ${state.crunchMinutes.size} crunch minutes")
+
+      log.error(s"Received Legacy Query")
       sender() ! Option(state)
 
     case SaveSnapshotSuccess(SnapshotMetadata(_, seqNr, _)) =>

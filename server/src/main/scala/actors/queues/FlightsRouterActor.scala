@@ -54,32 +54,7 @@ object FlightsRouterActor {
     daysRangeMillis.map(SDate(_).toUtcDate)
   }
 
-  def queryStream(legacy1DateCutoff: UtcDate, legacy2DateCutoff: UtcDate, dates: Seq[UtcDate]): Source[QueryLike, NotUsed] = {
-    val grouped: List[QueryLike] = dates
-      .groupBy(d => (d < legacy1DateCutoff, d < legacy2DateCutoff))
-      .collect {
-        case ((isLegacy1, _), dates) if isLegacy1 && dates.nonEmpty =>
-          dates.map(Legacy1Query).toList
-        case ((_, isLegacy2), dates) if isLegacy2 && dates.nonEmpty =>
-          dates.map(Legacy2Query).toList
-        case (_, dates) =>
-          dates.map(Query).to[immutable.Iterable]
-      }
-      .flatten.toList
-
-    Source(grouped.sorted)
-  }
-
-  def queryStreamForPointInTime(legacy1DateCutoff: UtcDate, legacy2DateCutoff: UtcDate, dates: Seq[UtcDate], pointInTime: SDateLike): Source[QueryLike, NotUsed] = {
-    val queries: List[QueryLike] =
-      if (pointInTime < SDate(legacy1DateCutoff))
-        dates.map(Legacy1Query).toList
-      else if (pointInTime < SDate(legacy2DateCutoff))
-        dates.map(Legacy2Query).toList
-      else dates.map(Query).toList
-
-    Source(queries)
-  }
+  def queryStream(dates: Seq[UtcDate]): Source[QueryLike, NotUsed] = Source(dates.map(Query).toList)
 
   def scheduledInRange(start: SDateLike, end: SDateLike, scheduled: MillisSinceEpoch): Boolean = {
     val scheduledDate = SDate(scheduled)
@@ -94,30 +69,19 @@ object FlightsRouterActor {
     pcpStartInRange || pcpEndInRange
   }
 
-  def flightsByDaySource(flightsLookupByDay: FlightsLookup,
-                         flightsLookupByDayLegacy1: FlightsLookup,
-                         flightsLookupByDayLegacy2: FlightsLookup,
-                         legacy1DataCutoff: UtcDate,
-                         legacy2DataCutoff: UtcDate)
+  def flightsByDaySource(flightsLookupByDay: FlightsLookup)
                         (start: SDateLike,
                          end: SDateLike,
                          terminal: Terminal,
                          maybePit: Option[MillisSinceEpoch]): Source[FlightsWithSplits, NotUsed] = {
     val dates = utcDateRange(start, end)
 
-    val queries = maybePit match {
-      case Some(pointInTime) => queryStreamForPointInTime(legacy1DataCutoff, legacy2DataCutoff, dates, SDate(pointInTime))
-      case None => queryStream(legacy1DataCutoff, legacy2DataCutoff, dates)
-    }
+    val queries = queryStream(dates)
 
     queries
       .mapAsync(1) {
-        case Query(date) =>
-          flightsLookupByDay(terminal, date, maybePit)
-        case Legacy1Query(date) =>
-          flightsLookupByDayLegacy1(terminal, date, maybePit)
-        case Legacy2Query(date) =>
-          flightsLookupByDayLegacy2(terminal, date, maybePit)
+        query =>
+          flightsLookupByDay(terminal, query.date, maybePit)
       }
       .map {
         case FlightsWithSplits(flights) =>
@@ -148,11 +112,7 @@ class FlightsRouterActor(
                           updatesSubscriber: ActorRef,
                           terminals: Iterable[Terminal],
                           flightsByDayLookup: FlightsLookup,
-                          flightsInRangeLegacy1Lookup: FlightsLookup,
-                          flightsInRangeLegacy2Lookup: FlightsLookup,
-                          updateFlights: FlightsUpdate,
-                          legacy1Date: SDateLike,
-                          legacy2Date: SDateLike
+                          updateFlights: FlightsUpdate
                         ) extends Actor with ActorLogging {
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
@@ -228,12 +188,7 @@ class FlightsRouterActor(
   }
 
   val handleLookups: (SDateLike, SDateLike, Terminal, Option[MillisSinceEpoch]) => Source[FlightsWithSplits, NotUsed] =
-    FlightsRouterActor.flightsByDaySource(
-      flightsByDayLookup,
-      flightsInRangeLegacy1Lookup,
-      flightsInRangeLegacy2Lookup,
-      legacy1Date.toUtcDate,
-      legacy2Date.toUtcDate)
+    FlightsRouterActor.flightsByDaySource(flightsByDayLookup)
 
   def updateByTerminalDayAndGetDiff(container: FlightsWithSplitsDiff): Future[Seq[MillisSinceEpoch]] = {
     val eventualUpdatedMinutesDiff: Source[Seq[MillisSinceEpoch], NotUsed] =

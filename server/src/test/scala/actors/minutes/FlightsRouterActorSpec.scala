@@ -65,11 +65,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacy2Lookup(),
-          mockLookup.legacy1Lookup(),
-          noopUpdates,
-          legacy1CutOffDate,
-          legacy2CutOffDate
+          noopUpdates
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[FlightsWithSplits, NotUsed]]
@@ -95,11 +91,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacy2Lookup(),
-          mockLookup.legacy1Lookup(),
-          noopUpdates,
-          legacy1CutOffDate,
-          legacy2CutOffDate
+          noopUpdates
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[FlightsWithSplits, NotUsed]]
@@ -125,11 +117,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacy2Lookup(),
-          mockLookup.legacy1Lookup(),
-          noopUpdates,
-          legacy1CutOffDate,
-          legacy2CutOffDate
+          noopUpdates
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[FlightsWithSplits, NotUsed]]
@@ -158,11 +146,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacy2Lookup(),
-          mockLookup.legacy1Lookup(),
-          noopUpdates,
-          legacy1CutOffDate,
-          legacy2CutOffDate
+          noopUpdates
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[FlightsWithSplits, NotUsed]]
@@ -191,11 +175,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacy2Lookup(),
-          mockLookup.legacy1Lookup(),
-          noopUpdates,
-          legacy1CutOffDate,
-          legacy2CutOffDate
+          noopUpdates
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[FlightsWithSplits, NotUsed]]
@@ -224,11 +204,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacy2Lookup(),
-          mockLookup.legacy1Lookup(),
-          noopUpdates,
-          legacy1CutOffDate,
-          legacy2CutOffDate
+          noopUpdates
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[FlightsWithSplits, NotUsed]]
@@ -257,11 +233,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacy2Lookup(),
-          mockLookup.legacy1Lookup(),
-          noopUpdates,
-          legacy1CutOffDate,
-          legacy2CutOffDate
+          noopUpdates
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[FlightsWithSplits, NotUsed]]
@@ -289,11 +261,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
-          mockLookup.legacy2Lookup(),
-          mockLookup.legacy1Lookup(),
-          noopUpdates,
-          legacy1CutOffDate,
-          legacy2CutOffDate
+          noopUpdates
         )))
         val request = GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
         val pitQuery = PointInTimeQuery(SDate("2020-09-22").millisSinceEpoch, request)
@@ -303,168 +271,5 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         result === flights
       }
     }
-  }
-
-  "Concerning requests for flights after the legacy 2 cutoff date but before legacy 1 cutoff date" >> {
-
-    val legacy1CutOffDate: SDateLike = SDate("2020-08-15T00:00Z")
-    val legacy2CutOffDate: SDateLike = SDate("2020-09-01T00:00Z")
-
-    "Given a request for flights scheduled on a date before the cut off date" >> {
-      "That request should be forwarded to the FlightState actor" >> {
-
-        val from = SDate("2020-08-21T00:00Z")
-        val to = SDate("2020-08-23T00:00Z")
-
-        val mockLookup = MockLookup()
-
-        val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          TestProbe().ref,
-          Seq(T1),
-          mockLookup.lookup(),
-          mockLookup.legacy2Lookup(),
-          mockLookup.legacy1Lookup(),
-          noopUpdates,
-          legacy1CutOffDate,
-          legacy2CutOffDate
-        )))
-        val request = GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
-        val result = cmActor.ask(request)(Timeout(5 minutes)).mapTo[Source[FlightsWithSplits, NotUsed]]
-
-        Await.result(result.flatMap(s => s.runWith(Sink.seq)), 1 second)
-
-        mockLookup.paramsLegacy1Lookup === List(
-          (T1, UtcDate(2020,8, 19), None),
-          (T1, UtcDate(2020,8, 20), None),
-          (T1, UtcDate(2020,8, 21), None),
-          (T1, UtcDate(2020,8, 22), None),
-          (T1, UtcDate(2020,8, 23), None),
-          (T1, UtcDate(2020,8, 24), None)
-        )
-      }
-    }
-
-    "Given a request for flspights falling within a range at a point in time before the legacy cutoff date" >> {
-      "That request should be forwarded to the FlightState actor" >> {
-        val from = SDate("2020-08-23T00:00Z")
-        val to = SDate("2020-08-23T00:00Z")
-
-        val mockLookup = MockLookup()
-
-        val pit = SDate("2020-08-23T00:00Z").millisSinceEpoch
-
-        val cmActor: ActorRef = system.actorOf(Props(
-          new FlightsRouterActor(
-            TestProbe().ref,
-            Seq(T1),
-            mockLookup.lookup(),
-            mockLookup.legacy2Lookup(),
-            mockLookup.legacy1Lookup(),
-            noopUpdates,
-            legacy1CutOffDate,
-            legacy2CutOffDate
-          )
-        ))
-
-        val query = GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
-        val pointInTimeRequest = PointInTimeQuery(
-          pit,
-          query
-        )
-        val result = cmActor.ask(pointInTimeRequest).mapTo[Source[FlightsWithSplits, NotUsed]]
-
-        Await.result(result.flatMap(s => s.runWith(Sink.seq)), 1 second)
-
-        mockLookup.paramsLegacy1Lookup === List(
-          (T1, UtcDate(2020,8, 21), Option(pit)),
-          (T1, UtcDate(2020,8, 22), Option(pit)),
-          (T1, UtcDate(2020,8, 23), Option(pit)),
-          (T1, UtcDate(2020,8, 24), Option(pit)),
-        )
-      }
-    }
-  }
-
-  "Concerning requests for flights before the legacy 2 and spanning all 3 date ranges" >> {
-    val legacy1CutOffDate: SDateLike = SDate("2020-09-03T00:00Z")
-    val legacy2CutOffDate: SDateLike = SDate("2020-09-04T00:00Z")
-    "Given a request for flights scheduled on a date before the cut off date" >> {
-      "That request should be forwarded to the FlightState actor" >> {
-
-        val from = SDate("2020-09-01T00:00Z")
-        val to = SDate("2020-09-01T00:00Z")
-
-        val mockLookup = MockLookup()
-
-        val cmActor: ActorRef = system.actorOf(Props(
-          new FlightsRouterActor(
-            TestProbe().ref,
-            Seq(T1),
-            mockLookup.lookup(),
-            mockLookup.legacy2Lookup(),
-            mockLookup.legacy1Lookup(),
-            noopUpdates,
-            legacy1CutOffDate,
-            legacy2CutOffDate
-          )
-        ))
-        val request = GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
-        val result = cmActor.ask(request)(Timeout(5 minutes)).mapTo[Source[FlightsWithSplits, NotUsed]]
-
-        Await.result(result.flatMap(s => s.runWith(Sink.seq)), 1 second)
-
-        mockLookup.paramsLegacy2Lookup === List(
-          (T1, from.addDays(-2).toUtcDate, None),
-          (T1, from.addDays(-1).toUtcDate, None),
-          (T1, from.toUtcDate, None),
-          (T1, from.addDays(1).toUtcDate, None),
-        )
-        mockLookup.paramsLegacy1Lookup === Nil
-        mockLookup.paramsLookup === Nil
-      }
-    }
-
-    "Given a request for flights scheduled on a date before the cut off date" >> {
-      val legacy1CutOffDate: SDateLike = SDate("2020-09-02T00:00Z")
-      val legacy2CutOffDate: SDateLike = SDate("2020-09-04T00:00Z")
-      "That request should be forwarded to the FlightState actor" >> {
-
-        val from = SDate("2020-09-02T00:00Z")
-        val to = SDate("2020-09-04T00:00Z")
-
-        val mockLookup = MockLookup()
-
-        val cmActor: ActorRef = system.actorOf(Props(
-          new FlightsRouterActor(
-            TestProbe().ref,
-            Seq(T1),
-            mockLookup.lookup(),
-            mockLookup.legacy2Lookup(),
-            mockLookup.legacy1Lookup(),
-            noopUpdates,
-            legacy1CutOffDate,
-            legacy2CutOffDate
-          )
-        ))
-        val request = GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
-        val result = cmActor.ask(request)(Timeout(5 minutes)).mapTo[Source[FlightsWithSplits, NotUsed]]
-
-        Await.result(result.flatMap(s => s.runWith(Sink.seq)), 1 second)
-
-        mockLookup.paramsLegacy2Lookup === List(
-          (T1, UtcDate(2020, 8, 31), None),
-          (T1, UtcDate(2020, 9, 1), None),
-        )
-        mockLookup.paramsLegacy1Lookup === List(
-          (T1, UtcDate(2020, 9, 2), None),
-          (T1, UtcDate(2020, 9, 3), None),
-        )
-        mockLookup.paramsLookup === List(
-          (T1, UtcDate(2020, 9, 4), None),
-          (T1, UtcDate(2020, 9, 5), None),
-        )
-      }
-    }
-
   }
 }

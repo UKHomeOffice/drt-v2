@@ -120,6 +120,7 @@ class FlightsStateActor(val now: () => SDateLike,
 
   def updatesRequests: PartialFunction[Any, Unit] = {
     case flightUpdates: FlightsWithSplitsDiff =>
+      log.error(s"Received Legacy2 Arrivals Update $flightUpdates")
       if (flightUpdates.nonEmpty)
         handleDiff(flightUpdates)
       else
@@ -135,19 +136,24 @@ class FlightsStateActor(val now: () => SDateLike,
   }
 
   def standardRequests: Receive = {
-    case GetStateForDateRange(startMillis, endMillis) =>
+    case q@GetStateForDateRange(startMillis, endMillis) =>
+      log.error(s"Received Legacy2 Arrivals Query $q")
       sender() ! state.window(startMillis, endMillis)
 
-    case GetFlights(startMillis, endMillis) =>
+    case q@GetFlights(startMillis, endMillis) =>
+      log.error(s"Received Legacy2 Arrivals Query $q")
       sender() ! state.window(startMillis, endMillis)
 
-    case GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
+    case q@GetStateForTerminalDateRange(startMillis, endMillis, terminal) =>
+      log.error(s"Received Legacy2 Arrivals Query $q")
       sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
 
-    case GetFlightsForTerminalDateRange(startMillis, endMillis, terminal) =>
+    case q@GetFlightsForTerminalDateRange(startMillis, endMillis, terminal) =>
+      log.error(s"Received Legacy2 Arrivals Query $q")
       sender() ! state.forTerminal(terminal).window(startMillis, endMillis)
 
-    case GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
+    case q@GetUpdatesSince(sinceMillis, startMillis, endMillis) =>
+      log.error(s"Received Legacy2 Arrivals Query $q")
       sender() ! state.window(startMillis, endMillis).updatedSince(sinceMillis)
   }
 

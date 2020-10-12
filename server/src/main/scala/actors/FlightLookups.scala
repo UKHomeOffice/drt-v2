@@ -80,11 +80,7 @@ trait FlightLookupsLike {
 case class FlightLookups(system: ActorSystem,
                          now: () => SDateLike,
                          queuesByTerminal: Map[Terminal, Seq[Queue]],
-                         updatesSubscriber: ActorRef,
-                         legacy1Date: SDateLike,
-                         legacy2Date: SDateLike,
-                         tempLegacy1ActorProps: (SDateLike, Int) => Props,
-                         tempLegacy2ActorProps: (SDateLike, Int) => Props
+                         updatesSubscriber: ActorRef
                         )(implicit val ec: ExecutionContext) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
 
@@ -93,10 +89,7 @@ case class FlightLookups(system: ActorSystem,
       updatesSubscriber,
       queuesByTerminal.keys,
       flightsByDayLookup,
-      cachedLookup(flightsByDayLookupLegacy(tempLegacy1ActorProps), now)(system),
-      cachedLookup(flightsByDayLookupLegacy(tempLegacy2ActorProps), now)(system),
-      updateFlights,
-      legacy1Date,
-      legacy2Date))
+      updateFlights
+    ))
   )
 }
