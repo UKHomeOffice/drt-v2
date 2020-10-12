@@ -40,7 +40,7 @@ object TerminalContentComponent {
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])]
                   )
 
-  case class State(activeTab: String, showExportDialogue: Boolean = false, filterPassengerFlights: Boolean = true)
+  case class State(activeTab: String, showExportDialogue: Boolean = false, filterPassengerFlights: Boolean = false)
 
 
   def viewStartAndEnd(day: SDateLike, range: TimeRangeHours): (SDateLike, SDateLike) = {
