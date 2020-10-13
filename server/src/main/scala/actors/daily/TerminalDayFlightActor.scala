@@ -97,7 +97,12 @@ class TerminalDayFlightActor(
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case diff: FlightsWithSplitsDiffMessage => handleDiffMessage(diff)
+    case diff: FlightsWithSplitsDiffMessage =>
+      maybePointInTime match {
+        case Some(pit) if pit < diff.getCreatedAt  =>
+          log.debug(s"Ignoring diff created more recently than the recovery point in time")
+        case _ => handleDiffMessage(diff)
+      }
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
@@ -105,7 +110,7 @@ class TerminalDayFlightActor(
       setStateFromSnapshot(flightMessages)
   }
 
-  override def stateToMessage: GeneratedMessage = FlightMessageConversion.flightsToMessage(state.flights.toMap.values)
+  override def stateToMessage: GeneratedMessage = FlightMessageConversion.flightsToMessage(state.flights.values)
 
   def handleDiffMessage(diff: FlightsWithSplitsDiffMessage): Unit = {
     state = state -- diff.removals.map(uniqueArrivalFromMessage)
