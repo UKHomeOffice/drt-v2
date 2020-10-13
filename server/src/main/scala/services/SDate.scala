@@ -1,7 +1,7 @@
 package services
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{LocalDate, MilliDate, SDateLike}
+import drt.shared.{LocalDate, MilliDate, SDateLike, UtcDate}
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
@@ -45,7 +45,7 @@ object SDate {
     def millisSinceEpoch: MillisSinceEpoch = dateTime.getMillis
 
     def toLocalDateTimeString(): String = {
-      f"${localNow.getFullYear()}-${localNow.getMonth()}%02d-${localNow.getDate()}%02d ${localNow.getHours()}%02d:${localNow.getMinutes()}%02d"
+      f"${toLocal.getFullYear()}-${toLocal.getMonth()}%02d-${toLocal.getDate()}%02d ${toLocal.getHours()}%02d:${toLocal.getMinutes()}%02d"
     }
 
     def toISOString(): String = jodaSDateToIsoString(dateTime)
@@ -62,17 +62,22 @@ object SDate {
     }
 
     def getLocalLastMidnight: SDateLike = {
-      SDate(localNow.toIsoMidnight, europeLondonTimeZone)
+      SDate(toLocal.toIsoMidnight, europeLondonTimeZone)
     }
 
-    private def localNow: SDateLike = SDate(dateTime, europeLondonTimeZone)
+    private lazy val toLocal: SDateLike = SDate(dateTime, europeLondonTimeZone)
 
     def getLocalNextMidnight: SDateLike = {
       val nextDay = getLocalLastMidnight.addDays(1)
       SDate(nextDay.toIsoMidnight, europeLondonTimeZone)
     }
 
-    def toLocalDate: LocalDate = LocalDate(localNow.getFullYear(), localNow.getMonth(), localNow.getDate())
+    def toLocalDate: LocalDate = LocalDate(toLocal.getFullYear(), toLocal.getMonth(), toLocal.getDate())
+
+    def toUtcDate: UtcDate = {
+      val utcLastMidnight = getUtcLastMidnight
+      UtcDate(utcLastMidnight.getFullYear(), utcLastMidnight.getMonth(), utcLastMidnight.getDate())
+    }
   }
 
   def millisToLocalIsoDateOnly(timeZone: DateTimeZone): MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, timeZone).toISODateOnly
@@ -115,9 +120,14 @@ object SDate {
 
   def apply(localDate: LocalDate): SDateLike = SDate(localDate.toISOString + "T00:00", Crunch.europeLondonTimeZone)
 
+  def apply(utcDate: UtcDate): SDateLike = SDate(utcDate.year, utcDate.month, utcDate.day, 0, 0)
+
   def now(): JodaSDate = JodaSDate(new DateTime(DateTimeZone.UTC))
 
   def now(dtz: DateTimeZone): JodaSDate = JodaSDate(new DateTime(dtz))
+
+  def apply(y: Int, m: Int, d: Int): SDateLike =
+    implicits.jodaToSDate(new DateTime(y, m, d, 0, 0, DateTimeZone.UTC))
 
   def apply(y: Int, m: Int, d: Int, h: Int, mm: Int): SDateLike =
     implicits.jodaToSDate(new DateTime(y, m, d, h, mm, DateTimeZone.UTC))

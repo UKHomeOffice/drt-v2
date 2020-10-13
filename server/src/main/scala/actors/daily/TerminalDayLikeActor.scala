@@ -1,7 +1,7 @@
 package actors.daily
 
 import actors.{GetState, RecoveryActorLike, Sizes}
-import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, WithTimeAccessor}
@@ -55,6 +55,9 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
       log.debug(s"Received GetState")
       sender() ! stateResponse
 
+    case _: SaveSnapshotSuccess =>
+      ackIfRequired()
+
     case m => log.warn(s"Got unexpected message: $m")
   }
 
@@ -83,7 +86,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
         state = updateStateFromDiff(state, differences)
         val messageToPersist = containerToMessage(differences)
         val replyToAndMessage = Option(sender(), MinutesContainer(differences))
-        persistAndMaybeSnapshot(messageToPersist, replyToAndMessage)
+        persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)
     }
 
   def containerToMessage(differences: Iterable[VAL]): GeneratedMessage

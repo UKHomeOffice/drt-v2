@@ -125,7 +125,7 @@ class SimulationParamsSpec extends Specification {
 
     val fws = FlightsWithSplits(List(
       ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50)), Set())
-    ).map(a => a.apiFlight.unique -> a))
+    ))
 
     val result = weightingOfOne.applyPassengerWeighting(fws)
 
@@ -137,11 +137,11 @@ class SimulationParamsSpec extends Specification {
 
     val fws = FlightsWithSplits(List(
       ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50)), Set())
-    ).map(a => a.apiFlight.unique -> a))
+    ))
 
     val expected = FlightsWithSplits(List(
-    ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(200), tranPax = Option(100)), Set())
-    ).map(a => a.apiFlight.unique -> a))
+      ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(200), tranPax = Option(100)), Set())
+    ))
 
     val result = weightingOfTwo.applyPassengerWeighting(fws)
 
