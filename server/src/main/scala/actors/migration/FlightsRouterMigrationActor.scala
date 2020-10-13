@@ -93,7 +93,6 @@ class FlightsRouterMigrationActor(updateFlights: FlightsMigrationUpdate) extends
     updateByTerminalDayAndGetAck(flightMessageMigration)
       .onComplete { _ =>
         processingRequest = false
-        log.info(s"** acking back to flights migration actor ($replyTo)")
         replyTo ! Ack
         self ! ProcessNextUpdateRequest
       }

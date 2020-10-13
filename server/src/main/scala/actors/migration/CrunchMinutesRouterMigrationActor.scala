@@ -59,7 +59,6 @@ class CrunchMinutesRouterMigrationActor(updateMinutes: CrunchMinutesMigrationUpd
     updateByTerminalDayAndGetAck(container)
       .onComplete { _ =>
         processingRequest = false
-        log.info(s"** acking back to crunch minutes migration actor ($replyTo)")
         replyTo ! Ack
         self ! ProcessNextUpdateRequest
       }

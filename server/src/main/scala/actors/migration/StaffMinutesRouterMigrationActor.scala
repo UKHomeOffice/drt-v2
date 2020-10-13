@@ -54,7 +54,6 @@ class StaffMinutesRouterMigrationActor(updateMinutes: StaffMinutesMigrationUpdat
     updateByTerminalDayAndGetAck(container)
       .onComplete { _ =>
         processingRequest = false
-        log.info(s"** acking back to staff minutes migration actor ($replyTo)")
         replyTo ! Ack
         self ! ProcessNextUpdateRequest
       }
