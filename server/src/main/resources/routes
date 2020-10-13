@@ -38,7 +38,6 @@ GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName  contro
 GET           /export/arrivals/snapshot/:localDay/:pointInTime/:terminalName  controllers.Application.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDay: String, pointInTime: Long, terminalName: String)
 
 GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource        controllers.Application.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
-GET           /export/api/:terminalName/:year/:month/:day          controllers.Application.exportApi(day: Int, month: Int, year: Int, terminalName: String)
 GET           /export/planning/:weekStarting/:terminalName         controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
 GET           /export/headlines/:weekStarting/:terminalName        controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
 GET           /export/users                                        controllers.Application.exportUsers
