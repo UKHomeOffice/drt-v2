@@ -25,7 +25,7 @@ import scala.collection.immutable.{Map, Seq, SortedMap}
 import scala.concurrent.duration._
 
 
-class MockPortStateActor (probe: TestProbe, responseDelayMillis: Long = 0L) extends Actor {
+class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long = 0L) extends Actor {
   var flightsToReturn: List[ApiFlightWithSplits] = List()
   val log: Logger = LoggerFactory.getLogger(getClass)
 

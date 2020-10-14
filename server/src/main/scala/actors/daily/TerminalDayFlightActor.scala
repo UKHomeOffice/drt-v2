@@ -93,7 +93,7 @@ class TerminalDayFlightActor(
     state = updatedState
 
     val replyToAndMessage = Option(sender(), minutesToUpdate)
-    persistAndMaybeSnapshot(FlightMessageConversion.flightWithSplitsDiffToMessage(diff), replyToAndMessage)
+    persistAndMaybeSnapshotWithAck(FlightMessageConversion.flightWithSplitsDiffToMessage(diff), replyToAndMessage)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

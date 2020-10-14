@@ -37,7 +37,7 @@ object TooltipComponent {
 
   val snapshotTooltip = tooltip("The Snapshot view uses the data that was available to DRT at the point in time selected.")
 
-  val miscTooltip = tooltip("The values under Misc represent the number of staff not allocated to a desk or e-passport gate. You can edit this value by clicking on the Staff Movements tab.")
+  val miscTooltip = tooltip("The values under Misc represent the number of staff not allocated to a desk or e-passport gate (these are often referred to as fixed points). You can edit this value by clicking on the Staff Movements tab.")
 
   val movesTooltip = tooltip("The value displayed in the Moves column reflects adjustments.")
 

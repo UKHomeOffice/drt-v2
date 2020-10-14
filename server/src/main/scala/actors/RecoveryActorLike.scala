@@ -22,6 +22,14 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   val maybeSnapshotInterval: Option[Int] = None
   var messagesPersistedSinceSnapshotCounter = 0
   var bytesSinceSnapshotCounter = 0
+  var maybeAckAfterSnapshot: Option[(ActorRef, Any)] = None
+
+  def ackIfRequired(): Unit = {
+    maybeAckAfterSnapshot.foreach {
+      case (replyTo, msg) => replyTo ! msg
+    }
+    maybeAckAfterSnapshot = None
+  }
 
   def unknownMessage: PartialFunction[Any, Unit] = {
     case unknown => logUnknown(unknown)
@@ -41,7 +49,9 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   def stateToMessage: GeneratedMessage
 
-  def persistAndMaybeSnapshot(messageToPersist: GeneratedMessage, maybeAck: Option[(ActorRef, Any)] = None): Unit = {
+  def persistAndMaybeSnapshot(message: GeneratedMessage): Unit = persistAndMaybeSnapshotWithAck(message, None)
+
+  def persistAndMaybeSnapshotWithAck(messageToPersist: GeneratedMessage, maybeAck: Option[(ActorRef, Any)]): Unit = {
     persist(messageToPersist) { message =>
       val messageBytes = message.serializedSize
       log.debug(s"Persisting $messageBytes bytes of ${message.getClass}")
@@ -51,15 +61,16 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
       messagesPersistedSinceSnapshotCounter += 1
       logCounters(bytesSinceSnapshotCounter, messagesPersistedSinceSnapshotCounter, snapshotBytesThreshold, maybeSnapshotInterval)
 
-      snapshotIfNeeded(stateToMessage)
-
-      maybeAck.foreach {
-        case (replyTo, ackMsg) => replyTo ! ackMsg
+      if (shouldTakeSnapshot) {
+        takeSnapshot(stateToMessage)
+        maybeAckAfterSnapshot = maybeAck
+      } else {
+        maybeAck.foreach {
+          case (replyTo, ackMsg) => replyTo ! ackMsg
+        }
       }
     }
   }
-
-  def snapshotIfNeeded(stateToSnapshot: GeneratedMessage): Unit = if (shouldTakeSnapshot) takeSnapshot(stateToSnapshot)
 
   def takeSnapshot(stateToSnapshot: GeneratedMessage): Unit = {
     log.debug(s"Snapshotting ${stateToSnapshot.serializedSize} bytes of ${stateToSnapshot.getClass}. Resetting counters to zero")
