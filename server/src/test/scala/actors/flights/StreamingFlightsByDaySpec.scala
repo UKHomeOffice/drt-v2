@@ -73,8 +73,6 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     val flight0509Early = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T01:10Z", pcpDt = "2020-09-04T23:50Z", actPax = Option(100)), Set())
     val flight0609 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-06T12:00Z", pcpDt = "2020-09-06T12:00Z", actPax = Option(100)), Set())
 
-    val dummyByDayLookup = (_: Terminal, utcDate: UtcDate, _: Option[MillisSinceEpoch]) => Future(FlightsWithSplits.empty)
-
     val earlyOnTimeAndLateFlights = (_: Terminal, utcDate: UtcDate, _: Option[MillisSinceEpoch]) =>
       Future(Map(
         UtcDate(2020, 9, 1) -> FlightsWithSplits(Seq(flight0109)),
@@ -89,7 +87,6 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
       "I should see the late pcp from 2nd, all 3 flights from the 3rd, 4th, and the early flight from the 5th" >> {
         val startDate = SDate(2020, 9, 3)
         val endDate = SDate(2020, 9, 4, 23, 59)
-        val mockLookup = MockLookup()
 
         val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights)(startDate, endDate, T1, None)
         val result = Await.result(FlightsRouterActor.runAndCombine(Future(flights)), 1 second)
