@@ -4,6 +4,7 @@ import java.util.UUID
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.RequestAndTerminate
+import actors.migration.FlightsRouterMigrationActor.removeInvalidRemovals
 import actors.minutes.MinutesActorLike.{CrunchMinutesMigrationUpdate, FlightsMigrationUpdate, ProcessNextUpdateRequest, StaffMinutesMigrationUpdate}
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
@@ -52,6 +53,14 @@ object FlightsRouterMigrationActor {
         requestAndTerminateActor.ask(RequestAndTerminate(actor, cms))
       } else Future(Ack)
     }
+
+  def removeInvalidRemovals(diff: FlightsWithSplitsDiffMessage): FlightsWithSplitsDiffMessage = {
+    val createdDay = SDate(diff.getCreatedAt).toUtcDate
+
+    diff.copy(removals = diff.removals.filter { unique =>
+      createdDay < SDate(unique.getScheduled).toUtcDate
+    })
+  }
 }
 
 class FlightsRouterMigrationActor(updateFlights: FlightsMigrationUpdate) extends Actor with ActorLogging {
@@ -101,19 +110,19 @@ class FlightsRouterMigrationActor(updateFlights: FlightsMigrationUpdate) extends
   def updateByTerminalDayAndGetAck(container: FlightMessageMigration): Future[immutable.Seq[Any]] =
     Source(groupByTerminalAndDay(container))
       .mapAsync(1) {
-        case ((terminal, day), splitsDiffMessage) =>
-          updateFlights(terminal, day, splitsDiffMessage)
+        case ((terminal, day), flightsDiffMessage) =>
+          updateFlights(terminal, day, removeInvalidRemovals(flightsDiffMessage))
       }
       .runWith(Sink.seq)
 
-  def groupByTerminalAndDay(flightMessageMigration: FlightMessageMigration): Map[(String, UtcDate), FlightsWithSplitsDiffMessage] = {
+  def groupByTerminalAndDay(flightMessageMigration: FlightMessageMigration): List[((String, UtcDate), FlightsWithSplitsDiffMessage)] = {
     val updates: Map[(String, UtcDate), Seq[FlightWithSplitsMessage]] = flightMessageMigration.flightsUpdateMessages
       .groupBy(flightWithSplitsMessage =>
         (flightWithSplitsMessage.getFlight.getTerminal, SDate(flightWithSplitsMessage.getFlight.getScheduled).toUtcDate))
     val removals: Map[(String, UtcDate), Seq[UniqueArrivalMessage]] = flightMessageMigration.flightRemovalsMessage
       .groupBy(ua => (ua.getTerminalName, SDate(ua.getScheduled).toUtcDate))
 
-    val keys = updates.keys ++ removals.keys
+    val keys = (updates.keys ++ removals.keys).toList.sorted
     keys
       .map {
         terminalDay =>
@@ -124,7 +133,7 @@ class FlightsRouterMigrationActor(updateFlights: FlightsMigrationUpdate) extends
           )
           (terminalDay, diff)
       }
-      .toMap
+
   }
 
 }
