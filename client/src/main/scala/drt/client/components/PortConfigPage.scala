@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.client.components.TooltipComponent._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -44,7 +45,7 @@ object PortConfigDetails {
                   minMaxDesksTable(config.minMaxDesksByTerminalQueue24Hrs(tn))
                 ),
                 <.div(^.className := "container config-container",
-                  <.h4("Default Processing Times"),
+                  <.h4("Default Processing Times", " ", defaultProcessingTimesTooltip),
                   defaultProcessingTimesTable(config.terminalProcessingTimes(tn))
                 ),
                 <.div(^.className := "container config-container",
@@ -52,7 +53,7 @@ object PortConfigDetails {
                   defaultPaxSplits(config.terminalPaxTypeQueueAllocation(tn))
                 ),
                 <.div(^.className := "container config-container",
-                  <.h4("Walktimes"),
+                  <.h4("Walktimes", " ", walkTimesTooltip),
                   defaultWalktime(config.defaultWalkTimeMillis(tn))
                 )
               )

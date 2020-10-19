@@ -64,13 +64,16 @@ class TestDrtActor extends Actor {
       val liveArrivalsProbe = testProbe("live-arrivals")
 
       val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(tc.now, DrtStaticParameters.timeBeforeThisMonth(tc.now))))
+
       val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(tc.now)))
       val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now))))
       val snapshotInterval = 1
       val manifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(oneMegaByte, tc.now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval))))
       val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(tc.now, journalType, tc.airportConfig.crunchOffsetMinutes)))
       val deploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes)))
-      val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(tc.now, expireAfterMillis, tc.airportConfig.queuesByTerminal, SDate("1970-01-01"), 1000)))
+      val dummyLegacy1ActorProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
+      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, crunchQueueActor)
+      val flightsActor: ActorRef = flightLookups.flightsActor
 
       val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsActor, tc.now, tc.airportConfig)
 
@@ -108,7 +111,6 @@ class TestDrtActor extends Actor {
 
         if (tc.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 
-        portStateActor ! SetCrunchQueueActor(crunchQueueActor)
         portStateActor ! SetDeploymentQueueActor(deploymentQueueActor)
         (deskRecsKillSwitch, deploymentsKillSwitch)
       }
@@ -136,17 +138,54 @@ class TestDrtActor extends Actor {
         case Some(actor) => actor
       }
 
-      val crunchInputs = CrunchSystem(CrunchProps(logLabel = tc.logLabel, airportConfig = tc.airportConfig, pcpArrival = tc.pcpArrivalTime, portStateActor = portStateActor, maxDaysToCrunch = tc.maxDaysToCrunch, expireAfterMillis = tc.expireAfterMillis, actors = Map[String, ActorRef](
-                "shifts" -> shiftsActor,
-                "fixed-points" -> fixedPointsActor,
-                "staff-movements" -> staffMovementsActor,
-                "forecast-base-arrivals" -> forecastBaseArrivalsProbe.ref,
-                "forecast-arrivals" -> forecastArrivalsProbe.ref,
-                "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
-                "live-arrivals" -> liveArrivalsProbe.ref,
-                "aggregated-arrivals" -> aggregatedArrivalsActor,
-                "deployment-request" -> deploymentQueueActor
-                ), useNationalityBasedProcessingTimes = false, useLegacyManifests = tc.useLegacyManifests, now = tc.now, manifestsLiveSource = manifestsSource, manifestResponsesSource = manifestResponsesSource, voyageManifestsActor = manifestsActor, manifestRequestsSink = manifestRequestsSink, simulator = tc.simulator, initialPortState = tc.initialPortState, initialForecastBaseArrivals = tc.initialForecastBaseArrivals, initialForecastArrivals = tc.initialForecastArrivals, initialLiveBaseArrivals = tc.initialLiveBaseArrivals, initialLiveArrivals = tc.initialLiveArrivals, arrivalsForecastBaseSource = forecastBaseArrivals, arrivalsForecastSource = forecastArrivals, pcpPaxFn = tc.pcpPaxFn, arrivalsLiveBaseSource = liveBaseArrivals, arrivalsLiveSource = liveArrivals, passengersActorProvider = passengersActorProvider, initialShifts = tc.initialShifts, initialFixedPoints = tc.initialFixedPoints, initialStaffMovements = tc.initialStaffMovements, refreshArrivalsOnStart = tc.refreshArrivalsOnStart, stageThrottlePer = 50 milliseconds, adjustEGateUseByUnder12s = false, optimiser = tc.cruncher, aclPaxAdjustmentDays = aclPaxAdjustmentDays, startDeskRecs = startDeskRecs, arrivalsAdjustments = tc.arrivalsAdjustments))
+      val crunchInputs = CrunchSystem(CrunchProps(
+        logLabel = tc.logLabel,
+        airportConfig = tc.airportConfig,
+        pcpArrival = tc.pcpArrivalTime,
+        portStateActor = portStateActor,
+        maxDaysToCrunch = tc.maxDaysToCrunch,
+        expireAfterMillis = tc.expireAfterMillis,
+        actors = Map[String, ActorRef](
+          "shifts" -> shiftsActor,
+          "fixed-points" -> fixedPointsActor,
+          "staff-movements" -> staffMovementsActor,
+          "forecast-base-arrivals" -> forecastBaseArrivalsProbe.ref,
+          "forecast-arrivals" -> forecastArrivalsProbe.ref,
+          "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
+          "live-arrivals" -> liveArrivalsProbe.ref,
+          "aggregated-arrivals" -> aggregatedArrivalsActor,
+          "deployment-request" -> deploymentQueueActor
+          ),
+        useNationalityBasedProcessingTimes = false,
+        useLegacyManifests = tc.useLegacyManifests,
+        now = tc.now,
+        manifestsLiveSource = manifestsSource,
+        manifestResponsesSource = manifestResponsesSource,
+        voyageManifestsActor = manifestsActor,
+        manifestRequestsSink = manifestRequestsSink,
+        simulator = tc.simulator,
+        initialPortState = tc.initialPortState,
+        initialForecastBaseArrivals = tc.initialForecastBaseArrivals,
+        initialForecastArrivals = tc.initialForecastArrivals,
+        initialLiveBaseArrivals = tc.initialLiveBaseArrivals,
+        initialLiveArrivals = tc.initialLiveArrivals,
+        arrivalsForecastBaseSource = forecastBaseArrivals,
+        arrivalsForecastSource = forecastArrivals,
+        arrivalsLiveBaseSource = liveBaseArrivals,
+        arrivalsLiveSource = liveArrivals,
+        passengersActorProvider = passengersActorProvider,
+        initialShifts = tc.initialShifts,
+        initialFixedPoints = tc.initialFixedPoints,
+        initialStaffMovements = tc.initialStaffMovements,
+        refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
+        stageThrottlePer = 50 milliseconds,
+        pcpPaxFn = tc.pcpPaxFn,
+        adjustEGateUseByUnder12s = false,
+        optimiser = tc.cruncher,
+        aclPaxAdjustmentDays = aclPaxAdjustmentDays,
+        startDeskRecs = startDeskRecs,
+        arrivalsAdjustments = tc.arrivalsAdjustments
+      ))
 
       replyTo ! CrunchGraphInputsAndProbes(
         baseArrivalsInput = crunchInputs.forecastBaseArrivalsResponse,

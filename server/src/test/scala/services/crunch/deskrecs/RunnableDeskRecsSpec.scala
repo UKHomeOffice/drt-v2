@@ -3,6 +3,7 @@ package services.crunch.deskrecs
 import actors.PartitionedPortStateActor.GetFlights
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.actor.{Actor, Props}
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes}
@@ -42,7 +43,7 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long = 0L) exten
 
     case getFlights: GetFlights =>
       Thread.sleep(responseDelayMillis)
-      sender() ! FlightsWithSplits(flightsToReturn.map(fws => (fws.unique, fws)))
+      sender() ! Source(List(FlightsWithSplits(flightsToReturn)))
       probe.ref ! getFlights
 
     case drm: DeskRecMinutes =>

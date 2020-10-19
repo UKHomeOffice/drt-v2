@@ -118,7 +118,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
       log.info(s"Added $movementsToAdd. We have ${state.staffMovements.movements.length} movements after purging")
       val movements: StaffMovements = StaffMovements(movementsToAdd)
       val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements), Option(now().millisSinceEpoch))
-      persistAndMaybeSnapshot(messagesToPersist, Option(sender(), AddStaffMovementsAck(movementsToAdd)))
+      persistAndMaybeSnapshotWithAck(messagesToPersist, Option(sender(), AddStaffMovementsAck(movementsToAdd)))
 
     case RemoveStaffMovements(uuidToRemove) =>
       val updatedStaffMovements = state.staffMovements - Seq(uuidToRemove)
@@ -126,10 +126,11 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
       log.info(s"Removed $uuidToRemove. We have ${state.staffMovements.movements.length} movements after purging")
       val messagesToPersist: RemoveStaffMovementMessage = RemoveStaffMovementMessage(Option(uuidToRemove.toString), Option(now().millisSinceEpoch))
-      persistAndMaybeSnapshot(messagesToPersist, Option(sender(), RemoveStaffMovementsAck(uuidToRemove)))
+      persistAndMaybeSnapshotWithAck(messagesToPersist, Option(sender(), RemoveStaffMovementsAck(uuidToRemove)))
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
+      ackIfRequired()
 
     case SaveSnapshotFailure(md, cause) =>
       log.error(s"Save snapshot failure: $md", cause)

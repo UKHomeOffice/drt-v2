@@ -1,6 +1,6 @@
 package services.exports
 
-import actors.PartitionedPortStateActor.{DateRangeLike, GetFlightsForTerminal, GetMinutesForTerminalDateRange}
+import actors.PartitionedPortStateActor.{DateRangeLike, GetFlightsForTerminalDateRange, GetMinutesForTerminalDateRange}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
@@ -130,7 +130,7 @@ object Exports {
                                    flightsProvider: DateRangeLike => Future[Any])
                                   (from: SDateLike, to: SDateLike)
                                   (implicit ec: ExecutionContext): Future[TerminalSummaryLike] =
-    flightsProvider(GetFlightsForTerminal(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
+    flightsProvider(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, terminal)).map {
       case flights: FlightsWithSplits =>
         val terminalFlights = flightsForTimeRange(flights, from, to)
         terminalFlightsSummaryGenerator(terminalFlights, millisToLocalIsoDateOnly, millisToLocalHoursAndMinutes, pcpPaxFn)

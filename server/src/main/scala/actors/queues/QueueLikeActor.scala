@@ -71,7 +71,6 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
     case ReadyToEmit =>
       readyToEmit = true
-      log.debug(s"Got a ReadyToEmit. Will emit if I have something in the queue")
       emitNextDayIfReady()
 
     case SetDaysQueueSource(source) =>
@@ -103,7 +102,6 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
   def emitNextDayIfReady(): Unit = if (readyToEmit)
     queuedDays.headOption match {
       case Some(day) =>
-        log.debug(s"Emitting ${SDate(day, Crunch.europeLondonTimeZone).toISODateOnly}")
         readyToEmit = false
         maybeDaysQueueSource.foreach { sourceQueue =>
           sourceQueue.offer(day).foreach { _ =>
@@ -117,6 +115,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
     }
 
   def updateState(days: Iterable[MillisSinceEpoch]): Unit = {
+    log.info(s"Adding ${days.size} days to queue. Queue now contains ${queuedDays.size} days")
     queuedDays = queuedDays ++ days
   }
 

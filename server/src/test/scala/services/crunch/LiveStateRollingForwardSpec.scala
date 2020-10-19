@@ -39,7 +39,6 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     nowDate = SDate(wednesday)
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2))))
 
-    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival))
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2))
 
     success

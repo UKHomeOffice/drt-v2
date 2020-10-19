@@ -78,9 +78,9 @@ object RunnableCrunch {
       liveBaseArrivalsSource,
       liveArrivalsSource,
       manifestsLiveSource,
-      shiftsSource.async("staff-dispatcher"),
-      fixedPointsSource.async("staff-dispatcher"),
-      staffMovementsSource.async("staff-dispatcher"),
+      shiftsSource,
+      fixedPointsSource,
+      staffMovementsSource,
       actualDesksAndWaitTimesSource,
       arrivalsKillSwitch,
       manifestsLiveKillSwitch,
@@ -107,13 +107,13 @@ object RunnableCrunch {
           movementsKillSwitchSync
         ) =>
           def newPortStateSink(): SinkShape[Any] = {
-            builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("port-state-dispatcher"))
+            builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async)
           }
 
-          val arrivals = builder.add(arrivalsGraphStage.async("arrivals-dispatcher"))
-          val arrivalSplits = builder.add(arrivalSplitsStage.async("arrivals-dispatcher"))
-          val staff = builder.add(staffGraphStage.async("staff-dispatcher"))
-          val deploymentRequestSink = builder.add(Sink.actorRef(deploymentRequestActor, StreamCompleted).async("simulation-dispatcher"))
+          val arrivals = builder.add(arrivalsGraphStage)
+          val arrivalSplits = builder.add(arrivalSplitsStage)
+          val staff = builder.add(staffGraphStage)
+          val deploymentRequestSink = builder.add(Sink.actorRef(deploymentRequestActor, StreamCompleted))
           val deskStatsSink = newPortStateSink()
           val flightsWithSplitsSink = newPortStateSink()
 
@@ -140,8 +140,8 @@ object RunnableCrunch {
 
           val manifestsSink = builder.add(Sink.actorRef(manifestsActor, StreamCompleted))
 
-          val arrivalUpdatesSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("aggregated-arrivals-dispatcher"))
-          val arrivalRemovalsSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async("aggregated-arrivals-dispatcher"))
+          val arrivalUpdatesSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
+          val arrivalRemovalsSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
 
           // @formatter:off
           forecastBaseArrivalsSourceSync.out.map {
@@ -202,7 +202,7 @@ object RunnableCrunch {
           arrivalSplits.out ~> arrivalSplitsFanOut
                                arrivalSplitsFanOut ~> flightsWithSplitsSink
                                arrivalSplitsFanOut
-                                 .map(_.arrivalsToRemove.map(a => RemoveFlight(a.unique)).toList)
+                                 .map(_.arrivalsToRemove.map(ua => RemoveFlight(ua)).toList)
                                  .conflateWithSeed(List(_)) { case (acc, incoming) =>
                                     log.info(s"${acc.length + incoming.length} conflated arrivals for removal sink")
                                     acc :+ incoming }

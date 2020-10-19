@@ -18,6 +18,8 @@ import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
+import TooltipComponent._
+import scala.util.Try
 
 object TerminalContentComponent {
 
@@ -104,7 +106,7 @@ object TerminalContentComponent {
                     props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
                   }),
                 <.li(^.className := staffingActive,
-                  <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements"), ^.onClick --> {
+                  <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements"," ", staffMovementsTabTooltip), ^.onClick --> {
                     GoogleEventTracker.sendEvent(terminalName, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
                   }),
@@ -122,7 +124,7 @@ object TerminalContentComponent {
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
                   ExportArrivals,
-                  SPAMain.exportViewUrl(ExportArrivals, props.terminalPageTab.viewMode, terminal)
+                  SPAMain.exportArrivalViewUrl(props.terminalPageTab.viewMode, terminal)
                 ),
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,

@@ -113,7 +113,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
   val queryFromPortStateFn: Option[MillisSinceEpoch] => DateRangeLike => Future[Any] = (maybePointInTime: Option[MillisSinceEpoch]) => (message: DateRangeLike) => {
     implicit val timeout: Timeout = new Timeout(30 seconds)
 
-    val finalMessage = maybePointInTime match {
+    val finalMessage: DateRangeLike = maybePointInTime match {
       case None => message
       case Some(pit) => PointInTimeQuery(pit, message)
     }

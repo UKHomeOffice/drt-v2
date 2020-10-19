@@ -5,6 +5,7 @@ import drt.auth.LoggedInUser
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
+import drt.client.components.TooltipComponent._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.{SPACircuit, ViewMode}
@@ -89,16 +90,16 @@ object TerminalDesksAndQueues {
           case ViewDeps =>
             val h = List(<.th(
               ^.title := "Suggested deployment given available staff",
-              s"Dep ${deskUnitLabel(queueName)}", ^.className := queueColumnClass)
+              s"Dep ${deskUnitLabel(queueName)}", " ", depTooltip(queueName) ,^.className := queueColumnClass)
             )
             if (showWaitColumn)
-              h :+ <.th(^.title := "Wait times with suggested deployments", "Est wait", ^.className := queueColumnClass)
+              h :+ <.th(^.title := "Wait times with suggested deployments", "Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
             else
               h
           case ViewRecs =>
             val h = List(<.th(^.title := "Recommendations to best meet SLAs", s"Rec ${deskUnitLabel(queueName)}", ^.className := queueColumnClass))
             if (showWaitColumn)
-              h :+ <.th(^.title := "Wait times with recommendations", "Est wait", ^.className := queueColumnClass)
+              h :+ <.th(^.title := "Wait times with recommendations", "Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
             else
               h
         }
@@ -114,11 +115,11 @@ object TerminalDesksAndQueues {
         val queueSubHeadings = queueNames.flatMap(queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName, showWaitColumn)).toTagMod
 
         List(queueSubHeadings,
-          <.th(^.className := "non-pcp", "Misc", ^.title := "Miscellaneous staff"),
-          <.th(^.className := "non-pcp", "Moves", ^.title := "Staff movements"),
-          <.th(^.className := "total-deployed", "Rec", ^.title := "Total staff recommended for desks"),
+          <.th(^.className := "non-pcp", "Misc", " ", miscTooltip, ^.title := "Miscellaneous staff"),
+          <.th(^.className := "non-pcp", "Moves"," ", movesTooltip, ^.title := "Staff movements"),
+          <.th(^.className := "total-deployed", "Rec", " ", recToolTip, ^.title := "Total staff recommended for desks"),
           <.th(^.className := "total-deployed", "Dep", ^.title := "Total staff deployed based on assignments entered"),
-          <.th(^.className := "total-deployed", "Avail", ^.colSpan := 2, ^.title := "Total staff available based on staff entered"))
+          <.th(^.className := "total-deployed", "Avail", " ", availTooltip, ^.colSpan := 2, ^.title := "Total staff available based on staff entered"))
       }
 
       def qth(queue: Queue, xs: TagMod*) = <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)
@@ -168,11 +169,11 @@ object TerminalDesksAndQueues {
         List(
           <.div(^.className := s"selector-control view-type-control $viewRecsClass",
             <.input.radio(^.checked := state.viewType == ViewRecs, ^.onChange ==> toggleViewType(ViewRecs), ^.id := "show-recs"),
-            <.label(^.`for` := "show-recs", "Recommendations")
+            <.label(^.`for` := "show-recs", "Recommendations", " ", recommendationsTooltip)
           ),
           <.div(^.className := s"selector-control view-type-control $viewDepsClass",
             <.input.radio(^.checked := state.viewType == ViewDeps, ^.onChange ==> toggleViewType(ViewDeps), ^.id := "show-deps"),
-            <.label(^.`for` := "show-deps", "Available staff deployments")
+            <.label(^.`for` := "show-deps", "Available staff deployments", " ", availableStaffDeploymentsTooltip)
           )).toTagMod
       }
 

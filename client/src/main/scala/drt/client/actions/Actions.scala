@@ -154,6 +154,8 @@ object Actions {
 
   case class FileUploadStatus(fileUploadState:FileUploadState) extends Action
 
+  case class FileUploadInProgress() extends Action
+
   case class ForecastFileUploadAction(portCode: String, formData:FormData) extends Action
 
   case class ResetFileUpload() extends Action

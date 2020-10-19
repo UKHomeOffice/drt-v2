@@ -2,6 +2,7 @@ package actors.minutes
 
 import actors.PartitionedPortStateActor.{DateRangeLike, GetMinutesForTerminalDateRange, GetStateForDateRange, GetStateForTerminalDateRange, PointInTimeQuery, PortStateRequest, TerminalRequest}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.migration.{CrunchMinutesMessageMigration, StaffMinutesMessageMigration}
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef}
@@ -11,8 +12,9 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, Terminals, WithTimeAccessor}
+import drt.shared.{SDateLike, Terminals, UtcDate, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
+import server.protobuf.messages.CrunchState.{CrunchMinutesMessage, FlightsWithSplitsDiffMessage, StaffMinutesMessage}
 import services.SDate
 import services.graphstages.Crunch
 
@@ -22,10 +24,13 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object MinutesActorLike {
   type MinutesLookup[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, Option[MillisSinceEpoch]) => Future[Option[MinutesContainer[A, B]]]
-  type FlightsLookup = (Terminals.Terminal, SDateLike, Option[MillisSinceEpoch]) => Future[Option[FlightsWithSplits]]
+  type FlightsLookup = (Terminals.Terminal, UtcDate, Option[MillisSinceEpoch]) => Future[FlightsWithSplits]
 
   type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A, B]]
-  type FlightsUpdate = (Terminals.Terminal, SDateLike, FlightsWithSplitsDiff) => Future[Set[MillisSinceEpoch]]
+  type CrunchMinutesMigrationUpdate = (String, UtcDate, CrunchMinutesMessageMigration) => Future[Any]
+  type StaffMinutesMigrationUpdate = (String, UtcDate, StaffMinutesMessageMigration) => Future[Any]
+  type FlightsUpdate = (Terminals.Terminal, UtcDate, FlightsWithSplitsDiff) => Future[Seq[MillisSinceEpoch]]
+  type FlightsMigrationUpdate = (String, UtcDate, FlightsWithSplitsDiffMessage) => Future[Any]
 
   case object ProcessNextUpdateRequest
 
@@ -112,7 +117,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
         .collect {
           case (_, Some(container)) => container.window(start, end)
           case (day, None) =>
-            log.info(s"No minutes found for for ${day.toISOString()}")
+            log.debug(s"No minutes found for for ${day.toISOString()}")
             MinutesContainer.empty[A, B]
         }
         .fold(MinutesContainer[A, B](Seq())) {

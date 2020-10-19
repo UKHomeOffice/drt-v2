@@ -77,10 +77,11 @@ object PortStateMessageConversion {
     movements = Option(sm.movements),
     lastUpdated = sm.lastUpdated)
 
-  def flightsFromMessages(flightMessages: Seq[FlightWithSplitsMessage]): Seq[(UniqueArrival, ApiFlightWithSplits)] = flightMessages.map(message => {
-    val fws = flightWithSplitsFromMessage(message)
-    (fws.unique, fws)
-  })
+  def flightsFromMessages(flightMessages: Seq[FlightWithSplitsMessage]): Map[UniqueArrival, ApiFlightWithSplits] =
+    flightMessages.map(message => {
+      val fws = flightWithSplitsFromMessage(message)
+      (fws.unique, fws)
+    }).toMap
 
   def portStateToSnapshotMessage(portState: PortState): CrunchStateSnapshotMessage = {
     CrunchStateSnapshotMessage(
@@ -111,7 +112,6 @@ object PortStateMessageConversion {
       splitSource,
       sm.eventType.map(EventType(_)),
       SplitStyle(sm.style.getOrElse("")),
-
     )
   }
 

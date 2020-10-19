@@ -2,17 +2,35 @@ package actors
 
 import actors.PortStateMessageConversion.splitMessageToApiSplits
 import actors.restore.RestorerWithLegacy
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
-import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightMessage, FlightStateSnapshotMessage}
+import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightMessage, FlightStateSnapshotMessage, _}
 import services.SDate
 
 import scala.util.{Success, Try}
 
 object FlightMessageConversion {
+  def flightWithSplitsDiffFromMessage(diffMessage: FlightsWithSplitsDiffMessage): FlightsWithSplitsDiff =
+    FlightsWithSplitsDiff(diffMessage.updates.map(flightWithSplitsFromMessage).toList, diffMessage.removals.collect {
+      case UniqueArrivalMessage(Some(number), Some(terminal), Some(scheduled)) =>
+        UniqueArrival(number, terminal, scheduled)
+    }.toList)
+
+
+  def flightWithSplitsDiffToMessage(diff: FlightsApi.FlightsWithSplitsDiff) = {
+    FlightsWithSplitsDiffMessage(
+      createdAt = Option(SDate.now().millisSinceEpoch),
+      removals = diff.arrivalsToRemove.map(ua => {
+        UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled))
+      }),
+      updates = diff.flightsToUpdate.map(flightWithSplitsToMessage)
+    )
+  }
+
   val log: Logger = LoggerFactory.getLogger(getClass.toString)
 
   def arrivalsStateToSnapshotMessage(state: ArrivalsState): FlightStateSnapshotMessage = {

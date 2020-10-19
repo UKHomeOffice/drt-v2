@@ -76,7 +76,7 @@ object MultiDayExportComponent {
                   scope.modState(_.copy(endDay = d.getDate(), endMonth = d.getMonth(), endYear = d.getFullYear()))
                 }),
                 if (state.startMillis > state.endMillis)
-                    <.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date.")
+                  <.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date.")
                 else
                   EmptyVdom,
 
@@ -86,7 +86,9 @@ object MultiDayExportComponent {
                     if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
                       <.a("Export Arrivals",
                         ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/arrivals/${state.startMillis}/${state.endMillis}/${props.terminal}"),
+                        ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
+                          s"${SDate(state.startMillis).toLocalDate.toISOString}/" +
+                          s"${SDate(state.endMillis).toLocalDate.toISOString}/${props.terminal}"),
                         ^.target := "_blank",
                         ^.onClick --> {
                           Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))

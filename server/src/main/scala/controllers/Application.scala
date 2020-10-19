@@ -158,6 +158,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithPortState
     with WithStaffing
     with WithVersion
+    with WithMigrations
     with WithSimulations {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem

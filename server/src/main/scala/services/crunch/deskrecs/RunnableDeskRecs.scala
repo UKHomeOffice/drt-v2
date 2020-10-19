@@ -2,6 +2,7 @@ package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetFlights
 import actors.acking.AckingReceiver._
+import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream._
@@ -28,6 +29,7 @@ object RunnableDeskRecs {
             portDeskRecs: DesksAndWaitsPortProviderLike,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
            (implicit executionContext: ExecutionContext,
+            materializer: Materializer,
             timeout: Timeout = new Timeout(60 seconds)): RunnableGraph[(SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -46,7 +48,10 @@ object RunnableDeskRecs {
             .map(min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch)
             .mapAsync(1) { crunchStartMillis =>
               log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString()}")
-              flightsToCrunch(portStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
+              flightsSource(portStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis).map(s => (crunchStartMillis, s))
+            }
+            .flatMapConcat {
+              case (startMillis, source) => source.fold(FlightsWithSplits.empty)(_ ++ _).map(fws => (startMillis, fws))
             }
             .map { case (crunchStartMillis, flights) =>
               val crunchEndMillis = SDate(crunchStartMillis).addMinutes(portDeskRecs.minutesToCrunch).millisSinceEpoch
@@ -55,7 +60,6 @@ object RunnableDeskRecs {
               log.info(s"Crunching ${flights.flights.size} flights, ${minuteMillis.length} minutes (${SDate(crunchStartMillis).toISOString()} to ${SDate(crunchEndMillis).toISOString()})")
 
               val loads = portDeskRecs.flightsToLoads(flights, crunchStartMillis)
-
               portDeskRecs.loadsToDesks(minuteMillis, loads, maxDesksProviders)
             } ~> killSwitch ~> deskRecsSink
 
@@ -65,18 +69,17 @@ object RunnableDeskRecs {
     RunnableGraph.fromGraph(graph).addAttributes(Attributes.inputBuffer(1, 1))
   }
 
-  private def flightsToCrunch(portStateActor: ActorRef)
-                             (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
-                             (implicit executionContext: ExecutionContext,
-                              timeout: Timeout): Future[(MillisSinceEpoch, FlightsWithSplits)] =
+  private def flightsSource(portStateActor: ActorRef)
+                           (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
+                           (implicit executionContext: ExecutionContext,
+                            timeout: Timeout): Future[Source[FlightsWithSplits, NotUsed]] =
     portStateActor
       .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
-      .mapTo[FlightsWithSplits]
-      .map(fs => (crunchStartMillis, fs))
-      .recoverWith {
+      .mapTo[Source[FlightsWithSplits, NotUsed]]
+      .recover {
         case t =>
           log.error("Failed to fetch flights from PortStateActor", t)
-          Future((crunchStartMillis, FlightsWithSplits(List())))
+          Source[FlightsWithSplits](List())
       }
 
   def start(portStateActor: ActorRef,
