@@ -1,0 +1,69 @@
+package actors.debug
+
+import actors.{GetState, RecoveryActorLike}
+import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.SDateLike
+import org.slf4j.{Logger, LoggerFactory}
+import scalapb.GeneratedMessage
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
+import server.protobuf.messages.FlightsMessage.FlightsDiffMessage
+import services.SDate
+
+case class DebugState(lastSnapshot: Option[GeneratedMessage], messages: List[GeneratedMessage])
+
+case class MessageQuery(numberOfMessages: Int)
+
+case class MessageResponse(messages: List[GeneratedMessage])
+
+
+class DebugFlightsActor(lookupId: String, maybePointInTime: Option[MillisSinceEpoch] = None) extends RecoveryActorLike {
+
+  override val log: Logger = LoggerFactory.getLogger(getClass)
+
+  override def now: () => SDateLike = () => SDate.now()
+
+  var snapshot: Option[GeneratedMessage] = None
+
+  var messages: List[GeneratedMessage] = List()
+
+  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
+
+  override def processRecoveryMessage: PartialFunction[Any, Unit] = {
+    case CrunchDiffMessage(createdAt, _, removals, updates, _, _, _, _) if removals.nonEmpty || updates.nonEmpty =>
+      messages = FlightsWithSplitsDiffMessage(createdAt, removals, updates) :: messages
+
+    case m: FlightsDiffMessage =>
+      val fws = FlightsWithSplitsDiffMessage(m.createdAt, m.removals, m.updates.map(f => FlightWithSplitsMessage(Option(f), Seq())))
+      messages = fws :: messages
+
+    case m: FlightsWithSplitsDiffMessage =>
+      messages = m :: messages
+    case other =>
+      log.info(s"Not handling ${other.getClass}")
+  }
+
+  override def processSnapshotMessage: PartialFunction[Any, Unit] = {
+      case m: GeneratedMessage =>
+      snapshot = Option(m)
+  }
+
+  override def stateToMessage: GeneratedMessage = ???
+
+  override def receiveCommand: Receive = {
+    case GetState =>
+      sender() ! DebugState(snapshot, messages)
+    case MessageQuery(num) =>
+      sender() ! MessageResponse(messages.take(num))
+  }
+
+  override def persistenceId: String = lookupId
+
+  override def recovery: Recovery = maybePointInTime match {
+    case None =>
+      Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
+    case Some(pointInTime) =>
+      val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
+      Recovery(fromSnapshot = criteria, replayMax = 1000)
+  }
+}
