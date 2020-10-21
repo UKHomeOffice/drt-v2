@@ -6,7 +6,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
+import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
 import server.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import services.SDate
 
@@ -30,21 +30,32 @@ class DebugFlightsActor(lookupId: String, maybePointInTime: Option[MillisSinceEp
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case CrunchDiffMessage(createdAt, _, removals, updates, _, _, _, _) if removals.nonEmpty || updates.nonEmpty =>
-      messages = FlightsWithSplitsDiffMessage(createdAt, removals, updates) :: messages
 
-    case m: FlightsDiffMessage =>
-      val fws = FlightsWithSplitsDiffMessage(m.createdAt, m.removals, m.updates.map(f => FlightWithSplitsMessage(Option(f), Seq())))
-      messages = fws :: messages
+    case CrunchDiffMessage(Some(createdAt), _, removals, updates, _, _, _, _) if removals.nonEmpty || updates.nonEmpty =>
 
-    case m: FlightsWithSplitsDiffMessage =>
-      messages = m :: messages
+      if (createdAt < maybePointInTime.getOrElse(Long.MaxValue)) {
+        messages = FlightsWithSplitsDiffMessage(Option(createdAt), removals, updates) :: messages
+      }
+
+    case FlightsDiffMessage(Some(createdAt), removals, updates, _) =>
+
+      if (createdAt < maybePointInTime.getOrElse(Long.MaxValue)) {
+        val fws = FlightsWithSplitsDiffMessage(Option(createdAt), removals, updates.map(f => FlightWithSplitsMessage(Option(f), Seq())))
+        messages = fws :: messages
+      }
+
+    case m@FlightsWithSplitsDiffMessage(createdAt, _, _) =>
+
+      if (createdAt.getOrElse(Long.MinValue) < maybePointInTime.getOrElse(Long.MaxValue)) {
+        messages = m :: messages
+      }
+
     case other =>
       log.info(s"Not handling ${other.getClass}")
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-      case m: GeneratedMessage =>
+    case m: GeneratedMessage =>
       snapshot = Option(m)
   }
 
