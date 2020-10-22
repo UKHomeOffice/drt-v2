@@ -193,7 +193,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   "Given a list of arrivals with splits we should get back a CSV of arrival data using live feed numbers when available" >> {
 
     val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
-      .toCsvStream(Source(List(FlightsWithSplits(flights))))
+      .toCsvStreamWithoutActualApi(Source(List(FlightsWithSplits(flights))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
@@ -207,10 +207,42 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     result === expected
   }
 
+  "Given a list of arrivals with splits we should get back a CSV of arrival sorted by PCP time" >> {
+
+    val flightsWithPcpTimes: Seq[ApiFlightWithSplits] = List(
+      ApiFlightWithSplits(
+        arrival(iata = "SA326", schDt = "2017-01-01T20:00:00Z", terminal = T1, origin = PortCode("JHD"), pcpDt = "2017-01-01T20:00:00Z"),
+        Set()
+      ),
+      ApiFlightWithSplits(
+        arrival(iata = "SA328", schDt = "2017-01-01T22:00:00Z", terminal = T1, origin = PortCode("JHD"), pcpDt = "2017-01-01T22:00:00Z"),
+        Set()
+      ),
+      ApiFlightWithSplits(
+        arrival(iata = "SA327", schDt = "2017-01-01T21:00:00Z", terminal = T1, origin = PortCode("JHD"), pcpDt = "2017-01-01T21:00:00Z"),
+        Set()
+      )
+    )
+
+    val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
+      .toCsvStreamWithoutActualApi(Source(List(FlightsWithSplits(flightsWithPcpTimes))))
+
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+
+    val expected =
+      """|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
+         |SA0326,SA0326,JHD,/,,2017-01-01,20:00,,,,,20:00,,0,,,,,,,,,,,,
+         |SA0327,SA0327,JHD,/,,2017-01-01,21:00,,,,,21:00,,0,,,,,,,,,,,,
+         |SA0328,SA0328,JHD,/,,2017-01-01,22:00,,,,,22:00,,0,,,,,,,,,,,,
+         |""".stripMargin
+
+    result === expected
+  }
+
   "Given a list of arrivals with splits we should get back a CSV of arrival data with unique entry for code Share Arrival flight" >> {
 
     val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
-      .toCsvStream(Source(List(FlightsWithSplits(codeShareFlights))))
+      .toCsvStreamWithoutActualApi(Source(List(FlightsWithSplits(codeShareFlights))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
@@ -226,7 +258,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   "Given a list of arrivals with splits and with live passenger numbers, we should use live passenger PCP numbers" >> {
 
     val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
-      .toCsvStream(Source(List(FlightsWithSplits(List(flightWithAllTypesOfAPISplit)))))
+      .toCsvStreamWithoutActualApi(Source(List(FlightsWithSplits(List(flightWithAllTypesOfAPISplit)))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
