@@ -62,6 +62,10 @@ case class Arrival(Operator: Option[Operator],
     firstInRange || lastInRange
   }
 
+  def isRelevantToPeriod(rangeStart: SDateLike, rangeEnd: SDateLike): Boolean = {
+    Arrival.isRelevantToPeriod(rangeStart, rangeEnd)(this)
+  }
+
   def millisToDisembark(pax: Int): Long = {
     val minutesToDisembark = (pax.toDouble / 20).ceil
     val oneMinuteInMillis = 60 * 1000
@@ -92,6 +96,20 @@ case class Arrival(Operator: Option[Operator],
 
 object Arrival {
   val flightCodeRegex: Regex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]*)$".r
+
+  def isInRange(rangeStart: MillisSinceEpoch, rangeEnd: MillisSinceEpoch)(needle: MillisSinceEpoch) =
+    rangeStart < needle && needle < rangeEnd
+
+  def isRelevantToPeriod(rangeStart: SDateLike, rangeEnd: SDateLike)(arrival: Arrival): Boolean = {
+    val rangeCheck: MillisSinceEpoch => Boolean = isInRange(rangeStart.millisSinceEpoch, rangeEnd.millisSinceEpoch)
+
+    rangeCheck(arrival.Scheduled) ||
+      rangeCheck(arrival.Estimated.getOrElse(0)) ||
+      rangeCheck(arrival.EstimatedChox.getOrElse(0)) ||
+      rangeCheck(arrival.Actual.getOrElse(0)) ||
+      rangeCheck(arrival.ActualChox.getOrElse(0)) ||
+      arrival.hasPcpDuring(rangeStart, rangeEnd)
+  }
 
   def summaryString(arrival: Arrival): String = arrival.AirportID + "/" + arrival.Terminal + "@" + arrival.Scheduled + "!" + arrival.flightCodeString
 
@@ -172,6 +190,6 @@ object Arrival {
       FeedSources = FeedSources,
       CarrierScheduled = CarrierScheduled,
       ApiPax = ApiPax
-      )
+    )
   }
 }
