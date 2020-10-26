@@ -325,7 +325,7 @@ class ServerSDateSpec extends Specification {
     }
   }
 
-"When creating an SDateLike from a UtcDate then I should get back an SDate at midnight UTC on that day" >> {
+  "When creating an SDateLike from a UtcDate then I should get back an SDate at midnight UTC on that day" >> {
     "Given a date during BST, I should get back UTC midnight" >> {
       val utcDate = UtcDate(2020, 7, 2)
       val expected = SDate("2020-07-02T00:00Z")

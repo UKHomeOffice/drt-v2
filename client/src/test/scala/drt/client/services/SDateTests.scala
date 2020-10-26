@@ -1,7 +1,7 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{MilliDate, SDateLike}
+import drt.shared.{LocalDate, MilliDate, SDateLike, UtcDate}
 import moment.Moment
 import utest.TestSuite
 import utest._
@@ -134,6 +134,40 @@ object SDateTests extends TestSuite {
           val actual = SDate("2017-03-01T13:40").toString
           assert(actual == "2017-03-01T1340")
         }
+      }
+    }
+
+    "When creating an SDateLike from a LocalDate then I should get back an SDate at midnight localtime on that day" - {
+      "Given a BST date, I should get back BST midnight" - {
+        val localDate = LocalDate(2020, 7, 2)
+        val expected = SDate("2020-07-01T23:00Z")
+        val result = SDate(localDate)
+
+        assert(result == expected)
+      }
+      "Given a UTC date, I should get back UTC midnight" - {
+        val localDate = LocalDate(2020, 1, 2)
+        val expected = SDate("2020-01-02T00:00Z")
+        val result = SDate(localDate)
+
+        assert(result == expected)
+      }
+    }
+
+    "When creating an SDateLike from a UtcDate then I should get back an SDate at midnight UTC on that day" - {
+      "Given a date during BST, I should get back UTC midnight" - {
+        val utcDate = UtcDate(2020, 7, 2)
+        val expected = SDate("2020-07-02T00:00Z")
+        val result = SDate(utcDate)
+
+        assert(result == expected)
+      }
+      "Given a date during GMT, I should get back UTC midnight" - {
+        val utcDate = UtcDate(2020, 1, 2)
+        val expected = SDate("2020-01-02T00:00Z")
+        val result = SDate(utcDate)
+
+        assert(result == expected)
       }
     }
   }
