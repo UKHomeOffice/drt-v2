@@ -62,9 +62,8 @@ case class Arrival(Operator: Option[Operator],
     firstInRange || lastInRange
   }
 
-  def isRelevantToPeriod(rangeStart: SDateLike, rangeEnd: SDateLike): Boolean = {
+  def isRelevantToPeriod(rangeStart: SDateLike, rangeEnd: SDateLike): Boolean =
     Arrival.isRelevantToPeriod(rangeStart, rangeEnd)(this)
-  }
 
   def millisToDisembark(pax: Int): Long = {
     val minutesToDisembark = (pax.toDouble / 20).ceil

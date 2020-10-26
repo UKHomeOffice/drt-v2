@@ -18,7 +18,6 @@ class FlightsWithSplitsDiffSpec extends Specification {
   def arrivalForDateAndTerminal(date: SDateLike, terminal: Terminal): Arrival =
     ArrivalGenerator.arrival(schDt = date.toISOString(), terminal = terminal)
 
-
   "Given a FlightsWithSplitsDiff with no updates and no removals then isEmpty should be true" >> {
     val diff = FlightsWithSplitsDiff(List(), List())
     val result = diff.isEmpty
@@ -138,6 +137,4 @@ class FlightsWithSplitsDiffSpec extends Specification {
 
     result === expected
   }
-
-
 }
