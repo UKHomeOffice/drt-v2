@@ -37,6 +37,8 @@ object Optimiser {
       fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toIndexedSeq
 
+    if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
+
     for {
       desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla)
       processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq())

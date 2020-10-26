@@ -46,7 +46,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
           val expected = Set(Queues.EeaDesk)
 
-          crunch.portStateTestProbe.fishForMessage(10 seconds) {
+          crunch.portStateTestProbe.fishForMessage(1 seconds) {
             case ps: PortState =>
               val resultSummary = paxLoadsFromPortState(ps, 1).flatMap(_._2.keys).toSet
               resultSummary == expected
@@ -83,7 +83,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
     val expected = Map(T1 -> Map(Queues.EeaDesk -> List(15.0)))
 
-    crunch.portStateTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(1 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 1, SDate(scheduled))
         resultSummary == expected

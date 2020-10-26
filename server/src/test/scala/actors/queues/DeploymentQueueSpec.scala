@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 
 
 class TestDeploymentQueueActor(now: () => SDateLike, offsetMinutes: Int)
-  extends DeploymentQueueActor(now, InMemoryStreamingJournal, offsetMinutes) {
+  extends DeploymentQueueActor(now, offsetMinutes) {
   override val maybeSnapshotInterval: Option[Int] = Option(1)
 }
 

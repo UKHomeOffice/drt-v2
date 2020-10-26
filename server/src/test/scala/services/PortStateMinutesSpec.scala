@@ -19,7 +19,7 @@ class PortStateMinutesSpec extends Specification {
 
       "To an empty PortState" >> {
         "Then I should see those flights in the PortState" >> {
-          val (portState, _) = newFlightsWithSplits.applyTo(FlightsWithSplits(List()), now)
+          val (portState, _) = newFlightsWithSplits.applyTo(FlightsWithSplits.empty, now)
           val expected = PortState(newFlightsWithSplits.flightsToUpdate.map(_.copy(lastUpdated = Option(now))), List(), List())
 
           portState.flights === expected.flights

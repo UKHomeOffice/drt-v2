@@ -130,7 +130,7 @@ object TerminalContentComponent {
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
                   ExportArrivals,
-                  SPAMain.exportViewUrl(ExportArrivals, props.terminalPageTab.viewMode, terminal)
+                  SPAMain.exportArrivalViewUrl(props.terminalPageTab.viewMode, terminal)
                 ),
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,

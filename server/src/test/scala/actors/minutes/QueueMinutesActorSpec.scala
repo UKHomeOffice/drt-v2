@@ -19,7 +19,6 @@ class QueueMinutesActorSpec extends CrunchTestLike {
   val queue: Queues.Queue = EeaDesk
   val date: SDateLike = SDate("2020-01-01T00:00")
   val myNow: () => SDateLike = () => date
-  val lookupWithNoData: MinutesLookup[CrunchMinute, TQM] = (_: Terminal, _: SDateLike, _: Option[MillisSinceEpoch]) => Future(None)
 
   def lookupWithData(crunchMinutes: MinutesContainer[CrunchMinute, TQM]): MinutesLookup[CrunchMinute, TQM] = (_: Terminal, _: SDateLike, _: Option[MillisSinceEpoch]) => Future(Option(crunchMinutes))
 

@@ -1,7 +1,7 @@
 package actors
 
-import actors.PartitionedPortStateActor.{queueUpdatesProps, staffUpdatesProps, tempLegacyActorProps}
-import actors.daily.{QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
+import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
@@ -58,18 +58,23 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
 
   override val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
-  override val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
+  override val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
 
-  val legacyFlightDataCutoff: SDateLike = SDate(config.get[String]("legacy-flight-data-cutoff"))
+
   override val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
 
-  override val flightsActor: ActorRef = system.actorOf(Props(new FlightsStateActor(now, expireAfterMillis, airportConfig.queuesByTerminal, legacyFlightDataCutoff, airportConfig.portStateSnapshotInterval)))
+  val flightLookups: FlightLookups = FlightLookups(
+    system,
+    now,
+    airportConfig.queuesByTerminal,
+    crunchQueueActor
+  )
+  override val flightsActor: ActorRef = flightLookups.flightsActor
   override val queuesActor: ActorRef = lookups.queueMinutesActor
   override val staffActor: ActorRef = lookups.staffMinutesActor
   override val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
   override val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
-
-  log.info(s"Legacy flight data cutoff: ${legacyFlightDataCutoff.toISOString()}")
+  override val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
 
   override val portStateActor: ActorRef = system.actorOf(Props(new PartitionedPortStateActor(
     flightsActor,
@@ -77,11 +82,10 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     staffActor,
     queueUpdates,
     staffUpdates,
+    flightUpdates,
     now,
     airportConfig.queuesByTerminal,
-    journalType,
-    legacyFlightDataCutoff,
-    tempLegacyActorProps(airportConfig.portStateSnapshotInterval))))
+    journalType)))
 
   val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 
@@ -105,7 +109,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   def run(): Unit = {
     val futurePortStates: Future[(Option[PortState], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
-      val maybeLivePortState = if (usePartitionedPortState) initialFlightsPortState(portStateActor) else initialStateFuture[PortState](portStateActor)
+      val maybeLivePortState = if (usePartitionedPortState) initialFlightsPortState(portStateActor, params.forecastMaxDays) else initialStateFuture[PortState](portStateActor)
       val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))

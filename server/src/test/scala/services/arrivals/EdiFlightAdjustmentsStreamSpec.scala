@@ -47,7 +47,7 @@ class EdiFlightAdjustmentsStreamSpec extends CrunchTestLike {
   private def offerAndCheck(arrival: Arrival): PortState = {
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(arrival))))
 
-    crunch.portStateTestProbe.fishForMessage(100 second) {
+    crunch.portStateTestProbe.fishForMessage(1 second) {
       case ps: PortState =>
         ps.flights.values.exists(a => a.apiFlight.ActPax == arrival.ActPax)
     }.asInstanceOf[PortState]

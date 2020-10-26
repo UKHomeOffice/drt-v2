@@ -208,25 +208,13 @@ describe('Restrict access to endpoint by role', () => {
     },
     {
       roles: ["test", "arrivals-and-splits:view"],
-      endpoint: "/export/arrivals/" + millis + "/T1",
-      method: "GET",
-      shouldBeGranted: true
-    },
-    {
-      roles: ["test", "api:view-port-arrivals"],
-      endpoint: "/export/api/T1/2019/5/1",
+      endpoint: "/export/arrivals/2020-09-01/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: true
     },
     {
       roles: ["test"],
-      endpoint: "/export/api/T1/2019/5/1",
-      method: "GET",
-      shouldBeGranted: false
-    },
-    {
-      roles: ["test"],
-      endpoint: "/export/arrivals/" + millis + "/T1",
+      endpoint: "/export/arrivals/2020-09-01/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: false
     },
@@ -244,7 +232,7 @@ describe('Restrict access to endpoint by role', () => {
     },
     {
       roles: ["test"],
-      endpoint: "/export/arrivals/" + millis + "/T1",
+      endpoint: "/export/arrivals/2020-09-01/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: false
     },

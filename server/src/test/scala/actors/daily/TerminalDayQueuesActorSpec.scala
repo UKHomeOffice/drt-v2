@@ -14,12 +14,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 
-class MockTerminalDayQueuesActor(day: SDateLike,
-                                 terminal: Terminal,
-                                 initialState: Map[TQM, CrunchMinute]) extends TerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, None) {
-  state = initialState
-}
-
 class TerminalDayQueuesActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1
   val queue: Queue = EeaDesk
@@ -57,7 +51,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
     }
   }
 
-  "Given a terminal-day queues actor for a day which does not any data" >> {
+  "Given a terminal-day queues actor for a day which does not have any data" >> {
     val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
     "When I ask for the state for that day" >> {

@@ -1,5 +1,6 @@
 package services
 
+import drt.shared.api.Arrival
 import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
 
@@ -106,6 +107,61 @@ class ArrivalSpec extends Specification {
       val expectedEnd = SDate(pcpTime).addMinutes(5).millisSinceEpoch
 
       pcpRange.max === expectedEnd
+    }
+  }
+
+  "When asking if a flight is relevant to a time period" >> {
+    val startTime = SDate("2020-10-22T11:00Z")
+    val endTime = SDate("2020-10-22T13:00Z")
+    "Given none of the flights times are inside the range then it should not be relevant" >> {
+      val expected = false
+      val arrival = ArrivalGenerator.arrival(
+        schDt = "2020-10-22T10:00Z",
+        estDt = "2020-10-22T10:00Z",
+        estChoxDt = "2020-10-22T10:00Z",
+        actDt = "2020-10-22T10:00Z",
+        actChoxDt = "2020-10-22T10:00Z",
+        pcpDt = "2020-10-22T10:00Z"
+      )
+
+      val result = arrival.isRelevantToPeriod(startTime, endTime)
+      result === expected
+    }
+    "Given any of the flights times are inside the range then it should be relevant" >> {
+
+      val flightWithScheduledTimeInRange = ArrivalGenerator.arrival(schDt = "2020-10-22T12:00Z")
+      val flightWithEstTimeInRange = ArrivalGenerator.arrival(
+        schDt = "2020-10-22T11:00Z",
+        estDt = "2020-10-22T13:00Z"
+      )
+      val flightWithEstChoxTimeInRange = ArrivalGenerator.arrival(
+        schDt = "2020-10-22T11:00Z",
+        estChoxDt = "2020-10-22T13:00Z"
+      )
+      val flightWithActTimeInRange = ArrivalGenerator.arrival(
+        schDt = "2020-10-22T11:00Z",
+        actDt = "2020-10-22T13:00Z"
+      )
+      val flightWithActChoxTimeInRange = ArrivalGenerator.arrival(
+        schDt = "2020-10-22T11:00Z",
+        actChoxDt = "2020-10-22T13:00Z"
+      )
+      val flightWithPcpTimeInRange = ArrivalGenerator.arrival(
+        schDt = "2020-10-22T11:00Z",
+        pcpDt = "2020-10-22T13:00Z"
+      )
+
+      val flightsInRange = List(
+        flightWithScheduledTimeInRange,
+        flightWithEstTimeInRange,
+        flightWithEstChoxTimeInRange,
+        flightWithActTimeInRange,
+        flightWithActChoxTimeInRange,
+        flightWithPcpTimeInRange
+      )
+
+      val result = flightsInRange.filter(Arrival.isRelevantToPeriod(startTime, endTime))
+      result === flightsInRange
     }
   }
 }

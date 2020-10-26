@@ -36,7 +36,7 @@ trait ExportToCsv {
 
       log.info(s"Export $description for terminal $terminal between ${start.toISOString()} & ${end.toISOString()} ($numberOfDays days)")
 
-      val exportSource = Exports.summaryForDaysCsvSource(start, numberOfDays, now, terminal, maybeSummaryActorAndRequestProvider, generateNewSummary)
+      val exportSource: Source[String, NotUsed] = Exports.summaryForDaysCsvSource(start, numberOfDays, now, terminal, maybeSummaryActorAndRequestProvider, generateNewSummary)
       val fileName = makeFileName(description, terminal, start, end, airportConfig.portCode)
 
       Try(sourceToCsvResponse(exportSource, fileName)) match {
@@ -59,7 +59,11 @@ object CsvFileStreaming {
 
     Result(
       header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-      body = HttpEntity.Chunked(exportSource.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType))
+      body = HttpEntity.Chunked(exportSource.collect {
+        case s if s.nonEmpty => s
+      }.map(c => {
+        HttpChunk.Chunk(writeable.transform(c))
+      }), writeable.contentType))
   }
 
   def makeFileName(subject: String,

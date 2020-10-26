@@ -1,6 +1,5 @@
 package actors.queues
 
-import actors.acking.AckingReceiver.Ack
 import actors.queues.QueueLikeActor.{ReadyToEmit, Tick, UpdatedMillis}
 import actors.{RecoveryActorLike, SetDaysQueueSource, StreamingJournalLike}
 import akka.actor.Cancellable
@@ -30,7 +29,7 @@ object QueueLikeActor {
 
 }
 
-abstract class QueueLikeActor(val now: () => SDateLike, val journalType: StreamingJournalLike, crunchOffsetMinutes: Int) extends RecoveryActorLike {
+abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int) extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val maybeSnapshotInterval: Option[Int] = Option(500)
@@ -72,7 +71,6 @@ abstract class QueueLikeActor(val now: () => SDateLike, val journalType: Streami
 
     case ReadyToEmit =>
       readyToEmit = true
-      log.debug(s"Got a ReadyToEmit. Will emit if I have something in the queue")
       emitNextDayIfReady()
 
     case SetDaysQueueSource(source) =>
@@ -104,7 +102,6 @@ abstract class QueueLikeActor(val now: () => SDateLike, val journalType: Streami
   def emitNextDayIfReady(): Unit = if (readyToEmit)
     queuedDays.headOption match {
       case Some(day) =>
-        log.debug(s"Emitting ${SDate(day, Crunch.europeLondonTimeZone).toISODateOnly}")
         readyToEmit = false
         maybeDaysQueueSource.foreach { sourceQueue =>
           sourceQueue.offer(day).foreach { _ =>
@@ -118,6 +115,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, val journalType: Streami
     }
 
   def updateState(days: Iterable[MillisSinceEpoch]): Unit = {
+    log.info(s"Adding ${days.size} days to queue. Queue now contains ${queuedDays.size} days")
     queuedDays = queuedDays ++ days
   }
 

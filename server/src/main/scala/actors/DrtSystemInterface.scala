@@ -4,6 +4,7 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.GetFlights
 import actors.Sizes.oneMegaByte
 import actors.daily.PassengersActor
+import actors.queues.FlightsRouterActor
 import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
@@ -103,6 +104,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val staffActor: ActorRef
   val queueUpdates: ActorRef
   val staffUpdates: ActorRef
+  val flightUpdates: ActorRef
 
   def feedActors: List[ActorRef] = List(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
 
@@ -234,7 +236,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 
-    portStateActor ! SetCrunchQueueActor(crunchQueueActor)
     portStateActor ! SetDeploymentQueueActor(deploymentQueueActor)
 
     (deskRecsKillSwitch, deploymentsKillSwitch)
@@ -365,14 +366,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2 minutes)
 
-  def initialFlightsPortState(actor: ActorRef): Future[Option[PortState]] = {
+  def initialFlightsPortState(actor: ActorRef, forecastMaxDays: Int): Future[Option[PortState]] = {
     val from = now().getLocalLastMidnight.addDays(-1)
-    val to = from.addDays(180)
+    val to = from.addDays(forecastMaxDays)
     val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
-    actor
-      .ask(request)(new Timeout(15 seconds)).mapTo[FlightsWithSplits]
+    FlightsRouterActor.runAndCombine(actor
+      .ask(request)(new Timeout(15 seconds)).mapTo[Source[FlightsWithSplits, NotUsed]])
       .map { fws =>
-        Option(PortState(fws.flights.toMap.values, Iterable(), Iterable()))
+        Option(PortState(fws.flights.values, Iterable(), Iterable()))
       }
   }
 

@@ -1,6 +1,5 @@
 package services.crunch
 
-import actors.FlightMessageConversion
 import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.arrival
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
@@ -11,14 +10,12 @@ import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
 import drt.shared.Terminals.T1
 import drt.shared._
 import drt.shared.api.Arrival
-import org.specs2.matcher.Scope
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
+import server.feeds._
 import services.SDate
 
 import scala.collection.immutable.{List, SortedMap}
-import scala.collection.mutable
 import scala.concurrent.duration._
 
 class ArrivalsGraphStageSpec extends CrunchTestLike {
@@ -60,8 +57,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       val voyageManifests: ManifestsFeedResponse = ManifestsFeedSuccess(DqManifests("", Set(
         VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("10:25"), List(
           PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
-          ))
-        )))
+        ))
+      )))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
 
@@ -82,7 +79,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       val aclFlight: Flights = Flights(List(
         ArrivalGenerator.arrival(iata = "BA0002", schDt = forecastScheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
-        ))
+      ))
 
       offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 

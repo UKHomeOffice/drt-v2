@@ -126,11 +126,15 @@ object JSDateConversions {
       .second(0)
       .millisecond(0)
 
-    def firstDayOfMonth(today: SDateLike) = SDate(y = today.getFullYear(), m = today.getMonth(), d = 1)
+    def firstDayOfMonth(today: SDateLike): SDateLike = SDate(y = today.getFullYear(), m = today.getMonth(), d = 1)
 
     def lastDayOfMonth(today: SDateLike): SDateLike = firstDayOfMonth(today).addMonths(1).addDays(-1)
 
     def now(): SDateLike = Moment().tz(europeLondon)
+
+    def apply(localDate: LocalDate): SDateLike = SDate(localDate.toISOString + "T00:00")
+
+    def apply(utcDate: UtcDate): SDateLike = Moment.tz(utcDate.toISOString, utc)
   }
 
   def startOfDay(d: SDateLike): SDateLike = SDate(d.getFullYear(), d.getMonth(), d.getDate())

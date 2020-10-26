@@ -1,9 +1,12 @@
 package actors
 
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
+import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.Terminals.T1
 import drt.shared.api.{Arrival, FlightCodeSuffix}
-import drt.shared.{AclFeedSource, ApiFeedSource, FeedSource, LiveFeedSource, Operator, PortCode}
+import drt.shared.{AclFeedSource, ApiFeedSource, ApiFlightWithSplits, ApiPaxTypeAndQueueCount, FeedSource, LiveFeedSource, Nationality, Operator, PaxNumbers, PaxTypes, PortCode, Queues, Splits}
 import org.specs2.mutable.Specification
+import passengersplits.core.PassengerTypeCalculatorValues.CountryCodes
 import server.protobuf.messages.FlightsMessage.FlightMessage
 
 class FlightMessageConversionSpec extends Specification {
@@ -63,6 +66,28 @@ class FlightMessageConversionSpec extends Specification {
       val restoredArrival = FlightMessageConversion.flightMessageToApiFlight(arrivalMessage)
       "Then the converted Arrival should match the original" >> {
         restoredArrival === arrivalWith0Pax
+      }
+    }
+  }
+
+  "Given a FlightsWithSplitsDiff" >> {
+    val diff = FlightsWithSplitsDiff(
+      List(ApiFlightWithSplits(arrival, Set(Splits(
+        Set(
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, None),
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, None),
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 3, None),
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, None)
+        ),
+        Historical,
+        None,
+        PaxNumbers
+      )))), List(arrival.unique))
+    "When I convert it to a protobuf message and then back to an FlightsWithSplitsDiff" >> {
+      val diffMessage = FlightMessageConversion.flightWithSplitsDiffToMessage(diff)
+      val restoredDiff = FlightMessageConversion.flightWithSplitsDiffFromMessage(diffMessage)
+      "Then the converted FlightsWithSplitsDiff should match the original" >> {
+        restoredDiff === diff
       }
     }
   }

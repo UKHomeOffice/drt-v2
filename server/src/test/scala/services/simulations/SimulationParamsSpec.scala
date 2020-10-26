@@ -9,7 +9,7 @@ import org.specs2.mutable.Specification
 
 class SimulationParamsSpec extends Specification {
 
-  val testConfig = AirportConfigs.confByPort(PortCode("TEST"))
+  val testConfig: AirportConfig = AirportConfigs.confByPort(PortCode("TEST"))
 
   private val terminal: Terminal = Terminal("T1")
   val simulation: SimulationParams = SimulationParams(
@@ -125,7 +125,7 @@ class SimulationParamsSpec extends Specification {
 
     val fws = FlightsWithSplits(List(
       ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50)), Set())
-    ))
+    ).map(a => a.apiFlight.unique -> a).toMap)
 
     val result = weightingOfOne.applyPassengerWeighting(fws)
 
@@ -137,11 +137,11 @@ class SimulationParamsSpec extends Specification {
 
     val fws = FlightsWithSplits(List(
       ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50)), Set())
-    ))
+    ).map(a => a.apiFlight.unique -> a).toMap)
 
     val expected = FlightsWithSplits(List(
-      ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(200), tranPax = Option(100)), Set())
-    ))
+    ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(200), tranPax = Option(100)), Set())
+    ).map(a => a.apiFlight.unique -> a).toMap)
 
     val result = weightingOfTwo.applyPassengerWeighting(fws)
 

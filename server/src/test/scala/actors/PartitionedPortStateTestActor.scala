@@ -1,20 +1,20 @@
 package actors
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, queueUpdatesProps, staffUpdatesProps}
+import actors.PartitionedPortStateActor.{GetStateForDateRange, flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.acking.Acking.AckingAsker
 import actors.acking.AckingReceiver.{Ack, StreamFailure}
-import actors.daily.{QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import services.SDate
 
-import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
 
 object PartitionedPortStateTestActor {
@@ -25,7 +25,8 @@ object PartitionedPortStateTestActor {
     val staffActor = lookups.staffMinutesActor
     val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-queues")
     val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-staff")
-    system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, now, airportConfig.queuesByTerminal)))
+    val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-flight")
+    system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, now, airportConfig.queuesByTerminal)))
   }
 }
 
@@ -35,6 +36,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                                     staffActor: ActorRef,
                                     queueUpdatesActor: ActorRef,
                                     staffUpdatesActor: ActorRef,
+                                    flightUpdatesActor: ActorRef,
                                     now: () => SDateLike,
                                     queues: Map[Terminal, Seq[Queue]])
   extends PartitionedPortStateActor(
@@ -43,12 +45,11 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     staffActor,
     queueUpdatesActor,
     staffUpdatesActor,
+    flightUpdatesActor,
     now,
     queues,
-    InMemoryStreamingJournal,
-    SDate("1970-01-01"),
-    PartitionedPortStateActor.tempLegacyActorProps(1000)
-  ) {
+    InMemoryStreamingJournal)
+{
 
   var state: PortState = PortState.empty
 
@@ -57,23 +58,18 @@ class PartitionedPortStateTestActor(probe: ActorRef,
       log.info(s"Stream shut down")
 
     case ps: PortState =>
-      val replyTo = sender()
       log.info(s"Setting initial port state")
       state = ps
-      flightsActor.ask(FlightsWithSplitsDiff(ps.flights.values.toList, List())).flatMap { _ =>
-        queuesActor.ask(MinutesContainer(ps.crunchMinutes.values)).flatMap { _ =>
-          staffActor.ask(MinutesContainer(ps.staffMinutes.values))
-        }
-      }.foreach(_ => replyTo ! Ack)
   }
 
   override val askThenAck: AckingAsker = (actor: ActorRef, message: Any, replyTo: ActorRef) => {
     actor.ask(message).foreach { _ =>
       message match {
         case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.nonEmpty =>
-          actor.ask(GetStateForDateRange(0L, Long.MaxValue)).mapTo[FlightsWithSplits].foreach {
-            case FlightsWithSplits(flights) =>
-              val updatedFlights: SortedMap[UniqueArrival, ApiFlightWithSplits] = SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights
+
+          actor.ask(GetStateForDateRange(flightsWithSplitsDiff.updateMinutes.min, flightsWithSplitsDiff.updateMinutes.max)).mapTo[Source[FlightsWithSplits, NotUsed]].foreach {
+             _ =>
+              val updatedFlights = (state.flights -- flightsWithSplitsDiff.arrivalsToRemove) ++ flightsWithSplitsDiff.flightsToUpdate.map(fws => (fws.unique, fws))
               state = state.copy(flights = updatedFlights)
               sendStateToProbe()
           }
