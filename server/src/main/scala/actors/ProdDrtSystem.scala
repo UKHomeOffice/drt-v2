@@ -270,8 +270,4 @@ object ArrivalGenerator {
 
     arrivals.flatten
   }
-
-  def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): ApiFlightWithSplits = ApiFlightWithSplits(
-    ArrivalGenerator.arrival(schDt = date.toISOString(), terminal = terminal), Set(), Option(date.millisSinceEpoch)
-  )
 }

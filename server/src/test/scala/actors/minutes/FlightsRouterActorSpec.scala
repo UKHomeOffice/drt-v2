@@ -1,15 +1,14 @@
 package actors.minutes
 
-import actors.ArrivalGenerator
+import controllers.ArrivalGenerator
 import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, PointInTimeQuery}
 import actors.queues.FlightsRouterActor
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
-import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.{T1, Terminal}

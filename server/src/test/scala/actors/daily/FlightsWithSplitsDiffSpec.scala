@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.ArrivalGenerator
+import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared.api.Arrival

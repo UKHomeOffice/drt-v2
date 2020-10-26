@@ -1,6 +1,6 @@
 package drt.shared
 
-import actors.ArrivalGenerator
+import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import org.specs2.mutable.Specification
 import services.SDate

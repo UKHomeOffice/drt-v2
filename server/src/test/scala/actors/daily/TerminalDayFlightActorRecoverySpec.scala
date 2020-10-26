@@ -1,22 +1,16 @@
 package actors.daily
 
-import actors.FlightMessageConversion
-import actors.daily.TerminalDayFlightActor
-import akka.actor.Props
-import akka.persistence.PersistentActor
-import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
-
-import actors.ArrivalGenerator.flightWithSplitsForDayAndTerminal
-import actors.GetState
+import actors.{FlightMessageConversion, GetState}
 import actors.acking.AckingReceiver.Ack
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
-import drt.shared.Queues.{EeaDesk, Queue}
-import drt.shared.Terminals.{T1, T2, Terminal}
-import drt.shared.{SDateLike, TQM, UtcDate}
+import akka.persistence.PersistentActor
+import controllers.ArrivalGenerator.flightWithSplitsForDayAndTerminal
+import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.Terminals.{T1, Terminal}
+import drt.shared.{SDateLike, UtcDate}
+import scalapb.GeneratedMessage
+import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.SDate
 import services.crunch.CrunchTestLike
 
