@@ -45,6 +45,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   val maxBufferSize: Int = config.get[Int]("crunch.manifests.max-buffer-size")
   val minSecondsBetweenBatches: Int = config.get[Int]("crunch.manifests.min-seconds-between-batches")
+  val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
 
   val aggregateArrivalsDbConfigKey = "aggregated-db"
 
@@ -96,7 +97,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)))
 
   val s3ApiProvider: S3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
-  val initialManifestsState: Option[VoyageManifestState] = initialState[VoyageManifestState](voyageManifestsActor)
+  val initialManifestsState: Option[VoyageManifestState] = if (refetchApiData) None else initialState[VoyageManifestState](voyageManifestsActor)
   val latestZipFileName: String = S3ApiProvider.latestUnexpiredDqZipFilename(initialManifestsState.map(_.latestZipFilename), now, expireAfterMillis)
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
