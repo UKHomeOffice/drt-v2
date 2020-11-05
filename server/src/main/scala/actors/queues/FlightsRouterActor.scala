@@ -107,7 +107,7 @@ class FlightsRouterActor(
 
   var updateRequestsQueue: List[(ActorRef, FlightsWithSplitsDiff)] = List()
   var processingRequest: Boolean = false
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
+  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), "flights-router-actor-kill-actor")
   val forwardRequestAndKillActor: (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] = FlightsRouterActor.forwardRequestAndKillActor(killActor)
 
   override def receive: Receive = {
