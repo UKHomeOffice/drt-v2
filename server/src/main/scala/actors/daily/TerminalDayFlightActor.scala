@@ -3,7 +3,7 @@ package actors.daily
 import actors.PortStateMessageConversion.flightsFromMessages
 import actors.{FlightMessageConversion, GetState, RecoveryActorLike, Sizes}
 import akka.actor.Props
-import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
@@ -72,11 +72,14 @@ class TerminalDayFlightActor(
       else
         logDifferences(diff, filteredDiff)
 
-      updateAndPersistDiff(filteredDiff)
+      updateAndPersistDiffAndAck(filteredDiff)
 
     case GetState =>
       log.debug(s"Received GetState")
       sender() ! state
+
+    case _: SaveSnapshotSuccess =>
+      ackIfRequired()
 
     case m => log.warn(s"Got unexpected message: $m")
   }
@@ -87,8 +90,7 @@ class TerminalDayFlightActor(
       s"${diff.arrivalsToRemove} removals sent in ${filteredDiff.arrivalsToRemove.size} persisted"
   )
 
-  def updateAndPersistDiff(diff: FlightsWithSplitsDiff): Unit = {
-
+  def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit = {
     val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch)
     state = updatedState
 
