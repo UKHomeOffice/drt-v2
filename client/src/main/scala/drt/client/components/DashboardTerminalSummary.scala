@@ -167,7 +167,6 @@ object DashboardTerminalSummary {
               <.tbody(
                 <.tr(^.className := "dashboard-summary__pax-summary-row",
                   <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", "Time Range"),
-                  <.th("Flights", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
                   <.th("Total Pax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"), props.queues.map(q =>
                     <.th(Queues.queueDisplayNames(q), ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod),
                 summary.map {
@@ -177,14 +176,12 @@ object DashboardTerminalSummary {
                     val totalPax = paxPerQueue.values.map(Math.round).sum
                     <.tr(^.className := "dashboard-summary__pax-summary-row",
                       <.td(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", s"${SDate(MilliDate(start)).prettyTime()} - ${SDate(MilliDate(start)).addHours(1).prettyTime()}"),
-                      <.td(s"$numFlights", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
                       <.td(s"$totalPax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
                       props.queues.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
                     )
                 }.toTagMod,
                 <.tr(^.className := "dashboard-summary__pax-summary-row",
                   <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell heading pax-summary-cell--left", "3 Hour Total"),
-                  <.th(props.flights.size, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
                   <.th(totalPaxAcrossQueues, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
                   props.queues.map(q => <.th(s"${queueTotals.getOrElse(q, 0.0)}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
                 )
