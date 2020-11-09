@@ -32,11 +32,12 @@ object Optimiser {
     val indexedWork = workloads.toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
-    val bestMaxDesks = if (workloads.size >= 60) {
-      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer)
-      fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
-    } else maxDesks.toIndexedSeq
+//    val bestMaxDesks = if (workloads.size >= 60) {
+//      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer)
+//      fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
+//    } else maxDesks.toIndexedSeq
 
+    val bestMaxDesks = maxDesks.toIndexedSeq
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
     for {
