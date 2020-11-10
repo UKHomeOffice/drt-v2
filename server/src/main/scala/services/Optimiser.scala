@@ -32,11 +32,6 @@ object Optimiser {
     val indexedWork = workloads.toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
-//    val bestMaxDesks = if (workloads.size >= 60) {
-//      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer)
-//      fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
-//    } else maxDesks.toIndexedSeq
-
     val bestMaxDesks = maxDesks.toIndexedSeq
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
@@ -126,64 +121,6 @@ object Optimiser {
 
       ProcessedWork(utilReversed, waitReversed, q, totalWait, excessWait)
     }
-  }
-
-  def rollingFairXmax(work: IndexedSeq[Double],
-                      xmin: IndexedSeq[Int],
-                      blockSize: Int,
-                      sla: Int,
-                      targetWidth: Int,
-                      rollingBuffer: Int): IndexedSeq[Int] = {
-    val workWithOverrun = work ++ List.fill(targetWidth)(0d)
-    val xminWithOverrun = xmin ++ List.fill(targetWidth)(xmin.takeRight(1).head)
-
-    var backlog = 0d
-
-    val result = (workWithOverrun.indices by targetWidth).foldLeft(IndexedSeq[Int]()) { case (acc, startSlot) =>
-      val winStart: Int = List(startSlot - rollingBuffer, 0).max
-      val i = startSlot + targetWidth + rollingBuffer
-      val i1 = workWithOverrun.size
-      val winStop: Int = List(i, i1).min
-      val winWork = workWithOverrun.slice(winStart, winStop)
-      val winXmin = xminWithOverrun.slice(winStart, winStop)
-
-      if (winStart == 0) backlog = 0
-
-      val runAv = runningAverage(winWork, List(blockSize, sla).min)
-      val guessMax: Int = runAv.max.ceil.toInt
-
-      val lowerLimit = List(winXmin.max, (winWork.sum / winWork.size).ceil.toInt).max
-
-      var winXmax = guessMax
-      var hasExcessWait = false
-      var lowerLimitReached = false
-
-      if (guessMax <= lowerLimit)
-        winXmax = lowerLimit
-      else {
-        do {
-          val trialDesks = leftwardDesks(winWork, winXmin, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog)
-          val trialProcessExcessWait = tryProcessWork(winWork, trialDesks, sla, IndexedSeq(0)) match {
-            case Success(pw) => pw.excessWait
-            case Failure(t) => throw t
-          }
-          if (trialProcessExcessWait > 0) {
-            winXmax = List(winXmax + 1, guessMax).min
-            hasExcessWait = true
-          }
-          if (winXmax <= lowerLimit) lowerLimitReached = true
-          if (!lowerLimitReached && !hasExcessWait) winXmax = winXmax - 1
-        } while (!lowerLimitReached && !hasExcessWait)
-      }
-
-      val newXmax = acc ++ List.fill(targetWidth)(winXmax)
-      0 until targetWidth foreach { j =>
-        backlog = List(backlog + winWork(j) - newXmax(winStart), 0).max
-      }
-      newXmax
-    }.take(work.size)
-
-    result
   }
 
   def runningAverage(values: Iterable[Double], windowLength: Int): Iterable[Double] = {

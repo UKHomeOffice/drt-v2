@@ -72,33 +72,6 @@ class OptimiserSpec extends Specification {
     }
   }
 
-  0 to 3 map { i =>
-    s"rolling.fair.xmax comparison with random work #$i" >> {
-      loadOptimiserScript
-
-      val workloads = (1 to 1440).map(_ => Math.random() * 20)
-      val maxDesks = (1 to 1440).map(_ => 10)
-      val minDesks = (1 to 1440).map(_ => 1)
-      val sla = 25
-
-      engine.put("work", workloads.toArray)
-      engine.put("xmax", maxDesks.toArray)
-      engine.put("xmin", minDesks.toArray)
-      engine.put("sla", sla)
-      engine.put("weight_churn", 50)
-      engine.put("weight_pax", 0.05)
-      engine.put("weight_staff", 3)
-      engine.put("weight_sla", 10)
-
-      engine.eval("result <- rolling.fair.xmax(work, xmin=xmin, block.size=5, sla=sla, target.width=60, rolling.buffer=120)")
-      val fairXmax = engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.map(_.toInt).toList
-
-      val newResult = Optimiser.rollingFairXmax(workloads, minDesks, 5, sla, 60, 120)
-
-      newResult == fairXmax.toIndexedSeq === true
-    }
-  }
-
   "block.mean comparison" >> {
     skipped("exploratory")
 
@@ -158,49 +131,6 @@ class OptimiserSpec extends Specification {
     val newResult = Optimiser.tryOptimiseWin(workloads, minDesks.toIndexedSeq, maxDesks.toIndexedSeq, adjustedSla, weightChurn, weightPax, weightStaff, weightSla)
 
     newResult === rResult
-  }
-
-  "optimise.win comparison with real workload" >> {
-    skipped("dropping the rolling fair xmax from the scala optimiser to improve results")
-    loadOptimiserScript
-
-    val workload = lhrSlowWorkload2
-
-    val workloads = workload
-    val maxDesks = (1 to workload.length).map(_ => 30)
-    val minDesks = (1 to workload.length).map(_ => 2)
-    val sla = 45
-
-    val weightChurn = 50
-    val weightPax = 0.05
-    val weightStaff = 3
-    val weightSla = 10
-
-    engine.put("work", workloads.toArray)
-    engine.put("xmax", maxDesks.toArray)
-    engine.put("xmin", minDesks.toArray)
-    engine.put("sla", sla)
-
-    engine.put("w_churn", weightChurn)
-    engine.put("w_pax", weightPax)
-    engine.put("w_staff", weightStaff)
-    engine.put("w_sla", weightSla)
-
-    val rTimer = new Timer
-    val rResult = TryRenjin.crunch(workloads, minDesks.toList, maxDesks.toList, OptimizerConfig(sla)).get.recommendedDesks
-    rTimer.report("renjin crunch")
-
-    val sTimer = new Timer
-    val sResult = Optimiser.crunch(workloads, minDesks.toList, maxDesks.toList, OptimizerConfig(sla)).get.recommendedDesks
-    sTimer.report("scala crunch")
-
-    val diffs = sResult.zip(rResult).zipWithIndex.grouped(15).map(_.head).collect {
-      case ((s, r), i) if s != r =>
-        println(s"minute $i: $s != $r")
-        (i, s, r)
-    }.toList
-
-    diffs.length < 2 === true
   }
 
   "Given 10 minutes of work and 15 minutes of capacity" >> {
