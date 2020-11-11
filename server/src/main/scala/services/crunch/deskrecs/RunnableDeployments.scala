@@ -68,12 +68,13 @@ object RunnableDeployments {
               case (firstMillis, lastMillis, queues, availableStaffByTerminal) =>
                 val minuteMillis = firstMillis to lastMillis by 60000
                 log.info(s"Simulating ${minuteMillis.length} minutes (${SDate(firstMillis).toISOString()} to ${SDate(lastMillis).toISOString()})")
-
+                val startTime = System.currentTimeMillis()
                 val deskLimitsByTerminal: Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff] = staffToDeskLimits(availableStaffByTerminal)
                 val workload = queues.minutes.map(_.toMinute)
                   .map { minute => (minute.key, LoadMinute(minute)) }
                   .toMap
                 val simulationMinutes = portDeskRecs.loadsToSimulations(minuteMillis, workload, deskLimitsByTerminal)
+                log.info(s"Simulating took ${System.currentTimeMillis() - startTime}ms")
 
                 SimulationMinutes(simulationMinutes.values.toList)
             } ~> killSwitch ~> deploymentsSink

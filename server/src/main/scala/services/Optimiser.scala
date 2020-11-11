@@ -32,7 +32,12 @@ object Optimiser {
     val indexedWork = workloads.toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
-    val bestMaxDesks = maxDesks.toIndexedSeq
+//    val bestMaxDesks = if (workloads.size >= 60) {
+//      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer)
+//      fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
+//    } else maxDesks.toIndexedSeq
+
+        val bestMaxDesks = maxDesks.toIndexedSeq
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
     for {
@@ -121,6 +126,64 @@ object Optimiser {
 
       ProcessedWork(utilReversed, waitReversed, q, totalWait, excessWait)
     }
+  }
+
+  def rollingFairXmax(work: IndexedSeq[Double],
+                      xmin: IndexedSeq[Int],
+                      blockSize: Int,
+                      sla: Int,
+                      targetWidth: Int,
+                      rollingBuffer: Int): IndexedSeq[Int] = {
+    val workWithOverrun = work ++ List.fill(targetWidth)(0d)
+    val xminWithOverrun = xmin ++ List.fill(targetWidth)(xmin.takeRight(1).head)
+
+    var backlog = 0d
+
+    val result = (workWithOverrun.indices by targetWidth).foldLeft(IndexedSeq[Int]()) { case (acc, startSlot) =>
+      val winStart: Int = List(startSlot - rollingBuffer, 0).max
+      val i = startSlot + targetWidth + rollingBuffer
+      val i1 = workWithOverrun.size
+      val winStop: Int = List(i, i1).min
+      val winWork = workWithOverrun.slice(winStart, winStop)
+      val winXmin = xminWithOverrun.slice(winStart, winStop)
+
+      if (winStart == 0) backlog = 0
+
+      val runAv = runningAverage(winWork, List(blockSize, sla).min)
+      val guessMax: Int = runAv.max.ceil.toInt
+
+      val lowerLimit = List(winXmin.max, (winWork.sum / winWork.size).ceil.toInt).max
+
+      var winXmax = guessMax
+      var hasExcessWait = false
+      var lowerLimitReached = false
+
+      if (guessMax <= lowerLimit)
+        winXmax = lowerLimit
+      else {
+        do {
+          val trialDesks = leftwardDesks(winWork, winXmin, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog)
+          val trialProcessExcessWait = tryProcessWork(winWork, trialDesks, sla, IndexedSeq(0)) match {
+            case Success(pw) => pw.excessWait
+            case Failure(t) => throw t
+          }
+          if (trialProcessExcessWait > 0) {
+            winXmax = List(winXmax + 1, guessMax).min
+            hasExcessWait = true
+          }
+          if (winXmax <= lowerLimit) lowerLimitReached = true
+          if (!lowerLimitReached && !hasExcessWait) winXmax = winXmax - 1
+        } while (!lowerLimitReached && !hasExcessWait)
+      }
+
+      val newXmax = acc ++ List.fill(targetWidth)(winXmax)
+      0 until targetWidth foreach { j =>
+        backlog = List(backlog + winWork(j) - newXmax(winStart), 0).max
+      }
+      newXmax
+    }.take(work.size)
+
+    result
   }
 
   def runningAverage(values: Iterable[Double], windowLength: Int): Iterable[Double] = {
@@ -213,47 +276,103 @@ object Optimiser {
 
   def neighbouringPoints(x0: Int, xmin: Int, xmax: Int): IndexedSeq[Int] = (xmin to xmax)
     .filterNot(_ == x0)
-    .sortBy(x => (x - x0).abs)
+    .sorted.reverse
+//    .sortBy(x => (x - x0).abs)
 
   def branchBound(startingX: IndexedSeq[Int],
                   cost: IndexedSeq[Int] => Cost,
                   xmin: IndexedSeq[Int],
                   xmax: IndexedSeq[Int],
                   concavityLimit: Int): Iterable[Int] = {
-    val x = mutable.IndexedSeq() ++ startingX
+    val desks = startingX.to[mutable.IndexedSeq]
     var incumbent = startingX
-    val minutes = x.length
+    val minutes = desks.length
     var bestSoFar = cost(incumbent.toIndexedSeq).totalPenalty
-    val candidates: mutable.IndexedSeq[IndexedSeq[Int]] = mutable.IndexedSeq() ++ (0 until minutes).map(i => neighbouringPoints(startingX(i), xmin(i), xmax(i)))
+    val candidates = (0 until minutes)
+      .map(i => neighbouringPoints(startingX(i), xmin(i), xmax(i)))
+      .to[mutable.IndexedSeq]
 
     var cursor = minutes - 1
 
     while (cursor >= 0) {
       while (candidates(cursor).nonEmpty) {
-        x(cursor) = candidates(cursor).take(1).head
+        desks(cursor) = candidates(cursor).head
         candidates(cursor) = candidates(cursor).drop(1)
 
-        val trialPenalty = cost(x.toIndexedSeq).totalPenalty
+        val trialPenalty = cost(desks.toIndexedSeq).totalPenalty
 
         if (trialPenalty > bestSoFar + concavityLimit) {
-          if (x(cursor) > incumbent(cursor)) {
-            candidates(cursor) = candidates(cursor).filter(_ < x(cursor))
+          if (desks(cursor) > incumbent(cursor)) {
+            candidates(cursor) = candidates(cursor).filter(_ < desks(cursor))
           } else {
-            candidates(cursor) = candidates(cursor).filter(_ > x(cursor))
+            candidates(cursor) = candidates(cursor).filter(_ > desks(cursor))
           }
         } else {
           if (trialPenalty < bestSoFar) {
-            incumbent = x.toIndexedSeq
+            incumbent = desks.toIndexedSeq
             bestSoFar = trialPenalty
           }
           if (cursor < minutes - 1) cursor = cursor + 1
         }
       }
       candidates(cursor) = neighbouringPoints(incumbent(cursor), xmin(cursor), xmax(cursor))
-      x(cursor) = incumbent(cursor)
+      desks(cursor) = incumbent(cursor)
       cursor = cursor - 1
     }
-    x
+    desks
+  }
+
+  def branchBoundBinarySearch(startingX: IndexedSeq[Int],
+                              cost: IndexedSeq[Int] => Cost,
+                              xmin: IndexedSeq[Int],
+                              xmax: IndexedSeq[Int],
+                              concavityLimit: Int): Iterable[Int] = {
+    val desks = startingX.to[mutable.IndexedSeq]
+    var incumbent = startingX
+    val minutes = desks.length
+    var bestSoFar = cost(incumbent.toIndexedSeq).totalPenalty
+    val candidates = (0 until minutes)
+      .map(i => neighbouringPoints(startingX(i), xmin(i), xmax(i)))
+      .to[mutable.IndexedSeq]
+
+    var cursor = minutes - 1
+
+    while (cursor >= 0) {
+      while (candidates(cursor).nonEmpty) {
+        val middle = ((candidates(cursor).length - 1) / 2).floor.toInt
+//        val higherCandidates = candidates(cursor).slice(0, middle - 1)
+//        val lowerCandidates = candidates(cursor).slice(middle + 1, candidates(cursor).length)
+//        println(s"middle of ${candidates(cursor).indices} (${candidates(cursor)}): $middle")
+//        println(s"higher: $higherCandidates, lower: $lowerCandidates")
+        desks(cursor) = candidates(cursor)(middle)
+        candidates(cursor) = candidates(cursor).filterNot(_ == desks(cursor))
+
+        val trialPenalty = cost(desks.toIndexedSeq).totalPenalty
+
+        val isBetter = trialPenalty <= bestSoFar + concavityLimit
+
+        if (isBetter) {
+//          println(s"better! increment the cursor")
+          if (trialPenalty < bestSoFar) {
+            incumbent = desks.toIndexedSeq
+            bestSoFar = trialPenalty
+          }
+          if (cursor < minutes - 1) cursor = cursor + 1
+        } else {
+          if (desks(cursor) > incumbent(cursor)) {
+//            println(s"worse! (higher than incumbent (${desks(cursor)} > ${incumbent(cursor)})) try the lower candidates ($lowerCandidates)")
+            candidates(cursor) = candidates(cursor).filter(_ < desks(cursor))
+          } else {
+//            println(s"\n\n\n+++++++++++++++++=worse! (lower or equal than incumbent (${desks(cursor)} <= ${incumbent(cursor)})) try the higher candidates ($higherCandidates)\n\n\n")
+            candidates(cursor) = candidates(cursor).filter(_ > desks(cursor))
+          }
+        }
+      }
+      candidates(cursor) = neighbouringPoints(incumbent(cursor), xmin(cursor), xmax(cursor))
+      desks(cursor) = incumbent(cursor)
+      cursor = cursor - 1
+    }
+    desks
   }
 
   def tryOptimiseWin(work: IndexedSeq[Double],
@@ -280,7 +399,7 @@ object Optimiser {
       var qStart = IndexedSeq(0d)
       var churnStart = 0
 
-      val desks: mutable.IndexedSeq[Int] = mutable.IndexedSeq[Int]() ++ blockMean(runningAverage(work, smoothingWidth), blockWidth)
+      val desks = blockMean(runningAverage(work, smoothingWidth), blockWidth)
         .map(_.ceil.toInt)
         .zip(maxDesks)
         .map {
@@ -289,7 +408,7 @@ object Optimiser {
         .zip(minDesks)
         .map {
           case (d, min) => List(d, min).max
-        }
+        }.to[mutable.IndexedSeq]
 
       def myCost(costWork: IndexedSeq[Double], costQStart: IndexedSeq[Double], costChurnStart: Int)
                 (capacity: IndexedSeq[Int]): Cost =
@@ -304,7 +423,8 @@ object Optimiser {
         val xmaxCondensed = maxDesks.slice(winStart, winStop).grouped(blockWidth).map(_.head).toIndexedSeq
 
         val windowIndices = winStart until winStop
-        branchBound(blockGuess, myCost(currentWork, qStart, churnStart), xminCondensed, xmaxCondensed, concavityLimit)
+        branchBoundBinarySearch(blockGuess, myCost(currentWork, qStart, churnStart), xminCondensed, xmaxCondensed, concavityLimit)
+//        branchBound(blockGuess, myCost(currentWork, qStart, churnStart), xminCondensed, xmaxCondensed, concavityLimit)
           .flatMap(o => List.fill(blockWidth)(o))
           .zip(windowIndices)
           .foreach {
