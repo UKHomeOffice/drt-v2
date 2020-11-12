@@ -5,7 +5,7 @@ import actors.Sizes.oneMegaByte
 import actors._
 import actors.daily.PassengersActor
 import actors.queues.QueueLikeActor.UpdatedMillis
-import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
+import actors.queues.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
@@ -68,10 +68,12 @@ class TestDrtActor extends Actor {
       val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(tc.now)))
       val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now))))
       val snapshotInterval = 1
-      val manifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(oneMegaByte, tc.now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval))))
+      val manifestLookups = ManifestLookups(system)
+      val manifestsActor: ActorRef = system.actorOf(ManifestRouterActor.props(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests))
+      val manifestsActorOld: ActorRef = system.actorOf(Props(new VoyageManifestsActor(oneMegaByte, tc.now, DrtStaticParameters.expireAfterMillis, Option(snapshotInterval))))
       val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(tc.now, journalType, tc.airportConfig.crunchOffsetMinutes)))
       val deploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes)))
-      val dummyLegacy1ActorProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
+
       val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, crunchQueueActor)
       val flightsActor: ActorRef = flightLookups.flightsActor
 

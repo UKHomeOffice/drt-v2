@@ -6,9 +6,7 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, UtcDate}
+import drt.shared.UtcDate
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 
 import scala.concurrent.ExecutionContext
@@ -20,7 +18,6 @@ trait ManifestLookupsLike {
   implicit val ec: ExecutionContext
   implicit val timeout: Timeout = new Timeout(60 seconds)
 
-  val now: () => SDateLike
   val requestAndTerminateActor: ActorRef
 
   val updateManifests: ManifestsUpdate = (date: UtcDate, vms: VoyageManifests) => {
@@ -40,11 +37,7 @@ trait ManifestLookupsLike {
 
 }
 
-case class ManifestLookups(system: ActorSystem,
-                           now: () => SDateLike,
-                           queuesByTerminal: Map[Terminal, Seq[Queue]],
-                           updatesSubscriber: ActorRef
-                          )(implicit val ec: ExecutionContext) extends ManifestLookupsLike {
-  override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "manifests-lookup-kill-actor")
-
+case class ManifestLookups(system: ActorSystem)(implicit val ec: ExecutionContext) extends ManifestLookupsLike {
+  override val requestAndTerminateActor: ActorRef = system
+    .actorOf(Props(new RequestAndTerminateActor()), "manifests-lookup-kill-actor")
 }

@@ -1,10 +1,10 @@
 package actors.minutes
 
-import actors.ManifestLookupsLike
 import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import actors.daily.RequestAndTerminate
 import actors.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
-import actors.queues.ManifestRouterActor
+import actors.queues.{ApiFeedState, ManifestRouterActor}
+import actors.{GetFeedStatuses, GetState, ManifestLookupsLike}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask
@@ -15,10 +15,10 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
+import server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
 
-import scala.collection.immutable
 import scala.collection.immutable.List
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -43,6 +43,103 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
 
   val noopUpdates: ManifestsUpdate = (_: UtcDate, _: VoyageManifests) => Future(Unit)
 
+  "When sending an ApiFeedResponse" >> {
+
+    "Given a Success response with 1 manifest" >> {
+
+      val testProbe = TestProbe()
+      val manifestRouterActor: ActorRef = manifestRouterActorWithTestProbe(testProbe)
+
+      val manifest = manifestForDate("2020-11-20")
+
+      val creationDate = SDate("2020-11-20T12:00Z")
+
+      val manifestFeedSuccess = ManifestsFeedSuccess(DqManifests("lastSeen.zip", Set(manifest)), creationDate)
+      val expected = VoyageManifests(Set(manifest))
+      manifestRouterActor ! manifestFeedSuccess
+
+      "Then it should be sent to the actor for the correct day" >> {
+
+        testProbe.fishForMessage(1 second) {
+          case RequestAndTerminate(_, m) =>
+            m === expected
+        }
+        success
+      }
+
+      "Then it should update the last seen zip file name" >> {
+
+        val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 1 second)
+
+
+        result.latestZipFilename === "lastSeen.zip"
+      }
+
+      "Then it should record the successful response" >> {
+
+        val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 1 second)
+
+        result.maybeSourceStatuses === Option(
+          FeedSourceStatuses(
+            ApiFeedSource,
+            FeedStatuses(
+              List(FeedStatusSuccess(creationDate.millisSinceEpoch, 1)),
+              Option(creationDate.millisSinceEpoch),
+              None,
+              Option(creationDate.millisSinceEpoch)
+            )
+          )
+        )
+      }
+    }
+
+    "Given a Failure response" >> {
+
+      val testProbe = TestProbe()
+      val manifestRouterActor: ActorRef = manifestRouterActorWithTestProbe(testProbe)
+
+      val manifest = manifestForDate("2020-11-20")
+
+      val creationDate = SDate("2020-11-20T12:00Z")
+
+      val manifestFeedFailure = ManifestsFeedFailure("Failed", creationDate)
+
+      manifestRouterActor ! manifestFeedFailure
+
+      "Then it should record the failure response" >> {
+
+        val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 1 second)
+
+        result.maybeSourceStatuses === Option(
+          FeedSourceStatuses(
+            ApiFeedSource,
+            FeedStatuses(
+              statuses = List(FeedStatusFailure(creationDate.millisSinceEpoch, "Failed")),
+              lastSuccessAt = None,
+              lastFailureAt = Option(creationDate.millisSinceEpoch),
+              lastUpdatesAt = None
+            )
+          )
+        )
+      }
+      "Then it should respond with the feed statuses when asked" >> {
+
+        val result: Option[FeedSourceStatuses] = Await.result(manifestRouterActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]], 1 second)
+
+        result === Option(
+          FeedSourceStatuses(
+            ApiFeedSource,
+            FeedStatuses(
+              statuses = List(FeedStatusFailure(creationDate.millisSinceEpoch, "Failed")),
+              lastSuccessAt = None,
+              lastFailureAt = Option(creationDate.millisSinceEpoch),
+              lastUpdatesAt = None
+            )
+          )
+        )
+      }
+    }
+  }
 
   "Given a manifest for a date " +
     "When it is saved" >> {
@@ -50,14 +147,14 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
     val testProbe = TestProbe()
     val manifestRouterActor: ActorRef = manifestRouterActorWithTestProbe(testProbe)
 
-    val manifest = manifestForDate("2019-11-20")
+    val manifest = manifestForDate("2020-11-20")
 
     val manifests = VoyageManifests(Set(manifest))
 
 
     "Then it should be sent to the actor for the correct day" >> {
 
-      manifestRouterActor ! manifests
+      manifestRouterActor ! ManifestsFeedSuccess(DqManifests("lastSeen.zip", Set(manifest)))
 
       testProbe.fishForMessage(1 second) {
         case RequestAndTerminate(_, m) =>
