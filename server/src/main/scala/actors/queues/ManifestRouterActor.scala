@@ -73,10 +73,13 @@ class ManifestRouterActor(manifestLookup: ManifestLookup, manifestsUpdate: Manif
   var updateRequestsQueue: List[(ActorRef, VoyageManifests)] = List()
   var processingRequest: Boolean = false
 
-  var state = ApiFeedState(
+  val initialState: ApiFeedState = ApiFeedState(
     S3ApiProvider.defaultApiLatestZipFilename(() => SDate.now(), expireAfterMillis),
     None
   )
+
+  var state = initialState
+
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def now: () => SDateLike = () => SDate.now()

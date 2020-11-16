@@ -64,7 +64,7 @@ class DayManifestActor(
 
     case GetState =>
       log.debug(s"Received GetState")
-      sender() ! state
+      sender() ! VoyageManifests(state.values.toSet)
 
     case m => log.warn(s"Got unexpected message: $m")
   }

@@ -5,7 +5,6 @@ import java.util.{Calendar, TimeZone, UUID}
 
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange}
 import actors._
-import actors.debug.{DebugFlightsActor, MessageQuery, MessageResponse}
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern._
@@ -30,7 +29,6 @@ import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Action, _}
 import play.api.{Configuration, Environment}
-import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.PcpArrival.{pcpFrom, _}
 import services.SplitsProvider.SplitProvider
 import services._
@@ -41,7 +39,6 @@ import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
 
-import scala.collection.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -175,6 +172,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithStaffing
     with WithVersion
     with WithSimulations
+    with WithPassengerInfo
     with WithMigrations
     with ProdPassengerSplitProviders
     with WithDebug {

@@ -56,9 +56,8 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val forecastArrivalsActor: ActorRef = system.actorOf(Props(new ForecastPortArrivalsActor(params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis)), name = "forecast-arrivals-actor")
   override val liveArrivalsActor: ActorRef = system.actorOf(Props(new LiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-arrivals-actor")
 
-  val manifestLookups = ManifestLookups(system)
+  val manifestLookups: ManifestLookups = ManifestLookups(system)
   override val voyageManifestsActor: ActorRef = system.actorOf(ManifestRouterActor.props(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests), name = "voyage-manifests-router-actor")
-  //  override val voyageManifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm))), name = "voyage-manifests-actor")
 
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
 

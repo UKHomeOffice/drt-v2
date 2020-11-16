@@ -32,7 +32,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
   case class MockManifestLookupWithTestProbe(system: ActorSystem, testActor: ActorRef) extends ManifestLookupsLike {
 
     override implicit val ec: ExecutionContext = system.dispatcher
-    override val now: () => SDateLike = () => SDate.now()
+
     override val requestAndTerminateActor: ActorRef = testActor
 
     override val manifestsByDayLookup: ManifestLookup = (date: UtcDate, maybePit: Option[MillisSinceEpoch]) => {
