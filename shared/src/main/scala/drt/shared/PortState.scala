@@ -47,7 +47,7 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
   def flightsRange(roundedStart: SDateLike, roundedEnd: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits]
   = ISortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights
     .filter {
-      case (_, f) => f.apiFlight.hasPcpDuring(roundedStart, roundedEnd)
+      case (_, f) => f.apiFlight.isRelevantToPeriod(roundedStart, roundedEnd)
     }
 
   def flightsRangeWithTerminals(roundedStart: SDateLike, roundedEnd: SDateLike, portQueues: IMap[Terminal, Seq[Queue]]): ISortedMap[UniqueArrival, ApiFlightWithSplits] = flightsRange(roundedStart, roundedEnd)

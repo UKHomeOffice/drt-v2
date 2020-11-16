@@ -1,9 +1,9 @@
 package actors.daily
 
-import actors.ArrivalGenerator.flightWithSplitsForDayAndTerminal
 import actors.GetState
 import akka.actor.ActorRef
 import akka.pattern.ask
+import controllers.ArrivalGenerator.flightWithSplitsForDayAndTerminal
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.{EeaDesk, Queue}

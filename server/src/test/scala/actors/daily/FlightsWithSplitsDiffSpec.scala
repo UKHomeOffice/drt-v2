@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.ArrivalGenerator
+import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared.api.Arrival
@@ -17,7 +17,6 @@ class FlightsWithSplitsDiffSpec extends Specification {
   def arrivalForDate(date: SDateLike): Arrival = ArrivalGenerator.arrival(schDt = date.toISOString())
   def arrivalForDateAndTerminal(date: SDateLike, terminal: Terminal): Arrival =
     ArrivalGenerator.arrival(schDt = date.toISOString(), terminal = terminal)
-
 
   "Given a FlightsWithSplitsDiff with no updates and no removals then isEmpty should be true" >> {
     val diff = FlightsWithSplitsDiff(List(), List())
@@ -138,6 +137,4 @@ class FlightsWithSplitsDiffSpec extends Specification {
 
     result === expected
   }
-
-
 }

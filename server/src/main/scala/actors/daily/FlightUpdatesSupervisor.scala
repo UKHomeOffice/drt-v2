@@ -22,16 +22,15 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 
-
-
-
 object FlightUpdatesSupervisor {
+
   case class UpdateLastRequest(terminal: Terminal, day: MillisSinceEpoch, lastRequestMillis: MillisSinceEpoch)
+
 }
 
 class FlightUpdatesSupervisor(now: () => SDateLike,
-                                                  terminals: List[Terminal],
-                                                  updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
+                              terminals: List[Terminal],
+                              updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import FlightUpdatesSupervisor._

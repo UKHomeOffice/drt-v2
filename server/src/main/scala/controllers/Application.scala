@@ -5,6 +5,7 @@ import java.util.{Calendar, TimeZone, UUID}
 
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange}
 import actors._
+import actors.debug.{DebugFlightsActor, MessageQuery, MessageResponse}
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern._
@@ -29,6 +30,7 @@ import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Action, _}
 import play.api.{Configuration, Environment}
+import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.PcpArrival.{pcpFrom, _}
 import services.SplitsProvider.SplitProvider
 import services._
@@ -39,6 +41,7 @@ import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
 
+import scala.collection.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -158,8 +161,10 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithPortState
     with WithStaffing
     with WithVersion
+    with WithSimulations
     with WithMigrations
-    with WithSimulations {
+    with WithDebug {
+
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
   implicit val mat: ActorMaterializer = DrtActorSystem.mat
@@ -223,7 +228,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
         val portStateFuture = portStateActor.ask(
           GetStateForTerminalDateRange(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
-          )(new Timeout(30 seconds))
+        )(new Timeout(30 seconds))
 
         portStateFuture
           .map {
@@ -353,12 +358,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   def index: Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
     Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
-  }
-
-  def getActorTree: Action[AnyContent] = authByRole(Debug) {
-    Action { _ =>
-      Ok(ActorTree.get().toString)
-    }
   }
 
   def healthCheck: Action[AnyContent] = Action.async { _ =>

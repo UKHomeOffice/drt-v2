@@ -17,24 +17,34 @@ case class StreamingFlightsExport(pcpPaxFn: Arrival => Int) {
 
   val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
 
-  def toCsvStream(flightsStream: Source[FlightsApi.FlightsWithSplits, NotUsed]): Source[String, NotUsed] = {
+  def withoutActualApiCsvRow(fws: ApiFlightWithSplits): String =
+    flightWithSplitsToCsvRow(queueNames, fws).mkString(",")
+
+  def withActualApiCsvRow(fws: ApiFlightWithSplits): String = (flightWithSplitsToCsvRow(queueNames, fws) :::
+    actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadingsForFlights).toList)
+    .mkString(",")
+
+  def toCsvStreamWithoutActualApi(flightsStream: Source[FlightsApi.FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
+    toCsvStream(flightsStream, withoutActualApiCsvRow, csvHeader)
+
+  def toCsvStream(
+                   flightsStream: Source[FlightsApi.FlightsWithSplits, NotUsed],
+                   csvRowFn: ApiFlightWithSplits => String,
+                   headers: String
+                 ): Source[String, NotUsed] = {
     flightsStream.map(fws => {
-      uniqueArrivalsWithCodeShares(fws.flights.values.toSeq).map {
-        case (fws, _) => flightWithSplitsToCsvRow(queueNames, fws).mkString(",") + "\n"
-      }.mkString
-    }).prepend(Source(List(csvHeader + "\n")))
+      uniqueArrivalsWithCodeShares(fws.flights.values.toSeq)
+        .sortBy {
+          case (fws, _) => fws.apiFlight.PcpTime
+        }
+        .map {
+          case (fws, _) => csvRowFn(fws) + "\n"
+        }.mkString
+    }).prepend(Source(List(headers + "\n")))
   }
 
-  def toCsvStreamWithActualApi(flightsStream: Source[FlightsApi.FlightsWithSplits, NotUsed]): Source[String, NotUsed] = {
-    flightsStream.map(fws => {
-      uniqueArrivalsWithCodeShares(fws.flights.values.toSeq).map {
-        case (fws, _) =>
-         val rowFields = flightWithSplitsToCsvRow(queueNames, fws) :::
-            actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadingsForFlights).toList
-          rowFields.mkString(",") + "\n"
-      }.mkString
-    }).prepend(Source(List(csvHeader + "," + actualApiHeadingsForFlights.mkString(",") + "\n")))
-  }
+  def toCsvStreamWithActualApi(flightsStream: Source[FlightsApi.FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
+    toCsvStream(flightsStream, withActualApiCsvRow, csvHeader + "," + actualApiHeadingsForFlights.mkString(","))
 
   val csvHeader: String =
     rawArrivalHeadings + ",PCP Pax," +

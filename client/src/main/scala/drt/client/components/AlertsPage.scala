@@ -6,7 +6,7 @@ import drt.client.actions.Actions.{DeleteAllAlerts, SaveAlert}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.Alert
+import drt.shared.{Alert, SDateLike}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import japgolly.scalajs.react.vdom.html_<^.{^, _}
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
@@ -17,9 +17,30 @@ object AlertsPage {
   case class State(title: Option[String] = None, message: Option[String] = None, alertClass: Option[String] = None, expiryDateTime: Option[MillisSinceEpoch] = None, expiryDateTimeString: String = "")
 
   val defaultAlertClass = "notice"
-  val defaultExpiryHours = 24
+  val defaultExpiry = "1 day"
 
-  def defaultExpiryMillis(): MillisSinceEpoch = SDate.now().addHours(defaultExpiryHours).millisSinceEpoch
+  val expiryOptions = List(
+    "1 hour",
+    "3 hours",
+    "1 day",
+    "2 days",
+    "3 days",
+    "1 week",
+    "1 month",
+    "6 months",
+  )
+
+  def expiryOptionToMillis(expiryOption: String): SDateLike = {
+    expiryOption.split(" ").take(2).toList match {
+      case number :: unit :: Nil if unit.contains("hour") => SDate.now().addHours(number.toInt)
+      case number :: unit :: Nil if unit.contains("day") => SDate.now().addDays(number.toInt)
+      case number :: unit :: Nil if unit.contains("week") => SDate.now().addDays(number.toInt* 7)
+      case number :: unit :: Nil if unit.contains("month") => SDate.now().addMonths(number.toInt)
+      case _ => expiryOptionToMillis(defaultExpiry)
+    }
+  }
+
+  def defaultExpiryMillis(): MillisSinceEpoch = expiryOptionToMillis(defaultExpiry).millisSinceEpoch
 
   def defaultState(): State = State(alertClass = Option(defaultAlertClass), expiryDateTime = Option(defaultExpiryMillis()))
 
@@ -86,8 +107,8 @@ object AlertsPage {
         state.copy(message = Option(message))
       })
 
-      def setExpiryDateTimeFromHours(hours: String) =
-        scope.modState(state => state.copy(expiryDateTime = Option(SDate.now().addHours(hours.toInt).millisSinceEpoch)))
+      def setExpiryDateTimeFromSelection(selectedExpiryOption: String) =
+        scope.modState(state => state.copy(expiryDateTime = Option(expiryOptionToMillis(selectedExpiryOption).millisSinceEpoch)))
 
       def isValid: Boolean = state.message.exists(s => s.trim != "")
 
@@ -114,7 +135,10 @@ object AlertsPage {
         <.div(^.`class` := "row", ^.height := "10px"),
         <.div(^.`class` := "row",
           <.label(^.`for` := "alert-date-time", "Expires after", ^.`class` := "col-md-3"),
-          <.select(^.id := "alert-date-time", ^.defaultValue := defaultExpiryHours, (12 to 72 by 12).map(h => <.option(^.value := h, s"$h hours")).toTagMod, ^.onChange ==> ((e: ReactEventFromInput) => setExpiryDateTimeFromHours(e.target.value)), ^.`class` := "col-md-3"),
+          <.select(^.id := "alert-date-time", ^.defaultValue := defaultExpiry,
+              expiryOptions.map(e => <.option(^.value := e, e)).toTagMod,
+            ^.onChange ==> ((e: ReactEventFromInput) => setExpiryDateTimeFromSelection(e.target.value)),
+            ^.`class` := "col-md-3"),
           <.div(^.id := "expiry-error", ^.`class` := "col-md-6")
         ),
         <.div(^.`class` := "row", ^.height := "10px"),

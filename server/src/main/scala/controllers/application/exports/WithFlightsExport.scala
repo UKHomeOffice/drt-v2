@@ -31,7 +31,7 @@ trait WithFlightsExport extends ExportToCsv {
     if (user.hasRole(ApiView))
       StreamingFlightsExport(ctrl.pcpPaxFn).toCsvStreamWithActualApi _
     else
-      StreamingFlightsExport(ctrl.pcpPaxFn).toCsvStream _
+      StreamingFlightsExport(ctrl.pcpPaxFn).toCsvStreamWithoutActualApi _
   }
 
   def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDayString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {

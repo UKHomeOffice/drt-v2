@@ -58,37 +58,37 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
     }
   }
 
-//  "Given two flights, one with an invalid terminal " +
-//    "When I ask for a crunch " +
-//    "I should only see crunch results for the flight with a valid terminal" >> {
-//
-//    val scheduled = "2017-01-01T00:00Z"
-//
-//    val flights = Flights(Seq(
-//      ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(15)),
-//      ArrivalGenerator.arrival(schDt = scheduled, iata = "FR8819", terminal = InvalidTerminal, actPax = Option(10))
-//      ))
-//
-//    val fiveMinutes = 600d / 60
-//
-//    val crunch = runCrunchGraph(TestConfig(
-//      now = () => SDate(scheduled),
-//      airportConfig = defaultAirportConfig.copy(
-//        terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
-//        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk))
-//        )
-//      ))
-//
-//    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
-//
-//    val expected = Map(T1 -> Map(Queues.EeaDesk -> List(15.0)))
-//
-//    crunch.portStateTestProbe.fishForMessage(1 seconds) {
-//      case ps: PortState =>
-//        val resultSummary = paxLoadsFromPortState(ps, 1, SDate(scheduled))
-//        resultSummary == expected
-//    }
-//
-//    success
-//  }
+  "Given two flights, one with an invalid terminal " +
+    "When I ask for a crunch " +
+    "I should only see crunch results for the flight with a valid terminal" >> {
+
+    val scheduled = "2017-01-01T00:00Z"
+
+    val flights = Flights(Seq(
+      ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(15)),
+      ArrivalGenerator.arrival(schDt = scheduled, iata = "FR8819", terminal = InvalidTerminal, actPax = Option(10))
+      ))
+
+    val fiveMinutes = 600d / 60
+
+    val crunch = runCrunchGraph(TestConfig(
+      now = () => SDate(scheduled),
+      airportConfig = defaultAirportConfig.copy(
+        terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+        queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk))
+        )
+      ))
+
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+
+    val expected = Map(T1 -> Map(Queues.EeaDesk -> List(15.0)))
+
+    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+      case ps: PortState =>
+        val resultSummary = paxLoadsFromPortState(ps, 1, SDate(scheduled))
+        resultSummary == expected
+    }
+
+    success
+  }
 }
