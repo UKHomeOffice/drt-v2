@@ -148,4 +148,36 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends Specification {
       }
     }
   }
+
+  "Low staffing levels" >> {
+    "Given a staffing flexed desk limits provider with 1 queue with min 1 desk but no staff " >> {
+      "When I ask for max desks at each hour from midnight to midnight outside BST " >> {
+        "Then I should get 0 max and thus 0 min for every hour due to there being no available staff" >> {
+          val terminalDesks = List.fill(24)(10)
+          val availableStaff = List.fill(24)(0)
+          val minDesksForEea: Map[Queue, IndexedSeq[Int]] = Map(EeaDesk -> minDesks)
+          val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), minDesksForEea, Map())
+          val result = limits.deskLimitsForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
+          val expected = (List.fill(24)(0), List.fill(24)(0))
+
+          result === expected
+        }
+      }
+    }
+
+    "Given a staffing flexed desk limits provider with 2 queues with min 4 desks and just one staff" >> {
+      "When I ask for max eea desks at each hour from midnight to midnight outside BST with no already utilised staff" >> {
+        "Then I should get 0 max and thus 0 min for every hour due to min desks requirement for the remaining queue being equal to or higher than the available staff" >> {
+          val terminalDesks = List.fill(24)(10)
+          val availableStaff = List.fill(24)(1)
+          val minDesksForEea: Map[Queue, IndexedSeq[Int]] = Map(EeaDesk -> minDesks, NonEeaDesk -> IndexedSeq.fill(24)(4))
+          val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), minDesksForEea, Map())
+          val result = limits.deskLimitsForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
+          val expected = (List.fill(24)(0), List.fill(24)(0))
+
+          result === expected
+        }
+      }
+    }
+  }
 }

@@ -282,40 +282,91 @@ object Optimiser {
                   xmin: IndexedSeq[Int],
                   xmax: IndexedSeq[Int],
                   concavityLimit: Int): Iterable[Int] = {
-    val x = mutable.IndexedSeq() ++ startingX
+    val desks = startingX.to[mutable.IndexedSeq]
     var incumbent = startingX
-    val minutes = x.length
+    val minutes = desks.length
     var bestSoFar = cost(incumbent.toIndexedSeq).totalPenalty
-    val candidates: mutable.IndexedSeq[IndexedSeq[Int]] = mutable.IndexedSeq() ++ (0 until minutes).map(i => neighbouringPoints(startingX(i), xmin(i), xmax(i)))
+    val candidates = (0 until minutes)
+      .map(i => neighbouringPoints(startingX(i), xmin(i), xmax(i)))
+      .to[mutable.IndexedSeq]
 
     var cursor = minutes - 1
 
     while (cursor >= 0) {
       while (candidates(cursor).nonEmpty) {
-        x(cursor) = candidates(cursor).take(1).head
+        desks(cursor) = candidates(cursor).head
         candidates(cursor) = candidates(cursor).drop(1)
 
-        val trialPenalty = cost(x.toIndexedSeq).totalPenalty
+        val trialPenalty = cost(desks.toIndexedSeq).totalPenalty
 
         if (trialPenalty > bestSoFar + concavityLimit) {
-          if (x(cursor) > incumbent(cursor)) {
-            candidates(cursor) = candidates(cursor).filter(_ < x(cursor))
+          if (desks(cursor) > incumbent(cursor)) {
+            candidates(cursor) = candidates(cursor).filter(_ < desks(cursor))
           } else {
-            candidates(cursor) = candidates(cursor).filter(_ > x(cursor))
+            candidates(cursor) = candidates(cursor).filter(_ > desks(cursor))
           }
         } else {
           if (trialPenalty < bestSoFar) {
-            incumbent = x.toIndexedSeq
+            incumbent = desks.toIndexedSeq
             bestSoFar = trialPenalty
           }
           if (cursor < minutes - 1) cursor = cursor + 1
         }
       }
       candidates(cursor) = neighbouringPoints(incumbent(cursor), xmin(cursor), xmax(cursor))
-      x(cursor) = incumbent(cursor)
+      desks(cursor) = incumbent(cursor)
       cursor = cursor - 1
     }
-    x
+    desks
+  }
+
+  /**
+   * Experimental - seems to be much faster when not running max desks through rollingFairXmax first
+   */
+  def branchBoundBinarySearch(startingX: IndexedSeq[Int],
+                              cost: IndexedSeq[Int] => Cost,
+                              xmin: IndexedSeq[Int],
+                              xmax: IndexedSeq[Int],
+                              concavityLimit: Int): Iterable[Int] = {
+    val desks = startingX.to[mutable.IndexedSeq]
+    var incumbent = startingX
+    val minutes = desks.length
+    var bestSoFar = cost(incumbent.toIndexedSeq).totalPenalty
+    val candidates = (0 until minutes)
+      .map(i => neighbouringPoints(startingX(i), xmin(i), xmax(i)))
+      .to[mutable.IndexedSeq]
+
+    var cursor = minutes - 1
+
+    while (cursor >= 0) {
+      while (candidates(cursor).nonEmpty) {
+        val middle = ((candidates(cursor).length - 1) / 2).floor.toInt
+        desks(cursor) = candidates(cursor)(middle)
+        candidates(cursor) = candidates(cursor).filterNot(_ == desks(cursor))
+
+        val trialPenalty = cost(desks.toIndexedSeq).totalPenalty
+
+        val isBetter = trialPenalty <= bestSoFar + concavityLimit
+
+        if (isBetter) {
+          if (trialPenalty < bestSoFar) {
+            incumbent = desks.toIndexedSeq
+            bestSoFar = trialPenalty
+          }
+          if (cursor < minutes - 1) cursor = cursor + 1
+        } else {
+          if (desks(cursor) > incumbent(cursor)) {
+            candidates(cursor) = candidates(cursor).filter(_ < desks(cursor))
+          } else {
+            candidates(cursor) = candidates(cursor).filter(_ > desks(cursor))
+          }
+        }
+      }
+      candidates(cursor) = neighbouringPoints(incumbent(cursor), xmin(cursor), xmax(cursor))
+      desks(cursor) = incumbent(cursor)
+      cursor = cursor - 1
+    }
+    desks
   }
 
   def tryOptimiseWin(work: IndexedSeq[Double],
@@ -342,7 +393,7 @@ object Optimiser {
       var qStart = IndexedSeq(0d)
       var churnStart = 0
 
-      val desks: mutable.IndexedSeq[Int] = mutable.IndexedSeq[Int]() ++ blockMean(runningAverage(work, smoothingWidth), blockWidth)
+      val desks = blockMean(runningAverage(work, smoothingWidth), blockWidth)
         .map(_.ceil.toInt)
         .zip(maxDesks)
         .map {
@@ -351,7 +402,7 @@ object Optimiser {
         .zip(minDesks)
         .map {
           case (d, min) => List(d, min).max
-        }
+        }.to[mutable.IndexedSeq]
 
       def myCost(costWork: IndexedSeq[Double], costQStart: IndexedSeq[Double], costChurnStart: Int)
                 (capacity: IndexedSeq[Int]): Cost =
