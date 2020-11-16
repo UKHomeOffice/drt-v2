@@ -168,6 +168,8 @@ class ManifestRouterActor(manifestLookup: ManifestLookup, manifestsUpdate: Manif
             log.debug("Update requests queue is empty. Nothing to do")
         }
       }
+    case _: UniqueArrival =>
+      sender() ! None
 
     case unexpected => log.warn(s"Got an unexpected message: $unexpected")
   }
