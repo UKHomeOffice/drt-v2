@@ -34,7 +34,7 @@ object RestrictedAccessByPortPage {
 
   case class State(title: Option[String] = None, message: Option[String] = None, expiryDateTime: Option[MillisSinceEpoch] = None)
 
-  def url(port: PortCode) = urlLowerCase.replace(portRequested.toString.toLowerCase, port.toString.toLowerCase)
+  def url(port: PortCode): String = urlLowerCase.replace(portRequested.toString.toLowerCase, port.toString.toLowerCase)
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("RestrictedAccessForPort")
     .render_P(props => {
