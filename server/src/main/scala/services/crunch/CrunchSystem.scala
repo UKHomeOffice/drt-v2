@@ -54,7 +54,6 @@ case class CrunchProps[FR](
                             manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                             voyageManifestsActor: ActorRef,
                             manifestRequestsSink: Sink[List[Arrival], NotUsed],
-                            simulator: Simulator,
                             initialPortState: Option[PortState] = None,
                             initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
                             initialForecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),

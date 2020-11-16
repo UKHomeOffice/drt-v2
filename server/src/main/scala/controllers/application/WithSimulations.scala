@@ -17,7 +17,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import play.api.mvc._
 import services.crunch.desklimits.PortDeskLimits
-import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
+import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs, SimRunnableDeskRecs}
 import services.exports.Exports
 import services.exports.summaries.queues.TerminalQueuesSummary
 import services.imports.ArrivalCrunchSimulationActor
@@ -65,9 +65,9 @@ trait WithSimulations {
     implicit val timeout: Timeout = new Timeout(2 minutes)
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
 
-    val (runnableDeskRecs, _): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = RunnableDeskRecs(
+    val (runnableDeskRecs, _): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = SimRunnableDeskRecs(
       portStateActor,
-      DesksAndWaitsPortProvider(simulationConfig, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi),
+      DesksAndWaitsPortProvider(simulationConfig, Optimiser.crunchWithDump, PcpPax.bestPaxEstimateWithApi),
       PortDeskLimits.fixed(simulationConfig)
     ).run()
 

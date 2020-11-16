@@ -178,7 +178,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = voyageManifestsActor,
       manifestRequestsSink = manifestRequestsSink,
-      simulator = Optimiser.runSimulationOfWork,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(SortedMap()),
       initialForecastArrivals = initialForecastArrivals.getOrElse(SortedMap()),

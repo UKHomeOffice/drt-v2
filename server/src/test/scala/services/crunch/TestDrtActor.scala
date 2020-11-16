@@ -164,7 +164,6 @@ class TestDrtActor extends Actor {
         manifestResponsesSource = manifestResponsesSource,
         voyageManifestsActor = manifestsActor,
         manifestRequestsSink = manifestRequestsSink,
-        simulator = tc.simulator,
         initialPortState = tc.initialPortState,
         initialForecastBaseArrivals = tc.initialForecastBaseArrivals,
         initialForecastArrivals = tc.initialForecastArrivals,
