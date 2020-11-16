@@ -61,7 +61,10 @@ object RunnableDeskRecs {
               val startTime = System.currentTimeMillis()
               val loads = portDeskRecs.flightsToLoads(flights, crunchStartMillis)
               val minutes = portDeskRecs.loadsToDesks(minuteMillis, loads, maxDesksProviders)
-              log.info(s"Crunching took ${System.currentTimeMillis() - startTime}ms")
+              val timeTaken = System.currentTimeMillis() - startTime
+              if (timeTaken > 1000) {
+                log.warn(s"Simulation took ${timeTaken}ms")
+              }
               minutes
             } ~> killSwitch ~> deskRecsSink
 

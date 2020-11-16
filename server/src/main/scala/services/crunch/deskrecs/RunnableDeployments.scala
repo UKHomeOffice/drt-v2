@@ -74,7 +74,10 @@ object RunnableDeployments {
                   .map { minute => (minute.key, LoadMinute(minute)) }
                   .toMap
                 val simulationMinutes = portDeskRecs.loadsToSimulations(minuteMillis, workload, deskLimitsByTerminal)
-                log.info(s"Simulating took ${System.currentTimeMillis() - startTime}ms")
+                val timeTaken = System.currentTimeMillis() - startTime
+                if (timeTaken > 1000) {
+                  log.warn(s"Simulation took ${timeTaken}ms")
+                }
 
                 SimulationMinutes(simulationMinutes.values.toList)
             } ~> killSwitch ~> deploymentsSink
