@@ -21,7 +21,7 @@ import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
 import services.exports.Exports
 import services.exports.summaries.queues.TerminalQueuesSummary
 import services.imports.ArrivalCrunchSimulationActor
-import services.{SDate, TryRenjin}
+import services.{Optimiser, SDate}
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
@@ -67,7 +67,7 @@ trait WithSimulations {
 
     val (runnableDeskRecs, _): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = RunnableDeskRecs(
       portStateActor,
-      DesksAndWaitsPortProvider(simulationConfig, TryRenjin.crunch, PcpPax.bestPaxEstimateWithApi),
+      DesksAndWaitsPortProvider(simulationConfig, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi),
       PortDeskLimits.fixed(simulationConfig)
     ).run()
 
@@ -99,5 +99,4 @@ trait WithSimulations {
       )
     })
   }
-
 }

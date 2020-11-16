@@ -22,7 +22,7 @@ class StaffMinutesSpec extends CrunchTestLike {
   "Upgraded deployments" >> {
     "Given a shift with 10 staff and passengers split to 2 queues " +
       "When I ask for the PortState " +
-      "Then I should see 1 EEA desk & 2 Non-EEA desks deployed " >> {
+      "Then I should see 1 EEA desk & 1 Non-EEA desks deployed - ie the min desks for each queue " >> {
       val scheduled = "2017-01-01T00:00Z"
       val shiftStart = SDate(scheduled)
 
@@ -35,8 +35,6 @@ class StaffMinutesSpec extends CrunchTestLike {
       val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
       val assignment2 = StaffAssignment("egate monitor", T1, startDate2, endDate2, 2, None)
       val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
-
-      val flight = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100))
 
       val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(
@@ -67,7 +65,6 @@ class StaffMinutesSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(5 seconds) {
         case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.fixedPoints) == Option(2)
       }
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
 
       val expectedCrunchDeployments = Set(
         (Queues.EeaDesk, shiftStart.addMinutes(0), 1),
@@ -75,11 +72,12 @@ class StaffMinutesSpec extends CrunchTestLike {
         (Queues.EeaDesk, shiftStart.addMinutes(2), 1),
         (Queues.EeaDesk, shiftStart.addMinutes(3), 1),
         (Queues.EeaDesk, shiftStart.addMinutes(4), 1),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(0), 2),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(1), 2),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(2), 2),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(3), 2),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(4), 2))
+        (Queues.NonEeaDesk, shiftStart.addMinutes(0), 1),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(1), 1),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(2), 1),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(3), 1),
+        (Queues.NonEeaDesk, shiftStart.addMinutes(4), 1)
+      )
 
       crunch.portStateTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>

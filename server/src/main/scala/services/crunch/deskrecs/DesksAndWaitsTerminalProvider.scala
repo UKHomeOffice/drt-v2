@@ -47,10 +47,9 @@ case class DesksAndWaitsTerminalProvider(slas: Map[Queue, Int],
         case (queueRecsSoFar, queue) =>
           log.debug(s"Optimising $queue")
           val queueWork = adjustedWork(queue, loadsByQueue(queue))
-          val minDesks = deskLimitsProvider.minDesksForMinutes(minuteMillis, queue).toSeq
-
           val queueDeskAllocations = queueRecsSoFar.mapValues { case (desks, _) => desks.toList }
-          val maxDesks = deskLimitsProvider.maxDesksForMinutes(minuteMillis, queue, queueDeskAllocations).toSeq
+
+          val (minDesks, maxDesks) = deskLimitsProvider.deskLimitsForMinutes(minuteMillis, queue, queueDeskAllocations)
 
           queueWork match {
             case noWork if noWork.isEmpty || noWork.max == 0 =>
@@ -58,14 +57,14 @@ case class DesksAndWaitsTerminalProvider(slas: Map[Queue, Int],
               queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0))))
             case someWork =>
               val start = System.currentTimeMillis()
-              val r = cruncher(someWork, minDesks, maxDesks, OptimizerConfig(slas(queue))) match {
+              val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks.toSeq, OptimizerConfig(slas(queue))) match {
                 case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queue -> ((desks.toList, waits.toList)))
                 case Failure(t) =>
                   log.error(s"Crunch failed for $queue", t)
                   queueRecsSoFar
               }
               log.info(s"$queue crunch for ${SDate(minuteMillis.min).toISOString()} took: ${System.currentTimeMillis() - start}ms")
-              r
+              optimisedDesks
           }
       }
   }
