@@ -32,12 +32,11 @@ object Optimiser {
     val indexedWork = workloads.toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
-//    val bestMaxDesks = if (workloads.size >= 60) {
-//      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer)
-//      fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
-//    } else maxDesks.toIndexedSeq
+    val bestMaxDesks = if (workloads.size >= 60) {
+      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer)
+      fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
+    } else maxDesks.toIndexedSeq
 
-        val bestMaxDesks = maxDesks.toIndexedSeq
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
     for {
@@ -276,8 +275,8 @@ object Optimiser {
 
   def neighbouringPoints(x0: Int, xmin: Int, xmax: Int): IndexedSeq[Int] = (xmin to xmax)
     .filterNot(_ == x0)
-    .sorted.reverse
-//    .sortBy(x => (x - x0).abs)
+//    .sorted.reverse
+    .sortBy(x => (x - x0).abs)
 
   def branchBound(startingX: IndexedSeq[Int],
                   cost: IndexedSeq[Int] => Cost,
@@ -340,10 +339,6 @@ object Optimiser {
     while (cursor >= 0) {
       while (candidates(cursor).nonEmpty) {
         val middle = ((candidates(cursor).length - 1) / 2).floor.toInt
-//        val higherCandidates = candidates(cursor).slice(0, middle - 1)
-//        val lowerCandidates = candidates(cursor).slice(middle + 1, candidates(cursor).length)
-//        println(s"middle of ${candidates(cursor).indices} (${candidates(cursor)}): $middle")
-//        println(s"higher: $higherCandidates, lower: $lowerCandidates")
         desks(cursor) = candidates(cursor)(middle)
         candidates(cursor) = candidates(cursor).filterNot(_ == desks(cursor))
 
@@ -352,7 +347,6 @@ object Optimiser {
         val isBetter = trialPenalty <= bestSoFar + concavityLimit
 
         if (isBetter) {
-//          println(s"better! increment the cursor")
           if (trialPenalty < bestSoFar) {
             incumbent = desks.toIndexedSeq
             bestSoFar = trialPenalty
@@ -360,10 +354,8 @@ object Optimiser {
           if (cursor < minutes - 1) cursor = cursor + 1
         } else {
           if (desks(cursor) > incumbent(cursor)) {
-//            println(s"worse! (higher than incumbent (${desks(cursor)} > ${incumbent(cursor)})) try the lower candidates ($lowerCandidates)")
             candidates(cursor) = candidates(cursor).filter(_ < desks(cursor))
           } else {
-//            println(s"\n\n\n+++++++++++++++++=worse! (lower or equal than incumbent (${desks(cursor)} <= ${incumbent(cursor)})) try the higher candidates ($higherCandidates)\n\n\n")
             candidates(cursor) = candidates(cursor).filter(_ > desks(cursor))
           }
         }
@@ -423,8 +415,8 @@ object Optimiser {
         val xmaxCondensed = maxDesks.slice(winStart, winStop).grouped(blockWidth).map(_.head).toIndexedSeq
 
         val windowIndices = winStart until winStop
-        branchBoundBinarySearch(blockGuess, myCost(currentWork, qStart, churnStart), xminCondensed, xmaxCondensed, concavityLimit)
-//        branchBound(blockGuess, myCost(currentWork, qStart, churnStart), xminCondensed, xmaxCondensed, concavityLimit)
+//        branchBoundBinarySearch(blockGuess, myCost(currentWork, qStart, churnStart), xminCondensed, xmaxCondensed, concavityLimit)
+        branchBound(blockGuess, myCost(currentWork, qStart, churnStart), xminCondensed, xmaxCondensed, concavityLimit)
           .flatMap(o => List.fill(blockWidth)(o))
           .zip(windowIndices)
           .foreach {
