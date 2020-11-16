@@ -44,13 +44,11 @@ object TryRenjin {
         engine.put("weight_staff", 3)
         engine.put("weight_sla", 10)
 
-//        val adjustedXMax = if (workloads.size > 60) {
-//          engine.eval("rollingfairxmax <- rolling.fair.xmax(w, xmin=xmin, block.size=5, sla=adjustedSla, target.width=60, rolling.buffer=120)")
-//          val fairXmax = engine.eval("rollingfairxmax").asInstanceOf[DoubleVector]
-//          fairXmax.toIntArray.toSeq.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
-//        } else maxDesks
-
-        val adjustedXMax = maxDesks
+        val adjustedXMax = if (workloads.size > 60) {
+          engine.eval("rollingfairxmax <- rolling.fair.xmax(w, xmin=xmin, block.size=5, sla=adjustedSla, target.width=60, rolling.buffer=120)")
+          val fairXmax = engine.eval("rollingfairxmax").asInstanceOf[DoubleVector]
+          fairXmax.toIntArray.toSeq.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
+        } else maxDesks
 
         engine.put("adjustedXMax", adjustedXMax.toArray)
 

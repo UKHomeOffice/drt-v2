@@ -275,7 +275,6 @@ object Optimiser {
 
   def neighbouringPoints(x0: Int, xmin: Int, xmax: Int): IndexedSeq[Int] = (xmin to xmax)
     .filterNot(_ == x0)
-//    .sorted.reverse
     .sortBy(x => (x - x0).abs)
 
   def branchBound(startingX: IndexedSeq[Int],
@@ -321,6 +320,9 @@ object Optimiser {
     desks
   }
 
+  /**
+   * Experimental - seems to be much faster when not running max desks through rollingFairXmax first
+   */
   def branchBoundBinarySearch(startingX: IndexedSeq[Int],
                               cost: IndexedSeq[Int] => Cost,
                               xmin: IndexedSeq[Int],
@@ -415,7 +417,6 @@ object Optimiser {
         val xmaxCondensed = maxDesks.slice(winStart, winStop).grouped(blockWidth).map(_.head).toIndexedSeq
 
         val windowIndices = winStart until winStop
-//        branchBoundBinarySearch(blockGuess, myCost(currentWork, qStart, churnStart), xminCondensed, xmaxCondensed, concavityLimit)
         branchBound(blockGuess, myCost(currentWork, qStart, churnStart), xminCondensed, xmaxCondensed, concavityLimit)
           .flatMap(o => List.fill(blockWidth)(o))
           .zip(windowIndices)
