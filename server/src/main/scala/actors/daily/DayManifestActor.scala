@@ -3,7 +3,7 @@ package actors.daily
 import actors.acking.AckingReceiver.Ack
 import actors.{GetState, ManifestMessageConversion, RecoveryActorLike, Sizes}
 import akka.actor.Props
-import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.{ArrivalKey, SDateLike, UtcDate}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
@@ -65,6 +65,9 @@ class DayManifestActor(
     case GetState =>
       log.debug(s"Received GetState")
       sender() ! VoyageManifests(state.values.toSet)
+
+    case _: SaveSnapshotSuccess =>
+      ackIfRequired()
 
     case m => log.warn(s"Got unexpected message: $m")
   }

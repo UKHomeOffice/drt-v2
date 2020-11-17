@@ -13,7 +13,7 @@ case class Terminate(actor: ActorRef)
 
 case class RequestAndTerminate(actor: ActorRef, request: Any)
 
-class   RequestAndTerminateActor(implicit timeout: Timeout) extends Actor {
+class RequestAndTerminateActor(implicit timeout: Timeout) extends Actor {
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   val log: Logger = LoggerFactory.getLogger(getClass)
   var deathWatchReplyToAndResponse: Map[ActorRef, (ActorRef, Any)] = Map[ActorRef, (ActorRef, Any)]()

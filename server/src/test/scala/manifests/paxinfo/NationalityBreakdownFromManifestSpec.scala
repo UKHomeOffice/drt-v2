@@ -35,7 +35,7 @@ object NationalityBreakdownFromManifestSpec extends Specification {
 
   "When extracting nationality breakdown" >> {
     "Given a manifest with 1 passenger with a nationality of GB " +
-      "Then I should get a Map of" >> {
+      "Then I should get a Map of GBR to 1" >> {
 
       val voyageManifest = manifestWithPassengerNationalities(List("GBR"))
       val result = PassengerInfo.manifestToNationalityCount(voyageManifest)
@@ -47,8 +47,8 @@ object NationalityBreakdownFromManifestSpec extends Specification {
   }
 
   "When extracting nationality breakdown" >> {
-    "Given a manifest multiple GB passengers " +
-      "Then I should the total of all GB Pax for that nationality" >> {
+    "Given a manifest with multiple GB passengers " +
+      "Then I should see the total of all GB Pax for that nationality" >> {
 
       val voyageManifest = manifestWithPassengerNationalities(List("GBR", "GBR", "GBR"))
 
@@ -62,7 +62,7 @@ object NationalityBreakdownFromManifestSpec extends Specification {
 
   "When extracting nationality breakdown" >> {
     "Given a manifest with multiple nationalities" +
-      "Then I should the total of each nationality across all queues" >> {
+      "Then I should see the total of each nationality across all queues" >> {
 
       val voyageManifest = manifestWithPassengerNationalities(
         List(

@@ -1,6 +1,6 @@
 package actors.minutes
 
-import actors.minutes.MinutesActorLike.ManifestLookup
+import actors.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.UtcDate
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
@@ -11,6 +11,7 @@ case class MockManifestsLookup() {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
   var paramsLookup: List[(UtcDate, Option[MillisSinceEpoch])] = List()
+  var paramsUpdate: List[(UtcDate, VoyageManifests)] = List()
 
   def lookup(mockData: VoyageManifests = VoyageManifests.empty): ManifestLookup = {
 
@@ -24,5 +25,10 @@ case class MockManifestsLookup() {
       paramsLookup = paramsLookup :+ (d, pit)
       Future(byDay(d))
     }
+
+  }
+  def update : ManifestsUpdate = (date: UtcDate, manifests: VoyageManifests) => {
+    paramsUpdate = paramsUpdate :+ (date, manifests)
+    Future(Unit)
   }
 }

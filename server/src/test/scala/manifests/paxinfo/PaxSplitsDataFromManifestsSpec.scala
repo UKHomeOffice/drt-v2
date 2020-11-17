@@ -43,7 +43,6 @@ object PaxSplitsDataFromManifestsSpec extends Specification {
 
       val expected = Map(AgeRange(0, Option(11)) -> 1)
 
-
       result === expected
     }
 
@@ -60,7 +59,6 @@ object PaxSplitsDataFromManifestsSpec extends Specification {
           AgeRange(25, Option(49)) -> 1
         )
 
-
       result === expected
     }
   }
@@ -76,7 +74,6 @@ object PaxSplitsDataFromManifestsSpec extends Specification {
       100, 99
     ))
 
-
     val result = PassengerInfo.manifestToAgeRangeCount(manifest)
 
     val expected = Map(
@@ -86,9 +83,6 @@ object PaxSplitsDataFromManifestsSpec extends Specification {
       AgeRange(50, Option(65)) -> 1,
       AgeRange(65, None) -> 2
     )
-
-    println(result)
-    println(expected)
 
     result === expected
   }
