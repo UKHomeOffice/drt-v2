@@ -140,7 +140,7 @@ object PortSwitcher {
           p != props.portCode
         })
         if (otherPorts.size == 1) {
-          <.a(Icon.plane, " ", ^.href := RestrictedAccessByPortPage.url(otherPorts.head), otherPorts.head.iata)
+          <.a(Icon.plane, " ", ^.href := RestrictedAccessByPortPage.urls.urlForPort(otherPorts.head), otherPorts.head.iata)
         } else {
           <.span(
             ^.className := "dropdown",
@@ -149,7 +149,7 @@ object PortSwitcher {
             if (state.showDropDown) <.div(^.className := "menu-overlay", ^.onClick --> scope.modState(_ => State())) else "",
             <.ul(^.className := s"main-menu__port-switcher dropdown-menu $showClass",
               otherPorts.toList.sorted.map(p => <.li(^.className := "dropdown-item",
-                <.a(^.href := RestrictedAccessByPortPage.url(p), p.iata))).toTagMod
+                <.a(^.href := RestrictedAccessByPortPage.urls.urlForPort(p), p.iata))).toTagMod
             )
           )
         }

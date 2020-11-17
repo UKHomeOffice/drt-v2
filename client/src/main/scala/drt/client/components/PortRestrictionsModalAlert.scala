@@ -18,7 +18,7 @@ object PortRestrictionsModalAlert {
   val component = ScalaComponent.builder[Props]("ModalDialog")
     .render_P(props => {
 
-      val currentPort = RestrictedAccessByPortPage.portRequested
+      val currentPort = RestrictedAccessByPortPage.urls.currentPort
       log.info(s"Current port is $currentPort")
       val userCanAccessPort = RestrictedAccessByPortPage.userCanAccessPort(props.loggedInUser, currentPort)
       val show = if (props.display && !userCanAccessPort) "show" else ""
