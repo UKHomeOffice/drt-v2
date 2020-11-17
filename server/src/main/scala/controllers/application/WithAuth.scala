@@ -2,8 +2,10 @@ package controllers.application
 
 import controllers.Application
 import drt.auth.{LoggedInUser, Role}
+import drt.shared.ErrorResponse
 import play.api.libs.json.{JsObject, Json, Writes}
 import play.api.mvc.{Action, AnyContent, Result}
+import upickle.default.write
 
 import scala.concurrent.Future
 
@@ -49,14 +51,8 @@ trait WithAuth {
     }
   }
 
-  private def unauthorizedMessageJson(allowedRole: Role): Result = {
-    Unauthorized(
-      s"""
-         |{
-         |  message: "Permission denied, you need $allowedRole to access this resource"
-         |}
-         """.stripMargin)
-  }
+  def unauthorizedMessageJson(allowedRole: Role): Result =
+    Unauthorized(write(ErrorResponse(s"Permission denied, you need $allowedRole to access this resource")))
 
   def auth[A](action: Action[A]): Action[A] = Action.async(action.parser) { request =>
 
@@ -72,12 +68,7 @@ trait WithAuth {
     val preventAccess = !loggedInUser.hasRole(allowedRole)
 
     if (preventAccess) {
-      Future(Unauthorized(
-        s"""
-           |{
-           |  message: "Permission denied, you need $allowedRole to access this resource"
-           |}
-         """.stripMargin))
+      Future(unauthorizedMessageJson(allowedRole))
     } else {
       action(request)
     }

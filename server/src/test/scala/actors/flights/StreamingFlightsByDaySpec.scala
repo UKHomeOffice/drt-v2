@@ -1,7 +1,7 @@
 package actors.flights
 
 import actors.ArrivalGenerator
-import actors.minutes.MockLookup
+import actors.minutes.MockFlightsLookup
 import actors.queues.FlightsRouterActor
 import actors.queues.FlightsRouterActor._
 import akka.stream.scaladsl.Sink

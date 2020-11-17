@@ -39,7 +39,8 @@ const bfRoles = [
   "arrivals-and-splits:view",
   "desks-and-queues:view",
   "staff-movements:edit",
-  "staff-movements:export"
+  "staff-movements:export",
+  "enhanced-api-view"
 ];
 const bfReadOnlyRoles = [
   "border-force-staff",

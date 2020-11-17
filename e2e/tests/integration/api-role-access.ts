@@ -1,11 +1,11 @@
-import moment from "moment-timezone";
-moment.locale("en-gb");
+
+import { todayAtUtc } from '../support/time-helpers'
+
 
 describe('Restrict access to endpoint by role', () => {
 
-  const todayDateString = moment().format("YYYY-MM-DD");
-  const todayString = todayDateString + "T00:00:00Z";
-  const millis = moment(todayString).unix() * 1000;
+  const today = todayAtUtc(0, 0);
+  const millis = today.unix() * 1000;
 
   const testCases = [
     {
@@ -317,6 +317,24 @@ describe('Restrict access to endpoint by role', () => {
     {
       roles: ["test", "arrival-simulation-upload"],
       endpoint: "/export/desk-rec-simulation",
+      method: "GET",
+      shouldBeGranted: true
+    },
+    {
+      roles: ["test"],
+      endpoint: "/export/desk-rec-simulation",
+      method: "GET",
+      shouldBeGranted: false
+    },
+    {
+      roles: ["test"],
+      endpoint: "/manifest/"+ today.format("YYYY-MM-DDTHH:mm") + "/AMS/0123/nationalities",
+      method: "GET",
+      shouldBeGranted: false
+    },
+    {
+      roles: ["test", "enhanced-api-view"],
+      endpoint: "/manifest/"+ today.format("YYYY-MM-DDTHH:mm") + "/AMS/0123/nationalities",
       method: "GET",
       shouldBeGranted: true
     },
