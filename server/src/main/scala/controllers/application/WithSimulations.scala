@@ -11,7 +11,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.util.Timeout
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming
-import drt.auth.ArrivalSimulationUpload
+import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._

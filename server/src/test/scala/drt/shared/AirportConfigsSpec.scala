@@ -1,6 +1,6 @@
 package drt.shared
 
-import drt.auth.LHRAccess
+import uk.gov.homeoffice.drt.auth.Roles.LHR
 import drt.shared.Terminals.{T1, Terminal}
 import org.specs2.mutable.Specification
 
@@ -55,7 +55,7 @@ class AirportConfigsSpec extends Specification {
         terminalPaxSplits = Map(),
         terminalProcessingTimes = Map(),
         minMaxDesksByTerminalQueue24Hrs = Map(),
-        role = LHRAccess,
+        role = LHR,
         terminalPaxTypeQueueAllocation = Map(T1 -> defaultQueueRatios),
         desksByTerminal = Map[Terminal, Int]()
         )

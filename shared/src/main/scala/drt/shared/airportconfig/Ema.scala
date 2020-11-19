@@ -1,9 +1,9 @@
 package drt.shared.airportconfig
 
-import drt.auth.EMAAccess
+import uk.gov.homeoffice.drt.auth.Roles.EMA
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
+import drt.shared.Queues.{EGate, EeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
@@ -11,9 +11,10 @@ import drt.shared._
 import scala.collection.immutable.SortedMap
 
 object Ema extends AirportConfigLike {
+
   import AirportConfigDefaults._
 
-  val config = AirportConfig(
+  val config: AirportConfig = AirportConfig(
     portCode = PortCode("EMA"),
     queuesByTerminal = SortedMap(
       T1 -> Seq(Queues.QueueDesk, Queues.EGate)
@@ -48,7 +49,7 @@ object Ema extends AirportConfigLike {
         Queues.QueueDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
     ),
-    role = EMAAccess,
+    role = EMA,
     // This is deliberately high (10000) to cope with restoring previous snapshot bug where the time between snapshots
     // was going beyond the message threshold.
     // A neater fix would be to produce the missing snapshots retrospectively, but that would be quite a big job for a
@@ -62,5 +63,5 @@ object Ema extends AirportConfigLike {
     ),
     flexedQueues = Set(),
     desksByTerminal = Map(T1 -> 5)
-    )
+  )
 }

@@ -3,16 +3,13 @@ package controllers.application.exports
 import actors.summaries.TerminalQueuesSummaryActor
 import akka.actor.ActorRef
 import controllers.Application
-import drt.auth.DesksAndQueuesView
-import drt.shared.CrunchApi.MillisSinceEpoch
+import uk.gov.homeoffice.drt.auth.Roles.DesksAndQueuesView
 import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import play.api.mvc.{Action, AnyContent}
 import services.SDate
 import services.exports.Exports
-import services.exports.summaries.{GetSummaries, TerminalSummaryLike}
-
-import scala.concurrent.Future
+import services.exports.summaries.GetSummaries
 
 trait WithDesksExport extends ExportToCsv {
   self: Application =>

@@ -9,7 +9,7 @@ import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnap
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorMaterializer, KillSwitch}
 import akka.util.Timeout
-import drt.auth.Role
+import uk.gov.homeoffice.drt.auth.Roles.Role
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.Arrival
 import drt.shared.{AirportConfig, MilliTimes, PortCode}

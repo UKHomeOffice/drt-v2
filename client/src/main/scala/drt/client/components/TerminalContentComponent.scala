@@ -2,10 +2,12 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
-import drt.auth._
+import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, ArrivalSource, Role, StaffMovementsExport}
+import uk.gov.homeoffice.drt.auth._
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
+import drt.client.components.TooltipComponent._
 import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -18,7 +20,7 @@ import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, vdomElementFromComponent, vdomElementFromTag, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
-import TooltipComponent._
+
 import scala.util.Try
 
 object TerminalContentComponent {

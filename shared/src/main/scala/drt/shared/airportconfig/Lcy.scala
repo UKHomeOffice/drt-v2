@@ -1,6 +1,6 @@
 package drt.shared.airportconfig
 
-import drt.auth.LCYAccess
+import uk.gov.homeoffice.drt.auth.Roles.LCY
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
@@ -11,9 +11,10 @@ import drt.shared._
 import scala.collection.immutable.SortedMap
 
 object Lcy extends AirportConfigLike {
+
   import AirportConfigDefaults._
 
-  val config = AirportConfig(
+  val config: AirportConfig = AirportConfig(
     portCode = PortCode("LCY"),
     queuesByTerminal = SortedMap(
       T1 -> Seq(Queues.NonEeaDesk, Queues.EeaDesk, Queues.EGate)
@@ -46,7 +47,7 @@ object Lcy extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4))
       )
     ),
-    role = LCYAccess,
+    role = LCY,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.6993,
@@ -55,5 +56,5 @@ object Lcy extends AirportConfigLike {
     ),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map(T1 -> 9)
-    )
+  )
 }

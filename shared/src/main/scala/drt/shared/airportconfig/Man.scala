@@ -1,6 +1,6 @@
 package drt.shared.airportconfig
 
-import drt.auth.MANAccess
+import uk.gov.homeoffice.drt.auth.Roles.MAN
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
@@ -11,9 +11,10 @@ import drt.shared._
 import scala.collection.immutable.SortedMap
 
 object Man extends AirportConfigLike {
+
   import AirportConfigDefaults._
 
-  val config = AirportConfig(
+  val config: AirportConfig = AirportConfig(
     portCode = PortCode("MAN"),
     queuesByTerminal = SortedMap(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk),
@@ -55,7 +56,7 @@ object Man extends AirportConfigLike {
       "Afternoon shift, T1, {date}, 14:00, 16:59, 18",
       "Evening shift, T1, {date}, 17:00, 23:59, 22"
     ),
-    role = MANAccess,
+    role = MAN,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.7968,
@@ -75,5 +76,5 @@ object Man extends AirportConfigLike {
       T2 -> 11,
       T3 -> 9
     )
-    )
+  )
 }

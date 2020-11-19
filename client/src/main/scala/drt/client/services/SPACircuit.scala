@@ -5,7 +5,7 @@ import java.util.UUID
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._

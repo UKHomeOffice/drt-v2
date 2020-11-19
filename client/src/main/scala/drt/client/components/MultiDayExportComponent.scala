@@ -1,6 +1,7 @@
 package drt.client.components
 
-import drt.auth.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView, LoggedInUser}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
 import drt.client.SPAMain
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -8,9 +9,10 @@ import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 
 object MultiDayExportComponent {
   val today: SDateLike = SDate.now()
@@ -37,7 +39,7 @@ object MultiDayExportComponent {
   implicit val terminalReuse: Reusability[Terminal] = Reusability.derive[Terminal]
   implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.terminal, p.selectedDate.millisSinceEpoch))
 
-  val component = ScalaComponent.builder[Props]("SnapshotSelector")
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SnapshotSelector")
     .initialStateFromProps(p => State(
       startDay = p.selectedDate.getDate(),
       startMonth = p.selectedDate.getMonth(),

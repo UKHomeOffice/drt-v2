@@ -4,7 +4,7 @@ import actors.debug.{DebugFlightsActor, MessageQuery, MessageResponse}
 import akka.actor.Props
 import akka.pattern.ask
 import controllers.Application
-import drt.auth.Debug
+import uk.gov.homeoffice.drt.auth.Roles.Debug
 import play.api.mvc.{Action, AnyContent}
 import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.{ActorTree, SDate}

@@ -1,6 +1,6 @@
 package drt.shared.airportconfig
 
-import drt.auth.LPLAccess
+import uk.gov.homeoffice.drt.auth.Roles.LPL
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EeaDesk, NonEeaDesk}
@@ -11,9 +11,10 @@ import drt.shared._
 import scala.collection.immutable.SortedMap
 
 object Lpl extends AirportConfigLike {
+
   import AirportConfigDefaults._
 
-  val config = AirportConfig(
+  val config: AirportConfig = AirportConfig(
     portCode = PortCode("LPL"),
     queuesByTerminal = SortedMap(
       T1 -> Seq(Queues.NonEeaDesk, Queues.EeaDesk)
@@ -43,15 +44,15 @@ object Lpl extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
       )
     ),
-    role = LPLAccess,
+    role = LPL,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (
         EeaMachineReadable -> List(EeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EeaDesk -> 1.0)
       ))
     ),
-    feedSources = Seq(ApiFeedSource,LiveBaseFeedSource, AclFeedSource),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, AclFeedSource),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map(T1 -> 8)
-    )
+  )
 }
