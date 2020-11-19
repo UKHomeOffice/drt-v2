@@ -42,9 +42,9 @@ trait WithAuth {
   def authByRole[A](allowedRole: Role)(action: Action[A]): Action[A] = Action.async(action.parser) { request =>
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
     log.debug(s"${loggedInUser.roles}, allowed role $allowedRole")
-    val preventAccess = !loggedInUser.hasRole(allowedRole)
+    val allowAccess = loggedInUser.hasRole(allowedRole)
 
-    if (!preventAccess) {
+    if (allowAccess) {
       auth(action)(request)
     } else {
       log.warning("Unauthorized")

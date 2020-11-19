@@ -369,7 +369,14 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   def index: Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
-    Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
+    if (user.hasRole(airportConfig.role))
+      Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
+    else {
+      request.connection.secure
+      val baseDomain = config.get[String]("base-domain")
+      val protocol = if (request.connection.secure) "https://" else "http://"
+      Redirect(Call("get", protocol + baseDomain))
+    }
   }
 
   def healthCheck: Action[AnyContent] = Action.async { _ =>
