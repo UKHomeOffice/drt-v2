@@ -6,7 +6,7 @@ import actors.minutes.MinutesActorLike.{CrunchMinutesMigrationUpdate, FlightsMig
 import actors.{DbStreamingJournal, PostgresTables}
 import akka.actor.{ActorRef, Props}
 import controllers.Application
-import drt.auth.Debug
+import uk.gov.homeoffice.drt.auth.Roles.Debug
 import drt.shared.SDateLike
 import play.api.http.HttpEntity
 import play.api.mvc.{Action, AnyContent, ResponseHeader, Result}

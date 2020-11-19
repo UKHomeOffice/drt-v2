@@ -1,6 +1,7 @@
 package drt.client.components
 
-import drt.auth.{FaqView, LoggedInUser}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.FaqView
 import drt.client.SPAMain.{ContactUsLoc, FaqsLoc, Loc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit

@@ -6,13 +6,13 @@ import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import controllers.Application
-import drt.auth.EnhancedApiView
 import drt.shared.{ArrivalKey, ErrorResponse, PortCode, VoyageNumber}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import play.api.mvc.{Action, AnyContent, Result}
 import services.SDate
+import uk.gov.homeoffice.drt.auth.Roles.EnhancedApiView
 import upickle.default.write
 
 import scala.concurrent.Future

@@ -1,10 +1,11 @@
 package controllers.application
 
 import controllers.Application
-import drt.auth.{LoggedInUser, Role}
 import drt.shared.ErrorResponse
 import play.api.libs.json.{JsObject, Json, Writes}
 import play.api.mvc.{Action, AnyContent, Result}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.Role
 import upickle.default.write
 
 import scala.concurrent.Future

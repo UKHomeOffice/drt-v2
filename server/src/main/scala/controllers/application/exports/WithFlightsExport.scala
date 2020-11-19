@@ -1,15 +1,14 @@
 package controllers.application.exports
 
-import actors.PartitionedPortStateActor.{DateRangeLike, GetFlightsForTerminalDateRange, PointInTimeQuery}
-import actors.summaries.FlightsSummaryActor
+import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, PointInTimeQuery}
 import akka.NotUsed
-import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
-import drt.auth.{ApiView, ArrivalSource, ArrivalsAndSplitsView, LoggedInUser}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
@@ -17,9 +16,8 @@ import drt.shared.{SDateLike, _}
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
-import services.exports.summaries.TerminalSummaryLike
-import services.exports.summaries.flights.{ArrivalFeedExport, TerminalFlightsSummary, TerminalFlightsWithActualApiSummary}
-import services.exports.{Exports, StreamingFlightsExport}
+import services.exports.StreamingFlightsExport
+import services.exports.summaries.flights.ArrivalFeedExport
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}

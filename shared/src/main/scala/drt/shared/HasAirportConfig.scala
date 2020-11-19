@@ -1,6 +1,6 @@
 package drt.shared
 
-import drt.auth.Role
+import uk.gov.homeoffice.drt.auth.Roles.Role
 import drt.shared.PaxTypes._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}

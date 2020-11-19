@@ -1,6 +1,7 @@
 package drt.client.components
 
-import drt.auth.{LoggedInUser, Role}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.Role
 import drt.client.SPAMain.Loc
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker

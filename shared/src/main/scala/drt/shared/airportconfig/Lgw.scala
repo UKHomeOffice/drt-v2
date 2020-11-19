@@ -1,6 +1,6 @@
 package drt.shared.airportconfig
 
-import drt.auth.LGWAccess
+import uk.gov.homeoffice.drt.auth.Roles.LGW
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
@@ -11,9 +11,10 @@ import drt.shared._
 import scala.collection.immutable.SortedMap
 
 object Lgw extends AirportConfigLike {
+
   import AirportConfigDefaults._
 
-  val config = AirportConfig(
+  val config: AirportConfig = AirportConfig(
     portCode = PortCode("LGW"),
     queuesByTerminal = SortedMap(
       N -> Seq(EeaDesk, EGate, NonEeaDesk),
@@ -67,7 +68,7 @@ object Lgw extends AirportConfigLike {
       "Afternoon shift, N, {date}, 14:00, 16:59, 10",
       "Evening shift, N, {date}, 17:00, 23:59, 17"
     ),
-    role = LGWAccess,
+    role = LGW,
     terminalPaxTypeQueueAllocation = Map(
       N -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.8244,
@@ -77,8 +78,8 @@ object Lgw extends AirportConfigLike {
         EGate -> 0.8375,
         EeaDesk -> (1.0 - 0.8375)
       )))),
-    feedSources = Seq(ApiFeedSource,LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map[Terminal, Int](N -> 31, S -> 28)
-    )
+  )
 }

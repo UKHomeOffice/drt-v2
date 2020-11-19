@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.auth.{Role, _}
+import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, CreateAlerts, ManageUsers, PortFeedUpload, Role, ViewConfig}
 import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate

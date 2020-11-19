@@ -3,7 +3,8 @@ package drt.client.components
 import java.util.UUID
 
 import diode.data.Pot
-import drt.auth.{LoggedInUser, StaffEdit}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import drt.client.actions.Actions._
 import drt.client.components.FixedPoints._
 import drt.client.logger.{Logger, LoggerFactory}

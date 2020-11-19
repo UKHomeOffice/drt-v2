@@ -7,14 +7,12 @@ import akka.actor.{ActorRef, PoisonPill}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.Application
-import drt.auth.ArrivalSource
+import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
 import services.SDate
 import upickle.default.write
-
-import scala.concurrent.Future
 
 
 trait WithFeeds {

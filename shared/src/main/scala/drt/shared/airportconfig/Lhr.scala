@@ -1,6 +1,6 @@
 package drt.shared.airportconfig
 
-import drt.auth.LHRAccess
+import uk.gov.homeoffice.drt.auth.Roles.LHR
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
@@ -33,7 +33,7 @@ object Lhr extends AirportConfigLike {
     B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
   )
 
-  val config = AirportConfig(
+  val config: AirportConfig = AirportConfig(
     portCode = PortCode("LHR"),
     queuesByTerminal = SortedMap(
       T2 -> Seq(EeaDesk, EGate, NonEeaDesk, FastTrack, Transfer),
@@ -52,7 +52,7 @@ object Lhr extends AirportConfigLike {
       SplitRatio(eeaNonMachineReadableToDesk, 0),
       SplitRatio(visaNationalToDesk, 0.08),
       SplitRatio(visaNationalToFastTrack, 0),
-      SplitRatio(nonVisaNationalToDesk, 0.28 ),
+      SplitRatio(nonVisaNationalToDesk, 0.28),
       SplitRatio(nonVisaNationalToFastTrack, 0)
     ))).toMap,
     terminalProcessingTimes = Map(
@@ -97,7 +97,7 @@ object Lhr extends AirportConfigLike {
     hasActualDeskStats = true,
     portStateSnapshotInterval = 250,
     exportQueueOrder = Queues.exportQueueOrderWithFastTrack,
-    role = LHRAccess,
+    role = LHR,
     terminalPaxTypeQueueAllocation = Map(
       T2 -> (lhrDefaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.8102,
@@ -118,7 +118,7 @@ object Lhr extends AirportConfigLike {
     ),
     hasTransfer = true,
     maybeCiriumEstThresholdHours = Option(6),
-    feedSources = Seq( ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map[Terminal, Int](
       T2 -> 36,
@@ -126,5 +126,5 @@ object Lhr extends AirportConfigLike {
       T4 -> 39,
       T5 -> 34
     )
-    )
+  )
 }

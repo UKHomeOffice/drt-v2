@@ -1,6 +1,6 @@
 package drt.shared.airportconfig
 
-import drt.auth.BFSAccess
+import uk.gov.homeoffice.drt.auth.Roles.BFS
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EeaDesk, NonEeaDesk}
@@ -12,9 +12,10 @@ import scala.collection.immutable.SortedMap
 
 
 object Bfs extends AirportConfigLike {
+
   import AirportConfigDefaults._
 
-  val config = AirportConfig(
+  val config: AirportConfig = AirportConfig(
     portCode = PortCode("BFS"),
     queuesByTerminal = SortedMap(
       T1 -> Seq(Queues.NonEeaDesk, Queues.EeaDesk)
@@ -44,7 +45,7 @@ object Bfs extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4))
       )
     ),
-    role = BFSAccess,
+    role = BFS,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (
         EeaMachineReadable -> List(EeaDesk -> 1.0),
@@ -53,5 +54,5 @@ object Bfs extends AirportConfigLike {
     feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, AclFeedSource),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map(T1 -> 8)
-    )
+  )
 }

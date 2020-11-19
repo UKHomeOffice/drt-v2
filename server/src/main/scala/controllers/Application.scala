@@ -15,7 +15,8 @@ import boopickle.Default._
 import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
 import controllers.application._
-import drt.auth._
+import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, ManageUsers, Role, StaffEdit}
+import uk.gov.homeoffice.drt.auth._
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}

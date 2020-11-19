@@ -3,7 +3,7 @@ package controllers.application
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince, PointInTimeQuery}
 import akka.pattern.ask
 import controllers.Application
-import drt.auth.DesksAndQueuesView
+import uk.gov.homeoffice.drt.auth.Roles.DesksAndQueuesView
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, Request}
