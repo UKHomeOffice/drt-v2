@@ -40,14 +40,16 @@ const bfRoles = [
   "desks-and-queues:view",
   "staff-movements:edit",
   "staff-movements:export",
-  "enhanced-api-view"
+  "enhanced-api-view",
+  "test"
 ];
 const bfReadOnlyRoles = [
   "border-force-staff",
   "forecast:view",
   "fixed-points:view",
   "arrivals-and-splits:view",
-  "desks-and-queues:view"
+  "desks-and-queues:view",
+  "test"
 ];
 const bfPlanningRoles = ["staff:edit"];
 const superUserRoles = ["create-alerts", "manage-users"];
