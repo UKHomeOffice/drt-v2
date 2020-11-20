@@ -273,7 +273,7 @@ describe('Restrict access to endpoint by role', () => {
       shouldBeGranted: false
     },
     {
-      roles: [],
+      roles: ["test"],
       endpoint: "/",
       method: "GET",
       shouldBeGranted: true
@@ -345,7 +345,7 @@ describe('Restrict access to endpoint by role', () => {
       shouldBeGranted: false
     },
     {
-       roles: [],
+       roles: ["test"],
        endpoint: "/#faqs",
        method: "GET",
        shouldBeGranted: true
