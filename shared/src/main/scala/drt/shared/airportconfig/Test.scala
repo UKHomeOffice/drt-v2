@@ -1,6 +1,6 @@
 package drt.shared.airportconfig
 
-import uk.gov.homeoffice.drt.auth.Roles.TestAccess
+import uk.gov.homeoffice.drt.auth.Roles.TEST
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
@@ -45,7 +45,7 @@ object Test extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
       )
     ),
-    role = TestAccess,
+    role = TEST,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.7968,

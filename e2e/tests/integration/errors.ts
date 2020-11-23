@@ -1,4 +1,3 @@
-
 describe('Global error handler', () => {
 
   interface ErrorResponse {
@@ -28,10 +27,12 @@ describe('Global error handler', () => {
 
   it("should log an error event to the server and popup a confirmation dialog to reload the page", () => {
     preventExceptionFromFailingTest();
-    cy.visit('/');
-    cy.server();
     let pageLoadCount = 1;
-    cy.route("POST", "/logging", {}).as('postLog');
+    cy
+      .asABorderForceOfficer()
+      .visit('/')
+      .server()
+      .route("POST", "/logging", {}).as('postLog');
     cy.on('window:confirm', () => true);
     cy.on("window:before:load", () => {
       pageLoadCount++;
@@ -47,10 +48,12 @@ describe('Global error handler', () => {
 
   it("should not reload the page if the user selects not to", () => {
     preventExceptionFromFailingTest();
-    cy.visit('/');
     let pageLoadCount = 1;
-    cy.on('window:confirm', () => false);
+    cy
+      .asABorderForceOfficer()
+      .visit('/');
 
+    cy.on('window:confirm', () => false);
     cy.on("window:before:load", () => {
       pageLoadCount++;
     });
