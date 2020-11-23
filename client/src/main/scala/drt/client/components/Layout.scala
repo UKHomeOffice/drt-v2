@@ -33,25 +33,20 @@ object Layout {
           ),
           <.div(
             layoutModelItems.userPot.renderReady(loggedInUser => {
-              layoutModelItems.hasPortAccessPot.renderReady(userHasPortAccess => {
-                if (userHasPortAccess) {
-                  val airportConfigRCP = SPACircuit.connect(_.airportConfig)
+              val airportConfigRCP = SPACircuit.connect(_.airportConfig)
 
-                  airportConfigRCP(airportConfigMP => {
-                    val airportConfig = airportConfigMP()
+              airportConfigRCP(airportConfigMP => {
+                val airportConfig = airportConfigMP()
+                <.div(
+                  airportConfig.renderReady(airportConfig => {
                     <.div(
-                      airportConfig.renderReady(airportConfig => {
-                        <.div(
-                          Navbar(props.ctl, props.currentLoc.page, loggedInUser, airportConfig),
-                          <.div(^.className := "container",
-                            <.div(<.div(props.currentLoc.render()))
-                          ), VersionUpdateNotice())
-                      }), layoutModelItems
-                        .displayAlertDialog
-                        .renderReady(displayDialog => PortRestrictionsModalAlert(displayDialog, loggedInUser)))
-                  })
-
-                } else <.div(RestrictedAccessByPortPage(loggedInUser, props.ctl))
+                      Navbar(props.ctl, props.currentLoc.page, loggedInUser, airportConfig),
+                      <.div(^.className := "container",
+                        <.div(<.div(props.currentLoc.render()))
+                      ), VersionUpdateNotice())
+                  }), layoutModelItems
+                    .displayAlertDialog
+                    .renderReady(displayDialog => PortRestrictionsModalAlert(displayDialog, loggedInUser)))
               })
             }))
         )
