@@ -375,7 +375,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       val baseDomain = config.get[String]("base-domain")
       val isSecure = config.get[Boolean]("https")
       val protocol = if (isSecure) "https://" else "http://"
-      val redirectUrl = protocol + baseDomain
+      val fromPort = "?fromPort=" + airportConfig.portCode.toString.toLowerCase
+      val redirectUrl = protocol + baseDomain + fromPort
       log.info(s"Redirecting to $redirectUrl")
       Redirect(Call("get", redirectUrl))
     }
