@@ -163,7 +163,5 @@ object Exports {
     }
     .flatten
 
-  def csvFileResult(fileName: String, data: String): Result = Result(
-    ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-    HttpEntity.Strict(ByteString(data), Option("application/csv")))
+
 }

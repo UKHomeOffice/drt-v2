@@ -54,6 +54,10 @@ trait ExportToCsv {
 
 object CsvFileStreaming {
 
+  def csvFileResult(fileName: String, data: String): Result = Result(
+    ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
+    HttpEntity.Strict(ByteString(data), Option("application/csv")))
+
   def sourceToCsvResponse(exportSource: Source[String, NotUsed], fileName: String): Result = {
     implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
 

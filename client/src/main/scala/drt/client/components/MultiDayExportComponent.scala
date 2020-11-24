@@ -98,14 +98,24 @@ object MultiDayExportComponent {
                         }
                       ) else EmptyVdom,
                     if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                      <.a("Export Desks",
+                      List(<.a("Export Recs",
                         ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/desks/${state.startMillis}/${state.endMillis}/${props.terminal}"),
+                        ^.href := SPAMain.absoluteUrl(s"export/desk-recs/${SDate(state.startMillis).toLocalDate.toISOString}/${SDate(state.endMillis).toLocalDate.toISOString}/${props.terminal}"),
                         ^.target := "_blank",
                         ^.onClick --> {
                           Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
                         }
-                      ) else EmptyVdom,
+                      ),
+                        <.a("Export Deployments",
+                          ^.className := "btn btn-default",
+                          ^.href := SPAMain.absoluteUrl(s"export/desk-deps/${SDate(state.startMillis).toLocalDate.toISOString}/${SDate(state.endMillis).toLocalDate.toISOString}/${props.terminal}"),
+                          ^.target := "_blank",
+                          ^.onClick --> {
+                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
+                          }
+                        )
+                      ).toVdomArray
+                    else EmptyVdom,
                     if (props.loggedInUser.hasRole(ArrivalSource) && (state.endMillis <= SDate.now().millisSinceEpoch))
                       <.a("Export Live Feed",
                         ^.className := "btn btn-default",

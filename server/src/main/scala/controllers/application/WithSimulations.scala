@@ -12,6 +12,8 @@ import akka.util.Timeout
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
+import controllers.application.exports.CsvFileStreaming.csvFileResult
+import drt.auth.ArrivalSimulationUpload
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
@@ -88,7 +90,7 @@ trait WithSimulations {
 
       val desks = TerminalQueuesSummary(queues, Exports.queueSummaries(queues, 15, minutes, crunchMinutes, SortedMap())).toCsvWithHeader
 
-      Exports.csvFileResult(
+      csvFileResult(
         CsvFileStreaming.makeFileName(s"simulation-${simulationParams.passengerWeighting}",
           simulationParams.terminal,
           date,

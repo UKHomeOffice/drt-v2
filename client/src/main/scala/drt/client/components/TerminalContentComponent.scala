@@ -137,8 +137,14 @@ object TerminalContentComponent {
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
-                  ExportDesks,
-                  SPAMain.exportViewUrl(ExportDesks, props.terminalPageTab.viewMode, terminal)
+                  ExportDeskRecs,
+                  SPAMain.exportDesksUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal)
+                ),
+                exportLink(
+                  props.terminalPageTab.dateFromUrlOrNow,
+                  terminalName,
+                  ExportDeployments,
+                  SPAMain.exportDesksUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal)
                 ),
                 displayForRole(
                   exportLink(

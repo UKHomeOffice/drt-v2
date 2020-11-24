@@ -22,7 +22,7 @@ import services.exports.summaries.flights.ArrivalFeedExport
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
-trait WithFlightsExport extends ExportToCsv {
+trait WithFlightsExport {
   self: Application =>
 
   def csvForUser(user: LoggedInUser): Source[FlightsWithSplits, NotUsed] => Source[String, NotUsed] = {

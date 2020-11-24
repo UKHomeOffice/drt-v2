@@ -66,7 +66,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
 
 
-  override val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
+  override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
 
   val flightLookups: FlightLookups = FlightLookups(
     system,
@@ -75,8 +75,8 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     crunchQueueActor
   )
   override val flightsActor: ActorRef = flightLookups.flightsActor
-  override val queuesActor: ActorRef = lookups.queueMinutesActor
-  override val staffActor: ActorRef = lookups.staffMinutesActor
+  override val queuesActor: ActorRef = minuteLookups.queueMinutesActor
+  override val staffActor: ActorRef = minuteLookups.staffMinutesActor
   override val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
   override val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
   override val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
