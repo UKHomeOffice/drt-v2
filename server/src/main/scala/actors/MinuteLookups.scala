@@ -26,7 +26,8 @@ trait MinuteLookupsLike {
   val replayMaxCrunchStateMessages: Int
   val requestAndTerminateActor: ActorRef
 
-  val updateCrunchMinutes: (Terminal, SDateLike, MinutesContainer[CrunchMinute, TQM]) => Future[MinutesContainer[CrunchMinute, TQM]] = (terminal: Terminal, date: SDateLike, container: MinutesContainer[CrunchMinute, TQM]) => {
+  val updateCrunchMinutes: (Terminal, SDateLike, MinutesContainer[CrunchMinute, TQM]) => Future[MinutesContainer[CrunchMinute, TQM]] =
+    (terminal: Terminal, date: SDateLike, container: MinutesContainer[CrunchMinute, TQM]) => {
     val actor = system.actorOf(TerminalDayQueuesActor.props(terminal, date, now))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[MinutesContainer[CrunchMinute, TQM]]
   }

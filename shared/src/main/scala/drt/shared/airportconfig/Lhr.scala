@@ -96,7 +96,8 @@ object Lhr extends AirportConfigLike {
     ),
     hasActualDeskStats = true,
     portStateSnapshotInterval = 250,
-    exportQueueOrder = Queues.exportQueueOrderWithFastTrack,
+    forecastExportQueueOrder = Queues.forecastExportQueueOrderWithFastTrack,
+    desksExportQueueOrder = Queues.deskExportQueueOrderWithFastTrack,
     role = LHR,
     terminalPaxTypeQueueAllocation = Map(
       T2 -> (lhrDefaultQueueRatios + (EeaMachineReadable -> List(

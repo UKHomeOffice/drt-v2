@@ -137,8 +137,14 @@ object TerminalContentComponent {
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
-                  ExportDesks,
-                  SPAMain.exportViewUrl(ExportDesks, props.terminalPageTab.viewMode, terminal)
+                  ExportDeskRecs,
+                  SPAMain.exportDesksUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal)
+                ),
+                exportLink(
+                  props.terminalPageTab.dateFromUrlOrNow,
+                  terminalName,
+                  ExportDeployments,
+                  SPAMain.exportDesksUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal)
                 ),
                 displayForRole(
                   exportLink(
@@ -228,7 +234,7 @@ object TerminalContentComponent {
                  exportType: ExportType,
                  exportUrl: String
                 ): VdomTagOf[Anchor] =
-    <.a(s"Export $exportType",
+    <.a(Icon.download, s" $exportType",
       ^.className := "btn btn-default",
       ^.href := exportUrl,
       ^.target := "_blank",
