@@ -11,9 +11,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.util.Timeout
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming
-import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 import controllers.application.exports.CsvFileStreaming.csvFileResult
-import drt.auth.ArrivalSimulationUpload
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
@@ -24,6 +22,7 @@ import services.exports.Exports
 import services.exports.summaries.queues.TerminalQueuesSummary
 import services.imports.ArrivalCrunchSimulationActor
 import services.{Optimiser, SDate}
+import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Future

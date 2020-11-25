@@ -207,6 +207,18 @@ describe('Restrict access to endpoint by role', () => {
       shouldBeGranted: false
     },
     {
+      roles: ["test", "desks-and-queues:view"],
+      endpoint: "/export/desk-deps/" + millis + "/" + millis + "/T1",
+      method: "GET",
+      shouldBeGranted: true
+    },
+    {
+      roles: ["test"],
+      endpoint: "/export/desk-deps/" + millis + "/" + millis + "/T1",
+      method: "GET",
+      shouldBeGranted: false
+    },
+    {
       roles: ["test", "arrivals-and-splits:view"],
       endpoint: "/export/arrivals/2020-09-01/" + millis + "/T1",
       method: "GET",

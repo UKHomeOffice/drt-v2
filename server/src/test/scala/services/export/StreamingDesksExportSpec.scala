@@ -67,7 +67,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStream(
         dates,
         T1,
-        defaultAirportConfig.exportQueueOrder,
+        defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
         staffMinuteLookup)
 
@@ -89,7 +89,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deploymentsToCSVStream(
         dates,
         T1,
-        defaultAirportConfig.exportQueueOrder,
+        defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
         staffMinuteLookup)
 
@@ -111,7 +111,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         dates,
         T1,
-        defaultAirportConfig.exportQueueOrder,
+        defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
         staffMinuteLookup)
 
@@ -135,7 +135,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deploymentsToCSVStreamWithHeaders(
         dates,
         T1,
-        defaultAirportConfig.exportQueueOrder,
+        defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
         staffMinuteLookup)
 
@@ -159,7 +159,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStream(
         dates,
         T1,
-        defaultAirportConfig.exportQueueOrder,
+        defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
         staffMinuteLookup)
 
@@ -183,7 +183,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         dates,
         T1,
-        defaultAirportConfig.exportQueueOrder,
+        defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
         staffMinuteLookup)
 
@@ -208,7 +208,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         dates,
         T1,
-        defaultAirportConfig.exportQueueOrder,
+        defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
         staffMinuteLookup)
 
@@ -240,7 +240,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStream(
         dates,
         T1,
-        defaultAirportConfig.exportQueueOrder,
+        defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
         staffMinuteLookup)
 

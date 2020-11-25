@@ -86,7 +86,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
         portStateFuture
           .map { portState =>
             val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
-            val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
+            val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.forecastExportQueueOrder)
             CsvFileStreaming.csvFileResult(fileName, csvData)
           }
           .recover {

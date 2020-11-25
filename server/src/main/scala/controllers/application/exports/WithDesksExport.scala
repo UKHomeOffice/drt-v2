@@ -4,16 +4,14 @@ import actors.queues.DateRange
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import controllers.Application
-import uk.gov.homeoffice.drt.auth.Roles.DesksAndQueuesView
-import drt.shared.SDateLike
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
-import drt.auth.DesksAndQueuesView
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared.{ErrorResponse, LocalDate, SDateLike, UtcDate}
 import play.api.mvc.{Action, AnyContent}
 import services.SDate
 import services.exports.StreamingDesksExport
+import uk.gov.homeoffice.drt.auth.Roles.DesksAndQueuesView
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -146,7 +144,7 @@ trait WithDesksExport {
     StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
       dates,
       terminal,
-      airportConfig.exportQueueOrder,
+      airportConfig.desksExportQueueOrder,
       ctrl.minuteLookups.queuesLookup,
       ctrl.minuteLookups.staffLookup,
       pointInTime
@@ -159,7 +157,7 @@ trait WithDesksExport {
     StreamingDesksExport.deploymentsToCSVStreamWithHeaders(
       dates,
       terminal,
-      airportConfig.exportQueueOrder,
+      airportConfig.desksExportQueueOrder,
       ctrl.minuteLookups.queuesLookup,
       ctrl.minuteLookups.staffLookup,
       pointInTime
