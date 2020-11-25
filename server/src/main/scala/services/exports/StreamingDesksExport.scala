@@ -12,6 +12,7 @@ import services.SDate
 import services.graphstages.Crunch
 
 import scala.collection.immutable
+import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future}
 
 object StreamingDesksExport {
@@ -66,7 +67,6 @@ object StreamingDesksExport {
       .prepend(Source(List(csvHeader(exportQueuesInOrder, "dep"))))
 
 
-
   def exportDesksToCSVStream(
                               dates: Source[UtcDate, NotUsed],
                               terminal: Terminal,
@@ -84,36 +84,62 @@ object StreamingDesksExport {
         maybeCMs <- futureMaybeCM
         maybeSMs <- futureMaybeSM
       } yield {
-
-        val portState = PortState(
-          List(),
+        minutesToCsv(
+          terminal,
+          exportQueuesInOrder,
+          d,
           maybeCMs.map(_.minutes.map(_.toMinute)).getOrElse(List()),
-          maybeSMs.map(_.minutes.map(_.toMinute)).getOrElse(List())
+          maybeSMs.map(_.minutes.map(_.toMinute)).getOrElse(List()),
+          deskExportFn
         )
-        val terminalCrunchMinutes: immutable.SortedMap[MillisSinceEpoch, Map[Queue, CrunchMinute]] = portState
-          .crunchSummary(SDate(d), 24 * 4, 15, terminal, exportQueuesInOrder)
-        val terminalStaffMinutes: Map[MillisSinceEpoch, StaffMinute] = portState
-          .staffSummary(SDate(d), 24 * 4, 15, terminal)
-
-        terminalCrunchMinutes.map {
-          case (minute, qcm) =>
-            val qcms: immutable.Seq[CrunchMinute] = exportQueuesInOrder.map(q => qcm.get(q)).collect {
-              case Some(qcm) => qcm
-            }
-            val qsCsv: String = qcms.map(deskExportFn).mkString(",")
-            val staffMinutesCsv = terminalStaffMinutes.get(minute) match {
-              case Some(sm) =>
-                s"${sm.fixedPoints},${sm.movements},${sm.shifts}"
-              case _ => "Missing staffing data for this period,,"
-            }
-            val total = qcms.map(_.deskRec).sum
-            val localMinute = SDate(minute, Crunch.europeLondonTimeZone)
-            val misc = terminalStaffMinutes.get(minute).map(_.fixedPoints).getOrElse(0)
-            s"${localMinute.toISODateOnly},${localMinute.prettyTime()},$qsCsv,$staffMinutesCsv,${total + misc}\n"
-
-        }.mkString
       }
     })
+  }
+
+  def crunchMinutesToRecsExportWithHeaders(terminal: Terminal,
+                                           exportQueuesInOrder: List[Queue],
+                                           utcDate: UtcDate,
+                                           crunchMinutes: Iterable[CrunchMinute],
+                                          ): String =
+    csvHeader(exportQueuesInOrder, "req") +
+      minutesToCsv(terminal, exportQueuesInOrder, utcDate, crunchMinutes, List(), deskRecsCsv)
+
+  def minutesToCsv(terminal: Terminal,
+                   exportQueuesInOrder: List[Queue],
+                   utcDate: UtcDate,
+                   crunchMinutes: Iterable[CrunchMinute],
+                   staffMinutes: Iterable[StaffMinute],
+                   deskExportFn: CrunchMinute => String,
+                  ): String = {
+    val portState = PortState(
+      List(),
+      crunchMinutes,
+      staffMinutes
+    )
+
+    val terminalCrunchMinutes: SortedMap[MillisSinceEpoch, Map[Queue, CrunchMinute]] = portState
+      .crunchSummary(SDate(utcDate), 24 * 4, 15, terminal, exportQueuesInOrder)
+
+    val terminalStaffMinutes: Map[MillisSinceEpoch, StaffMinute] = portState
+      .staffSummary(SDate(utcDate), 24 * 4, 15, terminal)
+
+    terminalCrunchMinutes.map {
+      case (minute, qcm) =>
+        val qcms: immutable.Seq[CrunchMinute] = exportQueuesInOrder.map(q => qcm.get(q)).collect {
+          case Some(qcm) => qcm
+        }
+        val qsCsv: String = qcms.map(deskExportFn).mkString(",")
+        val staffMinutesCsv = terminalStaffMinutes.get(minute) match {
+          case Some(sm) =>
+            s"${sm.fixedPoints},${sm.movements},${sm.shifts}"
+          case _ => "Missing staffing data for this period,,"
+        }
+        val total = qcms.map(_.deskRec).sum
+        val localMinute = SDate(minute, Crunch.europeLondonTimeZone)
+        val misc = terminalStaffMinutes.get(minute).map(_.fixedPoints).getOrElse(0)
+        s"${localMinute.toISODateOnly},${localMinute.prettyTime()},$qsCsv,$staffMinutesCsv,${total + misc}\n"
+
+    }.mkString
   }
 
   def deskRecsCsv(cm: CrunchMinute): String =

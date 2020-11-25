@@ -1,56 +1,14 @@
 package controllers.application.exports
 
 import akka.NotUsed
-import akka.actor.ActorRef
 import akka.stream.scaladsl.Source
-import akka.util.{ByteString, Timeout}
-import controllers.Application
+import akka.util.ByteString
 import drt.shared.Terminals.Terminal
-import drt.shared.{PortCode, PortState, SDateLike}
+import drt.shared.{PortCode, SDateLike}
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc.{ResponseHeader, Result}
 import services.SDate
-import services.exports.Exports
-import services.exports.summaries.TerminalSummaryLike
 import services.graphstages.Crunch
-import services.graphstages.Crunch.europeLondonTimeZone
-
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.util.{Failure, Success, Try}
-
-trait ExportToCsv {
-  self: Application =>
-
-  import CsvFileStreaming._
-
-  def exportToCsv(start: SDateLike,
-                  end: SDateLike,
-                  description: String,
-                  terminal: Terminal,
-                  maybeSummaryActorAndRequestProvider: Option[((SDateLike, Terminal) => ActorRef, Any)],
-                  generateNewSummary: (SDateLike, SDateLike) => Future[TerminalSummaryLike])
-                 (implicit timeout: Timeout): Result = {
-    if (airportConfig.terminals.toSet.contains(terminal)) {
-      val numberOfDays = start.daysBetweenInclusive(end)
-
-      log.info(s"Export $description for terminal $terminal between ${start.toISOString()} & ${end.toISOString()} ($numberOfDays days)")
-
-      val exportSource: Source[String, NotUsed] = Exports.summaryForDaysCsvSource(start, numberOfDays, now, terminal, maybeSummaryActorAndRequestProvider, generateNewSummary)
-      val fileName = makeFileName(description, terminal, start, end, airportConfig.portCode)
-
-      Try(sourceToCsvResponse(exportSource, fileName)) match {
-        case Success(value) => value
-        case Failure(t) =>
-          log.error("Failed to get CSV export", t)
-          BadRequest("Failed to get CSV export")
-      }
-    } else {
-      log.error(s"Bad terminal: $terminal")
-      BadRequest(s"Invalid terminal $terminal")
-    }
-  }
-}
 
 object CsvFileStreaming {
 

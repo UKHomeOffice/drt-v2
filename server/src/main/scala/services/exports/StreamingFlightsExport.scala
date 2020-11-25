@@ -2,18 +2,22 @@ package services.exports
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
-import services.SDate
 import services.exports.summaries.flights.TerminalFlightsSummary
 import services.exports.summaries.flights.TerminalFlightsSummary.rawArrivalHeadings
-import services.graphstages.Crunch
 
-case class StreamingFlightsExport(pcpPaxFn: Arrival => Int) {
+case class StreamingFlightsExport(
+                                   pcpPaxFn: Arrival => Int,
+                                   millisToDateStringFn: MillisSinceEpoch => String,
+                                   millisToTimeStringFn: MillisSinceEpoch => String
+                                 ) {
 
   val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
 
@@ -24,33 +28,59 @@ case class StreamingFlightsExport(pcpPaxFn: Arrival => Int) {
     actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadingsForFlights).toList)
     .mkString(",")
 
-  def toCsvStreamWithoutActualApi(flightsStream: Source[FlightsApi.FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
+  def toCsvStreamWithoutActualApi(flightsStream: Source[FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
     toCsvStream(flightsStream, withoutActualApiCsvRow, csvHeader)
 
+  def toCsvWithActualApi(flights: List[FlightsWithSplits]): String =
+    csvHeaderWithActualApi + "\n" +
+      flights
+        .map(fws => fwsToCsv(fws, withActualApiCsvRow))
+        .mkString("\n")
+
   def toCsvStream(
-                   flightsStream: Source[FlightsApi.FlightsWithSplits, NotUsed],
+                   flightsStream: Source[FlightsWithSplits, NotUsed],
                    csvRowFn: ApiFlightWithSplits => String,
                    headers: String
-                 ): Source[String, NotUsed] = {
-    flightsStream.map(fws => {
-      uniqueArrivalsWithCodeShares(fws.flights.values.toSeq)
-        .sortBy {
-          case (fws, _) => fws.apiFlight.PcpTime
-        }
-        .map {
-          case (fws, _) => csvRowFn(fws) + "\n"
-        }.mkString
-    }).prepend(Source(List(headers + "\n")))
-  }
+                 ): Source[String, NotUsed] =
+    flightsStream
+      .map(fws => fwsToCsv(fws, csvRowFn))
+      .prepend(Source(List(headers + "\n")))
 
-  def toCsvStreamWithActualApi(flightsStream: Source[FlightsApi.FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
-    toCsvStream(flightsStream, withActualApiCsvRow, csvHeader + "," + actualApiHeadingsForFlights.mkString(","))
+
+  def fwsToCsv(fws: FlightsWithSplits, csvRowFn: ApiFlightWithSplits => String): String =
+    uniqueArrivalsWithCodeShares(fws.flights.values.toSeq)
+      .sortBy {
+        case (fws, _) => fws.apiFlight.PcpTime
+      }
+      .map {
+        case (fws, _) => csvRowFn(fws) + "\n"
+      }
+      .mkString
+
+  def toCsvStreamWithActualApi(flightsStream: Source[FlightsWithSplits, NotUsed]): Source[String, NotUsed] = {
+    toCsvStream(flightsStream, withActualApiCsvRow, csvHeaderWithActualApi)
+  }
 
   val csvHeader: String =
     rawArrivalHeadings + ",PCP Pax," +
       headingsForSplitSource(queueNames, "API") + "," +
       headingsForSplitSource(queueNames, "Historical") + "," +
       headingsForSplitSource(queueNames, "Terminal Average")
+
+  val actualApiHeadingsForFlights: Seq[String] = Seq(
+    "API Actual - B5JSSK to Desk",
+    "API Actual - B5JSSK to eGates",
+    "API Actual - EEA (Machine Readable)",
+    "API Actual - EEA (Non Machine Readable)",
+    "API Actual - Fast Track (Non Visa)",
+    "API Actual - Fast Track (Visa)",
+    "API Actual - Non EEA (Non Visa)",
+    "API Actual - Non EEA (Visa)",
+    "API Actual - Transfer",
+    "API Actual - eGates"
+  )
+
+  val csvHeaderWithActualApi: String = csvHeader + "," + actualApiHeadingsForFlights.mkString(",")
 
   def headingsForSplitSource(queueNames: Seq[Queue], source: String): String = queueNames
     .map(q => {
@@ -65,8 +95,8 @@ case class StreamingFlightsExport(pcpPaxFn: Arrival => Int) {
     val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
     TerminalFlightsSummary.arrivalAsRawCsvValues(
       fws.apiFlight,
-      SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
-      SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+      millisToDateStringFn,
+      millisToTimeStringFn
     ) ++
       List(pcpPaxFn(fws.apiFlight).toString) ++ splitsForSources
   }
@@ -85,20 +115,6 @@ case class StreamingFlightsExport(pcpPaxFn: Arrival => Int) {
 
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares
     .uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))
-
-
-  val actualApiHeadingsForFlights: Seq[String] = Seq(
-    "API Actual - B5JSSK to Desk",
-    "API Actual - B5JSSK to eGates",
-    "API Actual - EEA (Machine Readable)",
-    "API Actual - EEA (Non Machine Readable)",
-    "API Actual - Fast Track (Non Visa)",
-    "API Actual - Fast Track (Visa)",
-    "API Actual - Non EEA (Non Visa)",
-    "API Actual - Non EEA (Visa)",
-    "API Actual - Transfer",
-    "API Actual - eGates"
-  )
 
   def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
     headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
