@@ -234,7 +234,7 @@ object TerminalContentComponent {
                  exportType: ExportType,
                  exportUrl: String
                 ): VdomTagOf[Anchor] =
-    <.a(s"Export $exportType",
+    <.a(Icon.download, s" $exportType",
       ^.className := "btn btn-default",
       ^.href := exportUrl,
       ^.target := "_blank",

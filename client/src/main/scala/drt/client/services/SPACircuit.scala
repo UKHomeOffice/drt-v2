@@ -68,7 +68,7 @@ sealed trait ExportType {
 }
 
 object ExportDeskRecs extends ExportType {
-  override def toString = "Recs"
+  override def toString = "Recommendations"
 
   override def toUrlString: String = "desk-recs"
 }

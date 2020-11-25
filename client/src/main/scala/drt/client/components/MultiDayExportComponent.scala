@@ -1,11 +1,10 @@
 package drt.client.components
 
-import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
 import drt.client.SPAMain
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.{ExportDeployments, ExportDeskRecs}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
@@ -13,6 +12,8 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
 
 object MultiDayExportComponent {
   val today: SDateLike = SDate.now()
@@ -87,7 +88,7 @@ object MultiDayExportComponent {
                   <.div(^.className := "multi-day-export-links",
 
                     if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
-                      <.a("Export Arrivals",
+                      <.a(Icon.download, " Arrivals",
                         ^.className := "btn btn-default",
                         ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
                           s"${SDate(state.startMillis).toLocalDate.toISOString}/" +
@@ -98,31 +99,31 @@ object MultiDayExportComponent {
                         }
                       ) else EmptyVdom,
                     if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                      List(<.a("Export Recs",
+                      List(<.a(Icon.download, s" Recommendations",
                         ^.className := "btn btn-default",
                         ^.href := SPAMain.absoluteUrl(s"export/desk-recs/${SDate(state.startMillis).toLocalDate.toISOString}/${SDate(state.endMillis).toLocalDate.toISOString}/${props.terminal}"),
                         ^.target := "_blank",
                         ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
+                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", s"Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
                         }
                       ),
-                        <.a("Export Deployments",
+                        <.a(Icon.download, s" Deployments",
                           ^.className := "btn btn-default",
                           ^.href := SPAMain.absoluteUrl(s"export/desk-deps/${SDate(state.startMillis).toLocalDate.toISOString}/${SDate(state.endMillis).toLocalDate.toISOString}/${props.terminal}"),
                           ^.target := "_blank",
                           ^.onClick --> {
-                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
+                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Deployments", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
                           }
                         )
                       ).toVdomArray
                     else EmptyVdom,
                     if (props.loggedInUser.hasRole(ArrivalSource) && (state.endMillis <= SDate.now().millisSinceEpoch))
-                      <.a("Export Live Feed",
+                      <.a(Icon.file, " Live Feed",
                         ^.className := "btn btn-default",
                         ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
                         ^.target := "_blank",
                         ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
+                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Live Feed", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
                         }
                       ) else EmptyVdom
 
