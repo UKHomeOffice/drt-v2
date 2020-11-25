@@ -17,7 +17,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import services.SDate
 
-import scala.collection.immutable
 import scala.collection.immutable.NumericRange
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -32,7 +31,6 @@ object FlightsRouterActor {
   }
 
   case class Query(date: UtcDate) extends QueryLike
-
 
 
   def queryStream(dates: Seq[UtcDate]): Source[QueryLike, NotUsed] = Source(dates.map(Query).toList)
@@ -55,7 +53,7 @@ object FlightsRouterActor {
                          end: SDateLike,
                          terminal: Terminal,
                          maybePit: Option[MillisSinceEpoch]): Source[FlightsWithSplits, NotUsed] = {
-    val dates = DateRange.utcDateRangeWithBuffer(start, end)
+    val dates = DateRange.utcDateRangeWithBuffer(2, 1)(start, end)
 
     val queries = queryStream(dates)
 

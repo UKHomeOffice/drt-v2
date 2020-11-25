@@ -40,7 +40,7 @@ object MinutesActorLike {
 
 }
 
-abstract class MinutesActorLike[A, B <: WithTimeAccessor] (terminals: Iterable[Terminal],
+abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Terminal],
                                                           lookup: MinutesLookup[A, B],
                                                           updateMinutes: MinutesUpdate[A, B]) extends Actor {
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher

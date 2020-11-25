@@ -9,7 +9,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.exports.summaries.queues.TerminalQueuesSummary.{colHeadings, eGatesHeadings}
 import services.graphstages.Crunch
 
 import scala.collection.immutable
@@ -19,6 +18,7 @@ object StreamingDesksExport {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def colHeadings(deskTitle: String = "req") = List("Pax", "Wait", s"Desks $deskTitle", "Act. wait time", "Act. desks")
+
   def eGatesHeadings(deskTitle: String) = List("Pax", "Wait", s"Staff $deskTitle", "Act. wait time", "Act. desks")
 
   def csvHeader(queues: Seq[Queue], deskTitle: String): String = {
@@ -36,24 +36,13 @@ object StreamingDesksExport {
     .flatMap(qn => List.fill(colHeadings().length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(",")
 
   def deskRecsToCSVStreamWithHeaders(
-                                   dates: Source[UtcDate, NotUsed],
-                                   terminal: Terminal,
-                                   exportQueuesInOrder: List[Queue],
-                                   crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                                   staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                                   maybePit: Option[MillisSinceEpoch] = None
-                                 )(implicit ec: ExecutionContext): Source[String, NotUsed] =
-    deskRecsToCSVStream(dates, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup, maybePit)
-      .prepend(Source(List(csvHeader(exportQueuesInOrder, "req"))))
-
-  def deskRecsToCSVStream(
-                           dates: Source[UtcDate, NotUsed],
-                           terminal: Terminal,
-                           exportQueuesInOrder: List[Queue],
-                           crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                           staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                           maybePit: Option[MillisSinceEpoch] = None
-                         )(implicit ec: ExecutionContext): Source[String, NotUsed] =
+                                      dates: Source[UtcDate, NotUsed],
+                                      terminal: Terminal,
+                                      exportQueuesInOrder: List[Queue],
+                                      crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+                                      staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+                                      maybePit: Option[MillisSinceEpoch] = None
+                                    )(implicit ec: ExecutionContext): Source[String, NotUsed] =
     exportDesksToCSVStream(
       dates,
       terminal,
@@ -62,45 +51,31 @@ object StreamingDesksExport {
       staffMinuteLookup,
       deskRecsCsv,
       maybePit)
+      .prepend(Source(List(csvHeader(exportQueuesInOrder, "req"))))
+
 
   def deploymentsToCSVStreamWithHeaders(
-                                   dates: Source[UtcDate, NotUsed],
-                                   terminal: Terminal,
-                                   exportQueuesInOrder: List[Queue],
-                                   crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                                   staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                                   maybePit: Option[MillisSinceEpoch] = None
-                                 )(implicit ec: ExecutionContext): Source[String, NotUsed] =
-    deploymentsToCSVStream(dates, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup, maybePit)
+                                         dates: Source[UtcDate, NotUsed],
+                                         terminal: Terminal,
+                                         exportQueuesInOrder: List[Queue],
+                                         crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+                                         staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+                                         maybePit: Option[MillisSinceEpoch] = None
+                                       )(implicit ec: ExecutionContext): Source[String, NotUsed] =
+    exportDesksToCSVStream(dates, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup, deploymentsCsv, maybePit)
       .prepend(Source(List(csvHeader(exportQueuesInOrder, "dep"))))
 
-  def deploymentsToCSVStream(
-                           dates: Source[UtcDate, NotUsed],
-                           terminal: Terminal,
-                           exportQueuesInOrder: List[Queue],
-                           crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                           staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                           maybePit: Option[MillisSinceEpoch] = None
-                         )(implicit ec: ExecutionContext): Source[String, NotUsed] =
-    exportDesksToCSVStream(
-      dates,
-      terminal,
-      exportQueuesInOrder,
-      crunchMinuteLookup,
-      staffMinuteLookup,
-      deploymentsCsv,
-      maybePit)
 
 
   def exportDesksToCSVStream(
-                        dates: Source[UtcDate, NotUsed],
-                        terminal: Terminal,
-                        exportQueuesInOrder: List[Queue],
-                        crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                        staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                        deskExportFn: CrunchMinute => String,
-                        maybePit: Option[MillisSinceEpoch] = None
-                      )(implicit ec: ExecutionContext): Source[String, NotUsed] = {
+                              dates: Source[UtcDate, NotUsed],
+                              terminal: Terminal,
+                              exportQueuesInOrder: List[Queue],
+                              crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+                              staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+                              deskExportFn: CrunchMinute => String,
+                              maybePit: Option[MillisSinceEpoch] = None
+                            )(implicit ec: ExecutionContext): Source[String, NotUsed] = {
 
     dates.mapAsync(1)(d => {
       val futureMaybeCM: Future[Option[CrunchApi.MinutesContainer[CrunchMinute, TQM]]] = crunchMinuteLookup(terminal, SDate(d), maybePit)
@@ -142,8 +117,8 @@ object StreamingDesksExport {
   }
 
   def deskRecsCsv(cm: CrunchMinute): String =
-      s"${Math.round(cm.paxLoad)},${cm.waitTime},${cm.deskRec},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
+    s"${Math.round(cm.paxLoad)},${cm.waitTime},${cm.deskRec},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
 
   def deploymentsCsv(cm: CrunchMinute): String =
-      s"${Math.round(cm.paxLoad)},${cm.deployedWait.getOrElse("")},${cm.deployedDesks.getOrElse(0)},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
+    s"${Math.round(cm.paxLoad)},${cm.deployedWait.getOrElse("")},${cm.deployedDesks.getOrElse(0)},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
 }

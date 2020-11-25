@@ -7,9 +7,9 @@ import services.SDate
 
 object DateRange {
 
-  def utcDateRangeWithBuffer(start: SDateLike, end: SDateLike): Seq[UtcDate] = {
-    val lookupStartMillis = start.addDays(-2).millisSinceEpoch
-    val lookupEndMillis = end.addDays(1).millisSinceEpoch
+  def utcDateRangeWithBuffer(startBuffer: Int, endBuffer: Int)(start: SDateLike, end: SDateLike): Seq[UtcDate] = {
+    val lookupStartMillis = start.addDays(startBuffer * -1).millisSinceEpoch
+    val lookupEndMillis = end.addDays(endBuffer).millisSinceEpoch
     val daysRangeMillis = lookupStartMillis to lookupEndMillis by MilliTimes.oneDayMillis
     daysRangeMillis.map(SDate(_).toUtcDate)
   }
@@ -20,9 +20,6 @@ object DateRange {
     val daysRangeMillis = lookupStartMillis to lookupEndMillis by MilliTimes.oneDayMillis
     daysRangeMillis.map(SDate(_).toUtcDate)
   }
-
-  def utcDateRangeWithBufferSource(start: SDateLike, end: SDateLike): Source[UtcDate, NotUsed]
-  = Source(utcDateRangeWithBuffer(start, end).toList)
 
   def utcDateRangeSource(start: SDateLike, end: SDateLike): Source[UtcDate, NotUsed]
   = Source(utcDateRange(start, end).toList)

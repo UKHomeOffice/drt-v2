@@ -54,10 +54,11 @@ describe('Restrict access by Role', () => {
         .click({ force: true })
         .get(".modal-dialog")
         .should((modal) => {
-          expect(modal).to.contain("Export Arrivals");
-          expect(modal).not.to.contain("Export Desks");
+          expect(modal).to.contain("Arrivals");
+          expect(modal).not.to.contain("Deployments");
+          expect(modal).not.to.contain("Recommendations");
         });
-      
+
     });
 
   });
