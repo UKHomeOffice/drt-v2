@@ -24,7 +24,6 @@ class StreamingDesksExportSpec extends CrunchTestLike {
     val nonEEADeskRec = 4
     val eGateRec = 3
 
-
     val eeaDeskDep = 4
     val nonEEADeskDep = 3
     val eGateDep = 2

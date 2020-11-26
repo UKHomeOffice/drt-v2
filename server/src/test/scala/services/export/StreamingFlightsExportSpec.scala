@@ -4,8 +4,10 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.T1
 import drt.shared._
+import services.SDate
 import services.crunch.CrunchTestLike
 import services.exports.StreamingFlightsExport
+import services.graphstages.Crunch
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -192,7 +194,11 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
   "Given a list of arrivals with splits we should get back a CSV of arrival data using live feed numbers when available" >> {
 
-    val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
+    val resultStream = StreamingFlightsExport(
+      PcpPax.bestPaxEstimateWithApi,
+      SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
+      SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+    )
       .toCsvStreamWithoutActualApi(Source(List(FlightsWithSplits(flights))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
@@ -224,7 +230,11 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       )
     )
 
-    val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
+    val resultStream = StreamingFlightsExport(
+      PcpPax.bestPaxEstimateWithApi,
+      SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
+      SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+    )
       .toCsvStreamWithoutActualApi(Source(List(FlightsWithSplits(flightsWithPcpTimes))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
@@ -241,7 +251,11 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
   "Given a list of arrivals with splits we should get back a CSV of arrival data with unique entry for code Share Arrival flight" >> {
 
-    val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
+    val resultStream = StreamingFlightsExport(
+      PcpPax.bestPaxEstimateWithApi,
+      SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
+      SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+    )
       .toCsvStreamWithoutActualApi(Source(List(FlightsWithSplits(codeShareFlights))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
@@ -257,7 +271,11 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
   "Given a list of arrivals with splits and with live passenger numbers, we should use live passenger PCP numbers" >> {
 
-    val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
+    val resultStream = StreamingFlightsExport(
+      PcpPax.bestPaxEstimateWithApi,
+      SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
+      SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+    )
       .toCsvStreamWithoutActualApi(Source(List(FlightsWithSplits(List(flightWithAllTypesOfAPISplit)))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
@@ -273,7 +291,11 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   "When asking for Actual API Split Data" >> {
 
     "Given a list of Flights With Splits then I should get Api Split data for each flight" >> {
-      val exporter = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
+      val exporter = StreamingFlightsExport(
+        PcpPax.bestPaxEstimateWithApi,
+        SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
+        SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+      )
 
       val result = flights.map { flight =>
         exporter.actualAPISplitsForFlightInHeadingOrder(flight, exporter.actualApiHeadingsForFlights)
@@ -290,7 +312,11 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   }
 
   "Given a list of Flights With Splits then I should get all the data for with API numbers when live numbers are missing" >> {
-    val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
+    val resultStream = StreamingFlightsExport(
+      PcpPax.bestPaxEstimateWithApi,
+      SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
+      SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+    )
       .toCsvStreamWithActualApi(Source(List(FlightsWithSplits(flightsIncludingOneWithNoPaxNos))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
@@ -306,7 +332,11 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   }
 
   "Given a list of Flights With Splits then I should get all the data with unique entry for code Share Arrival flight including API numbers" >> {
-    val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
+    val resultStream = StreamingFlightsExport(
+      PcpPax.bestPaxEstimateWithApi,
+      SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
+      SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+    )
       .toCsvStreamWithActualApi(Source(List(FlightsWithSplits(codeShareFlights))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
@@ -321,7 +351,11 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   }
 
   "Given a source of flights containing empty days and days with flights, then I should still get a CSV result" >> {
-    val resultStream = StreamingFlightsExport(PcpPax.bestPaxEstimateWithApi)
+    val resultStream = StreamingFlightsExport(
+      PcpPax.bestPaxEstimateWithApi,
+      SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
+      SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+    )
       .toCsvStreamWithActualApi(Source(List(
         FlightsWithSplits.empty,
         FlightsWithSplits.empty,

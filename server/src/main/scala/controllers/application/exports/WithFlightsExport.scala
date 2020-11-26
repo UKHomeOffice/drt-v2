@@ -7,8 +7,6 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
-import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
@@ -17,7 +15,10 @@ import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
 import services.exports.StreamingFlightsExport
-import services.exports.summaries.flights.ArrivalFeedExport
+import services.exports.flights.ArrivalFeedExport
+import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -27,9 +28,17 @@ trait WithFlightsExport {
 
   def csvForUser(user: LoggedInUser): Source[FlightsWithSplits, NotUsed] => Source[String, NotUsed] = {
     if (user.hasRole(ApiView))
-      StreamingFlightsExport(ctrl.pcpPaxFn).toCsvStreamWithActualApi _
+      StreamingFlightsExport(
+        ctrl.pcpPaxFn,
+        SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
+        SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+      ).toCsvStreamWithActualApi _
     else
-      StreamingFlightsExport(ctrl.pcpPaxFn).toCsvStreamWithoutActualApi _
+      StreamingFlightsExport(
+        ctrl.pcpPaxFn,
+        SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
+        SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+      ).toCsvStreamWithoutActualApi _
   }
 
   def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDayString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {
