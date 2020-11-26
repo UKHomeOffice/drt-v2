@@ -15,7 +15,7 @@ import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
 import services.exports.StreamingFlightsExport
-import services.exports.summaries.flights.ArrivalFeedExport
+import services.exports.flights.ArrivalFeedExport
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView}

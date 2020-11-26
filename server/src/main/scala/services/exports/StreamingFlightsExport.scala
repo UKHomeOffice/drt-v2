@@ -10,8 +10,7 @@ import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTP
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
-import services.exports.summaries.flights.TerminalFlightsSummary
-import services.exports.summaries.flights.TerminalFlightsSummary.rawArrivalHeadings
+import services.exports.flights.ArrivalToCsv
 
 case class StreamingFlightsExport(
                                    pcpPaxFn: Arrival => Int,
@@ -62,7 +61,7 @@ case class StreamingFlightsExport(
   }
 
   val csvHeader: String =
-    rawArrivalHeadings + ",PCP Pax," +
+    ArrivalToCsv.rawArrivalHeadings + ",PCP Pax," +
       headingsForSplitSource(queueNames, "API") + "," +
       headingsForSplitSource(queueNames, "Historical") + "," +
       headingsForSplitSource(queueNames, "Terminal Average")
@@ -93,7 +92,7 @@ case class StreamingFlightsExport(
 
   def flightWithSplitsToCsvRow(queueNames: Seq[Queue], fws: ApiFlightWithSplits): List[String] = {
     val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
-    TerminalFlightsSummary.arrivalAsRawCsvValues(
+    ArrivalToCsv.arrivalAsRawCsvValues(
       fws.apiFlight,
       millisToDateStringFn,
       millisToTimeStringFn

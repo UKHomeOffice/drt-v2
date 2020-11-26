@@ -1,9 +1,9 @@
-package services.exports.summaries.flights
+package services.exports.flights
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.Arrival
 
-object TerminalFlightsSummary {
+object ArrivalToCsv {
 
   val rawArrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
   val rawArrivalHeadingsWithTransfer: String = rawArrivalHeadings + ",Transfer Pax"
