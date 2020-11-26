@@ -51,11 +51,11 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val crunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
   override val deploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
 
-  override val lookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal, crunchQueueActor)
   override val flightsActor: ActorRef = flightLookups.flightsActor
-  override val queuesActor: ActorRef = lookups.queueMinutesActor
-  override val staffActor: ActorRef = lookups.staffMinutesActor
+  override val queuesActor: ActorRef = minuteLookups.queueMinutesActor
+  override val staffActor: ActorRef = minuteLookups.staffMinutesActor
   override val queueUpdates: ActorRef = system.actorOf(Props(
     new QueueTestUpdatesSupervisor(
       now,

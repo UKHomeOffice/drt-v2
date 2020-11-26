@@ -196,13 +196,25 @@ describe('Restrict access to endpoint by role', () => {
     },
     {
       roles: ["test", "desks-and-queues:view"],
-      endpoint: "/export/desks/" + millis + "/" + millis + "/T1",
+      endpoint: "/export/desk-recs/" + millis + "/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: true
     },
     {
       roles: ["test"],
-      endpoint: "/export/desks/" + millis + "/" + millis + "/T1",
+      endpoint: "/export/desk-recs/" + millis + "/" + millis + "/T1",
+      method: "GET",
+      shouldBeGranted: false
+    },
+    {
+      roles: ["test", "desks-and-queues:view"],
+      endpoint: "/export/desk-deps/" + millis + "/" + millis + "/T1",
+      method: "GET",
+      shouldBeGranted: true
+    },
+    {
+      roles: ["test"],
+      endpoint: "/export/desk-deps/" + millis + "/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: false
     },

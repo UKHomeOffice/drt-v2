@@ -19,8 +19,9 @@ describe('Multi day export', () => {
       .choose24Hours()
       .get("#arrivalsTab").click().then(() => {
         cy.contains('Multi Day Export').click().then(() => {
-          cy.get('.modal-body').contains("Export Desks")
-            .get('.modal-body').contains("Export Arrivals")
+          cy.get('.modal-body').contains("Recommendations")
+            .get('.modal-body').contains("Deployments")
+            .get('.modal-body').contains("Arrivals")
             .get('.modal-footer').contains("Close").click()
             .get('.modal-body').should('not.be.visible');
         })
@@ -67,7 +68,7 @@ describe('Multi day export', () => {
               .then(() => {
                 cy
                   .get('.modal-body')
-                  .contains("Export Desks")
+                  .contains("Recommendations")
                   .should('have.attr', 'href')
                   .then((href) => {
                     if (typeof href === 'string') {

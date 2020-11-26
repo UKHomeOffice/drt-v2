@@ -28,18 +28,12 @@ import scala.language.postfixOps
 
 object ManifestRouterActor {
 
-  def utcDateRange(start: SDateLike, end: SDateLike): List[UtcDate] = {
-    val lookupStartMillis = start.millisSinceEpoch
-    val lookupEndMillis = end.millisSinceEpoch
-    val daysRangeMillis = lookupStartMillis to lookupEndMillis by MilliTimes.oneDayMillis
-    daysRangeMillis.map(SDate(_).toUtcDate).toList
-  }
 
   def manifestsByDaySource(manifestsByDayLookup: ManifestLookup)
                           (start: SDateLike,
                            end: SDateLike,
                            maybePit: Option[MillisSinceEpoch]): Source[VoyageManifests, NotUsed] = {
-    Source(utcDateRange(start, end))
+    DateRange.utcDateRangeSource(start, end)
       .mapAsync(1) {
         date =>
           manifestsByDayLookup(date, maybePit)

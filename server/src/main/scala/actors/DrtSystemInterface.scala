@@ -88,7 +88,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val usePartitionedPortState: Boolean = config.get[Boolean]("feature-flags.use-partitioned-state")
 
-  val lookups: MinuteLookupsLike
+  val minuteLookups: MinuteLookupsLike
 
   val portStateActor: ActorRef
   val shiftsActor: ActorRef
@@ -222,8 +222,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(airportConfig.crunchOffsetMinutes)
     val (queueSourceForDaysToRedeploy, deploymentsKillSwitch) = RunnableDeployments.start(
       portStateActor,
-      lookups.queueMinutesActor,
-      lookups.staffMinutesActor,
+      minuteLookups.queueMinutesActor,
+      minuteLookups.staffMinutesActor,
       terminalToIntsToTerminalToStaff,
       crunchStartDateProvider,
       deskLimitsProviders,

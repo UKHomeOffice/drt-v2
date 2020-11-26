@@ -126,8 +126,11 @@ object Queues {
     QueueDesk -> "Desk"
     )
 
-  val exportQueueOrderSansFastTrack = List(EeaDesk, NonEeaDesk, EGate)
-  val exportQueueOrderWithFastTrack = List(EeaDesk, NonEeaDesk, EGate, FastTrack)
+  val forecastExportQueueOrderSansFastTrack = List(EeaDesk, NonEeaDesk, EGate)
+  val forecastExportQueueOrderWithFastTrack = List(EeaDesk, NonEeaDesk, EGate, FastTrack)
+
+  val deskExportQueueOrderSansFastTrack = List(EeaDesk, EGate, NonEeaDesk)
+  val deskExportQueueOrderWithFastTrack = List(EeaDesk, EGate, NonEeaDesk, FastTrack)
   val exportQueueDisplayNames: Map[Queue, String] = Map(
     EeaDesk -> "EEA",
     NonEeaDesk -> "NON-EEA",
@@ -244,7 +247,8 @@ case class AirportConfig(portCode: PortCode,
                          crunchOffsetMinutes: Int = 0,
                          hasEstChox: Boolean = true,
                          useStaffingInput: Boolean = false,
-                         exportQueueOrder: List[Queue] = Queues.exportQueueOrderSansFastTrack,
+                         forecastExportQueueOrder: List[Queue] = Queues.forecastExportQueueOrderSansFastTrack,
+                         desksExportQueueOrder: List[Queue] = Queues.deskExportQueueOrderSansFastTrack,
                          contactEmail: Option[String] = None,
                          outOfHoursContactPhone: Option[String] = None,
                          dayLengthHours: Int = 36,
