@@ -1,20 +1,21 @@
 package drt.shared.airportconfig
 
-import drt.auth.STNAccess
+import uk.gov.homeoffice.drt.auth.Roles.STN
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{T1, Terminal}
+import drt.shared.Terminals.T1
 import drt.shared._
 
 import scala.collection.immutable.SortedMap
 
 
 object Stn extends AirportConfigLike {
+
   import AirportConfigDefaults._
 
-  val config = AirportConfig(
+  val config: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
     queuesByTerminal = SortedMap(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk)
@@ -55,7 +56,7 @@ object Stn extends AirportConfigLike {
     fixedPointExamples = Seq("Roving Officer, 00:00, 23:59, 1",
       "Referral Officer, 00:00, 23:59, 1",
       "Forgery Officer, 00:00, 23:59, 1"),
-    role = STNAccess,
+    role = STN,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.8084,
@@ -64,5 +65,5 @@ object Stn extends AirportConfigLike {
     ),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map(T1 -> 22)
-    )
+  )
 }

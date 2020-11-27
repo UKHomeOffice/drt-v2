@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit

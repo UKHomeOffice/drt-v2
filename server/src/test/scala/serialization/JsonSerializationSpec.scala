@@ -1,6 +1,7 @@
 package serialization
 
-import drt.auth.{Role, Roles}
+import uk.gov.homeoffice.drt.auth.Roles
+import uk.gov.homeoffice.drt.auth.Roles.Role
 import drt.shared.CrunchApi._
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.SplitSources.Historical

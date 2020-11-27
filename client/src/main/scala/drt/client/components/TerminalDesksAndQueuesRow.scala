@@ -1,6 +1,7 @@
 package drt.client.components
 
-import drt.auth.{LoggedInUser, StaffMovementsEdit}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.StaffMovementsEdit
 import drt.client.actions.Actions.UpdateStaffAdjustmentDialogueState
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}

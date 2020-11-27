@@ -2,10 +2,10 @@ package drt.client.components
 
 import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
-import drt.auth._
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
+import drt.client.components.TooltipComponent._
 import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -18,8 +18,8 @@ import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
-import TooltipComponent._
-import scala.util.Try
+import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, ArrivalSource, Role, StaffMovementsExport}
+import uk.gov.homeoffice.drt.auth._
 
 object TerminalContentComponent {
 
@@ -106,7 +106,7 @@ object TerminalContentComponent {
                     props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
                   }),
                 <.li(^.className := staffingActive,
-                  <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements"," ", staffMovementsTabTooltip), ^.onClick --> {
+                  <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", " ", staffMovementsTabTooltip), ^.onClick --> {
                     GoogleEventTracker.sendEvent(terminalName, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
                   }),
@@ -129,8 +129,14 @@ object TerminalContentComponent {
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
-                  ExportDesks,
-                  SPAMain.exportViewUrl(ExportDesks, props.terminalPageTab.viewMode, terminal)
+                  ExportDeskRecs,
+                  SPAMain.exportDesksUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal)
+                ),
+                exportLink(
+                  props.terminalPageTab.dateFromUrlOrNow,
+                  terminalName,
+                  ExportDeployments,
+                  SPAMain.exportDesksUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal)
                 ),
                 displayForRole(
                   exportLink(
@@ -220,7 +226,7 @@ object TerminalContentComponent {
                  exportType: ExportType,
                  exportUrl: String
                 ): VdomTagOf[Anchor] =
-    <.a(s"Export $exportType",
+    <.a(Icon.download, s" $exportType",
       ^.className := "btn btn-default",
       ^.href := exportUrl,
       ^.target := "_blank",

@@ -4,15 +4,15 @@ import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForTerminalDateR
 import akka.pattern._
 import akka.util.{ByteString, Timeout}
 import controllers.Application
-import controllers.application.exports.{WithDesksExport, WithFlightsExport}
-import drt.auth.{ForecastView, ManageUsers}
+import controllers.application.exports.{CsvFileStreaming, WithDesksExport, WithFlightsExport}
+import uk.gov.homeoffice.drt.auth.Roles.{ForecastView, ManageUsers}
 import drt.shared.CrunchApi._
 import drt.shared.Terminals.Terminal
 import drt.shared.{PortState, SDateLike}
 import drt.users.KeyCloakGroups
 import play.api.http.HttpEntity
 import play.api.mvc._
-import services.exports.{Exports, Forecast}
+import services.exports.Forecast
 import services.{CSVData, SDate}
 
 import scala.concurrent.Future
@@ -55,7 +55,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
           .map { portState =>
             val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
             val csvData = CSVData.forecastPeriodToCsv(fp)
-            Exports.csvFileResult(fileName, csvData)
+            CsvFileStreaming.csvFileResult(fileName, csvData)
           }
           .recover {
             case t =>
@@ -86,8 +86,8 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
         portStateFuture
           .map { portState =>
             val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
-            val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
-            Exports.csvFileResult(fileName, csvData)
+            val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.forecastExportQueueOrder)
+            CsvFileStreaming.csvFileResult(fileName, csvData)
           }
           .recover {
             case t =>

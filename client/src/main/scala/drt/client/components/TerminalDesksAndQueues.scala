@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
-import drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}

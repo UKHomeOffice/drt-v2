@@ -1,6 +1,6 @@
 package drt.shared.airportconfig
 
-import drt.auth.Test2Access
+import uk.gov.homeoffice.drt.auth.Roles.TEST2
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk}
@@ -11,9 +11,10 @@ import drt.shared._
 import scala.collection.immutable.SortedMap
 
 object Test2 extends AirportConfigLike {
+
   import AirportConfigDefaults._
 
-  val config = AirportConfig(
+  val config: AirportConfig = AirportConfig(
     portCode = PortCode("TEST2"),
     queuesByTerminal = SortedMap(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk),
@@ -54,12 +55,12 @@ object Test2 extends AirportConfigLike {
         Queues.FastTrack -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
       )
     ),
-    role = Test2Access,
+    role = TEST2,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.7968,
         EeaDesk -> (1.0 - 0.7968)
       )))),
     desksByTerminal = Map(T1 -> 22, T2 -> 22)
-    )
+  )
 }

@@ -1,10 +1,12 @@
 package drt.client.components
 
-import drt.auth.{LoggedInUser, StaffEdit}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.shared.CrunchApi.StaffMinute
-import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 
@@ -20,7 +22,7 @@ object StaffMissingWarningComponent {
                     terminalPageTab: TerminalPageTabLoc
                   )
 
-  val component = ScalaComponent.builder[Props]("StaffMissingWarning")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffMissingWarning")
     .render_P(p => {
 
       val hasStaff = p.terminalStaffMinutes.values.exists(_.available > 0)

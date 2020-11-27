@@ -1,6 +1,6 @@
 package services.crunch
 
-import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props, Terminated}
+import akka.actor.{ActorRef, ActorSystem, Props, Terminated}
 import akka.pattern.ask
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.Supervision.Stop
@@ -9,7 +9,7 @@ import akka.stream.testkit.TestSubscriber.Probe
 import akka.stream.{ActorMaterializer, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
-import drt.auth.STNAccess
+import uk.gov.homeoffice.drt.auth.Roles.STN
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaNonMachineReadableToDesk}
 import drt.shared.Queues.Queue
@@ -65,7 +65,7 @@ object TestDefaults {
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))))),
     timeToChoxMillis = 120000L,
-    role = STNAccess,
+    role = STN,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> Map(
         EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),

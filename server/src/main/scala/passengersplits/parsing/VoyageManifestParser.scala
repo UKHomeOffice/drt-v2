@@ -16,10 +16,6 @@ object VoyageManifestParser {
     Try(content.parseJson.convertTo[VoyageManifest])
   }
 
-  case class PassengerInfo(DocumentType: Option[DocumentType],
-                           DocumentIssuingCountryCode: Nationality,
-                           Age: Option[PaxAge] = None)
-
   case class InTransit(isInTransit: Boolean) {
     override def toString: String = if (isInTransit) "Y" else "N"
   }
@@ -40,11 +36,21 @@ object VoyageManifestParser {
                                DisembarkationPortCountryCode: Option[Nationality] = None,
                                NationalityCountryCode: Option[Nationality] = None,
                                PassengerIdentifier: Option[String]
-                              ) {
-    def toPassengerInfo = PassengerInfo(DocumentType, DocumentIssuingCountryCode, Age)
+                              )
+
+  case class VoyageManifests(manifests: Set[VoyageManifest]) {
+
+    def toMap: Map[ArrivalKey, VoyageManifest] = manifests.collect {
+      case vm if vm.maybeKey.isDefined =>
+        vm.maybeKey.get -> vm
+    }.toMap
+
+    def ++(other: VoyageManifests): VoyageManifests = VoyageManifests(manifests ++ other.manifests)
   }
 
-  case class VoyageManifests(manifests: Set[VoyageManifest])
+  object VoyageManifests {
+    def empty: VoyageManifests = VoyageManifests(Set())
+  }
 
   case class ManifestDateOfArrival(date: String) {
     override def toString: String = date
@@ -66,9 +72,13 @@ object VoyageManifestParser {
 
     def scheduleArrivalDateTime: Option[SDateLike] = Try(DateTime.parse(scheduleDateTimeString)).toOption.map(JodaSDate)
 
-    def passengerInfos: Seq[PassengerInfo] = PassengerList.map(_.toPassengerInfo)
-
     def scheduleDateTimeString: String = s"${ScheduledDateOfArrival}T${ScheduledTimeOfArrival}Z"
+
+    def maybeKey: Option[ArrivalKey] = (scheduleArrivalDateTime, VoyageNumber) match {
+      case (Some(scheduled), vn: VoyageNumber) =>
+        Option(ArrivalKey(DeparturePortCode, vn, scheduled.millisSinceEpoch))
+      case _ => None
+    }
   }
 
   object FlightPassengerInfoProtocol extends DefaultJsonProtocol {
