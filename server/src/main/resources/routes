@@ -19,6 +19,7 @@ POST          /alerts                                              controllers.A
 DELETE        /alerts                                              controllers.Application.deleteAlerts
 
 GET           /version                                             controllers.Application.getApplicationVersion
+GET           /application-config                                  controllers.Application.getApplicationConfig
 
 GET           /crunch                                              controllers.Application.getCrunch
 GET           /crunch-snapshot/:pit                                controllers.Application.getCrunchSnapshot(pit: Long)

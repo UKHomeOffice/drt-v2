@@ -151,6 +151,7 @@ object SPAMain {
 
   def requestInitialActions(): Unit = {
     val initActions = Seq(
+      GetApplicationConfig,
       GetApplicationVersion,
       GetContactDetails,
       GetLoggedInUser,

@@ -12,6 +12,8 @@ import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import ujson.Js.Value
+import uk.gov.homeoffice.drt.Urls
+import uk.gov.homeoffice.drt.auth.Roles.Role
 import upickle.Js
 import upickle.default._
 
@@ -639,6 +641,17 @@ case class BuildVersion(version: String, requiresReload: Boolean = false)
 
 object BuildVersion {
   implicit val rw: ReadWriter[BuildVersion] = macroRW
+}
+
+case class ApplicationConfig(rootDomain: String, useHttps: Boolean) {
+  val urls: Urls = Urls(rootDomain, useHttps)
+
+  def allPortsAccessible(roles: Set[Role]): Set[PortCode] = AirportConfigs.allPortConfigs
+    .filter(airportConfig => roles.contains(airportConfig.role)).map(_.portCode).toSet
+}
+
+object ApplicationConfig {
+  implicit val rw: ReadWriter[ApplicationConfig] = macroRW
 }
 
 object FlightsApi {

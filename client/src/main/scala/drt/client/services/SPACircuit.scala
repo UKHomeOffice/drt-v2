@@ -12,6 +12,7 @@ import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
+import upickle.default.macroRW
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
@@ -95,7 +96,8 @@ case class LoadingState(isLoading: Boolean = false)
 
 case class ClientServerVersions(client: String, server: String)
 
-case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
+case class RootModel(applicationConfig: Pot[ApplicationConfig] = Empty,
+                     applicationVersion: Pot[ClientServerVersions] = Empty,
                      latestUpdateMillis: MillisSinceEpoch = 0L,
                      portStatePot: Pot[PortState] = Empty,
                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
@@ -136,21 +138,20 @@ object PollDelay {
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
-  def timeProvider(): MillisSinceEpoch = SDate.now().millisSinceEpoch
+  val timeProvider: MillisSinceEpoch = SDate.now().millisSinceEpoch
 
-  override protected def initialModel = RootModel()
+  override protected def initialModel: RootModel = RootModel()
 
-
-  def currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
-
-  def airportConfigPot(): Pot[AirportConfig] = zoomTo(_.airportConfig).value
-
-  def pointInTimeMillis: MillisSinceEpoch = zoom(_.viewMode).value.millis
+  val currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
 
   override val actionHandler: HandlerFunction = {
+    val updatePortState: ModelRW[RootModel, (Pot[PortState], MillisSinceEpoch)] = zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))
+
     val composedHandlers: HandlerFunction = composeHandlers(
-      new InitialPortStateHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
-      new PortStateUpdatesHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
+      new ScheduleActionHandler(zoomRW(identity)((m, _) => m)),
+      new ApplicationConfigHandler(zoomRW(_.applicationConfig)((m, v) => m.copy(applicationConfig = v))),
+      new InitialPortStateHandler(currentViewMode, updatePortState),
+      new PortStateUpdatesHandler(currentViewMode, updatePortState),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(() => timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
       new ArrivalSourcesHandler(zoomRW(_.arrivalSources)((m, v) => m.copy(arrivalSources = v))),
@@ -163,7 +164,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new ViewModeHandler(zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.portStatePot)),
+      new ViewModeHandler(zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new ShowAlertModalDialogHandler(zoomRW(_.displayAlertDialog)((m, v) => m.copy(displayAlertDialog = v))),
