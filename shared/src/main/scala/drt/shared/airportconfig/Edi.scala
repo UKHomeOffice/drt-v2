@@ -1,6 +1,6 @@
 package drt.shared.airportconfig
 
-import drt.auth.EDIAccess
+import uk.gov.homeoffice.drt.auth.Roles.EDI
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
@@ -10,9 +10,10 @@ import drt.shared._
 import scala.collection.immutable.SortedMap
 
 object Edi extends AirportConfigLike {
+
   import AirportConfigDefaults._
 
-  val config = AirportConfig(
+  val config: AirportConfig = AirportConfig(
     portCode = PortCode("EDI"),
     queuesByTerminal = SortedMap(
       A1 -> Seq(EeaDesk, EGate, NonEeaDesk),
@@ -55,7 +56,7 @@ object Edi extends AirportConfigLike {
       "Afernoon shift, A1, {date}, 14:00, 16:59, 10",
       "Evening shift, A1, {date}, 17:00, 23:59, 17"
     ),
-    role = EDIAccess,
+    role = EDI,
     terminalPaxTypeQueueAllocation = Map(
       A1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.8140,
@@ -68,6 +69,5 @@ object Edi extends AirportConfigLike {
     ),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map[Terminal, Int](A1 -> 11, A2 -> 9)
-    )
-
+  )
 }

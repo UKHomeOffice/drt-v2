@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.actions.Actions.UpdateShowAlertModalDialog
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker

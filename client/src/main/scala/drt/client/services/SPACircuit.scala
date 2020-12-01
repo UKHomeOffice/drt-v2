@@ -5,7 +5,7 @@ import java.util.UUID
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
@@ -67,10 +67,16 @@ sealed trait ExportType {
   def toUrlString: String
 }
 
-object ExportDesks extends ExportType {
-  override def toString = "Desks"
+object ExportDeskRecs extends ExportType {
+  override def toString = "Recommendations"
 
-  override def toUrlString: String = toString.toLowerCase
+  override def toUrlString: String = "desk-recs"
+}
+
+object ExportDeployments extends ExportType {
+  override def toString = "Deployments"
+
+  override def toUrlString: String = "desk-deps"
 }
 
 object ExportArrivals extends ExportType {

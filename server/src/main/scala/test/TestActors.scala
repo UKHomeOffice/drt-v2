@@ -6,7 +6,7 @@ import actors.acking.AckingReceiver.Ack
 import actors.daily._
 import actors.minutes.MinutesActorLike._
 import actors.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
-import actors.queues.{CrunchQueueActor, DeploymentQueueActor, FlightsRouterActor}
+import actors.queues.{CrunchQueueActor, DeploymentQueueActor, FlightsRouterActor, ManifestRouterActor}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
@@ -93,8 +93,9 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestVoyageManifestsActor(override val now: () => SDateLike, expireAfterMillis: Int, snapshotInterval: Int)
-    extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, Option(snapshotInterval)) with Resettable {
+  class TestVoyageManifestsActor(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate)
+    extends ManifestRouterActor(manifestLookup, manifestsUpdate) with Resettable {
+
     override def resetState(): Unit = state = initialState
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

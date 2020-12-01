@@ -1,11 +1,11 @@
-import moment from "moment-timezone";
-moment.locale("en-gb");
+
+import { todayAtUtc } from '../support/time-helpers'
+
 
 describe('Restrict access to endpoint by role', () => {
 
-  const todayDateString = moment().format("YYYY-MM-DD");
-  const todayString = todayDateString + "T00:00:00Z";
-  const millis = moment(todayString).unix() * 1000;
+  const today = todayAtUtc(0, 0);
+  const millis = today.unix() * 1000;
 
   const testCases = [
     {
@@ -196,13 +196,25 @@ describe('Restrict access to endpoint by role', () => {
     },
     {
       roles: ["test", "desks-and-queues:view"],
-      endpoint: "/export/desks/" + millis + "/" + millis + "/T1",
+      endpoint: "/export/desk-recs/" + millis + "/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: true
     },
     {
       roles: ["test"],
-      endpoint: "/export/desks/" + millis + "/" + millis + "/T1",
+      endpoint: "/export/desk-recs/" + millis + "/" + millis + "/T1",
+      method: "GET",
+      shouldBeGranted: false
+    },
+    {
+      roles: ["test", "desks-and-queues:view"],
+      endpoint: "/export/desk-deps/" + millis + "/" + millis + "/T1",
+      method: "GET",
+      shouldBeGranted: true
+    },
+    {
+      roles: ["test"],
+      endpoint: "/export/desk-deps/" + millis + "/" + millis + "/T1",
       method: "GET",
       shouldBeGranted: false
     },
@@ -273,7 +285,7 @@ describe('Restrict access to endpoint by role', () => {
       shouldBeGranted: false
     },
     {
-      roles: [],
+      roles: ["test"],
       endpoint: "/",
       method: "GET",
       shouldBeGranted: true
@@ -327,7 +339,25 @@ describe('Restrict access to endpoint by role', () => {
       shouldBeGranted: false
     },
     {
-       roles: [],
+      roles: ["test"],
+      endpoint: "/manifest/"+ today.format("YYYY-MM-DDTHH:mm") + "/AMS/0123/nationalities",
+      method: "GET",
+      shouldBeGranted: false
+    },
+    {
+      roles: ["test", "enhanced-api-view"],
+      endpoint: "/manifest/"+ today.format("YYYY-MM-DDTHH:mm") + "/AMS/0123/nationalities",
+      method: "GET",
+      shouldBeGranted: true
+    },
+    {
+      roles: ["test"],
+      endpoint: "/export/desk-rec-simulation",
+      method: "GET",
+      shouldBeGranted: false
+    },
+    {
+       roles: ["test"],
        endpoint: "/#faqs",
        method: "GET",
        shouldBeGranted: true

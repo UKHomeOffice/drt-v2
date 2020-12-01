@@ -1,6 +1,6 @@
 package drt.shared.airportconfig
 
-import drt.auth.BHXAccess
+import uk.gov.homeoffice.drt.auth.Roles.BHX
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
@@ -14,7 +14,7 @@ object Bhx extends AirportConfigLike {
 
   import AirportConfigDefaults._
 
-  val config = AirportConfig(
+  val config: AirportConfig = AirportConfig(
     portCode = PortCode("BHX"),
     queuesByTerminal = SortedMap(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk),
@@ -67,7 +67,7 @@ object Bhx extends AirportConfigLike {
       )
     ),
     hasEstChox = false,
-    role = BHXAccess,
+    role = BHX,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.7968,
@@ -78,8 +78,8 @@ object Bhx extends AirportConfigLike {
         (B5JPlusNational -> List(EeaDesk -> 1.0))
       ))
     ),
-    feedSources = Seq(ApiFeedSource,LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, ForecastFeedSource, AclFeedSource),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
     desksByTerminal = Map[Terminal, Int](T1 -> 9, T2 -> 5)
-    )
+  )
 }

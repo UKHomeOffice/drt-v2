@@ -17,8 +17,7 @@ import drt.shared.api.Arrival
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
-import services.exports.Exports
-import services.exports.summaries.flights.TerminalFlightsWithActualApiSummary
+import services.exports.StreamingFlightsExport
 import services.imports.{ArrivalCrunchSimulationActor, ArrivalImporter}
 import services.{Optimiser, SDate}
 
@@ -34,21 +33,25 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
 
   val terminal: Terminal = Terminal("T5")
 
+  def fwsToCsv(flights: Seq[ApiFlightWithSplits]): String =
+    StreamingFlightsExport(
+      PcpPax.bestPaxEstimateWithApi,
+      (millis: MillisSinceEpoch) => SDate(millis).toISODateOnly,
+      (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes
+    ).toCsvWithActualApi(List(FlightsWithSplits(flights)))
+
+
   "Given a CSV with all the columns we need in it then we should get a flight with splits" >> {
 
     val result1: Array[ApiFlightWithSplits] = ArrivalImporter(csv, terminal)
 
-    val csv2 = TerminalFlightsWithActualApiSummary(
-      result1,
-      Exports.millisToUtcIsoDateOnly,
-      Exports.millisToUtcHoursAndMinutes,
-      PcpPax.bestPaxEstimateWithApi
-    ).toCsvWithHeader
+    val csv2 = fwsToCsv(result1)
 
     val result2 = ArrivalImporter(csv2, terminal)
 
     result1.head === result2.head
   }
+
 
   "Given an APIFlightWithSplits then I should be able to convert it into a CSV and back to the same APIFlightWithSplits" >> {
     val flight: Arrival = ArrivalGenerator.arrival(
@@ -74,13 +77,7 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
     ), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
     val expected: ApiFlightWithSplits = ApiFlightWithSplits(flight, Set(splits))
 
-    val csvFromFlightWithSplits = TerminalFlightsWithActualApiSummary(
-      Seq(expected),
-      Exports.millisToUtcIsoDateOnly,
-      Exports.millisToUtcHoursAndMinutes,
-      PcpPax.bestPaxEstimateWithApi
-    ).toCsvWithHeader
-
+    val csvFromFlightWithSplits = fwsToCsv(Seq(expected))
     val result: ApiFlightWithSplits = ArrivalImporter(csvFromFlightWithSplits, terminal).head
 
     result === expected
@@ -134,7 +131,7 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
     runnableDeskRecs.offer(date.millisSinceEpoch)
 
     val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
-      case drm :DeskRecMinutes => drm
+      case drm: DeskRecMinutes => drm
     }
 
     val deskRecMinutes = Await.result(futureDeskRecMinutes, 5 seconds)

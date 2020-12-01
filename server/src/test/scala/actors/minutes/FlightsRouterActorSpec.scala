@@ -25,25 +25,12 @@ class FlightsRouterActorSpec extends CrunchTestLike {
   val date: SDateLike = SDate("2020-01-01T00:00")
   val myNow: () => SDateLike = () => date
 
-  val legacyTestProbe: TestProbe = TestProbe()
-
-  val legacy1CutOffDate: SDateLike = SDate("2020-08-15T00:00Z")
-  val legacy2CutOffDate: SDateLike = SDate("2020-09-01T00:00Z")
-
   val flightWithSplits: ApiFlightWithSplits = ArrivalGenerator.flightWithSplitsForDayAndTerminal(date)
   val flightsWithSplits: FlightsWithSplits = FlightsWithSplits(List(flightWithSplits))
 
   val testProbe: TestProbe = TestProbe()
 
   implicit val mat: ActorMaterializer = ActorMaterializer.create(system)
-
-  class DummyActor extends Actor {
-    override def receive: Receive = {
-      case req =>
-        testProbe.ref ! req
-        sender() ! FlightsWithSplits.empty
-    }
-  }
 
   val noopUpdates: (Terminal, UtcDate, FlightsWithSplitsDiff) => Future[Seq[MillisSinceEpoch]] =
     (_: Terminal, _: UtcDate, _: FlightsWithSplitsDiff) => Future(Seq[MillisSinceEpoch]())
@@ -57,7 +44,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       val from = SDate("2020-09-22T00:00Z")
       val to = from.addDays(1).addMinutes(-1)
 
-      val mockLookup = MockLookup()
+      val mockLookup = MockFlightsLookup()
 
       "Then I should get that flight back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
@@ -83,7 +70,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       val from = SDate("2020-09-22T00:00Z")
       val to = SDate("2020-09-25T00:00Z")
 
-      val mockLookup = MockLookup()
+      val mockLookup = MockFlightsLookup()
 
       "Then I should get all the flights back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
@@ -109,7 +96,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       val from = SDate("2020-09-22T00:00Z")
       val to = SDate("2020-09-24T00:00Z")
 
-      val mockLookup = MockLookup()
+      val mockLookup = MockFlightsLookup()
 
       "Then I should only get back flights within the requested range" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
@@ -138,7 +125,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       val from = SDate("2020-09-23T00:00Z")
       val to = SDate("2020-09-24T00:00Z")
 
-      val mockLookup = MockLookup()
+      val mockLookup = MockFlightsLookup()
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
@@ -167,7 +154,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       val from = SDate("2020-09-22T00:00Z")
       val to = SDate("2020-09-22T23:01Z")
 
-      val mockLookup = MockLookup()
+      val mockLookup = MockFlightsLookup()
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
@@ -196,7 +183,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       val from = SDate("2020-09-23T00:00Z")
       val to = SDate("2020-09-25T23:01Z")
 
-      val mockLookup = MockLookup()
+      val mockLookup = MockFlightsLookup()
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
@@ -225,7 +212,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       val from = SDate("2020-09-23T00:00Z")
       val to = SDate("2020-09-23T01:00Z")
 
-      val mockLookup = MockLookup()
+      val mockLookup = MockFlightsLookup()
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
@@ -253,7 +240,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       val from = SDate("2020-09-22T00:00Z")
       val to = from.addDays(1).addMinutes(-1)
 
-      val mockLookup = MockLookup()
+      val mockLookup = MockFlightsLookup()
 
       "Then I should get that flight back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(

@@ -1,7 +1,7 @@
 package controllers.application
 
 import controllers.Application
-import drt.auth.ArrivalsAndSplitsView
+import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
 import services.AirportToCountry

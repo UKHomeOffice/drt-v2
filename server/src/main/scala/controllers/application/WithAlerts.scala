@@ -4,7 +4,7 @@ import actors.{DeleteAlerts, GetState}
 import akka.pattern._
 import akka.util.Timeout
 import controllers.Application
-import drt.auth.CreateAlerts
+import uk.gov.homeoffice.drt.auth.Roles.CreateAlerts
 import drt.shared.Alert
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTime

@@ -52,6 +52,8 @@ describe('API splits', () => {
     const ukChildren = ofPassengerProfile(passengerProfiles.ukChild, 1);
     const apiManifest = manifest(ukAdults.concat(ukChildren));
 
+    const expectedNationalitySummary = "[[{\"code\":\"Nationality(GBR)\"},11]]"
+
     cy
       .addFlight(
         {
@@ -67,7 +69,14 @@ describe('API splits', () => {
       .contains("7")
       .get('.eeadesk-queue-pax > span')
       .contains("4")
+      .request({
+        method: 'GET',
+        url: "/manifest/"+ scheduledTime.format("YYYY-MM-DDTHH:mm") +"/AMS/0123/nationalities",
+      }).then((resp) => {
+        expect(resp.body).to.equal(expectedNationalitySummary, "Api splits incorrect for regular users")
+      })
       ;
+
 
   });
 });

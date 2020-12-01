@@ -11,17 +11,18 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.util.Timeout
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming
-import drt.auth.ArrivalSimulationUpload
+import controllers.application.exports.CsvFileStreaming.csvFileResult
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import play.api.mvc._
 import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
-import services.exports.Exports
-import services.exports.summaries.queues.TerminalQueuesSummary
+import services.exports.StreamingDesksExport
 import services.imports.ArrivalCrunchSimulationActor
 import services.{Optimiser, SDate}
+import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
@@ -51,7 +52,7 @@ trait WithSimulations {
 
             FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
 
-              retrieveSimulationDesks(simulationParams, simulationConfig, date, fws)
+              retrieveSimulationDesks(simulationParams, simulationConfig, date, fws, simulationParams.terminal)
             }.flatten
 
           case Failure(e) =>
@@ -61,7 +62,12 @@ trait WithSimulations {
     }
   }
 
-  def retrieveSimulationDesks(simulationParams: SimulationParams, simulationConfig: AirportConfig, date: SDateLike, fws: FlightsWithSplits): Future[Result] = {
+  def retrieveSimulationDesks(
+                               simulationParams: SimulationParams,
+                               simulationConfig: AirportConfig,
+                               date: SDateLike, fws: FlightsWithSplits,
+                               terminal: Terminal
+                             ): Future[Result] = {
     implicit val timeout: Timeout = new Timeout(2 minutes)
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
 
@@ -77,18 +83,22 @@ trait WithSimulations {
       case drm: DeskRecMinutes => DeskRecMinutes(drm.minutes.filter(_.terminal == simulationParams.terminal))
     }
 
-    val queues = simulationConfig.nonTransferQueues(simulationParams.terminal)
-    val minutes = date.getLocalLastMidnight.millisSinceEpoch to date.getLocalNextMidnight.millisSinceEpoch by 15 * MilliTimes.oneMinuteMillis
-
     futureDeskRecMinutes.map(deskRecMinutes => {
 
       val crunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ deskRecMinutes
         .minutes
         .map(dr => dr.key -> dr.toMinute).toMap
 
-      val desks = TerminalQueuesSummary(queues, Exports.queueSummaries(queues, 15, minutes, crunchMinutes, SortedMap())).toCsvWithHeader
+      val desks = StreamingDesksExport.crunchMinutesToRecsExportWithHeaders(
+        terminal,
+        airportConfig.desksExportQueueOrder,
+        date.toUtcDate,
+        crunchMinutes.map {
+          case (_, cm) => cm
+        }
+      )
 
-      Exports.csvFileResult(
+      csvFileResult(
         CsvFileStreaming.makeFileName(s"simulation-${simulationParams.passengerWeighting}",
           simulationParams.terminal,
           date,

@@ -26,14 +26,18 @@ GET           /crunch-snapshot/:pit                                controllers.A
 GET           /feed-statuses                                       controllers.Application.getFeedStatuses
 GET           /arrival/:number/:terminal/:scheduled                controllers.Application.getArrival(number: Int, terminal: String, scheduled: Long)
 GET           /arrival/:pointInTime/:number/:terminal/:scheduled   controllers.Application.getArrivalAtPointInTime(pointInTime: Long, number: Int, terminal: String, scheduled: Long)
+GET           /manifest/:scheduled/:origin/:voyageNumber/age-ranges controllers.Application.getPassengerAgesForFlight(scheduled: String, origin: String, voyageNumber: Int)
+GET           /manifest/:scheduled/:origin/:voyageNumber/nationalities controllers.Application.getPassengerNationalitiesForFlight(scheduled: String, origin: String, voyageNumber: Int)
 
 GET           /logged-in                                           controllers.Application.isLoggedIn
 
 GET           /fixed-points                                        controllers.Application.getFixedPoints
 POST          /fixed-points                                        controllers.Application.saveFixedPoints
 
-GET           /export/desks/:start/:end/:terminalName              controllers.Application.exportDesksAndQueuesBetweenTimeStampsCSV(start, end, terminalName)
-GET           /export/desks/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName)
+GET           /export/desk-recs/:startLD/:endLD/:terminalName              controllers.Application.exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLD, endLD, terminalName)
+GET           /export/desk-recs/snapshot/:localDay/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesRecsAtPointInTimeCSV(localDay, pointInTime, terminalName)
+GET           /export/desk-deps/:startLD/:endLD/:terminalName              controllers.Application.exportDesksAndQueuesDepsBetweenTimeStampsCSV(startLD, endLD, terminalName)
+GET           /export/desk-deps/snapshot/:localDay/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesDepsAtPointInTimeCSV(localDay, pointInTime, terminalName)
 GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName  controllers.Application.exportFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
 GET           /export/arrivals/snapshot/:localDay/:pointInTime/:terminalName  controllers.Application.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDay: String, pointInTime: Long, terminalName: String)
 

@@ -1,4 +1,4 @@
-package services.exports.summaries.flights
+package services.exports.flights
 
 import java.util.UUID
 
@@ -72,7 +72,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
 
     val csvData = arrivalsForDay
       .map(a =>
-        TerminalFlightsSummary.arrivalAsRawCsvValuesWithTransfer(
+        ArrivalToCsv.arrivalAsRawCsvValuesWithTransfer(
           a,
           Exports.millisToLocalIsoDateOnly,
           Exports.millisToLocalHoursAndMinutes
@@ -86,7 +86,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
 
 
   def headingsSource: Source[Option[String], NotUsed] = Source(
-    List(Option(TerminalFlightsSummary.rawArrivalHeadingsWithTransfer + lineEnding))
+    List(Option(ArrivalToCsv.rawArrivalHeadingsWithTransfer + lineEnding))
   )
 
   def flightsDataSource(
