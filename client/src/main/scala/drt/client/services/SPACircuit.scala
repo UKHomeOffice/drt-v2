@@ -96,8 +96,7 @@ case class LoadingState(isLoading: Boolean = false)
 
 case class ClientServerVersions(client: String, server: String)
 
-case class RootModel(applicationConfig: Pot[ApplicationConfig] = Empty,
-                     applicationVersion: Pot[ClientServerVersions] = Empty,
+case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      latestUpdateMillis: MillisSinceEpoch = 0L,
                      portStatePot: Pot[PortState] = Empty,
                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
@@ -149,7 +148,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
     val composedHandlers: HandlerFunction = composeHandlers(
       new ScheduleActionHandler(zoomRW(identity)((m, _) => m)),
-      new ApplicationConfigHandler(zoomRW(_.applicationConfig)((m, v) => m.copy(applicationConfig = v))),
       new InitialPortStateHandler(currentViewMode, updatePortState),
       new PortStateUpdatesHandler(currentViewMode, updatePortState),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),

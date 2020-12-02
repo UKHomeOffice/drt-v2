@@ -53,7 +53,7 @@ lazy val client: Project = (project in file("client"))
     scalaJSStage in Test := FastOptStage,
     emitSourceMaps in fullOptJS := true,
     // 'new style js dependencies with scalaBundler'
-    npmDependencies in Compile ++= Settings.clientNpmDependences,
+    npmDependencies in Compile ++= Settings.clientNpmDependencies,
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
     jsDependencies += RuntimeDOM % "test",

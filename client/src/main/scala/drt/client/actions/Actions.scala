@@ -22,11 +22,7 @@ object Actions {
 
   case object GetApplicationVersion extends Action
 
-  case object GetApplicationConfig extends Action
-
   case class ScheduleAction(delay: FiniteDuration, action: Action) extends Action
-
-  case class SetApplicationConfig(config: ApplicationConfig) extends Action
 
   case object GetLoggedInUser extends Action
 

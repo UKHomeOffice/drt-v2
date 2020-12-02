@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
+import drt.client.SPAMain
 import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
@@ -24,7 +25,6 @@ object MainMenu {
                    currentLoc: Loc,
                    feeds: Seq[FeedSourceStatuses],
                    airportConfig: AirportConfig,
-                   applicationConfig: ApplicationConfig,
                    user: LoggedInUser) extends UseValueEq
 
   case class MenuItem(idx: Int, label: Props => VdomNode, icon: Icon, location: Loc, classes: List[String] = List())
@@ -113,7 +113,7 @@ object MainMenu {
       }
 
       val navItems: Seq[VdomTagOf[LI]] = if (props.user.portRoles.size > 1)
-        children :+ <.li(PortSwitcher(props.user, props.airportConfig.portCode, props.applicationConfig.urls))
+        children :+ <.li(PortSwitcher(props.user, props.airportConfig.portCode))
       else
         children
       <.div(
@@ -130,13 +130,12 @@ object MainMenu {
             currentLoc: Loc,
             feeds: Seq[FeedSourceStatuses],
             airportConfig: AirportConfig,
-            appConfig: ApplicationConfig,
             user: LoggedInUser): VdomElement
-  = component(Props(ctl, currentLoc, feeds, airportConfig, appConfig, user))
+  = component(Props(ctl, currentLoc, feeds, airportConfig, user))
 }
 
 object PortSwitcher {
-  case class Props(user: LoggedInUser, portCode: PortCode, urls: Urls) extends UseValueEq
+  case class Props(user: LoggedInUser, portCode: PortCode) extends UseValueEq
 
   case class State(showDropDown: Boolean = false)
 
@@ -149,7 +148,7 @@ object PortSwitcher {
           case portRole: PortAccess if props.portCode != PortCode(portRole.name) => PortCode(portRole.name)
         }
         if (otherPorts.size == 1) {
-          <.a(Icon.plane, " ", ^.href := props.urls.urlForPort(otherPorts.head.toString), otherPorts.head.iata)
+          <.a(Icon.plane, " ", ^.href := SPAMain.urls.urlForPort(otherPorts.head.toString), otherPorts.head.iata)
         } else {
           <.span(
             ^.className := "dropdown",
@@ -158,11 +157,11 @@ object PortSwitcher {
             if (state.showDropDown) <.div(^.className := "menu-overlay", ^.onClick --> scope.modState(_ => State())) else "",
             <.ul(^.className := s"main-menu__port-switcher dropdown-menu $showClass",
               otherPorts.toList.sorted.map(p => <.li(^.className := "dropdown-item",
-                <.a(^.href := props.urls.urlForPort(p.toString), p.iata))).toTagMod
+                <.a(^.href := SPAMain.urls.urlForPort(p.toString), p.iata))).toTagMod
             )
           )
         }
       }).build
 
-  def apply(user: LoggedInUser, portCode: PortCode, urls: Urls): VdomElement = component(Props(user, portCode, urls))
+  def apply(user: LoggedInUser, portCode: PortCode): VdomElement = component(Props(user, portCode))
 }
