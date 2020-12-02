@@ -18,7 +18,6 @@ GET           /alerts/:createdAfter                                controllers.A
 POST          /alerts                                              controllers.Application.addAlert
 DELETE        /alerts                                              controllers.Application.deleteAlerts
 
-GET           /version                                             controllers.Application.getApplicationVersion
 GET           /application-config                                  controllers.Application.getApplicationConfig
 
 GET           /crunch                                              controllers.Application.getCrunch

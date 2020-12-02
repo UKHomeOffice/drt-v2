@@ -10,11 +10,6 @@ import upickle.default.write
 trait WithApplicationInfo {
   self: Application =>
 
-  def getApplicationVersion: Action[AnyContent] = Action { _ =>
-    val shouldReload = config.getOptional[Boolean]("feature-flags.version-requires-reload").getOrElse(false)
-    Ok(write(BuildVersion(BuildInfo.version, requiresReload = shouldReload)))
-  }
-
   def getApplicationConfig: Action[AnyContent] = Action { _ =>
     val rootDomain = config.get[String]("drt.domain")
     val useHttps = config.get[Boolean]("drt.use-https")
