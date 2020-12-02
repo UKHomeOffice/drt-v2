@@ -74,7 +74,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "48"
-    val drtLib = "41"
+    val drtLib = "58"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "0.6.7"
@@ -96,7 +96,7 @@ object Settings {
     "io.suzaku" %%% "boopickle" % booPickle
   ))
 
-  val clientNpmDependences = Seq(
+  val clientNpmDependencies = Seq(
     "react" -> react,
     "react-dom" -> react,
     "log4javascript" -> log4Javascript,

@@ -22,6 +22,8 @@ object Actions {
 
   case object GetApplicationVersion extends Action
 
+  case class ScheduleAction(delay: FiniteDuration, action: Action) extends Action
+
   case object GetLoggedInUser extends Action
 
   case object GetUserDashboardState extends Action
@@ -152,11 +154,11 @@ object Actions {
 
   case class UpdateStaffAdjustmentDialogueState(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
 
-  case class FileUploadStatus(fileUploadState:FileUploadState) extends Action
+  case class FileUploadStatus(fileUploadState: FileUploadState) extends Action
 
   case class FileUploadInProgress() extends Action
 
-  case class ForecastFileUploadAction(portCode: String, formData:FormData) extends Action
+  case class ForecastFileUploadAction(portCode: String, formData: FormData) extends Action
 
   case class ResetFileUpload() extends Action
 

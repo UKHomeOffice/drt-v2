@@ -14,7 +14,6 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAirportConfig =>
-
       updated(Pending(), Effect(DrtApi.get("airport-config")
         .map(r => UpdateAirportConfig(read[AirportConfig](r.responseText))).recoverWith {
         case _ =>

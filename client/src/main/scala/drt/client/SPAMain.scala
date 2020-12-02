@@ -14,9 +14,10 @@ import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.html_<^
 import org.scalajs.dom
+import org.scalajs.dom.console
 import scalacss.ProdDefaults._
+import uk.gov.homeoffice.drt.Urls
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
@@ -191,7 +192,7 @@ object SPAMain {
 
       rule.notFound(redirectToPage(PortDashboardLoc(None))(Redirect.Replace))
     }
-    .renderWith(layout)
+    .renderWith(Layout(_, _))
     .onPostRender((maybePrevLoc, currentLoc) => {
       Callback(
         (maybePrevLoc, currentLoc) match {
@@ -329,9 +330,15 @@ object SPAMain {
       })
   }
 
-  def layout(c: RouterCtl[Loc], r: Resolution[Loc]): html_<^.VdomElement = Layout(c, r)
+  val pathToThisApp: String = dom.document.location.pathname
 
-  def pathToThisApp: String = dom.document.location.pathname
+  val rootDomain: String = dom.document.location.host.split("\\.").drop(1).mkString(".")
+
+  val useHttps: Boolean = dom.document.location.protocol == "https:"
+
+  console.log(s"useHttps: '$useHttps'")
+
+  val urls: Urls = Urls(rootDomain, useHttps)
 
   def absoluteUrl(relativeUrl: String): String = {
     if (pathToThisApp == "/") s"/$relativeUrl"
