@@ -3,27 +3,25 @@ package queueus
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
+import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
 
 case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAllocator: QueueAllocator) {
-  def toQueues(terminal: Terminal, bestManifest: BestAvailableManifest): Map[Queue, List[(Queue, PaxType, ManifestPassengerProfile, Double)]] = {
-    val queueAllocatorForFlight = queueAllocator(terminal, bestManifest) _
-    val paxTypeAllocatorForFlight = paxTypeAllocator(bestManifest) _
-    bestManifest.passengerList.flatMap(mpp => {
+  def toQueues(terminal: Terminal, manifest: ManifestLike): Map[Queue, List[(Queue, PaxType, ManifestPassengerProfile, Double)]] = {
+    val queueAllocatorForFlight = queueAllocator(terminal, manifest) _
+    val paxTypeAllocatorForFlight = paxTypeAllocator
+    manifest.passengers.flatMap(mpp => {
       val paxType = paxTypeAllocatorForFlight(mpp)
       val queueAllocations = queueAllocatorForFlight(paxType)
       queueAllocations.map {
         case (queue, allocation) => (queue, paxType, mpp, allocation)
       }
     })
-    }
-    .groupBy {
-      case (queueType, _, _, _) => queueType
-    }
+  }.groupBy {
+    case (queueType, _, _, _) => queueType
+  }
 
-  def toSplits(terminal: Terminal, bestManifest:  BestAvailableManifest): Splits = {
-
-    val splits = toQueues(terminal, bestManifest).flatMap {
+  def toSplits(terminal: Terminal, manifest: ManifestLike): Splits = {
+    val splits = toQueues(terminal, manifest).flatMap {
       case (_, passengerProfileTypeByQueueCount) =>
         passengerProfileTypeByQueueCount.foldLeft(Map[PaxTypeAndQueue, ApiPaxTypeAndQueueCount]()) {
           case (soFar, (queue, paxType, mpp, paxCount)) =>
@@ -39,7 +37,7 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
         }
     }.values.toSet
 
-    Splits(splits, bestManifest.source, None, PaxNumbers)
+    Splits(splits, manifest.source, None, PaxNumbers)
   }
 
   def incrementNationalityCount(mpp: ManifestPassengerProfile, paxCount: Double, apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount): Some[Map[Nationality, Double]] =

@@ -1,9 +1,12 @@
 package passengersplits.parsing
 
 import drt.shared.EventTypes.InvalidEventType
+import drt.shared.SplitRatiosNs.SplitSources.AdvPaxInfo
 import drt.shared._
+import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
 import org.joda.time.DateTime
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import services.SDate
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat}
 
@@ -70,7 +73,7 @@ object VoyageManifestParser {
                             CarrierCode: CarrierCode,
                             ScheduledDateOfArrival: ManifestDateOfArrival,
                             ScheduledTimeOfArrival: ManifestTimeOfArrival,
-                            PassengerList: List[PassengerInfoJson]) {
+                            PassengerList: List[PassengerInfoJson]) extends ManifestLike {
     def flightCode: String = CarrierCode.code + VoyageNumber
 
     def scheduleArrivalDateTime: Option[SDateLike] = Try(DateTime.parse(scheduleDateTimeString)).toOption.map(JodaSDate)
@@ -82,12 +85,20 @@ object VoyageManifestParser {
         Option(ArrivalKey(DeparturePortCode, vn, scheduled.millisSinceEpoch))
       case _ => None
     }
+
+    override val source: SplitRatiosNs.SplitSource = AdvPaxInfo
+    override val scheduled: SDateLike = scheduleArrivalDateTime.getOrElse(SDate(0))
+    override val arrivalPortCode: PortCode = ArrivalPortCode
+    override val departurePortCode: PortCode = DeparturePortCode
+    override val voyageNumber: VoyageNumberLike = VoyageNumber
+    override val carrierCode: CarrierCode = CarrierCode
+    override val passengers: List[ManifestPassengerProfile] = PassengerList.map(ManifestPassengerProfile(_, arrivalPortCode))
   }
 
   object FlightPassengerInfoProtocol extends DefaultJsonProtocol {
 
     implicit object DocumentTypeJsonFormat extends RootJsonFormat[DocumentType] {
-      def write(c: DocumentType) = JsString(c.toString)
+      def write(c: DocumentType): JsString = JsString(c.toString)
 
       def read(value: JsValue): DocumentType = value match {
         case str: JsString => DocumentType(str.value)
@@ -95,7 +106,7 @@ object VoyageManifestParser {
     }
 
     implicit object NationalityJsonFormat extends RootJsonFormat[Nationality] {
-      def write(c: Nationality) = JsString(c.toString)
+      def write(c: Nationality): JsString = JsString(c.toString)
 
       def read(value: JsValue): Nationality = value match {
         case str: JsString => Nationality(str.value)
@@ -103,7 +114,7 @@ object VoyageManifestParser {
     }
 
     implicit object PortCodeJsonFormat extends RootJsonFormat[PortCode] {
-      def write(c: PortCode) = JsString(c.toString)
+      def write(c: PortCode): JsString = JsString(c.toString)
 
       def read(value: JsValue): PortCode = value match {
         case str: JsString => PortCode(str.value)
@@ -112,7 +123,7 @@ object VoyageManifestParser {
     }
 
     implicit object EeaFlagJsonFormat extends RootJsonFormat[EeaFlag] {
-      def write(c: EeaFlag) = JsString(c.toString)
+      def write(c: EeaFlag): JsString = JsString(c.toString)
 
       def read(value: JsValue): EeaFlag = value match {
         case str: JsString => EeaFlag(str.value)
@@ -133,7 +144,7 @@ object VoyageManifestParser {
     }
 
     implicit object InTransitJsonFormat extends RootJsonFormat[InTransit] {
-      def write(c: InTransit) = JsString(if (c.isInTransit) "Y" else "N")
+      def write(c: InTransit): JsString = JsString(if (c.isInTransit) "Y" else "N")
 
       def read(value: JsValue): InTransit = value match {
         case str: JsString => InTransit(str.value)
@@ -154,7 +165,7 @@ object VoyageManifestParser {
     )
 
     implicit object EventTypeJsonFormat extends RootJsonFormat[EventType] {
-      def write(c: EventType) = JsString(c.toString)
+      def write(c: EventType): JsString = JsString(c.toString)
 
       def read(value: JsValue): EventType = value match {
         case str: JsString => EventType(str.value)
@@ -163,7 +174,7 @@ object VoyageManifestParser {
     }
 
     implicit object CarrierCodeJsonFormat extends RootJsonFormat[CarrierCode] {
-      def write(c: CarrierCode) = JsString(c.toString)
+      def write(c: CarrierCode): JsString = JsString(c.toString)
 
       def read(value: JsValue): CarrierCode = value match {
         case str: JsString => CarrierCode(str.value)
@@ -171,7 +182,7 @@ object VoyageManifestParser {
     }
 
     implicit object VoyageNumberJsonFormat extends RootJsonFormat[VoyageNumberLike] {
-      def write(c: VoyageNumberLike) = JsString(c.toString)
+      def write(c: VoyageNumberLike): JsString = JsString(c.toString)
 
       def read(value: JsValue): VoyageNumberLike = value match {
         case str: JsString => VoyageNumber(str.value)
@@ -180,7 +191,7 @@ object VoyageManifestParser {
     }
 
     implicit object ManifestDateOfArrivalJsonFormat extends RootJsonFormat[ManifestDateOfArrival] {
-      def write(c: ManifestDateOfArrival) = JsString(c.toString)
+      def write(c: ManifestDateOfArrival): JsString = JsString(c.toString)
 
       def read(value: JsValue): ManifestDateOfArrival = value match {
         case str: JsString => ManifestDateOfArrival(str.value)
@@ -188,14 +199,25 @@ object VoyageManifestParser {
     }
 
     implicit object ManifestTimeOfArrivalJsonFormat extends RootJsonFormat[ManifestTimeOfArrival] {
-      def write(c: ManifestTimeOfArrival) = JsString(c.toString)
+      def write(c: ManifestTimeOfArrival): JsString = JsString(c.toString)
 
       def read(value: JsValue): ManifestTimeOfArrival = value match {
         case str: JsString => ManifestTimeOfArrival(str.value)
       }
     }
 
-    implicit val passengerInfoResponseConverter: RootJsonFormat[VoyageManifest] = jsonFormat8(VoyageManifest)
+    implicit val passengerInfoResponseConverter: RootJsonFormat[VoyageManifest] =
+      jsonFormat(
+      VoyageManifest,
+      "EventCode",
+      "ArrivalPortCode",
+      "DeparturePortCode",
+      "VoyageNumber",
+      "CarrierCode",
+      "ScheduledDateOfArrival",
+      "ScheduledTimeOfArrival",
+      "PassengerList"
+    )
   }
 
 }

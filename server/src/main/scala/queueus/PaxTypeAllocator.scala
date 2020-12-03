@@ -29,25 +29,25 @@ trait PaxTypeAllocator {
 
   val noTransit: PartialFunction[ManifestPassengerProfile, PaxType] = countryAndDocumentTypes
 
-  def apply(bestAvailableManifest: BestAvailableManifest)(manifestPassengerProfile: ManifestPassengerProfile): PaxType
+  def apply(manifestPassengerProfile: ManifestPassengerProfile): PaxType
 }
 
 case object DefaultPaxTypeAllocator extends PaxTypeAllocator {
 
-  def apply(bestAvailableManifest: BestAvailableManifest)(manifestPassengerProfile: ManifestPassengerProfile): PaxType =
+  override def apply(manifestPassengerProfile: ManifestPassengerProfile): PaxType =
     noTransit(manifestPassengerProfile)
 }
 
 case object DefaultWithTransitPaxTypeAllocator extends PaxTypeAllocator {
 
-  def apply(bestAvailableManifest: BestAvailableManifest)(manifestPassengerProfile: ManifestPassengerProfile): PaxType = withTransit(manifestPassengerProfile)
+  override def apply(manifestPassengerProfile: ManifestPassengerProfile): PaxType = withTransit(manifestPassengerProfile)
 }
 
 case class B5JPlusTypeAllocator() extends PaxTypeAllocator {
 
   val withB5JPlus: PartialFunction[ManifestPassengerProfile, PaxType] = b5JPlus orElse countryAndDocumentTypes
 
-  def apply(bestAvailableManifest: BestAvailableManifest)(manifestPassengerProfile: ManifestPassengerProfile): PaxType =
+  override def apply(manifestPassengerProfile: ManifestPassengerProfile): PaxType =
       withB5JPlus(manifestPassengerProfile)
 
 }
@@ -56,7 +56,7 @@ case class B5JPlusWithTransitTypeAllocator() extends PaxTypeAllocator {
 
   val withTransitAndB5JPlus: PartialFunction[ManifestPassengerProfile, PaxType] = transit orElse b5JPlus orElse countryAndDocumentTypes
 
-  def apply(bestAvailableManifest: BestAvailableManifest)(manifestPassengerProfile: ManifestPassengerProfile): PaxType =
+  override def apply(manifestPassengerProfile: ManifestPassengerProfile): PaxType =
     withTransitAndB5JPlus(manifestPassengerProfile)
 
 }

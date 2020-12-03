@@ -7,13 +7,23 @@ import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, Documen
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, PaxAge, VoyageManifest}
 import services.SDate
 
+trait ManifestLike {
+  val source: SplitSource
+  val arrivalPortCode: PortCode
+  val departurePortCode: PortCode
+  val voyageNumber: VoyageNumberLike
+  val carrierCode: CarrierCode
+  val scheduled: SDateLike
+  val passengers: List[ManifestPassengerProfile]
+}
+
 case class BestAvailableManifest(source: SplitSource,
                                  arrivalPortCode: PortCode,
                                  departurePortCode: PortCode,
                                  voyageNumber: VoyageNumberLike,
                                  carrierCode: CarrierCode,
                                  scheduled: SDateLike,
-                                 passengerList: List[ManifestPassengerProfile])
+                                 passengers: List[ManifestPassengerProfile]) extends ManifestLike
 
 object BestAvailableManifest {
   def apply(manifest: VoyageManifest): BestAvailableManifest = {

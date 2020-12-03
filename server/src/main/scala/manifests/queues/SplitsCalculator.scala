@@ -5,7 +5,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
-import manifests.passengers.BestAvailableManifest
+import manifests.passengers.{BestAvailableManifest, ManifestLike}
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, PaxTypeQueueAllocation, QueueAdjustments}
 
@@ -25,6 +25,6 @@ case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
     Set(Splits(portDefault.toSet, SplitSources.TerminalAverage, None, Percentage))
   }
 
-  def bestSplitsForArrival(manifest: BestAvailableManifest, arrival: Arrival): Splits = adjustments
+  def bestSplitsForArrival(manifest: ManifestLike, arrival: Arrival): Splits = adjustments
     .adjust(queueAllocator.toSplits(arrival.Terminal, manifest))
 }
