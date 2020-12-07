@@ -7,7 +7,7 @@ import japgolly.scalajs.react.{Children, JsComponent}
 
 import scala.scalajs.js
 import scala.scalajs.js.Dictionary
-import scala.scalajs.js.JSConverters.JSRichGenTraversableOnce
+import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSImport
 
 /**
@@ -15,98 +15,113 @@ import scala.scalajs.js.annotation.JSImport
  *
  * @param properties see https://www.chartjs.org/docs/latest/charts/line.html#dataset-properties
  */
-case class DataSet(properties: Map[String, js.Any]) {
-
-  lazy val propertiesWithDefaults: Dictionary[js.Any] = {
-    properties.foreach {
-      case (k, v) => props.update(k, v)
-    }
-    props
-  }
-
-  val props: Dictionary[js.Any] = js.Dictionary(
-//    "fill" -> false,
-//    "lineTension" -> 0.1,
-//    "backgroundColor" -> "rgba(52,52,52,0.4)",
-//    "borderColor" -> "rgba(52,52,52,1)",
-//    "borderCapStyle" -> "butt",
-//    "borderDashOffset" -> 0.0,
-//    "borderJoinStyle" -> "miter",
-//    "pointBorderColor" -> "rgba(0,0,0,1)",
-//    "pointBackgroundColor" -> "#fff",
-//    "pointBorderWidth" -> 1,
-//    "pointHoverRadius" -> 5,
-//    "pointHoverBackgroundColor" -> "rgba(20,20,20,1)",
-//    "pointHoverBorderColor" -> "rgba(10,10,10,1)",
-//    "pointHoverBorderWidth" -> 2,
-//    "pointRadius" -> 1,
-//    "pointHitRadius" -> 10
-  )
-
-  def toJS: js.Dictionary[js.Any] = propertiesWithDefaults
-}
-
-case class ChartJSProps(
-                         labels: js.UndefOr[js.Dictionary[String]] = js.undefined,
-                         something: js.UndefOr[String] = js.undefined,
-                         another: js.UndefOr[String] = js.undefined
-                       ) {
-  def apply() = {
-
-    val props: js.Object = JSMacro[ChartJSProps](this)
-
-    props
-  }
-}
-
-
-object DataSet {
-  def apply(label: String, data: Seq[Double]): DataSet = DataSet(Map("data" -> data.toJSArray, "label" -> label))
-
-  def apply(label: String, data: Seq[Double], colour: String): DataSet =
-    DataSet(Map("data" -> data.toJSArray, "label" -> label, "backgroundColor" -> colour))
-}
 
 object ChartJSComponent {
-
-  val log: Logger = LoggerFactory.getLogger("ChartJSComponent")
-
-  def props(options: js.Dictionary[js.Any]): Props = {
-
-    val props = (new js.Object).asInstanceOf[Props]
-
-    val test: Unit = ChartJSProps(something = "this is a prop")()
-
-    println(s"Marco thing: $test")
-
-    props.data = options
-
-    props
-  }
 
   @js.native
   trait Props extends js.Object {
 
-    var data: js.Dictionary[js.Any] = js.native
-    var options: js.Dictionary[js.Any] = js.native
+    var data: js.Object = js.native
+    var options: js.UndefOr[js.Object] = js.native
     var width: Int = js.native
     var height: Int = js.native
   }
 
-  private val component = JsComponent[Props, Children.None, Null](BarRaw)
+  case class ChartJsProps(
+                           data: js.Object,
+                           width: Int = 300,
+                           height: Int = 150,
+                           options: js.UndefOr[js.Object] = js.undefined
+                         ) {
 
-  object Props {
-    def apply(data: js.Dictionary[js.Any], options: js.Dictionary[js.Any] = js.Dictionary.empty, width: Int = 300, height: Int = 150): Props = {
+    def toJs: Props = {
       val props = (new js.Object).asInstanceOf[Props]
       props.data = data
       props.options = options
       props.width = width
       props.height = height
 
-
       props
     }
+
   }
+
+  object ChartJsProps {
+    def apply(data: ChartJsData, width: Int, height: Int): ChartJsProps = ChartJsProps(data = data, width, height)
+
+    def apply(data: ChartJsData, width: Int, height: Int, options: ChartJsOptions): ChartJsProps =
+      ChartJsProps(data = data.toJs, width, height, options.toJs)
+
+    def apply(data: ChartJsData, options: ChartJsOptions): ChartJsProps =
+      ChartJsProps(data = data.toJs, options = options.toJs)
+  }
+
+  case class ChartJsDataSet(
+                             data: js.Array[Double],
+                             hoverBorderColor: js.UndefOr[String] = js.undefined,
+                             label: js.UndefOr[String] = js.undefined,
+                             backgroundColor: js.UndefOr[String] = js.undefined,
+                             borderColor: js.UndefOr[String] = js.undefined,
+                             borderWidth: js.UndefOr[Int] = js.undefined,
+                             hoverBackgroundColor: js.UndefOr[String] = js.undefined
+                           ) {
+
+    def toJs: js.Object = JSMacro[ChartJsDataSet](this)
+  }
+
+  case class ChartJsOptions(
+                             scales: js.UndefOr[Dictionary[js.Any]] = js.undefined,
+                             title: js.UndefOr[Dictionary[js.Any]] = js.undefined,
+                             legend: js.UndefOr[Dictionary[js.Any]] = js.undefined,
+                           ) {
+    def toJs: js.Object = JSMacro[ChartJsOptions](this)
+  }
+
+  object ChartJsOptions {
+    def apply(title: String): ChartJsOptions = {
+
+      val scales: Dictionary[js.Any] = js.Dictionary(
+        "yAxes" ->
+          js.Array(
+            js.Dictionary("ticks" ->
+              js.Dictionary("beginAtZero" -> true)
+            )
+          )
+      )
+
+      val t: Dictionary[js.Any] = js.Dictionary(
+        "display" -> true,
+        "text" -> title
+      )
+
+      val legend: Dictionary[js.Any] = js.Dictionary(
+        "display" -> true
+      )
+
+      ChartJsOptions(scales, t, legend)
+    }
+  }
+
+  case class ChartJsData(
+                          datasets: js.Array[js.Object],
+                          labels: js.UndefOr[js.Array[String]] = js.undefined,
+                        ) {
+    def toJs: js.Object = JSMacro[ChartJsData](this)
+  }
+
+  object ChartJsData {
+
+    def apply(dataSets: Seq[ChartJsDataSet]): ChartJsData = ChartJsData(dataSets.map(_.toJs).toJSArray)
+
+    def apply(dataSets: Seq[ChartJsDataSet], labels: Option[Seq[String]]): ChartJsData =
+      ChartJsData(dataSets.map(_.toJs).toJSArray, labels.map(_.toJSArray).orUndefined)
+
+    def apply(labels: Seq[String], data: Seq[Double], dataSetLabel: String): ChartJsData =
+      ChartJsData(js.Array(ChartJsDataSet(data.toJSArray, label = dataSetLabel).toJs), labels.toJSArray)
+  }
+
+  val log: Logger = LoggerFactory.getLogger("ChartJSComponent")
+
 
   @JSImport("react-chartjs-2", "Line")
   @js.native
@@ -116,15 +131,9 @@ object ChartJSComponent {
 
     private val component = JsComponent[Props, Children.None, Null](LineRaw)
 
-    def apply(options: js.Dictionary[js.Any]): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] = component(Props(options))
+    def apply(props: ChartJsProps): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
+      component(props.toJs)
 
-    def apply(dataSets: Seq[DataSet], labels: Seq[String]): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
-      component(Props(
-        js.Dictionary(
-          "datasets" -> dataSets.map(_.toJS).toJSArray,
-          "labels" -> labels.toJSArray
-        )
-      ))
   }
 
   @JSImport("react-chartjs-2", "Bar")
@@ -132,42 +141,10 @@ object ChartJSComponent {
   object BarRaw extends js.Object
 
   object Bar {
+    private val component = JsComponent[Props, Children.None, Null](BarRaw)
 
-
-    def apply(options: js.Dictionary[js.Any]): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] = {
-      options("minBarLength") = 0
-      component(Props(options))
-    }
-
-    def apply(title: String, dataSets: Seq[DataSet], labels: Seq[String]): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] = {
-
-      println(component)
-
-      val test = ChartJSProps(something = "this is a prop")()
-
-      println(s"Marco thing: $test")
-
-      component(Props(
-        js.Dictionary(
-          "datasets" -> dataSets.map(_.toJS).toJSArray,
-          "labels" -> labels.toJSArray,
-          "type" -> "bar"
-        ),
-        js.Dictionary(
-          "scales" -> js.Dictionary("yAxes" ->
-            js.Array(
-              js.Dictionary("ticks" ->
-                js.Dictionary("beginAtZero" -> true)
-              )
-            )
-          ),
-          "title" -> js.Dictionary(
-            "display" -> true,
-            "text" -> title
-          )
-        )
-      ))
-    }
+    def apply(props: ChartJsProps): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
+      component(props.toJs)
   }
 
   @JSImport("react-chartjs-2", "HorizontalBar")
@@ -178,35 +155,9 @@ object ChartJSComponent {
 
     private val component = JsComponent[Props, Children.None, Null](HorizontalBarRaw)
 
-    def apply(options: js.Dictionary[js.Any]): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] = component(Props(options))
 
-    def apply(title: String, dataSets: Seq[DataSet], labels: Seq[String], width: Int = 300, height: Int = 150, showLegend: Boolean = false): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
-      component(Props(
-        js.Dictionary(
-          "datasets" -> dataSets.map(_.toJS).toJSArray,
-          "labels" -> labels.toJSArray,
-          "type" -> "bar"
-        ),
-        js.Dictionary(
-          "scales" -> js.Dictionary(
-            "yAxes" ->
-              js.Array(
-                js.Dictionary("ticks" ->
-                  js.Dictionary("beginAtZero" -> true)
-                )
-              )
-          ),
-          "title" -> js.Dictionary(
-            "display" -> true,
-            "text" -> title
-          ),
-          "legend" -> js.Dictionary(
-            "display" -> showLegend
-          )
-        ),
-        width,
-        height
-      ))
+    def apply(props: ChartJsProps): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
+      component(props.toJs)
   }
 
   @JSImport("react-chartjs-2", "Pie")
@@ -217,15 +168,8 @@ object ChartJSComponent {
 
     private val component = JsComponent[Props, Children.None, Null](PieRaw)
 
-    def apply(options: js.Dictionary[js.Any]): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] = component(Props(options))
-
-    def apply(dataSets: Seq[DataSet], labels: Seq[String]): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
-      component(Props(
-        js.Dictionary(
-          "datasets" -> dataSets.map(_.toJS).toJSArray,
-          "labels" -> labels.toJSArray
-        )
-      ))
+    def apply(props: ChartJsProps): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
+      component(props.toJs)
   }
 
 }

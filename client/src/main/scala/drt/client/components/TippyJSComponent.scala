@@ -56,8 +56,12 @@ object TippyJSComponent {
 
   def apply[A](content: js.Object, interactive: Boolean, trigger: VdomTagOf[HTMLElement]) = {
 
-
     component(props(content, interactive))(trigger)
+  }
+
+  def apply[A](content: HtmlTag, interactive: Boolean, trigger: VdomTagOf[HTMLElement]) = {
+
+    component(props(content.rawElement, interactive))(trigger)
   }
 
 }

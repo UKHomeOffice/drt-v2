@@ -56,7 +56,7 @@ object Settings {
     val awsSdk = "1.11.89"
     val awsCommons = "0.12.2"
     val csvCommons = "1.4"
-    val pprint = "0.5.4"
+    val pprint = "0.5.6"
     val scalaCheck = "1.13.4"
     val akkaPersistenceInMemory = "2.5.15.2"
     val akkaPersistenceJdbc = "3.5.0"
@@ -113,6 +113,7 @@ object Settings {
 
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
+    "com.lihaoyi" %% "pprint" % pprint,
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs
   ))
 
@@ -136,7 +137,7 @@ object Settings {
     "com.github.gphat" % "censorinus_2.12" % censorinus,
     "com.pauldijou" %% "jwt-core" % "4.0.0",
     "com.hierynomus" % "sshj" % sshJ,
-    //    "com.lihaoyi" %% "pprint" % pprint,
+    "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
 
     "com.mfglabs" %% "commons-aws-s3" % awsCommons,

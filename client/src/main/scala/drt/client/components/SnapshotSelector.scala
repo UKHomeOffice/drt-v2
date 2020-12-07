@@ -76,7 +76,7 @@ object SnapshotSelector {
         <.select(^.className := "form-control", ^.defaultValue := defaultValue.toString,
           ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(callback(e.target.value))),
           nameValues.map {
-            case (name, value) => <.option(^.value := value, name)
+            case (name, value) => <.option(^.value := value, ^.key := value, name)
           }.toTagMod)
       }
 

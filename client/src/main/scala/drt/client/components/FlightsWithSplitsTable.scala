@@ -3,6 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
+import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsDataSet, ChartJsOptions, ChartJsProps}
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.TooltipComponent._
@@ -20,6 +21,8 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, TableSection}
+
+import scala.scalajs.js.JSConverters._
 
 object FlightsWithSplitsTable {
 
@@ -234,52 +237,50 @@ object FlightTableRow {
           flightWithSplits.splits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages).map(
             (splits: Splits) => {
 
-              val nationalityData: ChartData = ChartData(ChartData.splitToNationalityChartData(splits.splits))
-              val liveAPIPaxTypes = ChartData.splitToPaxTypeData(splits.splits, "Live API")
-                .copy(colour = "rgb(112,128,144)")
-              val paxTypeSplitComparison: Seq[ChartDataSet] = flightWithSplits
-                .splits
-                .find(_.source == SplitSources.Historical)
-                .map(s => ChartData.splitToPaxTypeData(s.splits, "Historic")).toSeq :+ liveAPIPaxTypes
+              val nationalityData: ChartJsData = ChartData.splitToNationalityChartData(splits.splits)
 
-              val paxTypeData: ChartData = ChartData(paxTypeSplitComparison)
+              val liveAPIPaxTypes: ChartJsData = ChartData.splitToPaxTypeData(splits.splits, "Live API")
 
-              val ageData: ChartData = ChartData(ChartData.splitDataToAgeRanges(splits.splits))
+//              val paxTypeSplitComparison: Seq[ChartJsData] = flightWithSplits
+//                .splits
+//                .find(_.source == SplitSources.Historical)
+//                .map(s => ChartData.splitToPaxTypeData(s.splits, "Historic")).toSeq :+ liveAPIPaxTypes
+//
+//              val paxTypeData: Seq[ChartJsData] = paxTypeSplitComparison
 
+              val ageData: ChartJsData = ChartData.splitDataToAgeRanges(splits.splits)
+
+              
               TippyJSComponent(
                 <.div(^.cls := "container arrivals__table__flight__chart-box",
                   <.div(^.cls := "row",
                     <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
                       ChartJSComponent.HorizontalBar(
-                        "Nationality Breakdown",
-                        nationalityData.dataSets.map(d => DataSet(d.title, d.values)),
-                        nationalityData.dataSets.head.labels,
-                        300,
-                        300
+                        ChartJsProps(
+                          data = nationalityData,
+                          300,
+                          300,
+                          options = ChartJsOptions("Nationality Breakdown")
+                        )
                       )),
                     <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
                       ChartJSComponent.HorizontalBar(
-                        "Passenger Types",
-                        paxTypeData.dataSets.map(cd =>
-                          cd.copy(
-                            labelValues = ChartData.applySplitsToTotal(cd.labelValues, props.pcpPaxFn(flight)
-                            ))
-                        ).map(d => DataSet(d.title, d.values, d.colour)),
-                        paxTypeData.dataSets.head.labels,
-                        300,
-                        300,
-                        showLegend = true
-                      )),
-                    <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
-                      ChartJSComponent.HorizontalBar(
-                        "Age Breakdown",
-                        ageData.dataSets.map(d => DataSet(d.title, d.values)),
-                        ageData.dataSets.head.labels,
-                        300,
-                        300
-                      ))
-                  )
-                ).rawElement, interactive = true, <.span(Icon.infoCircle))
+                        ChartJsProps(
+                          data = liveAPIPaxTypes,
+                          300,
+                          300,
+                          options = ChartJsOptions("Passenger Types")
+                        ))),
+                      <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
+                        ChartJSComponent.HorizontalBar(
+                          ChartJsProps(
+                            data = ageData,
+                            300,
+                            300,
+                            options = ChartJsOptions("Age Breakdown")
+                          ))
+                      )
+                    )).rawElement, interactive = true, <.span(Icon.infoCircle))
             })
         ),
 

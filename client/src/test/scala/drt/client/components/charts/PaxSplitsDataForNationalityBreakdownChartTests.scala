@@ -1,5 +1,7 @@
 package drt.client.components.charts
 
+import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsDataSet}
+import drt.client.components.charts.DataFormat.jsonString
 import drt.client.services.ChartData.splitToNationalityChartData
 import drt.client.services.ChartDataSet
 import drt.shared.PaxTypes._
@@ -21,12 +23,11 @@ object PaxSplitsDataForNationalityBreakdownChartTests extends TestSuite {
           Option(Map(PaxAge(21) -> 1.0))
         ))
 
-        val result = splitToNationalityChartData(apiSplit)
+        val expected = ChartJsData(Seq("GBR"), Seq(1.0), "All Queues").toJs
 
-        val expected = ChartDataSet("All Queues", List(("GBR", 1.0)))
+        val result = splitToNationalityChartData(apiSplit).toJs
 
-
-        assert(result == expected)
+        assert(jsonString(result) == jsonString(expected))
       }
     }
 
@@ -40,12 +41,11 @@ object PaxSplitsDataForNationalityBreakdownChartTests extends TestSuite {
           ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 8.0, Some(Map(Nationality("GBR") -> 8.0)), None),
         )
 
-        val result = splitToNationalityChartData(apiSplit)
+        val expected = ChartJsData(Seq("GBR"), Seq(11.0), "All Queues").toJs
 
-        val expected = ChartDataSet("All Queues", List(("GBR", 11.0)))
+        val result = splitToNationalityChartData(apiSplit).toJs
 
-
-        assert(result == expected)
+        assert(jsonString(result) == jsonString(expected))
       }
     }
 
@@ -63,12 +63,14 @@ object PaxSplitsDataForNationalityBreakdownChartTests extends TestSuite {
           ApiPaxTypeAndQueueCount(B5JPlusNational, EeaDesk, 2, Some(Map(Nationality("AUS") -> 2)), None)
         )
 
-        val result = splitToNationalityChartData(apiSplit)
+        val data = Seq(4.0, 17.0, 2.0, 7.0)
+        val labels = Seq("AUS", "GBR", "MRU", "ZWE")
 
-        val expected = ChartDataSet("All Queues", Vector(("AUS", 4.0), ("GBR", 17.0), ("MRU", 2.0), ("ZWE", 7.0)))
+        val expected = ChartJsData(labels, data, "All Queues").toJs
 
+        val result = splitToNationalityChartData(apiSplit).toJs
 
-        assert(result == expected)
+        assert(jsonString(result) == jsonString(expected))
       }
     }
 
@@ -87,14 +89,13 @@ object PaxSplitsDataForNationalityBreakdownChartTests extends TestSuite {
           None
         ))
 
-        val result = splitToNationalityChartData(apiSplit)
+        val labels = Seq("GBR", "ITA")
+        val data = Seq(1.0, 1.0)
+        val expected = ChartJsData(labels, data, "All Queues").toJs
 
-        val expected = ChartDataSet("All Queues", List(
-          ("GBR", 1.0),
-          ("ITA", 1.0)
-        ))
+        val result = splitToNationalityChartData(apiSplit).toJs
 
-        assert(result == expected)
+        assert(jsonString(result) == jsonString(expected))
       }
     }
   }

@@ -1,6 +1,9 @@
 package drt.client.services
 
+import drt.client.components.ChartJSComponent.ChartJsData
 import drt.shared.{ApiPaxTypeAndQueueCount, PaxAge, PaxTypes}
+
+import scala.collection.immutable
 
 case class ChartData(dataSets: Seq[ChartDataSet]) {
 
@@ -19,9 +22,8 @@ case class ChartDataSet(
 
 object ChartData {
 
-  def splitToPaxTypeData(splits: Set[ApiPaxTypeAndQueueCount], legend: String = "Passenger Types"): ChartDataSet = ChartDataSet(
-    legend,
-    splits
+  def splitToPaxTypeData(splits: Set[ApiPaxTypeAndQueueCount], legend: String = "Passenger Types"): ChartJsData = {
+    val data = splits
       .foldLeft(Map[String, Double]())(
         (acc: Map[String, Double], ptqc: ApiPaxTypeAndQueueCount) => {
           val label = PaxTypes.displayName(ptqc.passengerType)
@@ -31,27 +33,31 @@ object ChartData {
       .toSeq
       .sortBy {
         case (paxType, _) => paxType
-      })
+      }
+    ChartJsData(data.map(_._1), data.map(_._2), legend)
+  }
 
   def apply(dataSet: ChartDataSet): ChartData = ChartData(List(dataSet))
 
-  def splitToNationalityChartData(splits: Set[ApiPaxTypeAndQueueCount]) =
-    ChartDataSet(
-      "All Queues",
-      splits
-        .foldLeft(Map[String, Double]())(
-          (acc: Map[String, Double], ptqc: ApiPaxTypeAndQueueCount) => {
-            val nationalityCountForSplit = ptqc.nationalities.getOrElse(List()).map {
-              case (nat, count) =>
-                nat.code -> (acc.getOrElse(nat.code, 0.0) + count)
-            }.toMap
-            acc ++ nationalityCountForSplit
-          }
-        )
-        .toSeq
-        .sortBy {
-          case (nat, _) => nat
-        })
+  def splitToNationalityChartData(splits: Set[ApiPaxTypeAndQueueCount]) = {
+
+    val nationalityCounts: Seq[(String, Double)] = splits
+      .foldLeft(Map[String, Double]())(
+        (acc: Map[String, Double], ptqc: ApiPaxTypeAndQueueCount) => {
+          val nationalityCountForSplit = ptqc.nationalities.getOrElse(List()).map {
+            case (nat, count) =>
+              nat.code -> (acc.getOrElse(nat.code, 0.0) + count)
+          }.toMap
+          acc ++ nationalityCountForSplit
+        }
+      )
+      .toSeq
+      .sortBy {
+        case (nat, _) => nat
+      }
+
+    ChartJsData(nationalityCounts.map(_._1), nationalityCounts.map(_._2), "All Queues")
+  }
 
   case class AgeRange(bottom: Int, top: Option[Int]) {
     def isInRange(age: Int) = this match {
@@ -71,7 +77,7 @@ object ChartData {
     def apply(bottom: Int): AgeRange = AgeRange(bottom, None)
   }
 
-  def splitDataToAgeRanges(splits: Set[ApiPaxTypeAndQueueCount]): ChartDataSet = {
+  def splitDataToAgeRanges(splits: Set[ApiPaxTypeAndQueueCount]): ChartJsData = {
     val ageRanges = List(
       AgeRange(0, 11),
       AgeRange(12, 24),
@@ -80,7 +86,7 @@ object ChartData {
       AgeRange(65),
     )
 
-    val data = ageRanges.map(range => {
+    val data: immutable.Seq[(String, Double)] = ageRanges.map(range => {
       val ageCount: Seq[(PaxAge, Double)] = splits.toList.flatMap(_.ages.getOrElse(Map()))
       val totalInAgeRange: Double = ageCount
         .collect {
@@ -89,9 +95,7 @@ object ChartData {
         .sum
       (range.title, totalInAgeRange)
     })
-    ChartDataSet(
-      "Passenger Ages",
-      data)
+    ChartJsData(data.map(_._1), data.map(_._2), "Passenger Ages")
   }
 
   def applySplitsToTotal(splitData: Seq[(String, Double)], flightPax: Int): Seq[(String, Double)] = {
