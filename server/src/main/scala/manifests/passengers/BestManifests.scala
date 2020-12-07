@@ -77,6 +77,8 @@ object ManifestPassengerProfile {
     else
       pij.DocumentType
     val maybeInTransit = Option(pij.InTransitFlag.isInTransit|| pij.DisembarkationPortCode.exists(_ != portCode))
-    ManifestPassengerProfile(nationality, documentType, pij.Age, maybeInTransit)
+    val profile = ManifestPassengerProfile(nationality, documentType, pij.Age, maybeInTransit)
+    println(s"profile: $profile")
+    profile
   }
 }
