@@ -99,7 +99,9 @@ object CiriumFeed {
       if (scheduledToNearest5Mins == carrierScheduledTime)
         None
       else
-        Option(carrierScheduledTime)
+        Option(carrierScheduledTime),
+      None,
+      Some(f.departureDate).map(_.millis)
     )
   }
 

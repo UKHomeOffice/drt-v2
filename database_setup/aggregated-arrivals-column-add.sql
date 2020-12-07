@@ -1,0 +1,1 @@
+ALTER TABLE public.arrival ADD COLUMN scheduled_departure timestamp;
