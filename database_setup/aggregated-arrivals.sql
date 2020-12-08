@@ -15,6 +15,7 @@ CREATE TABLE public.arrival(
   pcp timestamp NOT NULL,
   totalPassengers integer,
   pcpPassengers integer,
+  scheduled_departure timestamp;
   PRIMARY KEY (number, destination, terminal, scheduled)
 );
 
@@ -24,3 +25,4 @@ CREATE INDEX origin ON public.arrival (origin);
 CREATE INDEX terminal ON public.arrival (terminal);
 CREATE INDEX scheduled ON public.arrival (scheduled ASC);
 CREATE INDEX pcp ON public.arrival (pcp ASC);
+CREATE INDEX scheduled_departure ON public.arrival (scheduled_departure ASC);

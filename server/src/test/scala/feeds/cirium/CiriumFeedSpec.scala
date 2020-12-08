@@ -58,6 +58,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val actRunwayArrival = "2019-07-15T11:08:00.000Z"
     val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
     val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
+    val publishedDepartureTime = "2019-07-15T09:10:00.000Z"
 
     val ciriumArrival = ciriumFlightStatus(
       publishedArrivalTime,
@@ -65,10 +66,12 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       actRunwayArrival,
       estGateArrivalTime,
       actGateArrivalTime,
-      "1000"
+      "1000",
+      publishedDepartureTime
     )
 
-    val expected = drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime)
+    val expected = drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime,publishedDepartureTime)
+
 
     val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
 
@@ -83,6 +86,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val actRunwayArrival = "2019-07-15T11:08:00.000Z"
     val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
     val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
+    val publishedDepartureTime = "2019-07-15T09:10:00.000Z"
 
     val ciriumArrival = ciriumFlightStatus(
       publishedArrivalTime,
@@ -90,7 +94,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       actRunwayArrival,
       estGateArrivalTime,
       actGateArrivalTime,
-      "1000"
+      "1000",
+      publishedDepartureTime
     )
 
     val expected = drtArrival(
@@ -98,7 +103,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       estRunwayArrival,
       actRunwayArrival,
       estGateArrivalTime,
-      actGateArrivalTime
+      actGateArrivalTime,
+      publishedDepartureTime
     ).copy(CarrierScheduled = Option(SDate(publishedArrivalTime).millisSinceEpoch))
 
     val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
@@ -106,7 +112,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     result === expected
   }
 
-  private def drtArrival(publishedArrivalTime: String, estRunwayArrival: String, actRunwayArrival: String, estGateArrivalTime: String, actGateArrivalTime: String) = {
+  private def drtArrival(publishedArrivalTime: String, estRunwayArrival: String, actRunwayArrival: String, estGateArrivalTime: String, actGateArrivalTime: String, publishedDepartureTime: String) = {
     Arrival(
       Option(Operator("TST")),
       ArrivalStatus("Active"),
@@ -128,7 +134,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       PortCode("JFK"),
       SDate(publishedArrivalTime).millisSinceEpoch,
       None,
-      Set(LiveBaseFeedSource)
+      Set(LiveBaseFeedSource),
+      ScheduledDeparture = Option(SDate(publishedDepartureTime).millisSinceEpoch)
     )
   }
 
@@ -138,7 +145,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
                                   actRunwayArrival: String,
                                   estGateArrivalTime: String,
                                   actGateArrivalTime: String,
-                                  flightNumber: String
+                                  flightNumber: String,
+                                  publishedDepartureTime: String
                                 ) = {
     CiriumFlightStatus(
       100000,
@@ -148,7 +156,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       flightNumber,
       "JFK",
       "LHR",
-      CiriumDate("2019-07-15T09:10:00.000Z", None),
+      CiriumDate(publishedDepartureTime, None),
       CiriumDate(publishedArrivalTime, None),
       "A",
       CiriumOperationalTimes(
@@ -310,6 +318,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val actRunwayArrival = "2019-07-15T11:08:00.000Z"
     val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
     val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
+    val publishedDepartureTime = "2019-07-15T09:10:00.000Z"
 
     override def makeRequest(): Future[List[CiriumFlightStatus]] = Future(List(ciriumFlightStatus(
       publishedArrivalTime,
@@ -317,7 +326,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       actRunwayArrival,
       estGateArrivalTime,
       actGateArrivalTime,
-      "1000"
+      "1000",
+      publishedDepartureTime
     )))
   }
 
@@ -328,7 +338,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val actRunwayArrival = "2019-07-15T11:08:00.000Z"
     val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
     val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
-
+    val publishedDepartureTime = "2019-07-15T09:10:00.000Z"
     var callCount = 0
 
     override def makeRequest(): Future[List[CiriumFlightStatus]] = {
@@ -343,7 +353,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
           actRunwayArrival,
           estGateArrivalTime,
           actGateArrivalTime,
-          "1000"
+          "1000",
+          publishedDepartureTime
         )))
       }
       callCount = callCount + 1

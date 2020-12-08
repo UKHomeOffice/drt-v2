@@ -2,7 +2,6 @@ package drt.shared
 
 import java.util.UUID
 
-import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.shared.CrunchApi._
 import drt.shared.EventTypes.{CI, DC, InvalidEventType}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
@@ -12,8 +11,6 @@ import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import ujson.Js.Value
-import uk.gov.homeoffice.drt.Urls
-import uk.gov.homeoffice.drt.auth.Roles.Role
 import upickle.Js
 import upickle.default._
 
@@ -497,10 +494,10 @@ trait SDateLike {
   def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
 
   /**
-   * Days of the week 1 to 7 (Monday is 1)
-   *
-   * @return
-   */
+    * Days of the week 1 to 7 (Monday is 1)
+    *
+    * @return
+    */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int
@@ -668,7 +665,7 @@ object FlightsApi {
         case (_, fws) =>
           val pcpRange = fws.apiFlight.pcpRange()
           (startMillis <= pcpRange.min && pcpRange.max <= endMillis) ||
-          (startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis)
+            (startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis)
       }
       FlightsWithSplits(inWindow)
     }
