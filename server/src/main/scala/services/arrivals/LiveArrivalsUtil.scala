@@ -13,7 +13,8 @@ object LiveArrivalsUtil {
       EstimatedChox = if (portFeedArrival.EstimatedChox.isEmpty) baseLiveArrival.EstimatedChox else portFeedArrival.EstimatedChox,
       Estimated = if (portFeedArrival.Estimated.isEmpty) baseLiveArrival.Estimated else portFeedArrival.Estimated,
       Gate = if (portFeedArrival.Gate.isEmpty) baseLiveArrival.Gate else portFeedArrival.Gate,
-      Status = if (portFeedArrival.Status.description == "UNK") baseLiveArrival.Status else portFeedArrival.Status
+      Status = if (portFeedArrival.Status.description == "UNK") baseLiveArrival.Status else portFeedArrival.Status,
+      ScheduledDeparture = if (portFeedArrival.ScheduledDeparture.isEmpty) baseLiveArrival.ScheduledDeparture else portFeedArrival.ScheduledDeparture
     )
   }
 
@@ -29,6 +30,7 @@ object LiveArrivalsUtil {
        |Status: ${a.Status.description}
        |Gate: ${a.Gate}
        |PCP: ${a.PcpTime.map(d => SDate(d).toISOString())}
+       |scheduledDeparture: ${a.ScheduledDeparture.map(d => SDate(d).toISOString())}
        |""".stripMargin
   }
 
