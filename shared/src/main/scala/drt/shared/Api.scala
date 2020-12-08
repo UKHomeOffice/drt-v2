@@ -18,7 +18,9 @@ import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
-
+import uk.gov.homeoffice.drt.Urls
+import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 
 object DeskAndPaxTypeCombinations {
   val egate = "eGate"
