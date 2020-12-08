@@ -1,8 +1,8 @@
 package drt.server.feeds.lgw
 
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
 import drt.shared._
+import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 import services.SDate
 
@@ -28,7 +28,7 @@ class LGWForecastXLSExtractorSpec extends Specification {
 
     val result = LGWForecastXLSExtractor(path)
 
-    val expected = List(Arrival(None, CarrierCode("TST"), VoyageNumber(5), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, None, Some(14), Some(0), None, None, PortCode("LGW"), Terminal("N"), PortCode("RIX"), SDate("2020-07-10T07:40").millisSinceEpoch, None, Set(ForecastFeedSource), None, None,None))
+    val expected = List(Arrival(None, CarrierCode("TST"), VoyageNumber(5), None, ArrivalStatus("Port Forecast"), None, None, None, None, None, None, None, Some(14), Some(0), None, None, PortCode("LGW"), Terminal("N"), PortCode("RIX"), SDate("2020-07-10T07:40").millisSinceEpoch, None, Set(ForecastFeedSource), None, None, None))
 
     result === expected
   }
