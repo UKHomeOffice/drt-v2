@@ -53,6 +53,7 @@ object Test extends AirportConfigLike {
       )))
     ),
     hasTransfer = true,
-    desksByTerminal = Map(T1 -> 22)
+    desksByTerminal = Map(T1 -> 22),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
   )
 }

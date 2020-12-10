@@ -12,7 +12,8 @@ import services.metrics.StageTimer
 import scala.collection.immutable.SortedMap
 
 
-final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, Arrival], forecastMaxMillis: () => MillisSinceEpoch) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]] {
+final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, Arrival], forecastMaxMillis: () => MillisSinceEpoch) extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]]
+{
   val in: Inlet[ArrivalsFeedResponse] = Inlet[ArrivalsFeedResponse]("DiffingStage.in")
   val out: Outlet[ArrivalsFeedResponse] = Outlet[ArrivalsFeedResponse]("DiffingStage.out")
   val stageName = "arrivals-diffing"
