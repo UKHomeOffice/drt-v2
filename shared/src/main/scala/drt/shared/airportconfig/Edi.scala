@@ -68,6 +68,7 @@ object Edi extends AirportConfigLike {
       )))
     ),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
-    desksByTerminal = Map[Terminal, Int](A1 -> 11, A2 -> 9)
+    desksByTerminal = Map[Terminal, Int](A1 -> 11, A2 -> 9),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
   )
 }

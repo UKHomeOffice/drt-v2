@@ -61,6 +61,7 @@ object Test2 extends AirportConfigLike {
         EGate -> 0.7968,
         EeaDesk -> (1.0 - 0.7968)
       )))),
-    desksByTerminal = Map(T1 -> 22, T2 -> 22)
+    desksByTerminal = Map(T1 -> 22, T2 -> 22),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
   )
 }

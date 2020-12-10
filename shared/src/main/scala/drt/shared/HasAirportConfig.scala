@@ -259,7 +259,7 @@ case class AirportConfig(portCode: PortCode,
                          hasTransfer: Boolean = false,
                          maybeCiriumEstThresholdHours: Option[Int] = None,
                          maybeCiriumTaxiThresholdMinutes: Option[Int] = Option(20),
-                         feedSources: Seq[FeedSource] = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource),
+                         feedSources: Seq[FeedSource],
                          desksByTerminal: Map[Terminal, Int],
                          queuePriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack, EGate),
                          assumedAdultsPerChild: Double = 1.0
