@@ -1,4 +1,4 @@
-package drt.client.services
+package drt.client.services.charts
 
 import drt.client.components.ChartJSComponent.ChartJsData
 import drt.shared.{ApiPaxTypeAndQueueCount, PaxAge, PaxTypes}
@@ -34,7 +34,7 @@ object ChartData {
       .sortBy {
         case (paxType, _) => paxType
       }
-    ChartJsData(data.map(_._1), data.map(_._2), legend)
+    ChartJsData(data.map(_._1), data.map(_._2.round.toDouble), legend)
   }
 
   def apply(dataSet: ChartDataSet): ChartData = ChartData(List(dataSet))

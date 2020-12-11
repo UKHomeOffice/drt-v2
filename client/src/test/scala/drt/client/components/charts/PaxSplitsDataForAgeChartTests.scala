@@ -2,8 +2,7 @@ package drt.client.components.charts
 
 import drt.client.components.ChartJSComponent.ChartJsData
 import drt.client.components.charts.DataFormat.jsonString
-import drt.client.services.ChartData.splitToNationalityChartData
-import drt.client.services.{ChartData, ChartDataSet}
+import drt.client.services.charts.ChartData
 import drt.shared.{ApiPaxTypeAndQueueCount, PaxAge, PaxTypes, Queues}
 import utest.{TestSuite, _}
 
@@ -26,7 +25,7 @@ object PaxSplitsDataForAgeChartTests extends TestSuite {
         val labels = Seq("0-11", "12-24", "25-49", "50-65", ">65")
         val data = Seq(1.0, 0, 0, 0, 0)
 
-        val expected = ChartJsData(labels, data, "All Queues").toJs
+        val expected = ChartJsData(labels, data, "Passenger Ages").toJs
 
         val result = ChartData.splitDataToAgeRanges(apiSplit).toJs
 

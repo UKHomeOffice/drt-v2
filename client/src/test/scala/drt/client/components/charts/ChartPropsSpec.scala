@@ -47,7 +47,7 @@ object ChartPropsSpec extends TestSuite {
 
       val props = ChartJsProps(
         ChartJsData(
-          dataSets = Seq(ChartJsDataSet(
+          datasets = Seq(ChartJsDataSet(
             data = js.Array(65, 59, 80, 81, 56, 55, 40),
             label = "My First dataset",
             backgroundColor = "rgba(255,99,132,0.2)",
@@ -70,7 +70,7 @@ object ChartPropsSpec extends TestSuite {
           """
             |{
             |    "data": {
-            |        "dataSets": [
+            |        "datasets": [
             |            {
             |                "data": [ 65, 59, 80, 81, 56, 55, 40 ],
             |                "hoverBorderColor": "rgba(255,99,132,1)",
@@ -136,7 +136,7 @@ object ChartPropsSpec extends TestSuite {
         JSON.parse(
           """
             |{
-            |    "dataSets": [
+            |    "datasets": [
             |        {
             |            "data": [ 10, 1, 10 ],
             |            "label": "title"

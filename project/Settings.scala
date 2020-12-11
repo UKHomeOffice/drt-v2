@@ -74,7 +74,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "48"
-    val drtLib = "43"
+    val drtLib = "59"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "1.2.0"
@@ -85,7 +85,7 @@ object Settings {
 
   import versions._
 
-  val clientNpmDependences = Seq(
+  val clientNpmDependencies = Seq(
     "react" -> react,
     "react-dom" -> react,
     "log4javascript" -> log4Javascript,

@@ -1,19 +1,20 @@
 package drt.shared
 
-import java.util.UUID
-
-import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.shared.CrunchApi._
 import drt.shared.EventTypes.{CI, DC, InvalidEventType}
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.MilliTimes.{oneDayMillis, oneMinuteMillis}
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, FlightCodeSuffix}
-import ujson.Value
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+
+import java.util.UUID
 //import upickle.{Value => UpickleValue}
+import ujson.Js.Value
+import uk.gov.homeoffice.drt.Urls
+import uk.gov.homeoffice.drt.auth.Roles.Role
 import upickle.default._
 
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
@@ -124,7 +125,9 @@ case object Ratio extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
-case class Nationality(code: String)
+case class Nationality(code: String) {
+  override def toString: String = code
+}
 
 object Nationality {
   implicit val rw: ReadWriter[Nationality] = macroRW
@@ -132,6 +135,8 @@ object Nationality {
 
 case class PaxAge(years: Int) {
   def isUnder(age: Int): Boolean = years < age
+
+  override def toString: String = s"$years"
 }
 
 object PaxAge {
@@ -374,6 +379,8 @@ case class InvalidVoyageNumber(exception: Throwable) extends VoyageNumberLike {
 }
 
 case object VoyageNumber {
+  implicit val rw: ReadWriter[VoyageNumber] = macroRW
+
   def apply(string: String): VoyageNumberLike = Try(string.toInt) match {
     case Success(value) => VoyageNumber(value)
     case Failure(exception) => InvalidVoyageNumber(exception)
@@ -480,6 +487,9 @@ case class ArrivalKey(origin: PortCode,
 }
 
 object ArrivalKey {
+
+  implicit val rw: ReadWriter[ArrivalKey] = macroRW
+
   def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled)
 
   def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
@@ -653,6 +663,17 @@ object BuildVersion {
   implicit val rw: ReadWriter[BuildVersion] = macroRW
 }
 
+case class ApplicationConfig(rootDomain: String, useHttps: Boolean) {
+  val urls: Urls = Urls(rootDomain, useHttps)
+
+  def allPortsAccessible(roles: Set[Role]): Set[PortCode] = AirportConfigs.allPortConfigs
+    .filter(airportConfig => roles.contains(airportConfig.role)).map(_.portCode).toSet
+}
+
+object ApplicationConfig {
+  implicit val rw: ReadWriter[ApplicationConfig] = macroRW
+}
+
 object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
@@ -667,7 +688,7 @@ object FlightsApi {
         case (_, fws) =>
           val pcpRange = fws.apiFlight.pcpRange()
           (startMillis <= pcpRange.min && pcpRange.max <= endMillis) ||
-          (startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis)
+            (startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis)
       }
       FlightsWithSplits(inWindow)
     }

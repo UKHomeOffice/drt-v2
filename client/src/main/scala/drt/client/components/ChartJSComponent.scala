@@ -6,7 +6,7 @@ import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.{Children, JsComponent}
 
 import scala.scalajs.js
-import scala.scalajs.js.Dictionary
+import scala.scalajs.js.{Dictionary, JSON}
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSImport
 
@@ -74,7 +74,13 @@ object ChartJSComponent {
                              title: js.UndefOr[Dictionary[js.Any]] = js.undefined,
                              legend: js.UndefOr[Dictionary[js.Any]] = js.undefined,
                            ) {
-    def toJs: js.Object = JSMacro[ChartJsOptions](this)
+    def toJs: js.Object = {
+
+      val options = JSMacro[ChartJsOptions](this)
+      println(JSON.stringify(options))
+      println(JSON.stringify(scales))
+      options
+    }
   }
 
   object ChartJsOptions {
@@ -95,7 +101,7 @@ object ChartJSComponent {
       )
 
       val legend: Dictionary[js.Any] = js.Dictionary(
-        "display" -> true
+        "display" -> false
       )
 
       ChartJsOptions(scales, t, legend)
@@ -111,10 +117,10 @@ object ChartJSComponent {
 
   object ChartJsData {
 
-    def apply(dataSets: Seq[ChartJsDataSet]): ChartJsData = ChartJsData(dataSets.map(_.toJs).toJSArray)
+    def apply(datasets: Seq[ChartJsDataSet]): ChartJsData = ChartJsData(datasets.map(_.toJs).toJSArray)
 
-    def apply(dataSets: Seq[ChartJsDataSet], labels: Option[Seq[String]]): ChartJsData =
-      ChartJsData(dataSets.map(_.toJs).toJSArray, labels.map(_.toJSArray).orUndefined)
+    def apply(datasets: Seq[ChartJsDataSet], labels: Option[Seq[String]]): ChartJsData =
+      ChartJsData(datasets.map(_.toJs).toJSArray, labels.map(_.toJSArray).orUndefined)
 
     def apply(labels: Seq[String], data: Seq[Double], dataSetLabel: String): ChartJsData =
       ChartJsData(js.Array(ChartJsDataSet(data.toJSArray, label = dataSetLabel).toJs), labels.toJSArray)

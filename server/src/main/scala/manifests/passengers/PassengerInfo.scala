@@ -39,4 +39,9 @@ object PassengerInfo {
         }
       })
   }
+
+  def manifestToPassengerInfoSummary(manifest: VoyageManifest): Option[PassengerInfoSummary] =
+    manifest
+      .maybeKey
+      .map(PassengerInfoSummary(_, manifestToAgeRangeCount(manifest), manifestToNationalityCount(manifest)))
 }

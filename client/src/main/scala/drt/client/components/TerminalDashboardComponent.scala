@@ -12,11 +12,13 @@ import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.PassengerInfoSummary
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 
+import scala.collection.immutable.Map
 import scala.scalajs.js.URIUtils
 import scala.util.Try
 
@@ -28,6 +30,7 @@ object TerminalDashboardComponent {
                     airportConfig: AirportConfig,
                     router: RouterCtl[Loc],
                     portState: PortState,
+                    passengerInfoSummary: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
                     featureFlags: Pot[Map[String, Boolean]]
                   )
 
@@ -79,6 +82,7 @@ object TerminalDashboardComponent {
                     splitsGraphComponentColoured)(
                     FlightsWithSplitsTable.Props(
                       ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
+                      p.passengerInfoSummary,
                       p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
                       p.airportConfig.hasEstChox,
                       None,
@@ -164,9 +168,18 @@ object TerminalDashboardComponent {
   def apply(terminalPageTabLoc: TerminalPageTabLoc,
             airportConfig: AirportConfig,
             portState: PortState,
+            passengerInfoSummaryByDay: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
             router: RouterCtl[Loc],
             featureFlags: Pot[Map[String, Boolean]]
-           ): VdomElement = component(Props(terminalPageTabLoc, airportConfig, router, portState, featureFlags))
+           ): VdomElement =
+    component(Props(
+      terminalPageTabLoc,
+      airportConfig,
+      router,
+      portState,
+      passengerInfoSummaryByDay,
+      featureFlags
+    ))
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {
     val offset: Int = sd.getMinutes() % slotSize

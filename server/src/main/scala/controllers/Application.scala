@@ -158,7 +158,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithImports
     with WithPortState
     with WithStaffing
-    with WithVersion
+    with WithApplicationInfo
     with WithSimulations
     with WithPassengerInfo
     with WithMigrations
@@ -359,8 +359,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     if (user.hasRole(airportConfig.role))
       Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
     else {
-      val baseDomain = config.get[String]("base-domain")
-      val isSecure = config.get[Boolean]("https")
+      val baseDomain = config.get[String]("drt.domain")
+      val isSecure = config.get[Boolean]("drt.use-https")
       val protocol = if (isSecure) "https://" else "http://"
       val fromPort = "?fromPort=" + airportConfig.portCode.toString.toLowerCase
       val redirectUrl = protocol + baseDomain + fromPort

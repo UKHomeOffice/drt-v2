@@ -1,12 +1,11 @@
 package drt.client.components.charts
 
-import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsDataSet}
+import drt.client.components.ChartJSComponent.ChartJsData
 import drt.client.components.charts.DataFormat.jsonString
-import drt.client.services.ChartData.splitToNationalityChartData
-import drt.client.services.ChartDataSet
+import drt.client.services.charts.ChartData.splitToNationalityChartData
 import drt.shared.PaxTypes._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
-import drt.shared.{ApiPaxTypeAndQueueCount, Nationality, PaxAge, PaxTypes, Queues}
+import drt.shared._
 import utest.{TestSuite, _}
 
 object PaxSplitsDataForNationalityBreakdownChartTests extends TestSuite {

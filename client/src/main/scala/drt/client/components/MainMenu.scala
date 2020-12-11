@@ -1,6 +1,7 @@
 package drt.client.components
 
-import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, CreateAlerts, ManageUsers, PortFeedUpload, Role, ViewConfig}
+import diode.UseValueEq
+import drt.client.SPAMain
 import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
@@ -13,11 +14,18 @@ import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, LI}
+import uk.gov.homeoffice.drt.Urls
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles._
 
 object MainMenu {
   @inline private def bss: BootstrapStyles.type = GlobalStyles.bootstrapStyles
 
-  case class Props(router: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedSourceStatuses], airportConfig: AirportConfig, roles: Set[Role])
+  case class Props(router: RouterCtl[Loc],
+                   currentLoc: Loc,
+                   feeds: Seq[FeedSourceStatuses],
+                   airportConfig: AirportConfig,
+                   user: LoggedInUser) extends UseValueEq
 
   case class MenuItem(idx: Int, label: Props => VdomNode, icon: Icon, location: Loc, classes: List[String] = List())
 
@@ -29,9 +37,9 @@ object MainMenu {
 
   def statusMenuItem(position: Int, feeds: Seq[FeedSourceStatuses]): MenuItem = MenuItem(position, _ => s"Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
 
-  def portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
+  val portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
 
-  def forecastUploadFile(position: Int): MenuItem = MenuItem(position, _ => "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
+  val forecastUploadFile: Int => MenuItem = (position: Int) => MenuItem(position, _ => "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
 
   def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
     val rag = if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Red)) Red
@@ -41,10 +49,11 @@ object MainMenu {
     rag.toString
   }
 
-
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedSourceStatuses]): List[MenuItem] = {
-
-    def addFileUpload: List[(Role, Int => MenuItem)] = if (List(PortCode("LHR"), PortCode("LGW"), PortCode("STN"), PortCode("TEST")) contains airportConfig.portCode) List((PortFeedUpload, forecastUploadFile _)) else List.empty
+    val addFileUpload: List[(Role, Int => MenuItem)] =
+      if (List(PortCode("LHR"), PortCode("LGW"), PortCode("STN"), PortCode("TEST")) contains airportConfig.portCode)
+        List((PortFeedUpload, forecastUploadFile))
+      else List.empty
 
     def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = airportConfig.terminals.map { tn =>
       val terminalName = tn.toString
@@ -92,7 +101,7 @@ object MainMenu {
 
   private class Backend() {
     def render(props: Props): VdomTagOf[Div] = {
-      val children: Seq[TagOf[LI]] = for (item <- menuItems(props.airportConfig, props.currentLoc, props.roles, props.feeds)) yield {
+      val children: Seq[TagOf[LI]] = for (item <- menuItems(props.airportConfig, props.currentLoc, props.user.roles, props.feeds)) yield {
         val active = (props.currentLoc, item.location) match {
           case (TerminalPageTabLoc(tn, _, _, _), TerminalPageTabLoc(tni, _, _, _)) => tn == tni
           case (current, itemLoc) => current == itemLoc
@@ -103,8 +112,8 @@ object MainMenu {
         )
       }
 
-      val navItems: Seq[VdomTagOf[LI]] = if (PortSwitcher.userCanSwitchPort(props.roles))
-        children :+ <.li(PortSwitcher(props.roles, props.airportConfig.portCode))
+      val navItems: Seq[VdomTagOf[LI]] = if (props.user.portRoles.size > 1)
+        children :+ <.li(PortSwitcher(props.user, props.airportConfig.portCode))
       else
         children
       <.div(
@@ -117,17 +126,16 @@ object MainMenu {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedSourceStatuses], airportConfig: AirportConfig, roles: Set[Role]): VdomElement
-  = component(Props(ctl, currentLoc, feeds, airportConfig, roles))
+  def apply(ctl: RouterCtl[Loc],
+            currentLoc: Loc,
+            feeds: Seq[FeedSourceStatuses],
+            airportConfig: AirportConfig,
+            user: LoggedInUser): VdomElement
+  = component(Props(ctl, currentLoc, feeds, airportConfig, user))
 }
 
 object PortSwitcher {
-
-  def userCanSwitchPort(roles: Set[Role]): Boolean = RestrictedAccessByPortPage
-    .allPortsAccessible(roles)
-    .size > 1
-
-  case class Props(loggedInUserRoles: Set[Role], portCode: PortCode)
+  case class Props(user: LoggedInUser, portCode: PortCode) extends UseValueEq
 
   case class State(showDropDown: Boolean = false)
 
@@ -136,11 +144,11 @@ object PortSwitcher {
       .initialState(State())
       .renderPS((scope, props, state) => {
         val showClass = if (state.showDropDown) "show" else ""
-        val otherPorts = RestrictedAccessByPortPage.allPortsAccessible(props.loggedInUserRoles).filter(p => {
-          p != props.portCode
-        })
+        val otherPorts = props.user.portRoles.collect {
+          case portRole: PortAccess if props.portCode != PortCode(portRole.name) => PortCode(portRole.name)
+        }
         if (otherPorts.size == 1) {
-          <.a(Icon.plane, " ", ^.href := RestrictedAccessByPortPage.url(otherPorts.head), otherPorts.head.iata)
+          <.a(Icon.plane, " ", ^.href := SPAMain.urls.urlForPort(otherPorts.head.toString), otherPorts.head.iata)
         } else {
           <.span(
             ^.className := "dropdown",
@@ -149,11 +157,11 @@ object PortSwitcher {
             if (state.showDropDown) <.div(^.className := "menu-overlay", ^.onClick --> scope.modState(_ => State())) else "",
             <.ul(^.className := s"main-menu__port-switcher dropdown-menu $showClass",
               otherPorts.toList.sorted.map(p => <.li(^.className := "dropdown-item",
-                <.a(^.href := RestrictedAccessByPortPage.url(p), p.iata))).toTagMod
+                <.a(^.href := SPAMain.urls.urlForPort(p.toString), p.iata))).toTagMod
             )
           )
         }
       }).build
 
-  def apply(loggedInUserRoles: Set[Role], portCode: PortCode): VdomElement = component(Props(loggedInUserRoles, portCode))
+  def apply(user: LoggedInUser, portCode: PortCode): VdomElement = component(Props(user, portCode))
 }

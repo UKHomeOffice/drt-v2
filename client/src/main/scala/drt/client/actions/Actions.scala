@@ -1,7 +1,6 @@
 package drt.client.actions
 
 import java.util.UUID
-
 import diode.Action
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
@@ -10,6 +9,7 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.PassengerInfoSummary
 import org.scalajs.dom.FormData
 
 import scala.concurrent.duration.FiniteDuration
@@ -21,6 +21,8 @@ object Actions {
   case object TriggerReload extends Action
 
   case object GetApplicationVersion extends Action
+
+  case class ScheduleAction(delay: FiniteDuration, action: Action) extends Action
 
   case object GetLoggedInUser extends Action
 
@@ -106,6 +108,12 @@ object Actions {
 
   case class GetAirportInfos(codes: Set[PortCode]) extends Action
 
+  case class GetPassengerInfoSummary(utcDate: UtcDate) extends Action
+
+  case class SetPassengerInfoSummary(utcDate: UtcDate, infoSummaries: Seq[PassengerInfoSummary]) extends Action
+
+  case object PollForPassengerInfo extends Action
+
   case class UpdateAirportInfo(code: PortCode, info: Option[AirportInfo]) extends Action
 
   case class UpdateAirportInfos(infos: Map[PortCode, AirportInfo]) extends Action
@@ -152,11 +160,11 @@ object Actions {
 
   case class UpdateStaffAdjustmentDialogueState(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
 
-  case class FileUploadStatus(fileUploadState:FileUploadState) extends Action
+  case class FileUploadStatus(fileUploadState: FileUploadState) extends Action
 
   case class FileUploadInProgress() extends Action
 
-  case class ForecastFileUploadAction(portCode: String, formData:FormData) extends Action
+  case class ForecastFileUploadAction(portCode: String, formData: FormData) extends Action
 
   case class ResetFileUpload() extends Action
 

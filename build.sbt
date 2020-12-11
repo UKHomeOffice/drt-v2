@@ -66,7 +66,7 @@ lazy val client: Project = (project in file("client"))
     requireJsDomEnv in Test := true,
     scalaJSStage in Test := FastOptStage,
     // 'new style js dependencies with scalaBundler'
-    npmDependencies in Compile ++= Settings.clientNpmDependences,
+    npmDependencies in Compile ++= Settings.clientNpmDependencies,
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
     useYarn := true,

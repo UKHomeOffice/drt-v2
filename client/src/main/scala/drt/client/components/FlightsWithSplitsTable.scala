@@ -3,7 +3,6 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
-import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsDataSet, ChartJsOptions, ChartJsProps}
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.TooltipComponent._
@@ -11,10 +10,8 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
-import drt.shared.SplitRatiosNs.SplitSources
-import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared._
-import drt.shared.api.Arrival
+import drt.shared.api.{Arrival, PassengerInfoSummary}
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
@@ -22,13 +19,14 @@ import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, TableSection}
 
-import scala.scalajs.js.JSConverters._
+import scala.collection.immutable.Map
 
 object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = Arrival => Int
 
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],
+                   passengerInfoSummaryByDay: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
                    queueOrder: Seq[Queue], hasEstChox: Boolean,
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    hasArrivalSourcesAccess: Boolean,
@@ -38,7 +36,7 @@ object FlightsWithSplitsTable {
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
-    (props.flightsWithSplits, props.arrivalSources).hashCode()
+    (props.flightsWithSplits, props.arrivalSources, props.passengerInfoSummaryByDay).hashCode()
   })
 
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
@@ -80,8 +78,14 @@ object FlightsWithSplitsTable {
             <.tbody(
               sortedFlights.zipWithIndex.map {
                 case ((flightWithSplits, codeShares), idx) =>
+                  val maybePassengerInfo: Option[PassengerInfoSummary] = props
+                    .passengerInfoSummaryByDay
+                    .get(SDate(flightWithSplits.apiFlight.Scheduled).toUtcDate)
+                    .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
+
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits,
+                    maybePassengerInfo,
                     codeShares,
                     idx,
                     timelineComponent = timelineComponent,
@@ -168,6 +172,7 @@ object FlightTableRow {
   type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
+                   maybePassengerInfoSummary: Option[PassengerInfoSummary],
                    codeShares: Set[Arrival],
                    idx: Int,
                    timelineComponent: Option[Arrival => html_<^.VdomNode],
@@ -183,7 +188,7 @@ object FlightTableRow {
 
   case class RowState(hasChanged: Boolean)
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.flightWithSplits.hashCode, p.idx))
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.flightWithSplits.hashCode, p.idx, p.maybePassengerInfoSummary.hashCode))
   implicit val stateReuse: Reusability[RowState] = Reusability.derive[RowState]
 
   def bestArrivalTime(f: Arrival): MillisSinceEpoch = {
@@ -233,55 +238,12 @@ object FlightTableRow {
 
       val firstCells = List[TagMod](
 
-        <.td(^.className := flightCodeClass, flightCodeCell,
-          flightWithSplits.splits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages).map(
-            (splits: Splits) => {
-
-              val nationalityData: ChartJsData = ChartData.splitToNationalityChartData(splits.splits)
-
-              val liveAPIPaxTypes: ChartJsData = ChartData.splitToPaxTypeData(splits.splits, "Live API")
-
-//              val paxTypeSplitComparison: Seq[ChartJsData] = flightWithSplits
-//                .splits
-//                .find(_.source == SplitSources.Historical)
-//                .map(s => ChartData.splitToPaxTypeData(s.splits, "Historic")).toSeq :+ liveAPIPaxTypes
-//
-//              val paxTypeData: Seq[ChartJsData] = paxTypeSplitComparison
-
-              val ageData: ChartJsData = ChartData.splitDataToAgeRanges(splits.splits)
-
-              
-              TippyJSComponent(
-                <.div(^.cls := "container arrivals__table__flight__chart-box",
-                  <.div(^.cls := "row",
-                    <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
-                      ChartJSComponent.HorizontalBar(
-                        ChartJsProps(
-                          data = nationalityData,
-                          300,
-                          300,
-                          options = ChartJsOptions("Nationality Breakdown")
-                        )
-                      )),
-                    <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
-                      ChartJSComponent.HorizontalBar(
-                        ChartJsProps(
-                          data = liveAPIPaxTypes,
-                          300,
-                          300,
-                          options = ChartJsOptions("Passenger Types")
-                        ))),
-                      <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
-                        ChartJSComponent.HorizontalBar(
-                          ChartJsProps(
-                            data = ageData,
-                            300,
-                            300,
-                            options = ChartJsOptions("Age Breakdown")
-                          ))
-                      )
-                    )).rawElement, interactive = true, <.span(Icon.infoCircle))
-            })
+        <.td(
+          ^.className := flightCodeClass,
+          flightCodeCell,
+          props
+            .maybePassengerInfoSummary
+            .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
         ),
 
         <.td(props.originMapper(flight.Origin)),

@@ -1,18 +1,18 @@
 package drt.client.services
 
-import java.util.UUID
-
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
+import drt.shared.api.PassengerInfoSummary
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 
+import java.util.UUID
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -122,7 +122,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      oohStatus: Pot[OutOfHoursStatus] = Empty,
                      featureFlags: Pot[Map[String, Boolean]] = Empty,
                      fileUploadState: Pot[FileUploadState] = Empty,
-                     simulationResult: Pot[SimulationResult] = Empty
+                     simulationResult: Pot[SimulationResult] = Empty,
+                     passengerInfoSummariesByDayPot: Pot[Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]]] = Ready(Map())
                     )
 
 object PollDelay {
@@ -131,6 +132,9 @@ object PollDelay {
   val minuteUpdateDelay: FiniteDuration = 10 seconds
   val oohSupportUpdateDelay: FiniteDuration = 1 minute
   val checkFeatureFlagsDelay: FiniteDuration = 10 minutes
+  val passengerInfoDelay: FiniteDuration = 1 minutes
+  val passengerInfoDelayWaitingForFlights: FiniteDuration = 1 second
+
 }
 
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
@@ -152,7 +156,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new InitialPortStateHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new PortStateUpdatesHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
-      new AirportCountryHandler(() => timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
+      new AirportCountryHandler(zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
+      new PassengerInfoSummaryHandler(zoom(_.portStatePot) ,zoomRW(_.passengerInfoSummariesByDayPot)((m, v) => m.copy(passengerInfoSummariesByDayPot = v))),
       new ArrivalSourcesHandler(zoomRW(_.arrivalSources)((m, v) => m.copy(arrivalSources = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),
@@ -163,7 +168,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new ViewModeHandler(zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.portStatePot)),
+      new ViewModeHandler(zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new ShowAlertModalDialogHandler(zoomRW(_.displayAlertDialog)((m, v) => m.copy(displayAlertDialog = v))),

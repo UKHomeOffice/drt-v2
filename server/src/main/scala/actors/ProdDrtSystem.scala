@@ -7,8 +7,6 @@ import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy}
-import uk.gov.homeoffice.drt.auth.Roles
-import uk.gov.homeoffice.drt.auth.Roles.Role
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes._
@@ -24,6 +22,8 @@ import server.feeds.ManifestsFeedResponse
 import services._
 import services.crunch.CrunchSystem
 import slickdb.{ArrivalTable, Tables}
+import uk.gov.homeoffice.drt.auth.Roles
+import uk.gov.homeoffice.drt.auth.Roles.Role
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future}

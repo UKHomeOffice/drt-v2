@@ -2,8 +2,7 @@ package drt.client.components.charts
 
 import drt.client.components.ChartJSComponent.ChartJsData
 import drt.client.components.charts.DataFormat.jsonString
-import drt.client.services.ChartData.applySplitsToTotal
-import drt.client.services.{ChartData, ChartDataSet}
+import drt.client.services.charts.ChartData
 import drt.shared.PaxTypes._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.{ApiPaxTypeAndQueueCount, Nationality, PaxTypes, Queues}
@@ -57,37 +56,37 @@ object PaxSplitsDataForPaxTypeChartTests extends TestSuite {
       }
     }
 
-    "When displaying historic split quantities they should be applied to the expected total pax for the flight" - {
-      "Given 1 passenger split the entire total should be allocated to that split" - {
-//        val splitData = Seq(("EEA Machine Readable", 10.0))
-//
-//        val result = applySplitsToTotal(splitData, 100)
-//
-//        val expected = Seq(("EEA Machine Readable", 100))
-//
-//        assert(result == expected)
-//      }
-//      "Given 1 EEA MR, 2 EEA NMR and 30 passengers then the split should be 10 MR and 20 NMR" - {
-//        val splitData = Seq(
-//          ("EEA Machine Readable", 1.0),
-//          ("EEA Non-Machine Readable", 2.0)
-//        )
-//
-//        val expected = Seq(
-//          ("EEA Machine Readable", 10),
-//          ("EEA Non-Machine Readable", 20)
-//        )
-//
-//        val labels = Seq("EEA Machine Readable", "EEA Non-Machine Readable")
-//        val data = Seq(10, 20)
-//        val expected = ChartJsData(labels, data, "Passenger Types").toJs
-//
-//        val result = applySplitsToTotal(splitData, 30).toJs
-//
-//
-//        assert(jsonString(result) == jsonString(expected))
-//      }
-    }
+    //    "When displaying historic split quantities they should be applied to the expected total pax for the flight" - {
+    //      "Given 1 passenger split the entire total should be allocated to that split" - {
+    //        val splitData = Seq(("EEA Machine Readable", 10.0))
+    //
+    //        val result = applySplitsToTotal(splitData, 100)
+    //
+    //        val expected = Seq(("EEA Machine Readable", 100))
+    //
+    //        assert(result == expected)
+    //      }
+    //      "Given 1 EEA MR, 2 EEA NMR and 30 passengers then the split should be 10 MR and 20 NMR" - {
+    //        val splitData = Seq(
+    //          ("EEA Machine Readable", 1.0),
+    //          ("EEA Non-Machine Readable", 2.0)
+    //        )
+    //
+    //        val expected = Seq(
+    //          ("EEA Machine Readable", 10),
+    //          ("EEA Non-Machine Readable", 20)
+    //        )
+    //
+    //        val labels = Seq("EEA Machine Readable", "EEA Non-Machine Readable")
+    //        val data = Seq(10, 20)
+    //        val expected = ChartJsData(labels, data, "Passenger Types").toJs
+    //
+    //        val result = applySplitsToTotal(splitData, 30).toJs
+    //
+    //
+    //        assert(jsonString(result) == jsonString(expected))
+    //      }
+    //    }
 
   }
 }

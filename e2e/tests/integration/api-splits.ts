@@ -71,7 +71,7 @@ describe('API splits', () => {
       .contains("4")
       .request({
         method: 'GET',
-        url: "/manifest/"+ scheduledTime.format("YYYY-MM-DDTHH:mm") +"/AMS/0123/nationalities",
+        url: "/manifest/"+ scheduledTime.format("YYYY-MM-DDTHH:mm") +"/AMS/0123/summary",
       }).then((resp) => {
         expect(resp.body).to.equal(expectedNationalitySummary, "Api splits incorrect for regular users")
       })

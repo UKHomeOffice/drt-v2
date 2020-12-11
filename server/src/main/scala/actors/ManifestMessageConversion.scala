@@ -10,19 +10,22 @@ import scala.util.Try
 
 object ManifestMessageConversion {
 
-  def passengerInfoFromMessage(m: PassengerInfoJsonMessage): PassengerInfoJson = {
-    PassengerInfoJson(
-      DocumentType = m.documentType.map(DocumentType(_)),
-      DocumentIssuingCountryCode = Nationality(m.documentIssuingCountryCode.getOrElse("")),
-      EEAFlag = EeaFlag(m.eeaFlag.getOrElse("")),
-      Age = m.age.flatMap(ageString => Try(ageString.toInt).toOption).map(a => PaxAge(a)),
-      DisembarkationPortCode = m.disembarkationPortCode.map(PortCode(_)),
-      InTransitFlag = InTransit(m.inTransitFlag.getOrElse("")),
-      DisembarkationPortCountryCode = m.disembarkationPortCountryCode.map(Nationality(_)),
-      NationalityCountryCode = m.nationalityCountryCode.map(Nationality(_)),
-      PassengerIdentifier = m.passengerIdentifier
-    )
-  }
+  def passengerInfoFromMessage(m: PassengerInfoJsonMessage): PassengerInfoJson = PassengerInfoJson(
+    DocumentType = m.documentType.map(DocumentType(_)),
+    DocumentIssuingCountryCode = m.documentIssuingCountryCode
+      .map(n => Nationality(correctNationalityBug(n))).getOrElse(Nationality("")),
+    EEAFlag = EeaFlag(m.eeaFlag.getOrElse("")),
+    Age = m.age.flatMap(ageString => Try(ageString.toInt).toOption).map(a => PaxAge(a)),
+    DisembarkationPortCode = m.disembarkationPortCode.map(PortCode(_)),
+    InTransitFlag = InTransit(m.inTransitFlag.getOrElse("")),
+    DisembarkationPortCountryCode = m.disembarkationPortCountryCode.map(n => Nationality(correctNationalityBug(n))),
+    NationalityCountryCode = m.nationalityCountryCode.map(n => Nationality(correctNationalityBug(n))),
+    PassengerIdentifier = m.passengerIdentifier
+  )
+
+  def correctNationalityBug(nationality: String) =
+    nationality
+      .replace("Nationality(", "").replace(")", "")
 
   def voyageManifestFromMessage(m: VoyageManifestMessage): VoyageManifest = {
     VoyageManifest(

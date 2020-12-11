@@ -11,7 +11,7 @@ import drt.shared.{PortState, SDateLike}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ViewModeHandler[M](viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)], portStateMP: ModelR[M, Pot[PortState]]) extends LoggingActionHandler(viewModePortStateMP) {
+class ViewModeHandler[M](viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)]) extends LoggingActionHandler(viewModePortStateMP) {
 
   def midnightThisMorning: SDateLike = SDate.midnightOf(SDate.now())
 
