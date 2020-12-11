@@ -56,7 +56,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       StaffMinute(T1, minute2.millisSinceEpoch, shifts, misc, moves),
     ))
 
-    val dates = DateRange.utcDateRangeSource(minute1, minute1)
+    val dates = DateRange.dateRangeSource(minute1, minute1, DateRange.millisToUtc)
 
     "When I ask for a desk recs CSV I should get back a stream of CSV strings matching those minutes" >> {
 
@@ -177,7 +177,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
-      val dates = DateRange.utcDateRangeSource(SDate("2020-11-01"), SDate("2020-11-03"))
+      val dates = DateRange.dateRangeSource(SDate("2020-11-01"), SDate("2020-11-03"), DateRange.millisToUtc)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         dates,
@@ -202,7 +202,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
-      val dates = DateRange.utcDateRangeSource(SDate("2020-11-01"), SDate("2020-11-02"))
+      val dates = DateRange.dateRangeSource(SDate("2020-11-01"), SDate("2020-11-02"), DateRange.millisToUtc)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         dates,
@@ -234,7 +234,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
-      val dates = DateRange.utcDateRangeSource(minute1, minute1)
+      val dates = DateRange.dateRangeSource(minute1, minute1, DateRange.millisToUtc)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         dates,

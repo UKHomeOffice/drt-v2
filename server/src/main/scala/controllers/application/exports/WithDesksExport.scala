@@ -7,7 +7,7 @@ import controllers.Application
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
-import drt.shared.{ErrorResponse, LocalDate, SDateLike, UtcDate}
+import drt.shared.{DateLike, ErrorResponse, LocalDate, SDateLike}
 import play.api.mvc.{Action, AnyContent}
 import services.SDate
 import services.exports.StreamingDesksExport
@@ -20,10 +20,9 @@ import scala.util.{Failure, Success, Try}
 trait WithDesksExport {
   self: Application =>
 
-  def exportDesksAndQueuesRecsAtPointInTimeCSV(
-                                                localDate: String,
-                                                pointInTime: String,
-                                                terminalName: String): Action[AnyContent] =
+  def exportDesksAndQueuesRecsAtPointInTimeCSV(localDate: String,
+                                               pointInTime: String,
+                                               terminalName: String): Action[AnyContent] =
     authByRole(DesksAndQueuesView) {
 
       (LocalDate.parse(localDate), Try(SDate(pointInTime.toLong))) match {
@@ -112,16 +111,14 @@ trait WithDesksExport {
       }
     }
 
-  def exportStreamingDesksAndQueuesBetweenTimestampsCSV(
-                                                         start: SDateLike,
-                                                         end: SDateLike,
-                                                         terminalName: String,
-                                                         exportSourceFn: (Source[UtcDate, NotUsed], Terminal) =>
-                                                           Source[String, NotUsed],
-                                                         filePrefix: String
+  def exportStreamingDesksAndQueuesBetweenTimestampsCSV(start: SDateLike,
+                                                        end: SDateLike,
+                                                        terminalName: String,
+                                                        exportSourceFn: (Source[DateLike, NotUsed], Terminal) =>
+                                                          Source[String, NotUsed],
+                                                        filePrefix: String
                                                        ): Action[AnyContent] = Action.async {
-
-    val dates = DateRange.utcDateRangeSource(start, end)
+    val dates = DateRange.localDateRangeSource(start, end)
     val terminal = Terminal(terminalName)
 
     val exportSource: Source[String, NotUsed] = exportSourceFn(dates, terminal)
@@ -138,7 +135,7 @@ trait WithDesksExport {
   }
 
   def deskRecsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
-    dates: Source[UtcDate, NotUsed],
+    dates: Source[DateLike, NotUsed],
     terminal: Terminal
   ): Source[String, NotUsed] =
     StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
@@ -151,7 +148,7 @@ trait WithDesksExport {
     )
 
   def deploymentsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
-    dates: Source[UtcDate, NotUsed],
+    dates: Source[DateLike, NotUsed],
     terminal: Terminal
   ): Source[String, NotUsed] =
     StreamingDesksExport.deploymentsToCSVStreamWithHeaders(

@@ -361,7 +361,7 @@ object Crunch {
     (startForTimeZone.millisSinceEpoch to endForTimeZone.millisSinceEpoch by MilliTimes.oneHourMillis)
       .map(SDate(_).toUtcDate)
       .distinct
-      .sorted
+      .sorted(DateLikeOrdering)
       .toList
   }
 }
