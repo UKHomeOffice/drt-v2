@@ -74,13 +74,7 @@ object ChartJSComponent {
                              title: js.UndefOr[Dictionary[js.Any]] = js.undefined,
                              legend: js.UndefOr[Dictionary[js.Any]] = js.undefined,
                            ) {
-    def toJs: js.Object = {
-
-      val options = JSMacro[ChartJsOptions](this)
-      println(JSON.stringify(options))
-      println(JSON.stringify(scales))
-      options
-    }
+    def toJs: js.Object = JSMacro[ChartJsOptions](this)
   }
 
   object ChartJsOptions {

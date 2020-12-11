@@ -43,6 +43,56 @@ object ChartPropsSpec extends TestSuite {
       assert(jsonString(result) == jsonString(expected))
     }
 
+    "Given some ChartJsOptions these should be converted into valid JS options" - {
+      val options = ChartJsOptions("title")
+      val result = options.toJs
+
+      val expected =
+        JSON.parse(
+          """
+            |{
+            |    "scales": {
+            |        "yAxes": [
+            |            {
+            |                "ticks": {
+            |                    "beginAtZero": true
+            |                }
+            |            }
+            |        ]
+            |    },
+            |    "title": {
+            |        "display": true,
+            |        "text": "title"
+            |    },
+            |    "legend": {
+            |        "display": false
+            |    }
+            |}""".stripMargin)
+
+      assert(jsonString(result) == jsonString(expected))
+    }
+
+    "Given just some data and labels, then the ChartJSData apply shortcut should create the relevant datasets for me" - {
+      val data = ChartJsData(Seq("one", "two", "three"), Seq(10.0, 1.0, 10.0), "title")
+      val result = data.toJs
+
+      val expected =
+        JSON.parse(
+          """
+            |{
+            |    "datasets": [
+            |        {
+            |            "data": [ 10, 1, 10 ],
+            |            "label": "title"
+            |        }
+            |    ],
+            |    "labels": [ "one", "two", "three" ]
+            |}""".stripMargin)
+
+      assert(jsonString(result) == jsonString(expected))
+    }
+
+
     "Given a scala set of props I should get back a JS set of the same props" - {
 
       val props = ChartJsProps(
@@ -96,56 +146,9 @@ object ChartPropsSpec extends TestSuite {
             |    "height": 150
             |}""".stripMargin)
 
-      assert(jsonString(result) == jsonString(expected))
-    }
-
-    "Given some ChartJsOptions these should be converted into valid JS options" - {
-      val options = ChartJsOptions("title")
-      val result = options.toJs
-
-      val expected =
-        JSON.parse(
-          """
-            |{
-            |    "scales": {
-            |        "yAxes": [
-            |            {
-            |                "ticks": {
-            |                    "beginAtZero": true
-            |                }
-            |            }
-            |        ]
-            |    },
-            |    "title": {
-            |        "display": true,
-            |        "text": "title"
-            |    },
-            |    "legend": {
-            |        "display": true
-            |    }
-            |}""".stripMargin)
-
-      assert(jsonString(result) == jsonString(expected))
-    }
-
-    "Given just some data and labels, then the ChartJSData apply shortcut should create the relevant datasets for me" - {
-      val data = ChartJsData(Seq("one", "two", "three"), Seq(10.0, 1.0, 10.0), "title")
-      val result = data.toJs
-
-      val expected =
-        JSON.parse(
-          """
-            |{
-            |    "datasets": [
-            |        {
-            |            "data": [ 10, 1, 10 ],
-            |            "label": "title"
-            |        }
-            |    ],
-            |    "labels": [ "one", "two", "three" ]
-            |}""".stripMargin)
-
-      assert(jsonString(result) == jsonString(expected))
+      val resultJson = jsonString(result)
+      val expectedJson = jsonString(expected)
+      assert(resultJson == expectedJson)
     }
   }
 
