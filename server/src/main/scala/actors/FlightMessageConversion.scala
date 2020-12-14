@@ -103,8 +103,8 @@ object FlightMessageConversion {
       paxType = Option(ptqc.passengerType.name),
       queueType = Option(ptqc.queueType.toString),
       paxValue = Option(ptqc.paxCount),
-      nationalities = splitNationalitiesToMessage(ptqc),
-      ages = splitAgesToMessage(ptqc)
+      nationalities = Seq(),
+      ages = Seq()
     )
   }
 

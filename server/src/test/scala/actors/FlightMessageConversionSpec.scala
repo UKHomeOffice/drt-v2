@@ -1,15 +1,12 @@
 package actors
 
-import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
+import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.Terminals.T1
-import drt.shared._
 import drt.shared.api.{Arrival, FlightCodeSuffix}
-import drt.shared.{AclFeedSource, ApiFeedSource, ApiFlightWithSplits, ApiPaxTypeAndQueueCount, FeedSource, LiveFeedSource, Nationality, Operator, PaxNumbers, PaxTypes, PortCode, Queues, Splits}
+import drt.shared.{AclFeedSource, ApiFlightWithSplits, ApiPaxTypeAndQueueCount, LiveFeedSource, Nationality, Operator, PaxNumbers, PaxTypes, PortCode, Queues, Splits, _}
 import org.specs2.mutable.Specification
-import passengersplits.core.PassengerTypeCalculatorValues.CountryCodes
-import server.protobuf.messages.FlightsMessage.FlightMessage
 
 class FlightMessageConversionSpec extends Specification {
 
@@ -73,37 +70,59 @@ class FlightMessageConversionSpec extends Specification {
   }
 
   "Given a flight with splits containing API Splits" >> {
-    val fws = ApiFlightWithSplits(
-      arrival,
-      Set(
-        Splits(
-          Set(
-            ApiPaxTypeAndQueueCount(
-              PaxTypes.EeaMachineReadable,
-              Queues.EeaDesk,
-              10,
-              Option(Map(
-                Nationality("GBR") -> 8,
-                Nationality("ITA") -> 2
-              )),
-              Option(Map(
-                PaxAge(5) -> 5,
-                PaxAge(32) -> 5
-              ))
-            )
-          ),
-          SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-          Option(EventType("DC")
+    val paxTypeAndQueueCount = ApiPaxTypeAndQueueCount(
+      PaxTypes.EeaMachineReadable,
+      Queues.EeaDesk,
+      10,
+      Option(Map(
+        Nationality("GBR") -> 8,
+        Nationality("ITA") -> 2
+      )),
+      Option(Map(
+        PaxAge(5) -> 5,
+        PaxAge(32) -> 5
+      ))
+    )
+
+    val paxTypeAndQueueCountWithoutApi = ApiPaxTypeAndQueueCount(
+      PaxTypes.EeaMachineReadable,
+      Queues.EeaDesk,
+      10,
+      None,
+      None
+    )
+
+    val splits = Set(
+      Splits(
+        Set(
+          paxTypeAndQueueCount
+        ),
+        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+        Option(EventType("DC")
         )
       )
     )
+    val splitsWithoutApi = Set(
+      Splits(
+        Set(
+          paxTypeAndQueueCountWithoutApi
+        ),
+        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+        Option(EventType("DC")
+        )
+      )
+    )
+
+    val fws = ApiFlightWithSplits(
+      arrival,
+      splits
     )
     "When I convert it to a protobuf message and then back to an Arrival" >> {
       val fwsMessage = FlightMessageConversion.flightWithSplitsToMessage(fws)
-      println(fwsMessage)
       val restoredFWS = FlightMessageConversion.flightWithSplitsFromMessage(fwsMessage)
-      "Then the converted Arrival should match the original" >> {
-        restoredFWS === fws
+      val expectedWithoutApiData = fws.copy(splits = splitsWithoutApi)
+      "Then the converted Arrival should match the original without API Data" >> {
+        restoredFWS === expectedWithoutApiData
       }
     }
   }

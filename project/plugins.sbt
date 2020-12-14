@@ -3,10 +3,7 @@ resolvers += "Typesafe Releases" at "https://repo.typesafe.com/typesafe/ivy-rele
 
 addSbtPlugin("net.virtual-void" % "sbt-optimizer" % "0.1.2")
 
-
 libraryDependencies += "com.typesafe" % "config" % "1.3.0"
-
-//addSbtPlugin("org.scala-native" % "sbt-scala-native" % "0.3.7")
 
 addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "1.0.0")
 
@@ -29,4 +26,3 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-gzip" % "1.0.2")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.7.0")
 
 addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.9.0")
-

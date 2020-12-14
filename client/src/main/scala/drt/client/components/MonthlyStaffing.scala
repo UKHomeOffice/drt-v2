@@ -19,7 +19,6 @@ import org.scalajs.dom.html.Select
 import org.scalajs.dom.window.confirm
 
 import scala.collection.mutable
-import scala.scalajs.js.special.debugger
 import scala.util.Try
 
 

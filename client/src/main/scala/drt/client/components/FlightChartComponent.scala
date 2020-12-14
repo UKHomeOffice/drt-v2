@@ -66,25 +66,6 @@ object FlightChartComponent {
           )
         ).rawElement, interactive = true, <.span(Icon.infoCircle))
     })
-
-    //      p.flightWithSplits.splits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages).map(
-    //        (splits: Splits) => {
-
-    //          val nationalityData: ChartJsData = ChartData.splitToNationalityChartData(splits.splits)
-    //
-    //          val liveAPIPaxTypes: ChartJsData = ChartData.splitToPaxTypeData(splits.splits, "Live API")
-    //
-    //          //              val paxTypeSplitComparison: Seq[ChartJsData] = flightWithSplits
-    //          //                .splits
-    //          //                .find(_.source == SplitSources.Historical)
-    //          //                .map(s => ChartData.splitToPaxTypeData(s.splits, "Historic")).toSeq :+ liveAPIPaxTypes
-    //          //
-    //          //              val paxTypeData: Seq[ChartJsData] = paxTypeSplitComparison
-    //
-    //          val ageData: ChartJsData = ChartData.splitDataToAgeRanges(splits.splits)
-
-
-    //    }
     .build
 
   def apply(props: Props): VdomElement = component(props)

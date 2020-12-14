@@ -114,7 +114,6 @@ object TerminalComponent {
                 model.featureFlags,
                 model.arrivalSources
               )
-
               <.div(
                 <.ul(^.className := "nav nav-tabs",
                   <.li(^.className := terminalDashboardClass,
@@ -169,8 +168,6 @@ object TerminalComponent {
                     if (props.terminalPageTab.mode == "dashboard") {
                       terminalContentProps.portStatePot.renderReady(ps =>
                         terminalContentProps.passengerInfoByDayPot.renderReady(paxInfo => {
-
-                          println(s"paxinfo: $paxInfo")
                           TerminalDashboardComponent(
                             props.terminalPageTab,
                             terminalContentProps.airportConfig,
@@ -179,9 +176,7 @@ object TerminalComponent {
                             props.router,
                             model.featureFlags
                           )
-                        }
-                        )
-                        )
+                        }))
                     } else ""
                   ),
                   <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
