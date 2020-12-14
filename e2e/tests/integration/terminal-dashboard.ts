@@ -77,7 +77,7 @@ describe('Viewing the terminal dashboard page', () => {
       .get("a.terminal-dashboard-side__sidebar_widget").click()
       .get(".dashboard-arrivals-popup tbody tr").should('have.length', 2)
       .get(".dashboard-arrivals-popup tbody tr").contains("TS0123")
-      .get(".arrivals__table__flight-code > div:nth(1)").contains("TS0124")
+      .get(":nth-child(2) > .arrivals__table__flight-code > span").contains("TS0124")
       .get(".popover-overlay")
       .click({force: true})
       .get(".prev-bar")
