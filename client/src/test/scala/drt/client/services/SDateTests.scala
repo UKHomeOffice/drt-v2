@@ -1,7 +1,8 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{LocalDate, MilliDate, SDateLike, UtcDate}
+import drt.shared.dates.{LocalDate, UtcDate}
+import drt.shared.{MilliDate, SDateLike}
 import moment.Moment
 import utest.TestSuite
 import utest._

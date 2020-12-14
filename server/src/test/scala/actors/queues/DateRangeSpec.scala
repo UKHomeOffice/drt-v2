@@ -1,6 +1,6 @@
 package actors.queues
 
-import drt.shared.{DateLike, LocalDate, UtcDate}
+import drt.shared.dates.{DateLike, LocalDate, UtcDate}
 import org.specs2.mutable.Specification
 import services.SDate
 

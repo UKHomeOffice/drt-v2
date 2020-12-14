@@ -15,6 +15,7 @@ import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.dates.UtcDate
 import org.slf4j.Logger
 import services.SDate
 import slickdb.ArrivalTable

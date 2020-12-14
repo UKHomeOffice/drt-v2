@@ -6,7 +6,7 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.UtcDate
+import drt.shared.dates.UtcDate
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 
 import scala.concurrent.ExecutionContext

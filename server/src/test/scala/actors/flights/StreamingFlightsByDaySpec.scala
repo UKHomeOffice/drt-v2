@@ -8,7 +8,8 @@ import akka.stream.scaladsl.Sink
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{ApiFlightWithSplits, UtcDate}
+import drt.shared.ApiFlightWithSplits
+import drt.shared.dates.UtcDate
 import services.SDate
 import services.crunch.CrunchTestLike
 

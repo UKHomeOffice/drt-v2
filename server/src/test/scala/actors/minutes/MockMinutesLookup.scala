@@ -7,6 +7,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, S
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.dates.UtcDate
 import services.SDate
 
 import scala.concurrent.{ExecutionContextExecutor, Future}

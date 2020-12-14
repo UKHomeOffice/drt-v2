@@ -1,4 +1,4 @@
-package drt.shared
+package drt.shared.dates
 
 case class LocalDate(year: Int, month: Int, day: Int) extends DateLike {
   override val timeZone: String = "Europe/London"

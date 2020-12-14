@@ -7,7 +7,8 @@ import akka.actor.Props
 import akka.persistence.{SaveSnapshotSuccess, SnapshotMetadata}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.{SDateLike, UniqueArrival, UtcDate}
+import drt.shared.dates.UtcDate
+import drt.shared.{SDateLike, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}

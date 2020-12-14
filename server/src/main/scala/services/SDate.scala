@@ -1,7 +1,8 @@
 package services
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{DateLike, LocalDate, MilliDate, SDateLike, UtcDate}
+import drt.shared.dates.{DateLike, LocalDate, UtcDate}
+import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}

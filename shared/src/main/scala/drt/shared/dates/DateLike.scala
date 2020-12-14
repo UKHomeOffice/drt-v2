@@ -1,4 +1,4 @@
-package drt.shared
+package drt.shared.dates
 
 import scala.util.{Success, Try}
 
@@ -35,12 +35,4 @@ object DateLike {
 
 object DateLikeOrdering extends Ordering[DateLike] {
   override def compare(x: DateLike, y: DateLike): Int = x.compare(y)
-}
-
-case class UtcDate(year: Int, month: Int, day: Int) extends DateLike {
-  override val timeZone: String = "UTC"
-}
-
-case object UtcDate {
-  def parse: String => Option[UtcDate] = DateLike.parse((y: Int, m: Int, d: Int) => UtcDate(y, m, d))
 }
