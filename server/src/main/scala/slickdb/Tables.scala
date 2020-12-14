@@ -31,11 +31,11 @@ trait Tables {
     *  @param pcp Database column pcp SqlType(timestamp)
     *  @param totalpassengers Database column totalpassengers SqlType(int4), Default(None)
     *  @param pcppassengers Database column pcppassengers SqlType(int4), Default(None) */
-  case class ArrivalRow(code: String, number: Int, destination: String, origin: String, terminal: String, gate: Option[String] = None, stand: Option[String] = None, status: String, scheduled: java.sql.Timestamp, estimated: Option[java.sql.Timestamp] = None, actual: Option[java.sql.Timestamp] = None, estimatedchox: Option[java.sql.Timestamp] = None, actualchox: Option[java.sql.Timestamp] = None, pcp: java.sql.Timestamp, totalpassengers: Option[Int] = None, pcppassengers: Option[Int] = None)
+  case class ArrivalRow(code: String, number: Int, destination: String, origin: String, terminal: String, gate: Option[String] = None, stand: Option[String] = None, status: String, scheduled: java.sql.Timestamp, estimated: Option[java.sql.Timestamp] = None, actual: Option[java.sql.Timestamp] = None, estimatedchox: Option[java.sql.Timestamp] = None, actualchox: Option[java.sql.Timestamp] = None, pcp: java.sql.Timestamp, totalpassengers: Option[Int] = None, pcppassengers: Option[Int] = None, scheduled_departure : Option[java.sql.Timestamp] = None)
   /** GetResult implicit for fetching ArrivalRow objects using plain SQL queries */
   implicit def GetResultArrivalRow(implicit e0: GR[String], e1: GR[Int], e2: GR[Option[String]], e3: GR[java.sql.Timestamp], e4: GR[Option[java.sql.Timestamp]], e5: GR[Option[Int]]): GR[ArrivalRow] = GR{
     prs => import prs._
-      ArrivalRow.tupled((<<[String], <<[Int], <<[String], <<[String], <<[String], <<?[String], <<?[String], <<[String], <<[java.sql.Timestamp], <<?[java.sql.Timestamp], <<?[java.sql.Timestamp], <<?[java.sql.Timestamp], <<?[java.sql.Timestamp], <<[java.sql.Timestamp], <<?[Int], <<?[Int]))
+      ArrivalRow.tupled((<<[String], <<[Int], <<[String], <<[String], <<[String], <<?[String], <<?[String], <<[String], <<[java.sql.Timestamp], <<?[java.sql.Timestamp], <<?[java.sql.Timestamp], <<?[java.sql.Timestamp], <<?[java.sql.Timestamp], <<[java.sql.Timestamp], <<?[Int], <<?[Int],<<?[java.sql.Timestamp]))
   }
   /** Table description of table arrival. Objects of this class serve as prototypes for rows in queries. */
   class Arrival(_tableTag: Tag) extends {
@@ -44,9 +44,9 @@ trait Tables {
       case _ => None
     }
   } with profile.api.Table[ArrivalRow](_tableTag, maybeSchema, "arrival") {
-    def * = (code, number, destination, origin, terminal, gate, stand, status, scheduled, estimated, actual, estimatedchox, actualchox, pcp, totalpassengers, pcppassengers) <> (ArrivalRow.tupled, ArrivalRow.unapply)
+    def * = (code, number, destination, origin, terminal, gate, stand, status, scheduled, estimated, actual, estimatedchox, actualchox, pcp, totalpassengers, pcppassengers,scheduled_departure) <> (ArrivalRow.tupled, ArrivalRow.unapply)
     /** Maps whole row to an option. Useful for outer joins. */
-    def ? = (Rep.Some(code), Rep.Some(number), Rep.Some(destination), Rep.Some(origin), Rep.Some(terminal), gate, stand, Rep.Some(status), Rep.Some(scheduled), estimated, actual, estimatedchox, actualchox, Rep.Some(pcp), totalpassengers, pcppassengers).shaped.<>({r=>import r._; _1.map(_=> ArrivalRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6, _7, _8.get, _9.get, _10, _11, _12, _13, _14.get, _15, _16)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+    def ? = (Rep.Some(code), Rep.Some(number), Rep.Some(destination), Rep.Some(origin), Rep.Some(terminal), gate, stand, Rep.Some(status), Rep.Some(scheduled), estimated, actual, estimatedchox, actualchox, Rep.Some(pcp), totalpassengers, pcppassengers,scheduled_departure).shaped.<>({ r=>import r._; _1.map(_=> ArrivalRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6, _7, _8.get, _9.get, _10, _11, _12, _13, _14.get, _15, _16,_17)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
     /** Database column code SqlType(text) */
     val code: Rep[String] = column[String]("code")
@@ -80,6 +80,8 @@ trait Tables {
     val totalpassengers: Rep[Option[Int]] = column[Option[Int]]("totalpassengers", O.Default(None))
     /** Database column pcppassengers SqlType(int4), Default(None) */
     val pcppassengers: Rep[Option[Int]] = column[Option[Int]]("pcppassengers", O.Default(None))
+    /** Database column scheduled SqlType(timestamp) */
+    val scheduled_departure: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("scheduled_departure", O.Default(None))
 
     /** Primary key of Arrival (database name arrival_pkey) */
     val pk = primaryKey("arrival_pkey", (number, destination, terminal, scheduled))
@@ -96,6 +98,8 @@ trait Tables {
     val index5 = index("scheduled", scheduled)
     /** Index over (terminal) (database name terminal) */
     val index6 = index("terminal", terminal)
+    /** Index over (scheduled) (database name scheduled) */
+    val index7 = index("scheduled_departure", scheduled_departure)
   }
   /** Collection-like TableQuery object for table Arrival */
   lazy val Arrival = new TableQuery(tag => new Arrival(tag))

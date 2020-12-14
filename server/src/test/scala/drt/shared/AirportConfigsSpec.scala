@@ -57,7 +57,8 @@ class AirportConfigsSpec extends Specification {
         minMaxDesksByTerminalQueue24Hrs = Map(),
         role = LHR,
         terminalPaxTypeQueueAllocation = Map(T1 -> defaultQueueRatios),
-        desksByTerminal = Map[Terminal, Int]()
+        desksByTerminal = Map[Terminal, Int](),
+        feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
         )
 
       val result = clonedConfig.feedPortCode

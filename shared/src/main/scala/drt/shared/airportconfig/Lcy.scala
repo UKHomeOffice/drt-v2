@@ -55,6 +55,7 @@ object Lcy extends AirportConfigLike {
       )))
     ),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
-    desksByTerminal = Map(T1 -> 9)
+    desksByTerminal = Map(T1 -> 9),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
   )
 }

@@ -56,6 +56,7 @@ object Gla extends AirportConfigLike {
       )))
     ),
     flexedQueues = Set(EeaDesk, NonEeaDesk),
-    desksByTerminal = Map(T1 -> 7)
+    desksByTerminal = Map(T1 -> 7),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
   )
 }
