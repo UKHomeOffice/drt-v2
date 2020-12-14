@@ -20,9 +20,10 @@ import scala.util.{Failure, Success, Try}
 trait WithDesksExport {
   self: Application =>
 
-  def exportDesksAndQueuesRecsAtPointInTimeCSV(localDate: String,
-                                               pointInTime: String,
-                                               terminalName: String): Action[AnyContent] =
+  def exportDesksAndQueuesRecsAtPointInTimeCSV(
+                                                localDate: String,
+                                                pointInTime: String,
+                                                terminalName: String): Action[AnyContent] =
     authByRole(DesksAndQueuesView) {
 
       (LocalDate.parse(localDate), Try(SDate(pointInTime.toLong))) match {
@@ -111,12 +112,13 @@ trait WithDesksExport {
       }
     }
 
-  def exportStreamingDesksAndQueuesBetweenTimestampsCSV(start: SDateLike,
-                                                        end: SDateLike,
-                                                        terminalName: String,
-                                                        exportSourceFn: (Source[DateLike, NotUsed], Terminal) =>
-                                                          Source[String, NotUsed],
-                                                        filePrefix: String
+  def exportStreamingDesksAndQueuesBetweenTimestampsCSV(
+                                                         start: SDateLike,
+                                                         end: SDateLike,
+                                                         terminalName: String,
+                                                         exportSourceFn: (Source[LocalDate, NotUsed], Terminal) =>
+                                                           Source[String, NotUsed],
+                                                         filePrefix: String
                                                        ): Action[AnyContent] = Action.async {
     val dates = DateRange.localDateRangeSource(start, end)
     val terminal = Terminal(terminalName)
@@ -135,7 +137,7 @@ trait WithDesksExport {
   }
 
   def deskRecsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
-    dates: Source[DateLike, NotUsed],
+    dates: Source[LocalDate, NotUsed],
     terminal: Terminal
   ): Source[String, NotUsed] =
     StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
@@ -148,7 +150,7 @@ trait WithDesksExport {
     )
 
   def deploymentsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
-    dates: Source[DateLike, NotUsed],
+    dates: Source[LocalDate, NotUsed],
     terminal: Terminal
   ): Source[String, NotUsed] =
     StreamingDesksExport.deploymentsToCSVStreamWithHeaders(

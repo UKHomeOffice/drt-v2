@@ -56,7 +56,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       StaffMinute(T1, minute2.millisSinceEpoch, shifts, misc, moves),
     ))
 
-    val dates = DateRange.dateRangeSource(minute1, minute1, DateRange.millisToUtc)
+    val dates = DateRange.localDateRangeSource(minute1, minute1)
 
     "When I ask for a desk recs CSV I should get back a stream of CSV strings matching those minutes" >> {
 
@@ -73,8 +73,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
 
       val expected =
-        s"""|2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$nonEEADeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$eGateRec,${actWait},${actDesk},$misc,$moves,$shifts,$totalRec
-            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$nonEEADeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$eGateRec,${actWait},${actDesk},$misc,$moves,$shifts,$totalRec"""
+        s"""|2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
+            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
           .stripMargin
 
       result === expected
@@ -95,8 +95,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
 
       val expected =
-        s"""|2020-11-19,00:00,${Math.round(pax)},$depWait,$eeaDeskDep,${actWait},${actDesk},${Math.round(pax)},$depWait,$nonEEADeskDep,${actWait},${actDesk},${Math.round(pax)},$depWait,$eGateDep,${actWait},${actDesk},$misc,$moves,$shifts,$totalRec
-            |2020-11-19,00:15,${Math.round(pax)},$depWait,$eeaDeskDep,${actWait},${actDesk},${Math.round(pax)},$depWait,$nonEEADeskDep,${actWait},${actDesk},${Math.round(pax)},$depWait,$eGateDep,${actWait},${actDesk},$misc,$moves,$shifts,$totalRec"""
+        s"""|2020-11-19,00:00,${Math.round(pax)},$depWait,$eeaDeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$nonEEADeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
+            |2020-11-19,00:15,${Math.round(pax)},$depWait,$eeaDeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$nonEEADeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
           .stripMargin
 
       result === expected
@@ -119,8 +119,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val expected =
         s"""|Date,,EEA,EEA,EEA,EEA,EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,e-Gates,e-Gates,e-Gates,e-Gates,e-Gates,Misc,Moves,PCP Staff,PCP Staff
             |,Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Staff req,Act. wait time,Act. desks,Staff req,Staff movements,Avail,Req
-            |2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$nonEEADeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$eGateRec,${actWait},${actDesk},$misc,$moves,$shifts,$totalRec
-            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$nonEEADeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$eGateRec,${actWait},${actDesk},$misc,$moves,$shifts,$totalRec"""
+            |2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
+            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
           .stripMargin
 
       result === expected
@@ -143,8 +143,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val expected =
         s"""|Date,,EEA,EEA,EEA,EEA,EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,e-Gates,e-Gates,e-Gates,e-Gates,e-Gates,Misc,Moves,PCP Staff,PCP Staff
             |,Start,Pax,Wait,Desks dep,Act. wait time,Act. desks,Pax,Wait,Desks dep,Act. wait time,Act. desks,Pax,Wait,Staff dep,Act. wait time,Act. desks,Staff req,Staff movements,Avail,Req
-            |2020-11-19,00:00,${Math.round(pax)},$depWait,$eeaDeskDep,${actWait},${actDesk},${Math.round(pax)},$depWait,$nonEEADeskDep,${actWait},${actDesk},${Math.round(pax)},$depWait,$eGateDep,${actWait},${actDesk},$misc,$moves,$shifts,$totalRec
-            |2020-11-19,00:15,${Math.round(pax)},$depWait,$eeaDeskDep,${actWait},${actDesk},${Math.round(pax)},$depWait,$nonEEADeskDep,${actWait},${actDesk},${Math.round(pax)},$depWait,$eGateDep,${actWait},${actDesk},$misc,$moves,$shifts,$totalRec"""
+            |2020-11-19,00:00,${Math.round(pax)},$depWait,$eeaDeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$nonEEADeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
+            |2020-11-19,00:15,${Math.round(pax)},$depWait,$eeaDeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$nonEEADeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
           .stripMargin
 
       result === expected
@@ -165,8 +165,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
 
       val expected =
-        s"""|2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$nonEEADeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$eGateRec,${actWait},${actDesk},$misc,$moves,$shifts,$totalRec
-            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$nonEEADeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$eGateRec,${actWait},${actDesk},$misc,$moves,$shifts,$totalRec"""
+        s"""|2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
+            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
           .stripMargin
 
       result === expected
@@ -177,7 +177,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
-      val dates = DateRange.dateRangeSource(SDate("2020-11-01"), SDate("2020-11-03"), DateRange.millisToUtc)
+      val dates = DateRange.localDateRangeSource(SDate("2020-11-01"), SDate("2020-11-03"))
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         dates,
@@ -202,7 +202,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
-      val dates = DateRange.dateRangeSource(SDate("2020-11-01"), SDate("2020-11-02"), DateRange.millisToUtc)
+      val dates = DateRange.localDateRangeSource(SDate("2020-11-01"), SDate("2020-11-02"))
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         dates,
@@ -234,7 +234,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
-      val dates = DateRange.dateRangeSource(minute1, minute1, DateRange.millisToUtc)
+      val dates = DateRange.localDateRangeSource(minute1, minute1)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         dates,
@@ -246,15 +246,15 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
 
       val expected =
-        s"""|2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$nonEEADeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$eGateRec,${actWait},${actDesk},0,0,0,12
-            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$nonEEADeskRec,${actWait},${actDesk},${Math.round(pax)},$waitTime,$eGateRec,${actWait},${actDesk},0,0,0,12"""
+        s"""|2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,0,0,0,12
+            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,0,0,0,12"""
           .stripMargin
 
       result === expected
     }
   }
 
-  def takeCSVLines(csvResult: String, linesToTake: Int) = {
+  def takeCSVLines(csvResult: String, linesToTake: Int): String = {
     csvResult
       .split("\n")
       .take(linesToTake)
@@ -263,7 +263,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
 
   def dropHeadings(csvResult: String): String = csvResult.split("\n").drop(2).mkString("\n")
 
-  def resultStreamToCSV(resultSource: Source[String, NotUsed]) = {
+  def resultStreamToCSV(resultSource: Source[String, NotUsed]): String = {
     Await.result(resultSource.runWith(Sink.seq), 1 second).mkString
   }
 }
