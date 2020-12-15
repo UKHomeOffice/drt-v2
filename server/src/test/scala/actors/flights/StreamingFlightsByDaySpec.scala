@@ -8,7 +8,8 @@ import akka.stream.scaladsl.Sink
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{ApiFlightWithSplits, UtcDate}
+import drt.shared.ApiFlightWithSplits
+import drt.shared.dates.UtcDate
 import services.SDate
 import services.crunch.CrunchTestLike
 
@@ -19,7 +20,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
   "When I ask for a Source of query dates" >> {
     "Given a start date of 2020-09-10 and end date of 2020-09-11" >> {
       "I should get 2 days before (2020-09-08) to 1 day after (2020-09-12)" >> {
-        val result = DateRange.utcDateRangeWithBuffer(2,1)(SDate(2020, 9, 10), SDate(2020, 9, 11))
+        val result = DateRange.utcDateRangeWithBuffer(2, 1)(SDate(2020, 9, 10), SDate(2020, 9, 11))
         val expected = Seq(
           UtcDate(2020, 9, 8),
           UtcDate(2020, 9, 9),

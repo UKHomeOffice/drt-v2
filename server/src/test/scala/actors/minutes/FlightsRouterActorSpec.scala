@@ -12,7 +12,8 @@ import akka.testkit.TestProbe
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{ApiFlightWithSplits, SDateLike, UtcDate}
+import drt.shared.dates.UtcDate
+import drt.shared.{ApiFlightWithSplits, SDateLike}
 import services.SDate
 import services.crunch.CrunchTestLike
 

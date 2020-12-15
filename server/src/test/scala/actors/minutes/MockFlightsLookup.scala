@@ -4,7 +4,8 @@ import actors.minutes.MinutesActorLike.FlightsLookup
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
-import drt.shared.{ApiFlightWithSplits, UniqueArrival, UtcDate}
+import drt.shared.dates.UtcDate
+import drt.shared.{ApiFlightWithSplits, UniqueArrival}
 import services.SDate
 
 import scala.concurrent.{ExecutionContextExecutor, Future}

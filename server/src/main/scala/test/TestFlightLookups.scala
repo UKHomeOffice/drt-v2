@@ -6,7 +6,8 @@ import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, UtcDate}
+import drt.shared.SDateLike
+import drt.shared.dates.UtcDate
 import test.TestActors.{ResetData, TestFlightsRouterActor, TestTerminalDayFlightActor}
 
 import scala.concurrent.{ExecutionContext, Future}

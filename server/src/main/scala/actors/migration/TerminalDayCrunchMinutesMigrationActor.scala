@@ -6,7 +6,8 @@ import actors.{PostgresTables, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{SaveSnapshotSuccess, SnapshotMetadata}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import drt.shared.{SDateLike, TQM, UtcDate}
+import drt.shared.dates.UtcDate
+import drt.shared.{SDateLike, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}

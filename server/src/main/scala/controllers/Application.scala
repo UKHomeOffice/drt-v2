@@ -174,7 +174,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithApplicationInfo
     with WithSimulations
     with WithPassengerInfo
-    with WithMigrations
     with ProdPassengerSplitProviders
     with WithDebug {
 

@@ -8,7 +8,8 @@ import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, T2, Terminal}
-import drt.shared.{SDateLike, TQM, UtcDate}
+import drt.shared.dates.UtcDate
+import drt.shared.{SDateLike, TQM}
 import services.SDate
 import services.crunch.CrunchTestLike
 

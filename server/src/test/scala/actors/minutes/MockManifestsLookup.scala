@@ -2,7 +2,7 @@ package actors.minutes
 
 import actors.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.UtcDate
+import drt.shared.dates.UtcDate
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
