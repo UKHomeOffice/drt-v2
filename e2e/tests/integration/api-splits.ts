@@ -52,7 +52,20 @@ describe('API splits', () => {
     const ukChildren = ofPassengerProfile(passengerProfiles.ukChild, 1);
     const apiManifest = manifest(ukAdults.concat(ukChildren));
 
-    const expectedNationalitySummary = "[[{\"code\":\"Nationality(GBR)\"},11]]"
+    const expectedNationalitySummary = [
+      {
+        "arrivalKey": {
+          "origin": { "iata": "AMS" },
+          "voyageNumber": { "$type": "drt.shared.VoyageNumber", "numeric": 123 },
+          "scheduled": 1608080100000
+        },
+        "ageRanges": [
+          [{ "bottom": 25, "top": [49] }, 10],
+          [{ "bottom": 0, "top": [11] }, 1]
+        ],
+        "nationalities": [[{ "code": "GBR" }, 11]]
+      }
+    ]
 
     cy
       .addFlight(
@@ -71,9 +84,9 @@ describe('API splits', () => {
       .contains("4")
       .request({
         method: 'GET',
-        url: "/manifest/"+ scheduledTime.format("YYYY-MM-DDTHH:mm") +"/AMS/0123/summary",
+        url: "/manifest/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
       }).then((resp) => {
-        expect(resp.body).to.equal(expectedNationalitySummary, "Api splits incorrect for regular users")
+        expect(resp.body).to.equal(JSON.stringify(expectedNationalitySummary), "Api splits incorrect for regular users")
       })
       ;
 

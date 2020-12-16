@@ -340,13 +340,13 @@ describe('Restrict access to endpoint by role', () => {
     },
     {
       roles: ["test"],
-      endpoint: "/manifest/"+ today.format("YYYY-MM-DDTHH:mm") + "/AMS/0123/nationalities",
+      endpoint: "/manifest/" + today.format("YYYY-MM-DD") + "/summary",
       method: "GET",
       shouldBeGranted: false
     },
     {
       roles: ["test", "enhanced-api-view"],
-      endpoint: "/manifest/"+ today.format("YYYY-MM-DDTHH:mm") + "/AMS/0123/nationalities",
+      endpoint: "/manifest/" + today.format("YYYY-MM-DD") + "/summary",
       method: "GET",
       shouldBeGranted: true
     },
@@ -357,11 +357,11 @@ describe('Restrict access to endpoint by role', () => {
       shouldBeGranted: false
     },
     {
-       roles: ["test"],
-       endpoint: "/#faqs",
-       method: "GET",
-       shouldBeGranted: true
-     }
+      roles: ["test"],
+      endpoint: "/#faqs",
+      method: "GET",
+      shouldBeGranted: true
+    }
   ]
 
   describe('Restrict access by role', () => {

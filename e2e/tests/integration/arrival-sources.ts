@@ -45,7 +45,7 @@ describe('Arrivals page', () => {
       .waitForFlightToAppear("TS0123")
       .get('.before-now > :nth-child(2) > span > span')
       .should('have.attr', 'title', 'Schiphol, Amsterdam, Netherlands')
-      .get('.arrivals__table__flight-code')
+      .get('.arrivals__table__flight-code > span')
       .click()
       .get('.dashboard-arrivals-popup')
       .contains('Port live');
