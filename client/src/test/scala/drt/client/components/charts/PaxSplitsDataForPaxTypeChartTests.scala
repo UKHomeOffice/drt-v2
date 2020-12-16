@@ -34,7 +34,7 @@ object PaxSplitsDataForPaxTypeChartTests extends TestSuite {
 
     "When extracting passenger type breakdown to display in a chart" - {
       "Given Splits containing an ApiSplit with multiple passenger types in multiple queues " +
-        "Then I should the total of each passenger type across all queues" - {
+        "Then I should get the total of each passenger type across all queues" - {
 
         val apiSplit = Set(
           ApiPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 7, None, None),

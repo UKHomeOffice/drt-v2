@@ -141,8 +141,6 @@ object PollDelay {
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
-  def timeProvider(): MillisSinceEpoch = SDate.now().millisSinceEpoch
-
   override protected def initialModel = RootModel()
 
 

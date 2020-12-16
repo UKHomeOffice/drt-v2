@@ -32,13 +32,13 @@ trait WithPassengerInfo {
 
   def passengerSummariesForDay: VoyageManifests => String =
     (manifests: VoyageManifests) => {
-      val maybeSummaries: Set[PassengerInfoSummary] = manifests
+      val summaries: Set[PassengerInfoSummary] = manifests
         .manifests
         .map(PassengerInfo.manifestToPassengerInfoSummary)
         .collect {
           case Some(pis) => pis
         }
-      write(maybeSummaries)
+      write(summaries)
     }
 
   def respondWithManifestSummary(utcDateString: String, summaryFn: VoyageManifests => String): Future[Result] = {
