@@ -11,6 +11,7 @@ import drt.client.services._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
 import drt.shared.api.PassengerInfoSummary
+import drt.shared.dates.UtcDate
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._

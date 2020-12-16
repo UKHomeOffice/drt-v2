@@ -1,6 +1,6 @@
 package services
 
-import drt.shared.{LocalDate, UtcDate}
+import drt.shared.dates.{LocalDate, UtcDate}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
 

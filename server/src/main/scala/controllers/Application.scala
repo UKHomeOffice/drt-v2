@@ -1,8 +1,5 @@
 package controllers
 
-import java.nio.ByteBuffer
-import java.util.{Calendar, TimeZone, UUID}
-
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange}
 import actors._
 import akka.actor._
@@ -15,8 +12,6 @@ import boopickle.Default._
 import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
 import controllers.application._
-import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, ManageUsers, Role, StaffEdit}
-import uk.gov.homeoffice.drt.auth._
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
@@ -25,7 +20,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{AirportConfig, _}
 import drt.users.KeyCloakClient
-import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Action, _}
@@ -39,7 +33,12 @@ import services.staffing.StaffTimeSlots
 import services.workloadcalculator.PaxLoadCalculator
 import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
+import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, ManageUsers, Role, StaffEdit}
+import uk.gov.homeoffice.drt.auth._
 
+import java.nio.ByteBuffer
+import java.util.{Calendar, TimeZone, UUID}
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -161,9 +160,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithApplicationInfo
     with WithSimulations
     with WithPassengerInfo
-    with WithMigrations
     with WithDebug {
-
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
   implicit val mat: ActorMaterializer = DrtActorSystem.mat

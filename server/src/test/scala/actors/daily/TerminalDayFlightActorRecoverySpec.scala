@@ -8,7 +8,8 @@ import akka.persistence.PersistentActor
 import controllers.ArrivalGenerator.flightWithSplitsForDayAndTerminal
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{SDateLike, UtcDate}
+import drt.shared.SDateLike
+import drt.shared.dates.UtcDate
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.SDate

@@ -12,7 +12,8 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, Terminals, UtcDate, WithTimeAccessor}
+import drt.shared.dates.UtcDate
+import drt.shared.{SDateLike, Terminals, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage

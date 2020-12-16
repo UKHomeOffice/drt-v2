@@ -6,7 +6,8 @@ import drt.client.actions.Actions._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{DrtApi, PollDelay}
 import drt.shared.api.PassengerInfoSummary
-import drt.shared.{ArrivalKey, PortState, UtcDate}
+import drt.shared.dates.UtcDate
+import drt.shared.{ArrivalKey, PortState}
 import upickle.default.read
 
 import scala.collection.immutable.Map

@@ -1,7 +1,8 @@
 package services
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{LocalDate, MilliDate, SDateLike, UtcDate}
+import drt.shared.dates.{DateLike, LocalDate, UtcDate}
+import drt.shared.{MilliDate, SDateLike}
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
@@ -119,6 +120,8 @@ object SDate {
   def apply(millis: MilliDate): SDateLike = JodaSDate(new DateTime(millis.millisSinceEpoch, DateTimeZone.UTC))
 
   def apply(localDate: LocalDate): SDateLike = SDate(localDate.toISOString + "T00:00", Crunch.europeLondonTimeZone)
+
+  def apply(dateLike: DateLike): SDateLike = SDate(dateLike.toISOString + "T00:00", DateTimeZone.forID(dateLike.timeZone))
 
   def apply(utcDate: UtcDate): SDateLike = SDate(utcDate.year, utcDate.month, utcDate.day, 0, 0)
 

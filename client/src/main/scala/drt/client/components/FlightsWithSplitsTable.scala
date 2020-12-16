@@ -12,6 +12,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared._
 import drt.shared.api.{Arrival, PassengerInfoSummary}
+import drt.shared.dates.UtcDate
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}

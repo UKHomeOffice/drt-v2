@@ -10,6 +10,7 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
 import drt.shared.api.PassengerInfoSummary
+import drt.shared.dates.UtcDate
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 
 import java.util.UUID
@@ -157,7 +158,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new PortStateUpdatesHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
-      new PassengerInfoSummaryHandler(zoom(_.portStatePot) ,zoomRW(_.passengerInfoSummariesByDayPot)((m, v) => m.copy(passengerInfoSummariesByDayPot = v))),
+      new PassengerInfoSummaryHandler(zoom(_.portStatePot), zoomRW(_.passengerInfoSummariesByDayPot)((m, v) => m.copy(passengerInfoSummariesByDayPot = v))),
       new ArrivalSourcesHandler(zoomRW(_.arrivalSources)((m, v) => m.copy(arrivalSources = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),

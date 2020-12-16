@@ -1,6 +1,6 @@
 package services
 
-import drt.shared.LocalDate
+import drt.shared.dates.LocalDate
 import org.specs2.mutable.Specification
 
 class ServerLocalDateSpec extends Specification {
