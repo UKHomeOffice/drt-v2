@@ -57,7 +57,7 @@ describe('API splits', () => {
         "arrivalKey": {
           "origin": { "iata": "AMS" },
           "voyageNumber": { "$type": "drt.shared.VoyageNumber", "numeric": 123 },
-          "scheduled": 1608080100000
+          "scheduled": scheduledTime.unix() * 1000
         },
         "ageRanges": [
           [{ "bottom": 25, "top": [49] }, 10],
