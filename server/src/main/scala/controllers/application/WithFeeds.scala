@@ -40,14 +40,15 @@ trait WithFeeds {
                  scheduled: MillisSinceEpoch): Action[AnyContent] = authByRole(ArrivalSource) {
     Action.async { _ =>
       Source(ctrl.feedActors)
-        .mapAsync(1)(feed =>
-                       feed
-                         .ask(UniqueArrival(number, terminal, scheduled))
-                         .map {
-                           case Some(fsa: FeedSourceArrival) if ctrl.isValidFeedSource(fsa.feedSource) => Option(fsa)
-                           case _ => None
-                         }
-                     )
+        .mapAsync(1) {
+          case (source, feed) =>
+            feed
+              .ask(UniqueArrival(number, terminal, scheduled))
+              .map {
+                case Some(fsa: FeedSourceArrival) if ctrl.isValidFeedSource(fsa.feedSource) => Option(fsa)
+                case _ => None
+              }
+        }
         .runWith(Sink.seq)
         .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
     }
@@ -63,14 +64,14 @@ trait WithFeeds {
       ("actors.LiveArrivalsActor-live", LiveFeedSource),
       ("actors.ForecastBaseArrivalsActor-forecast-base", AclFeedSource),
       ("actors.ForecastPortArrivalsActor-forecast-port", ForecastFeedSource)
-      )
+    )
 
     val pointInTimeActorSources: Seq[ActorRef] = arrivalActorPersistenceIds.map {
       case (id, source) =>
         system.actorOf(
           ArrivalsReadActor.props(SDate(pointInTime), id, source),
           name = s"arrival-read-$id-${UUID.randomUUID()}"
-          )
+        )
     }
     Action.async { _ =>
       Source(pointInTimeActorSources.toList)

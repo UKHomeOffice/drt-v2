@@ -388,6 +388,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     val endMillis = SDate.now().getLocalNextMidnight.millisSinceEpoch
     val portState = ctrl.portStateActor.ask(GetStateForDateRange(startMillis, endMillis))(10 seconds).mapTo[PortState]
 
+    ctrl.feedActors
+
     portState
       .map { _ =>
         val requestEnd = SDate.now().millisSinceEpoch

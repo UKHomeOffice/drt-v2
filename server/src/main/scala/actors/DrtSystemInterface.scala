@@ -106,7 +106,15 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val staffUpdates: ActorRef
   val flightUpdates: ActorRef
 
-  def feedActors: List[ActorRef] = List(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
+  def feedActors: Map[FeedSource, ActorRef] = Map(
+    LiveFeedSource -> liveArrivalsActor,
+    LiveBaseFeedSource -> liveBaseArrivalsActor,
+    ForecastFeedSource -> forecastArrivalsActor,
+    AclFeedSource -> baseArrivalsActor,
+    ApiFeedSource -> voyageManifestsActor
+  ).filter {
+    case (feedSource: FeedSource, _) => isValidFeedSource(feedSource)
+  }
 
   val aclFeed: AclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
 
@@ -407,10 +415,13 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   }
 
   def getFeedStatus: Future[Seq[FeedSourceStatuses]] = Source(feedActors)
-    .mapAsync(1) { actor =>
-      queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
+    .filter {
+      case (feedSource, _) => isValidFeedSource(feedSource)
+    }
+    .mapAsync(1) {
+      case (_, actor) =>
+        queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
     }
     .collect { case Some(fs) => fs }
-    .filter(fss => isValidFeedSource(fss.feedSource))
     .runWith(Sink.seq)
 }
