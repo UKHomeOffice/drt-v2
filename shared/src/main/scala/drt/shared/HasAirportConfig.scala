@@ -12,7 +12,7 @@ import upickle.default._
 import scala.collection.immutable.SortedMap
 
 trait ClassNameForToString {
-  override val toString: String = getClass.toString.split("\\$").last
+  override val toString: String = getClass.getSimpleName.split("\\$").last
 }
 
 object Terminals {

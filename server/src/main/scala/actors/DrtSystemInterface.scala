@@ -106,13 +106,15 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val staffUpdates: ActorRef
   val flightUpdates: ActorRef
 
-  def feedActors: Map[FeedSource, ActorRef] = Map(
+  lazy private val feedActors: Map[FeedSource, ActorRef] = Map(
     LiveFeedSource -> liveArrivalsActor,
     LiveBaseFeedSource -> liveBaseArrivalsActor,
     ForecastFeedSource -> forecastArrivalsActor,
     AclFeedSource -> baseArrivalsActor,
     ApiFeedSource -> voyageManifestsActor
-  ).filter {
+  )
+
+  lazy val feedActorsForPort: Map[FeedSource, ActorRef] = feedActors.filter {
     case (feedSource: FeedSource, _) => isValidFeedSource(feedSource)
   }
 
@@ -403,8 +405,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       }
   }
 
-  def queryActorWithRetry[A](askableActor: ActorRef, toAsk: Any): Future[Option[A]] = {
-    val future = askableActor.ask(toAsk)(new Timeout(2 minutes)).map {
+  def queryActorWithRetry[A](actor: ActorRef, toAsk: Any): Future[Option[A]] = {
+    val future = actor.ask(toAsk)(new Timeout(2 minutes)).map {
       case Some(state: A) if state.isInstanceOf[A] => Option(state)
       case state: A if !state.isInstanceOf[Option[A]] => Option(state)
       case _ => None
@@ -414,12 +416,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     Retry.retry(future, RetryDelays.fibonacci, 3, 5 seconds)
   }
 
-  def getFeedStatus: Future[Seq[FeedSourceStatuses]] = Source(feedActors)
-    .filter {
-      case (feedSource, _) => isValidFeedSource(feedSource)
-    }
+  def getFeedStatus: Future[Seq[FeedSourceStatuses]] = Source(feedActorsForPort)
     .mapAsync(1) {
-      case (_, actor) =>
+      case (source, actor) =>
+        println(s"feed $source :: actor: $actor")
         queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
     }
     .collect { case Some(fs) => fs }

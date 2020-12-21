@@ -39,9 +39,9 @@ trait WithFeeds {
                  terminal: String,
                  scheduled: MillisSinceEpoch): Action[AnyContent] = authByRole(ArrivalSource) {
     Action.async { _ =>
-      Source(ctrl.feedActors)
+      Source(ctrl.feedActorsForPort)
         .mapAsync(1) {
-          case (source, feed) =>
+          case (_, feed) =>
             feed
               .ask(UniqueArrival(number, terminal, scheduled))
               .map {

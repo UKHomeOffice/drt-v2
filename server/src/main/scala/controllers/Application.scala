@@ -2,13 +2,13 @@ package controllers
 
 import java.nio.ByteBuffer
 import java.util.{Calendar, TimeZone, UUID}
-
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange}
 import actors._
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern._
 import akka.stream._
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import api._
 import boopickle.Default._
@@ -25,6 +25,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{AirportConfig, _}
 import drt.users.KeyCloakClient
+
 import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
@@ -382,25 +383,19 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     }
   }
 
+  lazy val healthChecker: HealthCheck =
+    HealthCheck(ctrl.portStateActor, ctrl.feedActorsForPort.values.toList, 5, 20, now)
+
   def healthCheck: Action[AnyContent] = Action.async { _ =>
-    val requestStart = SDate.now()
-    val startMillis = SDate.now().getLocalLastMidnight.millisSinceEpoch
-    val endMillis = SDate.now().getLocalNextMidnight.millisSinceEpoch
-    val portState = ctrl.portStateActor.ask(GetStateForDateRange(startMillis, endMillis))(10 seconds).mapTo[PortState]
-
-    ctrl.feedActors
-
-    portState
-      .map { _ =>
-        val requestEnd = SDate.now().millisSinceEpoch
-        log.info(s"Health check request started at ${requestStart.toISOString()} and lasted ${(requestStart.millisSinceEpoch - requestEnd) / 1000} seconds ")
-        NoContent
+    for {
+      feedsOk <- healthChecker.feedsPass
+      portStateOk <- healthChecker.portStatePasses
+    } yield {
+      (feedsOk, portStateOk) match {
+        case (true, true) => Ok("health check ok")
+        case _ => InternalServerError("health check failed")
       }
-      .recoverWith {
-        case t =>
-          log.error(s"Health check failed to get live response", t)
-          Future(InternalServerError("Failed to retrieve port state"))
-      }
+    }
   }
 
   def apiLogin(): Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>
