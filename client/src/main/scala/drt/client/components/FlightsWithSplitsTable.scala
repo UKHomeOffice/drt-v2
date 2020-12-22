@@ -242,6 +242,7 @@ object FlightTableRow {
         <.td(
           ^.className := flightCodeClass,
           flightCodeCell,
+          " ",
           props
             .maybePassengerInfoSummary
             .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))

@@ -86,6 +86,12 @@ object ChartJSComponent {
             js.Dictionary("ticks" ->
               js.Dictionary("beginAtZero" -> true)
             )
+          ),
+        "xAxes" ->
+          js.Array(
+            js.Dictionary("ticks" ->
+              js.Dictionary("beginAtZero" -> true)
+            )
           )
       )
 

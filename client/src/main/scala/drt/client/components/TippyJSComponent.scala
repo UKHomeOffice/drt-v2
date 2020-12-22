@@ -37,7 +37,7 @@ object TippyJSComponent {
     p.content = content
     p.theme = "light-border"
     p.maxWidth = "None"
-    p.trigger = "click"
+    p.trigger = "mouseenter click"
     p.placement = "top-end"
     p
   }

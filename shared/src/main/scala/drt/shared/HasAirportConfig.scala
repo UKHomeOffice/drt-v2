@@ -194,6 +194,18 @@ object PaxTypes {
     case Transit => "Transit"
     case other => other.name
   }
+
+  def displayNameShort(pt: PaxType): String = pt match {
+    case EeaMachineReadable => "EEA MRTD"
+    case EeaNonMachineReadable => "EEA NMR"
+    case EeaBelowEGateAge => "EEA U12"
+    case VisaNational => "Visa"
+    case NonVisaNational => "Non-Visa"
+    case B5JPlusNational => "B5J+"
+    case B5JPlusNationalBelowEGateAge => "B5J+ U12"
+    case Transit => "Transit"
+    case other => other.name
+  }
 }
 
 case class PaxTypeAndQueue(passengerType: PaxType, queueType: Queue) {
