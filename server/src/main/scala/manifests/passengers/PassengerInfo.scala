@@ -1,8 +1,9 @@
 package manifests.passengers
 
-import drt.shared.Nationality
 import drt.shared.api._
+import drt.shared.{Nationality, PaxType}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
+import queueus.DefaultPaxTypeAllocator
 
 object PassengerInfo {
 
@@ -43,5 +44,20 @@ object PassengerInfo {
   def manifestToPassengerInfoSummary(manifest: VoyageManifest): Option[PassengerInfoSummary] =
     manifest
       .maybeKey
-      .map(PassengerInfoSummary(_, manifestToAgeRangeCount(manifest), manifestToNationalityCount(manifest)))
+      .map(arrivalKey =>
+        PassengerInfoSummary(
+          arrivalKey,
+          manifestToAgeRangeCount(manifest),
+          manifestToNationalityCount(manifest),
+          manifestToPassengerTypes(manifest)
+        )
+      )
+
+  def manifestToPassengerTypes(manifest: VoyageManifest): Map[PaxType, Int] =
+    bestAvailableManifestToPaxTypes(BestAvailableManifest(manifest))
+
+  def bestAvailableManifestToPaxTypes(bestAvailableManifest: BestAvailableManifest): Map[PaxType, Int] = {
+    bestAvailableManifest.passengerList.map(p => DefaultPaxTypeAllocator(bestAvailableManifest)(p))
+      .groupBy(identity).mapValues(_.size)
+  }
 }

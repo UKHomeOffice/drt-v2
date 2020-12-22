@@ -2,10 +2,8 @@ package drt.client.components
 
 import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsOptions, ChartJsProps}
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.services.charts.ChartData
-import drt.shared.ApiFlightWithSplits
-import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.api.PassengerInfoSummary
+import drt.shared.{ApiFlightWithSplits, PaxTypes}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
 
@@ -24,13 +22,13 @@ object FlightChartComponent {
       val nationalityData = ChartJsData(sortedNats.map(_._1.code), sortedNats.map(_._2.toDouble), "Live API")
 
       val sortedAges = p.passengerInfo.ageRanges.toList.sortBy(_._1.title)
-
       val ageData: ChartJsData = ChartJsData(sortedAges.map(_._1.title), sortedAges.map(_._2.toDouble), "Live API")
 
-      val maybeLiveApiPaxTypes: Option[ChartJsData] = p.flightWithSplits.splits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages).map(splits =>
+      val sortedPaxTypes = p.passengerInfo.paxTypes.toList.sortBy(_._1.cleanName)
+      val paxTypeData: ChartJsData = ChartJsData(sortedPaxTypes.map {
+        case (pt, _) => PaxTypes.displayName(pt)
+      }, sortedAges.map(_._2.toDouble), "Live API")
 
-        ChartData.splitToPaxTypeData(splits.splits, "Live API")
-      )
 
       TippyJSComponent(
         <.div(^.cls := "container arrivals__table__flight__chart-box",
@@ -44,16 +42,14 @@ object FlightChartComponent {
                   options = ChartJsOptions("Nationality Breakdown")
                 )
               )),
-            maybeLiveApiPaxTypes.map(liveAPIPaxTypes =>
-              <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
-                ChartJSComponent.HorizontalBar(
-                  ChartJsProps(
-                    data = liveAPIPaxTypes,
-                    300,
-                    300,
-                    options = ChartJsOptions("Passenger Types")
-                  )))
-            ),
+            <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
+              ChartJSComponent.HorizontalBar(
+                ChartJsProps(
+                  data = paxTypeData,
+                  300,
+                  300,
+                  options = ChartJsOptions("Passenger Types")
+                ))),
             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
               ChartJSComponent.HorizontalBar(
                 ChartJsProps(
