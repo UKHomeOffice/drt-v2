@@ -1,4 +1,4 @@
-package controllers
+package services
 
 import actors.GetFeedStatuses
 import actors.PartitionedPortStateActor.GetStateForDateRange
@@ -10,11 +10,8 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FeedSourceStatuses, FeedStatuses, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
-import scala.language.postfixOps
 
 case class HealthCheck(portStateActor: ActorRef,
                        feedActorsForPort: List[ActorRef],
@@ -26,10 +23,10 @@ case class HealthCheck(portStateActor: ActorRef,
   def feedsPass(implicit timeout: Timeout, mat: Materializer, ec: ExecutionContext): Future[Boolean] =
     Source(feedActorsForPort)
       .mapAsync(1) {
-        _.ask(GetFeedStatuses).mapTo[FeedSourceStatuses]
+        _.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
       }
       .collect {
-        case FeedSourceStatuses(feedSource, FeedStatuses(_, Some(lastSuccessAt), _, _))
+        case Some(FeedSourceStatuses(feedSource, FeedStatuses(_, Some(lastSuccessAt), _, _)))
           if lastSuccessAt < minutesAgoInMillis(lastFeedCheckThresholdMinutes) =>
           val minutesSinceLastCheck = ((now().millisSinceEpoch - lastSuccessAt) / 60000).toInt
           log.warn(s"${feedSource.name} has not been checked for $minutesSinceLastCheck minutes")
@@ -38,19 +35,19 @@ case class HealthCheck(portStateActor: ActorRef,
       .runWith(Sink.seq)
       .map(_.isEmpty)
 
-  def portStatePasses(implicit ec: ExecutionContext): Future[Boolean] = {
+  def portStatePasses(implicit ec: ExecutionContext, timeout: Timeout): Future[Boolean] = {
     val requestStart = SDate.now()
     val startMillis = SDate.now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = SDate.now().getLocalNextMidnight.millisSinceEpoch
 
-    portStateActor.ask(GetStateForDateRange(startMillis, endMillis))(10 seconds)
+    portStateActor.ask(GetStateForDateRange(startMillis, endMillis))
       .map { _ =>
         val requestEnd = SDate.now().millisSinceEpoch
         val took = (requestStart.millisSinceEpoch - requestEnd) / 1000
-        val isFailure = took > healthyResponseTimeSeconds
-        if (isFailure)
+        val isWithingThreshold = took < healthyResponseTimeSeconds
+        if (!isWithingThreshold)
           log.warn(s"Port state request took $took seconds")
-        isFailure
+        isWithingThreshold
       }
       .recover {
         case t =>

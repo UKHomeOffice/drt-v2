@@ -392,7 +392,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       ctrl.feedActorsForPort.values.toList,
       healthyResponseTimeSeconds,
       lastFeedCheckThresholdMinutes,
-      Metrics.collector,
       now)
   }
 
