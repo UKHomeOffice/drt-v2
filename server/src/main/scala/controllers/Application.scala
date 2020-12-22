@@ -383,8 +383,18 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     }
   }
 
-  lazy val healthChecker: HealthCheck =
-    HealthCheck(ctrl.portStateActor, ctrl.feedActorsForPort.values.toList, 5, 20, now)
+  lazy val healthChecker: HealthCheck = {
+    val healthyResponseTimeSeconds = config.get[Int]("health-check.max-response-time-seconds")
+    val lastFeedCheckThresholdMinutes = config.get[Int]("health-check.max-last-feed-check-minutes")
+
+    HealthCheck(
+      ctrl.portStateActor,
+      ctrl.feedActorsForPort.values.toList,
+      healthyResponseTimeSeconds,
+      lastFeedCheckThresholdMinutes,
+      Metrics.collector,
+      now)
+  }
 
   def healthCheck: Action[AnyContent] = Action.async { _ =>
     for {
