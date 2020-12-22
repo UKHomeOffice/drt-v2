@@ -418,9 +418,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def getFeedStatus: Future[Seq[FeedSourceStatuses]] = Source(feedActorsForPort)
     .mapAsync(1) {
-      case (source, actor) =>
-        println(s"feed $source :: actor: $actor")
-        queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
+      case (source, actor) => queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
     }
     .collect { case Some(fs) => fs }
     .runWith(Sink.seq)
