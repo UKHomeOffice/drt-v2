@@ -260,6 +260,17 @@ class ArrivalsGraphStage(name: String = "",
       mergeBestFieldsFromSources(baseArrival, mergeArrival(key).getOrElse(baseArrival))
     }
 
+
+    def findAndMergeArrivalForBaseLiveKeyInLiveArrival(searchKey: UniqueArrival, baseLiveArrival: Arrival) = {
+      val potentialLiveKey: Option[UniqueArrival] = liveArrivals.keys.collectFirst {
+        case key if key.number == searchKey.number && key.terminal == searchKey.terminal && Math.abs(key.scheduled - searchKey.scheduled) <= 1 * 60 * 60 * 1000 => key
+      }
+      log.info(s"live arrival merge,liveBaseArrivals searchKey $searchKey and liveArrivals potentialLiveKey $potentialLiveKey .")
+      potentialLiveKey.flatMap { key =>
+        liveArrivals.get(key).map(a => LiveArrivalsUtil.mergePortFeedWithBase(a, baseLiveArrival))
+      }
+    }
+
     def mergeArrival(key: UniqueArrival): Option[Arrival] = {
       val maybeLiveBaseArrivalWithSanitisedData = liveBaseArrivals.get(key).map(arrivalDataSanitiser.withSaneEstimates)
       val maybeBestArrival: Option[Arrival] = (
@@ -272,8 +283,8 @@ class ArrivalsGraphStage(name: String = "",
             .arrivalDataSanitiserWithoutThresholds
             .withSaneEstimates(mergedLiveArrival)
           Option(sanitisedLiveArrival)
+        case (None, Some(baseLiveArrival)) => findAndMergeArrivalForBaseLiveKeyInLiveArrival(key, baseLiveArrival)
         case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) =>
-
           Option(baseLiveArrival)
         case _ => forecastBaseArrivals.get(key)
       }
