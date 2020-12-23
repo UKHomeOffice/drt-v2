@@ -383,27 +383,22 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     }
   }
 
-  lazy val healthChecker: HealthCheck = {
+  lazy val healthChecker: HealthChecker = if (!config.get[Boolean]("health-check.disable-feed-monitoring")) {
     val healthyResponseTimeSeconds = config.get[Int]("health-check.max-response-time-seconds")
     val lastFeedCheckThresholdMinutes = config.get[Int]("health-check.max-last-feed-check-minutes")
 
-    HealthCheck(
-      ctrl.portStateActor,
-      ctrl.feedActorsForPort.values.toList,
-      healthyResponseTimeSeconds,
-      lastFeedCheckThresholdMinutes,
-      now)
-  }
+    val feedsToMonitor = ctrl.feedActorsForPort.values.toList.diff(airportConfig.feedSourceMonitorExemptions)
+    
+    HealthChecker(Seq(
+      FeedsHealthCheck(feedsToMonitor, lastFeedCheckThresholdMinutes, now),
+      ActorResponseTimeHealthCheck(ctrl.portStateActor, healthyResponseTimeSeconds))
+    )
+  } else HealthChecker(Seq())
 
   def healthCheck: Action[AnyContent] = Action.async { _ =>
-    for {
-      feedsOk <- healthChecker.feedsPass
-      portStateOk <- healthChecker.portStatePasses
-    } yield {
-      (feedsOk, portStateOk) match {
-        case (true, true) => Ok("health check ok")
-        case _ => InternalServerError("health check failed")
-      }
+    healthChecker.checksPassing.map {
+      case true => Ok("health check ok")
+      case _ => InternalServerError("health check failed")
     }
   }
 

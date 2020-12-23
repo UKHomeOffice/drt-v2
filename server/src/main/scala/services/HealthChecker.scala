@@ -13,14 +13,18 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class HealthCheck(portStateActor: ActorRef,
-                       feedActorsForPort: List[ActorRef],
-                       healthyResponseTimeSeconds: Int,
-                       lastFeedCheckThresholdMinutes: Int,
-                       now: () => SDateLike) {
+
+trait HealthCheck {
+  def isPassing: Future[Boolean]
+}
+
+case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
+                            lastFeedCheckThresholdMinutes: Int,
+                            now: () => SDateLike)
+                           (implicit timeout: Timeout, mat: Materializer, ec: ExecutionContext) extends HealthCheck {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def feedsPass(implicit timeout: Timeout, mat: Materializer, ec: ExecutionContext): Future[Boolean] =
+  override def isPassing: Future[Boolean] =
     Source(feedActorsForPort)
       .mapAsync(1) {
         _.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
@@ -35,7 +39,16 @@ case class HealthCheck(portStateActor: ActorRef,
       .runWith(Sink.seq)
       .map(_.isEmpty)
 
-  def portStatePasses(implicit ec: ExecutionContext, timeout: Timeout): Future[Boolean] = {
+  def minutesAgoInMillis(minutesAgo: Int): MillisSinceEpoch =
+    now().addMinutes(-1 * minutesAgo).millisSinceEpoch
+}
+
+case class ActorResponseTimeHealthCheck(portStateActor: ActorRef,
+                                        healthyResponseTimeSeconds: Int)
+                                       (implicit ec: ExecutionContext, timeout: Timeout) extends HealthCheck {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
+  override def isPassing: Future[Boolean] = {
     val requestStart = SDate.now()
     val startMillis = SDate.now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = SDate.now().getLocalNextMidnight.millisSinceEpoch
@@ -55,8 +68,8 @@ case class HealthCheck(portStateActor: ActorRef,
           true
       }
   }
+}
 
-  def minutesAgoInMillis(minutesAgo: Int): MillisSinceEpoch =
-    now().addMinutes(-1 * minutesAgo).millisSinceEpoch
-
+case class HealthChecker(checks: Seq[HealthCheck])(implicit ec: ExecutionContext) {
+  def checksPassing: Future[Boolean] = Future.sequence(checks.map(_.isPassing)).map(!_.contains(false))
 }
