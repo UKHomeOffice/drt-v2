@@ -49,13 +49,6 @@ object Edi extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3))
       )
     ),
-    shiftExamples = Seq(
-      "Midnight shift, A1, {date}, 00:00, 00:59, 10",
-      "Night shift, A1, {date}, 01:00, 06:59, 4",
-      "Morning shift, A1, {date}, 07:00, 13:59, 15",
-      "Afernoon shift, A1, {date}, 14:00, 16:59, 10",
-      "Evening shift, A1, {date}, 17:00, 23:59, 17"
-    ),
     role = EDI,
     terminalPaxTypeQueueAllocation = Map(
       A1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
