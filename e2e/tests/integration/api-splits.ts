@@ -54,18 +54,26 @@ describe('API splits', () => {
 
     const expectedNationalitySummary = [
       {
-        "arrivalKey":
-        {
+        "arrivalKey": {
           "origin": { "iata": "AMS" },
           "voyageNumber": { "$type": "drt.shared.VoyageNumber", "numeric": 123 },
           "scheduled": scheduledTime.unix() * 1000
         },
+
         "ageRanges": [
           [{ "bottom": 25, "top": [49] }, 10],
-          [{ "bottom": 0, "top": [11] }, 1]],
-        "nationalities": [[{ "code": "GBR" }, 11]
-          ]
-      }]
+          [{ "bottom": 0, "top": [11] }, 1]
+        ],
+
+        "nationalities": [
+          [{ "code": "GBR" }, 11]
+        ],
+
+        "paxTypes": [
+          ["EeaMachineReadable", 10], ["EeaBelowEGateAge", 1]
+        ]
+      }
+    ]
 
     cy
       .addFlight(
@@ -92,3 +100,4 @@ describe('API splits', () => {
 
   });
 });
+

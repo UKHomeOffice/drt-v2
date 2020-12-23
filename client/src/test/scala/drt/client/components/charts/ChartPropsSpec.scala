@@ -10,7 +10,6 @@ import scala.scalajs.js.JSON
 
 object ChartPropsSpec extends TestSuite {
 
-
   def tests = Tests {
 
     "Given a ChartJSDataSet when I convert it to JS then I should get a JS object with the correct values" - {
@@ -58,6 +57,13 @@ object ChartPropsSpec extends TestSuite {
             |                    "beginAtZero": true
             |                }
             |            }
+            |        ],
+            |        "xAxes": [
+            |            {
+            |                "ticks": {
+            |                    "beginAtZero": true
+            |                }
+            |            }
             |        ]
             |    },
             |    "title": {
@@ -68,6 +74,9 @@ object ChartPropsSpec extends TestSuite {
             |        "display": false
             |    }
             |}""".stripMargin)
+
+      println(jsonString(result))
+      println(jsonString(expected))
 
       assert(jsonString(result) == jsonString(expected))
     }
