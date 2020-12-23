@@ -261,11 +261,21 @@ class ArrivalsGraphStage(name: String = "",
     }
 
 
-    def scheduleTimeApproximation(searchKey: UniqueArrival): Option[UniqueArrival] = {
-      liveArrivals.keys.collectFirst {
+    def scheduleTimeApproximation(searchKey: UniqueArrival, baseLiveArrival: Arrival, logMessage: Boolean = false): Option[UniqueArrival] = {
+      val potentialLiveKey: Option[UniqueArrival] = liveArrivals.keys.collectFirst {
         case key if key.number == searchKey.number && key.terminal == searchKey.terminal && Math.abs(key.scheduled - searchKey.scheduled) <= 1 * 60 * 60 * 1000 => key
       }
 
+      potentialLiveKey match {
+        case Some(key) if liveArrivals.get(key).exists(_.Origin == baseLiveArrival.Origin) =>
+          Some(key)
+        case Some(key) => if (logMessage)
+          log.warn(s"ScheduledTime Approximation origin ${baseLiveArrival.Origin} match not found for potential Key $key in liveArrivals")
+          None
+        case None => if (logMessage)
+          log.warn(s"ScheduledTime Approximation search for searchKey $searchKey not found within an hour in liveArrivals")
+          None
+      }
     }
 
     def mergeArrival(key: UniqueArrival): Option[Arrival] = {
@@ -280,9 +290,9 @@ class ArrivalsGraphStage(name: String = "",
             .arrivalDataSanitiserWithoutThresholds
             .withSaneEstimates(mergedLiveArrival)
           Option(sanitisedLiveArrival)
-        case (None, Some(baseLiveArrival)) if scheduleTimeApproximation(key).isDefined => {
-          val potentialLiveKey = scheduleTimeApproximation(key)
-          log.info(s"live arrival merge,liveBaseArrivals searchKey $key and liveArrivals potentialLiveKey $potentialLiveKey .")
+        case (None, Some(baseLiveArrival)) if scheduleTimeApproximation(key, baseLiveArrival,true).isDefined => {
+          val potentialLiveKey = scheduleTimeApproximation(key, baseLiveArrival)
+          log.info(s"live arrival merge,liveBaseArrivals searchKey $key and liveArrivals potentialLiveKey $potentialLiveKey.")
           potentialLiveKey.flatMap { key =>
             liveArrivals.get(key).map(liveArrival => LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
           }
