@@ -20,7 +20,7 @@ import scala.concurrent.ExecutionContext
 object PartitionedPortStateTestActor {
   def apply(testProbe: TestProbe, flightsActor: ActorRef, now: () => SDateLike, airportConfig: AirportConfig)
            (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-    val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, 1000)
+    val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
     val queuesActor = lookups.queueMinutesActor
     val staffActor = lookups.staffMinutesActor
     val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-queues")

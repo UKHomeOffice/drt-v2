@@ -50,11 +50,6 @@ object Ema extends AirportConfigLike {
       )
     ),
     role = EMA,
-    // This is deliberately high (10000) to cope with restoring previous snapshot bug where the time between snapshots
-    // was going beyond the message threshold.
-    // A neater fix would be to produce the missing snapshots retrospectively, but that would be quite a big job for a
-    // minor gain
-    portStateSnapshotInterval = 10000,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(
         EGate -> 0.6993,

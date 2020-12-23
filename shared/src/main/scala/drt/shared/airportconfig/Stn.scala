@@ -22,7 +22,6 @@ object Stn extends AirportConfigLike {
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45),
     crunchOffsetMinutes = 240,
-    dayLengthHours = 36,
     defaultWalkTimeMillis = Map(T1 -> 600000L),
     terminalPaxSplits = Map(T1 -> SplitRatios(
       SplitSources.TerminalAverage,
