@@ -2,6 +2,7 @@ package services.simulations
 
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.dates.LocalDate
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
 

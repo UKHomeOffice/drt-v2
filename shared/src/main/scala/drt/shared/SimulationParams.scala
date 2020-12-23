@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
+import drt.shared.dates.LocalDate
 
 import scala.util.Try
 

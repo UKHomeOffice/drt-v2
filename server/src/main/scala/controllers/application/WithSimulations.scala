@@ -92,7 +92,7 @@ trait WithSimulations {
       val desks = StreamingDesksExport.crunchMinutesToRecsExportWithHeaders(
         terminal,
         airportConfig.desksExportQueueOrder,
-        date.toUtcDate,
+        date.toLocalDate,
         crunchMinutes.map {
           case (_, cm) => cm
         }

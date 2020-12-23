@@ -6,6 +6,7 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.dates.{DateLikeOrdering, UtcDate}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
@@ -361,7 +362,7 @@ object Crunch {
     (startForTimeZone.millisSinceEpoch to endForTimeZone.millisSinceEpoch by MilliTimes.oneHourMillis)
       .map(SDate(_).toUtcDate)
       .distinct
-      .sorted
+      .sorted(DateLikeOrdering)
       .toList
   }
 }

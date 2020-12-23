@@ -4,6 +4,7 @@ import drt.client.SPAMain
 import drt.client.modules.GoogleEventTracker
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.dates.LocalDate
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 

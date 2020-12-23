@@ -360,7 +360,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     implicit val timeout: Timeout = new Timeout(10 seconds)
     val arrivalFeed = ArrivalFeed(arrivalsImportActor)
     Source
-      .tick(10 seconds, 60 seconds, NotUsed)
+      .tick(10 seconds, 5 seconds, NotUsed)
       .mapAsync(1)(_ => arrivalFeed.requestFeed)
   }
 

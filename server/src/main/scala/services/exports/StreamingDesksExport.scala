@@ -7,6 +7,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.dates.LocalDate
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch
@@ -37,7 +38,7 @@ object StreamingDesksExport {
     .flatMap(qn => List.fill(colHeadings().length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(",")
 
   def deskRecsToCSVStreamWithHeaders(
-                                      dates: Source[UtcDate, NotUsed],
+                                      dates: Source[LocalDate, NotUsed],
                                       terminal: Terminal,
                                       exportQueuesInOrder: List[Queue],
                                       crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
@@ -56,7 +57,7 @@ object StreamingDesksExport {
 
 
   def deploymentsToCSVStreamWithHeaders(
-                                         dates: Source[UtcDate, NotUsed],
+                                         dates: Source[LocalDate, NotUsed],
                                          terminal: Terminal,
                                          exportQueuesInOrder: List[Queue],
                                          crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
@@ -68,7 +69,7 @@ object StreamingDesksExport {
 
 
   def exportDesksToCSVStream(
-                              dates: Source[UtcDate, NotUsed],
+                              dates: Source[LocalDate, NotUsed],
                               terminal: Terminal,
                               exportQueuesInOrder: List[Queue],
                               crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
@@ -98,15 +99,15 @@ object StreamingDesksExport {
 
   def crunchMinutesToRecsExportWithHeaders(terminal: Terminal,
                                            exportQueuesInOrder: List[Queue],
-                                           utcDate: UtcDate,
+                                           localDate: LocalDate,
                                            crunchMinutes: Iterable[CrunchMinute],
                                           ): String =
     csvHeader(exportQueuesInOrder, "req") +
-      minutesToCsv(terminal, exportQueuesInOrder, utcDate, crunchMinutes, List(), deskRecsCsv)
+      minutesToCsv(terminal, exportQueuesInOrder, localDate, crunchMinutes, List(), deskRecsCsv)
 
   def minutesToCsv(terminal: Terminal,
                    exportQueuesInOrder: List[Queue],
-                   utcDate: UtcDate,
+                   localDate: LocalDate,
                    crunchMinutes: Iterable[CrunchMinute],
                    staffMinutes: Iterable[StaffMinute],
                    deskExportFn: CrunchMinute => String,
@@ -118,10 +119,10 @@ object StreamingDesksExport {
     )
 
     val terminalCrunchMinutes: SortedMap[MillisSinceEpoch, Map[Queue, CrunchMinute]] = portState
-      .crunchSummary(SDate(utcDate), 24 * 4, 15, terminal, exportQueuesInOrder)
+      .crunchSummary(SDate(localDate), 24 * 4, 15, terminal, exportQueuesInOrder)
 
     val terminalStaffMinutes: Map[MillisSinceEpoch, StaffMinute] = portState
-      .staffSummary(SDate(utcDate), 24 * 4, 15, terminal)
+      .staffSummary(SDate(localDate), 24 * 4, 15, terminal)
 
     terminalCrunchMinutes.map {
       case (minute, qcm) =>

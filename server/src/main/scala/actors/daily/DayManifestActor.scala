@@ -4,9 +4,10 @@ import actors.acking.AckingReceiver.Ack
 import actors.{GetState, ManifestMessageConversion, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
-import drt.shared.{ArrivalKey, SDateLike, UtcDate}
+import drt.shared.{ArrivalKey, SDateLike}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
+import drt.shared.dates.UtcDate
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import scalapb.GeneratedMessage

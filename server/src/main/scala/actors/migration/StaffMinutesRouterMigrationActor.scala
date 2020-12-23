@@ -1,11 +1,11 @@
 package actors.migration
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.minutes.MinutesActorLike.{StaffMinutesMigrationUpdate, ProcessNextUpdateRequest}
+import actors.minutes.MinutesActorLike.{ProcessNextUpdateRequest, StaffMinutesMigrationUpdate}
 import akka.actor.{Actor, ActorRef}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.shared.UtcDate
+import drt.shared.dates.UtcDate
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 

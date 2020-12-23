@@ -1,7 +1,6 @@
 package actors.migration
 
 import java.util.UUID
-
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.RequestAndTerminate
 import actors.minutes.MinutesActorLike.{CrunchMinutesMigrationUpdate, ProcessNextUpdateRequest}
@@ -10,7 +9,7 @@ import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import drt.shared.UtcDate
+import drt.shared.dates.UtcDate
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 

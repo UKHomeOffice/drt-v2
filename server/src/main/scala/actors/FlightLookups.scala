@@ -10,7 +10,8 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, UtcDate}
+import drt.shared.SDateLike
+import drt.shared.dates.UtcDate
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._

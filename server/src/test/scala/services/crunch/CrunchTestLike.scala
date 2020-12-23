@@ -86,7 +86,8 @@ object TestDefaults {
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
         )
       ),
-    desksByTerminal = Map(T1 -> 40, T2 -> 40)
+    desksByTerminal = Map(T1 -> 40, T2 -> 40),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
     )
   val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {

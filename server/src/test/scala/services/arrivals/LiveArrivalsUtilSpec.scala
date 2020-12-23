@@ -14,7 +14,8 @@ class LiveArrivalsUtilSpec extends Specification {
                estChox: Option[Long] = None,
                actChox: Option[Long] = None,
                gate: Option[String] = None,
-               status: ArrivalStatus = ArrivalStatus("test")
+               status: ArrivalStatus = ArrivalStatus("test"),
+               scheduledDeparture: Option[Long] = None
              ): Arrival =
     Arrival(
       None,
@@ -72,7 +73,7 @@ class LiveArrivalsUtilSpec extends Specification {
   "Given a BaseLiveArrival with all landing times set and port arrival all times set then I should get the port times" >> {
     val baseArrival = arrival(Option(SDate(2019, 9, 30, 16, 1).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 2).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 3).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 4).millisSinceEpoch))
 
-    val liveArrival = arrival(Option(SDate(2019, 9, 30, 16, 5).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 6).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 7).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 8).millisSinceEpoch))
+    val liveArrival = arrival(Option(SDate(2019, 9, 30, 16, 5).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 6).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 7).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 8).millisSinceEpoch), scheduledDeparture = Option(SDate(2019, 9, 30, 13, 8).millisSinceEpoch))
     val expected = liveArrival.copy()
 
     val result = LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseArrival)

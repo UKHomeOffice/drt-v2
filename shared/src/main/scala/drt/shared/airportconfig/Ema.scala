@@ -62,6 +62,7 @@ object Ema extends AirportConfigLike {
       )))
     ),
     flexedQueues = Set(),
-    desksByTerminal = Map(T1 -> 5)
+    desksByTerminal = Map(T1 -> 5),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
   )
 }
