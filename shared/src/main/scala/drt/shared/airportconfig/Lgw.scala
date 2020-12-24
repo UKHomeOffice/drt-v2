@@ -61,13 +61,6 @@ object Lgw extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(10, 10, 10, 10, 10, 10, 12, 15, 15, 15, 15, 15, 15, 15, 15, 13, 13, 13, 13, 13, 13, 13, 13, 13))
       )
     ),
-    shiftExamples = Seq(
-      "Midnight shift, N, {date}, 00:00, 00:59, 10",
-      "Night shift, N, {date}, 01:00, 06:59, 4",
-      "Morning shift, N, {date}, 07:00, 13:59, 15",
-      "Afternoon shift, N, {date}, 14:00, 16:59, 10",
-      "Evening shift, N, {date}, 17:00, 23:59, 17"
-    ),
     role = LGW,
     terminalPaxTypeQueueAllocation = Map(
       N -> (defaultQueueRatios + (EeaMachineReadable -> List(

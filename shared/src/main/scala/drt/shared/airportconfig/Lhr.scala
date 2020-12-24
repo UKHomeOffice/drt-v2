@@ -43,7 +43,6 @@ object Lhr extends AirportConfigLike {
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 15, NonEeaDesk -> 45, FastTrack -> 15),
     crunchOffsetMinutes = 120,
-    dayLengthHours = 36,
     defaultWalkTimeMillis = Map(T2 -> 900000L, T3 -> 660000L, T4 -> 900000L, T5 -> 660000L),
     terminalPaxSplits = List(T2, T3, T4, T5).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
@@ -87,15 +86,7 @@ object Lhr extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20))
       )
     ),
-    shiftExamples = Seq(
-      "Midnight shift, T2, {date}, 00:00, 00:59, 25",
-      "Night shift, T2, {date}, 01:00, 06:59, 10",
-      "Morning shift, T2, {date}, 07:00, 13:59, 30",
-      "Afternoon shift, T2, {date}, 14:00, 16:59, 18",
-      "Evening shift, T2, {date}, 17:00, 23:59, 22"
-    ),
     hasActualDeskStats = true,
-    portStateSnapshotInterval = 250,
     forecastExportQueueOrder = Queues.forecastExportQueueOrderWithFastTrack,
     desksExportQueueOrder = Queues.deskExportQueueOrderWithFastTrack,
     role = LHR,

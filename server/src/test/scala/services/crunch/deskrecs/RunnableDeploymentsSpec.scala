@@ -62,8 +62,7 @@ case class TestMinuteLookups(queueProbe: ActorRef,
                              system: ActorSystem,
                              now: () => SDateLike,
                              expireAfterMillis: Int,
-                             queuesByTerminal: Map[Terminal, Seq[Queue]],
-                             override val replayMaxCrunchStateMessages: Int)
+                             queuesByTerminal: Map[Terminal, Seq[Queue]])
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
 
@@ -84,7 +83,7 @@ class RunnableDeploymentsSpec extends CrunchTestLike {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActorForDeployments(portStateProbe, noDelay)))
     val now = () => SDate("2020-07-17T00:00")
-    val lookups = TestMinuteLookups(queuesProbe.ref, system, now, MilliTimes.oneDayMillis, defaultAirportConfig.queuesByTerminal, 1000)
+    val lookups = TestMinuteLookups(queuesProbe.ref, system, now, MilliTimes.oneDayMillis, defaultAirportConfig.queuesByTerminal)
     val terminalToIntsToTerminalToStaff = PortDeskLimits.flexedByAvailableStaff(defaultAirportConfig) _
     val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(defaultAirportConfig.crunchOffsetMinutes)
     val (daysQueueSource, _) = RunnableDeployments(
