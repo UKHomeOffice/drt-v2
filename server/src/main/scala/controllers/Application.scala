@@ -386,7 +386,9 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     val healthyResponseTimeSeconds = config.get[Int]("health-check.max-response-time-seconds")
     val lastFeedCheckThresholdMinutes = config.get[Int]("health-check.max-last-feed-check-minutes")
 
-    val feedsToMonitor = ctrl.feedActorsForPort.values.toList.diff(airportConfig.feedSourceMonitorExemptions)
+    val feedsToMonitor = ctrl.feedActorsForPort
+      .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
+      .values.toList
     
     HealthChecker(Seq(
       FeedsHealthCheck(feedsToMonitor, lastFeedCheckThresholdMinutes, now),
