@@ -7,6 +7,8 @@ import drt.shared.{ApiFlightWithSplits, Nationality, PaxTypes}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
 
+import scala.scalajs.js.special.debugger
+
 object FlightChartComponent {
 
   def summariseNationlaties(nats: Map[Nationality, Int], numberToShow: Int): Map[Nationality, Int] =
@@ -43,6 +45,8 @@ object FlightChartComponent {
       val ageData: ChartJsData = ChartJsData(sortedAges.map(_._1.title), sortedAges.map(_._2.toDouble), "Live API")
 
       val sortedPaxTypes = p.passengerInfo.paxTypes.toList.sortBy(_._1.cleanName)
+      println(sortedPaxTypes)
+      debugger()
       val paxTypeData: ChartJsData = ChartJsData(sortedPaxTypes.map {
         case (pt, _) => PaxTypes.displayNameShort(pt)
       }, sortedAges.map(_._2.toDouble), "Live API")
@@ -50,7 +54,7 @@ object FlightChartComponent {
       TippyJSComponent(
         <.div(^.cls := "container arrivals__table__flight__chart-box",
           <.div(^.cls := "row",
-            if (nationalityData.datasets.nonEmpty)
+            if (sortedNats.toMap.values.sum > 0)
               <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
                 ChartJSComponent.Bar(
                   ChartJsProps(
@@ -62,7 +66,7 @@ object FlightChartComponent {
                 ))
             else
               EmptyVdom,
-            if (paxTypeData.datasets.nonEmpty)
+            if (sortedPaxTypes.toMap.values.sum > 0 && sortedAges.toMap.values.sum > 0)
               <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
                 ChartJSComponent.Bar(
                   ChartJsProps(
@@ -73,7 +77,7 @@ object FlightChartComponent {
                   )))
             else
               EmptyVdom,
-            if (ageData.datasets.nonEmpty)
+            if (sortedAges.toMap.values.sum > 0)
               <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
                 ChartJSComponent.Bar(
                   ChartJsProps(
