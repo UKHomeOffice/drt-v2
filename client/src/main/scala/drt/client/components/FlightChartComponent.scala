@@ -50,32 +50,41 @@ object FlightChartComponent {
       TippyJSComponent(
         <.div(^.cls := "container arrivals__table__flight__chart-box",
           <.div(^.cls := "row",
-            <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
-              ChartJSComponent.Bar(
-                ChartJsProps(
-                  data = nationalityData,
-                  300,
-                  300,
-                  options = ChartJsOptions("Nationality breakdown")
-                )
-              )),
-            <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
-              ChartJSComponent.Bar(
-                ChartJsProps(
-                  data = paxTypeData,
-                  300,
-                  300,
-                  options = ChartJsOptions("Passenger types")
-                ))),
-            <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
-              ChartJSComponent.Bar(
-                ChartJsProps(
-                  data = ageData,
-                  300,
-                  300,
-                  options = ChartJsOptions("Age breakdown")
+            if (nationalityData.datasets.nonEmpty)
+              <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
+                ChartJSComponent.Bar(
+                  ChartJsProps(
+                    data = nationalityData,
+                    300,
+                    300,
+                    options = ChartJsOptions("Nationality breakdown")
+                  )
                 ))
-            )
+            else
+              EmptyVdom,
+            if (paxTypeData.datasets.nonEmpty)
+              <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
+                ChartJSComponent.Bar(
+                  ChartJsProps(
+                    data = paxTypeData,
+                    300,
+                    300,
+                    options = ChartJsOptions("Passenger types")
+                  )))
+            else
+              EmptyVdom,
+            if (ageData.datasets.nonEmpty)
+              <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
+                ChartJSComponent.Bar(
+                  ChartJsProps(
+                    data = ageData,
+                    300,
+                    300,
+                    options = ChartJsOptions("Age breakdown")
+                  ))
+              )
+            else
+              EmptyVdom
           )
         ).rawElement, interactive = true, <.span(Icon.infoCircle))
     })
