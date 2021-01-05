@@ -4,6 +4,7 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.{TestKit, TestProbe}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneDayMillis
 import drt.shared.Terminals.T1
 import drt.shared._
@@ -14,7 +15,6 @@ import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
 
 import scala.collection.immutable.SortedMap
-import scala.collection.mutable
 import scala.concurrent.duration._
 
 
@@ -26,7 +26,7 @@ object TestableArrivalsGraphStage {
       SourceQueueWithComplete[List[Arrival]],
       SourceQueueWithComplete[List[Arrival]],
       SourceQueueWithComplete[List[Arrival]])
-  ] = {
+    ] = {
 
     val liveArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
     val liveBaseArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
@@ -39,7 +39,7 @@ object TestableArrivalsGraphStage {
       forecastArrivalsSource.async,
       liveBaseArrivalsSource.async,
       liveArrivalsSource.async
-      )((_, _, _, _)) {
+    )((_, _, _, _)) {
 
       implicit builder =>
         (forecastBase, forecast, liveBase, live) =>
@@ -65,6 +65,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
   isolated
 
   val scheduled: SDateLike = SDate(2019, 10, 1, 16, 0)
+
   override def after: Unit = TestKit.shutdownActorSystem(system)
 
   "Given a live arrival and a base live arrival I should get a merged arrival" >> {
@@ -105,13 +106,98 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     success
   }
 
+  "Given a live arrival with a scheduled arrival time and a base live arrival within 60 minutes scheduled arrival time" +
+    "Then they should get merged and have scheduled Departure" >> {
+    val probe = TestProbe("arrivals")
+    val (_, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+
+    val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
+    liveSource.offer(List(arrival()))
+
+    probe.fishForMessage(2 seconds) {
+      case ArrivalsDiff(toUpdate, _) =>
+        toUpdate.exists {
+          case (_, _) => true
+        }
+    }
+
+    liveBaseSource.offer(List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture))))
+
+    probe.fishForMessage(2 seconds) {
+      case ArrivalsDiff(toUpdate, _) =>
+        toUpdate.exists {
+          case (_, a) =>
+            a.ScheduledDeparture.get == scheduledDeparture
+            a.Scheduled == scheduled.millisSinceEpoch
+        }
+    }
+
+    success
+  }
+
+  "Given a forecast Base arrival with a scheduled arrival time and a base live arrival with in 60 minutes scheduled arrival time " +
+    "Then they should get merged and have scheduled Departure" >> {
+    val probe = TestProbe("arrivals")
+    val (forecastBaseArrivalsSource, _, liveBaseSource, _) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+
+    val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
+    forecastBaseArrivalsSource.offer(List(arrival()))
+
+    probe.fishForMessage(2 seconds) {
+      case ArrivalsDiff(toUpdate, _) =>
+        toUpdate.exists {
+          case (_, _) => true
+        }
+    }
+
+    liveBaseSource.offer(List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture))))
+
+    probe.fishForMessage(2 seconds) {
+      case ArrivalsDiff(toUpdate, _) =>
+        toUpdate.exists {
+          case (_, a) =>
+            a.ScheduledDeparture.get == scheduledDeparture
+            a.Scheduled == scheduled.millisSinceEpoch
+        }
+    }
+
+    success
+  }
+
+  "Given a forecast arrival with a scheduled arrival time and a live arrival with in 60 minutes scheduled arrival time" +
+    "Then they should not merged and scheduled Departure not present" >> {
+    val probe = TestProbe("arrivals")
+    val (forecastBaseArrivalsSource, _, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+
+    val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
+    forecastBaseArrivalsSource.offer(List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture))))
+
+    probe.fishForMessage(2 seconds) {
+      case ArrivalsDiff(toUpdate, _) =>
+        toUpdate.exists {
+          case (_, _) => true
+        }
+    }
+
+    liveSource.offer(List(arrival()))
+
+    probe.fishForMessage(2 seconds) {
+      case ArrivalsDiff(toUpdate, _) =>
+        toUpdate.exists {
+          case (_, a) => a.ScheduledDeparture == None
+        }
+    }
+
+    success
+  }
+
 
   "Given a base live arrival with an estimated time that is outside the defined acceptable data threshold " +
     "Then the estimated times should be ignored" >> {
     val probe = TestProbe("arrivals")
     val (forecastBaseSource, _, liveBaseSource, _) = TestableArrivalsGraphStage(
       probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
-      ).run
+    ).run
 
     forecastBaseSource.offer(List(arrival()))
     liveBaseSource.offer(List(arrival(estimated = Option(scheduled.addHours(5).millisSinceEpoch))))
@@ -132,7 +218,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     val probe = TestProbe("arrivals")
     val (forecastBaseSource, _, _, liveSource) = TestableArrivalsGraphStage(
       probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
-      ).run
+    ).run
 
     forecastBaseSource.offer(List(arrival()))
     val lateEstimatedTime = scheduled.addHours(5)
@@ -156,7 +242,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     val probe = TestProbe("arrivals")
     val (forecastBaseSource, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(
       probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
-      ).run
+    ).run
 
     forecastBaseSource.offer(List(arrival()))
     val estTime = scheduled.addHours(5)
@@ -180,7 +266,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     val probe = TestProbe("arrivals")
     val (forecastBaseSource, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(
       probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
-      ).run
+    ).run
 
     forecastBaseSource.offer(List(arrival()))
     val estTime = scheduled.addHours(5)
@@ -242,7 +328,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     ArrivalsAdjustmentsNoop,
     oneDayMillis,
     () => scheduled
-    )
+  )
 
   private def buildArrivalsGraphStage = new ArrivalsGraphStage(
     "",
@@ -257,9 +343,10 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     ArrivalsAdjustmentsNoop,
     oneDayMillis,
     () => scheduled
-    )
+  )
 
   def pcpTimeCalc(a: Arrival): MilliDate = PcpArrival.pcpFrom(0, 0, _ => 0)(a)
+
 
   "Given a base live arrival with an estimated time and a port live arrival with only scheduled time " +
     "Then PCP time should be calculated from the base live arrival time." >> {
@@ -303,7 +390,9 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
                estChox: Option[Long] = None,
                actChox: Option[Long] = None,
                gate: Option[String] = None,
-               status: ArrivalStatus = ArrivalStatus("test")
+               status: ArrivalStatus = ArrivalStatus("test"),
+               scheduledDate: MillisSinceEpoch = scheduled.millisSinceEpoch,
+               scheduledDepartureDate: Option[MillisSinceEpoch] = None,
              ): Arrival =
     Arrival(
       None,
@@ -324,8 +413,11 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
       "TST100",
       "TST100",
       PortCode("TST"),
-      scheduled.millisSinceEpoch,
+      scheduledDate,
       None,
-      Set()
-      )
+      Set(),
+      None,
+      None,
+      scheduledDepartureDate
+    )
 }
