@@ -264,28 +264,36 @@ class ArrivalsGraphStage(name: String = "",
     def scheduleTimeApproximation(searchKey: UniqueArrival, foundArrival: Arrival, arrivalsSourceType: ArrivalsSourceType, logMessage: Boolean = false): Option[UniqueArrival] = {
 
       val arrivalMap: SortedMap[UniqueArrival, Arrival] = arrivalsSourceType match {
-        case LiveArrivals => liveArrivals //Live feeds
-        case LiveBaseArrivals => liveBaseArrivals // Cirium
-        case BaseArrivals => forecastBaseArrivals // ACL
+        case LiveArrivals => liveArrivals //Live feeds arrivals
+        case LiveBaseArrivals => liveBaseArrivals // Cirium feeds arrivals
+        case BaseArrivals => forecastBaseArrivals // ACL feeds arrivals
       }
 
-      val potentialKey: Option[UniqueArrival] = arrivalMap.keys.collectFirst {
+      val potentialKeyList: Iterable[UniqueArrival] = arrivalMap.keys.collect {
         case key if key.number == searchKey.number && key.terminal == searchKey.terminal && Math.abs(key.scheduled - searchKey.scheduled) <= 1 * 60 * 60 * 1000 => key
       }
+
+      val potentialKey = if (potentialKeyList.size > 1) {
+        log.warn(s"Found multiple potentialKey $potentialKeyList for searchKey $searchKey within an hour of scheduled Approximation in sourceType $arrivalsSourceType")
+        potentialKeyList.toSeq.sortBy(_.scheduled).headOption
+      } else {
+        potentialKeyList.headOption
+      }
+
 
       potentialKey match {
         case Some(key) if arrivalMap.get(key).exists(_.Origin == foundArrival.Origin) =>
           Some(key)
         case Some(key) => if (logMessage)
-          log.warn(s"ScheduledTime Approximation origin ${foundArrival.Origin} match not found for potential Key $key in $arrivalsSourceType")
+          log.warn(s"ScheduledTime Approximation origin ${foundArrival.Origin} match not found for potential Key $key in sourceType $arrivalsSourceType")
           None
         case None => if (logMessage)
-          log.warn(s"ScheduledTime Approximation search for searchKey $searchKey not found within an hour in $arrivalsSourceType")
+          log.warn(s"ScheduledTime Approximation search for searchKey $searchKey not found within an hour in sourceType $arrivalsSourceType")
           None
       }
     }
 
-    def   mergeArrival(key: UniqueArrival): Option[Arrival] = {
+    def mergeArrival(key: UniqueArrival): Option[Arrival] = {
       val maybeLiveBaseArrivalWithSanitisedData = liveBaseArrivals.get(key).map(arrivalDataSanitiser.withSaneEstimates)
       val maybeBestArrival: Option[Arrival] = (
         liveArrivals.get(key),
@@ -316,7 +324,7 @@ class ArrivalsGraphStage(name: String = "",
           }
         }
 
-        case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) =>  forecastBaseArrivals.get(key).map { forecastBaseArrival =>
+        case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) => forecastBaseArrivals.get(key).map { forecastBaseArrival =>
           LiveArrivalsUtil.mergePortFeedWithBase(forecastBaseArrival, baseLiveArrival)
         }
 
