@@ -7,30 +7,9 @@ import drt.shared.{ApiFlightWithSplits, Nationality, PaxTypes}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
 
-import scala.scalajs.js.special.debugger
-
 object FlightChartComponent {
 
-  def summariseNationlaties(nats: Map[Nationality, Int], numberToShow: Int): Map[Nationality, Int] =
-    nats
-      .toList
-      .sortBy {
-        case (_, total) => total
-      }
-      .reverse
-      .splitAt(numberToShow) match {
-      case (relevant, other) if other.nonEmpty =>
-        relevant.toMap + (Nationality("Other") -> other.map(_._2).sum)
-      case (all, _) => all.toMap
-    }
-
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
-
-  case class Props(
-                    flightWithSplits: ApiFlightWithSplits,
-                    passengerInfo: PassengerInfoSummary
-                  )
-
   val component = ScalaComponent.builder[Props]("FlightChart")
     .render_P(p => {
       val sortedNats = summariseNationlaties(p.passengerInfo.nationalities, 10)
@@ -45,8 +24,7 @@ object FlightChartComponent {
       val ageData: ChartJsData = ChartJsData(sortedAges.map(_._1.title), sortedAges.map(_._2.toDouble), "Live API")
 
       val sortedPaxTypes = p.passengerInfo.paxTypes.toList.sortBy(_._1.cleanName)
-      println(sortedPaxTypes)
-      debugger()
+
       val paxTypeData: ChartJsData = ChartJsData(sortedPaxTypes.map {
         case (pt, _) => PaxTypes.displayNameShort(pt)
       }, sortedAges.map(_._2.toDouble), "Live API")
@@ -94,5 +72,24 @@ object FlightChartComponent {
     })
     .build
 
+  def summariseNationlaties(nats: Map[Nationality, Int], numberToShow: Int): Map[Nationality, Int] =
+    nats
+      .toList
+      .sortBy {
+        case (_, total) => total
+      }
+      .reverse
+      .splitAt(numberToShow) match {
+      case (relevant, other) if other.nonEmpty =>
+        relevant.toMap + (Nationality("Other") -> other.map(_._2).sum)
+      case (all, _) => all.toMap
+    }
+
   def apply(props: Props): VdomElement = component(props)
+
+  case class Props(
+                    flightWithSplits: ApiFlightWithSplits,
+                    passengerInfo: PassengerInfoSummary
+                  )
+
 }

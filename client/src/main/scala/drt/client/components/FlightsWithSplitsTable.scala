@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
-import drt.client.components.FlightComponents.SplitsGraph
+import drt.client.components.FlightComponents.{SplitsGraph, hasApiSplits}
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.TooltipComponent._
 import drt.client.services.JSDateConversions.SDate
@@ -243,9 +243,12 @@ object FlightTableRow {
           ^.className := flightCodeClass,
           flightCodeCell,
           " ",
-          props
-            .maybePassengerInfoSummary
-            .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
+
+          if (hasApiSplits(flightWithSplits: ApiFlightWithSplits))
+            props
+              .maybePassengerInfoSummary
+              .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
+          else EmptyVdom
         ),
 
         <.td(props.originMapper(flight.Origin)),
