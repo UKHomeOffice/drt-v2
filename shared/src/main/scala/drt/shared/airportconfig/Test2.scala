@@ -22,7 +22,6 @@ object Test2 extends AirportConfigLike {
     ),
     slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45, FastTrack -> 25),
     crunchOffsetMinutes = 240,
-    dayLengthHours = 36,
     defaultWalkTimeMillis = Map(
       T1 -> 600000L,
       T2 -> 600000L

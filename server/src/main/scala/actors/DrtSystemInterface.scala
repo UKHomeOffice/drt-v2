@@ -106,7 +106,17 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val staffUpdates: ActorRef
   val flightUpdates: ActorRef
 
-  def feedActors: List[ActorRef] = List(liveArrivalsActor, liveBaseArrivalsActor, forecastArrivalsActor, baseArrivalsActor, voyageManifestsActor)
+  lazy private val feedActors: Map[FeedSource, ActorRef] = Map(
+    LiveFeedSource -> liveArrivalsActor,
+    LiveBaseFeedSource -> liveBaseArrivalsActor,
+    ForecastFeedSource -> forecastArrivalsActor,
+    AclFeedSource -> baseArrivalsActor,
+    ApiFeedSource -> voyageManifestsActor
+  )
+
+  lazy val feedActorsForPort: Map[FeedSource, ActorRef] = feedActors.filter {
+    case (feedSource: FeedSource, _) => isValidFeedSource(feedSource)
+  }
 
   val aclFeed: AclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
 
@@ -395,8 +405,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       }
   }
 
-  def queryActorWithRetry[A](askableActor: ActorRef, toAsk: Any): Future[Option[A]] = {
-    val future = askableActor.ask(toAsk)(new Timeout(2 minutes)).map {
+  def queryActorWithRetry[A](actor: ActorRef, toAsk: Any): Future[Option[A]] = {
+    val future = actor.ask(toAsk)(new Timeout(2 minutes)).map {
       case Some(state: A) if state.isInstanceOf[A] => Option(state)
       case state: A if !state.isInstanceOf[Option[A]] => Option(state)
       case _ => None
@@ -406,11 +416,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     Retry.retry(future, RetryDelays.fibonacci, 3, 5 seconds)
   }
 
-  def getFeedStatus: Future[Seq[FeedSourceStatuses]] = Source(feedActors)
-    .mapAsync(1) { actor =>
-      queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
+  def getFeedStatus: Future[Seq[FeedSourceStatuses]] = Source(feedActorsForPort)
+    .mapAsync(1) {
+      case (source, actor) => queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
     }
     .collect { case Some(fs) => fs }
-    .filter(fss => isValidFeedSource(fss.feedSource))
     .runWith(Sink.seq)
 }

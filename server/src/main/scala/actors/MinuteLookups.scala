@@ -23,7 +23,6 @@ trait MinuteLookupsLike {
   val now: () => SDateLike
   val expireAfterMillis: Int
   val queuesByTerminal: Map[Terminal, Seq[Queue]]
-  val replayMaxCrunchStateMessages: Int
   val requestAndTerminateActor: ActorRef
 
   val updateCrunchMinutes: (Terminal, SDateLike, MinutesContainer[CrunchMinute, TQM]) => Future[MinutesContainer[CrunchMinute, TQM]] =
@@ -63,8 +62,7 @@ trait MinuteLookupsLike {
 case class MinuteLookups(system: ActorSystem,
                          now: () => SDateLike,
                          expireAfterMillis: Int,
-                         queuesByTerminal: Map[Terminal, Seq[Queue]],
-                         override val replayMaxCrunchStateMessages: Int)
+                         queuesByTerminal: Map[Terminal, Seq[Queue]])
                         (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "minutes-lookup-kill-actor")
 
