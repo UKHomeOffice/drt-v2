@@ -223,7 +223,8 @@ object FlightTableRow {
 
       val flightCodeClass = if (props.hasArrivalSourcesAccess) "arrivals__table__flight-code arrivals__table__flight-code--clickable" else "arrivals__table__flight-code"
 
-      val flightCodeCell = if (props.hasArrivalSourcesAccess) <.span(
+      val flightCodeElement = if (props.hasArrivalSourcesAccess) <.span(
+        ^.cls := "arrivals__table__flight-code-value",
         ^.onClick --> Callback(SPACircuit.dispatch {
           props.viewMode match {
             case vm: ViewDay if vm.isHistoric(SDate.now()) =>
@@ -235,20 +236,24 @@ object FlightTableRow {
           }
         }),
         allCodes.mkString(" - "))
-      else <.span(allCodes.mkString(" - "))
+      else <.span(
+        ^.cls := "arrivals__table__flight-code-value",
+        allCodes.mkString(" - ")
+      )
 
       val firstCells = List[TagMod](
 
         <.td(
           ^.className := flightCodeClass,
-          flightCodeCell,
-          " ",
-
-          if (hasApiSplits(flightWithSplits: ApiFlightWithSplits))
-            props
-              .maybePassengerInfoSummary
-              .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
-          else EmptyVdom
+          <.span(
+            ^.cls := "arrivals__table__flight-code-wrapper",
+            flightCodeElement,
+            if (hasApiSplits(flightWithSplits: ApiFlightWithSplits))
+              props
+                .maybePassengerInfoSummary
+                .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
+            else EmptyVdom
+          )
         ),
 
         <.td(props.originMapper(flight.Origin)),
