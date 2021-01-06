@@ -331,16 +331,16 @@ class ArrivalsGraphStage(name: String = "",
           val potentialForecastBaseKey = scheduleTimeApproximation(key, LiveBaseArrivals, baseLiveArrival, BaseArrivals)
           log.info(s"live arrival merge,liveBaseArrivals searchKey $key and forecastBaseArrivals potentialForecastBaseKey $potentialForecastBaseKey.")
           potentialForecastBaseKey.flatMap { pKey =>
-            forecastBaseArrivals.get(pKey).map(liveArrival => LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
+            forecastBaseArrivals.get(pKey).map(forecastBaseArrival => LiveArrivalsUtil.mergePortFeedWithBase(forecastBaseArrival, baseLiveArrival))
           }
         }
 
-        case _ if forecastBaseArrivals.get(key).map(foundArrival => scheduleTimeApproximation(key, BaseArrivals, foundArrival, LiveBaseArrivals, true)).isDefined =>
+        case _ if forecastBaseArrivals.get(key).flatMap(foundArrival => scheduleTimeApproximation(key, BaseArrivals, foundArrival, LiveBaseArrivals, true)).isDefined =>
           forecastBaseArrivals.get(key).flatMap { forecastArrival =>
             val potentialForecastKey = scheduleTimeApproximation(key, BaseArrivals, forecastArrival, LiveBaseArrivals)
             log.info(s"forecast base arrival merge,forecastBaseArrivals searchKey $key and LiveBaseArrivals potentialForecastKey $potentialForecastKey.")
             potentialForecastKey.flatMap { pKey =>
-              liveBaseArrivals.get(pKey).map(liveArrival => LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, forecastArrival))
+              liveBaseArrivals.get(pKey).map(liveBaseArrival => LiveArrivalsUtil.mergePortFeedWithBase(forecastArrival,liveBaseArrival))
             }
           }
 
