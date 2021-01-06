@@ -261,7 +261,7 @@ class ArrivalsGraphStage(name: String = "",
     }
 
 
-    def scheduleTimeApproximation(searchKey: UniqueArrival, foundArrival: Arrival, arrivalsSourceType: ArrivalsSourceType, logMessage: Boolean = false): Option[UniqueArrival] = {
+    def scheduleTimeApproximation(searchKey: UniqueArrival, searchKeyArrivalsSourceType: ArrivalsSourceType, foundArrival: Arrival, arrivalsSourceType: ArrivalsSourceType, logMessage: Boolean = false): Option[UniqueArrival] = {
 
       val arrivalMap: SortedMap[UniqueArrival, Arrival] = arrivalsSourceType match {
         case LiveArrivals => liveArrivals //Live feeds arrivals
@@ -274,21 +274,20 @@ class ArrivalsGraphStage(name: String = "",
       }
 
       val potentialKey = if (potentialKeyList.size > 1) {
-        log.warn(s"Found multiple potentialKey $potentialKeyList for searchKey $searchKey within an hour of scheduled Approximation in sourceType $arrivalsSourceType")
+        log.warn(s"Found multiple potentialKey $potentialKeyList for $searchKeyArrivalsSourceType searchKey $searchKey within an hour of scheduled Approximation in sourceType $arrivalsSourceType")
         potentialKeyList.toSeq.sortBy(_.scheduled).headOption
       } else {
         potentialKeyList.headOption
       }
 
-
       potentialKey match {
         case Some(key) if arrivalMap.get(key).exists(_.Origin == foundArrival.Origin) =>
           Some(key)
         case Some(key) => if (logMessage)
-          log.warn(s"ScheduledTime Approximation origin ${foundArrival.Origin} match not found for potential Key $key in sourceType $arrivalsSourceType")
+          log.warn(s"ScheduledTime Approximation $searchKeyArrivalsSourceType searchKey $searchKey and origin ${foundArrival.Origin} match not found for potential Key $key in sourceType $arrivalsSourceType")
           None
         case None => if (logMessage)
-          log.warn(s"ScheduledTime Approximation search for searchKey $searchKey not found within an hour in sourceType $arrivalsSourceType")
+          log.warn(s"ScheduledTime Approximation search for $searchKeyArrivalsSourceType searchKey $searchKey not found within an hour in sourceType $arrivalsSourceType")
           None
       }
     }
@@ -306,9 +305,9 @@ class ArrivalsGraphStage(name: String = "",
             .withSaneEstimates(mergedLiveArrival)
           Option(sanitisedLiveArrival)
 
-        case (Some(liveArrival), None) if scheduleTimeApproximation(key, liveArrival, LiveBaseArrivals, true).isDefined => {
-          val potentialLiveBaseKey = scheduleTimeApproximation(key, liveArrival, LiveBaseArrivals)
-          log.info(s"arrival merge,liveArrivals searchKey $key and LiveBaseArrivals potentialLiveBaseKey $potentialLiveBaseKey.")
+        case (Some(liveArrival), None) if scheduleTimeApproximation(key, LiveArrivals, liveArrival, LiveBaseArrivals, true).isDefined => {
+          val potentialLiveBaseKey = scheduleTimeApproximation(key, LiveArrivals, liveArrival, LiveBaseArrivals)
+          log.info(s"live arrival merge,liveArrivals searchKey $key and LiveBaseArrivals potentialLiveBaseKey $potentialLiveBaseKey.")
           potentialLiveBaseKey.flatMap { pKey =>
             liveBaseArrivals.get(pKey).map(baseLiveArrival => LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
           }
@@ -316,9 +315,9 @@ class ArrivalsGraphStage(name: String = "",
 
         case (Some(liveArrival), None) => Option(liveArrival)
 
-        case (None, Some(baseLiveArrival)) if scheduleTimeApproximation(key, baseLiveArrival, LiveArrivals, true).isDefined => {
-          val potentialLiveKey = scheduleTimeApproximation(key, baseLiveArrival, LiveArrivals)
-          log.info(s"arrival merge,liveBaseArrivals searchKey $key and LiveArrivals potentialLiveKey $potentialLiveKey.")
+        case (None, Some(baseLiveArrival)) if scheduleTimeApproximation(key, LiveBaseArrivals, baseLiveArrival, LiveArrivals, true).isDefined => {
+          val potentialLiveKey = scheduleTimeApproximation(key, LiveBaseArrivals, baseLiveArrival, LiveArrivals)
+          log.info(s"live base arrival merge,liveBaseArrivals searchKey $key and LiveArrivals potentialLiveKey $potentialLiveKey.")
           potentialLiveKey.flatMap { pKey =>
             liveArrivals.get(pKey).map(liveArrival => LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
           }
@@ -328,16 +327,26 @@ class ArrivalsGraphStage(name: String = "",
           LiveArrivalsUtil.mergePortFeedWithBase(forecastBaseArrival, baseLiveArrival)
         }
 
-        case (None, Some(baseLiveArrival)) if scheduleTimeApproximation(key, baseLiveArrival, BaseArrivals, true).isDefined => {
-          val potentialForecastBaseKey = scheduleTimeApproximation(key, baseLiveArrival, BaseArrivals)
+        case (None, Some(baseLiveArrival)) if scheduleTimeApproximation(key, LiveBaseArrivals, baseLiveArrival, BaseArrivals, true).isDefined => {
+          val potentialForecastBaseKey = scheduleTimeApproximation(key, LiveBaseArrivals, baseLiveArrival, BaseArrivals)
           log.info(s"live arrival merge,liveBaseArrivals searchKey $key and forecastBaseArrivals potentialForecastBaseKey $potentialForecastBaseKey.")
           potentialForecastBaseKey.flatMap { pKey =>
             forecastBaseArrivals.get(pKey).map(liveArrival => LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival))
           }
         }
 
+        case _ if forecastBaseArrivals.get(key).map(foundArrival => scheduleTimeApproximation(key, BaseArrivals, foundArrival, LiveBaseArrivals, true)).isDefined =>
+          forecastBaseArrivals.get(key).flatMap { forecastArrival =>
+            val potentialForecastKey = scheduleTimeApproximation(key, BaseArrivals, forecastArrival, LiveBaseArrivals)
+            log.info(s"forecast base arrival merge,forecastBaseArrivals searchKey $key and LiveBaseArrivals potentialForecastKey $potentialForecastKey.")
+            potentialForecastKey.flatMap { pKey =>
+              liveBaseArrivals.get(pKey).map(liveArrival => LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, forecastArrival))
+            }
+          }
+
         case _ => forecastBaseArrivals.get(key)
       }
+
       maybeBestArrival.map(bestArrival => {
         val arrivalForFlightCode = forecastBaseArrivals.getOrElse(key, bestArrival)
         mergeBestFieldsFromSources(arrivalForFlightCode, bestArrival)
