@@ -113,7 +113,9 @@ object Actions {
 
   case class SetPassengerInfoSummary(utcDate: UtcDate, infoSummaries: Seq[PassengerInfoSummary]) extends Action
 
-  case object PollForPassengerInfo extends Action
+  case object GetPassengerInfoForCurrentFlights extends Action
+
+  case object GetPassengerInfoForFlights extends Action
 
   case class UpdateAirportInfo(code: PortCode, info: Option[AirportInfo]) extends Action
 

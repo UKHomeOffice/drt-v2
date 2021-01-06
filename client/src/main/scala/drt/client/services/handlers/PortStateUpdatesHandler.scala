@@ -1,13 +1,13 @@
 package drt.client.services.handlers
 
+import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
-import diode.Implicits.runAfterImpl
 import drt.client.actions.Actions._
 import drt.client.logger._
 import drt.client.services._
-import drt.shared._
 import drt.shared.CrunchApi._
+import drt.shared._
 import org.scalajs.dom
 import upickle.default.read
 
@@ -43,9 +43,14 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
       modelRW.value match {
         case (Ready(existingState), _) =>
           val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
-          val scheduledUpdateRequest = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
+          val scheduledUpdateRequests = Effect(Future(SchedulePortStateUpdateRequest(viewMode))) +
+            Effect(Future(GetPassengerInfoForFlights))
+
           val newOriginCodes = crunchUpdates.flights.map(_.apiFlight.Origin) -- existingState.flights.map { case (_, fws) => fws.apiFlight.Origin }
-          val effects = if (newOriginCodes.nonEmpty) scheduledUpdateRequest + Effect(Future(GetAirportInfos(newOriginCodes))) else scheduledUpdateRequest
+          val effects = if (newOriginCodes.nonEmpty)
+            scheduledUpdateRequests + Effect(Future(GetAirportInfos(newOriginCodes)))
+          else
+            scheduledUpdateRequests
 
           updated((Ready(newState), crunchUpdates.latest), effects)
 

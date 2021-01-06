@@ -23,17 +23,13 @@ class PassengerInfoSummaryHandler[M](
     .zoom(_.map(_.flights.keys.map(k => SDate(k.scheduled).toUtcDate).toSet)).value.getOrElse(Set())
 
   override def handle: PartialFunction[Any, ActionResult[M]] = {
-    case PollForPassengerInfo =>
+    case GetPassengerInfoForFlights =>
       val flightDays = daysToRequestManifestsFor.map(day => Effect(Future(GetPassengerInfoSummary(day)))).toList
 
-      val pollDelay = if (flightDays.isEmpty)
-        PollDelay.passengerInfoDelayWaitingForFlights
-      else
-        PollDelay.passengerInfoDelay
+      val firstFlightDay: Effect = flightDays.head
+      val remainingFlightDays = flightDays.tail
 
-      val pollEffect: Effect = Effect(Future(RetryActionAfter(PollForPassengerInfo, pollDelay)))
-
-      val effects = flightDays.foldLeft(pollEffect)((acc, ef) => acc + ef)
+      val effects = remainingFlightDays.foldLeft(firstFlightDay)((acc, ef) => acc + ef)
 
       effectOnly(effects)
 

@@ -163,8 +163,7 @@ object SPAMain {
       GetAlerts(0L),
       GetShowAlertModalDialog,
       GetOohStatus,
-      GetFeatureFlags,
-      PollForPassengerInfo
+      GetFeatureFlags
     )
 
     initActions.foreach(SPACircuit.dispatch(_))
