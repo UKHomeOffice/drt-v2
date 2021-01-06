@@ -9,8 +9,7 @@ import {todayAtUtc} from '../support/time-helpers';
 describe('Arrivals CSV Export', () => {
 
   const scheduledDateTime = todayAtUtc(0, 55);
-  const schDateString = scheduledDateTime.format("YYYY-MM-DD");
-  const schTimeString = scheduledDateTime.format('HH:mm:00');
+
   const estTime = todayAtUtc(1, 5);
   const actTime = todayAtUtc(1, 7);
   const estChoxTime = todayAtUtc(1, 11);
@@ -22,7 +21,7 @@ describe('Arrivals CSV Export', () => {
     cy.deleteData();
   });
 
-  const manifest = (passengerList): object => manifestForDateTime(schDateString, schTimeString, passengerList)
+  const manifest = (passengerList): object => manifestForDateTime(scheduledDateTime, passengerList)
 
   const schDateLocal = scheduledDateTime.tz("Europe/London").format("YYYY-MM-DD");
   const schTimeLocal = scheduledDateTime.tz("Europe/London").format("HH:mm");

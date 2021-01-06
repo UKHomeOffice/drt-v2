@@ -1,7 +1,7 @@
 import moment from "moment-timezone";
 moment.locale("en-gb");
 
-import { manifestForDateTime, passengerProfiles, adultWithCountryCode } from '../support/manifest-helpers'
+import { manifestForDateTime, passengerProfiles } from '../support/manifest-helpers'
 import { todayAtUtc } from '../support/time-helpers'
 
 
@@ -11,14 +11,10 @@ describe('API splits', () => {
     cy.deleteData();
   });
 
-  const scheduledTime = todayAtUtc(0, 55);
-
-  const scheduledDateString = scheduledTime.format("YYYY-MM-DD");
-  const scheduledTimeString = scheduledTime.format("HH:mm:ss");
+  const scheduledTime = todayAtUtc(14, 55);
 
   const manifest = (passengerList): object => manifestForDateTime(
-    scheduledDateString,
-    scheduledTimeString,
+    scheduledTime,
     passengerList
   )
 
@@ -96,8 +92,17 @@ describe('API splits', () => {
       }).then((resp) => {
         expect(resp.body).to.equal(JSON.stringify(expectedNationalitySummary), "Api splits incorrect for regular users")
       })
+      .get("[aria-expanded=\"false\"]")
+      .trigger("mouseenter")
+      .get(".nationality-chart")
+      .should("be.visible")
+      .get(".passenger-type-chart")
+      .should("be.visible")
+      .get(".age-breakdown-chart")
+      .should("be.visible")
       ;
 
   });
+
 });
 

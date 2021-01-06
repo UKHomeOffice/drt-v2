@@ -33,7 +33,7 @@ object FlightChartComponent {
         <.div(^.cls := "container arrivals__table__flight__chart-box",
           <.div(^.cls := "row",
             if (sortedNats.toMap.values.sum > 0)
-              <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
+              <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart nationality-chart",
                 ChartJSComponent.Bar(
                   ChartJsProps(
                     data = nationalityData,
@@ -45,7 +45,7 @@ object FlightChartComponent {
             else
               EmptyVdom,
             if (sortedPaxTypes.toMap.values.sum > 0 && sortedAges.toMap.values.sum > 0)
-              <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
+              <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart passenger-type-chart",
                 ChartJSComponent.Bar(
                   ChartJsProps(
                     data = paxTypeData,
@@ -56,7 +56,7 @@ object FlightChartComponent {
             else
               EmptyVdom,
             if (sortedAges.toMap.values.sum > 0)
-              <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart",
+              <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart age-breakdown-chart",
                 ChartJSComponent.Bar(
                   ChartJsProps(
                     data = ageData,

@@ -174,6 +174,16 @@ Cypress.Commands.add('addManifest', (manifest) => {
   cy.request('POST', '/test/manifest', manifest)
 });
 
+Cypress.Commands.add('navigateToArrivalsTab', () => {
+  cy
+    .navigateHome()
+    .navigateToMenuItem('T1')
+    .selectCurrentTab()
+    .get("#currentTab").click()
+    .get("#arrivalsTab").click()
+    .choose24Hours()
+});
+
 Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
   cy
     .navigateHome()

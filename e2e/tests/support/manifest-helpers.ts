@@ -95,7 +95,11 @@ const adultWithCountryCode = (countryCode: string): object => {
 }
 
 
-const manifestForDateTime = (dateString, timeString, passengerList): object => {
+const manifestForDateTime = (sheduled: moment.Moment, passengerList): object => {
+
+    const dateString = sheduled.format("YYYY-MM-DD");
+    const timeString = sheduled.format("HH:mm:ss");
+
     return {
         "EventCode": "DC",
         "DeparturePortCode": "AMS",
