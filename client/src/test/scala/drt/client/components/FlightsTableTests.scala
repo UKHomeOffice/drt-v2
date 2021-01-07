@@ -91,11 +91,11 @@ object FlightsTableTests extends TestSuite {
       def thead(timeline: Boolean = false): TagOf[TableSection] = <.thead(
         <.tr(
           if (timeline) <.th("Timeline") else TagMod(""),
-          <.th("Flight"," ", wbrFlightColorTooltip),
+          <.th(<.div(^.cls := "arrivals__table__flight-code-wrapper", "Flight", " ", wbrFlightColorTooltip)),
           <.th("Origin"),
           <.th("Country", ^.className := "country"),
           <.th("Gate / Stand", ^.className := "gate-stand"),
-          <.th("Status"," ", arrivalStatusTooltip, ^.className := "status"),
+          <.th("Status", " ", arrivalStatusTooltip, ^.className := "status"),
           <.th("Sch"),
           <.th("Est"),
           <.th("Act"),
@@ -103,9 +103,9 @@ object FlightsTableTests extends TestSuite {
           <.th("Act Chox"),
           <.th("Est PCP"),
           <.th("Est PCP Pax"),
-          <.th("e-Gates"," ",splitsTableTooltip),
-          <.th("EEA"," ",splitsTableTooltip),
-          <.th("Non-EEA"," ",splitsTableTooltip),
+          <.th("e-Gates", " ", splitsTableTooltip),
+          <.th("EEA", " ", splitsTableTooltip),
+          <.th("Non-EEA", " ", splitsTableTooltip),
           <.th("Transfer Pax")
         ))
 
@@ -128,7 +128,9 @@ object FlightsTableTests extends TestSuite {
             thead(),
             <.tbody(
               <.tr(^.className := " before-now",
-                <.td(^.className := "arrivals__table__flight-code", <.span(testFlight.flightCodeString), " "),
+                <.td(^.className := "arrivals__table__flight-code", <.div(
+                  ^.cls := "arrivals__table__flight-code-wrapper",
+                  <.span(^.cls := "arrivals__table__flight-code-value", testFlight.flightCodeString))),
                 <.td(testFlight.Origin.toString),
                 <.td(<.span(<.span())),
                 <.td(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}"),
@@ -178,7 +180,9 @@ object FlightsTableTests extends TestSuite {
               <.tbody(
                 <.tr(^.className := " before-now",
                   <.td(<.span("herebecallback")),
-                  <.td(^.className := "arrivals__table__flight-code", <.span(testFlight.flightCodeString), " "),
+                  <.td(^.className := "arrivals__table__flight-code", <.div(
+                    ^.cls := "arrivals__table__flight-code-wrapper",
+                    <.span(^.cls := "arrivals__table__flight-code-value", testFlight.flightCodeString))),
                   <.td(testFlight.Origin.toString),
                   <.td(<.span(<.span())),
                   <.td(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}"),
@@ -216,7 +220,9 @@ object FlightsTableTests extends TestSuite {
               thead(),
               <.tbody(
                 <.tr(^.className := " before-now",
-                  <.td(^.className := "arrivals__table__flight-code", <.span(testFlight.flightCodeString), " "),
+                  <.td(^.className := "arrivals__table__flight-code", <.div(
+                    ^.cls := "arrivals__table__flight-code-wrapper",
+                    <.span(^.cls := "arrivals__table__flight-code-value", testFlight.flightCodeString))),
                   <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin.toString)), <.td(<.span(<.span())),
                   <.td(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}"),
                   <.td(testFlight.Status.description),
@@ -271,11 +277,11 @@ object FlightsTableTests extends TestSuite {
       def thead(timeline: Boolean = false): TagOf[TableSection] = <.thead(
         <.tr(
           if (timeline) <.th("Timeline") else TagMod(""),
-          <.th("Flight"," ", wbrFlightColorTooltip),
+          <.th(<.div(^.cls := "arrivals__table__flight-code-wrapper", "Flight", " ", wbrFlightColorTooltip)),
           <.th("Origin"),
           <.th("Country", ^.className := "country"),
           <.th("Gate / Stand", ^.className := "gate-stand"),
-          <.th("Status"," ", arrivalStatusTooltip, ^.className := "status"),
+          <.th("Status", " ", arrivalStatusTooltip, ^.className := "status"),
           <.th("Sch"),
           <.th("Est"),
           <.th("Act"),
@@ -283,9 +289,9 @@ object FlightsTableTests extends TestSuite {
           <.th("Act Chox"),
           <.th("Est PCP"),
           <.th("Est PCP Pax"),
-          <.th("e-Gates"," ",splitsTableTooltip),
-          <.th("EEA"," ",splitsTableTooltip),
-          <.th("Non-EEA"," ",splitsTableTooltip)
+          <.th("e-Gates", " ", splitsTableTooltip),
+          <.th("EEA", " ", splitsTableTooltip),
+          <.th("Non-EEA", " ", splitsTableTooltip)
         ))
 
       val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
@@ -307,7 +313,9 @@ object FlightsTableTests extends TestSuite {
             thead(),
             <.tbody(
               <.tr(^.className := " before-now",
-                <.td(^.className := "arrivals__table__flight-code", <.span(testLTNFlight.flightCodeString), " "),
+                <.td(^.className := "arrivals__table__flight-code", <.div(
+                  ^.cls := "arrivals__table__flight-code-wrapper",
+                  <.span(^.cls := "arrivals__table__flight-code-value", testLTNFlight.flightCodeString))),
                 <.td(testLTNFlight.Origin.toString),
                 <.td(<.span(<.span())),
                 <.td(s"${testLTNFlight.Gate.getOrElse("")} / ${testLTNFlight.Stand.getOrElse("")}"),

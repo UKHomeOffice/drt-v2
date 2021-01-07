@@ -89,8 +89,6 @@ object ChartJSComponent {
             js.Dictionary("ticks" ->
               js.Dictionary(
                 "beginAtZero" -> true,
-                "padding" -> 5,
-                "precision" -> 0,
                 "suggestedMax" -> suggestedMax.orUndefined
               )
             )
@@ -100,8 +98,6 @@ object ChartJSComponent {
             js.Dictionary("ticks" ->
               js.Dictionary(
                 "beginAtZero" -> true,
-                "padding" -> 5,
-                "precision" -> 0,
                 "suggestedMax" -> suggestedMax.orUndefined
               )
             )
