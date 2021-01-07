@@ -6,7 +6,7 @@ import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.{Children, JsComponent}
 
 import scala.scalajs.js
-import scala.scalajs.js.{Dictionary, JSON}
+import scala.scalajs.js.Dictionary
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSImport
 
@@ -78,19 +78,32 @@ object ChartJSComponent {
   }
 
   object ChartJsOptions {
-    def apply(title: String): ChartJsOptions = {
+    def withSuggestedMax(title: String, suggestedMax: Int): ChartJsOptions = options(title, Option(suggestedMax))
 
+    def apply(title: String): ChartJsOptions = options(title, None)
+
+    def options(title: String, suggestedMax: Option[Double]): ChartJsOptions = {
       val scales: Dictionary[js.Any] = js.Dictionary(
         "yAxes" ->
           js.Array(
             js.Dictionary("ticks" ->
-              js.Dictionary("beginAtZero" -> true)
+              js.Dictionary(
+                "beginAtZero" -> true,
+                "padding" -> 5,
+                "precision" -> 0,
+                "suggestedMax" -> suggestedMax.orUndefined
+              )
             )
           ),
         "xAxes" ->
           js.Array(
             js.Dictionary("ticks" ->
-              js.Dictionary("beginAtZero" -> true)
+              js.Dictionary(
+                "beginAtZero" -> true,
+                "padding" -> 5,
+                "precision" -> 0,
+                "suggestedMax" -> suggestedMax.orUndefined
+              )
             )
           )
       )

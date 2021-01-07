@@ -130,7 +130,9 @@ object FlightsWithSplitsTable {
         case (label, _) => label != "Est Chox" || props.hasEstChox
       }
       .map {
-        case (label, None) if label == "Flight" => <.th(label, " ", wbrFlightColorTooltip)
+        case (label, None) if label == "Flight" => <.th(^.minWidth:="75",
+          <.div(^.cls := "arrivals__table__flight-code-wrapper", ^.width := "75", label, " ", wbrFlightColorTooltip)
+        )
         case (label, None) => <.th(label)
         case (label, Some(className)) if className == "status" => <.th(label, " ", arrivalStatusTooltip, ^.className := className)
         case (label, Some(className)) => <.th(label, ^.className := className)
@@ -245,7 +247,7 @@ object FlightTableRow {
 
         <.td(
           ^.className := flightCodeClass,
-          <.span(
+          <.div(
             ^.cls := "arrivals__table__flight-code-wrapper",
             flightCodeElement,
             if (hasApiSplits(flightWithSplits: ApiFlightWithSplits))

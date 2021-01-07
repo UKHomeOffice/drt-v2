@@ -39,7 +39,7 @@ object FlightChartComponent {
                     data = nationalityData,
                     300,
                     300,
-                    options = ChartJsOptions("Nationality breakdown")
+                    options = ChartJsOptions.withSuggestedMax("Nationality breakdown", sortedNats.toMap.values.max + 5)
                   )
                 ))
             else
@@ -51,7 +51,7 @@ object FlightChartComponent {
                     data = paxTypeData,
                     300,
                     300,
-                    options = ChartJsOptions("Passenger types")
+                    options = ChartJsOptions.withSuggestedMax("Passenger types", sortedPaxTypes.toMap.values.max + 5)
                   )))
             else
               EmptyVdom,
@@ -62,7 +62,7 @@ object FlightChartComponent {
                     data = ageData,
                     300,
                     300,
-                    options = ChartJsOptions("Age breakdown")
+                    options = ChartJsOptions.withSuggestedMax("Age breakdown", sortedAges.toMap.values.max + 5)
                   ))
               )
             else
