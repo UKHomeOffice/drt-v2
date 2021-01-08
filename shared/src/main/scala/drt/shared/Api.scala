@@ -1,6 +1,7 @@
 package drt.shared
 
 import java.util.UUID
+
 import drt.shared.CrunchApi._
 import drt.shared.EventTypes.{CI, DC, InvalidEventType}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
@@ -11,6 +12,9 @@ import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import drt.shared.dates.{LocalDate, UtcDate}
 import ujson.Js.Value
+import uk.gov.homeoffice.drt.Urls
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.Role
 import upickle.Js
 import upickle.default._
 
@@ -18,9 +22,6 @@ import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
-import uk.gov.homeoffice.drt.Urls
-import uk.gov.homeoffice.drt.auth.Roles.Role
-import uk.gov.homeoffice.drt.auth.LoggedInUser
 
 object DeskAndPaxTypeCombinations {
   val egate = "eGate"
@@ -247,10 +248,15 @@ trait WithTerminal[A] extends Ordered[A] {
   def terminal: Terminal
 }
 
+trait WithPotentialKey[A] extends Ordered[A] {
+  def potentialKey(searchKey: UniqueArrival, scheduledThreshold: Int) = Boolean
+}
+
 case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch)
   extends WithLegacyUniqueId[Int, UniqueArrival]
     with WithTimeAccessor
-    with WithTerminal[UniqueArrival] {
+    with WithTerminal[UniqueArrival]
+    with WithPotentialKey[UniqueArrival] {
 
   override def compare(that: UniqueArrival): Int =
     scheduled.compare(that.scheduled) match {
@@ -264,6 +270,11 @@ case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSince
   override def timeValue: MillisSinceEpoch = scheduled
 
   override def uniqueId: Int = s"$terminal$scheduled$number".hashCode
+
+  val potentialKey: (UniqueArrival, Int) => Boolean = (searchKey, scheduledThreshold) =>
+    searchKey.number == this.number && searchKey.terminal == this.terminal && Math.abs(searchKey.scheduled - this.scheduled) <= scheduledThreshold
+
+
 }
 
 object UniqueArrival {

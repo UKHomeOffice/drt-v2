@@ -231,7 +231,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
   }
 
   "Given a live arrival with a scheduled arrival time and a live base arrival with in 60 minutes scheduled arrival time and forecast arrival with scheduled same as forecast base" +
-    "Then they should not merged and scheduled Departure not present" >> {
+    "Then they should merged and scheduled Departure present" >> {
     val probe = TestProbe("arrivals")
     val (_, forecastArrivalSource, liveBaseSource, liveArrivalSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
 
