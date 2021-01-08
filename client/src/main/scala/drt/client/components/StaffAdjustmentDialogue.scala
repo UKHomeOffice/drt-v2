@@ -10,7 +10,6 @@ import drt.client.services._
 import drt.shared.{SDateLike, StaffMovements}
 import drt.shared.Terminals.Terminal
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}

@@ -37,10 +37,22 @@ message SplitMessage {
     optional string style = 3;
 }
 
+message SplitNationalityCountMessage {
+    optional string paxNationality = 1;
+    optional double count = 2;
+}
+
+message SplitAgeCountMessage {
+    optional int32 paxAge = 1;
+    optional double count = 2;
+}
+
 message PaxTypeAndQueueCountMessage {
     optional string paxType = 1;
     optional string queueType = 2;
     optional double paxValue = 3;
+    repeated SplitNationalityCountMessage nationalities = 5;
+    repeated SplitAgeCountMessage ages = 6;
 }
 
 message CrunchMinutesMessage {

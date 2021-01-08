@@ -23,6 +23,11 @@ object FlightComponents {
     case _ => "pax-unknown"
   }
 
+  def hasApiSplits(flightWithSplits: ApiFlightWithSplits) = flightWithSplits.bestSplits match {
+    case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => true
+    case _ => false
+  }
+
 
   def paxComponentTitle(flight: Arrival): String = {
     val max: String = flight.MaxPax.filter(_ > 0).map(_.toString).getOrElse("n/a")

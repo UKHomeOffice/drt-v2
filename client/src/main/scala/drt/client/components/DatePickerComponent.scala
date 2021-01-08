@@ -6,11 +6,10 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.LoadingState
 import drt.shared.SDateLike
-import japgolly.scalajs.react.extra.Reusability
+import japgolly.scalajs.react.{Callback, ReactEventFromInput, Reusability, ScalaComponent}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.Div
 
 import scala.scalajs.js.Date
@@ -65,7 +64,7 @@ object DatePickerComponent {
 
       def isCurrentSelection = state.selectedDateTime.ddMMyyString == props.terminalPageTab.dateFromUrlOrNow.ddMMyyString
 
-      def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
+      def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate().toInt
 
       def updateUrlWithDateCallback(date: Option[SDateLike]): Callback = {
         props.router.set(

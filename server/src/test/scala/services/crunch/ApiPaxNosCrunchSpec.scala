@@ -6,7 +6,7 @@ import drt.shared.PaxTypesAndQueues._
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, PaxAge, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 

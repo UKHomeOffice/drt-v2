@@ -1,6 +1,8 @@
 package drt.client.services
 
+import drt.client.SPAMain
 import drt.client.logger.LoggerFactory
+import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import org.scalajs.dom
 import org.scalajs.dom.Event
@@ -16,6 +18,7 @@ object ErrorHandler {
 
       error match {
         case e: Exception =>
+          log.error(message, e)
           serverLogger.error(message, e)
         case _ =>
           serverLogger.error(message)

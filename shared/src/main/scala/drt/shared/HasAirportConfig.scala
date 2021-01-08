@@ -5,8 +5,9 @@ import drt.shared.PaxTypes._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
-import ujson.Js.Value
-import upickle.Js
+import drt.shared.api.Arrival
+import ujson.Value
+
 import upickle.default._
 
 import scala.collection.immutable.SortedMap
@@ -159,7 +160,7 @@ object PaxType {
   }
 
   implicit val paxTypeReaderWriter: ReadWriter[PaxType] =
-    readwriter[Js.Value].bimap[PaxType](paxType => paxType.cleanName, (s: Value) => PaxType(s"${s.str}$$"))
+    readwriter[Value].bimap[PaxType](paxType => paxType.cleanName, (s: Value) => PaxType(s"${s.str}$$"))
 }
 
 object PaxTypes {
@@ -190,6 +191,18 @@ object PaxTypes {
     case NonVisaNational => "Non-Visa National"
     case B5JPlusNational => "B5J+ National"
     case B5JPlusNationalBelowEGateAge => "B5J+ Child"
+    case Transit => "Transit"
+    case other => other.name
+  }
+
+  def displayNameShort(pt: PaxType): String = pt match {
+    case EeaMachineReadable => "EEA MRTD"
+    case EeaNonMachineReadable => "EEA NMR"
+    case EeaBelowEGateAge => "EEA U12"
+    case VisaNational => "VN"
+    case NonVisaNational => "NVN"
+    case B5JPlusNational => "B5J+"
+    case B5JPlusNationalBelowEGateAge => "B5J+ U12"
     case Transit => "Transit"
     case other => other.name
   }

@@ -156,7 +156,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         refreshArrivalsOnStart: Boolean,
                         startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {
 
-    val historicalSplitsProvider: SplitProvider = SplitsProvider.csvProvider
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
 
     val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(
@@ -167,7 +166,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val crunchInputs = CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTimeCalculator,
-      historicalSplitsProvider = historicalSplitsProvider,
       portStateActor = portStateActor,
       maxDaysToCrunch = params.forecastMaxDays,
       expireAfterMillis = DrtStaticParameters.expireAfterMillis,

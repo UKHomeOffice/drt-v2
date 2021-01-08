@@ -7,10 +7,9 @@ import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
 import drt.shared.{Forecast, MilliDate, Queues, SDateLike}
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Select
 
 import scala.collection.immutable.Seq

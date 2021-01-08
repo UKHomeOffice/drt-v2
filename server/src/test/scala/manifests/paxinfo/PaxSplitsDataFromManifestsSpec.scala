@@ -3,6 +3,7 @@ package manifests.paxinfo
 import drt.shared._
 import drt.shared.api.AgeRange
 import manifests.passengers.PassengerInfo
+import manifests.paxinfo.ManifestBuilder.manifestWithPassengerAges
 import org.specs2.mutable.Specification
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
@@ -11,27 +12,7 @@ import scala.collection.immutable.List
 
 object PaxSplitsDataFromManifestsSpec extends Specification {
 
-  def manifestWithPassengerAges(ages: List[Int]): VoyageManifest = {
-    VoyageManifest(EventTypes.DC,
-      PortCode("TST"),
-      PortCode("JFK"),
-      VoyageNumber("0001"),
-      CarrierCode("BA"),
-      ManifestDateOfArrival("2020-11-09"),
-      ManifestTimeOfArrival("00:00"),
-      ages.map(age =>
-        PassengerInfoJson(Option(DocumentType("P")),
-          Nationality("GBR"),
-          EeaFlag("EEA"),
-          Option(PaxAge(age)),
-          Option(PortCode("LHR")),
-          InTransit("N"),
-          Option(Nationality("GBR")),
-          Option(Nationality("GBR")),
-          None
-        )
-      ))
-  }
+
 
   "When extracting Age data from a manifest" >> {
     "Given a voyage manifest with 1 passenger aged 11" +

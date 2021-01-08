@@ -2,14 +2,12 @@ package test
 
 import actors._
 import actors.acking.AckingReceiver.Ack
-import actors.queues.ManifestRouterActor
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Status}
 import akka.pattern.ask
 import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorMaterializer, KillSwitch}
 import akka.util.Timeout
-import uk.gov.homeoffice.drt.auth.Roles.Role
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.Arrival
 import drt.shared.{AirportConfig, MilliTimes, PortCode}
@@ -22,6 +20,7 @@ import services.SDate
 import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test.{CSVFixtures, TestArrivalsActor, TestFixtureFeed, TestManifestsActor}
 import test.roles.TestUserRoleProvider
+import uk.gov.homeoffice.drt.auth.Roles.Role
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}

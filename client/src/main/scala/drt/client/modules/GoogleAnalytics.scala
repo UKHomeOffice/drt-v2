@@ -6,12 +6,20 @@ import org.scalajs.dom
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSGlobalScope
+import scala.util.Try
+
 
 object GoogleEventTracker {
+
+  @js.native
+  @JSGlobalScope
+  object Globals extends js.Object {
+    var analytics: js.Any = js.native
+  }
   def trackingCode: String = dom.document.getElementById("ga-code").getAttribute("value")
   def port: String = dom.document.getElementById("port-code").getAttribute("value")
   def userId: String = dom.document.getElementById("user-id").getAttribute("value")
-  def isScriptLoaded: Boolean = js.Dynamic.global.analytics.isInstanceOf[js.Function]
+  def isScriptLoaded: Boolean =  Try(Globals.analytics.isInstanceOf[js.Function]).isSuccess
   private var hasCreateTrackerRun = false
 
   private def runCreateTracker(): Unit = {

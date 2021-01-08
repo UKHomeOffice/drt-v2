@@ -10,8 +10,13 @@ import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import drt.shared.dates.{LocalDate, UtcDate}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+
+import java.util.UUID
+
 import ujson.Js.Value
-import upickle.Js
+import uk.gov.homeoffice.drt.Urls
+import uk.gov.homeoffice.drt.auth.Roles.Role
 import upickle.default._
 
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
@@ -110,7 +115,7 @@ object SplitStyle {
   }
 
   implicit val splitStyleReadWriter: ReadWriter[SplitStyle] =
-    readwriter[Js.Value].bimap[SplitStyle](
+    readwriter[Value].bimap[SplitStyle](
       feedSource => feedSource.toString,
       (s: Value) => apply(s.str)
     )
@@ -124,16 +129,31 @@ case object Ratio extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
-case class Nationality(code: String)
+case class Nationality(code: String) {
+  override def toString: String = code
+}
 
 object Nationality {
   implicit val rw: ReadWriter[Nationality] = macroRW
 }
 
-case class ApiPaxTypeAndQueueCount(passengerType: PaxType,
-                                   queueType: Queue,
-                                   paxCount: Double,
-                                   nationalities: Option[IMap[Nationality, Double]])
+case class PaxAge(years: Int) {
+  def isUnder(age: Int): Boolean = years < age
+
+  override def toString: String = s"$years"
+}
+
+object PaxAge {
+  implicit val rw: ReadWriter[PaxAge] = macroRW
+}
+
+case class ApiPaxTypeAndQueueCount(
+                                    passengerType: PaxType,
+                                    queueType: Queue,
+                                    paxCount: Double,
+                                    nationalities: Option[IMap[Nationality, Double]],
+                                    ages: Option[IMap[PaxAge, Double]]
+                                  )
 
 object ApiPaxTypeAndQueueCount {
   implicit val rw: ReadWriter[ApiPaxTypeAndQueueCount] = macroRW
@@ -363,6 +383,8 @@ case class InvalidVoyageNumber(exception: Throwable) extends VoyageNumberLike {
 }
 
 case object VoyageNumber {
+  implicit val rw: ReadWriter[VoyageNumber] = macroRW
+
   def apply(string: String): VoyageNumberLike = Try(string.toInt) match {
     case Success(value) => VoyageNumber(value)
     case Failure(exception) => InvalidVoyageNumber(exception)
@@ -437,7 +459,7 @@ object FeedSource {
   def apply(feedSource: String): Option[FeedSource] = feedSources.find(fs => fs.toString == feedSource)
 
   implicit val feedSourceReadWriter: ReadWriter[FeedSource] =
-    readwriter[Js.Value].bimap[FeedSource](
+    readwriter[Value].bimap[FeedSource](
       feedSource => feedSource.toString,
       (s: Value) => apply(s.str).getOrElse(UnknownFeedSource)
     )
@@ -459,6 +481,9 @@ case class ArrivalKey(origin: PortCode,
 }
 
 object ArrivalKey {
+
+  implicit val rw: ReadWriter[ArrivalKey] = macroRW
+
   def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled)
 
   def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
@@ -486,10 +511,10 @@ trait SDateLike {
   def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
 
   /**
-    * Days of the week 1 to 7 (Monday is 1)
-    *
-    * @return
-    */
+   * Days of the week 1 to 7 (Monday is 1)
+   *
+   * @return
+   */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int

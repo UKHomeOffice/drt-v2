@@ -1,4 +1,4 @@
-
+import Settings.versions.scalajsReact
 import com.typesafe.config._
 import sbt.Credentials
 import sbt.Keys.{credentials, _}
@@ -17,7 +17,7 @@ lazy val shared = (crossProject(JSPlatform, JVMPlatform).crossType(CrossType.Pur
     libraryDependencies ++= Settings.sharedDependencies.value,
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
-    )
+  )
   // set up settings specific to the JS project
   .jsConfigure(_ enablePlugins ScalaJSWeb)
 
@@ -31,6 +31,20 @@ lazy val sharedJS = shared.js.settings(name := "sharedJS")
 
 // use eliding to drop some debug code in the production build
 lazy val elideOptions = settingKey[Seq[String]]("Set limit for elidable functions")
+
+lazy val clientMacrosJS: Project = (project in file("client-macros"))
+  .enablePlugins(ScalaJSPlugin)
+  .settings(
+    name := "clientMacrosJS",
+    version := Settings.version,
+    scalaVersion := Settings.versions.scala,
+    scalacOptions ++= Settings.scalacOptions,
+    libraryDependencies ++= Seq(
+      "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact withSources(),
+      "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact withSources()
+    )
+  )
+
 
 // instantiate the JS project for SBT with some additional settings
 lazy val client: Project = (project in file("client"))
@@ -49,30 +63,29 @@ lazy val client: Project = (project in file("client"))
     scalacOptions ++= elideOptions.value,
     jsDependencies ++= Settings.jsDependencies.value,
     // reactjs testing
-    requiresDOM := true,
+    requireJsDomEnv in Test := true,
     scalaJSStage in Test := FastOptStage,
-    emitSourceMaps in fullOptJS := true,
     // 'new style js dependencies with scalaBundler'
     npmDependencies in Compile ++= Settings.clientNpmDependencies,
     npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
-    jsDependencies += RuntimeDOM % "test",
     useYarn := true,
     // yes, we want to package JS dependencies
     skip in packageJSDependencies := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.defaultLocal,
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
+    credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // use uTest framework for tests
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
     parallelExecution in Test := false,
     sources in doc in Compile := List()
-    )
+  )
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
   .enablePlugins(ScalaJSWeb)
-  .dependsOn(sharedJS)
+  .dependsOn(sharedJS, clientMacrosJS)
 
 // Client projects (just one in this case)
 lazy val clients = Seq(client)
@@ -100,6 +113,8 @@ lazy val server = (project in file("server"))
     dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-core" % "2.8.7",
     dependencyOverrides += "com.fasterxml.jackson.core" % "jackson-databind" % "2.8.7",
     dependencyOverrides += "com.fasterxml.jackson.module" % "jackson-module-scala_2.11" % "2.8.7",
+    dependencyOverrides += "io.netty" % "netty-all" % "4.0.56.Final",
+
     commands += ReleaseCmd,
     // connect to the client project
     scalaJSProjects := clients,
@@ -125,12 +140,12 @@ lazy val server = (project in file("server"))
     LessKeys.compress in Assets := true,
     PB.targets in Compile := Seq(
       scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
-      ),
+    ),
     PB.deleteTargetDirectory := false,
     TwirlKeys.templateImports += "buildinfo._",
     parallelExecution in Test := false,
     sources in doc in Compile := List()
-    )
+  )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
 

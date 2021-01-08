@@ -27,15 +27,4 @@ object SplitsProvider {
 
   def emptyProvider: SplitProvider = (_, _) => Option.empty[SplitRatios]
 
-  def csvProvider: SplitProvider = {
-    if (shouldUseCsvSplitsProvider) {
-      log.info("SplitsProvider: Using csv splits provider")
-      val provider: (String, MilliDate) => Option[SplitRatios] = CSVPassengerSplitsProvider(CsvPassengerSplitsReader.flightPaxSplitsLinesFromConfig).splitRatioProvider
-      provider
-    }
-    else {
-      log.info("SplitsProvider: using emptyProvider")
-      emptyProvider
-    }
-  }
 }

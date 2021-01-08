@@ -11,8 +11,7 @@ import scala.collection.immutable.Map
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class AirportCountryHandler[M](timeProvider: () => Long, modelRW: ModelRW[M, Map[PortCode, Pot[AirportInfo]]]) extends LoggingActionHandler(modelRW) {
-  def mkPending = Pending(timeProvider())
+class AirportCountryHandler[M](modelRW: ModelRW[M, Map[PortCode, Pot[AirportInfo]]]) extends LoggingActionHandler(modelRW) {
 
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAirportInfos(codes) =>

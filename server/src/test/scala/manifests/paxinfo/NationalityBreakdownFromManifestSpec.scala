@@ -2,6 +2,7 @@ package manifests.paxinfo
 
 import drt.shared._
 import manifests.passengers.PassengerInfo
+import manifests.paxinfo.ManifestBuilder.manifestWithPassengerNationalities
 import org.specs2.mutable.Specification
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
@@ -10,28 +11,7 @@ import scala.collection.immutable.List
 
 object NationalityBreakdownFromManifestSpec extends Specification {
 
-  def manifestWithPassengerNationalities(nats: List[String]): VoyageManifest = {
-    VoyageManifest(EventTypes.DC,
-      PortCode("TST"),
-      PortCode("JFK"),
-      VoyageNumber("0001"),
-      CarrierCode("BA"),
-      ManifestDateOfArrival("2020-11-09"),
-      ManifestTimeOfArrival("00:00"),
-      nats.map(nat =>
-        PassengerInfoJson(
-          DocumentType = Option(DocumentType("P")),
-          DocumentIssuingCountryCode = Nationality(nat),
-          EEAFlag = EeaFlag("EEA"),
-          Age = Option(PaxAge(22)),
-          DisembarkationPortCode = Option(PortCode("LHR")),
-          InTransitFlag = InTransit("N"),
-          DisembarkationPortCountryCode = Option(Nationality(nat)),
-          NationalityCountryCode = Option(Nationality(nat)),
-          PassengerIdentifier = None
-        )
-      ))
-  }
+
 
   "When extracting nationality breakdown" >> {
     "Given a manifest with 1 passenger with a nationality of GB " +

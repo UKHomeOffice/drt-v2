@@ -11,14 +11,10 @@ describe('API splits', () => {
     cy.deleteData();
   });
 
-  const scheduledTime = todayAtUtc(0, 55);
-
-  const scheduledDateString = scheduledTime.format("YYYY-MM-DD");
-  const scheduledTimeString = scheduledTime.format("HH:mm:ss");
+  const scheduledTime = todayAtUtc(14, 55);
 
   const manifest = (passengerList): object => manifestForDateTime(
-    scheduledDateString,
-    scheduledTimeString,
+    scheduledTime,
     passengerList
   )
 
@@ -52,7 +48,28 @@ describe('API splits', () => {
     const ukChildren = ofPassengerProfile(passengerProfiles.ukChild, 1);
     const apiManifest = manifest(ukAdults.concat(ukChildren));
 
-    const expectedNationalitySummary = "[[{\"code\":\"Nationality(GBR)\"},11]]"
+    const expectedNationalitySummary = [
+      {
+        "arrivalKey": {
+          "origin": { "iata": "AMS" },
+          "voyageNumber": { "$type": "drt.shared.VoyageNumber", "numeric": 123 },
+          "scheduled": scheduledTime.unix() * 1000
+        },
+
+        "ageRanges": [
+          [{ "bottom": 25, "top": [49] }, 10],
+          [{ "bottom": 0, "top": [11] }, 1]
+        ],
+
+        "nationalities": [
+          [{ "code": "GBR" }, 11]
+        ],
+
+        "paxTypes": [
+          ["EeaMachineReadable", 10], ["EeaBelowEGateAge", 1]
+        ]
+      }
+    ]
 
     cy
       .addFlight(
@@ -71,12 +88,21 @@ describe('API splits', () => {
       .contains("4")
       .request({
         method: 'GET',
-        url: "/manifest/"+ scheduledTime.format("YYYY-MM-DDTHH:mm") +"/AMS/0123/nationalities",
+        url: "/manifest/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
       }).then((resp) => {
-        expect(resp.body).to.equal(expectedNationalitySummary, "Api splits incorrect for regular users")
+        expect(resp.body).to.equal(JSON.stringify(expectedNationalitySummary), "Api splits incorrect for regular users")
       })
+      .get("[aria-expanded=\"false\"]")
+      .trigger("mouseenter")
+      .get(".nationality-chart")
+      .should("be.visible")
+      .get(".passenger-type-chart")
+      .should("be.visible")
+      .get(".age-breakdown-chart")
+      .should("be.visible")
       ;
 
-
   });
+
 });
+
