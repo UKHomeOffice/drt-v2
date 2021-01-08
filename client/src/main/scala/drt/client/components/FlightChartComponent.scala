@@ -12,7 +12,7 @@ object FlightChartComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
   val component = ScalaComponent.builder[Props]("FlightChart")
     .render_P(p => {
-      val sortedNats = summariseNationlaties(p.passengerInfo.nationalities, 10)
+      val sortedNats = summariseNationalities(p.passengerInfo.nationalities, 10)
         .toList
         .sortBy {
           case (_, pax) => pax
@@ -72,7 +72,7 @@ object FlightChartComponent {
     })
     .build
 
-  def summariseNationlaties(nats: Map[Nationality, Int], numberToShow: Int): Map[Nationality, Int] =
+  def summariseNationalities(nats: Map[Nationality, Int], numberToShow: Int): Map[Nationality, Int] =
     nats
       .toList
       .sortBy {

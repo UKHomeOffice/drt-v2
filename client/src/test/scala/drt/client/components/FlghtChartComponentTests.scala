@@ -16,7 +16,7 @@ object FlghtChartComponentTests extends TestSuite {
         Nationality("ZAF") -> 4,
         Nationality("AUS") -> 4,
       )
-      val result = FlightChartComponent.summariseNationlaties(nats, 10)
+      val result = FlightChartComponent.summariseNationalities(nats, 10)
 
       assert(result == nats)
     }
@@ -31,7 +31,7 @@ object FlghtChartComponentTests extends TestSuite {
         Nationality("AUS") -> 5,
       )
 
-      val result = FlightChartComponent.summariseNationlaties(nats, 4)
+      val result = FlightChartComponent.summariseNationalities(nats, 4)
 
       val expected = Map(
         Nationality("Other") -> 1,
@@ -54,7 +54,7 @@ object FlghtChartComponentTests extends TestSuite {
         Nationality("AUS") -> 5,
       )
 
-      val result = FlightChartComponent.summariseNationlaties(nats, 2)
+      val result = FlightChartComponent.summariseNationalities(nats, 2)
 
       val expected = Map(
         Nationality("Other") -> 6,
