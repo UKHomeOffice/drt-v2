@@ -54,27 +54,27 @@ class ScheduledApproximation(searchKey: UniqueArrival,
       LiveArrivalsUtil.mergePortFeedWithBase(aArrival, existingFoundArrival)
   }
 
-  def uniqueArrivalKeys(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.VoyageNumber.numeric, arrival.Terminal, arrival.Scheduled)
+  private def uniqueArrivalKeys(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.VoyageNumber.numeric, arrival.Terminal, arrival.Scheduled)
 
-  def getPotentialKeys(searchArrivalMap: SortedMap[UniqueArrival, Arrival]): Iterable[UniqueArrival] =
+  private def getPotentialKeys(searchArrivalMap: SortedMap[UniqueArrival, Arrival]): Iterable[UniqueArrival] =
     searchArrivalMap.keys.filter(_.potentialKey(searchKey, 1 * 60 * 60 * 1000))
 
 
-  def getPotentialKeyWithOriginFiltered(potentialKeys: Iterable[UniqueArrival], searchArrivalMap: SortedMap[UniqueArrival, Arrival], origin: PortCode) =
+  private def getPotentialKeyWithOriginFiltered(potentialKeys: Iterable[UniqueArrival], searchArrivalMap: SortedMap[UniqueArrival, Arrival], origin: PortCode) =
     potentialKeys.flatMap(searchArrivalMap.get(_).filter(_.Origin == origin))
 
-  def arrivalMapBySourceType(searchSourceType: ArrivalsSourceType): SortedMap[UniqueArrival, Arrival] = searchSourceType match {
+  private def arrivalMapBySourceType(searchSourceType: ArrivalsSourceType): SortedMap[UniqueArrival, Arrival] = searchSourceType match {
     case LiveArrivals => liveArrivals
     case LiveBaseArrivals => liveBaseArrivals
     case BaseArrivals => forecastBaseArrivals
   }
 
 
-  def foundMessage(message: String, keys: Seq[UniqueArrival], searchArrivalSourceType: ArrivalsSourceType, origin: PortCode, arrivalSourceType: ArrivalsSourceType) = {
+  private def foundMessage(message: String, keys: Seq[UniqueArrival], searchArrivalSourceType: ArrivalsSourceType, origin: PortCode, arrivalSourceType: ArrivalsSourceType) = {
     s"$message potentialKey $keys for searchArrivalSourceType $searchArrivalSourceType searchKey $searchKey within an hour of scheduled Approximation in sourceType $arrivalSourceType"
   }
 
-  def notFoundMessage(message: String, searchArrivalSourceType: ArrivalsSourceType, origin: PortCode, arrivalSourceType: ArrivalsSourceType) = {
+  private def notFoundMessage(message: String, searchArrivalSourceType: ArrivalsSourceType, origin: PortCode, arrivalSourceType: ArrivalsSourceType) = {
     s"$message potentialKey for searchArrivalSourceType $searchArrivalSourceType searchKey $searchKey within an hour of scheduled Approximation in sourceType $arrivalSourceType"
   }
 
