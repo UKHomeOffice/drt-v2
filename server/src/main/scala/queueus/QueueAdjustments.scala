@@ -48,12 +48,12 @@ case class ChildEGateAdjustments(assumedAdultsPerChild: Double) extends QueueAdj
       if (ptqcs.exists(p => p.queueType == EeaDesk && p.passengerType == paxType) || adjustment == 0.0)
         ptqcs
       else
-        ptqcs + ApiPaxTypeAndQueueCount(paxType, EeaDesk, 0.0, None)
+        ptqcs + ApiPaxTypeAndQueueCount(paxType, EeaDesk, 0.0, None, None)
 
     splitsWithDeskQueue.map {
-      case ptqc@ApiPaxTypeAndQueueCount(pt, EGate, pax, _) if pt == paxType =>
+      case ptqc@ApiPaxTypeAndQueueCount(pt, EGate, pax, _, _) if pt == paxType =>
         ptqc.copy(paxCount = pax - adjustment)
-      case ptqc@ApiPaxTypeAndQueueCount(pt, EeaDesk, pax, _) if pt == paxType =>
+      case ptqc@ApiPaxTypeAndQueueCount(pt, EeaDesk, pax, _, _) if pt == paxType =>
         ptqc.copy(paxCount = pax + adjustment)
 
       case other => other

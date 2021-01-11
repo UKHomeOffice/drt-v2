@@ -10,10 +10,9 @@ import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{Callback, Reusability, ScalaComponent}
 import org.scalajs.dom.html
 import org.scalajs.dom.html.TableCell
 

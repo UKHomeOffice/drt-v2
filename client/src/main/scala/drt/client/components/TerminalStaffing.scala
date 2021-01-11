@@ -14,7 +14,6 @@ import drt.client.services._
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
@@ -146,8 +145,8 @@ object TerminalStaffing {
               Seq(
                 <.tr(^.key := s"hr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}", {
                   hoursWorthOf15Minutes.map((t: Long) => {
-                    val d = new Date(t)
-                    val display = f"${d.getHours()}%02d:${d.getMinutes()}%02d"
+                    val d = SDate(t)
+                    val display = f"${d.getHours}%02d:${d.getMinutes}%02d"
                     <.th(^.key := t, display)
                   }).toTagMod
                 }),

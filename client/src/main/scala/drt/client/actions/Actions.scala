@@ -1,17 +1,18 @@
 package drt.client.actions
 
-import java.util.UUID
-
 import diode.Action
-import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.PassengerInfoSummary
+import drt.shared.dates.UtcDate
 import org.scalajs.dom.FormData
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 
+import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
 
 object Actions {
@@ -107,6 +108,14 @@ object Actions {
   case class HideLoader() extends Action
 
   case class GetAirportInfos(codes: Set[PortCode]) extends Action
+
+  case class GetPassengerInfoSummary(utcDate: UtcDate) extends Action
+
+  case class SetPassengerInfoSummary(utcDate: UtcDate, infoSummaries: Seq[PassengerInfoSummary]) extends Action
+
+  case object GetPassengerInfoForCurrentFlights extends Action
+
+  case object GetPassengerInfoForFlights extends Action
 
   case class UpdateAirportInfo(code: PortCode, info: Option[AirportInfo]) extends Action
 

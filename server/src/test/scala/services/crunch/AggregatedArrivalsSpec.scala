@@ -119,7 +119,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
     val liveFlights = Flights(List(liveArrival))
 
-    val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
+    val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None, None)), SplitSources.Historical, None, Percentage)
     val initialFlightsWithSplits = Seq(ApiFlightWithSplits(expiredArrival, Set(oldSplits), None))
     val initialPortState = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ initialFlightsWithSplits.map(f => (f.apiFlight.unique, f)), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
 
@@ -160,7 +160,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     table.insertOrUpdateArrival(descheduledArrival)
 
-    val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
+    val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None, None)), SplitSources.Historical, None, Percentage)
     val initialFlightsWithSplits = Seq(ApiFlightWithSplits(descheduledArrival, Set(oldSplits), None))
     val initialPortState = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ initialFlightsWithSplits.map(f => (f.apiFlight.unique, f)), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
 

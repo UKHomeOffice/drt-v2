@@ -15,14 +15,12 @@ describe('Simulation export', () => {
   const eGatePaxCsvIndex = 7;
   const nonEeaDeskPaxCsvIndex = 12;
   const scheduledDateTime = todayAtUtc(0, 55);
-  const schDateString = scheduledDateTime.format("YYYY-MM-DD");
-  const schTimeString = scheduledDateTime.format('HH:mm:00');
 
   beforeEach(function () {
     cy.deleteData();
   });
 
-  const manifest = (pl): object => manifestForDateTime(schDateString, schTimeString, pl)
+  const manifest = (pl): object => manifestForDateTime(scheduledDateTime, pl)
 
   function sumColumn(csvData, index: number): number {
     return csvData.slice(2)

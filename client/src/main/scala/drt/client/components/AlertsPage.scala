@@ -135,7 +135,7 @@ object AlertsPage {
         <.div(^.`class` := "row", ^.height := "10px"),
         <.div(^.`class` := "row",
           <.label(^.`for` := "alert-date-time", "Expires after", ^.`class` := "col-md-3"),
-          <.select(^.id := "alert-date-time", ^.default := defaultExpiry, ^.defaultValue := defaultExpiry,
+          <.select(^.id := "alert-date-time", ^.defaultValue := defaultExpiry,
               expiryOptions.map(e => <.option(^.value := e, e)).toTagMod,
             ^.onChange ==> ((e: ReactEventFromInput) => setExpiryDateTimeFromSelection(e.target.value)),
             ^.`class` := "col-md-3"),

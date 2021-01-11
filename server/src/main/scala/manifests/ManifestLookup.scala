@@ -1,21 +1,17 @@
 package manifests
 
-import java.sql.Timestamp
-
-import akka.NotUsed
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.SplitRatiosNs.SplitSources
-import drt.shared.{Nationality, PortCode, SDateLike, VoyageNumber}
+import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser.PaxAge
 import slick.jdbc.SQLActionBuilder
 import slick.sql.SqlStreamingAction
 import slickdb.VoyageManifestPassengerInfoTable
 
-import scala.collection.immutable
+import java.sql.Timestamp
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -102,7 +98,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
     ("sameFlightAndDay3WeekWindowPreviousYearQuery", sameFlightAndDay3WeekWindowPreviousYearQuery),
     ("sameFlight3WeekWindowPreviousYearQuery", sameFlight3WeekWindowPreviousYearQuery),
     ("sameRouteAndDay3WeekWindowPreviousYearQuery", sameRouteAndDay3WeekWindowPreviousYearQuery)
-    )
+  )
 
   def sameFlightAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
     val lastYear = uniqueArrivalKey.scheduled.addMonths(-12)

@@ -1,17 +1,15 @@
 // repository for Typesafe plugins
-resolvers += "Typesafe Releases" at "http://repo.typesafe.com/typesafe/releases/"
+resolvers += "Typesafe Releases" at "https://repo.typesafe.com/typesafe/ivy-releases/"
 
 addSbtPlugin("net.virtual-void" % "sbt-optimizer" % "0.1.2")
 
-
 libraryDependencies += "com.typesafe" % "config" % "1.3.0"
 
+addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "1.0.0")
 
-addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "0.5.0")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.1.1")
 
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "0.6.28")
-
-addSbtPlugin("ch.epfl.scala" % "sbt-web-scalajs-bundler" % "0.13.1")
+addSbtPlugin("ch.epfl.scala" % "sbt-web-scalajs-bundler" % "0.18.0")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-js-engine" % "1.2.2")
 

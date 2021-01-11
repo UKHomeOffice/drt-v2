@@ -50,7 +50,8 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       val fetchOrigins = Effect(Future(GetAirportInfos(originCodes)))
 
       val effects = if (getCurrentViewMode().isHistoric(SDate.now())) {
-        hideLoader + fetchOrigins
+        log.info(s"Setting historic flight paxinfo")
+        hideLoader + fetchOrigins + Effect(Future(GetPassengerInfoForFlights))
       } else {
         log.info(s"Starting to poll for crunch updates")
         hideLoader + fetchOrigins + getCrunchUpdatesAfterDelay(viewMode)

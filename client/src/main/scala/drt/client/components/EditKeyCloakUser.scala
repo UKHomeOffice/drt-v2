@@ -8,9 +8,8 @@ import drt.client.actions.Actions.SaveUserGroups
 import drt.client.services._
 import drt.shared.AirportConfigs
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, ReactEventFromInput, Reusability, ScalaComponent}
 
 
 object EditKeyCloakUser {

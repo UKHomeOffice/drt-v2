@@ -19,7 +19,7 @@ case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
     val emptySplits = SplitRatios(InvalidSource, List())
     val portDefault = terminalDefaultSplitRatios.getOrElse(terminalName, emptySplits).splits.map {
       case SplitRatio(PaxTypeAndQueue(paxType, queue), ratio) =>
-        ApiPaxTypeAndQueueCount(paxType, queue, ratio * 100, None)
+        ApiPaxTypeAndQueueCount(paxType, queue, ratio * 100, None, None)
     }
 
     Set(Splits(portDefault.toSet, SplitSources.TerminalAverage, None, Percentage))

@@ -98,7 +98,7 @@ object ArrivalImporter {
       (EeaMachineReadable, Queues.EGate, "API Actual - eGates")
     ).collect {
       case (paxType, queue, key) if h.contains(key) =>
-        ApiPaxTypeAndQueueCount(paxType, queue, arrivalFields(h(key)).toDouble, None)
+        ApiPaxTypeAndQueueCount(paxType, queue, arrivalFields(h(key)).toDouble, None, None)
     }
     Set(Splits(splitsSet, ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)))
   }

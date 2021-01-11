@@ -4,14 +4,12 @@ import drt.client.SPAMain
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{ExportDeployments, ExportDeskRecs}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, Reusability, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
 
@@ -40,7 +38,7 @@ object MultiDayExportComponent {
   implicit val terminalReuse: Reusability[Terminal] = Reusability.derive[Terminal]
   implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.terminal, p.selectedDate.millisSinceEpoch))
 
-  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SnapshotSelector")
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
     .initialStateFromProps(p => State(
       startDay = p.selectedDate.getDate(),
       startMonth = p.selectedDate.getMonth(),
@@ -101,6 +99,7 @@ object MultiDayExportComponent {
                     if (props.loggedInUser.hasRole(DesksAndQueuesView))
                       List(<.a(Icon.download, s" Recommendations",
                         ^.className := "btn btn-default",
+                        ^.key := "recs",
                         ^.href := SPAMain.absoluteUrl(s"export/desk-recs/${SDate(state.startMillis).toLocalDate.toISOString}/${SDate(state.endMillis).toLocalDate.toISOString}/${props.terminal}"),
                         ^.target := "_blank",
                         ^.onClick --> {
@@ -108,6 +107,7 @@ object MultiDayExportComponent {
                         }
                       ),
                         <.a(Icon.download, s" Deployments",
+                          ^.key := "deps",
                           ^.className := "btn btn-default",
                           ^.href := SPAMain.absoluteUrl(s"export/desk-deps/${SDate(state.startMillis).toLocalDate.toISOString}/${SDate(state.endMillis).toLocalDate.toISOString}/${props.terminal}"),
                           ^.target := "_blank",

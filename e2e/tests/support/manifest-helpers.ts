@@ -5,7 +5,7 @@ const passengerProfiles = {
         "DocumentIssuingCountryCode": "GBR",
         "PersonType": "P",
         "DocumentLevel": "Primary",
-        "Age": 30,
+        "Age": "30",
         "DisembarkationPortCode": "TST",
         "InTransitFlag": "N",
         "DisembarkationPortCountryCode": "TST",
@@ -20,7 +20,7 @@ const passengerProfiles = {
         "DocumentIssuingCountryCode": "GBR",
         "PersonType": "P",
         "DocumentLevel": "Primary",
-        "Age": 11,
+        "Age": "11",
         "DisembarkationPortCode": "TST",
         "InTransitFlag": "N",
         "DisembarkationPortCountryCode": "TST",
@@ -35,7 +35,7 @@ const passengerProfiles = {
         "DocumentIssuingCountryCode": "ZWE",
         "PersonType": "P",
         "DocumentLevel": "Primary",
-        "Age": 30,
+        "Age": "30",
         "DisembarkationPortCode": "TST",
         "InTransitFlag": "N",
         "DisembarkationPortCountryCode": "TST",
@@ -50,7 +50,7 @@ const passengerProfiles = {
         "DocumentIssuingCountryCode": "MRU",
         "PersonType": "P",
         "DocumentLevel": "Primary",
-        "Age": 30,
+        "Age": "30",
         "DisembarkationPortCode": "TST",
         "InTransitFlag": "N",
         "DisembarkationPortCountryCode": "TST",
@@ -65,7 +65,7 @@ const passengerProfiles = {
         "DocumentIssuingCountryCode": "AUS",
         "PersonType": "P",
         "DocumentLevel": "Primary",
-        "Age": 30,
+        "Age": "30",
         "DisembarkationPortCode": "TST",
         "InTransitFlag": "N",
         "DisembarkationPortCountryCode": "TST",
@@ -77,8 +77,29 @@ const passengerProfiles = {
     }
 }
 
+const adultWithCountryCode = (countryCode: string): object => {
+    return {
+        "DocumentIssuingCountryCode": countryCode,
+        "PersonType": "P",
+        "DocumentLevel": "Primary",
+        "Age": "30",
+        "DisembarkationPortCode": "TST",
+        "InTransitFlag": "N",
+        "DisembarkationPortCountryCode": "TST",
+        "NationalityCountryEEAFlag": "",
+        "PassengerIdentifier": "",
+        "DocumentType": "P",
+        "PoavKey": "3",
+        "NationalityCountryCode": countryCode
+    }
+}
 
-const manifestForDateTime = (dateString, timeString, passengerList): object => {
+
+const manifestForDateTime = (sheduled: moment.Moment, passengerList): object => {
+
+    const dateString = sheduled.format("YYYY-MM-DD");
+    const timeString = sheduled.format("HH:mm:ss");
+
     return {
         "EventCode": "DC",
         "DeparturePortCode": "AMS",
@@ -111,4 +132,5 @@ export {
     manifestForDateTime,
     passengerList,
     passengerProfiles,
+    adultWithCountryCode,
 }
