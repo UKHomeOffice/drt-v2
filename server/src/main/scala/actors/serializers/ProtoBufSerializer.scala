@@ -2,7 +2,7 @@ package actors.serializers
 
 import akka.serialization.SerializerWithStringManifest
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.Alert.{Alert, AlertMessage, AlertSnapshotMessage}
+import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
