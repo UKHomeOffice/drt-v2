@@ -1,4 +1,4 @@
-package actors
+package actors.serializers
 
 import drt.shared._
 import org.specs2.mutable.Specification

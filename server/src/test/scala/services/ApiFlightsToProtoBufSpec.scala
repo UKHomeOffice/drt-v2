@@ -1,6 +1,6 @@
 package services
 
-import actors.FlightMessageConversion._
+import actors.serializers.FlightMessageConversion._
 import drt.shared.Terminals.T2
 import drt.shared.api.Arrival
 import drt.shared.{ApiFeedSource, ArrivalStatus, Operator, PortCode}

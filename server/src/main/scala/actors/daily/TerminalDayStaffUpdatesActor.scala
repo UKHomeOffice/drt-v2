@@ -1,7 +1,8 @@
 package actors.daily
 
 import actors.acking.AckingReceiver.Ack
-import actors.{PortStateMessageConversion, StreamingJournalLike}
+import actors.StreamingJournalLike
+import actors.serializers.PortStateMessageConversion
 import akka.persistence._
 import akka.persistence.query.EventEnvelope
 import drt.shared.CrunchApi.StaffMinute

@@ -1,6 +1,6 @@
 package actors
 
-import actors.FlightMessageConversion._
+import actors.serializers.FlightMessageConversion._
 import actors.acking.AckingReceiver.StreamCompleted
 import actors.restore.RestorerWithLegacy
 import akka.persistence._

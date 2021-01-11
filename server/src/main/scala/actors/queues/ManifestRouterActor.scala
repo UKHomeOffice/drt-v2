@@ -1,11 +1,12 @@
 package actors.queues
 
 import actors.DrtStaticParameters.expireAfterMillis
-import actors.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
+import actors.serializers.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
 import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
-import actors.{FeedStateLike, FlightMessageConversion, GetFeedStatuses, GetState, RecoveryActorLike}
+import actors.serializers.FlightMessageConversion
+import actors.{FeedStateLike, GetFeedStatuses, GetState, RecoveryActorLike}
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}

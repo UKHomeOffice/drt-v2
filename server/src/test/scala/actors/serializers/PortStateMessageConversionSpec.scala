@@ -1,6 +1,6 @@
-package actors
+package actors.serializers
 
-import actors.PortStateMessageConversion._
+import actors.serializers.PortStateMessageConversion._
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.Terminals.T1
 import drt.shared._

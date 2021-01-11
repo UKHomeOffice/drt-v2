@@ -1,6 +1,6 @@
-package actors
+package actors.serializers
 
-import actors.FlightMessageConversion.flightWithSplitsFromMessage
+import actors.serializers.FlightMessageConversion.flightWithSplitsFromMessage
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}

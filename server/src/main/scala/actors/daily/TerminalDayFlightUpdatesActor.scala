@@ -2,7 +2,8 @@ package actors.daily
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.daily.StreamingUpdatesLike.StopUpdates
-import actors.{FlightMessageConversion, PortStateMessageConversion, StreamingJournalLike}
+import actors.serializers.{FlightMessageConversion, PortStateMessageConversion}
+import actors.StreamingJournalLike
 import akka.actor.PoisonPill
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer}

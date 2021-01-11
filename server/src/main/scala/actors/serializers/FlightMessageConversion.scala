@@ -1,14 +1,15 @@
-package actors
+package actors.serializers
 
-import actors.PortStateMessageConversion.splitMessageToApiSplits
+import actors.ArrivalsState
+import PortStateMessageConversion.splitMessageToApiSplits
 import actors.restore.RestorerWithLegacy
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Terminals.Terminal
-import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
-import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightMessage, FlightStateSnapshotMessage, _}
+import server.protobuf.messages.FlightsMessage._
 import services.SDate
 
 import scala.util.{Success, Try}

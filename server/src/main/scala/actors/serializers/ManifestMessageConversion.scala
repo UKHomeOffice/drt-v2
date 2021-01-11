@@ -1,6 +1,6 @@
-package actors
+package actors.serializers
 
-import drt.shared._
+import drt.shared.{CarrierCode, EventType, Nationality, PaxAge, PortCode, VoyageNumber}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.protobuf.messages.VoyageManifest.{PassengerInfoJsonMessage, VoyageManifestMessage, VoyageManifestsMessage}
