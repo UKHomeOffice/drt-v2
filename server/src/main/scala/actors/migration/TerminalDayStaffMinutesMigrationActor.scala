@@ -1,6 +1,6 @@
 package actors.migration
 
-import actors.PortStateMessageConversion.{staffMinuteFromMessage, staffMinuteToMessage}
+import actors.serializers.PortStateMessageConversion.{staffMinuteFromMessage, staffMinuteToMessage}
 import actors.acking.AckingReceiver.Ack
 import actors.{PostgresTables, RecoveryActorLike, Sizes}
 import akka.actor.Props

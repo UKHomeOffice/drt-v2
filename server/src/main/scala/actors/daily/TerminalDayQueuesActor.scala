@@ -24,7 +24,7 @@ class TerminalDayQueuesActor(year: Int,
                              maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[CrunchMinute, TQM](year, month, day, terminal, now, maybePointInTime) {
   override val typeForPersistenceId: String = "queues"
 
-  import actors.PortStateMessageConversion._
+  import actors.serializers.PortStateMessageConversion._
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case CrunchMinutesMessage(minuteMessages) => state = minuteMessagesToKeysAndMinutes(minuteMessages).toMap

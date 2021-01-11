@@ -2,7 +2,7 @@ package actors.serializers
 
 import akka.serialization.SerializerWithStringManifest
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
+import server.protobuf.messages.Alert.{Alert, AlertMessage, AlertSnapshotMessage}
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
@@ -44,7 +44,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val VoyageManifestLatestFileName: String  = classOf[VoyageManifestLatestFileNameMessage].getName
   final val VoyageManifests: String               = classOf[VoyageManifestsMessage].getName
   final val VoyageManifest: String                = classOf[VoyageManifestMessage].getName
-  final val Alerts: String                        = classOf[Alert].getName
+  final val Alerts: String                        = classOf[AlertMessage].getName
   final val AlertSnapshot: String                 = classOf[AlertSnapshotMessage].getName
   final val RegisteredArrival: String             = classOf[RegisteredArrivalMessage].getName
   final val RegisteredArrivals: String            = classOf[RegisteredArrivalsMessage].getName

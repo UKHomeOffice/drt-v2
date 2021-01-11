@@ -2,6 +2,7 @@ package actors
 
 import actors.Sizes.oneMegaByte
 import actors.acking.AckingReceiver.StreamCompleted
+import actors.serializers.AlertMessageConversion
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Alert, SDateLike}
@@ -23,26 +24,16 @@ class AlertsActor(val now: () => SDateLike) extends RecoveryActorLike with Persi
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case alert: ProtobufAlert => deserialise(alert).foreach(a => updateState(Seq(a)))
+    case alert: ProtobufAlert => AlertMessageConversion.alertFromMessage(alert).foreach(a => updateState(Seq(a)))
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case smm: AlertSnapshotMessage => updateState(smm.alerts.flatMap(deserialise))
+    case smm: AlertSnapshotMessage => updateState(smm.alerts.flatMap(AlertMessageConversion.alertFromMessage))
   }
-
-  def deserialise(alert: ProtobufAlert): Option[Alert] = for {
-    title <- alert.title
-    message <- alert.message
-    alertClass <- alert.alertClass
-    expires <- alert.expires
-    createdAt <- alert.createdAt
-  } yield Alert(title, message, alertClass, expires, createdAt)
-
-  def serialise(alert: Alert): ProtobufAlert = ProtobufAlert(Option(alert.title), Option(alert.message), Option(alert.expires), Option(alert.createdAt))
 
   def updateState(data: Seq[Alert]): Unit = state = state ++ data
 
-  override def stateToMessage: GeneratedMessage = AlertSnapshotMessage(state.map(serialise))
+  override def stateToMessage: GeneratedMessage = AlertSnapshotMessage(state.map(AlertMessageConversion.alertToMessage))
 
   var state: Seq[Alert] = initialState
 
@@ -53,7 +44,7 @@ class AlertsActor(val now: () => SDateLike) extends RecoveryActorLike with Persi
     case alert: Alert =>
       log.info(s"Saving Alert $alert")
       updateState(Seq(alert))
-      persistAndMaybeSnapshot(serialise(alert))
+      persistAndMaybeSnapshot(AlertMessageConversion.alertToMessage(alert))
       sender() ! alert
 
     case GetState =>

@@ -1,7 +1,8 @@
 package actors.daily
 
-import actors.{FlightMessageConversion, GetState}
+import actors.GetState
 import actors.acking.AckingReceiver.Ack
+import actors.serializers.FlightMessageConversion
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.persistence.PersistentActor
