@@ -55,7 +55,7 @@ class LiveArrivalsUtilSpec extends Specification {
       ActualChox = baseArrival.ActualChox
     )
 
-    val result = LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseArrival)
+    val result = LiveArrivalsUtil.mergePortFeedWithLiveBase(liveArrival, baseArrival)
 
     result === expected
   }
@@ -65,7 +65,7 @@ class LiveArrivalsUtilSpec extends Specification {
     val liveArrival = arrival(gate = Option("Gate"))
     val expected = liveArrival.copy()
 
-    val result = LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseArrival)
+    val result = LiveArrivalsUtil.mergePortFeedWithLiveBase(liveArrival, baseArrival)
 
     result === expected
   }
@@ -76,7 +76,7 @@ class LiveArrivalsUtilSpec extends Specification {
     val liveArrival = arrival(Option(SDate(2019, 9, 30, 16, 5).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 6).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 7).millisSinceEpoch), Option(SDate(2019, 9, 30, 16, 8).millisSinceEpoch), scheduledDeparture = Option(SDate(2019, 9, 30, 13, 8).millisSinceEpoch))
     val expected = liveArrival.copy()
 
-    val result = LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseArrival)
+    val result = LiveArrivalsUtil.mergePortFeedWithLiveBase(liveArrival, baseArrival)
 
     result === expected
   }
@@ -87,7 +87,7 @@ class LiveArrivalsUtilSpec extends Specification {
 
     val expected = liveArrival.copy(Gate = baseArrival.Gate)
 
-    val result = LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseArrival)
+    val result = LiveArrivalsUtil.mergePortFeedWithLiveBase(liveArrival, baseArrival)
 
     result === expected
   }
@@ -98,7 +98,7 @@ class LiveArrivalsUtilSpec extends Specification {
 
     val expected = liveArrival.copy()
 
-    val result = LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseArrival)
+    val result = LiveArrivalsUtil.mergePortFeedWithLiveBase(liveArrival, baseArrival)
 
     result === expected
   }
@@ -109,7 +109,7 @@ class LiveArrivalsUtilSpec extends Specification {
 
     val expected = liveArrival.copy(Status = baseArrival.Status)
 
-    val result = LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseArrival)
+    val result = LiveArrivalsUtil.mergePortFeedWithLiveBase(liveArrival, baseArrival)
 
     result === expected
   }

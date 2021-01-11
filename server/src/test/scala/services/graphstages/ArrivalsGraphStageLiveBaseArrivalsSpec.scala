@@ -191,9 +191,8 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     success
   }
 
-
-  "Given a forecast base arrival with a scheduled arrival time and a live  base arrival with in 60 minutes scheduled arrival time and forecast arrival with scheduled same as forecast base" +
-    "Then they should  merged and scheduled Departure present and actual pax count should exists" >> {
+  "Given a forecast base arrival with a scheduled arrival time and a live base arrival with in 60 minutes scheduled arrival time and forecast arrival with scheduled same as forecast base" +
+    "Then they should merged and scheduled Departure present and actual pax count should exists" >> {
     val probe = TestProbe("arrivals")
     val (forecastBaseArrivalsSource, forecastArrivalSource, liveBaseSource, _) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
 
@@ -213,8 +212,8 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
         toUpdate.exists {
-          case (_, a) => a.ScheduledDeparture.get == scheduledDeparture
-            a.Scheduled == scheduled.millisSinceEpoch
+          case (_, a) =>
+            a.ScheduledDeparture.get == scheduledDeparture && a.Scheduled == scheduled.millisSinceEpoch
         }
     }
 
@@ -424,7 +423,6 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
   )
 
   def pcpTimeCalc(a: Arrival): MilliDate = PcpArrival.pcpFrom(0, 0, _ => 0)(a)
-
 
   "Given a base live arrival with an estimated time and a port live arrival with only scheduled time " +
     "Then PCP time should be calculated from the base live arrival time." >> {

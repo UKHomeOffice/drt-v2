@@ -248,15 +248,10 @@ trait WithTerminal[A] extends Ordered[A] {
   def terminal: Terminal
 }
 
-trait WithPotentialKey[A] extends Ordered[A] {
-  def potentialKey(searchKey: UniqueArrival, scheduledThreshold: Int) = Boolean
-}
-
 case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch)
   extends WithLegacyUniqueId[Int, UniqueArrival]
     with WithTimeAccessor
-    with WithTerminal[UniqueArrival]
-    with WithPotentialKey[UniqueArrival] {
+    with WithTerminal[UniqueArrival] {
 
   override def compare(that: UniqueArrival): Int =
     scheduled.compare(that.scheduled) match {
@@ -271,10 +266,8 @@ case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSince
 
   override def uniqueId: Int = s"$terminal$scheduled$number".hashCode
 
-  val potentialKey: (UniqueArrival, Int) => Boolean = (searchKey, scheduledThreshold) =>
-    searchKey.number == this.number && searchKey.terminal == this.terminal && Math.abs(searchKey.scheduled - this.scheduled) <= scheduledThreshold
-
-
+  val equalWithinScheduledWindow: (UniqueArrival, Int) => Boolean = (searchKey, windowMillis) =>
+    searchKey.number == this.number && searchKey.terminal == this.terminal && Math.abs(searchKey.scheduled - this.scheduled) <= windowMillis
 }
 
 object UniqueArrival {
