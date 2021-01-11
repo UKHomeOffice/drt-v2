@@ -261,59 +261,9 @@ class ArrivalsGraphStage(name: String = "",
     }
 
 
-    def arrivalMapForSourceType(searchSourceType: ArrivalsSourceType): SortedMap[UniqueArrival, Arrival] = searchSourceType match {
-      case LiveArrivals => liveArrivals
-      case LiveBaseArrivals => liveBaseArrivals
-      case BaseArrivals => forecastBaseArrivals
-    }
-
-    def potentialKeys(mergeKey: UniqueArrival, searchArrivalMap: SortedMap[UniqueArrival, Arrival]): Iterable[UniqueArrival] =
-      searchArrivalMap.keys.filter(_.potentialKey(mergeKey, 1 * 60 * 60 * 1000))
-
-    def mergeScheduledApproximation(mergeKey: UniqueArrival, mergeKeySourceType: ArrivalsSourceType, foundArrival: Arrival, searchSourceType: ArrivalsSourceType) = {
-      val searchArrivalMap: SortedMap[UniqueArrival, Arrival] = arrivalMapForSourceType(searchSourceType)
-      val potentialKey: Option[UniqueArrival] = potentialKeys(mergeKey, searchArrivalMap).toSeq.sortBy(_.scheduled).headOption
-      val arrival: Option[Arrival] = potentialKey.flatMap { pKey =>
-        searchArrivalMap.get(pKey).map(aArrival =>
-          if (mergeKeySourceType == LiveArrivals && searchSourceType == LiveBaseArrivals)
-            LiveArrivalsUtil.mergePortFeedWithBase(foundArrival, aArrival)
-          else
-            LiveArrivalsUtil.mergePortFeedWithBase(aArrival, foundArrival))
-      }
-
-      arrival match {
-        case Some(_) => log.info(s"Arrival merge,$mergeKeySourceType searchKey $mergeKey and $searchSourceType potential${searchSourceType}Key $potentialKey.")
-        case None => log.warn(s"Expecting to found $mergeKey in $searchSourceType but not found")
-      }
-      arrival
-    }
-
-    def findScheduledApproximation(mergeKey: UniqueArrival, mergeKeySourceType: ArrivalsSourceType, origin: PortCode, searchSourceType: ArrivalsSourceType): Option[UniqueArrival] = {
-
-      val searchArrivalMap: SortedMap[UniqueArrival, Arrival] = arrivalMapForSourceType(searchSourceType)
-
-      val potentialKeyList = potentialKeys(mergeKey, searchArrivalMap)
-
-      val potentialKey = if (potentialKeyList.size > 1) {
-        log.warn(s"Found multiple potentialKey $potentialKeyList for $mergeKeySourceType searchKey $mergeKey within an hour of scheduled Approximation in sourceType $searchSourceType")
-        potentialKeyList.toSeq.sortBy(_.scheduled).headOption
-      } else {
-        potentialKeyList.headOption
-      }
-
-      potentialKey match {
-        case Some(key) if searchArrivalMap.get(key).exists(_.Origin == origin) =>
-          Some(key)
-        case Some(key) =>
-          log.warn(s"ScheduledTime Approximation $mergeKeySourceType searchKey $mergeKey and origin $origin match not found for potential Key $key in sourceType $searchSourceType")
-          None
-        case None =>
-          log.warn(s"ScheduledTime Approximation search for $mergeKeySourceType searchKey $mergeKey not found within an hour in sourceType $searchSourceType")
-          None
-      }
-    }
-
     def mergeArrival(key: UniqueArrival): Option[Arrival] = {
+
+      val scheduledApproximation = new ScheduledApproximation(key, forecastBaseArrivals, forecastArrivals, liveBaseArrivals, liveArrivals)
       val maybeLiveBaseArrivalWithSanitisedData = liveBaseArrivals.get(key).map(arrivalDataSanitiser.withSaneEstimates)
       val maybeBestArrival: Option[Arrival] = (
         liveArrivals.get(key),
@@ -326,26 +276,25 @@ class ArrivalsGraphStage(name: String = "",
             .withSaneEstimates(mergedLiveArrival)
           Option(sanitisedLiveArrival)
 
-        case (Some(liveArrival), None) if findScheduledApproximation(key, LiveArrivals, liveArrival.Origin, LiveBaseArrivals).isDefined =>
-          mergeScheduledApproximation(key, LiveArrivals, liveArrival, LiveBaseArrivals)
-
+        case (Some(liveArrival), None) if scheduledApproximation.findArrival(LiveArrivals, liveArrival.Origin, LiveBaseArrivals) =>
+          scheduledApproximation.mergeArrival(LiveArrivals, liveArrival, LiveBaseArrivals)
 
         case (Some(liveArrival), None) => Option(liveArrival)
 
-        case (None, Some(baseLiveArrival)) if findScheduledApproximation(key, LiveBaseArrivals, baseLiveArrival.Origin, LiveArrivals).isDefined =>
-          mergeScheduledApproximation(key, LiveBaseArrivals, baseLiveArrival, LiveArrivals)
+        case (None, Some(baseLiveArrival)) if scheduledApproximation.findArrival(LiveBaseArrivals, baseLiveArrival.Origin, LiveArrivals) =>
+          scheduledApproximation.mergeArrival(LiveBaseArrivals, baseLiveArrival, LiveArrivals)
 
 
         case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) => forecastBaseArrivals.get(key).map { forecastBaseArrival =>
           LiveArrivalsUtil.mergePortFeedWithBase(forecastBaseArrival, baseLiveArrival)
         }
 
-        case (None, Some(baseLiveArrival)) if findScheduledApproximation(key, LiveBaseArrivals, baseLiveArrival.Origin, BaseArrivals).isDefined =>
-          mergeScheduledApproximation(key, LiveBaseArrivals, baseLiveArrival, BaseArrivals)
+        case (None, Some(baseLiveArrival)) if scheduledApproximation.findArrival(LiveBaseArrivals, baseLiveArrival.Origin, BaseArrivals) =>
+          scheduledApproximation.mergeArrival(LiveBaseArrivals, baseLiveArrival, BaseArrivals)
 
 
-        case _ if forecastBaseArrivals.get(key).flatMap(foundArrival => findScheduledApproximation(key, BaseArrivals, foundArrival.Origin, LiveBaseArrivals)).isDefined => {
-          forecastBaseArrivals.get(key).flatMap(mergeScheduledApproximation(key, BaseArrivals, _, LiveBaseArrivals))
+        case _ if forecastBaseArrivals.get(key).exists(foundArrival => scheduledApproximation.findArrival(BaseArrivals, foundArrival.Origin, LiveBaseArrivals)) => {
+          forecastBaseArrivals.get(key).flatMap(scheduledApproximation.mergeArrival(LiveArrivals, _, LiveBaseArrivals))
         }
 
         case _ => forecastBaseArrivals.get(key)
