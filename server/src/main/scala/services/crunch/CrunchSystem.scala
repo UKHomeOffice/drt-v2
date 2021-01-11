@@ -40,7 +40,6 @@ case class CrunchProps[FR](
                             logLabel: String = "",
                             airportConfig: AirportConfig,
                             pcpArrival: Arrival => MilliDate,
-                            historicalSplitsProvider: SplitProvider,
                             portStateActor: ActorRef,
                             maxDaysToCrunch: Int,
                             expireAfterMillis: Int,
@@ -116,14 +115,7 @@ object CrunchSystem {
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
 
-    val ptqa = if (props.airportConfig.hasTransfer)
-      PaxTypeQueueAllocation(
-        B5JPlusWithTransitTypeAllocator(),
-        TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation))
-    else
-      PaxTypeQueueAllocation(
-        B5JPlusTypeAllocator(),
-        TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation))
+    val ptqa = paxTypeQueueAllocator(props.airportConfig)
 
     val splitAdjustments = if (props.adjustEGateUseByUnder12s)
       ChildEGateAdjustments(props.airportConfig.assumedAdultsPerChild)
@@ -196,6 +188,15 @@ object CrunchSystem {
       killSwitches
     )
   }
+
+  def paxTypeQueueAllocator[FR](config: AirportConfig): PaxTypeQueueAllocation = if (config.hasTransfer)
+    PaxTypeQueueAllocation(
+      B5JPlusWithTransitTypeAllocator(),
+      TerminalQueueAllocator(config.terminalPaxTypeQueueAllocation))
+  else
+    PaxTypeQueueAllocation(
+      B5JPlusTypeAllocator(),
+      TerminalQueueAllocator(config.terminalPaxTypeQueueAllocation))
 
   def initialStaffMinutesFromPortState(initialPortState: Option[PortState]): Option[StaffMinutes] = initialPortState.map(
     ps => StaffMinutes(ps.staffMinutes))

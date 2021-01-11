@@ -2,6 +2,12 @@
 @import "lib/font-awesome/less/font-awesome.less";
 @import "popover-styles.less";
 @import "popover-styles-staff-movement.less";
+@import 'handsontable.full.css';
+@import 'tippy.css';
+@import 'tippy-themes/light.css';
+@import 'tippy-themes/light-border.css';
+@import 'tippy-themes/material.css';
+@import 'tippy-themes/translucent.css';
 
 /////////////////
 // Custom navbar
@@ -1499,6 +1505,40 @@ th h2 {
 .arrivals__table__flight-code--clickable:hover {
   background-color: #CCCCCC;
   cursor: pointer;
+}
+
+.arrivals__table__flight-code-value {
+    min-width: 53px;
+    display: inline-block;
+}
+
+.arrivals__table__flight-code-wrapper {
+    width: 75px;
+    display: inline-block;
+}
+
+.arrivals__table__flight-code {
+  white-space: nowrap
+}
+
+.arrivals__table__flight__chart-box {
+  min-width: 850px;
+}
+
+.arrivals__table__flight__chart-box__chart {
+  width: 32%;
+  float: left;
+  border-right: #f3f2f1 1px solid;
+  margin-left: 1%;
+}
+
+.arrivals__table__flight__chart-box__chart:last-child {
+  border-right: None;
+  margin-left: None;
+}
+
+.arrivals__table__flight__chart-box__chart canvas {
+  cursor: default;
 }
 
 #arrivals td.queue-split {

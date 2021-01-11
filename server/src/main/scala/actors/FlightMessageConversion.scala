@@ -8,7 +8,7 @@ import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
-import server.protobuf.messages.FlightsMessage._
+import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FeedStatusesMessage, FlightMessage, FlightStateSnapshotMessage, _}
 import services.SDate
 
 import scala.util.{Success, Try}
@@ -100,11 +100,29 @@ object FlightMessageConversion {
 
   def paxTypeAndQueueCountToMessage(ptqc: ApiPaxTypeAndQueueCount): PaxTypeAndQueueCountMessage = {
     PaxTypeAndQueueCountMessage(
-      Option(ptqc.passengerType.name),
-      Option(ptqc.queueType.toString),
-      Option(ptqc.paxCount)
+      paxType = Option(ptqc.passengerType.name),
+      queueType = Option(ptqc.queueType.toString),
+      paxValue = Option(ptqc.paxCount),
+      nationalities = Seq(),
+      ages = Seq()
     )
   }
+
+  def splitNationalitiesToMessage(ptqc: ApiPaxTypeAndQueueCount): Seq[SplitNationalityCountMessage] = ptqc
+    .nationalities
+    .map(_.map {
+      case (nat, count) => SplitNationalityCountMessage(Option(nat.code), Option(count))
+    })
+    .getOrElse(Seq())
+    .toSeq
+
+  def splitAgesToMessage(ptqc: ApiPaxTypeAndQueueCount): Seq[SplitAgeCountMessage] = ptqc
+    .ages
+    .map(_.map {
+      case (age, count) => SplitAgeCountMessage(Option(age.years), Option(count))
+    })
+    .getOrElse(Seq())
+    .toSeq
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(

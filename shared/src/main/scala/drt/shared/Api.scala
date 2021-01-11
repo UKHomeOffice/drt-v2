@@ -1,7 +1,5 @@
 package drt.shared
 
-import java.util.UUID
-
 import drt.shared.CrunchApi._
 import drt.shared.EventTypes.{CI, DC, InvalidEventType}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
@@ -15,9 +13,9 @@ import ujson.Js.Value
 import uk.gov.homeoffice.drt.Urls
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
-import upickle.Js
 import upickle.default._
 
+import java.util.UUID
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
 import scala.util.matching.Regex
@@ -111,7 +109,7 @@ object SplitStyle {
   }
 
   implicit val splitStyleReadWriter: ReadWriter[SplitStyle] =
-    readwriter[Js.Value].bimap[SplitStyle](
+    readwriter[Value].bimap[SplitStyle](
       feedSource => feedSource.toString,
       (s: Value) => apply(s.str)
     )
@@ -125,16 +123,31 @@ case object Ratio extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
-case class Nationality(code: String)
+case class Nationality(code: String) {
+  override def toString: String = code
+}
 
 object Nationality {
   implicit val rw: ReadWriter[Nationality] = macroRW
 }
 
-case class ApiPaxTypeAndQueueCount(passengerType: PaxType,
-                                   queueType: Queue,
-                                   paxCount: Double,
-                                   nationalities: Option[IMap[Nationality, Double]])
+case class PaxAge(years: Int) {
+  def isUnder(age: Int): Boolean = years < age
+
+  override def toString: String = s"$years"
+}
+
+object PaxAge {
+  implicit val rw: ReadWriter[PaxAge] = macroRW
+}
+
+case class ApiPaxTypeAndQueueCount(
+                                    passengerType: PaxType,
+                                    queueType: Queue,
+                                    paxCount: Double,
+                                    nationalities: Option[IMap[Nationality, Double]],
+                                    ages: Option[IMap[PaxAge, Double]]
+                                  )
 
 object ApiPaxTypeAndQueueCount {
   implicit val rw: ReadWriter[ApiPaxTypeAndQueueCount] = macroRW
@@ -367,6 +380,8 @@ case class InvalidVoyageNumber(exception: Throwable) extends VoyageNumberLike {
 }
 
 case object VoyageNumber {
+  implicit val rw: ReadWriter[VoyageNumber] = macroRW
+
   def apply(string: String): VoyageNumberLike = Try(string.toInt) match {
     case Success(value) => VoyageNumber(value)
     case Failure(exception) => InvalidVoyageNumber(exception)
@@ -386,63 +401,53 @@ object FeedSourceArrival {
 }
 
 trait FeedSource {
-  def name: String
+  val name: String
 
   val description: Boolean => String
+
+  override val toString: String = getClass.getSimpleName.split("\\$").last
 }
 
 case object ApiFeedSource extends FeedSource {
-  def name: String = "API"
+  val name: String = "API"
 
   val description: Boolean => String = isLiveFeedAvailable => if (isLiveFeedAvailable)
     "Actual passenger nationality and age data when available."
   else
     "Actual passenger numbers and nationality data when available."
-
-  override def toString: String = "ApiFeedSource"
 }
 
 case object AclFeedSource extends FeedSource {
-  def name: String = "ACL"
+  val name: String = "ACL"
 
   val description: Boolean => String = _ => "Flight schedule for up to 6 months."
-
-  override def toString: String = "AclFeedSource"
 }
 
 case object ForecastFeedSource extends FeedSource {
-  def name: String = "Port forecast"
+  val name: String = "Port forecast"
 
   val description: Boolean => String = _ => "Updated forecast of passenger numbers."
-
-  override def toString: String = "ForecastFeedSource"
 }
 
 case object LiveFeedSource extends FeedSource {
-  def name: String = "Port live"
+  val name: String = "Port live"
 
   val description: Boolean => String = _ => "Up-to-date passenger numbers, estimated and actual arrival times, gates and stands."
-
-  override def toString: String = "LiveFeedSource"
 }
 
 case object LiveBaseFeedSource extends FeedSource {
-  def name: String = "Cirium live"
+  val name: String = "Cirium live"
 
   val description: Boolean => String = isLiveFeedAvailable => if (isLiveFeedAvailable)
     "Estimated and actual arrival time updates where not available from live feed."
   else
     "Estimated and actual arrival time updates."
-
-  override def toString: String = "LiveBaseFeedSource"
 }
 
 case object UnknownFeedSource extends FeedSource {
-  def name: String = "Unknown"
+  val name: String = "Unknown"
 
   val description: Boolean => String = _ => ""
-
-  override def toString: String = "UnknownFeedSource"
 }
 
 object FeedSource {
@@ -451,7 +456,7 @@ object FeedSource {
   def apply(feedSource: String): Option[FeedSource] = feedSources.find(fs => fs.toString == feedSource)
 
   implicit val feedSourceReadWriter: ReadWriter[FeedSource] =
-    readwriter[Js.Value].bimap[FeedSource](
+    readwriter[Value].bimap[FeedSource](
       feedSource => feedSource.toString,
       (s: Value) => apply(s.str).getOrElse(UnknownFeedSource)
     )
@@ -473,6 +478,9 @@ case class ArrivalKey(origin: PortCode,
 }
 
 object ArrivalKey {
+
+  implicit val rw: ReadWriter[ArrivalKey] = macroRW
+
   def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled)
 
   def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
@@ -500,10 +508,10 @@ trait SDateLike {
   def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
 
   /**
-    * Days of the week 1 to 7 (Monday is 1)
-    *
-    * @return
-    */
+   * Days of the week 1 to 7 (Monday is 1)
+   *
+   * @return
+   */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int

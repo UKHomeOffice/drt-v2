@@ -3,28 +3,31 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
-import drt.client.components.FlightComponents.SplitsGraph
+import drt.client.components.FlightComponents.{SplitsGraph, hasApiSplits}
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.TooltipComponent._
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, ViewDay, ViewMode, ViewPointInTime}
+import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared._
-import drt.shared.api.Arrival
+import drt.shared.api.{Arrival, PassengerInfoSummary}
+import drt.shared.dates.UtcDate
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, TableSection}
+
+import scala.collection.immutable.Map
 
 object FlightsWithSplitsTable {
 
   type BestPaxForArrivalF = Arrival => Int
 
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],
+                   passengerInfoSummaryByDay: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
                    queueOrder: Seq[Queue], hasEstChox: Boolean,
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    hasArrivalSourcesAccess: Boolean,
@@ -34,7 +37,7 @@ object FlightsWithSplitsTable {
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
-    (props.flightsWithSplits, props.arrivalSources).hashCode()
+    (props.flightsWithSplits, props.arrivalSources, props.passengerInfoSummaryByDay).hashCode()
   })
 
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
@@ -76,8 +79,14 @@ object FlightsWithSplitsTable {
             <.tbody(
               sortedFlights.zipWithIndex.map {
                 case ((flightWithSplits, codeShares), idx) =>
+                  val maybePassengerInfo: Option[PassengerInfoSummary] = props
+                    .passengerInfoSummaryByDay
+                    .get(SDate(flightWithSplits.apiFlight.Scheduled).toUtcDate)
+                    .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
+
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits,
+                    maybePassengerInfo,
                     codeShares,
                     idx,
                     timelineComponent = timelineComponent,
@@ -121,7 +130,9 @@ object FlightsWithSplitsTable {
         case (label, _) => label != "Est Chox" || props.hasEstChox
       }
       .map {
-        case (label, None) if label == "Flight" => <.th(label, " ", wbrFlightColorTooltip)
+        case (label, None) if label == "Flight" => <.th(
+          <.div(^.cls := "arrivals__table__flight-code-wrapper", label, " ", wbrFlightColorTooltip)
+        )
         case (label, None) => <.th(label)
         case (label, Some(className)) if className == "status" => <.th(label, " ", arrivalStatusTooltip, ^.className := className)
         case (label, Some(className)) => <.th(label, ^.className := className)
@@ -164,6 +175,7 @@ object FlightTableRow {
   type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
+                   maybePassengerInfoSummary: Option[PassengerInfoSummary],
                    codeShares: Set[Arrival],
                    idx: Int,
                    timelineComponent: Option[Arrival => html_<^.VdomNode],
@@ -179,7 +191,7 @@ object FlightTableRow {
 
   case class RowState(hasChanged: Boolean)
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.flightWithSplits.hashCode, p.idx))
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.flightWithSplits.hashCode, p.idx, p.maybePassengerInfoSummary.hashCode))
   implicit val stateReuse: Reusability[RowState] = Reusability.derive[RowState]
 
   def bestArrivalTime(f: Arrival): MillisSinceEpoch = {
@@ -213,7 +225,8 @@ object FlightTableRow {
 
       val flightCodeClass = if (props.hasArrivalSourcesAccess) "arrivals__table__flight-code arrivals__table__flight-code--clickable" else "arrivals__table__flight-code"
 
-      val flightCodeCell = if (props.hasArrivalSourcesAccess) <.div(
+      val flightCodeElement = if (props.hasArrivalSourcesAccess) <.span(
+        ^.cls := "arrivals__table__flight-code-value",
         ^.onClick --> Callback(SPACircuit.dispatch {
           props.viewMode match {
             case vm: ViewDay if vm.isHistoric(SDate.now()) =>
@@ -225,10 +238,26 @@ object FlightTableRow {
           }
         }),
         allCodes.mkString(" - "))
-      else <.div(allCodes.mkString(" - "))
+      else <.span(
+        ^.cls := "arrivals__table__flight-code-value",
+        allCodes.mkString(" - ")
+      )
 
       val firstCells = List[TagMod](
-        <.td(^.className := flightCodeClass, flightCodeCell),
+
+        <.td(
+          ^.className := flightCodeClass,
+          <.div(
+            ^.cls := "arrivals__table__flight-code-wrapper",
+            flightCodeElement,
+            if (hasApiSplits(flightWithSplits: ApiFlightWithSplits))
+              props
+                .maybePassengerInfoSummary
+                .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
+            else EmptyVdom
+          )
+        ),
+
         <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(

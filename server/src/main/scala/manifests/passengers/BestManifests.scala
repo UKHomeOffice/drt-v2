@@ -4,7 +4,7 @@ import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.{SDateLike, _}
 import manifests.UniqueArrivalKey
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, PaxAge, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import services.SDate
 
 case class BestAvailableManifest(source: SplitSource,

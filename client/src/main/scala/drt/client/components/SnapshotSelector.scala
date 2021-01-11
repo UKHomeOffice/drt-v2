@@ -6,11 +6,10 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.LoadingState
 import drt.shared.SDateLike
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Div
 
 import scala.scalajs.js.Date
@@ -77,11 +76,11 @@ object SnapshotSelector {
         <.select(^.className := "form-control", ^.defaultValue := defaultValue.toString,
           ^.onChange ==> ((e: ReactEventFromInput) => scope.modState(callback(e.target.value))),
           nameValues.map {
-            case (name, value) => <.option(^.value := value, name)
+            case (name, value) => <.option(^.value := value, ^.key := value, name)
           }.toTagMod)
       }
 
-      def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate()
+      def daysInMonth(month: Int, year: Int) = new Date(year, month, 0).getDate().toInt
 
       def isValidSnapshotDate = isLaterThanEarliest(state.snapshotDateTime) && isInPast
 
@@ -91,7 +90,7 @@ object SnapshotSelector {
         case (true, true) =>
           <.div(^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.spinner)
         case (false, true) =>
-          <.div (^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.checkCircleO)
+          <.div(^.className := "col-sm-1 no-gutters", ^.id := "snapshot-done", Icon.checkCircleO)
         case _ =>
           <.div(^.className := "col-sm-1 no-gutters", <.input.button(^.value := "Go", ^.disabled := !isValidSnapshotDate, ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime))
       }

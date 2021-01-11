@@ -9,7 +9,6 @@ import drt.shared._
 import drt.shared.airportconfig.Bhx
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
-import passengersplits.parsing.VoyageManifestParser.PaxAge
 import queueus._
 import services.SDate
 import services.crunch.CrunchTestLike
@@ -57,10 +56,27 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       ))
       val expected = Splits(
         Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Option(Map(Nationality(CountryCodes.UK) -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Option(Map(Nationality(CountryCodes.UK) -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 3, Option(Map(Nationality(CountryCodes.UK) -> 2))),
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, Option(Map(Nationality(CountryCodes.UK) -> 2)))
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.EeaBelowEGateAge,
+            Queues.EeaDesk,
+            1,
+            Option(Map(Nationality(CountryCodes.UK) -> 1)),
+            Option(Map(PaxAge(4) -> 1))
+          ),
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.EeaMachineReadable,
+            Queues.EeaDesk,
+            3,
+            Option(Map(Nationality(CountryCodes.UK) -> 2)),
+            Option(Map(PaxAge(35) -> 2))
+          ),
+          ApiPaxTypeAndQueueCount
+          (PaxTypes.EeaMachineReadable,
+            Queues.EGate,
+            1,
+            Option(Map(Nationality(CountryCodes.UK) -> 2)),
+            Option(Map(PaxAge(35) -> 2))
+          )
         ),
         Historical,
         None,
@@ -83,9 +99,27 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       ))
       val expected = Splits(
         Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNationalBelowEGateAge, Queues.EeaDesk, 1, Option(Map(Nationality(CountryCodes.USA) -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EeaDesk, 3, Option(Map(Nationality(CountryCodes.USA) -> 2))),
-          ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EGate, 1, Option(Map(Nationality(CountryCodes.USA) -> 2)))
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.B5JPlusNationalBelowEGateAge,
+            Queues.EeaDesk,
+            1,
+            Option(Map(Nationality(CountryCodes.USA) -> 1)),
+            Option(Map(PaxAge(4) -> 1))
+          ),
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.B5JPlusNational,
+            Queues.EeaDesk,
+            3,
+            Option(Map(Nationality(CountryCodes.USA) -> 2)),
+            Option(Map(PaxAge(35) -> 2))
+          ),
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.B5JPlusNational,
+            Queues.EGate,
+            1,
+            Option(Map(Nationality(CountryCodes.USA) -> 2)),
+            Option(Map(PaxAge(35) -> 2))
+          )
         ),
         Historical,
         None,
@@ -108,9 +142,27 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       ))
       val expected = Splits(
         Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 0, Option(Map(Nationality(CountryCodes.UK) -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 2, Option(Map(Nationality(CountryCodes.UK) -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 3, Option(Map(Nationality(CountryCodes.UK) -> 3)))
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.EeaMachineReadable,
+            Queues.EGate,
+            0,
+            Option(Map(Nationality(CountryCodes.UK) -> 1)),
+            Option(Map(PaxAge(35) -> 1))
+          ),
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.EeaMachineReadable,
+            Queues.EeaDesk,
+            2,
+            Option(Map(Nationality(CountryCodes.UK) -> 1)),
+            Option(Map(PaxAge(35) -> 1))
+          ),
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.EeaBelowEGateAge,
+            Queues.EeaDesk,
+            3,
+            Option(Map(Nationality(CountryCodes.UK) -> 3)),
+            Option(Map(PaxAge(4) -> 3))
+          )
         ),
         Historical,
         None,
@@ -132,9 +184,27 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       ))
       val expected = Splits(
         Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EGate, 0, Option(Map(Nationality(CountryCodes.USA) -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EeaDesk, 2, Option(Map(Nationality(CountryCodes.USA) -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNationalBelowEGateAge, Queues.EeaDesk, 3, Option(Map(Nationality(CountryCodes.USA) -> 3)))
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.B5JPlusNational,
+            Queues.EGate,
+            0,
+            Option(Map(Nationality(CountryCodes.USA) -> 1)),
+            Option(Map(PaxAge(35) -> 1))
+          ),
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.B5JPlusNational,
+            Queues.EeaDesk,
+            2,
+            Option(Map(Nationality(CountryCodes.USA) -> 1)),
+            Option(Map(PaxAge(35) -> 1))
+          ),
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.B5JPlusNationalBelowEGateAge,
+            Queues.EeaDesk,
+            3,
+            Option(Map(Nationality(CountryCodes.USA) -> 3)),
+            Option(Map(PaxAge(4) -> 3))
+          )
         ),
         Historical,
         None,
@@ -156,7 +226,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
 
 
     "Given 4 EEA adults and 1 EEA child with a 1.0 adjustment per child" +
-    "Then I should expect 1 EEA Adults to Desk, 1 EEA child to desk and 3 EEA Adult to eGates" >> {
+      "Then I should expect 1 EEA Adults to Desk, 1 EEA child to desk and 3 EEA Adult to eGates" >> {
       val splitsCalculator = SplitsCalculator(testPaxTypeAllocator, config.terminalPaxSplits, ChildEGateAdjustments(1.0))
       val manifest = apiManifest(List(
         ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
@@ -168,9 +238,27 @@ class SplitsCalculatorSpec extends CrunchTestLike {
 
       val expected = Splits(
         Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Option(Map(Nationality(CountryCodes.UK) -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None),
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 3, Option(Map(Nationality(CountryCodes.UK) -> 4)))
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.EeaBelowEGateAge,
+            Queues.EeaDesk,
+            1,
+            Option(Map(Nationality(CountryCodes.UK) -> 1)),
+            Option(Map(PaxAge(4) -> 1))
+          ),
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.EeaMachineReadable,
+            Queues.EeaDesk,
+            1,
+            None,
+            None
+          ),
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.EeaMachineReadable,
+            Queues.EGate,
+            3,
+            Option(Map(Nationality(CountryCodes.UK) -> 4)),
+            Option(Map(PaxAge(35) -> 4))
+          )
         ),
         Historical,
         None,
@@ -182,7 +270,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
     }
 
     "Given 4 EEA adults and 1 EEA child with a 0.0 adjustment per child" +
-    "Then I should expect 0 EEA Adults to Desk, 1 EEA child to desk and 4 EEA Adult to eGates" >> {
+      "Then I should expect 0 EEA Adults to Desk, 1 EEA child to desk and 4 EEA Adult to eGates" >> {
 
       val splitsCalculator = SplitsCalculator(testPaxTypeAllocator, config.terminalPaxSplits, ChildEGateAdjustments(0.0))
 
@@ -195,8 +283,20 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       ))
       val expected = Splits(
         Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 1, Option(Map(Nationality(CountryCodes.UK) -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 4, Option(Map(Nationality(CountryCodes.UK) -> 4)))
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.EeaBelowEGateAge,
+            Queues.EeaDesk,
+            1,
+            Option(Map(Nationality(CountryCodes.UK) -> 1)),
+            Option(Map(PaxAge(4) -> 1))
+          ),
+          ApiPaxTypeAndQueueCount(
+            PaxTypes.EeaMachineReadable,
+            Queues.EGate,
+            4,
+            Option(Map(Nationality(CountryCodes.UK) -> 4)),
+            Option(Map(PaxAge(35) -> 4))
+          )
         ),
         Historical,
         None,
@@ -219,12 +319,13 @@ class SplitsCalculatorSpec extends CrunchTestLike {
     val result = splitsCalculator.terminalDefaultSplits(T2)
 
     val expected = Set(Splits(Set(
-      ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 4.0, None),
-      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 0.0, None),
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 92.0, None),
-      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 4.0, None)),
+      ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 4.0, None, None),
+      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 0.0, None, None),
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 92.0, None, None),
+      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 4.0, None, None)),
       TerminalAverage, None, Percentage))
 
     result === expected
   }
 }
+

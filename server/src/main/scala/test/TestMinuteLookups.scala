@@ -18,8 +18,6 @@ case class TestMinuteLookups(system: ActorSystem,
                              expireAfterMillis: Int,
                              queuesByTerminal: Map[Terminal, Seq[Queue]])
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
-  override val replayMaxCrunchStateMessages = 1000
-
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
 
   val resetQueuesData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {

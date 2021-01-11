@@ -28,7 +28,7 @@ class WorkloadSpec extends Specification {
     val arrival = ArrivalGenerator.arrival(actPax = Option(1))
     val splits = Set(
       Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None, None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(EventTypes.DC),
         PaxNumbers))
@@ -54,7 +54,7 @@ class WorkloadSpec extends Specification {
 
     val splits = Set(
       Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None, None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(EventTypes.DC),
         PaxNumbers))
@@ -80,7 +80,7 @@ class WorkloadSpec extends Specification {
     val arrival = ArrivalGenerator.arrival(actPax = Option(1))
     val splits = Set(
       Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)))),
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)), None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(EventTypes.DC),
         PaxNumbers))
@@ -106,7 +106,7 @@ class WorkloadSpec extends Specification {
     val arrival = ArrivalGenerator.arrival(actPax = Option(10))
     val splits = Set(
       Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)))),
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)), None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(EventTypes.DC),
         PaxNumbers))
@@ -132,7 +132,7 @@ class WorkloadSpec extends Specification {
     val arrival = ArrivalGenerator.arrival(actPax = Option(100))
     val splits = Set(
       Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)))),
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)), None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(EventTypes.DC),
         PaxNumbers))
@@ -158,7 +158,7 @@ class WorkloadSpec extends Specification {
     val arrival = ArrivalGenerator.arrival(actPax = Option(10))
     val splits = Set(
       Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 3, Option(Map(Nationality("GBR") -> 1, Nationality("FRA") -> 2)))),
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 3, Option(Map(Nationality("GBR") -> 1, Nationality("FRA") -> 2)), None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(EventTypes.DC),
         PaxNumbers))
@@ -187,8 +187,8 @@ class WorkloadSpec extends Specification {
     val splits = Set(
       Splits(
         Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("ZAR") -> 1)))
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)), None),
+          ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("ZAR") -> 1)), None)
         ),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(EventTypes.DC),
@@ -219,8 +219,8 @@ class WorkloadSpec extends Specification {
     val splits = Set(
       Splits(
         Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 2, Option(Map(Nationality("GBR") -> 1, Nationality("FRA") -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 2, Option(Map(Nationality("ZAR") -> 1, Nationality("ZBW") -> 1)))
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 2, Option(Map(Nationality("GBR") -> 1, Nationality("FRA") -> 1)), None),
+          ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 2, Option(Map(Nationality("ZAR") -> 1, Nationality("ZBW") -> 1)), None)
         ),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(EventTypes.DC),
@@ -261,8 +261,8 @@ class WorkloadSpec extends Specification {
     val splits = Set(
       Splits(
         Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 12, Option(Map(Nationality("GBR") -> 10, Nationality("FRA") -> 2))),
-          ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 12, Option(Map(Nationality("ZAR") -> 6, Nationality("ZBW") -> 6)))
+          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 12, Option(Map(Nationality("GBR") -> 10, Nationality("FRA") -> 2)), None),
+          ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 12, Option(Map(Nationality("ZAR") -> 6, Nationality("ZBW") -> 6)), None)
         ),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(EventTypes.DC),
@@ -308,7 +308,7 @@ class WorkloadSpec extends Specification {
     val arrival = ArrivalGenerator.arrival(actPax = None, apiPax = Option(6))
     val splits = Set(
       Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 6, None)),
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 6, None, None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(EventTypes.DC),
         PaxNumbers))
@@ -335,7 +335,7 @@ class WorkloadSpec extends Specification {
     val arrival = ArrivalGenerator.arrival(actPax = Option(1), apiPax = Option(6), feedSources = Set(LiveFeedSource))
     val splits = Set(
       Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 6, None)),
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 6, None, None)),
         SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
         Option(EventTypes.DC),
         PaxNumbers))

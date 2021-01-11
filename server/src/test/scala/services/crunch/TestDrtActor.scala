@@ -143,7 +143,6 @@ class TestDrtActor extends Actor {
         logLabel = tc.logLabel,
         airportConfig = tc.airportConfig,
         pcpArrival = tc.pcpArrivalTime,
-        historicalSplitsProvider = tc.csvSplitsProvider,
         portStateActor = portStateActor,
         maxDaysToCrunch = tc.maxDaysToCrunch,
         expireAfterMillis = tc.expireAfterMillis,

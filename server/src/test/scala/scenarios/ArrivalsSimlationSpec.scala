@@ -66,14 +66,14 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
       pcpDt = "2020-06-17T06:30:00Z"
     )
     val splits = Splits(Set(
-      ApiPaxTypeAndQueueCount(B5JPlusNational, Queues.EeaDesk, 1.0, None),
-      ApiPaxTypeAndQueueCount(B5JPlusNational, Queues.EGate, 2.0, None),
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 3.0, None),
-      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 4.0, None),
-      ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 5.0, None),
-      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 6.0, None),
-      ApiPaxTypeAndQueueCount(Transit, Queues.Transfer, 7.0, None),
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 8.0, None)
+      ApiPaxTypeAndQueueCount(B5JPlusNational, Queues.EeaDesk, 1.0, None, None),
+      ApiPaxTypeAndQueueCount(B5JPlusNational, Queues.EGate, 2.0, None, None),
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 3.0, None, None),
+      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 4.0, None, None),
+      ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 5.0, None, None),
+      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 6.0, None, None),
+      ApiPaxTypeAndQueueCount(Transit, Queues.Transfer, 7.0, None, None),
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 8.0, None, None)
     ), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
     val expected: ApiFlightWithSplits = ApiFlightWithSplits(flight, Set(splits))
 
@@ -92,14 +92,14 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
 
     val expected: Set[Splits] = Set(Splits(
       Set(
-        ApiPaxTypeAndQueueCount(B5JPlusNational, Queues.EeaDesk, 0, None),
-        ApiPaxTypeAndQueueCount(B5JPlusNational, Queues.EGate, 0, None),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 8.0, None),
-        ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 7.0, None),
-        ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 1.0, None),
-        ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 1.0, None),
-        ApiPaxTypeAndQueueCount(Transit, Queues.Transfer, 13.0, None),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 46.0, None)
+        ApiPaxTypeAndQueueCount(B5JPlusNational, Queues.EeaDesk, 0, None, None),
+        ApiPaxTypeAndQueueCount(B5JPlusNational, Queues.EGate, 0, None, None),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 8.0, None, None),
+        ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 7.0, None, None),
+        ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 1.0, None, None),
+        ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 1.0, None, None),
+        ApiPaxTypeAndQueueCount(Transit, Queues.Transfer, 13.0, None, None),
+        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 46.0, None, None)
       ),
       ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC)
     ))

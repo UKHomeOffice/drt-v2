@@ -46,5 +46,6 @@ declare namespace Cypress {
         staffDeployedAtRow(row: number): Chainable<Element>;
         staffMovementsAtRow(row: number): Chainable<Element>;
         waitForFlightToAppear(flight: string): Chainable<Element>;
+        navigateToArrivalsTab(): Chainable<Element>;
     }
 }

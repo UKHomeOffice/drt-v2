@@ -118,7 +118,7 @@ object SPAMain {
     }
   }
 
-  def serverLogEndpoint: String = BaseUrl.until_#(Path("/logging")).value
+  def serverLogEndpoint: String = absoluteUrl("logging")
 
   case class PortDashboardLoc(period: Option[Int]) extends Loc
 
@@ -170,7 +170,7 @@ object SPAMain {
   }
 
   val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc]
-    .buildConfig { dsl =>
+    .buildConfig { dsl: RouterConfigDsl[Loc, Unit] =>
       import dsl._
 
       val rule = homeRoute(dsl) |
@@ -211,31 +211,31 @@ object SPAMain {
       )
     })
 
-  def homeRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def homeRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute(root, UserDashboardLoc) ~> renderR((router: RouterCtl[Loc]) => UserDashboardPage(router))
   }
 
-  def contactUsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def contactUsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute(root, ContactUsLoc) ~> renderR(_ => ContactPage())
   }
 
-  def statusRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def statusRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#status", StatusLoc) ~> renderR((_: RouterCtl[Loc]) => StatusPage())
   }
 
-  def keyCloakUsersRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def keyCloakUsersRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#users", KeyCloakUsersLoc) ~> renderR((router: RouterCtl[Loc]) => KeyCloakUsersPage(router))
   }
 
-  def keyCloakUserEditRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def keyCloakUserEditRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     dynamicRouteCT(("#editUser" / uuid).caseClass[KeyCloakUserEditLoc]) ~>
@@ -244,68 +244,68 @@ object SPAMain {
       })
   }
 
-  def alertRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def alertRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#alerts", AlertLoc) ~> renderR((_: RouterCtl[Loc]) => AlertsPage())
   }
 
-  def contactRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def contactRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#contact", ContactUsLoc) ~> renderR(_ => ContactPage())
   }
 
-  def faqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+
+  def faqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#faqs", FaqsLoc) ~> renderR(_ => FaqsPage(""))
   }
 
-  def deskAndQueuesFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def deskAndQueuesFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#faqs/deskAndQueues", DeskAndQueuesLoc) ~> renderR(_ => FaqsPage("deskAndQueues"))
   }
 
-  def arrivalsFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def arrivalsFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#faqs/arrivals", ArrivalsFaqsLoc) ~> renderR(_ => FaqsPage("arrivals"))
   }
 
-  def portConfigurationFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def portConfigurationFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#faqs/portConfiguration", PortConfigurationFaqsLoc) ~> renderR(_ => FaqsPage("portConfiguration"))
   }
 
-  def staffMovementsFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def staffMovementsFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#faqs/staff-movements", StaffMovementsFaqsLoc) ~> renderR(_ => FaqsPage("staff-movements"))
   }
 
-  def monthlyStaffingFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def monthlyStaffingFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#faqs/monthly-staffing", MonthlyStaffingFaqsLoc) ~> renderR(_ => FaqsPage("monthly-staffing"))
   }
 
-
-  def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#forecastFileUpload", ForecastFileUploadLoc) ~> renderR(_ => ForecastFileUploadPage())
   }
 
-  def portConfigRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#config", PortConfigLoc) ~> renderR(_ => PortConfigPage())
   }
 
-  def dashboardRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def dashboardRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     dynamicRouteCT(("#portDashboard" / int.option).caseClass[PortDashboardLoc]) ~>
@@ -314,9 +314,8 @@ object SPAMain {
       })
   }
 
-  def terminalRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def terminalRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
-    import modules.AdditionalDsl._
 
     val requiredTerminalName = string("[a-zA-Z0-9]+")
     val requiredTopLevelTab = string("[a-zA-Z0-9]+")
@@ -365,7 +364,7 @@ object SPAMain {
   protected def getInstance(): this.type = this
 
   @JSExport
-  def main(): Unit = {
+  def main(args: Array[String]): Unit = {
     log.debug("Application starting")
 
     ErrorHandler.registerGlobalErrorHandler()

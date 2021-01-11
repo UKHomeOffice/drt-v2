@@ -5,8 +5,9 @@ import drt.shared.PaxTypes._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
+import drt.shared.api.Arrival
 import ujson.Js.Value
-import upickle.Js
+
 import upickle.default._
 
 import scala.collection.immutable.SortedMap
@@ -159,7 +160,7 @@ object PaxType {
   }
 
   implicit val paxTypeReaderWriter: ReadWriter[PaxType] =
-    readwriter[Js.Value].bimap[PaxType](paxType => paxType.cleanName, (s: Value) => PaxType(s"${s.str}$$"))
+    readwriter[Value].bimap[PaxType](paxType => paxType.cleanName, (s: Value) => PaxType(s"${s.str}$$"))
 }
 
 object PaxTypes {
@@ -190,6 +191,18 @@ object PaxTypes {
     case NonVisaNational => "Non-Visa National"
     case B5JPlusNational => "B5J+ National"
     case B5JPlusNationalBelowEGateAge => "B5J+ Child"
+    case Transit => "Transit"
+    case other => other.name
+  }
+
+  def displayNameShort(pt: PaxType): String = pt match {
+    case EeaMachineReadable => "EEA MRTD"
+    case EeaNonMachineReadable => "EEA NMR"
+    case EeaBelowEGateAge => "EEA U12"
+    case VisaNational => "VN"
+    case NonVisaNational => "NVN"
+    case B5JPlusNational => "B5J+"
+    case B5JPlusNationalBelowEGateAge => "B5J+ U12"
     case Transit => "Transit"
     case other => other.name
   }
@@ -238,20 +251,16 @@ case class AirportConfig(portCode: PortCode,
                          terminalPaxSplits: Map[Terminal, SplitRatios],
                          terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                          minMaxDesksByTerminalQueue24Hrs: Map[Terminal, Map[Queue, (List[Int], List[Int])]],
-                         shiftExamples: Seq[String] = Seq(),
                          fixedPointExamples: Seq[String] = Seq(),
                          hasActualDeskStats: Boolean = false,
-                         portStateSnapshotInterval: Int = 1000,
                          eGateBankSize: Int = 10,
                          minutesToCrunch: Int = 1440,
                          crunchOffsetMinutes: Int = 0,
                          hasEstChox: Boolean = true,
-                         useStaffingInput: Boolean = false,
                          forecastExportQueueOrder: List[Queue] = Queues.forecastExportQueueOrderSansFastTrack,
                          desksExportQueueOrder: List[Queue] = Queues.deskExportQueueOrderSansFastTrack,
                          contactEmail: Option[String] = None,
                          outOfHoursContactPhone: Option[String] = None,
-                         dayLengthHours: Int = 36,
                          nationalityBasedProcTimes: Map[String, Double] = ProcessingTimes.nationalityProcessingTimes,
                          role: Role,
                          cloneOfPortCode: Option[PortCode] = None,
@@ -260,6 +269,7 @@ case class AirportConfig(portCode: PortCode,
                          maybeCiriumEstThresholdHours: Option[Int] = None,
                          maybeCiriumTaxiThresholdMinutes: Option[Int] = Option(20),
                          feedSources: Seq[FeedSource],
+                         feedSourceMonitorExemptions: Seq[FeedSource] = Seq(),
                          desksByTerminal: Map[Terminal, Int],
                          queuePriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack, EGate),
                          assumedAdultsPerChild: Double = 1.0
