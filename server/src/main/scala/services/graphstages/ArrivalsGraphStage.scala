@@ -13,7 +13,6 @@ import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone
 import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.SortedMap
-import scala.concurrent.duration._
 import scala.language.postfixOps
 
 sealed trait ArrivalsSourceType
@@ -57,8 +56,8 @@ class ArrivalsGraphStage(name: String = "",
     var toPush: Option[ArrivalsDiff] = None
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
-
-    val arrivalsForSource: ArrivalsSourceType => SortedMap[UniqueArrival, Arrival] = {
+    
+    def arrivalsForSource(source: ArrivalsSourceType): SortedMap[UniqueArrival, Arrival] = source match {
       case BaseArrivals => forecastBaseArrivals
       case ForecastArrivals => forecastArrivals
       case LiveArrivals => liveArrivals
