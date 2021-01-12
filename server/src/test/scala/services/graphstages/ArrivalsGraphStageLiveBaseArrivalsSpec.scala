@@ -116,9 +116,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
-        toUpdate.exists {
-          case (_, _) => true
-        }
+        toUpdate.nonEmpty
     }
 
     liveBaseSource.offer(List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture))))
@@ -145,9 +143,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
-        toUpdate.exists {
-          case (_, _) => true
-        }
+        toUpdate.nonEmpty
     }
 
     liveBaseSource.offer(List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture))))
@@ -174,9 +170,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
-        toUpdate.exists {
-          case (_, _) => true
-        }
+        toUpdate.nonEmpty
     }
 
     liveSource.offer(List(arrival()))
@@ -203,9 +197,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
-        toUpdate.exists {
-          case (_, _) => true
-        }
+        toUpdate.nonEmpty
     }
 
     liveBaseSource.offer(List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture))))
@@ -241,9 +233,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
     probe.fishForMessage(2 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
-        toUpdate.exists {
-          case (_, _) => true
-        }
+        toUpdate.nonEmpty
     }
 
     liveBaseSource.offer(List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture))))
@@ -306,7 +296,6 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
       case ArrivalsDiff(toUpdate, _) =>
         toUpdate.exists {
           case (_, a) =>
-
             a.Estimated == Option(lateEstimatedTime.millisSinceEpoch)
         }
     }
