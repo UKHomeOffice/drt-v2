@@ -56,7 +56,7 @@ class ArrivalsGraphStage(name: String = "",
     var toPush: Option[ArrivalsDiff] = None
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
-    
+
     def arrivalsForSource(source: ArrivalsSourceType): SortedMap[UniqueArrival, Arrival] = source match {
       case BaseArrivals => forecastBaseArrivals
       case ForecastArrivals => forecastArrivals

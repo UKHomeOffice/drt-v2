@@ -30,7 +30,7 @@ object ApproximateScheduleMatch {
                                  sourcesToSearch: List[(ArrivalsSourceType, Map[UniqueArrival, Arrival])]): Option[Arrival] =
     sourcesToSearch.foldLeft[Option[Arrival]](None) {
       case (Some(found), _) => Some(found)
-      case (None, (sourceToSearch, arrivalsForSource)) => ApproximateScheduleMatch.maybeMergeApproxMatch(arrival, origin, sourceToSearch, arrivalsForSource)
+      case (None, (sourceToSearch, arrivalsForSource)) => maybeMergeApproxMatch(arrival, origin, sourceToSearch, arrivalsForSource)
     }
 
   def mergeApproxIfFoundElseOriginal(arrival: Arrival,
