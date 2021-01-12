@@ -9,6 +9,7 @@ import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, LiveArrivalsUtil}
+import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone, mergeApproxIfFoundElseOriginal}
 import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.SortedMap
@@ -57,13 +58,16 @@ class ArrivalsGraphStage(name: String = "",
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
-    def arrivalsForSource(sourceType: ArrivalsSourceType): SortedMap[UniqueArrival, Arrival] = sourceType match {
+    val arrivalsForSource: ArrivalsSourceType => SortedMap[UniqueArrival, Arrival] = {
       case BaseArrivals => forecastBaseArrivals
       case ForecastArrivals => forecastArrivals
       case LiveArrivals => liveArrivals
       case LiveBaseArrivals => liveBaseArrivals
       case _ => SortedMap[UniqueArrival, Arrival]()
     }
+
+    def arrivalSources(sources: List[ArrivalsSourceType]): List[(ArrivalsSourceType, SortedMap[UniqueArrival, Arrival])] =
+      sources.map(s => (s, arrivalsForSource(s)))
 
     override def preStart(): Unit = {
       log.info(s"Received ${initialForecastBaseArrivals.size} initial base arrivals")
@@ -249,7 +253,7 @@ class ArrivalsGraphStage(name: String = "",
       }
     }
 
-    def getUpdatesFromNonBaseArrivals(keys: Iterable[UniqueArrival]): SortedMap[UniqueArrival, Arrival] = {
+    def getUpdatesFromNonBaseArrivals(keys: Iterable[UniqueArrival]): SortedMap[UniqueArrival, Arrival] =
       SortedMap[UniqueArrival, Arrival]() ++ keys
         .foldLeft(Map[UniqueArrival, Arrival]()) {
           case (updatedArrivalsSoFar, key) =>
@@ -259,7 +263,6 @@ class ArrivalsGraphStage(name: String = "",
               case None => updatedArrivalsSoFar
             }
         }
-    }
 
     def arrivalHasUpdates(maybeExistingArrival: Option[Arrival], updatedArrival: Arrival): Boolean = {
       maybeExistingArrival.isEmpty || !maybeExistingArrival.get.equals(updatedArrival)
@@ -283,16 +286,16 @@ class ArrivalsGraphStage(name: String = "",
           Option(sanitisedLiveArrival)
 
         case (Some(liveArrival), None, _) =>
-          mergeApproxIfFoundElseOriginal(liveArrival, Option(liveArrival.Origin), List(LiveBaseArrivals))
+          mergeApproxIfFoundElseOriginal(liveArrival, Option(liveArrival.Origin), arrivalSources(List(LiveBaseArrivals)))
 
         case (None, Some(liveBaseArrival), Some(forecastBaseArrival)) =>
           Some(liveBaseArrival.copy(CarrierCode = forecastBaseArrival.CarrierCode))
 
         case (None, Some(liveBaseArrival), None) =>
-          mergeApproxIfFoundElseNone(liveBaseArrival, Option(liveBaseArrival.Origin), List(LiveArrivals, BaseArrivals))
+          mergeApproxIfFoundElseNone(liveBaseArrival, Option(liveBaseArrival.Origin), arrivalSources(List(LiveArrivals, BaseArrivals)))
 
         case (None, None, Some(forecastBaseArrival)) =>
-          mergeApproxIfFoundElseOriginal(forecastBaseArrival, Option(forecastBaseArrival.Origin), List(LiveBaseArrivals))
+          mergeApproxIfFoundElseOriginal(forecastBaseArrival, Option(forecastBaseArrival.Origin), arrivalSources(List(LiveBaseArrivals)))
 
         case (None, None, None) => None
       }
@@ -301,36 +304,6 @@ class ArrivalsGraphStage(name: String = "",
         val arrivalForFlightCode = forecastBaseArrivals.getOrElse(key, bestArrival)
         mergeBestFieldsFromSources(arrivalForFlightCode, bestArrival)
       })
-    }
-
-    def mergeApproxIfFoundElseNone(arrival: Arrival, maybeOrigin: Option[PortCode], sourcesToSearch: List[ArrivalsSourceType]): Option[Arrival] =
-      sourcesToSearch.foldLeft[Option[Arrival]](None) {
-        case (Some(found), _) => Some(found)
-        case (None, sourceToSearch) => maybeMergeApproxMatch(arrival, maybeOrigin, sourceToSearch)
-      }
-
-    def mergeApproxIfFoundElseOriginal(arrival: Arrival, maybeOrigin: Option[PortCode], sourcesToSearch: List[ArrivalsSourceType]): Option[Arrival] =
-      mergeApproxIfFoundElseNone(arrival, maybeOrigin, sourcesToSearch) match {
-        case Some(found) => Some(found)
-        case None => Some(arrival)
-      }
-
-    def maybeMergeApproxMatch(arrival: Arrival, maybeOrigin: Option[PortCode], sourceToSearch: ArrivalsSourceType): Option[Arrival] = {
-      val arrivalsToSearch: SortedMap[UniqueArrival, Arrival] = arrivalsForSource(sourceToSearch)
-      val key = arrival.unique
-      ApproximateScheduleMatch.find(key, maybeOrigin, arrivalsToSearch, MilliTimes.oneHourMillis) match {
-        case Left(matchedArrival) =>
-          if (sourceToSearch == LiveBaseArrivals)
-            Option(LiveArrivalsUtil.mergePortFeedWithLiveBase(arrival, matchedArrival))
-          else
-            Option(LiveArrivalsUtil.mergePortFeedWithLiveBase(matchedArrival, arrival))
-        case Right(none) if none.isEmpty =>
-          if (sourceToSearch == LiveBaseArrivals) log.warn(s"No cirium matches found for arrival $key")
-          None
-        case Right(_) =>
-          if (sourceToSearch == LiveBaseArrivals) log.warn(s"Multiple cirium matches found for arrival $key")
-          None
-      }
     }
 
     def mergeBestFieldsFromSources(baseArrival: Arrival, bestArrival: Arrival): Arrival = {
