@@ -11,15 +11,11 @@ import scala.collection.immutable.SortedMap
 object ApproximateScheduleMatch {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def find(uniqueArrival: UniqueArrival, maybeOrigin: Option[PortCode], arrivalsToSearch: Map[UniqueArrival, Arrival], windowMillis: Int): Either[Arrival, List[Arrival]] = {
+  def find(uniqueArrival: UniqueArrival, origin: PortCode, arrivalsToSearch: Map[UniqueArrival, Arrival], windowMillis: Int): Either[Arrival, List[Arrival]] = {
     val approxMatches = arrivalsToSearch
       .filterKeys(_.equalWithinScheduledWindow(uniqueArrival, windowMillis))
       .filter {
-        case (_, potentialArrival) =>
-          maybeOrigin match {
-            case None => true
-            case Some(origin) => potentialArrival.Origin == origin
-          }
+        case (_, potentialArrival) => potentialArrival.Origin == origin
       }
 
     approxMatches.values.toList match {
@@ -29,27 +25,27 @@ object ApproximateScheduleMatch {
   }
 
   def mergeApproxIfFoundElseNone(arrival: Arrival,
-                                 maybeOrigin: Option[PortCode],
+                                 origin: PortCode,
                                  sourcesToSearch: List[(ArrivalsSourceType, Map[UniqueArrival, Arrival])]): Option[Arrival] =
     sourcesToSearch.foldLeft[Option[Arrival]](None) {
       case (Some(found), _) => Some(found)
-      case (None, (sourceToSearch, arrivalsForSource)) => ApproximateScheduleMatch.maybeMergeApproxMatch(arrival, maybeOrigin, sourceToSearch, arrivalsForSource)
+      case (None, (sourceToSearch, arrivalsForSource)) => ApproximateScheduleMatch.maybeMergeApproxMatch(arrival, origin, sourceToSearch, arrivalsForSource)
     }
 
   def mergeApproxIfFoundElseOriginal(arrival: Arrival,
-                                     maybeOrigin: Option[PortCode],
+                                     origin: PortCode,
                                      sourcesToSearch: List[(ArrivalsSourceType, Map[UniqueArrival, Arrival])]): Option[Arrival] =
-    mergeApproxIfFoundElseNone(arrival, maybeOrigin, sourcesToSearch) match {
+    mergeApproxIfFoundElseNone(arrival, origin, sourcesToSearch) match {
       case Some(found) => Some(found)
       case None => Some(arrival)
     }
 
   def maybeMergeApproxMatch(arrival: Arrival,
-                            maybeOrigin: Option[PortCode],
+                            origin: PortCode,
                             searchSource: ArrivalsSourceType,
                             arrivalsToSearch: Map[UniqueArrival, Arrival]): Option[Arrival] = {
     val key = arrival.unique
-    find(key, maybeOrigin, arrivalsToSearch, MilliTimes.oneHourMillis) match {
+    find(key, origin, arrivalsToSearch, MilliTimes.oneHourMillis) match {
       case Left(matchedArrival) =>
         if (searchSource == LiveBaseArrivals)
           Option(LiveArrivalsUtil.mergePortFeedWithLiveBase(arrival, matchedArrival))

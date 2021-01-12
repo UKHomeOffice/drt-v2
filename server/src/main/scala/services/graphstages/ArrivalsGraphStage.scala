@@ -286,16 +286,16 @@ class ArrivalsGraphStage(name: String = "",
           Option(sanitisedLiveArrival)
 
         case (Some(liveArrival), None, _) =>
-          mergeApproxIfFoundElseOriginal(liveArrival, Option(liveArrival.Origin), arrivalSources(List(LiveBaseArrivals)))
+          mergeApproxIfFoundElseOriginal(liveArrival, liveArrival.Origin, arrivalSources(List(LiveBaseArrivals)))
 
         case (None, Some(liveBaseArrival), Some(forecastBaseArrival)) =>
           Some(liveBaseArrival.copy(CarrierCode = forecastBaseArrival.CarrierCode))
 
         case (None, Some(liveBaseArrival), None) =>
-          mergeApproxIfFoundElseNone(liveBaseArrival, Option(liveBaseArrival.Origin), arrivalSources(List(LiveArrivals, BaseArrivals)))
+          mergeApproxIfFoundElseNone(liveBaseArrival, liveBaseArrival.Origin, arrivalSources(List(LiveArrivals, BaseArrivals)))
 
         case (None, None, Some(forecastBaseArrival)) =>
-          mergeApproxIfFoundElseOriginal(forecastBaseArrival, Option(forecastBaseArrival.Origin), arrivalSources(List(LiveBaseArrivals)))
+          mergeApproxIfFoundElseOriginal(forecastBaseArrival, forecastBaseArrival.Origin, arrivalSources(List(LiveBaseArrivals)))
 
         case (None, None, None) => None
       }
