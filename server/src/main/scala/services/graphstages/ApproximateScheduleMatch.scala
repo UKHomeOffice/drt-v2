@@ -16,7 +16,10 @@ object ApproximateScheduleMatch {
     val approxMatches = arrivalsToSearch
       .filterKeys(_.equalWithinScheduledWindow(uniqueArrival, windowMillis))
       .filter {
-        case (_, potentialArrival) => potentialArrival.Origin == origin
+        case (_, potentialArrival) =>
+          val originMatches = potentialArrival.Origin == origin
+          if (!originMatches) log.warn(s"Origin mismatch for $uniqueArrival approximate match ${potentialArrival.unique} ($origin != ${potentialArrival.Origin})")
+          originMatches
       }
 
     approxMatches.values.toList match {
@@ -48,6 +51,7 @@ object ApproximateScheduleMatch {
     val key = arrival.unique
     findInScheduledWindow(key, origin, arrivalsToSearch, MilliTimes.oneHourMillis) match {
       case Left(matchedArrival) =>
+        log.info(s"Merging approximate schedule match ${matchedArrival.unique} with ${arrival.unique}")
         if (searchSource == LiveBaseArrivals)
           Option(LiveArrivalsUtil.mergePortFeedWithLiveBase(arrival, matchedArrival))
         else
