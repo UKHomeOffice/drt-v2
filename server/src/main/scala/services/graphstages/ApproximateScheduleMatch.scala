@@ -5,13 +5,14 @@ import drt.shared.{MilliTimes, PortCode, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import services.arrivals.LiveArrivalsUtil
 
-import scala.collection.immutable.SortedMap
-
 
 object ApproximateScheduleMatch {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def find(uniqueArrival: UniqueArrival, origin: PortCode, arrivalsToSearch: Map[UniqueArrival, Arrival], windowMillis: Int): Either[Arrival, List[Arrival]] = {
+  def findInScheduledWindow(uniqueArrival: UniqueArrival,
+                            origin: PortCode,
+                            arrivalsToSearch: Map[UniqueArrival, Arrival],
+                            windowMillis: Int): Either[Arrival, List[Arrival]] = {
     val approxMatches = arrivalsToSearch
       .filterKeys(_.equalWithinScheduledWindow(uniqueArrival, windowMillis))
       .filter {
@@ -45,17 +46,17 @@ object ApproximateScheduleMatch {
                             searchSource: ArrivalsSourceType,
                             arrivalsToSearch: Map[UniqueArrival, Arrival]): Option[Arrival] = {
     val key = arrival.unique
-    find(key, origin, arrivalsToSearch, MilliTimes.oneHourMillis) match {
+    findInScheduledWindow(key, origin, arrivalsToSearch, MilliTimes.oneHourMillis) match {
       case Left(matchedArrival) =>
         if (searchSource == LiveBaseArrivals)
           Option(LiveArrivalsUtil.mergePortFeedWithLiveBase(arrival, matchedArrival))
         else
           Option(LiveArrivalsUtil.mergePortFeedWithLiveBase(matchedArrival, arrival))
       case Right(none) if none.isEmpty =>
-        if (searchSource == LiveBaseArrivals) log.warn(s"No cirium matches found for arrival $key")
+        log.warn(s"No approximate schedule $searchSource matches found for arrival $key")
         None
       case Right(_) =>
-        if (searchSource == LiveBaseArrivals) log.warn(s"Multiple cirium matches found for arrival $key")
+        log.warn(s"Multiple approximate schedule $searchSource matches found for arrival $key")
         None
     }
   }
