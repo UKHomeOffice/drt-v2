@@ -68,7 +68,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
   override def after: Unit = TestKit.shutdownActorSystem(system)
 
-  val probe = TestProbe("arrivals")
+  val probe: TestProbe = TestProbe("arrivals")
 
   private def offerAndCheck(source: SourceQueueWithComplete[List[Arrival]], arrivalsToOffer: List[Arrival], checkArrival: Arrival => Boolean) = {
     source.offer(arrivalsToOffer)
@@ -76,9 +76,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     probe.fishForMessage(3 seconds) {
       case ArrivalsDiff(toUpdate, _) =>
         toUpdate.exists {
-          case (_, a) =>
-            println(s"checking arrival $a")
-            checkArrival(a)
+          case (_, a) => checkArrival(a)
         }
     }
   }
