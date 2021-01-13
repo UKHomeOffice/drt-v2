@@ -6,7 +6,7 @@ import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
-import ujson.Value
+import ujson.Js.Value
 
 import upickle.default._
 

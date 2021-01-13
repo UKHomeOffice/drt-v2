@@ -9,10 +9,10 @@ import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, LiveArrivalsUtil}
+import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone, mergeApproxIfFoundElseOriginal}
 import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.SortedMap
-import scala.concurrent.duration._
 import scala.language.postfixOps
 
 sealed trait ArrivalsSourceType
@@ -57,23 +57,33 @@ class ArrivalsGraphStage(name: String = "",
 
     val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
+    def arrivalsForSource(source: ArrivalsSourceType): SortedMap[UniqueArrival, Arrival] = source match {
+      case BaseArrivals => forecastBaseArrivals
+      case ForecastArrivals => forecastArrivals
+      case LiveArrivals => liveArrivals
+      case LiveBaseArrivals => liveBaseArrivals
+      case _ => SortedMap[UniqueArrival, Arrival]()
+    }
+
+    def arrivalSources(sources: List[ArrivalsSourceType]): List[(ArrivalsSourceType, SortedMap[UniqueArrival, Arrival])] =
+      sources.map(s => (s, arrivalsForSource(s)))
+
     override def preStart(): Unit = {
       log.info(s"Received ${initialForecastBaseArrivals.size} initial base arrivals")
       forecastBaseArrivals ++= relevantFlights(SortedMap[UniqueArrival, Arrival]() ++ initialForecastBaseArrivals)
       log.info(s"Received ${initialForecastArrivals.size} initial forecast arrivals")
-      forecastArrivals = prepInitialArrivals(initialForecastArrivals, forecastArrivals)
+      forecastArrivals = prepInitialArrivals(initialForecastArrivals)
 
       log.info(s"Received ${initialLiveBaseArrivals.size} initial live base arrivals")
-      liveBaseArrivals = prepInitialArrivals(initialLiveBaseArrivals, liveBaseArrivals)
+      liveBaseArrivals = prepInitialArrivals(initialLiveBaseArrivals)
       log.info(s"Received ${initialLiveArrivals.size} initial live arrivals")
-      liveArrivals = prepInitialArrivals(initialLiveArrivals, liveArrivals)
+      liveArrivals = prepInitialArrivals(initialLiveArrivals)
 
       merged = initialMergedArrivals
       super.preStart()
     }
 
-    def prepInitialArrivals(initialArrivals: SortedMap[UniqueArrival, Arrival],
-                            arrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = {
+    def prepInitialArrivals(initialArrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = {
       Crunch.purgeExpired(relevantFlights(SortedMap[UniqueArrival, Arrival]() ++ initialArrivals), UniqueArrival.atTime, now, expireAfterMillis.toInt)
     }
 
@@ -233,23 +243,25 @@ class ArrivalsGraphStage(name: String = "",
       } else log.debug(s"outMerged not available to push")
     }
 
-    def getUpdatesFromBaseArrivals: SortedMap[UniqueArrival, Arrival] =
+    def getUpdatesFromBaseArrivals: SortedMap[UniqueArrival, Arrival] = {
       forecastBaseArrivals.foldLeft(SortedMap[UniqueArrival, Arrival]()) {
         case (soFar, (key, baseArrival)) =>
           val mergedArrival = mergeBaseArrival(baseArrival)
           if (arrivalHasUpdates(merged.get(key), mergedArrival)) soFar + (key -> mergedArrival)
           else soFar
       }
+    }
 
-    def getUpdatesFromNonBaseArrivals(keys: Iterable[UniqueArrival]): SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival]() ++ keys
-      .foldLeft(Map[UniqueArrival, Arrival]()) {
-        case (updatedArrivalsSoFar, key) =>
-          mergeArrival(key) match {
-            case Some(mergedArrival) =>
-              if (arrivalHasUpdates(merged.get(key), mergedArrival)) updatedArrivalsSoFar.updated(key, mergedArrival) else updatedArrivalsSoFar
-            case None => updatedArrivalsSoFar
-          }
-      }
+    def getUpdatesFromNonBaseArrivals(keys: Iterable[UniqueArrival]): SortedMap[UniqueArrival, Arrival] =
+      SortedMap[UniqueArrival, Arrival]() ++ keys
+        .foldLeft(Map[UniqueArrival, Arrival]()) {
+          case (updatedArrivalsSoFar, key) =>
+            mergeArrival(key) match {
+              case Some(mergedArrival) =>
+                if (arrivalHasUpdates(merged.get(key), mergedArrival)) updatedArrivalsSoFar.updated(key, mergedArrival) else updatedArrivalsSoFar
+              case None => updatedArrivalsSoFar
+            }
+        }
 
     def arrivalHasUpdates(maybeExistingArrival: Option[Arrival], updatedArrival: Arrival): Boolean = {
       maybeExistingArrival.isEmpty || !maybeExistingArrival.get.equals(updatedArrival)
@@ -261,22 +273,32 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def mergeArrival(key: UniqueArrival): Option[Arrival] = {
-      val maybeLiveBaseArrivalWithSanitisedData = liveBaseArrivals.get(key).map(arrivalDataSanitiser.withSaneEstimates)
-      val maybeBestArrival: Option[Arrival] = (
-        liveArrivals.get(key),
-        maybeLiveBaseArrivalWithSanitisedData) match {
-        case (Some(liveArrival), None) => Option(liveArrival)
-        case (Some(liveArrival), Some(baseLiveArrival)) =>
-          val mergedLiveArrival = LiveArrivalsUtil.mergePortFeedWithBase(liveArrival, baseLiveArrival)
+      val maybeArrival = liveBaseArrivals.get(key)
+      val maybeSanitisedLiveBaseArrival = maybeArrival.map(arrivalDataSanitiser.withSaneEstimates)
+
+      val maybeBestArrival: Option[Arrival] = (liveArrivals.get(key), maybeSanitisedLiveBaseArrival, forecastBaseArrivals.get(key)) match {
+        case (Some(liveArrival), Some(baseLiveArrival), _) =>
+          val mergedLiveArrival = LiveArrivalsUtil.mergePortFeedWithLiveBase(liveArrival, baseLiveArrival)
           val sanitisedLiveArrival = ArrivalDataSanitiser
             .arrivalDataSanitiserWithoutThresholds
             .withSaneEstimates(mergedLiveArrival)
           Option(sanitisedLiveArrival)
-        case (None, Some(baseLiveArrival)) if forecastBaseArrivals.contains(key) =>
 
-          Option(baseLiveArrival)
-        case _ => forecastBaseArrivals.get(key)
+        case (Some(liveArrival), None, _) =>
+          mergeApproxIfFoundElseOriginal(liveArrival, liveArrival.Origin, arrivalSources(List(LiveBaseArrivals)))
+
+        case (None, Some(liveBaseArrival), Some(forecastBaseArrival)) =>
+          Some(liveBaseArrival.copy(CarrierCode = forecastBaseArrival.CarrierCode))
+
+        case (None, Some(liveBaseArrival), None) =>
+          mergeApproxIfFoundElseNone(liveBaseArrival, liveBaseArrival.Origin, arrivalSources(List(LiveArrivals, BaseArrivals)))
+
+        case (None, None, Some(forecastBaseArrival)) =>
+          mergeApproxIfFoundElseOriginal(forecastBaseArrival, forecastBaseArrival.Origin, arrivalSources(List(LiveBaseArrivals)))
+
+        case (None, None, None) => None
       }
+
       maybeBestArrival.map(bestArrival => {
         val arrivalForFlightCode = forecastBaseArrivals.getOrElse(key, bestArrival)
         mergeBestFieldsFromSources(arrivalForFlightCode, bestArrival)
@@ -293,11 +315,10 @@ class ArrivalsGraphStage(name: String = "",
         TranPax = transPax,
         Status = bestStatus(key),
         FeedSources = feedSources(key),
-        PcpTime = Option(pcpArrivalTime(bestArrival).millisSinceEpoch)
+        PcpTime = Option(pcpArrivalTime(bestArrival).millisSinceEpoch),
+        ScheduledDeparture = if (bestArrival.ScheduledDeparture.isEmpty) baseArrival.ScheduledDeparture else bestArrival.ScheduledDeparture
       )
     }
-
-    def trustLiveDataThreshold: FiniteDuration = 3 hours
 
     def bestPaxNos(key: UniqueArrival): (Option[Int], Option[Int]) =
       (liveArrivals.get(key), forecastArrivals.get(key), forecastBaseArrivals.get(key)) match {
