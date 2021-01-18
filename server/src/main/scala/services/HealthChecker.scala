@@ -56,10 +56,12 @@ case class ActorResponseTimeHealthCheck(portStateActor: ActorRef,
     portStateActor.ask(GetStateForDateRange(startMillis, endMillis))
       .map { _ =>
         val requestEnd = SDate.now().millisSinceEpoch
-        val took = (requestStart.millisSinceEpoch - requestEnd) / 1000
-        val isWithingThreshold = took < healthyResponseTimeSeconds
-        if (!isWithingThreshold)
-          log.warn(s"Port state request took $took seconds")
+        val took = requestEnd - requestStart.millisSinceEpoch
+        val isWithingThreshold = took < healthyResponseTimeSeconds * 1000
+
+        val message = s"Healthcheck: Port state request took $took seconds"
+        if (isWithingThreshold) log.info(message) else log.warn(message)
+
         isWithingThreshold
       }
       .recover {
