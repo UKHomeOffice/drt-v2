@@ -381,7 +381,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     
     HealthChecker(Seq(
       FeedsHealthCheck(feedsToMonitor, lastFeedCheckThresholdMinutes, now),
-      ActorResponseTimeHealthCheck(ctrl.portStateActor, healthyResponseTimeSeconds))
+      ActorResponseTimeHealthCheck(ctrl.portStateActor, healthyResponseTimeSeconds * MilliTimes.oneMinuteMillis))
     )
   } else HealthChecker(Seq())
 
