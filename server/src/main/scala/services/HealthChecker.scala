@@ -44,7 +44,7 @@ case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
 }
 
 case class ActorResponseTimeHealthCheck(portStateActor: ActorRef,
-                                        healthyResponseTimeSeconds: Int)
+                                        healthyResponseTimeMillis: Int)
                                        (implicit ec: ExecutionContext, timeout: Timeout) extends HealthCheck {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -57,9 +57,9 @@ case class ActorResponseTimeHealthCheck(portStateActor: ActorRef,
       .map { _ =>
         val requestEnd = SDate.now().millisSinceEpoch
         val took = requestEnd - requestStart.millisSinceEpoch
-        val isWithingThreshold = took < healthyResponseTimeSeconds * 1000
+        val isWithingThreshold = took < healthyResponseTimeMillis
 
-        val message = s"Healthcheck: Port state request took $took seconds"
+        val message = s"Health check: Port state request took $took seconds"
         if (isWithingThreshold) log.info(message) else log.warn(message)
 
         isWithingThreshold
