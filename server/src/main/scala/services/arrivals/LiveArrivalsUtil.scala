@@ -5,7 +5,7 @@ import services.SDate
 
 object LiveArrivalsUtil {
 
-  def mergePortFeedWithBase(portFeedArrival: Arrival, baseLiveArrival: Arrival): Arrival = {
+  def mergePortFeedWithLiveBase(portFeedArrival: Arrival, baseLiveArrival: Arrival): Arrival = {
 
     portFeedArrival.copy(
       ActualChox = if (portFeedArrival.ActualChox.isEmpty) baseLiveArrival.ActualChox else portFeedArrival.ActualChox,

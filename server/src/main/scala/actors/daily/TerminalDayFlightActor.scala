@@ -1,7 +1,8 @@
 package actors.daily
 
-import actors.PortStateMessageConversion.flightsFromMessages
-import actors.{FlightMessageConversion, GetState, RecoveryActorLike, Sizes}
+import actors.serializers.PortStateMessageConversion.flightsFromMessages
+import actors.serializers.FlightMessageConversion
+import actors.{GetState, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch

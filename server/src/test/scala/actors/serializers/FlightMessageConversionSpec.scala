@@ -1,4 +1,4 @@
-package actors
+package actors.serializers
 
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.SplitRatiosNs.SplitSources

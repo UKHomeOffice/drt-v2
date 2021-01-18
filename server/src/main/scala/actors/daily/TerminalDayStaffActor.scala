@@ -24,7 +24,7 @@ class TerminalDayStaffActor(year: Int,
                             maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[StaffMinute, TM](year, month, day, terminal, now, maybePointInTime) {
   override val typeForPersistenceId: String = "staff"
 
-  import actors.PortStateMessageConversion._
+  import actors.serializers.PortStateMessageConversion._
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case StaffMinutesMessage(minuteMessages) => state = minuteMessagesToKeysAndMinutes(minuteMessages).toMap

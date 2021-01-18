@@ -1,8 +1,9 @@
 package actors.migration
 
-import actors.PortStateMessageConversion.flightsFromMessages
+import actors.serializers.PortStateMessageConversion.flightsFromMessages
 import actors.acking.AckingReceiver.Ack
-import actors.{FlightMessageConversion, PostgresTables, RecoveryActorLike, Sizes}
+import actors.serializers.FlightMessageConversion
+import actors.{PostgresTables, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{SaveSnapshotSuccess, SnapshotMetadata}
 import drt.shared.CrunchApi.MillisSinceEpoch

@@ -43,7 +43,7 @@ class HealthCheckerSpec extends CrunchTestLike {
   val quickPsActor = system.actorOf(Props(new MockPortStateActor(100)))
 
   "Given a HealthChecker with feeds threshold of 20 mins and response threshold of 5 seconds" >> {
-    val hc = HealthChecker(Seq(ActorResponseTimeHealthCheck(quickPsActor, 5), FeedsHealthCheck(List(goodFeedActor), 20, myNow)))
+    val hc = HealthChecker(Seq(ActorResponseTimeHealthCheck(quickPsActor, 5000), FeedsHealthCheck(List(goodFeedActor), 20, myNow)))
 
     "When a feed actor returns a last checked within the threshold" >> {
       "I should get a Future(true)" >> {
@@ -64,7 +64,7 @@ class HealthCheckerSpec extends CrunchTestLike {
     }
 
     "When the port state actor responds later (100ms) than the threshold (0ms)" >> {
-      val hc = HealthChecker(Seq(ActorResponseTimeHealthCheck(slowPsActor, 0)))
+      val hc = HealthChecker(Seq(ActorResponseTimeHealthCheck(slowPsActor, 10)))
 
       "I should get a failing health check" >> {
         val result = Await.result(hc.checksPassing, 1 second)
