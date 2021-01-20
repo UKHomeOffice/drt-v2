@@ -144,6 +144,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
           manifestRequestsSink,
           manifestResponsesSource,
           params.refreshArrivalsOnStart,
+          params.refreshManifestsOnStart,
           startDeskRecs)
 
         if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
@@ -194,7 +195,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   def initialRegisteredArrivals(maybeRegisteredArrivals: Option[RegisteredArrivals],
                                 initialPortState: Option[PortState]): Option[RegisteredArrivals] =
-    if (params.resetRegisteredArrivalOnStart) {
+    if (params.refreshManifestsOnStart) {
       log.info(s"Resetting registered arrivals for manifest lookups")
       val maybeAllArrivals = initialPortState
         .map { state =>

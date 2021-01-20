@@ -25,6 +25,7 @@ case class UpdateStats(updatesCount: Int, additionsCount: Int)
  */
 class ArrivalSplitsGraphStage(name: String = "",
                               optionalInitialFlights: Option[FlightsWithSplitsDiff],
+                              refreshManifestsOnStart: Boolean,
                               splitsCalculator: SplitsCalculator,
                               expireAfterMillis: Int,
                               now: () => SDateLike)
@@ -53,7 +54,12 @@ class ArrivalSplitsGraphStage(name: String = "",
       optionalInitialFlights match {
         case Some(FlightsWithSplitsDiff(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
-          flightsByFlightId = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ flights.map(fws => ArrivalKey(fws.apiFlight) -> fws.copy(splits = Set()))
+          flightsByFlightId = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ flights.map { fws =>
+            val flight = if (refreshManifestsOnStart)
+              fws.copy(splits = initialSplits(fws.apiFlight, ArrivalKey(fws.apiFlight)))
+            else fws
+            ArrivalKey(fws.apiFlight) -> flight
+          }
           flightsByFlightId = purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
 
           flightsByFlightId.foreach { case (arrivalKey, fws) =>
@@ -62,6 +68,8 @@ class ArrivalSplitsGraphStage(name: String = "",
             val updatedArrivalKeys = existingEntry + arrivalKey
             codeShares += (csKey.copy(arrivalKeys = updatedArrivalKeys) -> updatedArrivalKeys)
           }
+
+          if (refreshManifestsOnStart) arrivalsWithSplitsDiff = flightsByFlightId
 
         case _ =>
           log.warn(s"Did not receive any flights to initialise with")

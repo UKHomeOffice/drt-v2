@@ -30,7 +30,7 @@ case class DrtConfigParameters(config: Configuration) {
   val aclMinFileSizeInBytes: Long = config.getOptional[Long]("acl.min-file-size-in-bytes").getOrElse(10000L)
   val refreshArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.refresh-arrivals-on-start").getOrElse(false)
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
-  val resetRegisteredArrivalOnStart: Boolean = if (refreshArrivalsOnStart) {
+  val refreshManifestsOnStart: Boolean = if (refreshArrivalsOnStart) {
     log.warn("Refresh arrivals flag is active. Turning on historic manifest refresh")
     true
   } else config.getOptional[Boolean]("crunch.manifests.reset-registered-arrivals-on-start").getOrElse(false)
