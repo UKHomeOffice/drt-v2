@@ -53,7 +53,7 @@ class ArrivalSplitsGraphStage(name: String = "",
       optionalInitialFlights match {
         case Some(FlightsWithSplitsDiff(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
-          flightsByFlightId = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ flights.map(fws => (ArrivalKey(fws.apiFlight) -> fws))
+          flightsByFlightId = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ flights.map(fws => ArrivalKey(fws.apiFlight) -> fws.copy(splits = Set()))
           flightsByFlightId = purgeExpired(flightsByFlightId, ArrivalKey.atTime, now, expireAfterMillis.toInt)
 
           flightsByFlightId.foreach { case (arrivalKey, fws) =>
