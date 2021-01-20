@@ -578,10 +578,10 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       val result = splitsCalculator.terminalDefaultSplits(T2)
 
     val expected = Set(Splits(Set(
-      ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 4.0, None),
-      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 0.0, None),
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 92.0, None),
-      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 4.0, None)),
+      ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 4.0, None, None),
+      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 0.0, None, None),
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 92.0, None, None),
+      ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 4.0, None, None)),
       TerminalAverage, None, Percentage))
 
       result === expected

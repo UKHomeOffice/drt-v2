@@ -57,7 +57,7 @@ object PassengerInfo {
     bestAvailableManifestToPaxTypes(BestAvailableManifest(manifest))
 
   def bestAvailableManifestToPaxTypes(bestAvailableManifest: BestAvailableManifest): Map[PaxType, Int] = {
-    bestAvailableManifest.passengerList.map(p => DefaultPaxTypeAllocator(bestAvailableManifest)(p))
+    bestAvailableManifest.passengers.map(DefaultPaxTypeAllocator(_))
       .groupBy(identity).mapValues(_.size)
   }
 }

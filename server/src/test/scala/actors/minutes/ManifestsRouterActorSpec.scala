@@ -209,7 +209,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
   }
 
 
-  def manifestForDate(date: String) = {
+  def manifestForDate(date: String): VoyageManifest = {
     VoyageManifest(EventTypes.DC,
       defaultAirportConfig.portCode,
       PortCode("JFK"),
