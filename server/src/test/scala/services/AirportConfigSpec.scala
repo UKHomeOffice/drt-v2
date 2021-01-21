@@ -1,9 +1,10 @@
 package services
 
+import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaNonMachineReadableToDesk}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared.airportconfig.{Bhx, Ema, Lhr}
-import drt.shared.{AirportConfigLike, Queues}
+import drt.shared.{AirportConfigLike, AirportConfigs, PortCode, Queues}
 import org.specs2.mutable.Specification
 import org.specs2.specification.core.Fragment
 
@@ -25,4 +26,12 @@ class AirportConfigSpec extends Specification {
     s"${port.config.portCode} $terminalName split order should be $expectedSplitOrder" >> {
       port.config.queueTypeSplitOrder(terminalName) === expectedSplitOrder
     }
+
+  "LHR processing times should reflect both the standard times and the additional plf times" >> {
+    val config = AirportConfigs.confByPort(PortCode("LHR"))
+    val eeaMrDesk = config.terminalProcessingTimes(T2)(eeaMachineReadableToDesk)
+    val expected = (25d + 43d) / 60
+
+    eeaMrDesk === expected
+  }
 }

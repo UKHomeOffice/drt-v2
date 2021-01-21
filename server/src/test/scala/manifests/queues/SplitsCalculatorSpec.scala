@@ -328,4 +328,3 @@ class SplitsCalculatorSpec extends CrunchTestLike {
     result === expected
   }
 }
-

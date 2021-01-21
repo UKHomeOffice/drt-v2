@@ -31,6 +31,7 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       useLegacyManifests: Boolean = false,
                       maxDaysToCrunch: Int = 2,
                       refreshArrivalsOnStart: Boolean = false,
+                      refreshManifestsOnStart: Boolean = false,
                       recrunchOnStart: Boolean = false,
                       flexDesks: Boolean = false,
                       maybePassengersActorProps: Option[Props] = None,

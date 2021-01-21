@@ -68,6 +68,7 @@ case class CrunchProps[FR](
                             initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
                             initialStaffMovements: Seq[StaffMovement] = Seq(),
                             refreshArrivalsOnStart: Boolean,
+                            refreshManifestsOnStart: Boolean,
                             stageThrottlePer: FiniteDuration,
                             adjustEGateUseByUnder12s: Boolean,
                             optimiser: TryCrunch,
@@ -125,6 +126,7 @@ object CrunchSystem {
     val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
       name = props.logLabel,
       optionalInitialFlights = initialFlightsWithSplits,
+      props.refreshManifestsOnStart,
       splitsCalculator = manifests.queues.SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits, splitAdjustments),
       expireAfterMillis = props.expireAfterMillis,
       now = props.now
