@@ -34,7 +34,7 @@ object TestableArrivalSplits {
     val arrivalSplitsStage = new ArrivalSplitsGraphStage(
       name = "",
       optionalInitialFlights = None,
-      false,
+      refreshManifestsOnStart = false,
       splitsCalculator = splitsCalculator,
       expireAfterMillis = oneDayMillis,
       now = now
