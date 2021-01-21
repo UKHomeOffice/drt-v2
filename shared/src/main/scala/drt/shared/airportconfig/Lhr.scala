@@ -11,16 +11,32 @@ import drt.shared._
 import scala.collection.immutable.SortedMap
 
 object Lhr extends AirportConfigLike {
-  val lhrDefaultTerminalProcessingTimes: Map[PaxTypeAndQueue, Double] = Map(
-    eeaMachineReadableToDesk -> 25d / 60,
-    eeaMachineReadableToEGate -> 25d / 60,
-    eeaNonMachineReadableToDesk -> 55d / 60,
-    visaNationalToDesk -> 96d / 60,
-    nonVisaNationalToDesk -> 78d / 60,
-    nonVisaNationalToFastTrack -> 78d / 60,
-    visaNationalToFastTrack -> 78d / 60,
+  val standardProcessingTimes: Map[PaxTypeAndQueue, Double] = Map(
+    eeaMachineReadableToDesk -> 25d,
+    eeaMachineReadableToEGate -> 25d,
+    eeaNonMachineReadableToDesk -> 55d,
+    visaNationalToDesk -> 96d,
+    nonVisaNationalToDesk -> 78d,
+    nonVisaNationalToFastTrack -> 78d,
+    visaNationalToFastTrack -> 78d,
     transitToTransfer -> 0d
   )
+  val plfAdditionalProcessingTimes: Map[PaxTypeAndQueue, Double] = Map(
+    eeaMachineReadableToDesk -> 43d,
+    eeaMachineReadableToEGate -> 0d,
+    eeaNonMachineReadableToDesk -> 43d,
+    visaNationalToDesk -> 68d,
+    nonVisaNationalToDesk -> 68d,
+    nonVisaNationalToFastTrack -> 68d,
+    visaNationalToFastTrack -> 68d,
+    transitToTransfer -> 0d
+  )
+
+  val lhrDefaultTerminalProcessingTimes: Map[PaxTypeAndQueue, Double] = standardProcessingTimes.map {
+    case (ptq, time) =>
+      val totalTime = time + plfAdditionalProcessingTimes.getOrElse(ptq, 0d)
+      (ptq, totalTime / 60)
+  }
 
   val queueRatiosWithNoEgates: Map[PaxType, Seq[(Queue, Double)]] = Map(
     EeaMachineReadable -> List(Queues.EeaDesk -> 1),
