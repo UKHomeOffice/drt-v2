@@ -57,7 +57,7 @@ object RunnableDeskRecs {
               val crunchEndMillis = SDate(crunchStartMillis).addMinutes(portDeskRecs.minutesToCrunch).millisSinceEpoch
               val minuteMillis = crunchStartMillis until crunchEndMillis by 60000
 
-              log.info(s"**\n\nCrunching ${flights.flights.size} flights, ${minuteMillis.length} minutes (${SDate(crunchStartMillis).toISOString()} to ${SDate(crunchEndMillis).toISOString()})\n\n")
+              log.info(s"Crunching ${flights.flights.size} flights, ${minuteMillis.length} minutes (${SDate(crunchStartMillis).toISOString()} to ${SDate(crunchEndMillis).toISOString()})")
               val startTime = System.currentTimeMillis()
               val loads = portDeskRecs.flightsToLoads(flights, crunchStartMillis)
               val minutes = portDeskRecs.loadsToDesks(minuteMillis, loads, maxDesksProviders)
