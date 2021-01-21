@@ -7,8 +7,10 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.PaxTypes.EeaMachineReadable
+import drt.shared.Queues.EGate
+import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.T1
+import drt.shared.Terminals.{T1, T2, T3}
 import drt.shared._
 import drt.shared.api.Arrival
 import manifests.passengers.BestAvailableManifest
@@ -17,7 +19,7 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
 import queueus.{B5JPlusWithTransitTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
 import services.SDate
-import services.crunch.{CrunchTestLike, PassengerInfoGenerator}
+import services.crunch.{CrunchTestLike, PassengerInfoGenerator, TestConfig}
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
@@ -73,67 +75,126 @@ object TestableArrivalSplits {
 }
 
 class ArrivalSplitsStageSpec extends CrunchTestLike {
-  val portCode = PortCode("LHR")
   val splitsProvider: (String, MilliDate) => Option[SplitRatios] = (_, _) => {
     val eeaMrToDeskSplit = SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0.5)
     val eeaNmrToDeskSplit = SplitRatio(PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk), 0.5)
     Option(SplitRatios(List(eeaMrToDeskSplit, eeaNmrToDeskSplit), SplitSources.Historical))
   }
 
-  val paxTypeQueueAllocation = PaxTypeQueueAllocation(
-    B5JPlusWithTransitTypeAllocator(),
-    TerminalQueueAllocatorWithFastTrack(defaultAirportConfig.terminalPaxTypeQueueAllocation))
+  "Given an arrival splits stage " >> {
+    val paxTypeQueueAllocation = PaxTypeQueueAllocation(
+      B5JPlusWithTransitTypeAllocator(),
+      TerminalQueueAllocatorWithFastTrack(defaultAirportConfig.terminalPaxTypeQueueAllocation))
 
-  val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, defaultAirportConfig.terminalPaxSplits)
+    val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, defaultAirportConfig.terminalPaxSplits)
 
-  "Given an arrival splits stage " +
-    "When I push an arrival and some splits for that arrival " +
-    "Then I should see a message containing a FlightWithSplits representing them" >> {
+    "When I push an arrival and some splits for that arrival " >> {
+      "Then I should see a message containing a FlightWithSplits representing them" >> {
+        val arrivalDate = "2018-01-01"
+        val arrivalTime = "00:05"
+        val scheduled = s"${arrivalDate}T$arrivalTime"
+        val probe = TestProbe("arrival-splits")
 
-    val arrivalDate = "2018-01-01"
-    val arrivalTime = "00:05"
-    val scheduled = s"${arrivalDate}T$arrivalTime"
-    val probe = TestProbe("arrival-splits")
+        val (arrivalDiffs, manifestsLiveInput, _) = TestableArrivalSplits(splitsCalculator, probe, () => SDate(scheduled)).run()
+        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = scheduled, feedSources = Set(LiveFeedSource))
+        val paxList = List(
+          PassengerInfoGenerator.passengerInfoJson(nationality = Nationality("GBR"), documentType = DocumentType("P"), issuingCountry = Nationality("GBR")),
+          PassengerInfoGenerator.passengerInfoJson(nationality = Nationality("ITA"), documentType = DocumentType("P"), issuingCountry = Nationality("ITA"))
+        )
+        val manifests = Set(VoyageManifest(EventTypes.DC, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival(arrivalDate), ManifestTimeOfArrival(arrivalTime), PassengerList = paxList))
 
-    val (arrivalDiffs, manifestsLiveInput, _) = TestableArrivalSplits(splitsCalculator, probe, () => SDate(scheduled)).run()
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = scheduled, feedSources = Set(LiveFeedSource))
-    val paxList = List(
-      PassengerInfoGenerator.passengerInfoJson(nationality = Nationality("GBR"), documentType = DocumentType("P"), issuingCountry = Nationality("GBR")),
-      PassengerInfoGenerator.passengerInfoJson(nationality = Nationality("ITA"), documentType = DocumentType("P"), issuingCountry = Nationality("ITA"))
-    )
-    val manifests = Set(VoyageManifest(EventTypes.DC, portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival(arrivalDate), ManifestTimeOfArrival(arrivalTime), PassengerList = paxList))
+        arrivalDiffs.offer(ArrivalsDiff(toUpdate = SortedMap(arrival.unique -> arrival), toRemove = Set()))
 
-    arrivalDiffs.offer(ArrivalsDiff(toUpdate = SortedMap(arrival.unique -> arrival), toRemove = Set()))
+        probe.fishForMessage(3 seconds) {
+          case FlightsWithSplitsDiff(flights, _) => flights.nonEmpty
+        }
 
-    probe.fishForMessage(3 seconds) {
-      case FlightsWithSplitsDiff(flights, _) => flights.nonEmpty
+        manifestsLiveInput.offer(manifests.map(BestAvailableManifest(_)).toList)
+
+        val terminalAverage = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), SplitSources.TerminalAverage, None, Percentage)
+        val apiSplits = Splits(
+          Set(
+            ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 1.6, Some(Map(Nationality("GBR") -> 0.8, Nationality("ITA") -> 0.8)), Some(Map(PaxAge(22) -> 1.6))),
+            ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 0.4, Some(Map(Nationality("GBR") -> 0.2, Nationality("ITA") -> 0.2)), Some(Map(PaxAge(22) -> 0.4)))
+          ),
+          SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)
+
+        val expectedSplits = Set(terminalAverage, apiSplits)
+        val expected = Seq(ApiFlightWithSplits(
+          arrival.copy(FeedSources = Set(LiveFeedSource, ApiFeedSource), ApiPax = Option(2)),
+          expectedSplits,
+          None
+        ))
+
+        probe.fishForMessage(3 seconds) {
+          case fs: FlightsWithSplitsDiff =>
+            val fws = fs.flightsToUpdate.map(f => f.copy(lastUpdated = None))
+
+            fws === expected
+        }
+
+        true
+      }
     }
-
-    manifestsLiveInput.offer(manifests.map(BestAvailableManifest(_)).toList)
-
-    val terminalAverage = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 100.0, None, None )), SplitSources.TerminalAverage, None, Percentage)
-    val apiSplits = Splits(
-      Set(
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 1.6, Some(Map(Nationality("GBR") -> 0.8, Nationality("ITA") -> 0.8)), Some(Map(PaxAge(22) -> 1.6))),
-        ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 0.4, Some(Map(Nationality("GBR") -> 0.2, Nationality("ITA") -> 0.2)), Some(Map(PaxAge(22) -> 0.4)))
-      ),
-      SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)
-
-    val expectedSplits = Set(terminalAverage, apiSplits)
-    val expected = Seq(ApiFlightWithSplits(
-      arrival.copy(FeedSources = Set(LiveFeedSource, ApiFeedSource), ApiPax = Option(2)),
-      expectedSplits,
-      None
-    ))
-
-    probe.fishForMessage(3 seconds) {
-      case fs: FlightsWithSplitsDiff =>
-        val fws = fs.flightsToUpdate.map(f => f.copy(lastUpdated = None))
-
-        fws === expected
-    }
-
-    true
   }
+
+  private def refreshManifestsAndCheckQueues(scheduled: String, fws: ApiFlightWithSplits, portCode: PortCode, checkQueues: Iterable[Queues.Queue] => Boolean) = {
+    val crunch = runCrunchGraph(
+      TestConfig(
+        airportConfig = AirportConfigs.confByPort(portCode),
+        initialPortState = Option(PortState(Seq(fws), Seq(), Seq())),
+        now = () => SDate(scheduled),
+        refreshManifestsOnStart = true
+      )
+    )
+
+    crunch.portStateTestProbe.fishForMessage(1 second) { case PortState(flights, _, _) =>
+      val queues = flights.values.flatMap(fws => fws.splits.flatMap(_.splits.filter(_.paxCount > 0).map(_.queueType)))
+      checkQueues(queues)
+    }
+  }
+
+  "Given an LHR T2 flight with an EEAMR split passed to the arrival splits stage along with refreshManifestsOnStart = true" >> {
+    "When I listen for flight updates" >> {
+      "I should see the flight updated with no egate splits" >> {
+        val scheduled = "2021-06-01T12:00"
+        val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = scheduled, terminal = T2)
+        val fws = ApiFlightWithSplits(arrival, Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)))
+
+        refreshManifestsAndCheckQueues(scheduled, fws, PortCode("LHR"), !_.exists(_ == EGate))
+
+        success
+      }
+    }
+  }
+
+  "Given an LHR T3 flight with an EEAMR split passed to the arrival splits stage along with refreshManifestsOnStart = true" >> {
+    "When I listen for flight updates" >> {
+      "I should see the flight updated with some egate splits" >> {
+        val scheduled = "2021-06-01T12:00"
+        val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = scheduled, terminal = T3)
+        val fws = ApiFlightWithSplits(arrival, Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)))
+
+        refreshManifestsAndCheckQueues(scheduled, fws, PortCode("LHR"), _.exists(_ == EGate))
+
+        success
+      }
+    }
+  }
+
+  "Given an STN T1 flight with an EEAMR split passed to the arrival splits stage along with refreshManifestsOnStart = true" >> {
+    "When I listen for flight updates" >> {
+      "I should see the flight updated with some egate splits" >> {
+        val scheduled = "2021-06-01T12:00"
+        val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = scheduled, terminal = T1)
+        val fws = ApiFlightWithSplits(arrival, Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)))
+
+        refreshManifestsAndCheckQueues(scheduled, fws, PortCode("STN"), _.exists(_ == EGate))
+
+        success
+      }
+    }
+  }
+
 }
 
