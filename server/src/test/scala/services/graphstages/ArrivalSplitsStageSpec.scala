@@ -154,9 +154,9 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
     }
   }
 
-  "Given an LHR T2 flight with an EEAMR split passed to the arrival splits stage along with refreshManifestsOnStart = true" >> {
-    "When I listen for flight updates" >> {
-      "I should see the flight updated with no egate splits" >> {
+  "Given a flight with an EEAMR to EGate split" >> {
+    "When the (LHR T2) Airport Config contains 0 EGate split and the refreshManifestsOnStart flag is set to true" >> {
+      "Then the splits for the flight should no longer contain any EGate passengers" >> {
         val scheduled = "2021-06-01T12:00"
         val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = scheduled, terminal = T2)
         val fws = ApiFlightWithSplits(arrival, Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)))
@@ -166,11 +166,9 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
         success
       }
     }
-  }
 
-  "Given an LHR T3 flight with an EEAMR split passed to the arrival splits stage along with refreshManifestsOnStart = true" >> {
-    "When I listen for flight updates" >> {
-      "I should see the flight updated with some egate splits" >> {
+    "When the (LHR T3) Airport Config contains a non-zero EGate split and the refreshManifestsOnStart flag is set to true" >> {
+      "Then the splits for the flight should still contain EGate passengers" >> {
         val scheduled = "2021-06-01T12:00"
         val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = scheduled, terminal = T3)
         val fws = ApiFlightWithSplits(arrival, Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)))
@@ -180,11 +178,9 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
         success
       }
     }
-  }
 
-  "Given an STN T1 flight with an EEAMR split passed to the arrival splits stage along with refreshManifestsOnStart = true" >> {
-    "When I listen for flight updates" >> {
-      "I should see the flight updated with some egate splits" >> {
+    "When the (STN T1) Airport Config contains a non-zero EGate split and the refreshManifestsOnStart flag is set to true" >> {
+      "Then the splits for the flight should still contain EGate passengers" >> {
         val scheduled = "2021-06-01T12:00"
         val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = scheduled, terminal = T1)
         val fws = ApiFlightWithSplits(arrival, Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)))
