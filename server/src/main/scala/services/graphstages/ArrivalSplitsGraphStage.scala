@@ -54,6 +54,7 @@ class ArrivalSplitsGraphStage(name: String = "",
       optionalInitialFlights match {
         case Some(FlightsWithSplitsDiff(flights, _)) =>
           log.info(s"Received initial flights. Setting ${flights.size}")
+          if (refreshManifestsOnStart) log.info(s"Refreshing manifests")
           flightsByFlightId = SortedMap[ArrivalKey, ApiFlightWithSplits]() ++ flights.map { fws =>
             val flight = if (refreshManifestsOnStart)
               fws.copy(splits = initialSplits(fws.apiFlight, ArrivalKey(fws.apiFlight)))

@@ -126,7 +126,7 @@ object CrunchSystem {
     val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
       name = props.logLabel,
       optionalInitialFlights = initialFlightsWithSplits,
-      props.refreshArrivalsOnStart,
+      props.refreshManifestsOnStart,
       splitsCalculator = manifests.queues.SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits, splitAdjustments),
       expireAfterMillis = props.expireAfterMillis,
       now = props.now
