@@ -156,15 +156,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     }
   }
 
-  "Given a live arrival and a cirium arrival" >> {
-    "When they have matching number, schedule, terminal and origin" >> {
-      "I should see the live arrival with the cirium arrival's status merged" >> {
-        val liveArrival = ArrivalGenerator.arrival("BA0001", schDt = "2021-06-01T12:00", terminal = T1, origin = PortCode("AAA"))
-        val ciriumArrival = ArrivalGenerator.arrival("BA0001", schDt = "2021-06-01T12:00", terminal = T1, origin = PortCode("AAA"))
-      }
-    }
-  }
-
   private def flightExists(withoutSuffix: Arrival, ps: PortState) = {
     ps.flights.contains(UniqueArrival(withoutSuffix))
   }
