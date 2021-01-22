@@ -160,8 +160,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     "When they have matching number, schedule, terminal and origin" >> {
       "I should see the live arrival with the cirium arrival's status merged" >> {
         val scheduled = "2021-06-01T12:00"
-        val liveArrival = ArrivalGenerator.arrival("BA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), status = ArrivalStatus("scheduled"))
-        val ciriumArrival = ArrivalGenerator.arrival("BA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), status = ArrivalStatus("on time"))
+        val liveArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
+        val ciriumArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), estDt = scheduled)
 
         val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
 
@@ -174,7 +174,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
 
         crunch.portStateTestProbe.fishForMessage(1 second) {
-          case PortState(flights, _, _) => flights.values.exists(_.apiFlight.Status == ArrivalStatus("on time"))
+          case PortState(flights, _, _) => flights.values.exists(_.apiFlight.Estimated == Option(SDate(scheduled).millisSinceEpoch))
         }
 
         success
@@ -184,8 +184,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     "When they have matching number, schedule, terminal and origin" >> {
       "I should see the live arrival without the cirium arrival's status merged" >> {
         val scheduled = "2021-06-01T12:00"
-        val liveArrival = ArrivalGenerator.arrival("BA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), status = ArrivalStatus("scheduled"))
-        val ciriumArrival = ArrivalGenerator.arrival("BA0001", schDt = scheduled, terminal = T1, origin = PortCode("BBB"), status = ArrivalStatus("on time"))
+        val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
+        val ciriumArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("BBB"), estDt = scheduled)
 
         val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
 
@@ -199,10 +199,13 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
         Thread.sleep(500)
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival.copy(Status = ArrivalStatus("delayed"))))))
+        val updatedChox = Option(SDate(scheduled).millisSinceEpoch)
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival.copy(ActualChox = updatedChox)))))
 
-        crunch.portStateTestProbe.fishForMessage(1 second) {
-          case PortState(flights, _, _) => flights.values.exists(_.apiFlight.Status == ArrivalStatus("delayed"))
+        crunch.portStateTestProbe.fishForMessage(2 second) {
+          case PortState(flights, _, _) => flights.values.exists { fws =>
+            fws.apiFlight.ActualChox == updatedChox && fws.apiFlight.Estimated.isEmpty
+          }
         }
 
         success
