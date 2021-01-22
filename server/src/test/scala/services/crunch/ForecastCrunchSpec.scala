@@ -13,7 +13,6 @@ import services.graphstages.CrunchMocks
 import services.{Optimiser, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
-import scala.collection.mutable
 import scala.concurrent.duration._
 
 
@@ -44,7 +43,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), maxDaysToCrunch = 4, cruncher = CrunchMocks.mockCrunch))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     val expectedForecast = Map(
       SDate(base).toISOString() -> 20,
@@ -94,7 +93,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       maxDaysToCrunch = 4
       ))
 
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     crunch.portStateTestProbe.fishForMessage(10 seconds) {
       case ps: PortState =>
@@ -128,7 +127,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(today)))
 
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseFlights))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     val expectedForecast = Map(
       SDate(baseScheduled).toISOString() -> 20,
@@ -178,7 +177,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(baseScheduled).addDays(-1)))
 
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
 
     val expectedForecastArrivals = Set(baseArrival.copy(FeedSources = Set(AclFeedSource)))
 
@@ -207,7 +206,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(baseScheduled).addDays(-1)))
 
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
 
     val expectedForecastArrivals = Set(baseArrival.copy(ActPax = Some(50), TranPax = Some(25), FeedSources = Set(ForecastFeedSource, AclFeedSource)))
 
@@ -237,7 +236,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(baseScheduled).addDays(-1)))
 
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveArrivals))
 
@@ -270,7 +269,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(baseScheduled).addDays(-1)))
 
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
     crunch.portStateTestProbe.receiveOne(2 seconds)
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals1st))
     crunch.portStateTestProbe.receiveOne(2 seconds)
@@ -311,7 +310,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       maxDaysToCrunch = 4
       ))
 
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(updatedBaseArrivals.values.toSeq)))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(updatedBaseArrivals.values.toSeq)))
 
     val expectedFlightCodes = updatedBaseArrivals.values.map(_.flightCodeString)
 
@@ -341,7 +340,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       maybePassengersActorProps = Option(Props(new MockPassengerDeltaActor(Option(paxDelta))))
       ))
 
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(baseArrivals)))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(baseArrivals)))
 
     val expectedActPax = Option(aclPax * paxDelta)
 
