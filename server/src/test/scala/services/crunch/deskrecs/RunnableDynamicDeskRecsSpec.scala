@@ -24,17 +24,19 @@ class MockActor(somethingToReturn: List[Any]) extends Actor {
 case class CrunchStuff(startTime: MillisSinceEpoch, flights: FlightsWithSplits, manifests: VoyageManifests)
 
 class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
-  "Given a stream of days and a flights provider" >> {
+
+  "Given a stream of days and a flights provider and a manifests provider" >> {
+
+    val flights: FlightsWithSplits = FlightsWithSplits(Seq(ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001"), Set())))
+    val flightsProvider: MillisSinceEpoch => Future[Source[FlightsWithSplits, NotUsed]] = (_: MillisSinceEpoch) => Future(Source(List(flights)))
+    val manifests: VoyageManifests = VoyageManifests(Set(VoyageManifestGenerator.voyageManifest()))
+    val manifestsProvider: MillisSinceEpoch => Future[Source[VoyageManifests, NotUsed]] = (_: MillisSinceEpoch) => Future(Source(List(manifests)))
+    val dayMillis = SDate("2021-06-01T12:00").millisSinceEpoch
+
     "When I add flights" >> {
       "I should get a stream with the day's flights added to the day" >> {
-
-        val flight = ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001"), Set())
-        val flights = FlightsWithSplits(Seq(flight))
-        val flightsProvider: MillisSinceEpoch => Future[Source[FlightsWithSplits, NotUsed]] = (_: MillisSinceEpoch) => Future(Source(List(flights)))
-
-        val dayMillis = SDate("2021-06-01T12:00").millisSinceEpoch
-
-        val eventualResult = addFlights(Source(List(dayMillis)), flightsProvider).runWith(Sink.seq)
+        val withFlights = addFlights(Source(List(dayMillis)), flightsProvider)
+        val eventualResult = withFlights.runWith(Sink.seq)
 
         val result: immutable.Seq[(MillisSinceEpoch, FlightsWithSplits)] = Await.result(eventualResult, 1 second)
         val expected = Seq((dayMillis, flights))
@@ -42,21 +44,9 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         result === expected
       }
     }
-  }
 
-  "Given a stream of days, a flights provider and a manifests provider" >> {
     "When I add flights and then manifests" >> {
       "I should get a stream with the day's flights and manifests added to the day" >> {
-        val flight = ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001"), Set())
-        val flights = FlightsWithSplits(Seq(flight))
-        val flightsProvider: MillisSinceEpoch => Future[Source[FlightsWithSplits, NotUsed]] = (_: MillisSinceEpoch) => Future(Source(List(flights)))
-
-        val manifest = VoyageManifestGenerator.voyageManifest()
-        val manifests = VoyageManifests(Set(manifest))
-        val manifestsProvider: MillisSinceEpoch => Future[Source[VoyageManifests, NotUsed]] = (_: MillisSinceEpoch) => Future(Source(List(manifests)))
-
-        val dayMillis = SDate("2021-06-01T12:00").millisSinceEpoch
-
         val withFlights = addFlights(Source(List(dayMillis)), flightsProvider)
         val withManifests = addManifests(withFlights, manifestsProvider)
         val eventualResult = withManifests.runWith(Sink.seq)
