@@ -458,7 +458,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val noonMillis = SDate(noon).millisSinceEpoch
 
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2))))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2))))
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
@@ -469,7 +469,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         nonZeroAtNoon
     }
 
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival))))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival))))
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, cms, _) =>
