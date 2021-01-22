@@ -588,4 +588,3 @@ class SplitsCalculatorSpec extends CrunchTestLike {
     }
   }
 }
-

@@ -200,7 +200,7 @@ class PortStateSpec extends CrunchTestLike {
 
         val newArrival = ArrivalGenerator.arrival("BA0010", schDt = scheduled, terminal = T2, actPax = Option(100))
 
-        offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(newArrival))))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(newArrival))))
 
         val expected = newArrival.copy(FeedSources = Set(AclFeedSource))
 

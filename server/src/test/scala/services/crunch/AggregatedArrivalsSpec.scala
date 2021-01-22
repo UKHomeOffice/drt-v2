@@ -174,7 +174,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
     ))
 
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
 
     testProbe.expectMsg(RemovalHandled)
 

@@ -1,17 +1,13 @@
 package services.crunch
 
-import java.util.UUID
-
-import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
-import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
-import server.feeds.ArrivalsFeedSuccess
 import services.{Optimiser, SDate}
 
+import java.util.UUID
 import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
 

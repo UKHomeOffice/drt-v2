@@ -116,7 +116,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
             queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
             )))
 
-        offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(oneFlight))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(oneFlight))
 
         crunch.portStateTestProbe.fishForMessage(1 second) {
           case PortState(_, cms, _) if cms.nonEmpty =>
@@ -126,7 +126,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
           case _ => false
         }
 
-        offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(zeroFlights))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(zeroFlights))
 
         crunch.portStateTestProbe.fishForMessage(1 seconds) {
           case PortState(_, cms, _) if cms.nonEmpty =>

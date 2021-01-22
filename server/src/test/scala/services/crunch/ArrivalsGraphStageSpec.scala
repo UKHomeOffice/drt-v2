@@ -81,7 +81,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         ArrivalGenerator.arrival(iata = "BA0002", schDt = forecastScheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
       ))
 
-      offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
       val forecastArrival: Arrival = arrival(schDt = forecastScheduled, iata = "BA0002", terminal = T1, actPax = Option(21), feedSources = Set(ForecastFeedSource))
       val forecastArrivals: ArrivalsFeedResponse = ArrivalsFeedSuccess(Flights(List(forecastArrival)))
@@ -110,7 +110,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       val aclFlight: Flights = Flights(List(arrivalInt, arrivalDom))
 
-      offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
       crunch.portStateTestProbe.fishForMessage(5 seconds) {
         case ps: PortState => flightExists(arrivalInt, ps) && !flightExists(arrivalDom, ps)
@@ -129,7 +129,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => dateNow))
       val aclFlight: Flights = Flights(List(withSuffixP, withSuffixF, withoutSuffix))
 
-      offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(aclFlight))
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
       crunch.portStateTestProbe.fishForMessage(5 seconds) {
         case ps: PortState =>
@@ -153,6 +153,63 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       }
 
       success
+    }
+  }
+
+  "Given a live arrival and a cirium arrival" >> {
+    "When they have matching number, schedule, terminal and origin" >> {
+      "I should see the live arrival with the cirium arrival's status merged" >> {
+        val scheduled = "2021-06-01T12:00"
+        val liveArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
+        val ciriumArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), estDt = scheduled)
+
+        val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
+
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
+
+        crunch.portStateTestProbe.fishForMessage(1 second) {
+          case PortState(flights, _, _) => flights.nonEmpty
+        }
+
+        offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
+
+        crunch.portStateTestProbe.fishForMessage(1 second) {
+          case PortState(flights, _, _) => flights.values.exists(_.apiFlight.Estimated == Option(SDate(scheduled).millisSinceEpoch))
+        }
+
+        success
+      }
+    }
+
+    "When they have matching number, schedule, terminal and origin" >> {
+      "I should see the live arrival without the cirium arrival's status merged" >> {
+        val scheduled = "2021-06-01T12:00"
+        val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
+        val ciriumArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("BBB"), estDt = scheduled)
+
+        val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
+
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
+
+        crunch.portStateTestProbe.fishForMessage(1 second) {
+          case PortState(flights, _, _) => flights.nonEmpty
+        }
+
+        offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
+
+        Thread.sleep(500)
+
+        val updatedChox = Option(SDate(scheduled).millisSinceEpoch)
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival.copy(ActualChox = updatedChox)))))
+
+        crunch.portStateTestProbe.fishForMessage(2 second) {
+          case PortState(flights, _, _) => flights.values.exists { fws =>
+            fws.apiFlight.ActualChox == updatedChox && fws.apiFlight.Estimated.isEmpty
+          }
+        }
+
+        success
+      }
     }
   }
 

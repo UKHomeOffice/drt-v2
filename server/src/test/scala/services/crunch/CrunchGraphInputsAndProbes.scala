@@ -7,9 +7,10 @@ import drt.shared.CrunchApi.ActualDeskStats
 import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovement}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 
-case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
+case class CrunchGraphInputsAndProbes(aclArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       forecastArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       liveArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
+                                      ciriumArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       manifestsLiveInput: SourceQueueWithComplete[ManifestsFeedResponse],
                                       shiftsInput: SourceQueueWithComplete[ShiftAssignments],
                                       fixedPointsInput: SourceQueueWithComplete[FixedPointAssignments],
@@ -23,9 +24,10 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       aggregatedArrivalsActor: ActorRef,
                                       portStateActor: ActorRef) {
   def shutdown(): Unit = {
-    baseArrivalsInput.complete()
+    aclArrivalsInput.complete()
     forecastArrivalsInput.complete()
     liveArrivalsInput.complete()
+    ciriumArrivalsInput.complete()
     manifestsLiveInput.complete()
     shiftsInput.complete()
     fixedPointsInput.complete()

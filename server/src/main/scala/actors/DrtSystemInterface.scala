@@ -154,6 +154,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         manifestRequestsSink: Sink[List[Arrival], NotUsed],
                         manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                         refreshArrivalsOnStart: Boolean,
+                        refreshManifestsOnStart: Boolean,
                         startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {
 
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
@@ -201,6 +202,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       initialFixedPoints = initialState[FixedPointAssignments](fixedPointsActor).getOrElse(FixedPointAssignments(Seq())),
       initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
       refreshArrivalsOnStart = refreshArrivalsOnStart,
+      refreshManifestsOnStart = refreshManifestsOnStart,
       stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") milliseconds,
       pcpPaxFn = pcpPaxFn,
       adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,

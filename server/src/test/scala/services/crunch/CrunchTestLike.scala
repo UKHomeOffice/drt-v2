@@ -9,7 +9,6 @@ import akka.stream.testkit.TestSubscriber.Probe
 import akka.stream.{ActorMaterializer, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
-import uk.gov.homeoffice.drt.auth.Roles.STN
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaNonMachineReadableToDesk}
 import drt.shared.Queues.Queue
@@ -23,6 +22,7 @@ import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.{AfterAll, AfterEach}
 import services._
 import slickdb.Tables
+import uk.gov.homeoffice.drt.auth.Roles.STN
 
 import scala.collection.immutable.{Map, SortedMap}
 import scala.concurrent.duration._
@@ -136,9 +136,9 @@ class CrunchTestLike
 
   def runCrunchGraph(config: TestConfig): CrunchGraphInputsAndProbes = {
     maybeDrtActor.foreach(shutDownDrtActor)
-    val actor = system.actorOf(Props(new TestDrtActor()))
-    maybeDrtActor = Option(actor)
-    Await.result(actor.ask(config).mapTo[CrunchGraphInputsAndProbes], 1 seconds)
+    val testDrtActor = system.actorOf(Props(new TestDrtActor()))
+    maybeDrtActor = Option(testDrtActor)
+    Await.result(testDrtActor.ask(config).mapTo[CrunchGraphInputsAndProbes], 1 seconds)
   }
 
   def shutDownDrtActor(drtActor: ActorRef): Terminated = {

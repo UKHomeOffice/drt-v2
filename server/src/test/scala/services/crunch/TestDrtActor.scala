@@ -1,7 +1,5 @@
 package services.crunch
 
-import actors.DrtStaticParameters.expireAfterMillis
-import actors.Sizes.oneMegaByte
 import actors._
 import actors.daily.PassengersActor
 import actors.queues.QueueLikeActor.UpdatedMillis
@@ -17,8 +15,6 @@ import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
-import services.SDate
-import services.arrivals.ArrivalsAdjustmentsNoop
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeployments, RunnableDeskRecs}
 import services.graphstages.Crunch
@@ -179,6 +175,7 @@ class TestDrtActor extends Actor {
         initialFixedPoints = tc.initialFixedPoints,
         initialStaffMovements = tc.initialStaffMovements,
         refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
+        refreshManifestsOnStart = tc.refreshManifestsOnStart,
         stageThrottlePer = 50 milliseconds,
         pcpPaxFn = tc.pcpPaxFn,
         adjustEGateUseByUnder12s = false,
@@ -189,9 +186,10 @@ class TestDrtActor extends Actor {
       ))
 
       replyTo ! CrunchGraphInputsAndProbes(
-        baseArrivalsInput = crunchInputs.forecastBaseArrivalsResponse,
+        aclArrivalsInput = crunchInputs.aclArrivalsResponse,
         forecastArrivalsInput = crunchInputs.forecastArrivalsResponse,
         liveArrivalsInput = crunchInputs.liveArrivalsResponse,
+        ciriumArrivalsInput = crunchInputs.ciriumArrivalsResponse,
         manifestsLiveInput = crunchInputs.manifestsLiveResponse,
         shiftsInput = crunchInputs.shifts,
         fixedPointsInput = crunchInputs.fixedPoints,
