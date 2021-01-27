@@ -15,14 +15,14 @@ case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
                             adjustments: QueueAdjustments = AdjustmentsNoop()) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def terminalDefaultSplits(terminalName: Terminal): Set[Splits] = {
+  def terminalDefaultSplits(terminalName: Terminal): Splits = {
     val emptySplits = SplitRatios(InvalidSource, List())
     val portDefault = terminalDefaultSplitRatios.getOrElse(terminalName, emptySplits).splits.map {
       case SplitRatio(PaxTypeAndQueue(paxType, queue), ratio) =>
         ApiPaxTypeAndQueueCount(paxType, queue, ratio * 100, None, None)
     }
 
-    Set(Splits(portDefault.toSet, SplitSources.TerminalAverage, None, Percentage))
+    Splits(portDefault.toSet, SplitSources.TerminalAverage, None, Percentage)
   }
 
   def bestSplitsForArrival(manifest: ManifestLike, arrival: Arrival): Splits = adjustments

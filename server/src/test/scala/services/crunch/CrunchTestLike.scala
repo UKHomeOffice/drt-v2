@@ -37,8 +37,11 @@ object H2Tables extends {
 object TestDefaults {
   val airportConfig: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
-    queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
-    slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
+    queuesByTerminal = SortedMap(
+      T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk),
+      T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)
+    ),
+    slaByQueue = Map(Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
     minutesToCrunch = 30,
     defaultWalkTimeMillis = Map(),
     terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
@@ -68,12 +71,12 @@ object TestDefaults {
     role = STN,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> Map(
-        EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
+        EeaMachineReadable -> List(Queues.EeaDesk -> 1.0),
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
         EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
         NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
         VisaNational -> List(Queues.NonEeaDesk -> 1.0),
-        B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
+        B5JPlusNational -> List(Queues.EeaDesk -> 1.0),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
         ),
       T2 -> Map(

@@ -52,13 +52,13 @@ object RunnableDynamicDeskRecs {
             .map(min => crunchPeriodStartMillis(SDate(min)).millisSinceEpoch)
             .mapAsync(1) { crunchStartMillis =>
               log.info(s"Asking for flights for ${SDate(crunchStartMillis).toISOString()}")
-              flightsSource(portStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
+              flightsProvider(portStateActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
                 .map(s => (crunchStartMillis, s))
             }
             .mapAsync(1) {
               case (crunchStartMillis: MillisSinceEpoch, flights: Source[FlightsWithSplits, NotUsed]) =>
                 log.info(s"Asking for manifests for ${SDate(crunchStartMillis).toISOString()}")
-                manifestsSource(manifestsActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
+                manifestsProvider(manifestsActor)(portDeskRecs.minutesToCrunch, crunchStartMillis)
                   .map(s => (crunchStartMillis, (flights, s)))
             }
             .flatMapConcat {
@@ -87,10 +87,10 @@ object RunnableDynamicDeskRecs {
     RunnableGraph.fromGraph(graph).addAttributes(Attributes.inputBuffer(1, 1))
   }
 
-  private def flightsSource(portStateActor: ActorRef)
-                           (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
-                           (implicit executionContext: ExecutionContext,
-                            timeout: Timeout): Future[Source[FlightsWithSplits, NotUsed]] =
+  private def flightsProvider(portStateActor: ActorRef)
+                             (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
+                             (implicit executionContext: ExecutionContext,
+                              timeout: Timeout): Future[Source[FlightsWithSplits, NotUsed]] =
     portStateActor
       .ask(GetFlights(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
       .mapTo[Source[FlightsWithSplits, NotUsed]]
@@ -100,10 +100,10 @@ object RunnableDynamicDeskRecs {
           Source[FlightsWithSplits](List())
       }
 
-  private def manifestsSource(manifestsActor: ActorRef)
-                             (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
-                             (implicit executionContext: ExecutionContext,
-                              timeout: Timeout): Future[Source[VoyageManifests, NotUsed]] =
+  def manifestsProvider(manifestsActor: ActorRef)
+                       (minutesToCrunch: Int, crunchStartMillis: MillisSinceEpoch)
+                       (implicit executionContext: ExecutionContext,
+                        timeout: Timeout): Future[Source[VoyageManifests, NotUsed]] =
     manifestsActor
       .ask(GetStateForDateRange(crunchStartMillis, crunchStartMillis + (minutesToCrunch * 60000L)))
       .mapTo[Source[VoyageManifests, NotUsed]]
@@ -111,6 +111,28 @@ object RunnableDynamicDeskRecs {
         case t =>
           log.error("Failed to fetch flights from PortStateActor", t)
           Source[VoyageManifests](List())
+      }
+
+  def addManifests(dayWithFlights: Source[(MillisSinceEpoch, FlightsWithSplits), NotUsed],
+                   manifestsProvider: MillisSinceEpoch => Future[Source[VoyageManifests, NotUsed]])
+                  (implicit ec: ExecutionContext): Source[(MillisSinceEpoch, FlightsWithSplits, VoyageManifests), NotUsed] =
+    dayWithFlights
+      .mapAsync(1) { case (day, flightsSource) =>
+        manifestsProvider(day).map(manifestsStream => (day, flightsSource, manifestsStream))
+      }
+      .flatMapConcat { case (day, fws, manifestsSource) =>
+        manifestsSource.fold(VoyageManifests.empty)(_ ++ _).map(vms => (day, fws, vms))
+      }
+
+  def addFlights(days: Source[MillisSinceEpoch, NotUsed],
+                 flightsProvider: MillisSinceEpoch => Future[Source[FlightsWithSplits, NotUsed]])
+                (implicit ec: ExecutionContext): Source[(MillisSinceEpoch, FlightsWithSplits), NotUsed] =
+    days
+      .mapAsync(1) { day =>
+        flightsProvider(day).map(flightsStream => (day, flightsStream))
+      }
+      .flatMapConcat { case (day, flights) =>
+        flights.fold(FlightsWithSplits.empty)(_ ++ _).map(fws => (day, fws))
       }
 
   def start(portStateActor: ActorRef,

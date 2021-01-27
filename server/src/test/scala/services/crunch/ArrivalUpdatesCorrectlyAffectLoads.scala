@@ -11,7 +11,7 @@ import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
 
-import scala.collection.immutable.{List, SortedMap}
+import scala.collection.immutable.{List, Map, SortedMap}
 import scala.concurrent.duration._
 
 class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
@@ -19,6 +19,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     now = () => SDate("2019-01-01T01:00"),
     pcpArrivalTime = TestDefaults.pcpForFlightFromBest,
     airportConfig = defaultAirportConfig.copy(
+      slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
       queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq())
     )
   ))

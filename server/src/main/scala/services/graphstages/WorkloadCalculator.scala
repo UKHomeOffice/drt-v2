@@ -21,7 +21,7 @@ object WorkloadCalculator {
                          pcpPaxFn: Arrival => Int
                        ): SplitMinutes = {
     val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
-      .flights.toMap.values.toList
+      .flights.values.toList
       .sortBy(_.apiFlight.ActPax.getOrElse(0))
       .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }
       .toMap.values

@@ -1,7 +1,7 @@
 package passengersplits.parsing
 
 import drt.shared.EventTypes.InvalidEventType
-import drt.shared.SplitRatiosNs.SplitSources.AdvPaxInfo
+import drt.shared.SplitRatiosNs.SplitSources.{AdvPaxInfo, ApiSplitsWithHistoricalEGateAndFTPercentages}
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
 import org.joda.time.DateTime
@@ -83,7 +83,7 @@ object VoyageManifestParser {
       case _ => None
     }
 
-    override val source: SplitRatiosNs.SplitSource = AdvPaxInfo
+    override val source: SplitRatiosNs.SplitSource = ApiSplitsWithHistoricalEGateAndFTPercentages
     override val scheduled: SDateLike = scheduleArrivalDateTime.getOrElse(SDate(0))
     override val arrivalPortCode: PortCode = ArrivalPortCode
     override val departurePortCode: PortCode = DeparturePortCode

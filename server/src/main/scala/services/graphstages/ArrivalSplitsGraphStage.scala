@@ -235,10 +235,10 @@ class ArrivalSplitsGraphStage(name: String = "",
     def initialSplits(updatedFlight: Arrival, key: ArrivalKey): Set[Splits] = {
       val terminalDefault = splitsCalculator.terminalDefaultSplits(updatedFlight.Terminal)
       if (manifestBuffer.contains(key)) {
-        val splits = terminalDefault + splitsFromManifest(updatedFlight, manifestBuffer(key))
+        val splits = Set(terminalDefault, splitsFromManifest(updatedFlight, manifestBuffer(key)))
         manifestBuffer -= key
         splits
-      } else terminalDefault
+      } else Set(terminalDefault)
     }
 
     def updateFlightsWithManifests(manifests: Seq[BestAvailableManifest]): Map[ArrivalKey, ApiFlightWithSplits] = {
