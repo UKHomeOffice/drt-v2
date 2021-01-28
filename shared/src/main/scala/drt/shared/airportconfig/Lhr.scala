@@ -21,33 +21,10 @@ object Lhr extends AirportConfigLike {
     visaNationalToFastTrack -> 78d,
     transitToTransfer -> 0d
   )
-  val plfAdditionalProcessingTimes: Map[PaxTypeAndQueue, Double] = Map(
-    eeaMachineReadableToDesk -> 43d,
-    eeaMachineReadableToEGate -> 0d,
-    eeaNonMachineReadableToDesk -> 43d,
-    visaNationalToDesk -> 68d,
-    nonVisaNationalToDesk -> 68d,
-    nonVisaNationalToFastTrack -> 68d,
-    visaNationalToFastTrack -> 68d,
-    transitToTransfer -> 0d
-  )
 
   val lhrDefaultTerminalProcessingTimes: Map[PaxTypeAndQueue, Double] = standardProcessingTimes.map {
-    case (ptq, time) =>
-      val totalTime = time + plfAdditionalProcessingTimes.getOrElse(ptq, 0d)
-      (ptq, totalTime / 60)
+    case (ptq, time) => (ptq, time / 60)
   }
-
-  val queueRatiosWithNoEgates: Map[PaxType, Seq[(Queue, Double)]] = Map(
-    EeaMachineReadable -> List(Queues.EeaDesk -> 1),
-    EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
-    EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
-    Transit -> List(Queues.Transfer -> 1.0),
-    NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
-    VisaNational -> List(Queues.NonEeaDesk -> 1.0),
-    B5JPlusNational -> List(Queues.EeaDesk -> 1),
-    B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-  )
 
   val lhrDefaultQueueRatios: Map[PaxType, Seq[(Queue, Double)]] = Map(
     EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
@@ -71,29 +48,16 @@ object Lhr extends AirportConfigLike {
     slaByQueue = Map(EeaDesk -> 25, EGate -> 15, NonEeaDesk -> 45, FastTrack -> 15),
     crunchOffsetMinutes = 120,
     defaultWalkTimeMillis = Map(T2 -> 900000L, T3 -> 660000L, T4 -> 900000L, T5 -> 660000L),
-    terminalPaxSplits = {
-      val t2And5: Map[Terminal, SplitRatios] = List(T2, T5).map(t => (t, SplitRatios(
-        SplitSources.TerminalAverage,
-        SplitRatio(eeaMachineReadableToDesk, 0.64 * 1),
-        SplitRatio(eeaMachineReadableToEGate, 0.64 * 0),
-        SplitRatio(eeaNonMachineReadableToDesk, 0),
-        SplitRatio(visaNationalToDesk, 0.08),
-        SplitRatio(visaNationalToFastTrack, 0),
-        SplitRatio(nonVisaNationalToDesk, 0.28),
-        SplitRatio(nonVisaNationalToFastTrack, 0)
-      ))).toMap
-      val t3And4: Map[Terminal, SplitRatios] = List(T3, T4).map(t => (t, SplitRatios(
-        SplitSources.TerminalAverage,
-        SplitRatio(eeaMachineReadableToDesk, 0.64 * 0.2),
-        SplitRatio(eeaMachineReadableToEGate, 0.64 * 0.8),
-        SplitRatio(eeaNonMachineReadableToDesk, 0),
-        SplitRatio(visaNationalToDesk, 0.08),
-        SplitRatio(visaNationalToFastTrack, 0),
-        SplitRatio(nonVisaNationalToDesk, 0.28),
-        SplitRatio(nonVisaNationalToFastTrack, 0)
-      ))).toMap
-      t2And5 ++ t3And4
-    },
+    terminalPaxSplits = List(T2, T3, T4, T5).map(t => (t, SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToDesk, 0.64 * 0.2),
+      SplitRatio(eeaMachineReadableToEGate, 0.64 * 0.8),
+      SplitRatio(eeaNonMachineReadableToDesk, 0),
+      SplitRatio(visaNationalToDesk, 0.08),
+      SplitRatio(visaNationalToFastTrack, 0),
+      SplitRatio(nonVisaNationalToDesk, 0.28),
+      SplitRatio(nonVisaNationalToFastTrack, 0)
+    ))).toMap,
     terminalProcessingTimes = Map(
       T2 -> lhrDefaultTerminalProcessingTimes,
       T3 -> lhrDefaultTerminalProcessingTimes,
@@ -102,7 +66,7 @@ object Lhr extends AirportConfigLike {
     ),
     minMaxDesksByTerminalQueue24Hrs = Map(
       T2 -> Map(
-        Queues.EGate -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)),
+        Queues.EGate -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)),
         Queues.EeaDesk -> (List(0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9)),
         Queues.FastTrack -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)),
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20))
@@ -120,7 +84,7 @@ object Lhr extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27, 27))
       ),
       T5 -> Map(
-        Queues.EGate -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
+        Queues.EGate -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)),
         Queues.EeaDesk -> (List(0, 0, 0, 0, 0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2), List(6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6)),
         Queues.FastTrack -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(0, 0, 0, 0, 0, 2, 2, 2, 1, 1, 1, 1, 2, 2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 0)),
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20))
@@ -131,14 +95,12 @@ object Lhr extends AirportConfigLike {
     desksExportQueueOrder = Queues.deskExportQueueOrderWithFastTrack,
     role = LHR,
     terminalPaxTypeQueueAllocation = {
-      //      val egateSplitT2 = 0.8102 // commented for reference
-      //      val egateSplitT5 = 0.8466 // commented for reference
-      val egateSplitT2 = 0
+      val egateSplitT2 = 0.8102
       val egateSplitT3 = 0.8075
       val egateSplitT4 = 0.7687
-      val egateSplitT5 = 0
+      val egateSplitT5 = 0.8466
       Map(
-        T2 -> (queueRatiosWithNoEgates + (EeaMachineReadable -> List(
+        T2 -> (lhrDefaultQueueRatios + (EeaMachineReadable -> List(
           EGate -> egateSplitT2,
           EeaDesk -> (1.0 - egateSplitT2)
         ))),
@@ -150,7 +112,7 @@ object Lhr extends AirportConfigLike {
           EGate -> egateSplitT4,
           EeaDesk -> (1.0 - egateSplitT4)
         ))),
-        T5 -> (queueRatiosWithNoEgates + (EeaMachineReadable -> List(
+        T5 -> (lhrDefaultQueueRatios + (EeaMachineReadable -> List(
           EGate -> egateSplitT5,
           EeaDesk -> (1.0 - egateSplitT5)
         )))
