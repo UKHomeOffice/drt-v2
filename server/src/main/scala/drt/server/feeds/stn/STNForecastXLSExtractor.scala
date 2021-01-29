@@ -47,12 +47,12 @@ object STNForecastXLSExtractor {
       if row.getCell(1) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
     } yield {
       Try {
-        val scheduledCell = numericCellOption(headingIndexByNameMap("SCHEDULED TIME& DATE"), row).getOrElse(0.0)
+        val scheduledCell = tryNumericThenStringCellOption(headingIndexByNameMap("SCHEDULED TIME& DATE"), row)
         val carrierCodeCell = stringCellOption(headingIndexByNameMap("AIRLINE"), row).getOrElse("")
-        val flightNumberCell = numericCellOption(headingIndexByNameMap("FLIGHT NUMBER"), row).getOrElse("")
+        val flightNumberCell = tryNumericThenStringCellOption(headingIndexByNameMap("FLIGHT NUMBER"), row)
         val originCell = stringCellOption(headingIndexByNameMap("DESTINATION / ORIGIN"), row)
-        val maxPaxCell = numericCellOption(headingIndexByNameMap("FLIGHT CAPACITY"), row).getOrElse(0.0)
-        val totalCell = numericCellOption(headingIndexByNameMap("FLIGHT FORECAST"), row).getOrElse(0.0)
+        val maxPaxCell = tryNumericThenStringCellOption(headingIndexByNameMap("FLIGHT CAPACITY"), row)
+        val totalCell = tryNumericThenStringCellOption(headingIndexByNameMap("FLIGHT FORECAST"), row)
         val internationalDomesticCell = stringCellOption(headingIndexByNameMap("TYPE"), row)
         val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone("UTC")).getTime)
 
@@ -67,8 +67,8 @@ object STNForecastXLSExtractor {
     }
 
     val arrivalRows = arrivalRowsTry.zipWithIndex.toList.flatMap {
-      case (Success(a),_) => Some(a)
-      case (Failure(e),i) => log.warn(s"Invalid data on row ${i + 2} ${e.getMessage}", e)
+      case (Success(a), _) => Some(a)
+      case (Failure(e), i) => log.warn(s"Invalid data on row ${i + 2} ${e.getMessage}", e)
         None
     }.filter(_.internationalDomestic == "INTERNATIONAL")
 

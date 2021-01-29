@@ -4,6 +4,7 @@ import java.util.Date
 
 import org.apache.poi.ss.usermodel.{Cell, Row, Sheet, Workbook}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import scala.util.Try
 
 object XlsExtractorUtil {
 
@@ -26,5 +27,7 @@ object XlsExtractorUtil {
   val headingIndexByName: Row => Map[String, Int] = headingRow => (headingRow.getFirstCellNum to headingRow.getLastCellNum collect {
     case index if headingRow.getCell(index) != null && headingRow.getCell(1).getCellType != Cell.CELL_TYPE_BLANK => stringCell(index, headingRow) -> index
   }).toMap
+
+  val tryNumericThenStringCellOption: (Int, Row) => Double = (index, row) => Try(numericCellOption(index, row).getOrElse(0.0)).getOrElse(stringCellOption(index, row).map(_.toDouble).getOrElse(0.0))
 
 }

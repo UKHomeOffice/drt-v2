@@ -51,16 +51,16 @@ object LGWForecastXLSExtractor {
     } yield {
       Try {
         val terminalCell = "N"
-        val flightDateCell = numericCellOption(headingIndexByNameMap("Date"), row)
-        val flightTimeCell = numericCellOption(headingIndexByNameMap("Time (UTC)"), row)
+        val flightDateCell = tryNumericThenStringCellOption(headingIndexByNameMap("Date"), row)
+        val flightTimeCell = tryNumericThenStringCellOption(headingIndexByNameMap("Time (UTC)"), row)
         val flightNumberCell = stringCellOption(headingIndexByNameMap("FlightNo"), row)
         val airportCell = stringCellOption(headingIndexByNameMap("Airport"), row)
         val serviceCell = stringCellOption(headingIndexByNameMap("Service"), row)
         val arrivalOrDepCell = stringCellOption(headingIndexByNameMap("ArrDep"), row)
         val internationalDomesticCell = stringCellOption(headingIndexByNameMap("Dom/Int"), row)
-        val totalCell = numericCellOption(headingIndexByNameMap("Forecast Pax"), row)
+        val totalCell = tryNumericThenStringCellOption(headingIndexByNameMap("Forecast Pax"), row)
 
-        val scheduledCell = SDate(DateUtil.getJavaDate(flightDateCell.getOrElse(0.0) + flightTimeCell.getOrElse(0.0), TimeZone.getTimeZone("UTC")).getTime)
+        val scheduledCell = SDate(DateUtil.getJavaDate(flightDateCell + flightTimeCell, TimeZone.getTimeZone("UTC")).getTime)
 
         LGWForecastFlightRow(scheduledDate = scheduledCell,
           flightCode = flightNumberCell.getOrElse(""),
@@ -68,7 +68,7 @@ object LGWForecastXLSExtractor {
           service = serviceCell.getOrElse(""),
           arrivalOrDep = arrivalOrDepCell.getOrElse(""),
           internationalDomestic = internationalDomesticCell.getOrElse(""),
-          totalPax = totalCell.map(_.toInt).getOrElse(0),
+          totalPax = totalCell.toInt,
           transferPax = 0,
           terminalCell)
       }
