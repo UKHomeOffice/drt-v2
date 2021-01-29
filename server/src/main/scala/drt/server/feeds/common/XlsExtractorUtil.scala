@@ -28,6 +28,8 @@ object XlsExtractorUtil {
     case index if headingRow.getCell(index) != null && headingRow.getCell(1).getCellType != Cell.CELL_TYPE_BLANK => stringCell(index, headingRow) -> index
   }).toMap
 
-  val tryNumericThenStringCellOption: (Int, Row) => Double = (index, row) => Try(numericCellOption(index, row).getOrElse(0.0)).getOrElse(stringCellOption(index, row).map(_.toDouble).getOrElse(0.0))
+  val tryNumericThenStringCellDoubleOption: (Int, Row) => Double = (index, row) => Try(numericCellOption(index, row).getOrElse(0.0)).getOrElse(stringCellOption(index, row).map(_.toDouble).getOrElse(0.0))
+
+  val tryNumericThenStringCellIntOption: (Int, Row) => Int = (index, row) => Try(numericCellOption(index, row).map(_.toInt).getOrElse(0)).getOrElse(stringCellOption(index, row).map(_.toInt).getOrElse(0))
 
 }

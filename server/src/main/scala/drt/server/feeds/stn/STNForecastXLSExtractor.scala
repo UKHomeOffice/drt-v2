@@ -47,17 +47,18 @@ object STNForecastXLSExtractor {
       if row.getCell(1) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
     } yield {
       Try {
-        val scheduledCell = tryNumericThenStringCellOption(headingIndexByNameMap("SCHEDULED TIME& DATE"), row)
+        val scheduledCell = tryNumericThenStringCellDoubleOption(headingIndexByNameMap("SCHEDULED TIME& DATE"), row)
         val carrierCodeCell = stringCellOption(headingIndexByNameMap("AIRLINE"), row).getOrElse("")
-        val flightNumberCell = tryNumericThenStringCellOption(headingIndexByNameMap("FLIGHT NUMBER"), row)
+        val flightNumberCell = tryNumericThenStringCellIntOption(headingIndexByNameMap("FLIGHT NUMBER"), row)
         val originCell = stringCellOption(headingIndexByNameMap("DESTINATION / ORIGIN"), row)
-        val maxPaxCell = tryNumericThenStringCellOption(headingIndexByNameMap("FLIGHT CAPACITY"), row)
-        val totalCell = tryNumericThenStringCellOption(headingIndexByNameMap("FLIGHT FORECAST"), row)
+        val maxPaxCell = tryNumericThenStringCellDoubleOption(headingIndexByNameMap("FLIGHT CAPACITY"), row)
+        val totalCell = tryNumericThenStringCellDoubleOption(headingIndexByNameMap("FLIGHT FORECAST"), row)
         val internationalDomesticCell = stringCellOption(headingIndexByNameMap("TYPE"), row)
         val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone("UTC")).getTime)
 
+        val flightNumber: String = if (flightNumberCell == 0) "" else flightNumberCell.toString
         STNForecastFlightRow(scheduledDate = scheduled,
-          flightCode = s"$carrierCodeCell$flightNumberCell",
+          flightCode = s"$carrierCodeCell$flightNumber",
           origin = originCell.getOrElse(""),
           internationalDomestic = internationalDomesticCell.getOrElse(""),
           totalPax = totalCell.toInt,
