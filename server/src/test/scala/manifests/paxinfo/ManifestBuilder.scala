@@ -1,8 +1,8 @@
 package manifests.paxinfo
 
-import drt.shared.{CarrierCode, EventTypes, Nationality, PaxAge, PortCode, VoyageNumber}
+import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser._
 
 import scala.collection.immutable.List
 
@@ -11,7 +11,12 @@ object ManifestBuilder {
   def manifestWithPassengerAges(ages: List[Int]): VoyageManifest =
     manifestWithPassengerAgesAndNats(ages.map(a => (Nationality("GBR"), a)))
 
-  def manifestWithPassengerAgesAndNats(natAge: List[(Nationality, Int)]): VoyageManifest = {
+  def manifestWithPassengerAgesAndNats(natAge: List[(Nationality, Int)]): VoyageManifest =
+    manifestWithPassengerAgesNatsAndIds(natAge.map {
+      case (nat, age) => (nat, age, None)
+    })
+
+  def manifestWithPassengerAgesNatsAndIds(natAgeId: List[(Nationality, Int, Option[String])]): VoyageManifest = {
     VoyageManifest(EventTypes.DC,
       PortCode("TST"),
       PortCode("JFK"),
@@ -19,8 +24,8 @@ object ManifestBuilder {
       CarrierCode("BA"),
       ManifestDateOfArrival("2020-11-09"),
       ManifestTimeOfArrival("00:00"),
-      natAge.map {
-        case (nationality, age) =>
+      natAgeId.map {
+        case (nationality, age, id) =>
           PassengerInfoJson(Option(DocumentType("P")),
             nationality,
             EeaFlag("EEA"),
@@ -29,7 +34,7 @@ object ManifestBuilder {
             InTransit("N"),
             Option(nationality),
             Option(nationality),
-            None
+            id
           )
       })
   }

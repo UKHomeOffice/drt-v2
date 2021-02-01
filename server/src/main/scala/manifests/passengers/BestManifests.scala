@@ -18,7 +18,21 @@ case class BestAvailableManifest(source: SplitSource,
 object BestAvailableManifest {
   def apply(manifest: VoyageManifest): BestAvailableManifest = {
 
-    val uniquePax: List[PassengerInfoJson] = if (manifest.PassengerList.exists(_.PassengerIdentifier.exists(_ != "")))
+    val uniquePax: List[PassengerInfoJson] = removeDuplicatePax(manifest)
+
+    BestAvailableManifest(
+      SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+      manifest.ArrivalPortCode,
+      manifest.DeparturePortCode,
+      manifest.VoyageNumber,
+      manifest.CarrierCode,
+      manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
+      uniquePax.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode))
+    )
+  }
+
+  def removeDuplicatePax(manifest: VoyageManifest) = {
+    if (manifest.PassengerList.exists(_.PassengerIdentifier.exists(_ != "")))
       manifest.PassengerList.collect {
         case p@PassengerInfoJson(_, _, _, _, _, _, _, _, Some(id)) if id != "" => p
       }
@@ -30,16 +44,6 @@ object BestAvailableManifest {
         .toList
     else
       manifest.PassengerList
-
-    BestAvailableManifest(
-      SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-      manifest.ArrivalPortCode,
-      manifest.DeparturePortCode,
-      manifest.VoyageNumber,
-      manifest.CarrierCode,
-      manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
-      uniquePax.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode))
-    )
   }
 
   def apply(source: SplitSource,
