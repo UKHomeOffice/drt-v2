@@ -105,11 +105,15 @@ object PaxDeltas {
         arrival
       }
 
-  private def applyAdjustment(arrival: Arrival, delta: Double) = {
-    val updatedPax = arrival.ActPax.map(pax => (pax * delta).round.toInt) match {
-      case Some(positiveWithDelta) if positiveWithDelta > 0 => Option(positiveWithDelta)
-      case _ => Option(0)
+  def applyAdjustment(arrival: Arrival, delta: Double): Arrival = {
+    val saneDelta = delta match {
+      case negative if negative < 0 => 0
+      case over100pc if over100pc > 1 => 1
+      case normal => normal
     }
+
+    val updatedPax = arrival.ActPax.map(pax => (pax * saneDelta).round.toInt)
+    
     arrival.copy(ActPax = updatedPax)
   }
 }

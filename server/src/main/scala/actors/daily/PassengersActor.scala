@@ -66,6 +66,11 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
     }
   }
 
+  override def receiveCommand: Receive = {
+    case gad: GetAverageAdjustment => sendAverageDelta(gad, sender())
+    case u => log.info(s"Got unexpected command: $u")
+  }
+
   override def stateToMessage: GeneratedMessage = {
     log.warn("This function should not be called")
     OriginTerminalPaxCountsMessages(Seq())
@@ -92,11 +97,6 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
     val sum = portAverageDeltas.sum
     val count = portAverageDeltas.size
     portAverageDelta = if (count > 0) sum / count else 1d
-  }
-
-  override def receiveCommand: Receive = {
-    case gad: GetAverageAdjustment => sendAverageDelta(gad, sender())
-    case u => log.info(s"Got unexpected command: $u")
   }
 
   private def updateState(origin: PortCode, terminal: Terminal, updateForState: Map[(Long, Long), Int]): Unit = {
