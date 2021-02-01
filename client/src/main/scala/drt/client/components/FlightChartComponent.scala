@@ -27,7 +27,7 @@ object FlightChartComponent {
 
       val paxTypeData: ChartJsData = ChartJsData(sortedPaxTypes.map {
         case (pt, _) => PaxTypes.displayNameShort(pt)
-      }, sortedAges.map(_._2.toDouble), "Live API")
+      }, sortedPaxTypes.map(_._2.toDouble), "Live API")
 
       TippyJSComponent(
         <.div(^.cls := "container arrivals__table__flight__chart-box",
