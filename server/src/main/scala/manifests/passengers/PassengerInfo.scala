@@ -16,7 +16,8 @@ object PassengerInfo {
   )
 
   def manifestToAgeRangeCount(manifest: VoyageManifest): Map[AgeRange, Int] =
-    manifest.PassengerList
+    excludeDuplicatePax(manifest)
+      .PassengerList
       .foldLeft(Map[AgeRange, Int]())((acc: Map[AgeRange, Int], info: PassengerInfoJson) => {
 
         val maybeRange = info.Age.flatMap(age => ageRanges.find(_.isInRange(age.years)))
@@ -29,7 +30,8 @@ object PassengerInfo {
       })
 
   def manifestToNationalityCount(manifest: VoyageManifest): Map[Nationality, Int] = {
-    manifest.PassengerList
+    excludeDuplicatePax(manifest)
+      .PassengerList
       .foldLeft(Map[Nationality, Int]())((acc: Map[Nationality, Int], info: PassengerInfoJson) => {
 
         info.NationalityCountryCode match {
@@ -40,6 +42,10 @@ object PassengerInfo {
         }
       })
   }
+
+  def excludeDuplicatePax(manifest: VoyageManifest): VoyageManifest = manifest.copy(
+    PassengerList = BestAvailableManifest.removeDuplicatePax(manifest)
+  )
 
   def manifestToPassengerInfoSummary(manifest: VoyageManifest): Option[PassengerInfoSummary] =
     manifest
@@ -60,4 +66,5 @@ object PassengerInfo {
     bestAvailableManifest.passengerList.map(p => DefaultPaxTypeAllocator(bestAvailableManifest)(p))
       .groupBy(identity).mapValues(_.size)
   }
+
 }
