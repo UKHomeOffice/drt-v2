@@ -1,8 +1,10 @@
 package services.crunch
 
 import drt.shared._
+import drt.shared.api.Arrival
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
+import services.SDate
 
 object VoyageManifestGenerator {
   val euPassport = PassengerInfoJson(
@@ -99,5 +101,14 @@ object VoyageManifestGenerator {
                      scheduledTime: ManifestTimeOfArrival = ManifestTimeOfArrival("00:00"),
                      paxInfos: List[PassengerInfoJson] = List()): VoyageManifest = {
     VoyageManifest(dqEventCode, portCode, departurePortCode, voyageNumber, carrierCode, scheduledDate, scheduledTime, paxInfos)
+  }
+
+  def manifestForArrival(arrival: Arrival, pax: List[PassengerInfoJson]): VoyageManifest = {
+    val Array(date, time) = SDate(arrival.Scheduled).toISOString().split("T")
+    VoyageManifestGenerator.voyageManifest(
+      paxInfos = pax,
+      scheduledDate = ManifestDateOfArrival(date),
+      scheduledTime = ManifestTimeOfArrival(time.take(5)),
+      voyageNumber = arrival.VoyageNumber)
   }
 }
