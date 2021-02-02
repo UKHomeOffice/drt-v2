@@ -59,8 +59,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
           crunch.portStateTestProbe.fishForMessage(5 seconds) {
             case ps: PortState =>
-              val resultSummary = paxLoadsFromPortState(ps, 2)
-              resultSummary == expected
+              paxLoadsFromPortState(ps, 2) == expected
           }
 
           success
@@ -93,8 +92,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
           crunch.portStateTestProbe.fishForMessage(5 seconds) {
             case ps: PortState =>
-              val resultSummary = paxLoadsFromPortState(ps, 5)
-              resultSummary == expected
+              paxLoadsFromPortState(ps, 5) == expected
           }
 
           success
@@ -139,9 +137,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
           crunch.portStateTestProbe.fishForMessage(5 seconds) {
             case ps: PortState =>
-              val resultSummary = workLoadsFromPortState(ps, 5)
-              println(s"resultSummary: $resultSummary")
-              resultSummary == expected
+              workLoadsFromPortState(ps, 5) == expected
           }
 
           success
@@ -185,9 +181,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
             crunch.portStateTestProbe.fishForMessage(5 seconds) {
               case ps: PortState =>
-                val resultSummary = paxLoadsFromPortState(ps, 5)
-                println(s"resultSummary: $resultSummary")
-                resultSummary == expected
+                paxLoadsFromPortState(ps, 5) == expected
             }
 
             success
@@ -236,9 +230,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
             crunch.portStateTestProbe.fishForMessage(5 seconds) {
               case ps: PortState =>
-                val resultSummary = paxLoadsFromPortState(ps, 5)
-                println(s"summary: $resultSummary")
-                resultSummary == expected
+                paxLoadsFromPortState(ps, 5) == expected
             }
 
             success

@@ -86,10 +86,10 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   val desksAndWaitsProvider: DesksAndWaitsPortProvider = DesksAndWaitsPortProvider(airportConfig, mockCrunch, pcpPaxCalcFn)
 
-  def checkQueuePax(arrival: Arrival,
-                    livePax: Option[List[PassengerInfoJson]],
-                    historicPax: Option[List[PassengerInfoJson]],
-                    expectedQueuePax: Map[(Terminal, Queue), Int]): Any = {
+  def setupGraphAndCheckQueuePax(arrival: Arrival,
+                                 livePax: Option[List[PassengerInfoJson]],
+                                 historicPax: Option[List[PassengerInfoJson]],
+                                 expectedQueuePax: Map[(Terminal, Queue), Int]): Any = {
     val crunchPeriodStartMillis: SDateLike => SDateLike = day => day
     val probe = TestProbe()
 
@@ -136,7 +136,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       withLiveManifests === Seq(ApiFlightWithSplits(arrival, Set(splits)))
     }
 
-    "When I have manifests not matching the arrival I should get no splits added to the arrival" >> {
+    "When I have no manifests matching the arrival I should get no splits added to the arrival" >> {
       val manifest = VoyageManifestGenerator.voyageManifest(portCode = PortCode("AAA"))
       val manifestsForDifferentArrival = manifestsByKey(manifest)
       val withLiveManifests = addManifests(flights, manifestsForDifferentArrival, mockSplits)
@@ -145,7 +145,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     }
   }
 
-  private def manifestsByKey(manifest: VoyageManifest) =
+   def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =
     List(manifest)
       .map { vm => vm.maybeKey.map(k => (k, vm)) }
       .collect { case Some(k) => k }
@@ -157,7 +157,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     "When I provide no live and no historic manifests, terminal splits should be applied (50% desk, 50% egates)" >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EGate) -> 50, (T1, EeaDesk) -> 50)
-      checkQueuePax(
+      setupGraphAndCheckQueuePax(
         arrival = arrival,
         livePax = None,
         historicPax = None,
@@ -168,7 +168,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     "When I provide only historic splits with an id card pax, all pax should arrive at the eea desk " >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
-      checkQueuePax(
+      setupGraphAndCheckQueuePax(
         arrival = arrival,
         livePax = None,
         historicPax = Option(List(euIdCard)),
@@ -179,7 +179,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     "When I provide only live splits with an id card pax, all pax should arrive at the eea desk " >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
-      checkQueuePax(
+      setupGraphAndCheckQueuePax(
         arrival = arrival,
         livePax = Option(List(euIdCard)),
         historicPax = None,
@@ -190,7 +190,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     "When I provide live (id card) and historic (visa) splits, all pax should arrive at the eea desk as per the live splits" >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
-      checkQueuePax(
+      setupGraphAndCheckQueuePax(
         arrival = arrival,
         livePax = Option(List(euIdCard)),
         historicPax = Option(List(visa)),
@@ -201,7 +201,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     "When I provide live (visa) and historic (id card) splits, all pax should arrive at the non-eea desk as per the live splits" >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, NonEeaDesk) -> 100)
-      checkQueuePax(
+      setupGraphAndCheckQueuePax(
         arrival = arrival,
         livePax = Option(List(visa)),
         historicPax = Option(List(euIdCard)),

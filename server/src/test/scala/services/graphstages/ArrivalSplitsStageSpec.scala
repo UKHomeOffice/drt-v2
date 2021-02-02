@@ -136,27 +136,6 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
       }
     }
   }
-  //List(
-  // ApiFlightWithSplits(
-  //   Arrival(None,BA,1,None,,None,None,None,None,None,None,None,None,None,None,None,,T1,JFK,1514765100000,Some(1514765100000),Set(LiveFeedSource, ApiFeedSource),None,Some(2),None),
-  //   Set(
-  //     Splits(Set(
-  //       ApiPaxTypeAndQueueCount(EeaMachineReadable,EeaDesk,100.0,None,None)),
-  //      TerminalAverage,None,Percentage),
-  //     Splits(Set(
-  //       ApiPaxTypeAndQueueCount(EeaMachineReadable,EeaDesk,2.0,Some(Map(GBR -> 1.0, ITA -> 1.0)),Some(Map(22 -> 2.0)))),
-  //      ApiSplitsWithHistoricalEGateAndFTPercentages,None,PaxNumbers)),None))
-  // != List(
-  // ApiFlightWithSplits(
-  //   Arrival(None,BA,1,None,,None,None,None,None,None,None,None,None,None,None,None,,T1,JFK,1514765100000,Some(1514765100000),Set(LiveFeedSource, ApiFeedSource),None,Some(2),None),
-  //   Set(
-  //     Splits(Set(
-  //       ApiPaxTypeAndQueueCount(EeaMachineReadable,EeaDesk,100.0,None,None)),
-  //      TerminalAverage,None,Percentage),
-  //     Splits(Set(
-  //       ApiPaxTypeAndQueueCount(EeaMachineReadable,EGate,1.6,Some(Map(GBR -> 0.8, ITA -> 0.8)),Some(Map(22 -> 1.6))),
-  //       ApiPaxTypeAndQueueCount(EeaMachineReadable,EeaDesk,0.4,Some(Map(GBR -> 0.2, ITA -> 0.2)),Some(Map(22 -> 0.4)))),
-  //     ApiSplitsWithHistoricalEGateAndFTPercentages,None,PaxNumbers)),None))
 
   private def refreshManifestsAndCheckQueues(scheduled: String, fws: ApiFlightWithSplits, portCode: PortCode, checkQueues: Iterable[Queues.Queue] => Boolean) = {
     val crunch = runCrunchGraph(

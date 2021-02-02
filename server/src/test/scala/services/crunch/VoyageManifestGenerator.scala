@@ -7,7 +7,7 @@ import passengersplits.parsing.VoyageManifestParser._
 import services.SDate
 
 object VoyageManifestGenerator {
-  val euPassport = PassengerInfoJson(
+  val euPassport: PassengerInfoJson = PassengerInfoJson(
     Option(DocumentType("P")),
     Nationality("GBR"),
     EeaFlag("EEA"),
@@ -19,7 +19,7 @@ object VoyageManifestGenerator {
     None
   )
 
-  def euPassportWithIdentifier(id: String) =
+  def euPassportWithIdentifier(id: String): PassengerInfoJson =
     PassengerInfoJson(
       Option(DocumentType("P")),
       Nationality("GBR"),
@@ -32,7 +32,7 @@ object VoyageManifestGenerator {
       Option(id)
     )
 
-  val euIdCard = PassengerInfoJson(
+  val euIdCard: PassengerInfoJson = PassengerInfoJson(
     Option(DocumentType("I")),
     Nationality("ITA"),
     EeaFlag("EEA"),
@@ -43,7 +43,8 @@ object VoyageManifestGenerator {
     Option(Nationality("ITA")),
     None
   )
-  val visa = PassengerInfoJson(
+
+  val visa: PassengerInfoJson = PassengerInfoJson(
     Option(DocumentType("P")),
     Nationality("EGY"),
     EeaFlag("EEA"),
@@ -54,7 +55,8 @@ object VoyageManifestGenerator {
     Option(Nationality("AFG")),
     None
   )
-  val nonVisa = PassengerInfoJson(
+
+  val nonVisa: PassengerInfoJson = PassengerInfoJson(
     Option(DocumentType("P")),
     Nationality("SLV"),
     EeaFlag("EEA"),
@@ -65,7 +67,8 @@ object VoyageManifestGenerator {
     Option(Nationality("ALA")),
     None
   )
-  val inTransitFlag = PassengerInfoJson(
+
+  val inTransitFlag: PassengerInfoJson = PassengerInfoJson(
     Option(DocumentType("P")),
     Nationality("GBR"),
     EeaFlag("EEA"),
@@ -76,7 +79,8 @@ object VoyageManifestGenerator {
     Option(Nationality("GBR")),
     None
   )
-  val inTransitCountry = PassengerInfoJson(
+
+  val inTransitCountry: PassengerInfoJson = PassengerInfoJson(
     Option(DocumentType("P")),
     Nationality("GBR"),
     EeaFlag("EEA"),
@@ -105,7 +109,8 @@ object VoyageManifestGenerator {
 
   def manifestForArrival(arrival: Arrival, pax: List[PassengerInfoJson]): VoyageManifest = {
     val Array(date, time) = SDate(arrival.Scheduled).toISOString().split("T")
-    VoyageManifestGenerator.voyageManifest(
+
+    voyageManifest(
       paxInfos = pax,
       scheduledDate = ManifestDateOfArrival(date),
       scheduledTime = ManifestTimeOfArrival(time.take(5)),

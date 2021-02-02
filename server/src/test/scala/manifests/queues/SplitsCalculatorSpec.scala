@@ -87,8 +87,6 @@ class SplitsCalculatorSpec extends CrunchTestLike {
           )
           val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
-          println(s"result: $result")
-
           result === expected
         }
       }
