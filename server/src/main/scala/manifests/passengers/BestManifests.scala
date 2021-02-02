@@ -3,7 +3,7 @@ package manifests.passengers
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.{SDateLike, _}
 import manifests.UniqueArrivalKey
-import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import services.SDate
 
@@ -28,7 +28,21 @@ case class BestAvailableManifest(source: SplitSource,
 object BestAvailableManifest {
   def apply(manifest: VoyageManifest): BestAvailableManifest = {
 
-    val uniquePax: List[PassengerInfoJson] = if (manifest.PassengerList.exists(_.PassengerIdentifier.exists(_ != "")))
+    val uniquePax: List[PassengerInfoJson] = removeDuplicatePax(manifest)
+
+    BestAvailableManifest(
+      SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+      manifest.ArrivalPortCode,
+      manifest.DeparturePortCode,
+      manifest.VoyageNumber,
+      manifest.CarrierCode,
+      manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
+      uniquePax.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode))
+    )
+  }
+
+  def removeDuplicatePax(manifest: VoyageManifest) = {
+    if (manifest.PassengerList.exists(_.PassengerIdentifier.exists(_ != "")))
       manifest.PassengerList.collect {
         case p@PassengerInfoJson(_, _, _, _, _, _, _, _, Some(id)) if id != "" => p
       }
@@ -40,16 +54,6 @@ object BestAvailableManifest {
         .toList
     else
       manifest.PassengerList
-
-    BestAvailableManifest(
-      SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-      manifest.ArrivalPortCode,
-      manifest.DeparturePortCode,
-      manifest.VoyageNumber,
-      manifest.CarrierCode,
-      manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
-      uniquePax.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode))
-    )
   }
 
   def apply(source: SplitSource,
@@ -70,13 +74,11 @@ case class ManifestPassengerProfile(nationality: Nationality,
                                     inTransit: Option[Boolean])
 
 object ManifestPassengerProfile {
-  def apply(pij: PassengerInfoJson, portCode: PortCode): ManifestPassengerProfile = {
-    val nationality = pij.NationalityCountryCode.getOrElse(Nationality(""))
-    val documentType: Option[DocumentType] = if (nationality.code == CountryCodes.UK)
-      Option(DocumentType.Passport)
-    else
-      pij.DocumentType
-    val maybeInTransit = Option(pij.InTransitFlag.isInTransit|| pij.DisembarkationPortCode.exists(_ != portCode))
-    ManifestPassengerProfile(nationality, documentType, pij.Age, maybeInTransit)
-  }
+  def apply(pij: PassengerInfoJson, portCode: PortCode): ManifestPassengerProfile =
+    ManifestPassengerProfile(
+      pij.NationalityCountryCode.getOrElse(Nationality("")),
+      pij.docTypeWithNationalityAssumption,
+      pij.Age,
+      Option(pij.isInTransit(portCode))
+    )
 }

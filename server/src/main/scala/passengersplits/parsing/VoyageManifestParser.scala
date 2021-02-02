@@ -1,16 +1,17 @@
 package passengersplits.parsing
 
 import drt.shared.EventTypes.InvalidEventType
-import drt.shared.SplitRatiosNs.SplitSources.{AdvPaxInfo, ApiSplitsWithHistoricalEGateAndFTPercentages}
+import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
 import org.joda.time.DateTime
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType.Passport
 import services.SDate
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat}
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Success, Try}
 
 object VoyageManifestParser {
   def parseVoyagePassengerInfo(content: String): Try[VoyageManifest] = {
@@ -39,7 +40,14 @@ object VoyageManifestParser {
                                DisembarkationPortCountryCode: Option[Nationality] = None,
                                NationalityCountryCode: Option[Nationality] = None,
                                PassengerIdentifier: Option[String]
-                              )
+                              ) {
+    def isInTransit(portCode: PortCode) = InTransitFlag.isInTransit || DisembarkationPortCode.exists(_ != portCode)
+
+    def docTypeWithNationalityAssumption: Option[DocumentType] = NationalityCountryCode match {
+      case Some(Nationality(code)) if code == CountryCodes.UK => Option(Passport)
+      case _ => DocumentType
+    }
+  }
 
   case class VoyageManifests(manifests: Set[VoyageManifest]) {
 

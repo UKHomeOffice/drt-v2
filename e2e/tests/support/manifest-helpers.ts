@@ -1,4 +1,3 @@
-
 const passengerProfiles = {
 
     ukPassport: {
@@ -94,6 +93,23 @@ const adultWithCountryCode = (countryCode: string): object => {
     }
 }
 
+const ukAdultWithId = (id: String) => {
+    return {
+        "DocumentIssuingCountryCode": "GBR",
+        "PersonType": "P",
+        "DocumentLevel": "Primary",
+        "Age": "30",
+        "DisembarkationPortCode": "TST",
+        "InTransitFlag": "N",
+        "DisembarkationPortCountryCode": "TST",
+        "NationalityCountryEEAFlag": "EEA",
+        "PassengerIdentifier": id,
+        "DocumentType": "Passport",
+        "PoavKey": "1",
+        "NationalityCountryCode": "GBR"
+    }
+}
+
 
 const manifestForDateTime = (sheduled: moment.Moment, passengerList): object => {
 
@@ -133,4 +149,5 @@ export {
     passengerList,
     passengerProfiles,
     adultWithCountryCode,
+    ukAdultWithId
 }
