@@ -28,13 +28,13 @@ object DynamicRunnableDeskRecs {
                   daysSourceQueue: Source[MillisSinceEpoch, NotUsed],
                   daysToDeskRecs: DaysToDeskRecs)
                  (implicit ec: ExecutionContext): RunnableGraph[NotUsed] = {
+
+    val deskRecsSink = Sink.actorRefWithAck(deskRecsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
+
     val graph = GraphDSL.create(daysSourceQueue) {
       implicit builder =>
         daysSourceQueueAsync =>
-          val deskRecsSink = builder.add(Sink.actorRefWithAck(deskRecsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
-
           daysToDeskRecs(daysSourceQueueAsync.out) ~> deskRecsSink
-
           ClosedShape
     }
 
@@ -55,13 +55,13 @@ object DynamicRunnableDeskRecs {
     val crunchDays = days.map(millis => crunchStart(SDate(millis)).millisSinceEpoch)
     val withFlights = addFlights(crunchDays, flightsProvider)
     val withSplits = addSplits(withFlights, liveManifestsProvider, historicManifestsProvider, splitsCalculator)
-    addDeskRecs(withSplits, portDeskRecs, maxDesksProviders)
+    toDeskRecs(withSplits, portDeskRecs, maxDesksProviders)
   }
 
-  private def addDeskRecs(dayAndFlights: Implicits.PortOps[(MillisSinceEpoch, Iterable[ApiFlightWithSplits])],
-                          portDeskRecs: DesksAndWaitsPortProviderLike,
-                          maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike]
-                         ): Implicits.PortOps[DeskRecMinutes] = {
+  private def toDeskRecs(dayAndFlights: Implicits.PortOps[(MillisSinceEpoch, Iterable[ApiFlightWithSplits])],
+                         portDeskRecs: DesksAndWaitsPortProviderLike,
+                         maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike]
+                        ): Implicits.PortOps[DeskRecMinutes] = {
     dayAndFlights
       .map { case (crunchStartMillis, flights) =>
         val crunchEndMillis = SDate(crunchStartMillis).addMinutes(portDeskRecs.minutesToCrunch).millisSinceEpoch

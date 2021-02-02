@@ -50,11 +50,6 @@ object PassengerInfo {
       )
     )
 
-  def bestAvailableManifestToPaxTypes(bestAvailableManifest: BestAvailableManifest): Map[PaxType, Int] = {
-    bestAvailableManifest.passengerList.map(p => DefaultPaxTypeAllocator(bestAvailableManifest)(p))
-      .groupBy(identity).mapValues(_.size)
-  }
-
   def excludeDuplicatePax(manifest: VoyageManifest): VoyageManifest = manifest.copy(
     PassengerList = BestAvailableManifest.removeDuplicatePax(manifest)
   )
@@ -76,9 +71,6 @@ object PassengerInfo {
           manifestToPassengerTypes(manifest)
         )
       )
-
-  def manifestToPassengerTypes(manifest: VoyageManifest): Map[PaxType, Int] =
-    bestAvailableManifestToPaxTypes(BestAvailableManifest(manifest))
 
   def bestAvailableManifestToPaxTypes(bestAvailableManifest: BestAvailableManifest): Map[PaxType, Int] = {
     bestAvailableManifest.passengers.map(DefaultPaxTypeAllocator(_))
