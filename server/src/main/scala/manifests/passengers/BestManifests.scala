@@ -3,7 +3,7 @@ package manifests.passengers
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.{SDateLike, _}
 import manifests.UniqueArrivalKey
-import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import services.SDate
 
@@ -64,13 +64,11 @@ case class ManifestPassengerProfile(nationality: Nationality,
                                     inTransit: Option[Boolean])
 
 object ManifestPassengerProfile {
-  def apply(pij: PassengerInfoJson, portCode: PortCode): ManifestPassengerProfile = {
-    val nationality = pij.NationalityCountryCode.getOrElse(Nationality(""))
-    val documentType: Option[DocumentType] = if (nationality.code == CountryCodes.UK)
-      Option(DocumentType.Passport)
-    else
-      pij.DocumentType
-    val maybeInTransit = Option(pij.InTransitFlag.isInTransit|| pij.DisembarkationPortCode.exists(_ != portCode))
-    ManifestPassengerProfile(nationality, documentType, pij.Age, maybeInTransit)
-  }
+  def apply(pij: PassengerInfoJson, portCode: PortCode): ManifestPassengerProfile =
+    ManifestPassengerProfile(
+      pij.NationalityCountryCode.getOrElse(Nationality("")),
+      pij.docTypeWithNationalityAssumption,
+      pij.Age,
+      Option(pij.isInTransit(portCode))
+    )
 }
