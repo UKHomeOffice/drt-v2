@@ -8,19 +8,22 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
+import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import manifests.queues.SplitsCalculator
+import manifests.queues.SplitsCalculator.SplitsForArrival
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
 import services.TryCrunch
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.Mocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.createGraph
-import services.crunch.{CrunchTestLike, TestDefaults}
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.{addManifests, createGraph}
+import services.crunch.{CrunchTestLike, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.CrunchMocks
 
 import scala.collection.immutable.Map
@@ -119,6 +122,35 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     }
   }
 
+  "Given a flight and a mock splits calculator" >> {
+    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"))
+    val flights = Seq(ApiFlightWithSplits(arrival, Set()))
+    val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
+    val mockSplits: SplitsForArrival = (_, _) => splits
+
+    "When I have a manifest matching the arrival I should get the mock splits added to the arrival" >> {
+      val manifest = VoyageManifestGenerator.manifestForArrival(arrival, List(euIdCard))
+      val manifestsForArrival = manifestsByKey(manifest)
+      val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
+
+      withLiveManifests === Seq(ApiFlightWithSplits(arrival, Set(splits)))
+    }
+
+    "When I have manifests not matching the arrival I should get no splits added to the arrival" >> {
+      val manifest = VoyageManifestGenerator.voyageManifest(portCode = PortCode("AAA"))
+      val manifestsForDifferentArrival = manifestsByKey(manifest)
+      val withLiveManifests = addManifests(flights, manifestsForDifferentArrival, mockSplits)
+
+      withLiveManifests === Seq(ApiFlightWithSplits(arrival, Set()))
+    }
+  }
+
+  private def manifestsByKey(manifest: VoyageManifest) =
+    List(manifest)
+      .map { vm => vm.maybeKey.map(k => (k, vm)) }
+      .collect { case Some(k) => k }
+      .toMap
+
   "Given an arrival with 100 pax " >> {
 
     val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = s"2021-06-01T12:00", origin = PortCode("JFK"))
@@ -180,4 +212,3 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   }
 }
-

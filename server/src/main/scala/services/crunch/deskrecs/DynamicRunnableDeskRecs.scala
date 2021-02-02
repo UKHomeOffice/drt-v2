@@ -12,6 +12,7 @@ import drt.shared.{ApiFlightWithSplits, ArrivalKey, SDateLike}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import manifests.queues.SplitsCalculator
+import manifests.queues.SplitsCalculator.SplitsForArrival
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.SDate
@@ -86,7 +87,7 @@ object DynamicRunnableDeskRecs {
         flightsProvider(day).map(flightsStream => (day, flightsStream))
       }
       .flatMapConcat { case (day, flights) =>
-        flights.fold(FlightsWithSplits.empty)(_ ++ _).map(fws => (day, fws))
+        flights.fold(FlightsWithSplits.empty)(_ ++ _).map(flights => (day, flights))
       }
 
   private def addSplits(dayWithFlights: Implicits.PortOps[(MillisSinceEpoch, FlightsWithSplits)],
@@ -98,55 +99,54 @@ object DynamicRunnableDeskRecs {
       .mapAsync(1) { case (day, flightsSource) =>
         liveManifestsProvider(day).map(manifestsStream => (day, flightsSource, manifestsStream))
       }
-      .flatMapConcat { case (day, fws, manifestsSource) =>
-        manifestsSource.fold(VoyageManifests.empty)(_ ++ _).map(vms => (day, fws, vms))
+      .flatMapConcat { case (day, flights, manifestsSource) =>
+        manifestsSource.fold(VoyageManifests.empty)(_ ++ _).map(manifests => (day, flights, manifests))
       }
-      .map { case (day, flights, liveManifests) =>
-        (day, addLiveManifests(flights, liveManifests, splitsCalculator))
+      .map { case (day, FlightsWithSplits(flights), manifests) =>
+        val manifestsByKey = arrivalKeysToManifests(manifests)
+        (day, addManifests(flights.values, manifestsByKey, splitsCalculator.splitsForArrival))
       }
       .mapAsync(1) {
         case (day, flights) =>
-          val toLookup = flights.filter(_.splits.isEmpty).map(_.apiFlight)
+          val arrivalsToLookup = flights.filter(_.splits.isEmpty).map(_.apiFlight)
 
-          historicManifestsProvider(toLookup).map { manifests =>
-            (day, addHistoricManifests(flights, manifests, splitsCalculator))
+          historicManifestsProvider(arrivalsToLookup).map { manifests =>
+            (day, addManifests(flights, manifests, splitsCalculator.splitsForArrival))
           }
       }
-
-  private def addHistoricManifests(flights: Iterable[ApiFlightWithSplits],
-                                   manifests: Map[ArrivalKey, VoyageManifest],
-                                   splitsCalculator: SplitsCalculator): Iterable[ApiFlightWithSplits] =
-    flights.map { flight =>
-      if (flight.splits.nonEmpty) flight
-      else {
-        val splits = manifests.get(ArrivalKey(flight.apiFlight)) match {
-          case Some(historicManifest) =>
-            splitsCalculator.bestSplitsForArrival(historicManifest, flight.apiFlight)
-          case None =>
-            splitsCalculator.terminalDefaultSplits(flight.apiFlight.Terminal)
-        }
-        ApiFlightWithSplits(flight.apiFlight, Set(splits))
+      .map {
+        case (day, flights) =>
+          val allFlightsWithSplits = flights.map {
+            case flightWithNoSplits if flightWithNoSplits.splits.isEmpty =>
+              val terminalDefault = splitsCalculator.terminalDefaultSplits(flightWithNoSplits.apiFlight.Terminal)
+              flightWithNoSplits.copy(splits = Set(terminalDefault))
+            case flightWithSplits => flightWithSplits
+          }
+          (day, allFlightsWithSplits)
       }
-    }
 
-  private def addLiveManifests(fws: FlightsWithSplits,
-                               vms: VoyageManifests,
-                               splitsCalculator: SplitsCalculator): Iterable[ApiFlightWithSplits] = {
-    val liveManifests = vms.manifests
-      .map(vm => vm.maybeKey.map(key => (key, vm)))
+  private def arrivalKeysToManifests(manifests: VoyageManifests): Map[ArrivalKey, VoyageManifest] =
+    manifests.manifests
+      .map { manifest =>
+        manifest.maybeKey.map(arrivalKey => (arrivalKey, manifest))
+      }
       .collect {
         case Some((key, vm)) => (key, vm)
       }.toMap
 
-    fws.flights.values.map {
-      case ApiFlightWithSplits(arrival, _, _) =>
-        val splits = liveManifests.get(ArrivalKey(arrival)) match {
-          case Some(liveManifest) =>
-            Some(splitsCalculator.bestSplitsForArrival(liveManifest, arrival))
+  def addManifests(flights: Iterable[ApiFlightWithSplits],
+                   manifests: Map[ArrivalKey, VoyageManifest],
+                   splitsForArrival: SplitsForArrival): Iterable[ApiFlightWithSplits] =
+    flights.map { flight =>
+      if (flight.splits.nonEmpty) flight
+      else {
+        val maybeSplits = manifests.get(ArrivalKey(flight.apiFlight)) match {
+          case Some(historicManifest) =>
+            Some(splitsForArrival(historicManifest, flight.apiFlight))
           case None =>
             None
         }
-        ApiFlightWithSplits(arrival, splits.toSet)
+        ApiFlightWithSplits(flight.apiFlight, maybeSplits.toSet)
+      }
     }
-  }
 }

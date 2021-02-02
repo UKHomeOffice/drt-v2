@@ -85,7 +85,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+          val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
           println(s"result: $result")
 
@@ -131,7 +131,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
           None,
           PaxNumbers
         )
-        val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+        val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
         result === expected
       }
@@ -174,7 +174,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
           None,
           PaxNumbers
         )
-        val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+        val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
         result === expected
       }
@@ -217,7 +217,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
           None,
           PaxNumbers
         )
-        val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+        val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
         result === expected
       }
@@ -272,7 +272,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
           None,
           PaxNumbers
         )
-        val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+        val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
         result === expected
       }
@@ -310,7 +310,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
           None,
           PaxNumbers
         )
-        val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+        val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
         result === expected
       }
@@ -417,7 +417,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+          val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
           result === expected
         }
@@ -436,7 +436,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+          val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
           result === expected
         }
@@ -455,7 +455,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+          val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
           result === expected
         }
@@ -475,7 +475,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+          val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
           result === expected
         }
@@ -507,7 +507,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+          val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
           result === expected
         }
@@ -528,7 +528,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.bestSplitsForArrival(manifest, testArrival)
+          val result = splitsCalculator.splitsForArrival(manifest, testArrival)
 
           result === expected
         }
