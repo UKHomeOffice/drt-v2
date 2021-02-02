@@ -183,7 +183,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
   "Given a voyage manifest `Passport` instead of `P` for doctype it should still be accepted as a passport doctype" >> {
     val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
-      PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
+      PassengerInfoJson(Option(DocumentType("Passport")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
     ))
 
     val result = BestAvailableManifest(vm)

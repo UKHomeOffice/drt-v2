@@ -3,7 +3,8 @@ package passengersplits.parsing
 import drt.shared.EventTypes.InvalidEventType
 import drt.shared._
 import org.joda.time.DateTime
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType.Passport
+import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat}
 
@@ -36,7 +37,14 @@ object VoyageManifestParser {
                                DisembarkationPortCountryCode: Option[Nationality] = None,
                                NationalityCountryCode: Option[Nationality] = None,
                                PassengerIdentifier: Option[String]
-                              )
+                              ) {
+    def isInTransit(portCode: PortCode) = InTransitFlag.isInTransit || DisembarkationPortCode.exists(_ != portCode)
+
+    def docTypeWithNationalityAssumption: Option[DocumentType] = NationalityCountryCode match {
+      case Some(Nationality(code)) if code == CountryCodes.UK => Option(Passport)
+      case _ => DocumentType
+    }
+  }
 
   case class VoyageManifests(manifests: Set[VoyageManifest]) {
 
