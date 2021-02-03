@@ -1,7 +1,7 @@
 package manifests.paxinfo
 
 import drt.shared._
-import drt.shared.api.{AgeRange, PassengerInfoSummary}
+import drt.shared.api.{AgeRange, PassengerInfoSummary, PaxAgeRange, UnknownAge}
 import manifests.passengers.PassengerInfo
 import manifests.paxinfo.ManifestBuilder._
 import org.specs2.mutable.Specification
@@ -63,7 +63,7 @@ class PassengerInfoSummaryFromManifestSpec extends Specification {
   }
   "When extracting passenger info " +
     "Given passengers that are inTransit " +
-    "then these should be excluded from the summaries">> {
+    "then these should be included in the summaries">> {
 
     val voyageManifest = manifestForPassengers(
       List(
@@ -80,14 +80,29 @@ class PassengerInfoSummaryFromManifestSpec extends Specification {
 
     val expected = Option(PassengerInfoSummary(
       ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2020-11-09T00:00").millisSinceEpoch),
-      Map(AgeRange(25, Option(49)) -> 2),
-      Map(Nationality("GBR") -> 2),
+      Map(AgeRange(25, Option(49)) -> 6),
+      Map(Nationality("GBR") -> 6),
       Map(
         PaxTypes.EeaMachineReadable -> 2,
+        PaxTypes.Transit -> 4,
       )
     ))
 
     result === expected
+  }
+
+  "When deserializing an unknown age range then I should get back and UnknownAge " >> {
+    val result = PaxAgeRange.parse(UnknownAge.title)
+
+    result === UnknownAge
+  }
+
+  "When deserializing age ranges we should get back the correct age range " >> {
+    val ageRangeStrings = PassengerInfo.ageRanges.map(_.title)
+
+    val result = ageRangeStrings.map(PaxAgeRange.parse)
+
+    result === PassengerInfo.ageRanges
   }
 
 

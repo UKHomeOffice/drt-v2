@@ -5,7 +5,7 @@ import upickle.default.{macroRW, _}
 
 case class PassengerInfoSummary(
                                  arrivalKey: ArrivalKey,
-                                 ageRanges: Map[AgeRange, Int],
+                                 ageRanges: Map[PaxAgeRange, Int],
                                  nationalities: Map[Nationality, Int],
                                  paxTypes: Map[PaxType, Int]
                                )
