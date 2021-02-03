@@ -14,15 +14,16 @@ import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPe
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.dates.UtcDate
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
-import services.TryCrunch
+import services.{SDate, TryCrunch}
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.Mocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{addManifests, createGraph}
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.{CrunchRequest, addManifests, createGraph}
 import services.crunch.{CrunchTestLike, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.CrunchMocks
 
@@ -50,17 +51,17 @@ object Mocks {
   }
 
   def mockFlightsProvider(arrivals: List[Arrival])
-                         (implicit ec: ExecutionContext): MillisSinceEpoch => Future[Source[FlightsWithSplits, NotUsed]] =
-    (_: MillisSinceEpoch) => Future(Source(List(FlightsWithSplits(arrivals.map(ApiFlightWithSplits(_, Set()))))))
+                         (implicit ec: ExecutionContext): CrunchRequest => Future[Source[List[Arrival], NotUsed]] =
+    _ => Future(Source(List(arrivals)))
 
   def mockLiveManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]])
-                               (implicit ec: ExecutionContext): MillisSinceEpoch => Future[Source[VoyageManifests, NotUsed]] = {
+                               (implicit ec: ExecutionContext): CrunchRequest => Future[Source[VoyageManifests, NotUsed]] = {
     val manifests = maybePax match {
       case Some(pax) => VoyageManifests(Set(manifestForArrival(arrival, pax)))
       case None => VoyageManifests(Set())
     }
 
-    (_: MillisSinceEpoch) => Future(Source(List(manifests)))
+    _ => Future(Source(List(manifests)))
   }
 
   def mockHistoricManifestsProvider(maybePax: Option[List[PassengerInfoJson]])
@@ -90,17 +91,15 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
                                  livePax: Option[List[PassengerInfoJson]],
                                  historicPax: Option[List[PassengerInfoJson]],
                                  expectedQueuePax: Map[(Terminal, Queue), Int]): Any = {
-    val crunchPeriodStartMillis: SDateLike => SDateLike = day => day
     val probe = TestProbe()
 
-    val daysSourceQueue = Source(List(arrival.Scheduled))
+    val daysSourceQueue = Source(List(CrunchRequest(SDate(arrival.Scheduled).toUtcDate, 0, 1440)))
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
 
-    val deskRecs = DynamicRunnableDeskRecs.daysToDeskRecs(
+    val deskRecs = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
       mockFlightsProvider(List(arrival)),
       mockLiveManifestsProvider(arrival, livePax),
       mockHistoricManifestsProvider(historicPax),
-      crunchPeriodStartMillis,
       splitsCalculator,
       desksAndWaitsProvider,
       maxDesksProvider) _

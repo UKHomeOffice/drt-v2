@@ -243,6 +243,8 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
 
 object ApiFlightWithSplits {
   implicit val rw: ReadWriter[ApiFlightWithSplits] = macroRW
+
+  def fromArrival(arrival: Arrival): ApiFlightWithSplits = ApiFlightWithSplits(arrival, Set())
 }
 
 trait WithTimeAccessor {
@@ -715,7 +717,7 @@ object FlightsApi {
   object FlightsWithSplits {
     val empty: FlightsWithSplits = FlightsWithSplits(Map[UniqueArrival, ApiFlightWithSplits]())
 
-    def apply(flights: Iterable[ApiFlightWithSplits]): FlightsWithSplits = new FlightsWithSplits(flights.map(fws => (fws.unique, fws)).toMap)
+    def apply(flights: Iterable[ApiFlightWithSplits]): FlightsWithSplits = FlightsWithSplits(flights.map(fws => (fws.unique, fws)).toMap)
   }
 
   case class FlightsWithSplitsDiff(flightsToUpdate: List[ApiFlightWithSplits], arrivalsToRemove: List[UniqueArrival]) {
