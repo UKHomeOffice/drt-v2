@@ -9,20 +9,20 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 trait PaxTypeAllocator {
 
   val b5JPlus: PartialFunction[ManifestPassengerProfile, PaxType] = {
-    case ManifestPassengerProfile(country, _, Some(age), _) if isB5JPlus(country) && age.isUnder(12) => B5JPlusNationalBelowEGateAge
-    case ManifestPassengerProfile(country, _, _, _) if isB5JPlus(country) => B5JPlusNational
+    case ManifestPassengerProfile(country, _, Some(age), _, _) if isB5JPlus(country) && age.isUnder(12) => B5JPlusNationalBelowEGateAge
+    case ManifestPassengerProfile(country, _, _, _, _) if isB5JPlus(country) => B5JPlusNational
   }
 
   val countryAndDocumentTypes: PartialFunction[ManifestPassengerProfile, PaxType] = {
-    case ManifestPassengerProfile(country, Some(docType), Some(age), _) if isEea(country) && docType == DocumentType.Passport && age.isUnder(12) => EeaBelowEGateAge
-    case ManifestPassengerProfile(country, Some(docType), _, _) if isEea(country) && docType == DocumentType.Passport => EeaMachineReadable
-    case ManifestPassengerProfile(country, _, _, _) if isEea(country) => EeaNonMachineReadable
-    case ManifestPassengerProfile(country, _, _, _) if !isEea(country) && isVisaNational(country) => VisaNational
-    case ManifestPassengerProfile(country, _, _, _) if !isEea(country) => NonVisaNational
+    case ManifestPassengerProfile(country, Some(docType), Some(age), _, _) if isEea(country) && docType == DocumentType.Passport && age.isUnder(12) => EeaBelowEGateAge
+    case ManifestPassengerProfile(country, Some(docType), _, _, _) if isEea(country) && docType == DocumentType.Passport => EeaMachineReadable
+    case ManifestPassengerProfile(country, _, _, _, _) if isEea(country) => EeaNonMachineReadable
+    case ManifestPassengerProfile(country, _, _, _, _) if !isEea(country) && isVisaNational(country) => VisaNational
+    case ManifestPassengerProfile(country, _, _, _, _) if !isEea(country) => NonVisaNational
   }
 
   val transit: PartialFunction[ManifestPassengerProfile, PaxType] = {
-    case ManifestPassengerProfile(_, _, _, Some(isTransit)) if isTransit => Transit
+    case ManifestPassengerProfile(_, _, _, Some(isTransit), _) if isTransit => Transit
   }
 
   val withTransit: PartialFunction[ManifestPassengerProfile, PaxType] = transit orElse countryAndDocumentTypes

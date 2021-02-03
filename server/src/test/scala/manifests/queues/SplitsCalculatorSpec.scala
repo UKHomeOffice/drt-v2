@@ -51,11 +51,11 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         "Then I should expect 3 EEA Adults to Desk, 1 EEA child to desk and 1 EEA Adult to eGates" >> {
 
           val manifest = apiManifest(List(
-            ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-            ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-            ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-            ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-            ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false))
+            ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+            ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+            ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+            ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+            ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false), None)
           ))
           val expected = Splits(
             Set(
@@ -95,11 +95,11 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         "Then I should expect 3 EEA Adults to Desk, 1 B5J child to desk and 1 B5J Adult to eGates" >> {
 
         val manifest = apiManifest(List(
-          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false))
+          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false), None)
         ))
         val expected = Splits(
           Set(
@@ -138,11 +138,11 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         "Then I should expect 2 EEA Adults to Desk, 3 EEA child to desk and 0 EEA Adults to eGates" >> {
 
         val manifest = apiManifest(List(
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false))
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false), None)
         ))
         val expected = Splits(
           Set(
@@ -181,11 +181,11 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         "Then I should expect 2 B5J Adults to Desk, 3 B5J child to desk and 0 B5J Adults to eGates" >> {
 
         val manifest = apiManifest(List(
-          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false))
+          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false), None)
         ))
         val expected = Splits(
           Set(
@@ -235,11 +235,11 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         "Then I should expect 1 EEA Adults to Desk, 1 EEA child to desk and 3 EEA Adult to eGates" >> {
         val splitsCalculator = SplitsCalculator(testPaxTypeAllocator, config.terminalPaxSplits, ChildEGateAdjustments(1.0))
         val manifest = apiManifest(List(
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false))
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false), None)
         ))
 
         val expected = Splits(
@@ -281,11 +281,11 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         val splitsCalculator = SplitsCalculator(testPaxTypeAllocator, config.terminalPaxSplits, ChildEGateAdjustments(0.0))
 
         val manifest = apiManifest(List(
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false)),
-          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false))
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), Option(false), None),
+          ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(4)), Option(false), None)
         ))
         val expected = Splits(
           Set(

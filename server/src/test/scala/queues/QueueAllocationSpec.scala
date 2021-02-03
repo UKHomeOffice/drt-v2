@@ -25,7 +25,7 @@ class QueueAllocationSpec extends Specification {
       Queues.EeaDesk -> 0.25
     )
   ))
-  val testQueueAllocator = TerminalQueueAllocator(terminalQueueAllocationMap)
+  val testQueueAllocator: TerminalQueueAllocator = TerminalQueueAllocator(terminalQueueAllocationMap)
 
   "Given a BestAvailableManifest with 1 GBP passenger " +
     "then I should get a Splits of 100% EEA to EGate" >> {
@@ -38,7 +38,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-02-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false))
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false), None)
       )
     )
 
@@ -65,8 +65,8 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-02-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false)),
-        ManifestPassengerProfile(Nationality("ZAF"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false))
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false), None),
+        ManifestPassengerProfile(Nationality("ZAF"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false), None)
       )
     )
 
@@ -107,7 +107,7 @@ class QueueAllocationSpec extends Specification {
       VoyageNumber("234"),
       CarrierCode("SA"),
       SDate("2019-07-22T06:24:00Z"),
-      List(ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(true)))
+      List(ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(true), None))
     )
 
     val expected = Splits(
@@ -147,7 +147,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-06-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false))
+        ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false), None)
       )
     )
 
@@ -184,7 +184,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-06-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false))
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false), None)
       )
     )
 
@@ -223,8 +223,8 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false)),
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(true))
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false), None),
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(true), None)
       )
     )
 
@@ -258,7 +258,7 @@ class QueueAllocationSpec extends Specification {
     result === expected
   }
 
-  val fastTrackQueueAllocator = TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap)
+  val fastTrackQueueAllocator: TerminalQueueAllocatorWithFastTrack = TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap)
 
   "Given a BestAvailableManifest with 10 NonEEA Passengers on a Flight with FastTrack at LHR " +
     "Then I should get 0.8 Pax to NonEEA Queue and 0.1 to FastTrack" >> {
@@ -271,7 +271,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false))
+        ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false), None)
       )
     )
 
@@ -316,7 +316,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("TM"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false))
+        ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false), None)
       )
     )
 
@@ -354,7 +354,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SAA"),
       SDate("2019-01-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false))
+        ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false), None)
       )
     )
 

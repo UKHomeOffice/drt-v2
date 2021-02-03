@@ -42,7 +42,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
     val eventualMaybePaxProfiles: Future[Seq[Try[List[ManifestPassengerProfile]]]] = Source(paxForArrivalQuery(flightKeys))
       .mapAsync(1) { builder =>
         paxInfoTable.db
-          .run(builder.as[(String, String, String, String, String, Boolean)])
+          .run(builder.as[(String, String, String, String, String, Boolean, String)])
           .map { rows =>
             Success(passengerProfiles(rows).toList)
           }
@@ -200,7 +200,8 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             age,
             in_transit_flag,
             disembarkation_port_country_code,
-            in_transit
+            in_transit,
+            passenger_identifier
           from voyage_manifest_passenger_info
           where
             event_code ='DC'
@@ -210,14 +211,15 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and scheduled_date=$scheduled"""
     }
 
-  def passengerProfiles(rows: Vector[(String, String, String, String, String, Boolean)]): Vector[ManifestPassengerProfile] = rows.map {
-    case (nat, doc, age, transitFlag, endCountry, inTransit) =>
+  def passengerProfiles(rows: Vector[(String, String, String, String, String, Boolean, String)]): Vector[ManifestPassengerProfile] = rows.map {
+    case (nat, doc, age, transitFlag, endCountry, inTransit, identifier) =>
       val transit = (transitFlag, endCountry, inTransit) match {
         case (t, _, _) if t == "Y" => true
         case (_, c, _) if c != "GBR" => true
         case (_, _, t) if t => true
         case _ => false
       }
-      ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(PaxAge(age.toInt)).toOption, Option(transit))
+      val maybeIdentifier = if (identifier.nonEmpty) Option(identifier) else None
+      ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(PaxAge(age.toInt)).toOption, Option(transit), maybeIdentifier)
   }
 }

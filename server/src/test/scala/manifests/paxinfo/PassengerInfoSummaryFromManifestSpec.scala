@@ -59,6 +59,7 @@ class PassengerInfoSummaryFromManifestSpec extends Specification {
 
     result === expected
   }
+
   "When extracting passenger info " +
     "Given passengers that are inTransit " +
     "then these should be included in the summaries">> {
