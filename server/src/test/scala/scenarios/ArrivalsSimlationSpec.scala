@@ -16,7 +16,7 @@ import drt.shared.airportconfig.Lhr
 import drt.shared.api.Arrival
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.PortDeskLimits
-import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
+import services.crunch.deskrecs.{PortDesksAndWaitsProvider, RunnableDeskRecs}
 import services.exports.StreamingFlightsExport
 import services.imports.{ArrivalCrunchSimulationActor, ArrivalImporter}
 import services.{Optimiser, SDate}
@@ -123,7 +123,7 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
     val fws = FlightsWithSplits(flightsWithSplits.map(f => f.unique -> f).toMap)
 
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(fws)))
-    val dawp = DesksAndWaitsPortProvider(lhrHalved, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi)
+    val dawp = PortDesksAndWaitsProvider(lhrHalved, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi)
 
     val (runnableDeskRecs, _): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = RunnableDeskRecs(portStateActor, dawp, PortDeskLimits.fixed(lhrHalved)).run()
 

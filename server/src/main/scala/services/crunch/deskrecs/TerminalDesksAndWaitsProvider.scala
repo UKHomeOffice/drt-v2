@@ -10,7 +10,7 @@ import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
 import scala.collection.immutable.{Map, NumericRange}
 import scala.util.{Failure, Success}
 
-case class DesksAndWaitsTerminalProvider(slas: Map[Queue, Int],
+case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int],
                                          queuePriority: List[Queue],
                                          cruncher: TryCrunch,
                                          bankSize: Int) {

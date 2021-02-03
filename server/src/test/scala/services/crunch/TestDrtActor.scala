@@ -16,7 +16,7 @@ import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeployments, RunnableDeskRecs}
+import services.crunch.deskrecs.{PortDesksAndWaitsProvider, RunnableDeployments, RunnableDeskRecs}
 import services.graphstages.Crunch
 import services.graphstages.Crunch.crunchStartWithOffset
 import test.TestMinuteLookups
@@ -76,7 +76,7 @@ class TestDrtActor extends Actor {
 
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
-      val portDeskRecs = DesksAndWaitsPortProvider(tc.airportConfig, tc.cruncher, tc.pcpPaxFn)
+      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, tc.pcpPaxFn)
 
       val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
         PortDeskLimits.flexed(tc.airportConfig)

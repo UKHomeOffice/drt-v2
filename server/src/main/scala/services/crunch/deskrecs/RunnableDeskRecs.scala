@@ -26,7 +26,7 @@ object RunnableDeskRecs {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(portStateActor: ActorRef,
-            portDeskRecs: DesksAndWaitsPortProviderLike,
+            portDeskRecs: PortDesksAndWaitsProviderLike,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
            (implicit executionContext: ExecutionContext,
             materializer: Materializer,
@@ -88,7 +88,7 @@ object RunnableDeskRecs {
       }
 
   def start(portStateActor: ActorRef,
-            portDeskRecs: DesksAndWaitsPortProviderLike,
+            portDeskRecs: PortDesksAndWaitsProviderLike,
             maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike])
            (implicit ec: ExecutionContext, mat: Materializer): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = {
 

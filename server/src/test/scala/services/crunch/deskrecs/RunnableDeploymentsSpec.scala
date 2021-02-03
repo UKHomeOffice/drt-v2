@@ -94,7 +94,7 @@ class RunnableDeploymentsSpec extends CrunchTestLike {
       crunchStartDateProvider,
       PortDeskLimits.fixed(defaultAirportConfig),
       defaultAirportConfig.minutesToCrunch,
-      DesksAndWaitsPortProvider(defaultAirportConfig, Optimiser.crunch, pcpPaxCalcFn)
+      PortDesksAndWaitsProvider(defaultAirportConfig, Optimiser.crunch, pcpPaxCalcFn)
     ).run()
 
     val midnight20190101 = SDate("2019-01-01T00:00")

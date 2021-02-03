@@ -55,7 +55,7 @@ object DynamicRunnableDeskRecs {
                                liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
                                historicManifestsProvider: Iterable[Arrival] => Future[Map[ArrivalKey, VoyageManifest]],
                                splitsCalculator: SplitsCalculator,
-                               portDeskRecs: DesksAndWaitsPortProviderLike,
+                               portDeskRecs: PortDesksAndWaitsProviderLike,
                                maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
                               (crunchRequests: Implicits.PortOps[CrunchRequest])
                               (implicit ec: ExecutionContext): Implicits.PortOps[DeskRecMinutes] = {
@@ -65,7 +65,7 @@ object DynamicRunnableDeskRecs {
   }
 
   private def toDeskRecs(dayAndFlights: Implicits.PortOps[(CrunchRequest, Iterable[ApiFlightWithSplits])],
-                         portDeskRecs: DesksAndWaitsPortProviderLike,
+                         portDeskRecs: PortDesksAndWaitsProviderLike,
                          maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike]
                         ): Implicits.PortOps[DeskRecMinutes] = {
     dayAndFlights
