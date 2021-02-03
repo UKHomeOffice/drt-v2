@@ -10,7 +10,7 @@ import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.EGate
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{T1, T2, T3}
+import drt.shared.Terminals.{T1, T3}
 import drt.shared._
 import drt.shared.api.Arrival
 import manifests.passengers.BestAvailableManifest
@@ -83,7 +83,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
 
   "Given an arrival splits stage " >> {
     val paxTypeQueueAllocation = PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator(),
+      B5JPlusWithTransitTypeAllocator,
       TerminalQueueAllocatorWithFastTrack(defaultAirportConfig.terminalPaxTypeQueueAllocation))
 
     val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, defaultAirportConfig.terminalPaxSplits)
@@ -114,8 +114,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
         val terminalAverage = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), SplitSources.TerminalAverage, None, Percentage)
         val apiSplits = Splits(
           Set(
-            ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 1.6, Some(Map(Nationality("GBR") -> 0.8, Nationality("ITA") -> 0.8)), Some(Map(PaxAge(22) -> 1.6))),
-            ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 0.4, Some(Map(Nationality("GBR") -> 0.2, Nationality("ITA") -> 0.2)), Some(Map(PaxAge(22) -> 0.4)))
+            ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 2.0, Some(Map(Nationality("GBR") -> 1.0, Nationality("ITA") -> 1.0)), Some(Map(PaxAge(22) -> 2.0)))
           ),
           SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)
 

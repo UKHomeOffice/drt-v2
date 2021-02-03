@@ -33,7 +33,7 @@ object RunnableDeployments {
             crunchPeriodStartMillis: SDateLike => SDateLike,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
             minutesToCrunch: Int,
-            portDeskRecs: DesksAndWaitsPortProviderLike)
+            portDeskRecs: PortDesksAndWaitsProviderLike)
            (implicit executionContext: ExecutionContext,
             timeout: Timeout = new Timeout(60 seconds)): RunnableGraph[(SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch)] = {
     import akka.stream.scaladsl.GraphDSL.Implicits._
@@ -130,7 +130,7 @@ object RunnableDeployments {
             crunchPeriodStart: SDateLike => SDateLike,
             maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
             minutesToCrunch: Int,
-            portDeskRecs: DesksAndWaitsPortProviderLike)
+            portDeskRecs: PortDesksAndWaitsProviderLike)
            (implicit ec: ExecutionContext, mat: Materializer): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = {
 
     RunnableDeployments(portStateActor, queuesActor, staffActor, staffToDeskLimits, crunchPeriodStart, maxDesksProviders, minutesToCrunch, portDeskRecs).run()

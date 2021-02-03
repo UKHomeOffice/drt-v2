@@ -1,11 +1,11 @@
 package actors.queues
 
 import actors.DrtStaticParameters.expireAfterMillis
-import actors.serializers.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
 import actors.PartitionedPortStateActor._
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.acking.AckingReceiver.Ack
 import actors.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
 import actors.serializers.FlightMessageConversion
+import actors.serializers.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
 import actors.{FeedStateLike, GetFeedStatuses, GetState, RecoveryActorLike}
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
@@ -47,7 +47,7 @@ object ManifestRouterActor {
       _.runWith(Sink.reduce[VoyageManifests](_ ++ _))
     )
 
-  def props(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate) = Props(
+  def props(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate): Props = Props(
     new ManifestRouterActor(manifestLookup, manifestsUpdate)
   )
 }
@@ -74,7 +74,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup, manifestsUpdate: Manif
     None
   )
 
-  var state = initialState
+  var state: ApiFeedState = initialState
 
   override val log: Logger = LoggerFactory.getLogger(getClass)
 

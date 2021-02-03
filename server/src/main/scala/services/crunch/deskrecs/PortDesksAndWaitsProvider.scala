@@ -15,7 +15,7 @@ import services.graphstages.WorkloadCalculator
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 
-case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
+case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
                                      divertedQueues: Map[Queue, Queue],
                                      desksByTerminal: Map[Terminal, Int],
                                      flexedQueuesPriority: List[Queue],
@@ -26,7 +26,7 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      eGateBankSize: Int,
                                      tryCrunch: TryCrunch,
                                      pcpPaxFn: Arrival => Int
-                                    ) extends DesksAndWaitsPortProviderLike {
+                                    ) extends PortDesksAndWaitsProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
@@ -41,8 +41,8 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
       case DeskRecMinute(t, q, m, _, _, d, w) => (TQM(t, q, m), SimulationMinute(t, q, m, d, w))
     }.toMap
 
-  def terminalDescRecs(terminal: Terminal): DesksAndWaitsTerminalProvider =
-    deskrecs.DesksAndWaitsTerminalProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSize)
+  def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
+    deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSize)
 
   def queueLoadsFromFlights(flights: FlightsWithSplits): Map[TQM, LoadMinute] = WorkloadCalculator
     .flightLoadMinutes(flights, terminalProcessingTimes, pcpPaxFn).minutes
@@ -94,9 +94,9 @@ case class DesksAndWaitsPortProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
   }
 }
 
-object DesksAndWaitsPortProvider {
-  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, pcpPaxFn: Arrival => Int): DesksAndWaitsPortProvider =
-    DesksAndWaitsPortProvider(
+object PortDesksAndWaitsProvider {
+  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, pcpPaxFn: Arrival => Int): PortDesksAndWaitsProvider =
+    PortDesksAndWaitsProvider(
       airportConfig.queuesByTerminal,
       airportConfig.divertedQueues,
       airportConfig.desksByTerminal,

@@ -10,7 +10,7 @@ import akka.stream.{ActorMaterializer, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
 import drt.shared.PaxTypes._
-import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaNonMachineReadableToDesk}
+import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk}
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.{T1, T2, Terminal}
@@ -37,24 +37,27 @@ object H2Tables extends {
 object TestDefaults {
   val airportConfig: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
-    queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk), T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)),
-    slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 20, Queues.NonEeaDesk -> 45),
+    queuesByTerminal = SortedMap(
+      T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk),
+      T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)
+    ),
+    slaByQueue = Map(Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
     minutesToCrunch = 30,
     defaultWalkTimeMillis = Map(),
     terminalPaxSplits = List(T1, T2).map(t => (t, SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 1)
-      ))).toMap,
+    ))).toMap,
     terminalProcessingTimes = Map(
       T1 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
-        ),
+      ),
       T2 -> Map(
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
-        )
-      ),
+      )
+    ),
     minMaxDesksByTerminalQueue24Hrs = Map(
       T1 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
@@ -68,14 +71,14 @@ object TestDefaults {
     role = STN,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> Map(
-        EeaMachineReadable -> List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
+        EeaMachineReadable -> List(Queues.EeaDesk -> 1.0),
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
         EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
         NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
         VisaNational -> List(Queues.NonEeaDesk -> 1.0),
-        B5JPlusNational -> List(Queues.EGate -> 0.6, Queues.EeaDesk -> 0.4),
+        B5JPlusNational -> List(Queues.EeaDesk -> 1.0),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-        ),
+      ),
       T2 -> Map(
         EeaMachineReadable -> List(Queues.EeaDesk -> 1),
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
@@ -84,11 +87,54 @@ object TestDefaults {
         VisaNational -> List(Queues.NonEeaDesk -> 1.0),
         B5JPlusNational -> List(Queues.EeaDesk -> 1),
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
-        )
-      ),
+      )
+    ),
     desksByTerminal = Map(T1 -> 40, T2 -> 40),
     feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
-    )
+  )
+  val airportConfigWithEgates: AirportConfig = AirportConfig(
+    portCode = PortCode("STN"),
+    queuesByTerminal = SortedMap(
+      T1 -> Seq(Queues.EGate, Queues.EeaDesk, Queues.NonEeaDesk)
+    ),
+    slaByQueue = Map(Queues.EGate -> 25, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
+    minutesToCrunch = 30,
+    defaultWalkTimeMillis = Map(),
+    terminalPaxSplits = List(T1).map(t => (t, SplitRatios(
+      SplitSources.TerminalAverage,
+      SplitRatio(eeaMachineReadableToEGate, 0.5),
+      SplitRatio(eeaMachineReadableToDesk, 0.5)
+    ))).toMap,
+    terminalProcessingTimes = Map(
+      T1 -> Map(
+        eeaMachineReadableToDesk -> 25d / 60,
+        eeaNonMachineReadableToDesk -> 25d / 60
+      )
+    ),
+    minMaxDesksByTerminalQueue24Hrs = Map(
+      T1 -> Map(
+        Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+        Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
+        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))
+      )
+    ),
+    timeToChoxMillis = 120000L,
+    role = STN,
+    terminalPaxTypeQueueAllocation = Map(
+      T1 -> Map(
+        EeaMachineReadable -> List(Queues.EeaDesk -> 1.0),
+        EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
+        EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
+        NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        VisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        B5JPlusNational -> List(Queues.EeaDesk -> 1.0),
+        B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
+      )
+    ),
+    desksByTerminal = Map(T1 -> 40),
+    feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
+  )
+
   val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {
     if (a.ActualChox.isDefined) MilliDate(SDate(a.ActualChox.get).millisSinceEpoch)
@@ -97,7 +143,9 @@ object TestDefaults {
     else if (a.Estimated.isDefined) MilliDate(SDate(a.Estimated.get).millisSinceEpoch)
     else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   }
+
   def testProbe(name: String)(implicit system: ActorSystem): TestProbe = TestProbe(name = name)
+
   val pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
 }
 

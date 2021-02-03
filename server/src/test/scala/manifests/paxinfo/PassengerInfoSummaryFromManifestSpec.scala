@@ -5,8 +5,6 @@ import drt.shared.api.{AgeRange, PassengerInfoSummary, PaxAgeRange, UnknownAge}
 import manifests.passengers.PassengerInfo
 import manifests.paxinfo.ManifestBuilder._
 import org.specs2.mutable.Specification
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser._
 import services.SDate
 
 import scala.collection.immutable.List
@@ -61,6 +59,7 @@ class PassengerInfoSummaryFromManifestSpec extends Specification {
 
     result === expected
   }
+
   "When extracting passenger info " +
     "Given passengers that are inTransit " +
     "then these should be included in the summaries">> {

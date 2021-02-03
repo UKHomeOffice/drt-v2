@@ -81,7 +81,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
         val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk), minDesks, maxDesks)
 
-        deskrecs.DesksAndWaitsTerminalProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, 10)
+        deskrecs.TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, 10)
           .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
         val expectedMaxEea = totalDesks24.map(_ - roWMinDesks)
@@ -105,7 +105,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
       val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks)
 
-      deskrecs.DesksAndWaitsTerminalProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, 10)
+      deskrecs.TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, 10)
         .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
       s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks" >> {
@@ -133,7 +133,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
       val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks)
 
-      deskrecs.DesksAndWaitsTerminalProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, 10)
+      deskrecs.TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, 10)
         .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
       s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks, EGate: $egateMaxDesks" >> {

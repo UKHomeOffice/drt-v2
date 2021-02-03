@@ -18,7 +18,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import play.api.mvc._
 import services.crunch.desklimits.PortDeskLimits
-import services.crunch.deskrecs.{DesksAndWaitsPortProvider, RunnableDeskRecs}
+import services.crunch.deskrecs.{PortDesksAndWaitsProvider, RunnableDeskRecs}
 import services.exports.StreamingDesksExport
 import services.imports.ArrivalCrunchSimulationActor
 import services.{Optimiser, SDate}
@@ -73,7 +73,7 @@ trait WithSimulations {
 
     val (runnableDeskRecs, _): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = RunnableDeskRecs(
       portStateActor,
-      DesksAndWaitsPortProvider(simulationConfig, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi),
+      PortDesksAndWaitsProvider(simulationConfig, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi),
       PortDeskLimits.fixed(simulationConfig)
     ).run()
 
