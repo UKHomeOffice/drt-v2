@@ -74,12 +74,12 @@ object DynamicRunnableDeskRecs {
         val startTime = System.currentTimeMillis()
 
         val loadsFromFlights: Map[TQM, Crunch.LoadMinute] = portDeskRecs.flightsToLoads(FlightsWithSplits(flights), crunchDay.start.millisSinceEpoch)
-        val deskRecMinutes: DeskRecMinutes = portDeskRecs.loadsToDesks(crunchDay.minutesInMillis, loadsFromFlights, maxDesksProviders)
+        val deskRecs: DeskRecMinutes = portDeskRecs.loadsToDesks(crunchDay.minutesInMillis, loadsFromFlights, maxDesksProviders)
 
         val timeTaken = System.currentTimeMillis() - startTime
         if (timeTaken > 1000) log.warn(s"Optimisation took ${timeTaken}ms")
 
-        deskRecMinutes
+        deskRecs
       }
   }
 
