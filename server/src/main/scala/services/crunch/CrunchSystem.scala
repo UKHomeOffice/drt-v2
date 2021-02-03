@@ -193,11 +193,11 @@ object CrunchSystem {
 
   def paxTypeQueueAllocator[FR](config: AirportConfig): PaxTypeQueueAllocation = if (config.hasTransfer)
     PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator(),
+      B5JPlusWithTransitTypeAllocator,
       TerminalQueueAllocator(config.terminalPaxTypeQueueAllocation))
   else
     PaxTypeQueueAllocation(
-      B5JPlusTypeAllocator(),
+      B5JPlusTypeAllocator,
       TerminalQueueAllocator(config.terminalPaxTypeQueueAllocation))
 
   def initialStaffMinutesFromPortState(initialPortState: Option[PortState]): Option[StaffMinutes] = initialPortState.map(

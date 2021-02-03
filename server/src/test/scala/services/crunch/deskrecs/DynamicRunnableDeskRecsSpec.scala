@@ -80,7 +80,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
 
   val ptqa: PaxTypeQueueAllocation = PaxTypeQueueAllocation(
-    B5JPlusTypeAllocator(),
+    B5JPlusTypeAllocator,
     TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
   val splitsCalculator: SplitsCalculator = manifests.queues.SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, AdjustmentsNoop())
 

@@ -43,7 +43,7 @@ case object DefaultWithTransitPaxTypeAllocator extends PaxTypeAllocator {
   override def apply(manifestPassengerProfile: ManifestPassengerProfile): PaxType = withTransit(manifestPassengerProfile)
 }
 
-case class B5JPlusTypeAllocator() extends PaxTypeAllocator {
+case object B5JPlusTypeAllocator extends PaxTypeAllocator {
 
   val withB5JPlus: PartialFunction[ManifestPassengerProfile, PaxType] = b5JPlus orElse countryAndDocumentTypes
 
@@ -52,7 +52,7 @@ case class B5JPlusTypeAllocator() extends PaxTypeAllocator {
 
 }
 
-case class B5JPlusWithTransitTypeAllocator() extends PaxTypeAllocator {
+case object B5JPlusWithTransitTypeAllocator extends PaxTypeAllocator {
 
   val withTransitAndB5JPlus: PartialFunction[ManifestPassengerProfile, PaxType] = transit orElse b5JPlus orElse countryAndDocumentTypes
 

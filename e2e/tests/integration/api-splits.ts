@@ -57,7 +57,7 @@ describe('API splits', () => {
                     "voyageNumber": {"$type": "drt.shared.VoyageNumber", "numeric": 123},
                     "scheduled": scheduledTime.unix() * 1000
                 },
-                "ageRanges": [[{"bottom": 25, "top": [49]}, 2]],
+                "ageRanges": [["25-49", 2]],
                 "nationalities": [[{"code": "GBR"}, 2]],
                 "paxTypes": [["EeaMachineReadable", 2]]
             }]
@@ -97,8 +97,8 @@ describe('API splits', () => {
                 },
 
                 "ageRanges": [
-                    [{"bottom": 25, "top": [49]}, 10],
-                    [{"bottom": 0, "top": [11]}, 1]
+                    ["25-49", 10],
+                    ["0-11", 1]
                 ],
 
                 "nationalities": [

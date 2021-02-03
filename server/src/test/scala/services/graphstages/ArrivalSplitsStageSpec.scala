@@ -10,7 +10,7 @@ import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.EGate
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{T1, T2, T3}
+import drt.shared.Terminals.{T1, T3}
 import drt.shared._
 import drt.shared.api.Arrival
 import manifests.passengers.BestAvailableManifest
@@ -83,7 +83,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
 
   "Given an arrival splits stage " >> {
     val paxTypeQueueAllocation = PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator(),
+      B5JPlusWithTransitTypeAllocator,
       TerminalQueueAllocatorWithFastTrack(defaultAirportConfig.terminalPaxTypeQueueAllocation))
 
     val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, defaultAirportConfig.terminalPaxSplits)

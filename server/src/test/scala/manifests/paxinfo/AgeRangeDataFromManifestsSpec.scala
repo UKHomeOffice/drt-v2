@@ -1,18 +1,14 @@
 package manifests.paxinfo
 
-import drt.shared._
-import drt.shared.api.AgeRange
+import drt.shared.PaxAge
+import drt.shared.api.{AgeRange, UnknownAge}
 import manifests.passengers.PassengerInfo
-import manifests.paxinfo.ManifestBuilder.manifestWithPassengerAges
+import manifests.paxinfo.ManifestBuilder.{manifestForPassengers, manifestWithPassengerAges, passengerBuilderWithOptions}
 import org.specs2.mutable.Specification
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser._
 
 import scala.collection.immutable.List
 
-object PaxSplitsDataFromManifestsSpec extends Specification {
-
-
+object AgeRangeDataFromManifestsSpec extends Specification {
 
   "When extracting Age data from a manifest" >> {
     "Given a voyage manifest with 1 passenger aged 11" +
@@ -37,6 +33,27 @@ object PaxSplitsDataFromManifestsSpec extends Specification {
       val expected = Map(
           AgeRange(0, Option(11)) -> 1,
           AgeRange(12, Option(24)) -> 1,
+          AgeRange(25, Option(49)) -> 1
+        )
+
+      result === expected
+    }
+
+    "Given a voyage manifest with missing age data for a passenger" +
+      "Then I should get `unknown` as the age range for those passengers" >> {
+
+      val apiSplit = manifestForPassengers(
+        List(
+          passengerBuilderWithOptions(age = None),
+          passengerBuilderWithOptions(age = None),
+          passengerBuilderWithOptions(age = Option(PaxAge(33))),
+        )
+      )
+
+      val result = PassengerInfo.manifestToAgeRangeCount(apiSplit)
+
+      val expected = Map(
+          UnknownAge -> 2,
           AgeRange(25, Option(49)) -> 1
         )
 

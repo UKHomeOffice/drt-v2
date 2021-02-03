@@ -42,7 +42,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1.0)
       ))
       val testPaxTypeAllocator = PaxTypeQueueAllocation(
-        B5JPlusTypeAllocator(),
+        B5JPlusTypeAllocator,
         TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap))
 
       val splitsCalculator = SplitsCalculator(testPaxTypeAllocator, config.terminalPaxSplits, ChildEGateAdjustments(1.0))
@@ -227,7 +227,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0)
       ))
       val testPaxTypeAllocator = PaxTypeQueueAllocation(
-        B5JPlusTypeAllocator(),
+        B5JPlusTypeAllocator,
         TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap))
 
 
@@ -319,7 +319,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       "I should see no EGate split" >> {
 
       val paxTypeQueueAllocation = PaxTypeQueueAllocation(
-        B5JPlusWithTransitTypeAllocator(),
+        B5JPlusWithTransitTypeAllocator,
         TerminalQueueAllocatorWithFastTrack(config.terminalPaxTypeQueueAllocation))
       val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, config.terminalPaxSplits)
       val result = splitsCalculator.terminalDefaultSplits(T2)
@@ -397,7 +397,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1.0)
       ))
       val testPaxTypeAllocator = PaxTypeQueueAllocation(
-        B5JPlusTypeAllocator(),
+        B5JPlusTypeAllocator,
         TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap))
 
       val splitsCalculator = SplitsCalculator(testPaxTypeAllocator, config.terminalPaxSplits, ChildEGateAdjustments(1.0))
@@ -486,7 +486,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0)
       ))
       val testPaxTypeAllocator = PaxTypeQueueAllocation(
-        B5JPlusTypeAllocator(),
+        B5JPlusTypeAllocator,
         TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap))
 
 
@@ -537,7 +537,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
           "I should see no EGate split" >> {
 
             val paxTypeQueueAllocation = PaxTypeQueueAllocation(
-              B5JPlusWithTransitTypeAllocator(),
+              B5JPlusWithTransitTypeAllocator,
               TerminalQueueAllocatorWithFastTrack(config.terminalPaxTypeQueueAllocation))
             val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, config.terminalPaxSplits)
             val result = splitsCalculator.terminalDefaultSplits(T2)

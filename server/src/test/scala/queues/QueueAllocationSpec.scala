@@ -132,7 +132,7 @@ class QueueAllocationSpec extends Specification {
       PaxNumbers
     )
 
-    val result = PaxTypeQueueAllocation(B5JPlusTypeAllocator(), testQueueAllocator).toSplits(T1, bestManifest)
+    val result = PaxTypeQueueAllocation(B5JPlusTypeAllocator, testQueueAllocator).toSplits(T1, bestManifest)
 
     result === expected
   }
@@ -167,7 +167,7 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusTypeAllocator(),
+      B5JPlusTypeAllocator,
       testQueueAllocator
     ).toSplits(T1, bestManifest)
 
@@ -205,7 +205,7 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusTypeAllocator(),
+      B5JPlusTypeAllocator,
       testQueueAllocator
     ).toSplits(T1, bestManifest)
 
@@ -251,7 +251,7 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator(),
+      B5JPlusWithTransitTypeAllocator,
       testQueueAllocator
     ).toSplits(T1, bestManifest)
 
@@ -298,7 +298,7 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator(),
+      B5JPlusWithTransitTypeAllocator,
       fastTrackQueueAllocator
     ).toSplits(T1, bestManifest)
 
@@ -336,7 +336,7 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator(),
+      B5JPlusWithTransitTypeAllocator,
       fastTrackQueueAllocator
     ).toSplits(T1, bestManifest)
 
@@ -381,7 +381,7 @@ class QueueAllocationSpec extends Specification {
     )
 
     val result = PaxTypeQueueAllocation(
-      B5JPlusWithTransitTypeAllocator(),
+      B5JPlusWithTransitTypeAllocator,
       fastTrackQueueAllocator
     ).toSplits(T1, bestManifest)
 

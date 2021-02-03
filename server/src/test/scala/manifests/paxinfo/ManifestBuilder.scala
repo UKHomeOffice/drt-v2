@@ -45,16 +45,31 @@ object ManifestBuilder {
                         inTransit: String = "N"
                       ): PassengerInfoJson =
 
-    PassengerInfoJson(Option(DocumentType("P")),
-      Nationality(nationality),
-      EeaFlag("EEA"),
-      Option(PaxAge(age)),
-      Option(PortCode(disembarkationPortCode)),
-      InTransit(inTransit),
-      Option(Nationality("GBR")),
+    passengerBuilderWithOptions(
       Option(Nationality(nationality)),
-      id
+      Option(PaxAge(age)),
+      id,
+      Option(PortCode(disembarkationPortCode)),
+      inTransit
     )
 
 
+  def passengerBuilderWithOptions(
+                        nationality: Option[Nationality] = None,
+                        age: Option[PaxAge] = None,
+                        id: Option[String] = None,
+                        disembarkationPortCode: Option[PortCode] = None,
+                        inTransit: String = "N"
+                      ) = {
+    PassengerInfoJson(Option(DocumentType("P")),
+      nationality.getOrElse(Nationality("")),
+      EeaFlag("EEA"),
+      age,
+      disembarkationPortCode,
+      InTransit(inTransit),
+      Option(Nationality("GBR")),
+      nationality,
+      id
+    )
+  }
 }

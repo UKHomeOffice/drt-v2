@@ -2,15 +2,12 @@ package manifests.paxinfo
 
 import drt.shared._
 import manifests.passengers.PassengerInfo
-import manifests.paxinfo.ManifestBuilder.manifestWithPassengerNationalities
+import manifests.paxinfo.ManifestBuilder.{manifestForPassengers, manifestWithPassengerNationalities, passengerBuilderWithOptions}
 import org.specs2.mutable.Specification
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import passengersplits.parsing.VoyageManifestParser._
 
 import scala.collection.immutable.List
 
 object NationalityBreakdownFromManifestSpec extends Specification {
-
 
 
   "When extracting nationality breakdown" >> {
@@ -62,6 +59,27 @@ object NationalityBreakdownFromManifestSpec extends Specification {
         Nationality("GBR") -> 3,
         Nationality("MRU") -> 1,
         Nationality("ZWE") -> 1
+      )
+
+      result === expected
+    }
+  }
+
+  "When extracting nationality breakdown" >> {
+    "Given a manifest with passengers of Unknown nationality" +
+      "Then those passengers should be counted as Unknown rather than ignored" >> {
+
+      val voyageManifest = manifestForPassengers(
+        List(
+          passengerBuilderWithOptions(nationality = None),
+          passengerBuilderWithOptions(nationality = Option(Nationality("GBR"))),
+        ))
+
+      val result: Map[Nationality, Int] = PassengerInfo.manifestToNationalityCount(voyageManifest)
+
+      val expected = Map(
+        Nationality("Unknown") -> 1,
+        Nationality("GBR") -> 1
       )
 
       result === expected
