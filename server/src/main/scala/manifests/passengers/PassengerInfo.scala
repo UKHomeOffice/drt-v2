@@ -3,7 +3,7 @@ package manifests.passengers
 import drt.shared.api._
 import drt.shared.{Nationality, PaxType}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
-import queueus.DefaultPaxTypeAllocator
+import queueus.B5JPlusWithTransitTypeAllocator
 
 object PassengerInfo {
 
@@ -15,43 +15,45 @@ object PassengerInfo {
     AgeRange(65),
   )
 
-  def manifestToAgeRangeCount(manifest: VoyageManifest): Map[AgeRange, Int] =
-    excludeTransitPax(excludeDuplicatePax(manifest))
+  def manifestToAgeRangeCount(manifest: VoyageManifest): Map[PaxAgeRange, Int] =
+    excludeDuplicatePax(manifest)
       .PassengerList
-      .foldLeft(Map[AgeRange, Int]())((acc: Map[AgeRange, Int], info: PassengerInfoJson) => {
+      .foldLeft(Map[PaxAgeRange, Int]())((acc: Map[PaxAgeRange, Int], info: PassengerInfoJson) => {
 
         val maybeRange = info.Age.flatMap(age => ageRanges.find(_.isInRange(age.years)))
         maybeRange match {
           case Some(range) =>
 
             acc + (range -> (acc.getOrElse(range, 0) + 1))
-          case None => acc
+          case None =>
+            acc + (UnknownAge -> (acc.getOrElse(UnknownAge, 0) + 1))
         }
       })
 
   def manifestToNationalityCount(manifest: VoyageManifest): Map[Nationality, Int] = {
-    excludeTransitPax(excludeDuplicatePax(manifest))
+    val unknownNat = Nationality("Unknown")
+
+    excludeDuplicatePax(manifest)
       .PassengerList
       .foldLeft(Map[Nationality, Int]())((acc: Map[Nationality, Int], info: PassengerInfoJson) => {
 
         info.NationalityCountryCode match {
           case Some(nationality) =>
-
             acc + (nationality -> (acc.getOrElse(nationality, 0) + 1))
-          case None => acc
+
+          case None =>
+            acc + (unknownNat -> (acc.getOrElse(unknownNat, 0) + 1))
         }
       })
   }
 
   def manifestToPassengerTypes(manifest: VoyageManifest): Map[PaxType, Int] =
     bestAvailableManifestToPaxTypes(
-      BestAvailableManifest(
-        excludeTransitPax(manifest)
-      )
+      BestAvailableManifest(manifest)
     )
 
   def bestAvailableManifestToPaxTypes(bestAvailableManifest: BestAvailableManifest): Map[PaxType, Int] = {
-    bestAvailableManifest.passengerList.map(p => DefaultPaxTypeAllocator(bestAvailableManifest)(p))
+    bestAvailableManifest.passengerList.map(p => B5JPlusWithTransitTypeAllocator()(bestAvailableManifest)(p))
       .groupBy(identity).mapValues(_.size)
   }
 
