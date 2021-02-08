@@ -9,7 +9,7 @@ import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
-import akka.stream.scaladsl.{Flow, FlowOps, Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -31,7 +31,7 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
-import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -50,11 +50,9 @@ import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch
-import services.graphstages.Crunch.crunchStartWithOffset
 import slickdb.VoyageManifestPassengerInfoTable
 
 import scala.collection.immutable.SortedMap
@@ -332,11 +330,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
         val azureClient = LGWAzureClient(LGWFeed.serviceBusClient(lgwNamespace, lgwSasToKey, lgwServiceBusUri))
         LGWFeed(azureClient)(system).source()
-      case "BHX" if !params.bhxIataEndPointUrl.isEmpty =>
+      case "BHX" if params.bhxIataEndPointUrl.nonEmpty =>
         BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), 80 seconds, 1 milliseconds)
       case "BHX" =>
         BHXLiveFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX live feed URL")))
-      case "LCY" if !params.lcyLiveEndPointUrl.isEmpty =>
+      case "LCY" if params.lcyLiveEndPointUrl.nonEmpty =>
         LCYFeed(LCYClient(new HttpClient, params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), 80 seconds, 1 milliseconds)
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
@@ -440,7 +438,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def getFeedStatus: Future[Seq[FeedSourceStatuses]] = Source(feedActorsForPort)
     .mapAsync(1) {
-      case (source, actor) => queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
+      case (_, actor) => queryActorWithRetry[FeedSourceStatuses](actor, GetFeedStatuses)
     }
     .collect { case Some(fs) => fs }
     .runWith(Sink.seq)
