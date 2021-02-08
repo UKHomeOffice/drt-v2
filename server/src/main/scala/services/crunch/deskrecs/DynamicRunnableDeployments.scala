@@ -1,17 +1,11 @@
 package services.crunch.deskrecs
 
-import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange}
 import akka.NotUsed
-import akka.actor.ActorRef
-import akka.pattern.ask
-import akka.stream.scaladsl.GraphDSL.Implicits
-import akka.stream.scaladsl.Source
-import akka.util.Timeout
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
+import akka.stream.scaladsl.Flow
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.LoadsToQueueMinutes
@@ -49,9 +43,8 @@ object DynamicRunnableDeployments {
                                   staffProvider: CrunchRequest => Future[Map[Terminal, List[Int]]],
                                   staffToDeskLimits: StaffToDeskLimits,
                                   loadsToQueueMinutes: LoadsToQueueMinutes)
-                                 (crunchRequests: Implicits.PortOps[CrunchRequest])
-                                 (implicit executionContext: ExecutionContext): Implicits.PortOps[PortStateQueueMinutes] = {
-    crunchRequests
+                                 (implicit executionContext: ExecutionContext): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] = {
+    Flow[CrunchRequest]
       .mapAsync(1) { request =>
         loadsProvider(request).map { minutes => (request, minutes) }
       }

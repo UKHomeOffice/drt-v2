@@ -110,7 +110,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       splitsCalculator,
       desksAndWaitsProvider.flightsToLoads,
       desksAndWaitsProvider.loadsToDesks,
-      maxDesksProvider) _
+      maxDesksProvider)
 
     val (queue, _) = RunnableOptimisation.createGraph(sink, deskRecs).run()
     queue.offer(request)

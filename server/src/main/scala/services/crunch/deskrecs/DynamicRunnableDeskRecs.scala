@@ -1,8 +1,7 @@
 package services.crunch.deskrecs
 
 import akka.NotUsed
-import akka.stream.scaladsl.GraphDSL.Implicits
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Flow, Source}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
@@ -38,19 +37,17 @@ object DynamicRunnableDeskRecs {
                                    flightsToLoads: FlightsToLoads,
                                    loadsToQueueMinutes: LoadsToQueueMinutes,
                                    maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
-                                  (crunchRequests: Implicits.PortOps[CrunchRequest])
-                                  (implicit ec: ExecutionContext): Implicits.PortOps[PortStateQueueMinutes] = {
-    val withArrivals = addArrivals(crunchRequests, arrivalsProvider)
-    val withSplits = addSplits(withArrivals, liveManifestsProvider, historicManifestsProvider, splitsCalculator)
-    toDeskRecs(withSplits, maxDesksProviders, flightsToLoads, loadsToQueueMinutes)
-  }
+                                  (implicit ec: ExecutionContext): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
+    Flow[CrunchRequest]
+      .via(addArrivals(arrivalsProvider))
+      .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
+      .via(toDeskRecs(maxDesksProviders, flightsToLoads, loadsToQueueMinutes))
 
-  private def toDeskRecs(dayAndFlights: Implicits.PortOps[(CrunchRequest, Iterable[ApiFlightWithSplits])],
-                         maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
+  private def toDeskRecs(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
                          flightsToLoads: FlightsToLoads,
                          loadsToQueueMinutes: LoadsToQueueMinutes
-                        ): Implicits.PortOps[PortStateQueueMinutes] = {
-    dayAndFlights
+                        ): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), PortStateQueueMinutes, NotUsed] = {
+    Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .map { case (crunchDay, flights) =>
         log.info(s"Crunching ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
 
@@ -61,10 +58,9 @@ object DynamicRunnableDeskRecs {
       }
   }
 
-  private def addArrivals(days: Implicits.PortOps[CrunchRequest],
-                          flightsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]])
-                         (implicit ec: ExecutionContext): Implicits.PortOps[(CrunchRequest, List[Arrival])] =
-    days
+  private def addArrivals(flightsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]])
+                         (implicit ec: ExecutionContext): Flow[CrunchRequest, (CrunchRequest, List[Arrival]), NotUsed] =
+    Flow[CrunchRequest]
       .mapAsync(1) { crunchRequest =>
         flightsProvider(crunchRequest).map(flightsStream => (crunchRequest, flightsStream))
       }
@@ -72,12 +68,11 @@ object DynamicRunnableDeskRecs {
         flights.fold(List[Arrival]())(_ ++ _).map(flights => (crunchRequest, flights))
       }
 
-  private def addSplits(crunchRequestWithArrivals: Implicits.PortOps[(CrunchRequest, List[Arrival])],
-                        liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
+  private def addSplits(liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
                         historicManifestsProvider: Iterable[Arrival] => Future[Source[ManifestLike, NotUsed]],
                         splitsCalculator: SplitsCalculator)
-                       (implicit ec: ExecutionContext): Implicits.PortOps[(CrunchRequest, Iterable[ApiFlightWithSplits])] =
-    crunchRequestWithArrivals
+                       (implicit ec: ExecutionContext): Flow[(CrunchRequest, List[Arrival]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+    Flow[(CrunchRequest, List[Arrival])]
       .mapAsync(1) { case (crunchRequest, flightsSource) =>
         liveManifestsProvider(crunchRequest).map(manifestsStream => (crunchRequest, flightsSource, manifestsStream))
       }

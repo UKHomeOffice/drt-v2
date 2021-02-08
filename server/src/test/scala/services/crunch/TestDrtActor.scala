@@ -128,7 +128,7 @@ class TestDrtActor extends Actor {
           splitsCalculator,
           portDeskRecs.flightsToLoads,
           portDeskRecs.loadsToDesks,
-          deskLimitsProviders) _
+          deskLimitsProviders)
 
         val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
 
@@ -137,7 +137,7 @@ class TestDrtActor extends Actor {
           OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, tc.airportConfig.terminals),
           staffToDeskLimits,
           portDeskRecs.loadsToSimulations
-        ) _
+        )
 
         val (deploymentRequestQueue, deploymentsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deploymentsProducer).run()
         maybeCrunchQueueActor = Option(crunchQueueActor)

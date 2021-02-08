@@ -72,38 +72,4 @@ case class TestMinuteLookups(queueProbe: ActorRef,
 }
 
 
-class RunnableDeploymentsSpec extends CrunchTestLike {
-  val noDelay: Long = 0L
-  val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
 
-  "Given a RunnableDescRecs with a mock PortStateActor and mock crunch " +
-    "When I give it a millisecond of 2019-01-01T00:00 " +
-    "The I should see a queues actor request for GetStateForDateRange followed by a SimulationMinutes message to the port state actor" >> {
-    val queuesProbe = TestProbe("queues")
-    val portStateProbe = TestProbe("port-state")
-    val mockPortStateActor = system.actorOf(Props(new MockPortStateActorForDeployments(portStateProbe, noDelay)))
-    val now = () => SDate("2020-07-17T00:00")
-    val lookups = TestMinuteLookups(queuesProbe.ref, system, now, MilliTimes.oneDayMillis, defaultAirportConfig.queuesByTerminal)
-    val terminalToIntsToTerminalToStaff = PortDeskLimits.flexedByAvailableStaff(defaultAirportConfig) _
-    val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(defaultAirportConfig.crunchOffsetMinutes)
-    val (daysQueueSource, _) = RunnableDeployments(
-      mockPortStateActor,
-      lookups.queueMinutesActor,
-      lookups.staffMinutesActor,
-      terminalToIntsToTerminalToStaff,
-      crunchStartDateProvider,
-      PortDeskLimits.fixed(defaultAirportConfig),
-      defaultAirportConfig.minutesToCrunch,
-      PortDesksAndWaitsProvider(defaultAirportConfig, Optimiser.crunch, pcpPaxCalcFn)
-    ).run()
-
-    val midnight20190101 = SDate("2019-01-01T00:00")
-    daysQueueSource.offer(midnight20190101.millisSinceEpoch)
-
-    queuesProbe.expectMsg(GetStateForDateRange(midnight20190101.millisSinceEpoch, midnight20190101.addMinutes(defaultAirportConfig.minutesToCrunch - 1).millisSinceEpoch))
-
-    portStateProbe.expectMsgClass(classOf[SimulationMinutes])
-
-    success
-  }
-}

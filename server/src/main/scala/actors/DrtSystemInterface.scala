@@ -9,7 +9,7 @@ import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
-import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Flow, FlowOps, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -31,7 +31,7 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
-import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -250,7 +250,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       splitsCalculator,
       portDeskRecs.flightsToLoads,
       portDeskRecs.loadsToDesks,
-      deskLimitsProviders) _
+      deskLimitsProviders)
 
     val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
 
@@ -259,7 +259,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, airportConfig.terminals),
       staffToDeskLimits,
       portDeskRecs.loadsToSimulations
-    ) _
+    )
 
     val (deploymentRequestQueue, deploymentsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deploymentsProducer).run()
 

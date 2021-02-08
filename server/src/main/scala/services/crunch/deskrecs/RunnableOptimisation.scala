@@ -1,16 +1,17 @@
 package services.crunch.deskrecs
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import akka.NotUsed
 import akka.actor.ActorRef
+import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
+import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, KillSwitches, OverflowStrategy, UniqueKillSwitch}
-import akka.stream.scaladsl.GraphDSL.Implicits
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{PortStateQueueMinutes, SDateLike, SimulationMinutes}
-import drt.shared.dates.{DateLike, LocalDate, UtcDate}
+import drt.shared.dates.LocalDate
+import drt.shared.{PortStateQueueMinutes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.graphstages.Crunch.{CrunchRequest, europeLondonTimeZone}
+import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
@@ -18,8 +19,6 @@ import scala.concurrent.ExecutionContext
 object RunnableOptimisation {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val timeLogger: TimeLogger = TimeLogger("Optimisation", 1000, log)
-
-  type CrunchRequestsToQueueMinutes = Implicits.PortOps[CrunchRequest] => Implicits.PortOps[PortStateQueueMinutes]
 
   case class CrunchRequest(localDate: LocalDate, offsetMinutes: Int, durationMinutes: Int) extends Ordered[CrunchRequest] {
     lazy val start: SDateLike = SDate(localDate).addMinutes(offsetMinutes)
@@ -44,7 +43,7 @@ object RunnableOptimisation {
     }
   }
 
-  def createGraph(deskRecsSinkActor: ActorRef, crunchRequestsToQueueMinutes: CrunchRequestsToQueueMinutes)
+  def createGraph(deskRecsSinkActor: ActorRef, crunchRequestsToQueueMinutes: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed])
                  (implicit ec: ExecutionContext): RunnableGraph[(SourceQueueWithComplete[CrunchRequest], UniqueKillSwitch)] = {
 
     val crunchRequestSource = Source.queue[CrunchRequest](1, OverflowStrategy.backpressure)
@@ -54,7 +53,7 @@ object RunnableOptimisation {
     val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {
       implicit builder =>
         (crunchRequests, killSwitch) =>
-          crunchRequestsToQueueMinutes(crunchRequests.out) ~> killSwitch ~> deskRecsSink
+          crunchRequests.out ~> crunchRequestsToQueueMinutes ~> killSwitch ~> deskRecsSink
           ClosedShape
     }
 
