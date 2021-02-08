@@ -40,14 +40,17 @@ import manifests.ManifestLookup
 import manifests.actors.{RegisteredArrivals, RegisteredArrivalsActor}
 import manifests.graph.{BatchStage, ManifestsGraph}
 import manifests.passengers.BestAvailableManifest
+import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
 import play.api.Configuration
+import queueus.{AdjustmentsNoop, ChildEGateAdjustments}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
-import services.SplitsProvider.SplitProvider
 import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
+import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
+import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch
@@ -70,7 +73,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-  val lookup: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
+  val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
   val config: Configuration
   val airportConfig: AirportConfig
@@ -97,7 +100,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val baseArrivalsActor: ActorRef
   val forecastArrivalsActor: ActorRef
   val liveArrivalsActor: ActorRef
-  val voyageManifestsActor: ActorRef
+  val manifestsRouterActor: ActorRef
 
   val flightsActor: ActorRef
   val queuesActor: ActorRef
@@ -111,7 +114,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     LiveBaseFeedSource -> liveBaseArrivalsActor,
     ForecastFeedSource -> forecastArrivalsActor,
     AclFeedSource -> baseArrivalsActor,
-    ApiFeedSource -> voyageManifestsActor
+    ApiFeedSource -> manifestsRouterActor
   )
 
   lazy val feedActorsForPort: Map[FeedSource, ActorRef] = feedActors.filter {
@@ -185,7 +188,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       useLegacyManifests = params.useLegacyManifests,
       manifestsLiveSource = voyageManifestsLiveSource,
       manifestResponsesSource = manifestResponsesSource,
-      voyageManifestsActor = voyageManifestsActor,
+      voyageManifestsActor = manifestsRouterActor,
       manifestRequestsSink = manifestRequestsSink,
       simulator = Optimiser.runSimulationOfWork,
       initialPortState = initialPortState,
@@ -227,22 +230,41 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   private def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
 
   val startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch) = () => {
-    val (queueSourceForDaysToReCrunch, deskRecsKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, deskLimitsProviders)
-    val terminalToIntsToTerminalToStaff = PortDeskLimits.flexedByAvailableStaff(airportConfig) _
-    val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(airportConfig.crunchOffsetMinutes)
-    val (queueSourceForDaysToRedeploy, deploymentsKillSwitch) = RunnableDeployments.start(
-      portStateActor,
-      minuteLookups.queueMinutesActor,
-      minuteLookups.staffMinutesActor,
-      terminalToIntsToTerminalToStaff,
-      crunchStartDateProvider,
-      deskLimitsProviders,
-      airportConfig.minutesToCrunch,
-      portDeskRecs
-    )
+    val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig) _
 
-    crunchQueueActor ! SetDaysQueueSource(queueSourceForDaysToReCrunch)
-    deploymentQueueActor ! SetDaysQueueSource(queueSourceForDaysToRedeploy)
+    implicit val timeout: Timeout = new Timeout(1 second)
+
+    val ptqa = paxTypeQueueAllocator(airportConfig)
+
+    val splitAdjustments = if (params.adjustEGateUseByUnder12s)
+      ChildEGateAdjustments(airportConfig.assumedAdultsPerChild)
+    else
+      AdjustmentsNoop()
+
+    val splitsCalculator = SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, splitAdjustments)
+
+    val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+      OptimisationProviders.arrivalsProvider(portStateActor),
+      OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
+      OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
+      splitsCalculator,
+      portDeskRecs.flightsToLoads,
+      portDeskRecs.loadsToDesks,
+      deskLimitsProviders) _
+
+    val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
+
+    val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
+      OptimisationProviders.loadsProvider(minuteLookups.queueMinutesActor),
+      OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, airportConfig.terminals),
+      staffToDeskLimits,
+      portDeskRecs.loadsToSimulations
+    ) _
+
+    val (deploymentRequestQueue, deploymentsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deploymentsProducer).run()
+
+    crunchQueueActor ! SetCrunchRequestQueue(crunchRequestQueue)
+    deploymentQueueActor ! SetCrunchRequestQueue(deploymentRequestQueue)
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 
@@ -267,7 +289,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val batchSize = config.get[Int]("crunch.manifests.lookup-batch-size")
     val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, batchSize, expireAfterMillis, maybeRegisteredArrivals, 1000, lookupRefreshDue)
 
-    ManifestsGraph(manifestRequestsSource, batchStage, manifestResponsesSink, registeredArrivalsActor, airportConfig.portCode, lookup).run
+    ManifestsGraph(manifestRequestsSource, batchStage, manifestResponsesSink, registeredArrivalsActor, airportConfig.portCode, manifestLookupService).run
   }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {

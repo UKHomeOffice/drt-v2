@@ -79,7 +79,7 @@ object RunnableDeployments {
                   log.warn(s"Simulation took ${timeTaken}ms")
                 }
 
-                SimulationMinutes(simulationMinutes.values.toList)
+                simulationMinutes
             } ~> killSwitch ~> deploymentsSink
 
           ClosedShape

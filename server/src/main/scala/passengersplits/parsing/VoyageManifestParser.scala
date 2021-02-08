@@ -5,8 +5,8 @@ import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPe
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
 import org.joda.time.DateTime
-import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType.Passport
+import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
 import services.SDate
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat}
@@ -84,12 +84,6 @@ object VoyageManifestParser {
     def scheduleArrivalDateTime: Option[SDateLike] = Try(DateTime.parse(scheduleDateTimeString)).toOption.map(JodaSDate)
 
     def scheduleDateTimeString: String = s"${ScheduledDateOfArrival}T${ScheduledTimeOfArrival}Z"
-
-    def maybeKey: Option[ArrivalKey] = (scheduleArrivalDateTime, VoyageNumber) match {
-      case (Some(scheduled), vn: VoyageNumber) =>
-        Option(ArrivalKey(DeparturePortCode, vn, scheduled.millisSinceEpoch))
-      case _ => None
-    }
 
     override val source: SplitRatiosNs.SplitSource = ApiSplitsWithHistoricalEGateAndFTPercentages
     override val scheduled: SDateLike = scheduleArrivalDateTime.getOrElse(SDate(0))

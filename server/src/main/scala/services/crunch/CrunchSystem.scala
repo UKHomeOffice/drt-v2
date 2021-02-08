@@ -10,6 +10,7 @@ import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.api.Arrival
 import drt.shared.{SDateLike, _}
 import manifests.passengers.BestAvailableManifest
+import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
@@ -123,11 +124,13 @@ object CrunchSystem {
     else
       AdjustmentsNoop()
 
+    val splitsCalculator = SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits, splitAdjustments)
+
     val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
       name = props.logLabel,
       optionalInitialFlights = initialFlightsWithSplits,
       props.refreshManifestsOnStart,
-      splitsCalculator = manifests.queues.SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits, splitAdjustments),
+      splitsCalculator = splitsCalculator,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now
     )

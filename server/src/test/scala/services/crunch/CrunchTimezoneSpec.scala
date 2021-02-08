@@ -4,7 +4,7 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
-import drt.shared.Queues.Queue
+import drt.shared.Queues.{EeaDesk, Queue}
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
@@ -47,48 +47,34 @@ class CrunchTimezoneSpec extends CrunchTestLike {
               T1 -> Map(
                 Queues.EeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20)),
                 Queues.NonEeaDesk -> Tuple2(0 :: 5 :: List.fill[Int](22)(0), List.fill[Int](24)(20))
-                )
               )
+            )
 
             val scheduledDuringBst = "2017-06-01T00:00Z"
 
             val flights = Flights(List(
               ArrivalGenerator.arrival(schDt = scheduledDuringBst, iata = "BA0001", terminal = T1, actPax = Option(1))
-              ))
+            ))
 
             val fiveMinutes = 600d / 60
             val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
 
-        val crunch = runCrunchGraph(TestConfig(
-          now = () => SDate(scheduledDuringBst),
-          airportConfig = defaultAirportConfig.copy(
-            minMaxDesksByTerminalQueue24Hrs = minMaxDesks,
-            terminalProcessingTimes = procTimes,
-            queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
-            minutesToCrunch = 120
-            )))
+            val crunch = runCrunchGraph(TestConfig(
+              now = () => SDate(scheduledDuringBst),
+              airportConfig = defaultAirportConfig.copy(
+                minMaxDesksByTerminalQueue24Hrs = minMaxDesks,
+                terminalProcessingTimes = procTimes,
+                queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
+                minutesToCrunch = 120
+              )))
 
             offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-            val expected = Map(T1 -> Map(
-              Queues.EeaDesk -> List(
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-                5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
-                ),
-              Queues.NonEeaDesk -> List(
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-                5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5
-                )
-              ))
-
             crunch.portStateTestProbe.fishForMessage(5 seconds) {
               case ps: PortState =>
-                val resultSummary = deskRecsFromPortState(ps, 120)
-                resultSummary == expected
+                val midnightBstEeaFiveDesks = ps.crunchMinutes.values.exists(cm => cm.minute == SDate("2017-05-31T23:00").millisSinceEpoch && cm.deskRec == 0)
+                val oneAmBstEeaZeroDesks = ps.crunchMinutes.values.exists(cm => cm.minute == SDate("2017-06-01T00:00").millisSinceEpoch && cm.deskRec == 5)
+                midnightBstEeaFiveDesks && oneAmBstEeaZeroDesks
             }
 
             success

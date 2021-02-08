@@ -3,29 +3,31 @@ package services.crunch.deskrecs
 import actors.acking.AckingReceiver.{Ack, StreamInitialized}
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
+import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.dates.UtcDate
+import manifests.graph.MockManifestLookupService
+import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
-import services.{SDate, TryCrunch}
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsProvider, addManifests}
 import services.crunch.deskrecs.Mocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{CrunchRequest, addManifests, createGraph}
+import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.CrunchMocks
+import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
@@ -64,13 +66,18 @@ object Mocks {
     _ => Future(Source(List(manifests)))
   }
 
-  def mockHistoricManifestsProvider(maybePax: Option[List[PassengerInfoJson]])
-                                   (implicit ec: ExecutionContext): Iterable[Arrival] => Future[Map[ArrivalKey, VoyageManifest]] =
+  def mockHistoricManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]])
+                                   (implicit ec: ExecutionContext, mat: ActorMaterializer): HistoricManifestsProvider = {
     maybePax match {
       case Some(pax) =>
-        (arrivals: Iterable[Arrival]) => Future(arrivals.map(arrival => (ArrivalKey(arrival), manifestForArrival(arrival, pax))).toMap)
-      case None => _ => Future(Map())
+        OptimisationProviders.historicManifestsProvider(PortCode("STN"), mockManifestLookupService(arrival, pax))
+      case None =>
+        _: Iterable[Arrival] => Future(Source(List()))
     }
+  }
+
+  def mockManifestLookupService(arrival: Arrival, pax: List[PassengerInfoJson]): MockManifestLookupService =
+    MockManifestLookupService(BestAvailableManifest(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
 }
 
 class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
@@ -93,18 +100,20 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
                                  expectedQueuePax: Map[(Terminal, Queue), Int]): Any = {
     val probe = TestProbe()
 
-    val daysSourceQueue = Source(List(CrunchRequest(SDate(arrival.Scheduled).toUtcDate, 0, 1440)))
+    val request = CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440)
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
 
-    val deskRecs = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
+    val deskRecs = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
       mockFlightsProvider(List(arrival)),
       mockLiveManifestsProvider(arrival, livePax),
-      mockHistoricManifestsProvider(historicPax),
+      mockHistoricManifestsProvider(arrival, historicPax),
       splitsCalculator,
-      desksAndWaitsProvider,
+      desksAndWaitsProvider.flightsToLoads,
+      desksAndWaitsProvider.loadsToDesks,
       maxDesksProvider) _
 
-    createGraph(sink, daysSourceQueue, deskRecs).run()
+    val (queue, _) = RunnableOptimisation.createGraph(sink, deskRecs).run()
+    queue.offer(request)
 
     probe.fishForMessage(1 second) {
       case DeskRecMinutes(drms) =>
@@ -144,7 +153,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     }
   }
 
-   def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =
+  def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =
     List(manifest)
       .map { vm => vm.maybeKey.map(k => (k, vm)) }
       .collect { case Some(k) => k }
