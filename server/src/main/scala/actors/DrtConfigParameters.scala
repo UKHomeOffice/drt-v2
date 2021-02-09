@@ -10,6 +10,9 @@ import play.api.Configuration
 case class DrtConfigParameters(config: Configuration) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  val gateWalkTimesFilePath: String = config.get[String]("walk_times.gates_csv_url")
+  val standWalkTimesFilePath: String = config.get[String]("walk_times.stands_csv_url")
+
   val forecastMaxDays: Int = config.get[Int]("crunch.forecast.max_days")
   val aclPollMinutes: Int = config.get[Int]("crunch.forecast.poll_minutes")
   val snapshotIntervalVm: Int = config.getOptional[Int]("persistence.snapshot-interval.voyage-manifest").getOrElse(1000)
@@ -86,6 +89,6 @@ case class DrtConfigParameters(config: Configuration) {
   val lcyLiveUsername: String = config.get[String]("feeds.lcy.live.username")
   val lcyLivePassword: String = config.get[String]("feeds.lcy.live.password")
 
-  val maybeEdiTerminalMapCsvUrl = config.getOptional[String]("feeds.edi.terminal-map-csv-url")
+  val maybeEdiTerminalMapCsvUrl: Option[String] = config.getOptional[String]("feeds.edi.terminal-map-csv-url")
 
 }

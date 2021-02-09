@@ -68,14 +68,16 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
-  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
-  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
+
   val lookup: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
   val config: Configuration
   val airportConfig: AirportConfig
   val params: DrtConfigParameters = DrtConfigParameters(config)
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
+
+  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(params.gateWalkTimesFilePath)
+  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(params.standWalkTimesFilePath)
 
   def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
 

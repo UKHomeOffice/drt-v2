@@ -1,14 +1,11 @@
 package controllers
 
-import java.nio.ByteBuffer
-import java.util.{Calendar, TimeZone, UUID}
-import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange}
+import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors._
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern._
 import akka.stream._
-import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import api._
 import boopickle.Default._
@@ -23,8 +20,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{AirportConfig, _}
 import drt.users.KeyCloakClient
-
-import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Action, _}
@@ -165,6 +160,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithApplicationInfo
     with WithSimulations
     with WithPassengerInfo
+    with WithWalkTimes
     with WithDebug {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
@@ -378,7 +374,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     val feedsToMonitor = ctrl.feedActorsForPort
       .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
       .values.toList
-    
+
     HealthChecker(Seq(
       FeedsHealthCheck(feedsToMonitor, lastFeedCheckThresholdMinutes, now),
       ActorResponseTimeHealthCheck(ctrl.portStateActor, healthyResponseTimeSeconds * MilliTimes.oneMinuteMillis))

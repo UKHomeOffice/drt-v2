@@ -9,7 +9,7 @@ import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
-import drt.shared.api.PassengerInfoSummary
+import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 
@@ -101,6 +101,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      portStatePot: Pot[PortState] = Empty,
                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
                      airportInfos: Map[PortCode, Pot[AirportInfo]] = Map(),
+                     walkTimes: Pot[WalkTimes] = Empty,
                      airportConfig: Pot[AirportConfig] = Empty,
                      arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])] = None,
                      contactDetails: Pot[ContactDetails] = Empty,
@@ -183,7 +184,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new FeedsStatusHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v))),
       new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v))),
       new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v))),
-      new ForecastFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v)))
+      new ForecastFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v))),
+      new WalkTimeHandler(zoomRW(_.walkTimes)((m, v) => m.copy(walkTimes = v))),
     )
 
     composedHandlers

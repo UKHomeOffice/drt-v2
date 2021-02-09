@@ -10,15 +10,16 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
+import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.{Arrival, PassengerInfoSummary}
+import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
-import org.scalajs.dom.html.{Div, TableSection}
+import org.scalajs.dom.html.{Div, Span, TableSection}
 
 import scala.collection.immutable.Map
 
@@ -33,6 +34,8 @@ object FlightsWithSplitsTable {
                    hasArrivalSourcesAccess: Boolean,
                    viewMode: ViewMode,
                    pcpPaxFn: Arrival => Int,
+                   walkTimes: WalkTimes,
+                   defaultWalkTime: Long,
                    hasTransfer: Boolean
                   )
 
@@ -97,6 +100,8 @@ object FlightsWithSplitsTable {
                     hasEstChox = props.hasEstChox,
                     props.hasArrivalSourcesAccess,
                     props.viewMode,
+                    props.walkTimes,
+                    props.defaultWalkTime,
                     props.hasTransfer
                   ))
               }.toTagMod)
@@ -186,6 +191,8 @@ object FlightTableRow {
                    hasEstChox: Boolean,
                    hasArrivalSourcesAccess: Boolean,
                    viewMode: ViewMode,
+                   walkTimes: WalkTimes,
+                   defaultWalkTime: Long,
                    hasTransfer: Boolean
                   )
 
@@ -265,7 +272,7 @@ object FlightTableRow {
             proxy().render(ai => <.span(ai.country))
           )
         }),
-        <.td(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}"),
+        <.td(gateOrStand(props.walkTimes, props.defaultWalkTime, flight)),
         <.td(flight.Status.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
         <.td(localDateTimeWithPopup(flight.Estimated)),
@@ -314,6 +321,19 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
+  private def gateOrStand(walkTimes: WalkTimes, defaultWalkTime: Long, flight: Arrival): VdomTagOf[Span] = {
+    val walkTimeProvider: (Option[String], Option[String], Terminal) => String =
+      walkTimes.walkTimeForArrival(defaultWalkTime)
+    val gateOrStand = <.span(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}")
+    val gateOrStandWithWalkTimes = TippyJSComponent(
+      <.span(walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal)).rawElement,
+      true,
+      gateOrStand
+    )
+    val displayGatesOrStands = if (walkTimes.isEmpty) gateOrStand else <.span(gateOrStandWithWalkTimes)
+    displayGatesOrStands
+  }
+
   def offScheduleClass(arrival: Arrival): String = {
     val eta = bestArrivalTime(arrival)
     val differenceFromScheduled = eta - arrival.Scheduled
@@ -325,4 +345,5 @@ object FlightTableRow {
   }
 
   def apply(props: Props): Unmounted[Props, RowState, Unit] = component(props)
+
 }

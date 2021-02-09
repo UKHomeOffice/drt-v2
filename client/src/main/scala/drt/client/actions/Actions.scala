@@ -7,7 +7,7 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.PassengerInfoSummary
+import drt.shared.api.{PassengerInfoSummary, WalkTime, WalkTimes}
 import drt.shared.dates.UtcDate
 import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -108,6 +108,10 @@ object Actions {
   case class HideLoader() extends Action
 
   case class GetAirportInfos(codes: Set[PortCode]) extends Action
+
+  case object GetWalktimes extends Action
+
+  case class SetWalktimes(walkTimes: WalkTimes) extends Action
 
   case class GetPassengerInfoSummary(utcDate: UtcDate) extends Action
 

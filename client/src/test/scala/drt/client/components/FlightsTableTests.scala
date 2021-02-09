@@ -8,7 +8,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.Arrival
+import drt.shared.api.{Arrival, WalkTimes}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import org.scalajs.dom.html.{Span, TableCell, TableSection}
@@ -133,7 +133,7 @@ object FlightsTableTests extends TestSuite {
                   <.span(^.cls := "arrivals__table__flight-code-value", testFlight.flightCodeString))),
                 <.td(testFlight.Origin.toString),
                 <.td(<.span(<.span())),
-                <.td(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}"),
+                <.td(<.span(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}")),
                 <.td(testFlight.Status.description),
                 <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), //sch
                 <.td(<.span(^.title := "2016-01-01 13:05", "13:05")),
@@ -158,6 +158,8 @@ object FlightsTableTests extends TestSuite {
               hasArrivalSourcesAccess = false,
               ViewLive,
               PcpPax.bestPaxEstimateWithApi,
+              walkTimes = WalkTimes(Map()),
+              defaultWalkTime = 30000L,
               hasTransfer = true)),
           staticComponent(expected)())
       }
@@ -185,7 +187,7 @@ object FlightsTableTests extends TestSuite {
                     <.span(^.cls := "arrivals__table__flight-code-value", testFlight.flightCodeString))),
                   <.td(testFlight.Origin.toString),
                   <.td(<.span(<.span())),
-                  <.td(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}"),
+                  <.td(<.span(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}")),
                   <.td(testFlight.Status.description),
                   date(Option(testFlight.Scheduled)),
                   date(testFlight.Estimated),
@@ -200,7 +202,19 @@ object FlightsTableTests extends TestSuite {
                   <.td(<.div(testFlight.TranPax.get, ^.className := "right"))))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(Option(timelineComponent))(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), Map(), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true)),
+          ArrivalsTable(Option(timelineComponent))(
+            FlightsWithSplitsTable.Props(
+              withSplits(testFlight :: Nil),
+              Map(),
+              queuesWithoutFastTrack,
+              hasEstChox = true,
+              None,
+              hasArrivalSourcesAccess = false,
+              ViewLive,
+              PcpPax.bestPaxEstimateWithApi,
+              walkTimes = WalkTimes(Map()),
+              defaultWalkTime = 30000L,
+              hasTransfer = true)),
           staticComponent(expected)())
       }
 
@@ -224,7 +238,7 @@ object FlightsTableTests extends TestSuite {
                     ^.cls := "arrivals__table__flight-code-wrapper",
                     <.span(^.cls := "arrivals__table__flight-code-value", testFlight.flightCodeString))),
                   <.td(<.span(^.title := "JFK, New York, USA", testFlight.Origin.toString)), <.td(<.span(<.span())),
-                  <.td(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}"),
+                  <.td(<.span(s"${testFlight.Gate.getOrElse("")} / ${testFlight.Stand.getOrElse("")}")),
                   <.td(testFlight.Status.description),
                   date(Option(testFlight.Scheduled)),
                   date(testFlight.Estimated),
@@ -242,7 +256,19 @@ object FlightsTableTests extends TestSuite {
 
           val table = ArrivalsTable(timelineComponent = None,
             originMapper = port => originMapperComponent(port)
-          )(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), Map(), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = true))
+          )(FlightsWithSplitsTable.Props(
+            withSplits(testFlight :: Nil),
+            Map(),
+            queuesWithoutFastTrack,
+            hasEstChox = true,
+            None,
+            hasArrivalSourcesAccess = false,
+            ViewLive,
+            PcpPax.bestPaxEstimateWithApi,
+            walkTimes = WalkTimes(Map()),
+            defaultWalkTime = 30000L,
+            hasTransfer = true
+          ))
 
           assertRenderedComponentsAreEqual(table, staticComponent(expected)())
         }
@@ -318,7 +344,7 @@ object FlightsTableTests extends TestSuite {
                   <.span(^.cls := "arrivals__table__flight-code-value", testLTNFlight.flightCodeString))),
                 <.td(testLTNFlight.Origin.toString),
                 <.td(<.span(<.span())),
-                <.td(s"${testLTNFlight.Gate.getOrElse("")} / ${testLTNFlight.Stand.getOrElse("")}"),
+                <.td(<.span(s"${testLTNFlight.Gate.getOrElse("")} / ${testLTNFlight.Stand.getOrElse("")}")),
                 <.td(testLTNFlight.Status.description),
                 <.td(<.span(^.title := "2016-01-01 13:00", "13:00")), //sch
                 <.td(<.span(^.title := "2016-01-01 13:05", "13:05")),
@@ -332,7 +358,19 @@ object FlightsTableTests extends TestSuite {
                 <.td(<.span(0), ^.className := "queue-split pax-unknown noneeadesk-queue-pax right")))))
 
         assertRenderedComponentsAreEqual(
-          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(withSplits(testFlight :: Nil), Map(), queuesWithoutFastTrack, hasEstChox = true, None, hasArrivalSourcesAccess = false, ViewLive, PcpPax.bestPaxEstimateWithApi, hasTransfer = false)),
+          ArrivalsTable(timelineComponent = None)(FlightsWithSplitsTable.Props(
+            withSplits(testFlight :: Nil),
+            Map(),
+            queuesWithoutFastTrack,
+            hasEstChox = true,
+            None,
+            hasArrivalSourcesAccess = false,
+            ViewLive,
+            PcpPax.bestPaxEstimateWithApi,
+            walkTimes = WalkTimes(Map()),
+            defaultWalkTime = 30000L,
+            hasTransfer = false
+          )),
           staticComponent(expected)())
       }
 

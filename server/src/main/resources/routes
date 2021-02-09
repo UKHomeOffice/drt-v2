@@ -13,6 +13,7 @@ GET           /ooh-status                                          controllers.A
 GET           /feature-flags                                       controllers.Application.getFeatureFlags
 
 GET           /airport-info                                        controllers.Application.getAirportInfo
+GET           /walk-times                                          controllers.Application.getWalkTimes
 
 GET           /alerts/:createdAfter                                controllers.Application.getAlerts(createdAfter: Long)
 POST          /alerts                                              controllers.Application.addAlert
