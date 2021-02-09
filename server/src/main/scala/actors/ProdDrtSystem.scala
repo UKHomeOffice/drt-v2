@@ -212,8 +212,6 @@ case class SetCrunchQueueActor(millisToCrunchActor: ActorRef)
 
 case class SetDeploymentQueueActor(millisToDeployActor: ActorRef)
 
-case class SetDaysQueueSource(daysQueueSource: SourceQueueWithComplete[MillisSinceEpoch])
-
 case class SetCrunchRequestQueue(source: SourceQueueWithComplete[CrunchRequest])
 
 object ArrivalGenerator {

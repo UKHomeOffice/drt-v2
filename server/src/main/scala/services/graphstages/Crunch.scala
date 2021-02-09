@@ -87,8 +87,6 @@ object Crunch {
     lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
   }
 
-  case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch)
-
   val europeLondonId = "Europe/London"
   val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID(europeLondonId)
 
