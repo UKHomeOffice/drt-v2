@@ -122,7 +122,7 @@ object CrunchSystem {
     val splitAdjustments = if (props.adjustEGateUseByUnder12s)
       ChildEGateAdjustments(props.airportConfig.assumedAdultsPerChild)
     else
-      AdjustmentsNoop()
+      AdjustmentsNoop
 
     val splitsCalculator = SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits, splitAdjustments)
 

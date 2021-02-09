@@ -14,7 +14,7 @@ object ArrivalGenerator {
               actPax: Option[Int] = None,
               maxPax: Option[Int] = None,
               terminal: Terminal = T1,
-              origin: PortCode = PortCode(""),
+              origin: PortCode = PortCode("JFK"),
               operator: Option[Operator] = None,
               status: ArrivalStatus = ArrivalStatus(""),
               estDt: String = "",

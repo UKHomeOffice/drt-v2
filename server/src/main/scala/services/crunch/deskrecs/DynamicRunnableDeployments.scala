@@ -7,6 +7,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import services.TimeLogger
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.LoadsToQueueMinutes
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
@@ -16,22 +17,6 @@ import services.graphstages.Crunch.LoadMinute
 import scala.collection.immutable.Map
 import scala.concurrent.{ExecutionContext, Future}
 
-case class TimeLogger(actionName: String, threshold: MillisSinceEpoch, logger: Logger) {
-  def time[R](action: => R): R = {
-    val startTime = System.currentTimeMillis()
-    val result = action
-    val timeTaken = System.currentTimeMillis() - startTime
-
-    val message = s"$actionName took ${timeTaken}ms"
-
-    if (timeTaken > threshold)
-      logger.warn(message)
-    else
-      logger.debug(message)
-
-    result
-  }
-}
 
 object DynamicRunnableDeployments {
   val log: Logger = LoggerFactory.getLogger(getClass)

@@ -2,7 +2,7 @@ package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetFlights
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import akka.actor.{Actor, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
@@ -14,9 +14,15 @@ import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
+import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
+import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
 import server.feeds.ArrivalsFeedSuccess
+import services.crunch.VoyageManifestGenerator.{euPassport, visa}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
+import services.crunch.deskrecs.OptimiserMocks.{mockHistoricManifestsProvider, mockHistoricManifestsProviderNoop, mockLiveManifestsProviderNoop}
+import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, TestConfig, TestDefaults}
 import services.graphstages.CrunchMocks
 import services.{SDate, TryCrunch}
@@ -67,24 +73,46 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
   val historicSplits: Splits = Splits(Set(
     ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None, None),
     ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None, None)),
-                                      SplitSources.Historical, None, Percentage)
+    SplitSources.Historical, None, Percentage)
   val minutesToCrunch = 30
   val nowFromSDate: () => SDateLike = () => SDate.now()
 
   val flexDesks = false
   val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
 
-  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(defaultAirportConfig)
+  private def getDeskRecsGraph(mockPortStateActor: ActorRef, historicManifests: HistoricManifestsProvider, airportConfig: AirportConfig = defaultAirportConfig) = {
+    val paxAllocation = PaxTypeQueueAllocation(
+      B5JPlusTypeAllocator,
+      TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
+
+    val splitsCalc = SplitsCalculator(paxAllocation, airportConfig.terminalPaxSplits, AdjustmentsNoop)
+    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, pcpPaxCalcFn)
+
+    val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+      OptimisationProviders.arrivalsProvider(mockPortStateActor),
+      mockLiveManifestsProviderNoop,
+      historicManifests,
+      splitsCalc,
+      desksAndWaitsProvider.flightsToLoads,
+      desksAndWaitsProvider.loadsToDesks,
+      PortDeskLimits.flexed(airportConfig))
+
+    RunnableOptimisation.createGraph(mockPortStateActor, deskRecsProducer).run()
+  }
+
+  private def crunchRequest(midnight20190101: SDateLike, airportConfig: AirportConfig = defaultAirportConfig): CrunchRequest = {
+    CrunchRequest(midnight20190101.millisSinceEpoch, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+  }
 
   "Given a RunnableDescRecs with a mock PortStateActor and mock crunch " +
     "When I give it a millisecond of 2019-01-01T00:00 " +
     "I should see a request for flights for 2019-01-01 00:00 to 00:30" >> {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
-    val (daysQueueSource, _) = RunnableDeskRecs(mockPortStateActor, PortDesksAndWaitsProvider(defaultAirportConfig, mockCrunch, pcpPaxCalcFn), maxDesksProvider).run()
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop)
 
     val midnight20190101 = SDate("2019-01-01T00:00")
-    daysQueueSource.offer(midnight20190101.millisSinceEpoch)
+    daysQueueSource.offer(crunchRequest(midnight20190101))
 
     val expectedStart = midnight20190101.millisSinceEpoch
     val expectedEnd = midnight20190101.addMinutes(30).millisSinceEpoch
@@ -102,10 +130,10 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, longDelay)))
 
-    val (daysQueueSource, _) = RunnableDeskRecs(mockPortStateActor, PortDesksAndWaitsProvider(defaultAirportConfig, mockCrunch, pcpPaxCalcFn), maxDesksProvider).run()
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop)
 
     val midnight20190101 = SDate("2019-01-01T00:00")
-    daysQueueSource.offer(midnight20190101.millisSinceEpoch)
+    daysQueueSource.offer(crunchRequest(midnight20190101))
 
     val expectedStart = midnight20190101.millisSinceEpoch
     val expectedEnd = midnight20190101.addMinutes(30).millisSinceEpoch
@@ -134,20 +162,17 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
-    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
-    val testAirportConfig = defaultAirportConfig.copy(terminalProcessingTimes = procTimes)
+    val arrivalPax = Map(arrival -> Option(List(euPassport, visa)))
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(arrivalPax))
 
-    val (daysQueueSource, _) = RunnableDeskRecs(mockPortStateActor, PortDesksAndWaitsProvider(testAirportConfig, mockCrunch, pcpPaxCalcFn), maxDesksProvider).run()
-
-    val epoch = SDate(scheduled).millisSinceEpoch
-    daysQueueSource.offer(epoch)
+    daysQueueSource.offer(crunchRequest(SDate(scheduled)))
 
     val expectedLoads = Set(
-      (Queues.EeaDesk, 10, epoch),
+      (Queues.EeaDesk, 10, SDate(scheduled).millisSinceEpoch),
       (Queues.EeaDesk, 2.5, SDate(scheduled).addMinutes(1).millisSinceEpoch),
-      (Queues.NonEeaDesk, 10, epoch),
+      (Queues.NonEeaDesk, 10, SDate(scheduled).millisSinceEpoch),
       (Queues.NonEeaDesk, 2.5, SDate(scheduled).addMinutes(1).millisSinceEpoch)
-      )
+    )
 
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
@@ -171,20 +196,18 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
-    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
-    val testAirportConfig = defaultAirportConfig.copy(terminalProcessingTimes = procTimes)
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(Map(arrival -> Option(List(euPassport, visa)))))
 
-    val (daysQueueSource, _) = RunnableDeskRecs(mockPortStateActor, PortDesksAndWaitsProvider(testAirportConfig, mockCrunch, pcpPaxCalcFn), maxDesksProvider).run()
+    val scheduledDate = SDate(scheduled)
 
-    val epoch = SDate(scheduled).millisSinceEpoch
-    daysQueueSource.offer(epoch)
+    daysQueueSource.offer(crunchRequest(scheduledDate))
 
     val expectedLoads = Set(
-      (Queues.EeaDesk, 10, epoch),
+      (Queues.EeaDesk, 10, scheduledDate.millisSinceEpoch),
       (Queues.EeaDesk, 2.5, SDate(scheduled).addMinutes(1).millisSinceEpoch),
-      (Queues.NonEeaDesk, 10, epoch),
+      (Queues.NonEeaDesk, 10, scheduledDate.millisSinceEpoch),
       (Queues.NonEeaDesk, 2.5, SDate(scheduled).addMinutes(1).millisSinceEpoch)
-      )
+    )
 
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
@@ -210,13 +233,13 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
-    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
-    val testAirportConfig = defaultAirportConfig.copy(terminalProcessingTimes = procTimes)
-
-    val (daysQueueSource, _) = RunnableDeskRecs(mockPortStateActor, PortDesksAndWaitsProvider(testAirportConfig, mockCrunch, pcpPaxCalcFn), maxDesksProvider).run()
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(Map(
+      arrival -> Option(List(euPassport, visa)),
+      arrival2 -> Option(List(euPassport, visa)),
+    )))
 
     val scheduledSd = SDate(scheduled)
-    daysQueueSource.offer(scheduledSd.millisSinceEpoch)
+    daysQueueSource.offer(crunchRequest(scheduledSd))
 
     val expectedLoads = Set(
       (Queues.EeaDesk, 10, scheduledSd.addMinutes(0).millisSinceEpoch),
@@ -225,7 +248,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       (Queues.NonEeaDesk, 10, scheduledSd.addMinutes(0).millisSinceEpoch),
       (Queues.NonEeaDesk, 2.5 + 10, scheduledSd.addMinutes(1).millisSinceEpoch),
       (Queues.NonEeaDesk, 0 + 2.5, scheduledSd.addMinutes(2).millisSinceEpoch)
-      )
+    )
 
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
@@ -252,15 +275,12 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
 
-    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60))
-    val testAirportConfig = defaultAirportConfig.copy(terminalProcessingTimes = procTimes)
-
-    val (daysQueueSource, _) = RunnableDeskRecs(mockPortStateActor, PortDesksAndWaitsProvider(testAirportConfig, mockCrunch, pcpPaxCalcFn), maxDesksProvider).run()
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop)
 
     val noonMillis = SDate(pcpOne).millisSinceEpoch
     val onePmMillis = SDate(pcpUpdated).millisSinceEpoch
     mockPortStateActor ! SetFlights(List(ApiFlightWithSplits(arrival.copy(PcpTime = Option(noonMillis)), Set(historicSplits), None)))
-    daysQueueSource.offer(noonMillis)
+    daysQueueSource.offer(crunchRequest(SDate(pcpOne)))
 
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
@@ -272,7 +292,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     }
 
     mockPortStateActor ! SetFlights(List(ApiFlightWithSplits(arrival.copy(PcpTime = Option(onePmMillis)), Set(historicSplits), None)))
-    daysQueueSource.offer(onePmMillis)
+    daysQueueSource.offer(crunchRequest(SDate(pcpUpdated)))
 
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
@@ -316,19 +336,19 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         CrunchMinute(T1, Queues.EeaDesk, noonMillis + 60000, 5, 2.5, 0, 0),
         CrunchMinute(T1, Queues.EeaDesk, noonMillis + 120000, 1, 1, 0, 0),
         CrunchMinute(T1, Queues.EeaDesk, noonMillis + 180000, 1, 1, 0, 0)
-        ),
+      ),
       staffMinutes = List()
-      )
+    )
     val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         terminalProcessingTimes = procTimes,
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
         minutesToCrunch = 60
-        ),
+      ),
       now = () => SDate(noon),
       pcpArrivalTime = TestDefaults.pcpForFlightFromBest,
       initialPortState = Option(initialPortState)
-      ))
+    ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis))))))
 
@@ -360,10 +380,10 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         terminalProcessingTimes = procTimes,
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
         minutesToCrunch = 60
-        ),
+      ),
       now = () => SDate(noon),
       pcpArrivalTime = TestDefaults.pcpForFlightFromBest
-      ))
+    ))
 
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = PortCode("JFK"))
     val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, actPax = Option(25), origin = PortCode("AAA"))
@@ -412,21 +432,15 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
-    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60, visaNationalToDesk -> 60d / 60))
-    val testAirportConfig = defaultAirportConfig.copy(
-      terminalProcessingTimes = procTimes,
-      divertedQueues = Map(Queues.NonEeaDesk -> Queues.EeaDesk)
-      )
-
-    val (daysQueueSource, _) = RunnableDeskRecs(mockPortStateActor, PortDesksAndWaitsProvider(testAirportConfig, mockCrunch, pcpPaxCalcFn), maxDesksProvider).run()
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop)
 
     val scheduledMillis = SDate(scheduled).millisSinceEpoch
-    daysQueueSource.offer(scheduledMillis)
+    daysQueueSource.offer(crunchRequest(SDate(scheduled)))
 
     val expectedLoads = Set(
       (Queues.EeaDesk, 20, scheduledMillis),
       (Queues.EeaDesk, 5, SDate(scheduled).addMinutes(1).millisSinceEpoch)
-      )
+    )
 
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
@@ -446,12 +460,12 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val testAirportConfig = defaultAirportConfig.copy(
       terminalProcessingTimes = procTimes,
       queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-      )
+    )
     val crunch = runCrunchGraph(TestConfig(
       airportConfig = testAirportConfig,
       now = () => SDate(noon),
       pcpArrivalTime = TestDefaults.pcpForFlightFromBest
-      ))
+    ))
 
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = PortCode("JFK"))
     val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, actPax = Option(25), origin = PortCode("AAA"))
@@ -495,11 +509,10 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     mockPortStateActor ! SetFlights(flight)
 
     val minsInADay = 1440
-    val testAirportConfig = defaultAirportConfig.copy(minutesToCrunch = minsInADay)
-    val (daysQueueSource, _) = RunnableDeskRecs(mockPortStateActor, PortDesksAndWaitsProvider(testAirportConfig, mockCrunch, pcpPaxCalcFn), maxDesksProvider).run()
+    val airportConfig = defaultAirportConfig.copy(minutesToCrunch = minsInADay)
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop, airportConfig)
 
-    val epoch = SDate(scheduled).millisSinceEpoch
-    daysQueueSource.offer(epoch)
+    daysQueueSource.offer(crunchRequest(SDate(scheduled), airportConfig))
 
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) => drms.length === defaultAirportConfig.queuesByTerminal.flatMap(_._2).size * minsInADay
@@ -521,7 +534,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       now = () => noonSDate,
       recrunchOnStart = true,
       initialPortState = Option(PortState(arrivalsFor10Days, List(), List()))
-      ))
+    ))
 
     val expectedCrunchDays = Set(SDate("2018-01-01T00:00").toISODateOnly, SDate("2018-01-02T00:00").toISODateOnly)
 

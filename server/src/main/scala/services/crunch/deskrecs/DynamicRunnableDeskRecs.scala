@@ -12,6 +12,7 @@ import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import services.TimeLogger
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
@@ -50,7 +51,6 @@ object DynamicRunnableDeskRecs {
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .map { case (crunchDay, flights) =>
         log.info(s"Crunching ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
-
         timeLogger.time({
           val loadsFromFlights: Map[TQM, Crunch.LoadMinute] = flightsToLoads(FlightsWithSplits(flights), crunchDay.start.millisSinceEpoch)
           loadsToQueueMinutes(crunchDay.minutesInMillis, loadsFromFlights, maxDesksProviders)

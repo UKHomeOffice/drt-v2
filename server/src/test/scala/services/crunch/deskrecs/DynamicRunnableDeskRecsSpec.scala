@@ -3,8 +3,8 @@ package services.crunch.deskrecs
 import actors.acking.AckingReceiver.{Ack, StreamInitialized}
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.DeskRecMinutes
@@ -14,16 +14,16 @@ import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPe
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
-import manifests.graph.MockManifestLookupService
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsProvider, addManifests}
-import services.crunch.deskrecs.Mocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
+import services.crunch.deskrecs.OptimiserMocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.CrunchMocks
@@ -34,8 +34,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object Mocks {
-
+object OptimiserMocks {
   class MockActor(somethingToReturn: List[Any]) extends Actor {
     override def receive: Receive = {
       case _ => sender() ! Source(somethingToReturn)
@@ -56,6 +55,15 @@ object Mocks {
                          (implicit ec: ExecutionContext): CrunchRequest => Future[Source[List[Arrival], NotUsed]] =
     _ => Future(Source(List(arrivals)))
 
+
+  def mockLiveManifestsProviderNoop(implicit ec: ExecutionContext): CrunchRequest => Future[Source[VoyageManifests, NotUsed]] = {
+    _ => Future(Source(List()))
+  }
+
+  def mockHistoricManifestsProviderNoop(implicit ec: ExecutionContext): HistoricManifestsProvider = {
+    _: Iterable[Arrival] => Future(Source(List()))
+  }
+
   def mockLiveManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]])
                                (implicit ec: ExecutionContext): CrunchRequest => Future[Source[VoyageManifests, NotUsed]] = {
     val manifests = maybePax match {
@@ -66,18 +74,31 @@ object Mocks {
     _ => Future(Source(List(manifests)))
   }
 
-  def mockHistoricManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]])
+  def mockHistoricManifestsProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
                                    (implicit ec: ExecutionContext, mat: ActorMaterializer): HistoricManifestsProvider = {
-    maybePax match {
-      case Some(pax) =>
-        OptimisationProviders.historicManifestsProvider(PortCode("STN"), mockManifestLookupService(arrival, pax))
-      case None =>
-        _: Iterable[Arrival] => Future(Source(List()))
-    }
+    OptimisationProviders.historicManifestsProvider(
+      PortCode("STN"),
+      MockManifestLookupService(arrivalsWithMaybePax.map { case (arrival, maybePax) =>
+        val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+        val maybeManifest = maybePax.map(pax => BestAvailableManifest(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
+        (key, maybeManifest)
+      })
+    )
   }
+}
 
-  def mockManifestLookupService(arrival: Arrival, pax: List[PassengerInfoJson]): MockManifestLookupService =
-    MockManifestLookupService(BestAvailableManifest(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
+import scala.concurrent.ExecutionContext.Implicits.global
+
+case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]]) extends ManifestLookupLike {
+  override def maybeBestAvailableManifest(arrivalPort: PortCode,
+                                          departurePort: PortCode,
+                                          voyageNumber: VoyageNumber,
+                                          scheduled: SDateLike)
+                                         (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = {
+    val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
+    val maybeManifest = bestAvailableManifests.get(key).flatten
+    Future((key, maybeManifest))
+  }
 }
 
 class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
@@ -90,7 +111,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   val ptqa: PaxTypeQueueAllocation = PaxTypeQueueAllocation(
     B5JPlusTypeAllocator,
     TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
-  val splitsCalculator: SplitsCalculator = manifests.queues.SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, AdjustmentsNoop())
+  val splitsCalculator: SplitsCalculator = manifests.queues.SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, AdjustmentsNoop)
 
   val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, pcpPaxCalcFn)
 
@@ -106,7 +127,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val deskRecs = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
       mockFlightsProvider(List(arrival)),
       mockLiveManifestsProvider(arrival, livePax),
-      mockHistoricManifestsProvider(arrival, historicPax),
+      mockHistoricManifestsProvider(Map(arrival -> historicPax)),
       splitsCalculator,
       desksAndWaitsProvider.flightsToLoads,
       desksAndWaitsProvider.loadsToDesks,

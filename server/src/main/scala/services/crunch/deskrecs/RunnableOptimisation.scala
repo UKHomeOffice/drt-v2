@@ -10,7 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.dates.LocalDate
 import drt.shared.{PortStateQueueMinutes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
+import services.{SDate, TimeLogger}
 import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.collection.immutable.NumericRange

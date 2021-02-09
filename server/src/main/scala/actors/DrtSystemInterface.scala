@@ -43,7 +43,7 @@ import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
 import play.api.Configuration
-import queueus.{AdjustmentsNoop, ChildEGateAdjustments}
+import queueus.{AdjustmentsNoop, ChildEGateAdjustments, PaxTypeQueueAllocation, QueueAdjustments}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services._
@@ -136,6 +136,13 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     PortDeskLimits.flexed(airportConfig)
   else
     PortDeskLimits.fixed(airportConfig)
+
+  val paxTypeQueueAllocation: PaxTypeQueueAllocation = paxTypeQueueAllocator(airportConfig)
+
+  val splitAdjustments: QueueAdjustments = if (params.adjustEGateUseByUnder12s)
+    ChildEGateAdjustments(airportConfig.assumedAdultsPerChild)
+  else
+    AdjustmentsNoop
 
   def run(): Unit
 
@@ -232,14 +239,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     implicit val timeout: Timeout = new Timeout(1 second)
 
-    val ptqa = paxTypeQueueAllocator(airportConfig)
-
-    val splitAdjustments = if (params.adjustEGateUseByUnder12s)
-      ChildEGateAdjustments(airportConfig.assumedAdultsPerChild)
-    else
-      AdjustmentsNoop()
-
-    val splitsCalculator = SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, splitAdjustments)
+    val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
 
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
       OptimisationProviders.arrivalsProvider(portStateActor),

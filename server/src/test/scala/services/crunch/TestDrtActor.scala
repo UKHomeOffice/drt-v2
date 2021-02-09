@@ -115,7 +115,7 @@ class TestDrtActor extends Actor {
         implicit val timeout: Timeout = new Timeout(1 second)
         val ptqa = paxTypeQueueAllocator(tc.airportConfig)
 
-        val splitAdjustments = AdjustmentsNoop()
+        val splitAdjustments = AdjustmentsNoop
 
         val splitsCalculator = SplitsCalculator(ptqa, tc.airportConfig.terminalPaxSplits, splitAdjustments)
 
