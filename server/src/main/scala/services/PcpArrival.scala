@@ -3,7 +3,7 @@ package services
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliDate
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
+import drt.shared.api.{Arrival, WalkTime}
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.util.{Success, Try}
@@ -12,7 +12,6 @@ object PcpArrival {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  case class WalkTime(from: String, to: Terminal, walkTimeMillis: Long)
 
   def walkTimesLinesFromFileUrl(walkTimesFileUrl: String): Seq[String] = {
     Try(scala.io.Source.fromURL(walkTimesFileUrl)).map(_.getLines().drop(1).toSeq) match {
@@ -40,16 +39,19 @@ object PcpArrival {
   }
 
   def walkTimeMillisProviderFromCsv(walkTimesCsvFileUrl: String): GateOrStandWalkTime = {
-    val walkTimes = walkTimesLinesFromFileUrl(walkTimesCsvFileUrl)
-      .map(walkTimeFromStringWithRounding)
-      .collect {
-        case Some(wt) =>
-          log.info(s"Loaded WalkTime $wt")
-          wt
-      }.map(x => ((x.from, x.to), x.walkTimeMillis)).toMap
+    val walkTimes = loadWalkTimesFromCsv(walkTimesCsvFileUrl)
+      .map(x => ((x.gateOrStand, x.terminal), x.walkTimeMillis)).toMap
 
     val tupleToLong = roundTimesToNearestMinute(walkTimes)
     walkTimeMillis(tupleToLong)
+  }
+
+  def loadWalkTimesFromCsv(walkTimesCsvFileUrl: String): Seq[WalkTime] = {
+    walkTimesLinesFromFileUrl(walkTimesCsvFileUrl)
+      .map(walkTimeFromStringWithRounding)
+      .collect {
+        case Some(wt) => wt
+      }
   }
 
   private def roundTimesToNearestMinute(walkTimes: Map[(String, Terminal), MillisSinceEpoch]) = {
