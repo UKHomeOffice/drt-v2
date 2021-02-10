@@ -24,9 +24,9 @@ case class WalkTimes(byTerminal: Map[Terminal, TerminalWalkTimes]) {
     val defaultString = s"${millisToMinutesAndSecondsString(defaultWalkTime)} (default walk time for terminal)"
     val maybeWalkTime: Option[String] = (gate, stand, byTerminal.get(terminal)) match {
       case (Some(g), _, Some(t)) if t.gateWalktimes.contains(g) =>
-        byTerminal(terminal).gateWalktimes.get(g).map(_.inMinutesAndSeconds)
+        byTerminal(terminal).gateWalktimes.get(g).map(_.inMinutesAndSeconds + " walk time")
       case (_, Some(s), Some(t)) if t.standWalkTimes.contains(s) =>
-        byTerminal(terminal).standWalkTimes.get(s).map(_.inMinutesAndSeconds)
+        byTerminal(terminal).standWalkTimes.get(s).map(_.inMinutesAndSeconds + " walk time")
       case _ => None
     }
 
@@ -68,10 +68,10 @@ object WalkTime {
     val minutes = inSeconds / 60
     val seconds = inSeconds % 60
 
-    val secondsString: Option[String] = if (seconds > 0) Option(s"$seconds seconds") else None
-    val minutesString: Option[String] = if (minutes > 0) Option(s"$minutes minute${if (minutes > 1) "s" else ""}") else None
+    val secondsString: Option[String] = if (seconds > 0) Option(s"${seconds}s") else None
+    val minutesString: Option[String] = if (minutes > 0) Option(s"${minutes}m") else None
 
-    (minutesString :: secondsString :: Nil).flatten.mkString(", ")
+    (minutesString :: secondsString :: Nil).flatten.mkString(" ")
   }
 
 }
