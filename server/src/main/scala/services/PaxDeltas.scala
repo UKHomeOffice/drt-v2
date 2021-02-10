@@ -83,6 +83,7 @@ object PaxDeltas {
       }
 
     val eventualUpdatedArrivals = updatedArrivalsSource
+      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .runWith(Sink.seq)
       .map(_.toList)
 

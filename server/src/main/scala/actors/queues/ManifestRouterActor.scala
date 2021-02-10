@@ -44,7 +44,7 @@ object ManifestRouterActor {
 
   def runAndCombine(source: Future[Source[VoyageManifests, NotUsed]])(implicit mat: ActorMaterializer, ec: ExecutionContext): Future[VoyageManifests] = source
     .flatMap(
-      _.runWith(Sink.reduce[VoyageManifests](_ ++ _))
+      _.log(getClass.getName).runWith(Sink.reduce[VoyageManifests](_ ++ _))
     )
 
   def props(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate): Props = Props(

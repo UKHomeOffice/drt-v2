@@ -7,6 +7,7 @@ import actors.StreamingJournalLike
 import akka.actor.PoisonPill
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer}
+import akka.stream.scaladsl.GraphDSL.Implicits.getClass
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
@@ -16,7 +17,7 @@ import drt.shared.{ApiFlightWithSplits, MilliTimes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
-import services.SDate
+import services.{SDate, StreamSupervision}
 
 
 class TerminalDayFlightUpdatesActor(
@@ -41,6 +42,7 @@ class TerminalDayFlightUpdatesActor(
       .eventsByPersistenceId(persistenceId, sequenceNumber, Long.MaxValue)
       .viaMat(KillSwitches.single)(Keep.both)
       .toMat(Sink.actorRefWithAck(self, StreamInitialized, Ack, StreamCompleted))(Keep.left)
+      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .run()
     maybeKillSwitch = Option(killSwitch)
   }

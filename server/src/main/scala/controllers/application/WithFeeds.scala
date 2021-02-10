@@ -49,6 +49,7 @@ trait WithFeeds {
                 case _ => None
               }
         }
+        .log(getClass.getName)
         .runWith(Sink.seq)
         .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
     }
@@ -87,6 +88,7 @@ trait WithFeeds {
                 None
             }
         })
+        .log(getClass.getName)
         .runWith(Sink.seq)
         .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
     }

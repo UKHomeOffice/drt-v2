@@ -44,6 +44,7 @@ case class S3ApiProvider(awsCredentials: AWSCredentials, bucketName: String)(imp
         case (zipFileName, maybeManifests) => maybeManifests.map(content => (zipFileName, content))
       }
       .mapConcat(identity)
+      .log(getClass.getName)
       .runWith(Sink.seq[(String, String)])
   }
 
@@ -53,9 +54,11 @@ case class S3ApiProvider(awsCredentials: AWSCredentials, bucketName: String)(imp
 
   def fileNameAndContentFromZip[X](zipFileName: String,
                                    zippedFileByteStream: Source[ByteString, X]): (String, List[String]) = {
-    val inputStream: InputStream = zippedFileByteStream.runWith(
-      StreamConverters.asInputStream()
-    )
+    val inputStream: InputStream = zippedFileByteStream
+      .log(getClass.getName)
+      .runWith(
+        StreamConverters.asInputStream()
+      )
     val zipInputStream = new ZipInputStream(inputStream)
 
     val jsonContents = Try {
@@ -77,7 +80,7 @@ case class S3ApiProvider(awsCredentials: AWSCredentials, bucketName: String)(imp
     } match {
       case Success(contents) => contents
       case Failure(e) => log.error(e.getMessage)
-                         List.empty[String]
+        List.empty[String]
     }
 
     Try(zipInputStream.close())

@@ -8,6 +8,7 @@ import akka.NotUsed
 import akka.actor.{Actor, ActorContext, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.GraphDSL.Implicits.getClass
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
@@ -16,6 +17,7 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import services.StreamSupervision
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -140,7 +142,11 @@ object PartitionedPortStateActor {
                          eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
                          eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
                         (implicit ec: ExecutionContext, mat: ActorMaterializer): Future[PortState] = {
-    val eventualFlights = flightsStream.flatMap(_.runWith(Sink.seq).map(_.fold(FlightsWithSplits.empty)(_ ++ _)))
+    val eventualFlights = flightsStream
+      .flatMap(source => source
+        .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
+        .runWith(Sink.seq).map(_.fold(FlightsWithSplits.empty)(_ ++ _)))
+
     stateAsTuple(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).map {
       case (fs, cms, sms) => PortState(fs, cms, sms)
     }

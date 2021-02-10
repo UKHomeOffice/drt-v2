@@ -122,6 +122,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
                     maybePointInTime: Option[MillisSinceEpoch]): Future[MinutesContainer[A, B]] = {
     val eventualContainerWithBookmarks: Future[immutable.Seq[MinutesContainer[A, B]]] =
       retrieveTerminalMinutesWithinRangeAsStream(terminal, start, end, maybePointInTime)
+        .log(getClass.getName)
         .runWith(Sink.seq)
 
     eventualContainerWithBookmarks.map {
@@ -174,6 +175,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
   private def combineEventualMinutesContainersStream(eventualUpdatedMinutesDiff: Source[MinutesContainer[A, B], NotUsed]): Future[MinutesContainer[A, B]] = {
     eventualUpdatedMinutesDiff
       .fold(MinutesContainer.empty[A, B])(_ ++ _)
+      .log(getClass.getName)
       .runWith(Sink.seq)
       .map {
         case containers if containers.nonEmpty => containers.reduce(_ ++ _)

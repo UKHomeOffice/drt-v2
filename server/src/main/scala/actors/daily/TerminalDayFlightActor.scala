@@ -65,7 +65,6 @@ class TerminalDayFlightActor(
 
   override def receiveCommand: Receive = {
     case diff: FlightsWithSplitsDiff =>
-
       val filteredDiff = diff.forTerminal(terminal)
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
 

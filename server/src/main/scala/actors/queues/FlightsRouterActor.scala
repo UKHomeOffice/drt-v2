@@ -16,7 +16,8 @@ import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.UtcDate
-import services.SDate
+import services.{SDate, StreamSupervision}
+import services.crunch.deskrecs.RunnableOptimisation.getClass
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.duration._
@@ -82,9 +83,10 @@ object FlightsRouterActor {
         .pipeTo(replyTo)
     }
 
-  def runAndCombine(source: Future[Source[FlightsWithSplits, NotUsed]])(implicit mat: ActorMaterializer, ec: ExecutionContext): Future[FlightsWithSplits] = source
-    .flatMap(
-      _.runWith(Sink.reduce[FlightsWithSplits](_ ++ _))
+  def runAndCombine(eventualSource: Future[Source[FlightsWithSplits, NotUsed]])(implicit mat: ActorMaterializer, ec: ExecutionContext): Future[FlightsWithSplits] = eventualSource
+    .flatMap(source => source
+      .log(getClass.getName)
+      .runWith(Sink.reduce[FlightsWithSplits](_ ++ _))
     )
 }
 
@@ -198,6 +200,7 @@ class FlightsRouterActor(
   private def combineEventualDiffsStream(eventualUpdatedMinutesDiff: Source[Seq[MillisSinceEpoch], NotUsed]): Future[Seq[MillisSinceEpoch]] = {
     eventualUpdatedMinutesDiff
       .fold(Seq[MillisSinceEpoch]())(_ ++ _)
+      .log(getClass.getName)
       .runWith(Sink.seq)
       .map {
         case containers if containers.nonEmpty => containers.reduce(_ ++ _)

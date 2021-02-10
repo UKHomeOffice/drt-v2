@@ -12,7 +12,8 @@ import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
+import services.{SDate, StreamSupervision}
+import services.crunch.deskrecs.RunnableOptimisation.getClass
 
 object ManifestsGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -56,6 +57,8 @@ object ManifestsGraph {
           ClosedShape
     }
 
-    RunnableGraph.fromGraph(graph)
+    RunnableGraph
+      .fromGraph(graph)
+      .withAttributes(StreamSupervision.resumeStrategyWithLog(ManifestsGraph.getClass.getName))
   }
 }

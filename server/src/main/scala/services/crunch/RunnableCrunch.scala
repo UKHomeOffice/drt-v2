@@ -15,6 +15,7 @@ import drt.shared._
 import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
+import services.StreamSupervision
 import services.graphstages._
 
 import scala.concurrent.Future
@@ -224,7 +225,9 @@ object RunnableCrunch {
           ClosedShape
     }
 
-    RunnableGraph.fromGraph(graph)
+    RunnableGraph
+      .fromGraph(graph)
+      .withAttributes(StreamSupervision.resumeStrategyWithLog(RunnableCrunch.getClass.getName))
   }
 
   def withOnlyDescheduledRemovals(removals: List[RemoveFlight], now: SDateLike): List[RemoveFlight] = {

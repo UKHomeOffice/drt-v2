@@ -6,12 +6,14 @@ import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.actor.PoisonPill
 import akka.persistence.query.PersistenceQuery
 import akka.persistence.{PersistentActor, RecoveryCompleted}
+import akka.stream.scaladsl.GraphDSL.Implicits.getClass
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.{MilliTimes, SDateLike, WithTimeAccessor}
 import org.slf4j.Logger
 import scalapb.GeneratedMessage
+import services.StreamSupervision
 
 object StreamingUpdatesLike {
   case object StopUpdates
@@ -33,6 +35,7 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
       .eventsByPersistenceId(persistenceId, nr, Long.MaxValue)
       .viaMat(KillSwitches.single)(Keep.both)
       .toMat(Sink.actorRefWithAck(self, StreamInitialized, Ack, StreamCompleted))(Keep.left)
+      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .run()
     maybeKillSwitch = Option(killSwitch)
   }

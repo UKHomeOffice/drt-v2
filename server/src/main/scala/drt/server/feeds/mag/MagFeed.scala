@@ -99,6 +99,7 @@ case class MagFeed(key: String,
           log.error(s"Failed to fetch or parse MAG arrivals: ${t.getMessage}")
           List()
       }
+      .log(getClass.getName)
       .runWith(Sink.seq)
       .map {
         case as if as.nonEmpty =>

@@ -1,13 +1,13 @@
 package actors.daily
 
 import java.util.UUID
-
 import actors.PartitionedPortStateActor.GetUpdatesSince
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.pattern.{AskTimeoutException, ask, pipe}
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.GraphDSL.Implicits.getClass
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -15,7 +15,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
+import services.{SDate, StreamSupervision}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -82,6 +82,7 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
       val terminalDays = terminalDaysForPeriod(fromMillis, toMillis)
 
       terminalsAndDaysUpdatesSource(terminalDays, sinceMillis)
+        .log(getClass.getName)
         .runWith(Sink.fold(FlightsWithSplits.empty)(_ ++ _))
         .pipeTo(replyTo)
 

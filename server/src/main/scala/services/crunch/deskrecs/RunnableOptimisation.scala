@@ -5,12 +5,12 @@ import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
 import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
-import akka.stream.{ClosedShape, KillSwitches, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.{ActorAttributes, ClosedShape, KillSwitches, OverflowStrategy, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.dates.LocalDate
 import drt.shared.{PortStateQueueMinutes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
-import services.{SDate, TimeLogger}
+import services.{SDate, StreamSupervision, TimeLogger}
 import services.graphstages.Crunch.europeLondonTimeZone
 
 import scala.collection.immutable.NumericRange
@@ -57,6 +57,8 @@ object RunnableOptimisation {
           ClosedShape
     }
 
-    RunnableGraph.fromGraph(graph)
+    RunnableGraph
+      .fromGraph(graph)
+      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
   }
 }
