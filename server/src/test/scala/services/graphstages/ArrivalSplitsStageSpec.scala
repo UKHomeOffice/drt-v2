@@ -30,7 +30,7 @@ object TestableArrivalSplits {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[List[BestAvailableManifest]], SourceQueueWithComplete[List[BestAvailableManifest]])] = {
+  def apply(splitsCalculator: SplitsCalculator, testProbe: TestProbe, now: () => SDateLike): RunnableGraph[(SourceQueueWithComplete[ArrivalsDiff], SourceQueueWithComplete[List[BestAvailableManifest]])] = {
     val arrivalSplitsStage = new ArrivalSplitsGraphStage(
       name = "",
       optionalInitialFlights = None,
@@ -42,28 +42,24 @@ object TestableArrivalSplits {
 
     val arrivalsDiffSource = Source.queue[ArrivalsDiff](1, OverflowStrategy.backpressure)
     val manifestsLiveSource = Source.queue[List[BestAvailableManifest]](1, OverflowStrategy.backpressure)
-    val manifestsHistoricSource = Source.queue[List[BestAvailableManifest]](1, OverflowStrategy.backpressure)
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val graph = GraphDSL.create(
       arrivalsDiffSource.async,
-      manifestsLiveSource.async,
-      manifestsHistoricSource.async
-    )((_, _, _)) {
+      manifestsLiveSource.async
+    )((_, _)) {
 
       implicit builder =>
         (
           arrivalsDiff,
-          manifestsLive,
-          manifestsHistoric
+          manifestsLive
         ) =>
           val arrivalSplitsStageAsync = builder.add(arrivalSplitsStage.async)
           val sink = builder.add(Sink.actorRef(testProbe.ref, StreamCompleted))
 
           arrivalsDiff.out ~> arrivalSplitsStageAsync.in0
           manifestsLive.out ~> arrivalSplitsStageAsync.in1
-          manifestsHistoric.out ~> arrivalSplitsStageAsync.in2
 
           arrivalSplitsStageAsync.out ~> sink
 
@@ -95,7 +91,7 @@ class ArrivalSplitsStageSpec extends CrunchTestLike {
         val scheduled = s"${arrivalDate}T$arrivalTime"
         val probe = TestProbe("arrival-splits")
 
-        val (arrivalDiffs, manifestsLiveInput, _) = TestableArrivalSplits(splitsCalculator, probe, () => SDate(scheduled)).run()
+        val (arrivalDiffs, manifestsLiveInput) = TestableArrivalSplits(splitsCalculator, probe, () => SDate(scheduled)).run()
         val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = scheduled, feedSources = Set(LiveFeedSource))
         val paxList = List(
           PassengerInfoGenerator.passengerInfoJson(nationality = Nationality("GBR"), documentType = DocumentType("P"), issuingCountry = Nationality("GBR")),

@@ -8,9 +8,7 @@ import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnap
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorMaterializer, KillSwitch, Materializer}
 import akka.util.Timeout
-import drt.shared.api.Arrival
 import drt.shared._
-import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import play.api.Configuration
@@ -150,17 +148,12 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   }
 
   def startSystem: () => List[KillSwitch] = () => {
-    val (manifestRequestsSource, bridge1Ks, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
-    val (manifestResponsesSource, bridge2Ks, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
-
     val cs = startCrunchSystem(
       initialPortState = None,
       initialForecastBaseArrivals = None,
       initialForecastArrivals = None,
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
-      manifestRequestsSink,
-      manifestResponsesSource,
       refreshArrivalsOnStart = false,
       refreshManifestsOnStart = false,
       startDeskRecs = startDeskRecs)
@@ -170,7 +163,7 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
     testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)
 
-    List(bridge1Ks, bridge2Ks) ++ cs.killSwitches
+    cs.killSwitches
   }
 }
 

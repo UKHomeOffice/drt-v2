@@ -29,18 +29,18 @@ class ArrivalSplitsGraphStage(name: String = "",
                               splitsCalculator: SplitsCalculator,
                               expireAfterMillis: Int,
                               now: () => SDateLike)
-  extends GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplitsDiff]] {
+  extends GraphStage[FanInShape2[ArrivalsDiff, List[BestAvailableManifest], FlightsWithSplitsDiff]] {
 
   val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
   val inManifestsLive: Inlet[List[BestAvailableManifest]] = Inlet[List[BestAvailableManifest]]("ManifestsLiveIn.in")
-  val inManifestsHistoric: Inlet[List[BestAvailableManifest]] = Inlet[List[BestAvailableManifest]]("ManifestsHistoricIn.in")
+//  val inManifestsHistoric: Inlet[List[BestAvailableManifest]] = Inlet[List[BestAvailableManifest]]("ManifestsHistoricIn.in")
   val outArrivalsWithSplits: Outlet[FlightsWithSplitsDiff] = Outlet[FlightsWithSplitsDiff]("FlightsWithSplitsOut.out")
 
   val stageName = "arrival-splits"
 
-  override val shape = new FanInShape3(inArrivalsDiff, inManifestsLive, inManifestsHistoric, outArrivalsWithSplits)
+  override val shape = new FanInShape2(inArrivalsDiff, inManifestsLive, outArrivalsWithSplits)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
     var flightsByFlightId: SortedMap[ArrivalKey, ApiFlightWithSplits] = SortedMap()
@@ -158,8 +158,6 @@ class ArrivalSplitsGraphStage(name: String = "",
 
     setHandler(inManifestsLive, InManifestsHandler(inManifestsLive))
 
-    setHandler(inManifestsHistoric, InManifestsHandler(inManifestsHistoric))
-
     def InManifestsHandler(inlet: Inlet[List[BestAvailableManifest]]): InHandler =
       new InHandler() {
         override def onPush(): Unit = {
@@ -182,7 +180,7 @@ class ArrivalSplitsGraphStage(name: String = "",
       }
 
     def pullAll(): Unit = {
-      List(inManifestsLive, inManifestsHistoric, inArrivalsDiff).foreach(in => if (!hasBeenPulled(in)) {
+      List(inManifestsLive, inArrivalsDiff).foreach(in => if (!hasBeenPulled(in)) {
         log.debug(s"Pulling ${in.toString}")
         pull(in)
       })

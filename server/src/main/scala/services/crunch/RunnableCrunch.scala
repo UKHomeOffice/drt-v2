@@ -33,14 +33,13 @@ object RunnableCrunch {
                                        liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                        liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                        manifestsLiveSource: Source[ManifestsFeedResponse, MS],
-                                       manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                                        shiftsSource: Source[ShiftAssignments, SS],
                                        fixedPointsSource: Source[FixedPointAssignments, SFP],
                                        staffMovementsSource: Source[Seq[StaffMovement], SMM],
                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
-                                       arrivalSplitsStage: GraphStage[FanInShape3[ArrivalsDiff, List[BestAvailableManifest], List[BestAvailableManifest], FlightsWithSplitsDiff]],
+                                       arrivalSplitsStage: GraphStage[FanInShape2[ArrivalsDiff, List[BestAvailableManifest], FlightsWithSplitsDiff]],
                                        staffGraphStage: StaffGraphStage,
 
                                        forecastArrivalsDiffStage: ArrivalsDiffingStage,
@@ -54,7 +53,6 @@ object RunnableCrunch {
                                        applyPaxDeltas: List[Arrival] => Future[List[Arrival]],
 
                                        manifestsActor: ActorRef,
-                                       manifestRequestsSink: Sink[List[Arrival], NotUsed],
 
                                        portStateActor: ActorRef,
                                        aggregatedArrivalsStateActor: ActorRef,
@@ -128,8 +126,6 @@ object RunnableCrunch {
           val liveBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
 
-          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
-
           val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2))
           val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplitsDiff](3))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
@@ -188,17 +184,11 @@ object RunnableCrunch {
 
           manifestsFanOut.out(1) ~> manifestsSink
 
-          manifestResponsesSource
-            .conflate[List[BestAvailableManifest]] { case (acc, incoming) =>
-                log.info(s"${acc.length + incoming.length} conflated historic manifests")
-                acc ++ incoming } ~> arrivalSplits.in2
-
           shiftsSourceAsync          ~> shiftsKillSwitchSync ~> staff.in0
           fixedPointsSourceAsync     ~> fixedPointsKillSwitchSync ~> staff.in1
           staffMovementsSourceAsync  ~> movementsKillSwitchSync ~> staff.in2
 
-          arrivals.out ~> arrivalsFanOut ~> arrivalSplits.in0
-                          arrivalsFanOut.map { _.toUpdate.values.toList } ~> manifestRequestsSink
+          arrivals.out ~> arrivalSplits.in0
 
           arrivalSplits.out ~> arrivalSplitsFanOut
                                arrivalSplitsFanOut ~> flightsWithSplitsSink

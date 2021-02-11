@@ -2,7 +2,6 @@ package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.GetFlights
-import actors.Sizes.oneMegaByte
 import actors.daily.PassengersActor
 import actors.queues.FlightsRouterActor
 import actors.queues.QueueLikeActor.UpdatedMillis
@@ -37,8 +36,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import manifests.ManifestLookupLike
-import manifests.actors.RegisteredArrivalsActor
-import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
 import play.api.Configuration
@@ -81,7 +78,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)), name = "alerts-actor")
   val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
-  val registeredArrivalsActor: ActorRef = system.actorOf(Props(new RegisteredArrivalsActor(oneMegaByte, Option(500), airportConfig.portCode, now, expireAfterMillis)), name = "registered-arrivals-actor")
   val crunchQueueActor: ActorRef
   val deploymentQueueActor: ActorRef
 
@@ -157,8 +153,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         initialForecastArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
-                        manifestRequestsSink: Sink[List[Arrival], NotUsed],
-                        manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                         refreshArrivalsOnStart: Boolean,
                         refreshManifestsOnStart: Boolean,
                         startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {
@@ -190,9 +184,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       useLegacyManifests = params.useLegacyManifests,
       manifestsLiveSource = voyageManifestsLiveSource,
-      manifestResponsesSource = manifestResponsesSource,
       voyageManifestsActor = manifestsRouterActor,
-      manifestRequestsSink = manifestRequestsSink,
       simulator = Optimiser.runSimulationOfWork,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(SortedMap()),

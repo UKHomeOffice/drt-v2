@@ -1,7 +1,6 @@
 package services.crunch
 
 import actors._
-import actors.acking.AckingReceiver.Ack
 import actors.daily.PassengersActor
 import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.queues.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
@@ -11,9 +10,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
 import drt.shared.{MilliTimes, PortCode, SDateLike, VoyageNumber}
-import graphs.SinkToSourceBridge
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
@@ -159,9 +156,6 @@ class TestDrtActor extends Actor {
       val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
 
-      val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
-      val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
-
       val aclPaxAdjustmentDays = 7
       val maxDaysToConsider = 14
 
@@ -198,9 +192,7 @@ class TestDrtActor extends Actor {
         useLegacyManifests = tc.useLegacyManifests,
         now = tc.now,
         manifestsLiveSource = manifestsSource,
-        manifestResponsesSource = manifestResponsesSource,
         voyageManifestsActor = manifestsRouterActor,
-        manifestRequestsSink = manifestRequestsSink,
         simulator = tc.simulator,
         initialPortState = tc.initialPortState,
         initialForecastBaseArrivals = tc.initialForecastBaseArrivals,
