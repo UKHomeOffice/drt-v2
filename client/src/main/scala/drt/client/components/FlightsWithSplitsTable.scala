@@ -140,7 +140,7 @@ object FlightsWithSplitsTable {
         )
         case (label, None) => <.th(label)
         case (label, Some(className)) if className == "status" => <.th(label, " ", arrivalStatusTooltip, ^.className := className)
-        case (label, Some(className)) if className == "gate-stand" => <.th(label, " ", gateOrStandTh(className), ^.className := className)
+        case (label, Some(className)) if className == "gate-stand" => <.th(label, " ", gateOrStandTh, ^.className := className)
         case (label, Some(className)) => <.th(label, ^.className := className)
       }
       .toTagMod
@@ -170,11 +170,11 @@ object FlightsWithSplitsTable {
     )
   }
 
-  private def gateOrStandTh(className: String) = {
+  private def gateOrStandTh = {
     <.span(
       TippyJSComponent(
         <.span("Hover over any gate / stand below to see the walk time. If it's not correct, contact us and we'll change it for you.").rawElement,
-        false, <.span(Icon.infoCircle)
+        interactive = false, <.span(Icon.infoCircle)
       )
     )
   }
@@ -248,7 +248,7 @@ object FlightTableRow {
           props.viewMode match {
             case vm: ViewDay if vm.isHistoric(SDate.now()) =>
               GetArrivalSourcesForPointInTime(props.viewMode.time.addHours(28), props.flightWithSplits.unique)
-            case vm: ViewPointInTime =>
+            case _: ViewPointInTime =>
               GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)
             case _ =>
               GetArrivalSources(props.flightWithSplits.unique)
@@ -337,7 +337,7 @@ object FlightTableRow {
     val gateOrStand = <.span(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}")
     val gateOrStandWithWalkTimes = TippyJSComponent(
       <.span(walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal)).rawElement,
-      true,
+      interactive = true,
       gateOrStand
     )
     val displayGatesOrStands = if (walkTimes.isEmpty) gateOrStand else <.span(gateOrStandWithWalkTimes)
