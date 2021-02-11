@@ -270,16 +270,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     crunchQueueActor ! UpdatedMillis(daysToReCrunch)
   }
 
-//  def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals],
-//                          manifestResponsesSink: Sink[List[BestAvailableManifest], NotUsed],
-//                          manifestRequestsSource: Source[List[Arrival], NotUsed],
-//                          lookupRefreshDue: MillisSinceEpoch => Boolean): UniqueKillSwitch = {
-//    val batchSize = config.get[Int]("crunch.manifests.lookup-batch-size")
-//    val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, batchSize, expireAfterMillis, maybeRegisteredArrivals, 1000, lookupRefreshDue)
-//
-//    ManifestsGraph(manifestRequestsSource, batchStage, manifestResponsesSink, registeredArrivalsActor, airportConfig.portCode, manifestLookupService).run
-//  }
-
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {
     if (airportConfig.feedPortCode == PortCode("LHR")) params.maybeBlackJackUrl.map(csvUrl => {
       val requestIntervalMillis = 5 * MilliTimes.oneMinuteMillis

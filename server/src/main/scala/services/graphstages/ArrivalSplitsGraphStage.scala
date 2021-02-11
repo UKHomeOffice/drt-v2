@@ -35,7 +35,6 @@ class ArrivalSplitsGraphStage(name: String = "",
 
   val inArrivalsDiff: Inlet[ArrivalsDiff] = Inlet[ArrivalsDiff]("ArrivalsDiffIn.in")
   val inManifestsLive: Inlet[List[BestAvailableManifest]] = Inlet[List[BestAvailableManifest]]("ManifestsLiveIn.in")
-//  val inManifestsHistoric: Inlet[List[BestAvailableManifest]] = Inlet[List[BestAvailableManifest]]("ManifestsHistoricIn.in")
   val outArrivalsWithSplits: Outlet[FlightsWithSplitsDiff] = Outlet[FlightsWithSplitsDiff]("FlightsWithSplitsOut.out")
 
   val stageName = "arrival-splits"
