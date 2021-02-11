@@ -48,8 +48,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     flightUpdatesActor,
     now,
     queues,
-    InMemoryStreamingJournal)
-{
+    InMemoryStreamingJournal) {
 
   var state: PortState = PortState.empty
 
@@ -65,14 +64,19 @@ class PartitionedPortStateTestActor(probe: ActorRef,
   override val askThenAck: AckingAsker = (actor: ActorRef, message: Any, replyTo: ActorRef) => {
     actor.ask(message).foreach { _ =>
       message match {
-        case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.nonEmpty =>
-
+        case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.updateMinutes.nonEmpty =>
           actor.ask(GetStateForDateRange(flightsWithSplitsDiff.updateMinutes.min, flightsWithSplitsDiff.updateMinutes.max)).mapTo[Source[FlightsWithSplits, NotUsed]].foreach {
-             _ =>
+            _ =>
               val updatedFlights = (state.flights -- flightsWithSplitsDiff.arrivalsToRemove) ++ flightsWithSplitsDiff.flightsToUpdate.map(fws => (fws.unique, fws))
               state = state.copy(flights = updatedFlights)
               sendStateToProbe()
           }
+          
+        case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.nonEmpty =>
+          val updatedFlights = (state.flights -- flightsWithSplitsDiff.arrivalsToRemove) ++ flightsWithSplitsDiff.flightsToUpdate.map(fws => (fws.unique, fws))
+          state = state.copy(flights = updatedFlights)
+          sendStateToProbe()
+
         case mc: MinutesContainer[_, _] =>
           val minuteMillis = mc.minutes.map(_.minute)
           mc.minutes.headOption match {
