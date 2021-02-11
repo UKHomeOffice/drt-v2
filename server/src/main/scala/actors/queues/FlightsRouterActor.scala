@@ -74,7 +74,8 @@ object FlightsRouterActor {
       }
   }
 
-  def forwardRequestAndKillActor(killActor: ActorRef)(implicit ec: ExecutionContext, timeout: Timeout): (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] =
+  def forwardRequestAndKillActor(killActor: ActorRef)
+                                (implicit ec: ExecutionContext, timeout: Timeout): (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] =
     (tempActor: ActorRef, replyTo: ActorRef, message: DateRangeLike) => {
       killActor
         .ask(RequestAndTerminate(tempActor, message))
@@ -83,7 +84,8 @@ object FlightsRouterActor {
         .pipeTo(replyTo)
     }
 
-  def runAndCombine(eventualSource: Future[Source[FlightsWithSplits, NotUsed]])(implicit mat: ActorMaterializer, ec: ExecutionContext): Future[FlightsWithSplits] = eventualSource
+  def runAndCombine(eventualSource: Future[Source[FlightsWithSplits, NotUsed]])
+                   (implicit mat: ActorMaterializer, ec: ExecutionContext): Future[FlightsWithSplits] = eventualSource
     .flatMap(source => source
       .log(getClass.getName)
       .runWith(Sink.reduce[FlightsWithSplits](_ ++ _))

@@ -144,7 +144,7 @@ object PartitionedPortStateActor {
                         (implicit ec: ExecutionContext, mat: ActorMaterializer): Future[PortState] = {
     val eventualFlights = flightsStream
       .flatMap(source => source
-        .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
+        .log(getClass.getName)
         .runWith(Sink.seq).map(_.fold(FlightsWithSplits.empty)(_ ++ _)))
 
     stateAsTuple(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).map {
