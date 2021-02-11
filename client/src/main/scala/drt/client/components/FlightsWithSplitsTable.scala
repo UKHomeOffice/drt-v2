@@ -140,6 +140,7 @@ object FlightsWithSplitsTable {
         )
         case (label, None) => <.th(label)
         case (label, Some(className)) if className == "status" => <.th(label, " ", arrivalStatusTooltip, ^.className := className)
+        case (label, Some(className)) if className == "gate-stand" => <.th(label, " ", gateOrStandTh(className), ^.className := className)
         case (label, Some(className)) => <.th(label, ^.className := className)
       }
       .toTagMod
@@ -166,6 +167,15 @@ object FlightsWithSplitsTable {
           queueDisplayNames
         )
       }
+    )
+  }
+
+  private def gateOrStandTh(className: String) = {
+    <.span(
+      TippyJSComponent(
+        <.span("Hover over any gate / stand below to see the walk time. If it's not correct, contact us and we'll change it for you.").rawElement,
+        false, <.span(Icon.infoCircle)
+      )
     )
   }
 }
