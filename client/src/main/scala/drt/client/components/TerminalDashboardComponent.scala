@@ -12,7 +12,7 @@ import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.PassengerInfoSummary
+import drt.shared.api.{PassengerInfoSummary, WalkTime, WalkTimes}
 import drt.shared.dates.UtcDate
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -32,7 +32,8 @@ object TerminalDashboardComponent {
                     router: RouterCtl[Loc],
                     portState: PortState,
                     passengerInfoSummary: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
-                    featureFlags: Pot[Map[String, Boolean]]
+                    featureFlags: Pot[Map[String, Boolean]],
+                    walkTimes: Pot[WalkTimes],
                   )
 
   val defaultSlotSize = 120
@@ -76,7 +77,7 @@ object TerminalDashboardComponent {
             <.div(^.className := "dashboard-arrivals-popup",
               <.h2("Arrivals"),
               <.div(^.className := "terminal-dashboard__arrivals_popup_table",
-                p.featureFlags.renderReady(_ =>
+                p.walkTimes.renderReady(walkTimes =>
                   FlightsWithSplitsTable.ArrivalsTable(
                     None,
                     originMapper,
@@ -90,7 +91,9 @@ object TerminalDashboardComponent {
                       hasArrivalSourcesAccess = false,
                       ViewLive,
                       PcpPax.bestPaxEstimateWithApi,
-                      hasTransfer = p.airportConfig.hasTransfer
+                      walkTimes,
+                      p.airportConfig.defaultWalkTimeMillis(p.terminalPageTabLoc.terminal),
+                      hasTransfer = p.airportConfig.hasTransfer,
                     )
                   ))),
               p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
@@ -171,7 +174,8 @@ object TerminalDashboardComponent {
             portState: PortState,
             passengerInfoSummaryByDay: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
             router: RouterCtl[Loc],
-            featureFlags: Pot[Map[String, Boolean]]
+            featureFlags: Pot[Map[String, Boolean]],
+            potWalktTimes: Pot[WalkTimes]
            ): VdomElement =
     component(Props(
       terminalPageTabLoc,
@@ -179,7 +183,8 @@ object TerminalDashboardComponent {
       router,
       portState,
       passengerInfoSummaryByDay,
-      featureFlags
+      featureFlags,
+      potWalktTimes
     ))
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {

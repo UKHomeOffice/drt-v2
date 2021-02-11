@@ -9,8 +9,9 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
+import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.PassengerInfoSummary
+import drt.shared.api.{PassengerInfoSummary, WalkTime, WalkTimes}
 import drt.shared.dates.UtcDate
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -43,7 +44,8 @@ object TerminalComponent {
                             minuteTicker: Int,
                             maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState],
                             featureFlags: Pot[Map[String, Boolean]],
-                            arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])]
+                            arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
+                            potWalkTimes: Pot[WalkTimes]
                           ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Terminal")
@@ -64,10 +66,12 @@ object TerminalComponent {
         model.minuteTicker,
         model.maybeStaffDeploymentAdjustmentPopoverState,
         model.featureFlags,
-        model.arrivalSources
+        model.arrivalSources,
+        model.walkTimes
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
+
 
       <.div(
         dialogueStateRCP(dialogueStateMP => <.div(dialogueStateMP().map(dialogueState => StaffAdjustmentDialogue(dialogueState)()).whenDefined)),
@@ -113,7 +117,8 @@ object TerminalComponent {
                 loggedInUser,
                 model.minuteTicker,
                 model.featureFlags,
-                model.arrivalSources
+                model.arrivalSources,
+                model.potWalkTimes,
               )
               <.div(
                 <.ul(^.className := "nav nav-tabs",
@@ -175,7 +180,8 @@ object TerminalComponent {
                             ps,
                             paxInfo,
                             props.router,
-                            model.featureFlags
+                            model.featureFlags,
+                            model.potWalkTimes,
                           )
                         }))
                     } else ""
