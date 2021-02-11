@@ -131,15 +131,10 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestAggregatedArrivalsActor() extends {
-    private val portCode = PortCode("TEST")
-  } with AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables)) {
-    def reset: Receive = {
-      case ResetData =>
-        sender() ! Ack
+  class MockAggregatedArrivalsActor extends Actor {
+    override def receive: Receive = {
+      case _ => sender() ! Ack
     }
-
-    override def receive: Receive = reset orElse super.receive
   }
 
   class TestCrunchQueueActor(now: () => SDateLike, journalType: StreamingJournalLike, crunchOffsetMinutes: Int, durationMinutes: Int)

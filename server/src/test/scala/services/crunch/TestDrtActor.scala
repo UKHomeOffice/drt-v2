@@ -1,6 +1,7 @@
 package services.crunch
 
 import actors._
+import actors.acking.AckingReceiver.Ack
 import actors.daily.PassengersActor
 import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.queues.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
@@ -23,6 +24,7 @@ import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.graphstages.Crunch
+import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
 
 import scala.collection.immutable.Map
@@ -170,7 +172,7 @@ class TestDrtActor extends Actor {
       }
 
       val aggregatedArrivalsActor = tc.maybeAggregatedArrivalsActor match {
-        case None => TestDefaults.testProbe("aggregated-arrivals").ref
+        case None => system.actorOf(Props(new MockAggregatedArrivalsActor))
         case Some(actor) => actor
       }
 

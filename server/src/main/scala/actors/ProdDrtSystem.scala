@@ -14,6 +14,7 @@ import drt.shared.Terminals._
 import drt.shared._
 import drt.shared.api.Arrival
 import graphs.SinkToSourceBridge
+import manifests.ManifestLookup
 import manifests.actors.RegisteredArrivals
 import manifests.passengers.{BestAvailableManifest, S3ManifestPoller}
 import play.api.Configuration
@@ -22,7 +23,7 @@ import server.feeds.ManifestsFeedResponse
 import services._
 import services.crunch.CrunchSystem
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
-import slickdb.{ArrivalTable, Tables}
+import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 
@@ -66,6 +67,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "crunch-queue-actor")
   override val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "staff-queue-actor")
 
+  override val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
   override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 

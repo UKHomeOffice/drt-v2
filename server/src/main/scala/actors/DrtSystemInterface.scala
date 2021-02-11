@@ -36,7 +36,7 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
-import manifests.ManifestLookup
+import manifests.{ManifestLookup, ManifestLookupLike}
 import manifests.actors.{RegisteredArrivals, RegisteredArrivalsActor}
 import manifests.graph.{BatchStage, ManifestsGraph}
 import manifests.passengers.BestAvailableManifest
@@ -72,7 +72,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.gates_csv_url"))
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(ConfigFactory.load.getString("walk_times.stands_csv_url"))
-  val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
+  val manifestLookupService: ManifestLookupLike
 
   val config: Configuration
   val airportConfig: AirportConfig
