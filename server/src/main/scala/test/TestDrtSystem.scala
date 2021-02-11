@@ -8,12 +8,11 @@ import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnap
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorMaterializer, KillSwitch, Materializer}
 import akka.util.Timeout
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.Arrival
-import drt.shared.{AirportConfig, MilliTimes, PortCode, SDateLike, VoyageNumber}
+import drt.shared._
 import graphs.SinkToSourceBridge
-import manifests.{ManifestLookup, ManifestLookupLike, UniqueArrivalKey}
 import manifests.passengers.BestAvailableManifest
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.ArrivalsFeedResponse
@@ -166,15 +165,12 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
       refreshManifestsOnStart = false,
       startDeskRecs = startDeskRecs)
 
-    val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
-    val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
-
     subscribeStaffingActors(cs)
     startScheduledFeedImports(cs)
 
     testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)
 
-    List(bridge1Ks, bridge2Ks, manifestKillSwitch) ++ cs.killSwitches
+    List(bridge1Ks, bridge2Ks) ++ cs.killSwitches
   }
 }
 

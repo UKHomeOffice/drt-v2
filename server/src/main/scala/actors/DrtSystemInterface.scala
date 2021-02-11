@@ -36,9 +36,8 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
-import manifests.{ManifestLookup, ManifestLookupLike}
-import manifests.actors.{RegisteredArrivals, RegisteredArrivalsActor}
-import manifests.graph.{BatchStage, ManifestsGraph}
+import manifests.ManifestLookupLike
+import manifests.actors.RegisteredArrivalsActor
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
@@ -50,11 +49,9 @@ import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.RunnableOptimisation.getClass
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.Crunch
-import slickdb.VoyageManifestPassengerInfoTable
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
@@ -281,15 +278,15 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     crunchQueueActor ! UpdatedMillis(daysToReCrunch)
   }
 
-  def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals],
-                          manifestResponsesSink: Sink[List[BestAvailableManifest], NotUsed],
-                          manifestRequestsSource: Source[List[Arrival], NotUsed],
-                          lookupRefreshDue: MillisSinceEpoch => Boolean): UniqueKillSwitch = {
-    val batchSize = config.get[Int]("crunch.manifests.lookup-batch-size")
-    val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, batchSize, expireAfterMillis, maybeRegisteredArrivals, 1000, lookupRefreshDue)
-
-    ManifestsGraph(manifestRequestsSource, batchStage, manifestResponsesSink, registeredArrivalsActor, airportConfig.portCode, manifestLookupService).run
-  }
+//  def startManifestsGraph(maybeRegisteredArrivals: Option[RegisteredArrivals],
+//                          manifestResponsesSink: Sink[List[BestAvailableManifest], NotUsed],
+//                          manifestRequestsSource: Source[List[Arrival], NotUsed],
+//                          lookupRefreshDue: MillisSinceEpoch => Boolean): UniqueKillSwitch = {
+//    val batchSize = config.get[Int]("crunch.manifests.lookup-batch-size")
+//    val batchStage: BatchStage = new BatchStage(now, Crunch.isDueLookup, batchSize, expireAfterMillis, maybeRegisteredArrivals, 1000, lookupRefreshDue)
+//
+//    ManifestsGraph(manifestRequestsSource, batchStage, manifestResponsesSink, registeredArrivalsActor, airportConfig.portCode, manifestLookupService).run
+//  }
 
   def startScheduledFeedImports(crunchInputs: CrunchSystem[Cancellable]): Unit = {
     if (airportConfig.feedPortCode == PortCode("LHR")) params.maybeBlackJackUrl.map(csvUrl => {
