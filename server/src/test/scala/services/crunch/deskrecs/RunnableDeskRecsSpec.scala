@@ -5,11 +5,12 @@ import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, Stream
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
+import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.PaxTypes.{EeaMachineReadable, VisaNational}
-import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
+import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
@@ -19,7 +20,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
 import server.feeds.ArrivalsFeedSuccess
 import services.crunch.VoyageManifestGenerator.{euPassport, visa}
-import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
+import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.OptimiserMocks.{mockHistoricManifestsProvider, mockHistoricManifestsProviderNoop, mockLiveManifestsProviderNoop}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
@@ -28,10 +29,11 @@ import services.graphstages.CrunchMocks
 import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, Seq, SortedMap}
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
 
 
-class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long = 0L) extends Actor {
+class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long) extends Actor {
   var flightsToReturn: List[ApiFlightWithSplits] = List()
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -48,9 +50,12 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long = 0L) exten
       probe.ref ! StreamFailure
 
     case getFlights: GetFlights =>
-      Thread.sleep(responseDelayMillis)
-      sender() ! Source(List(FlightsWithSplits(flightsToReturn)))
-      probe.ref ! getFlights
+      implicit val ec: ExecutionContextExecutor = context.dispatcher
+      val replyTo = sender()
+      context.system.scheduler.scheduleOnce(responseDelayMillis milliseconds) {
+        replyTo ! Source(List(FlightsWithSplits(flightsToReturn)))
+        probe.ref ! getFlights
+      }
 
     case drm: DeskRecMinutes =>
       sender() ! Ack
@@ -68,8 +73,8 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long = 0L) exten
 
 class RunnableDeskRecsSpec extends CrunchTestLike {
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
-  val noDelay: Long = 0L
-  val longDelay = 500L
+  val noDelay = 10L
+  val longDelay = 250L
   val historicSplits: Splits = Splits(Set(
     ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 50, None, None),
     ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 50, None, None)),
@@ -88,6 +93,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val splitsCalc = SplitsCalculator(paxAllocation, airportConfig.terminalPaxSplits, AdjustmentsNoop)
     val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, pcpPaxCalcFn)
 
+    implicit val timeout: Timeout = new Timeout(50 milliseconds)
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
       OptimisationProviders.arrivalsProvider(mockPortStateActor),
       mockLiveManifestsProviderNoop,
@@ -135,17 +141,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val midnight20190101 = SDate("2019-01-01T00:00")
     daysQueueSource.offer(crunchRequest(midnight20190101))
 
-    val expectedStart = midnight20190101.millisSinceEpoch
-    val expectedEnd = midnight20190101.addMinutes(30).millisSinceEpoch
-
-    portStateProbe.fishForMessage(1 second) {
-      case GetFlights(start, end) => start == expectedStart && end == expectedEnd
-    }
-    portStateProbe.fishForMessage(1 second) {
-      case _: DeskRecMinutes => true
-    }
-
-    portStateProbe.expectNoMessage(500 milliseconds)
+    portStateProbe.expectNoMessage(200 milliseconds)
 
     success
   }

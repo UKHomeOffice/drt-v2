@@ -20,6 +20,8 @@ message CrunchRequestMessage {
     optional int32 year = 1;
     optional int32 month = 2;
     optional int32 day = 3;
+    optional int32 offsetMinutes = 4;
+    optional int32 durationMinutes = 5;
 }
 
 message RemoveCrunchRequestMessage {

@@ -1,6 +1,7 @@
 package actors.queues
 
 import actors.queues.QueueLikeActor.{ReadyToEmit, Tick, UpdatedMillis}
+import actors.serializers.CrunchRequestMessageConversion.{crunchRequestToMessage, crunchRequestsFromMessages, removeCrunchRequestMessage}
 import actors.{RecoveryActorLike, SetCrunchRequestQueue}
 import akka.actor.Cancellable
 import akka.persistence._
@@ -10,7 +11,7 @@ import drt.shared.SDateLike
 import drt.shared.dates.LocalDate
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchRequestMessage, CrunchRequestsMessage, DaysMessage, RemoveCrunchRequestMessage, RemoveDayMessage}
+import server.protobuf.messages.CrunchState.{CrunchRequestsMessage, DaysMessage, RemoveCrunchRequestMessage, RemoveDayMessage}
 import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 
@@ -51,41 +52,31 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
     super.postStop()
   }
 
+  def crunchRequestFromMillis(millis: MillisSinceEpoch): CrunchRequest =
+    CrunchRequest(SDate(millis).toLocalDate, crunchOffsetMinutes, durationMinutes)
+
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
       queuedDays = queuedDays ++ crunchRequestsFromMessages(requests)
+    case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day)) =>
+      queuedDays = queuedDays.filterNot(cr => cr.localDate == LocalDate(year, month, day))
+
     case DaysMessage(days) => queuedDays = queuedDays ++ days.map(crunchRequestFromMillis)
     case RemoveDayMessage(Some(day)) => queuedDays = queuedDays - crunchRequestFromMillis(day)
-  }
-
-  private def crunchRequestsFromMessages(requests: Seq[CrunchRequestMessage]): Seq[CrunchRequest] = requests.map {
-    case CrunchRequestMessage(Some(year), Some(month), Some(day)) =>
-      crunchRequestFromMessage(year, month, day)
-  }
-
-  private def crunchRequestFromMessage(year: Int, month: Int, day: Int): CrunchRequest = {
-    CrunchRequest(LocalDate(year, month, day), crunchOffsetMinutes, durationMinutes)
-  }
-
-  private def crunchRequestFromMillis(millis: MillisSinceEpoch): CrunchRequest = {
-    CrunchRequest(SDate(millis).toLocalDate, crunchOffsetMinutes, durationMinutes)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
       log.info(s"Restoring queue to ${requests.size} days")
       queuedDays = crunchRequestsFromMessages(requests).to[SortedSet]
+
     case DaysMessage(days) =>
       log.info(s"Restoring queue to ${days.size} days")
       queuedDays = days.map(crunchRequestFromMillis).to[SortedSet]
   }
 
-  override def stateToMessage: GeneratedMessage = CrunchRequestsMessage(queuedDays.map(cr =>
-    crunchRequestToMessage(cr)).toList)
-
-  private def crunchRequestToMessage(cr: CrunchRequest) = {
-    CrunchRequestMessage(Option(cr.localDate.year), Option(cr.localDate.month), Option(cr.localDate.day))
-  }
+  override def stateToMessage: GeneratedMessage =
+    CrunchRequestsMessage(queuedDays.map(crunchRequestToMessage).toList)
 
   override def receiveCommand: Receive = {
     case Tick =>
@@ -103,8 +94,8 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
       emitNextDayIfReady()
 
     case UpdatedMillis(millis) =>
-      log.info(s"Received ${millis.size} UpdatedMillis")
-      val requests = millis.map(CrunchRequest(_, crunchOffsetMinutes, durationMinutes))
+      val requests = millis.map(CrunchRequest(_, crunchOffsetMinutes, durationMinutes)).toSet
+      log.info(s"Received UpdatedMillis covering ${requests.size}")
       updateState(requests)
       emitNextDayIfReady()
       persistAndMaybeSnapshot(CrunchRequestsMessage(requests.map(crunchRequestToMessage).toList))
@@ -133,12 +124,6 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
       case None =>
         log.debug(s"Nothing in the queue to emit")
     }
-
-  private def removeCrunchRequestMessage(request: CrunchRequest) = {
-    val localDate = request.localDate
-    val message = RemoveCrunchRequestMessage(Option(localDate.year), Option(localDate.month), Option(localDate.day))
-    message
-  }
 
   def updateState(days: Iterable[CrunchRequest]): Unit = {
     log.info(s"Adding ${days.size} days to queue. Queue now contains ${queuedDays.size} days")
