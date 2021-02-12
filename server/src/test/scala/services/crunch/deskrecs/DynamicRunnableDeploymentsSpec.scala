@@ -58,7 +58,7 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
   }
 
   "Given a mock workload provider returning no workloads" >> {
-    "When I ask for deployments I should see 1440 minutes for each queue with zero deployments" >> {
+    "When I ask for deployments I should see 1440 minutes for each queue" >> {
       val expected: PartialFunction[Any, Boolean] = {
         case SimulationMinutes(minutes) =>
           val byQueue: Map[Queue, Int] = minutes.groupBy(_.queue).mapValues(_.size)
