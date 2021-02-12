@@ -18,6 +18,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 
 import scala.collection.immutable.Map
 import scala.scalajs.js.URIUtils
@@ -34,6 +35,7 @@ object TerminalDashboardComponent {
                     passengerInfoSummary: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
                     featureFlags: Pot[Map[String, Boolean]],
                     walkTimes: Pot[WalkTimes],
+                    loggedInUser: LoggedInUser
                   )
 
   val defaultSlotSize = 120
@@ -88,7 +90,7 @@ object TerminalDashboardComponent {
                       p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
                       p.airportConfig.hasEstChox,
                       None,
-                      hasArrivalSourcesAccess = false,
+                      p.loggedInUser,
                       ViewLive,
                       PcpPax.bestPaxEstimateWithApi,
                       walkTimes,
@@ -175,7 +177,8 @@ object TerminalDashboardComponent {
             passengerInfoSummaryByDay: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
             router: RouterCtl[Loc],
             featureFlags: Pot[Map[String, Boolean]],
-            potWalktTimes: Pot[WalkTimes]
+            potWalktTimes: Pot[WalkTimes],
+            loggedInUser: LoggedInUser,
            ): VdomElement =
     component(Props(
       terminalPageTabLoc,
@@ -184,7 +187,8 @@ object TerminalDashboardComponent {
       portState,
       passengerInfoSummaryByDay,
       featureFlags,
-      potWalktTimes
+      potWalktTimes,
+      loggedInUser
     ))
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {

@@ -182,6 +182,7 @@ object TerminalComponent {
                             props.router,
                             model.featureFlags,
                             model.potWalkTimes,
+                            loggedInUser
                           )
                         }))
                     } else ""
