@@ -20,9 +20,9 @@ import scala.collection.immutable.Map
 import scala.concurrent.duration._
 
 
-class MockProviderActor extends Actor {
+class MockProviderActor(minutes: MinutesContainer[CrunchMinute, TQM]) extends Actor {
   override def receive: Receive = {
-    case _: GetStateForDateRange => sender() ! MinutesContainer.empty[CrunchMinute, TQM]
+    case _: GetStateForDateRange => sender() ! minutes
     case msg => println(s"got $msg")
   }
 }
@@ -38,12 +38,13 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
   val desksAndWaitsProvider: PortDesksAndWaitsProvider =
     PortDesksAndWaitsProvider(airportConfig, mockCrunch, pcpPaxCalcFn)
 
-  def setupGraphAndCheckQueuePax(expectedQueuePax: PartialFunction[Any, Boolean]): Any = {
+  def setupGraphAndCheckQueuePax(minutes: MinutesContainer[CrunchMinute, TQM],
+                                 expectedQueuePax: PartialFunction[Any, Boolean]): Any = {
     val probe = TestProbe()
 
     val request = CrunchRequest(SDate("2021-05-01").toLocalDate, 0, 1440)
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
-    val mockProvider = system.actorOf(Props(new MockProviderActor))
+    val mockProvider = system.actorOf(Props(new MockProviderActor(minutes)))
 
     val deskRecs = DynamicRunnableDeployments.crunchRequestsToDeployments(
       OptimisationProviders.loadsProvider(mockProvider),
@@ -61,10 +62,12 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
     "When I ask for deployments I should see 1440 minutes for each queue" >> {
       val expected: PartialFunction[Any, Boolean] = {
         case SimulationMinutes(minutes) =>
-          val byQueue: Map[Queue, Int] = minutes.groupBy(_.queue).mapValues(_.size)
-          byQueue === Map(EeaDesk -> 1440, NonEeaDesk -> 1440, EGate -> 1440)
+          val minuteCountByQueue: Map[Queue, Int] = minutes.groupBy(_.queue).mapValues(_.size)
+          minuteCountByQueue === Map(EeaDesk -> 1440, NonEeaDesk -> 1440, EGate -> 1440)
       }
-      setupGraphAndCheckQueuePax(expectedQueuePax = expected)
+      val noLoads = MinutesContainer.empty[CrunchMinute, TQM]
+
+      setupGraphAndCheckQueuePax(minutes = noLoads, expectedQueuePax = expected)
 
       success
     }
