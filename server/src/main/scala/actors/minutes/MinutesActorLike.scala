@@ -2,7 +2,6 @@ package actors.minutes
 
 import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForDateRange, PointInTimeQuery, TerminalRequest}
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.migration.{CrunchMinutesMessageMigration, StaffMinutesMessageMigration}
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef}
@@ -16,7 +15,6 @@ import drt.shared.dates.UtcDate
 import drt.shared.{SDateLike, Terminals, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.SDate
 import services.graphstages.Crunch
 
@@ -31,10 +29,7 @@ object MinutesActorLike {
   type ManifestLookup = (UtcDate, Option[MillisSinceEpoch]) => Future[VoyageManifests]
 
   type MinutesUpdate[A, B <: WithTimeAccessor] = (Terminals.Terminal, SDateLike, MinutesContainer[A, B]) => Future[MinutesContainer[A, B]]
-  type CrunchMinutesMigrationUpdate = (String, UtcDate, CrunchMinutesMessageMigration) => Future[Any]
-  type StaffMinutesMigrationUpdate = (String, UtcDate, StaffMinutesMessageMigration) => Future[Any]
   type FlightsUpdate = (Terminals.Terminal, UtcDate, FlightsWithSplitsDiff) => Future[Seq[MillisSinceEpoch]]
-  type FlightsMigrationUpdate = (String, UtcDate, FlightsWithSplitsDiffMessage) => Future[Any]
   type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[Any]
 
   case object ProcessNextUpdateRequest
