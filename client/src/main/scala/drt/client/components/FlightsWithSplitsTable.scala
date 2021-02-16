@@ -20,6 +20,8 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, Span, TableSection}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, RedListFeature}
 
 import scala.collection.immutable.Map
 
@@ -31,7 +33,7 @@ object FlightsWithSplitsTable {
                    passengerInfoSummaryByDay: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
                    queueOrder: Seq[Queue], hasEstChox: Boolean,
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                   hasArrivalSourcesAccess: Boolean,
+                   loggedInUser: LoggedInUser,
                    viewMode: ViewMode,
                    pcpPaxFn: Arrival => Int,
                    walkTimes: WalkTimes,
@@ -59,7 +61,7 @@ object FlightsWithSplitsTable {
         val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
         val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
         <.div(
-          (props.hasArrivalSourcesAccess, props.arrivalSources) match {
+          (props.loggedInUser.hasRole(ArrivalSource), props.arrivalSources) match {
             case (true, Some((_, sourcesPot))) =>
               <.div(^.tabIndex := 0,
                 <.div(^.className := "popover-overlay", ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))),
@@ -98,7 +100,7 @@ object FlightsWithSplitsTable {
                     splitsGraphComponent = splitsGraphComponent,
                     splitsQueueOrder = props.queueOrder,
                     hasEstChox = props.hasEstChox,
-                    props.hasArrivalSourcesAccess,
+                    props.loggedInUser,
                     props.viewMode,
                     props.walkTimes,
                     props.defaultWalkTime,
@@ -120,6 +122,7 @@ object FlightsWithSplitsTable {
       ("Flight", None),
       ("Origin", None),
       ("Country", Option("country")),
+      ("Red List", None),
       ("Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
       ("Sch", None),
@@ -133,6 +136,9 @@ object FlightsWithSplitsTable {
     val portColumnThs = columns
       .filter {
         case (label, _) => label != "Est Chox" || props.hasEstChox
+      }
+      .filter {
+        case (label, _) => label != "Red List" || props.loggedInUser.hasRole(RedListFeature)
       }
       .map {
         case (label, None) if label == "Flight" => <.th(
@@ -199,7 +205,7 @@ object FlightTableRow {
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean,
-                   hasArrivalSourcesAccess: Boolean,
+                   loggedInUser: LoggedInUser,
                    viewMode: ViewMode,
                    walkTimes: WalkTimes,
                    defaultWalkTime: Long,
@@ -240,25 +246,30 @@ object FlightTableRow {
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
         .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits, props.pcpPaxFn).getOrElse(Map())
 
-      val flightCodeClass = if (props.hasArrivalSourcesAccess) "arrivals__table__flight-code arrivals__table__flight-code--clickable" else "arrivals__table__flight-code"
+      val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
+        "arrivals__table__flight-code arrivals__table__flight-code--clickable"
+      else
+        "arrivals__table__flight-code"
 
-      val flightCodeElement = if (props.hasArrivalSourcesAccess) <.span(
-        ^.cls := "arrivals__table__flight-code-value",
-        ^.onClick --> Callback(SPACircuit.dispatch {
-          props.viewMode match {
-            case vm: ViewDay if vm.isHistoric(SDate.now()) =>
-              GetArrivalSourcesForPointInTime(props.viewMode.time.addHours(28), props.flightWithSplits.unique)
-            case vm: ViewPointInTime =>
-              GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)
-            case _ =>
-              GetArrivalSources(props.flightWithSplits.unique)
-          }
-        }),
-        allCodes.mkString(" - "))
-      else <.span(
-        ^.cls := "arrivals__table__flight-code-value",
-        allCodes.mkString(" - ")
-      )
+      val flightCodeElement = if (props.loggedInUser.hasRole(ArrivalSource))
+        <.span(
+          ^.cls := "arrivals__table__flight-code-value",
+          ^.onClick --> Callback(SPACircuit.dispatch {
+            props.viewMode match {
+              case vm: ViewDay if vm.isHistoric(SDate.now()) =>
+                GetArrivalSourcesForPointInTime(props.viewMode.time.addHours(28), props.flightWithSplits.unique)
+              case vm: ViewPointInTime =>
+                GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)
+              case _ =>
+                GetArrivalSources(props.flightWithSplits.unique)
+            }
+          }),
+          allCodes.mkString(" - "))
+      else
+        <.span(
+          ^.cls := "arrivals__table__flight-code-value",
+          allCodes.mkString(" - ")
+        )
 
       val firstCells = List[TagMod](
 
@@ -282,6 +293,11 @@ object FlightTableRow {
             proxy().render(ai => <.span(ai.country))
           )
         }),
+        if (props.loggedInUser.hasRole(RedListFeature))
+          <.td(props.maybePassengerInfoSummary.map(
+            info => NationalityFinderComponent(NationalityFinderComponent.Props(NationalityFinderComponent.redListNats, info))))
+        else
+          EmptyVdom,
         <.td(gateOrStand(props.walkTimes, props.defaultWalkTime, flight)),
         <.td(flight.Status.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),

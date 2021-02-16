@@ -22,14 +22,17 @@
 .ddm() when (@dropDown) {
   > .dropdown-menu {
     background-color: @bgDefault;
+
     > li {
       > a {
         color: @colDefault;
+
         &:hover, &:focus {
           color: @colHighlight;
           background-color: @bgHighlight;
         }
       }
+
       &.divider {
         background-color: @bgHighlight;
       }
@@ -43,45 +46,56 @@
   border-radius: 0px;
   border-left: 0px;
   border-right: 0px;
+
   .navbar-brand {
     color: @colDefault;
+
     &:hover, &:focus {
       color: @colHighlight;
     }
   }
+
   .navbar-text {
     color: @colDefault;
   }
+
   .navbar-nav {
     > li {
       > a {
         color: @colDefault;
+
         &:hover, &:focus {
           color: @colHighlight;
         }
       }
+
       > span {
-          > a {
-            color: @colDefault;
-            &:hover, &:focus {
-              color: @colHighlight;
-              text-decoration: none;
-              cursor: pointer;
-            }
+        > a {
+          color: @colDefault;
+
+          &:hover, &:focus {
+            color: @colHighlight;
+            text-decoration: none;
+            cursor: pointer;
           }
+        }
       }
+
       .ddm;
+
       > span {
         padding: 15px;
         display: block;
       }
     }
+
     > .active {
       > a, > a:hover, > a:focus {
         color: @colHighlight;
         background-color: @bgHighlight;
       }
     }
+
     > .open {
       > a, > a:hover, > a:focus {
         color: @colHighlight;
@@ -89,21 +103,27 @@
       }
     }
   }
+
   .navbar-toggle {
     border-color: @bgHighlight;
+
     &:hover, &:focus {
       background-color: @bgHighlight;
     }
+
     .icon-bar {
       background-color: @colDefault;
     }
   }
+
   .navbar-collapse,
   .navbar-form {
     border-color: @colDefault;
   }
+
   .navbar-link {
     color: @colDefault;
+
     &:hover {
       color: @colHighlight;
     }
@@ -111,25 +131,27 @@
 }
 
 .navbar-nav li.red .fa-bar-chart {
-    color: #f55;
+  color: #f55;
 }
 
-.navbar-nav li.amber .fa-bar-chart  {
-    color: #F7901E;
+.navbar-nav li.amber .fa-bar-chart {
+  color: #F7901E;
 }
 
-.navbar-nav li.green .fa-bar-chart  {
-    color: #008000;
+.navbar-nav li.green .fa-bar-chart {
+  color: #008000;
 }
 
 @media (max-width: 767px) {
   .navbar-default .navbar-nav .open .dropdown-menu {
     > li > a {
       color: @colDefault;
+
       &:hover, &:focus {
         color: @colHighlight;
       }
     }
+
     > .active {
       > a, > a:hover, > a:focus {
         color: @colHighlight;
@@ -148,7 +170,7 @@
 .main-logo {
   height: 70px;
   width: 220px;
-  float:left;
+  float: left;
   background-image: url(../images/logo_colour.png);
   background-repeat: no-repeat;
   background-position: 0px 15px;
@@ -171,21 +193,23 @@
 .modal-header {
   text-align: left;
 }
+
 .modal-footer {
   padding: 6px;
 }
+
 .multi-day-export-links {
   text-align: left;
   margin-left: 59px;
 }
 
 .multi-day-export__error {
-    text-align: left;
-    padding: 5px;
-    margin: 8px;
-    background-color: #f2dede;
-    border-color: #ebccd1;
-    color: #a94442;
+  text-align: left;
+  padding: 5px;
+  margin: 8px;
+  background-color: #f2dede;
+  border-color: #ebccd1;
+  color: #a94442;
 }
 
 .multi-day-export .modal-content {
@@ -196,7 +220,7 @@
   float: left;
 }
 
-.date .form-group.row .col-form-label{
+.date .form-group.row .col-form-label {
   margin-top: 7px;
   margin-left: 10px;
 }
@@ -204,9 +228,11 @@
 .date .form-group.row .day {
   width: auto;
 }
+
 .date .form-group.row .month {
   width: auto;
 }
+
 .date .form-group.row .year {
   width: auto;
 }
@@ -482,7 +508,7 @@ table.headlines tr:nth-child(odd) {
   margin-left: 0.5%;
 }
 
-.snapshot-selector .error-message, .date-selector .error-message  {
+.snapshot-selector .error-message, .date-selector .error-message {
   width: 240px;
   border: 1px solid red;
   border-radius: 3px;
@@ -525,6 +551,7 @@ table.headlines tr:nth-child(odd) {
   border-radius: 0.5em;
   width: 26em;
   z-index: 1000;
+
   .below {
     top: 1em;
   }
@@ -533,6 +560,7 @@ table.headlines tr:nth-child(odd) {
     top: 1em;
     right: 1em;
   }
+
   left: -19em;
   top: 93%;
 
@@ -554,9 +582,9 @@ table.headlines tr:nth-child(odd) {
 }
 
 .exports a {
-    margin: 0 10px 4px 0;
-    padding: 2px 7px;
-    width: 149px;
+  margin: 0 10px 4px 0;
+  padding: 2px 7px;
+  width: 149px;
 }
 
 .table-xcondensed {
@@ -1287,7 +1315,7 @@ th h2 {
   padding: 18px;
 }
 
-.summary-box-container.rag-summary table.rag-desks{
+.summary-box-container.rag-summary table.rag-desks {
   width: 100%;
   margin-top: 10px;
 }
@@ -1298,7 +1326,7 @@ th h2 {
   text-align: right;
 }
 
-.summary-box-container.rag-summary table.rag-desks td, .summary-box-container.rag-summary table.rag-desks th{
+.summary-box-container.rag-summary table.rag-desks td, .summary-box-container.rag-summary table.rag-desks th {
   width: 60px;
   text-align: center;
 }
@@ -1312,7 +1340,8 @@ th h2 {
   padding-top: 13px;
 
 }
-.summary-box-container .pcp-pressure .title{
+
+.summary-box-container .pcp-pressure .title {
   text-align: center;
   font-size: 14pt;
   margin-bottom: 13px;
@@ -1338,7 +1367,7 @@ th h2 {
   padding: 3px;
   overflow: hidden;
   white-space: nowrap;
-  width:10%;
+  width: 10%;
 }
 
 .pax-summary-cell--left {
@@ -1365,6 +1394,7 @@ th h2 {
   background: #a81b1e;
   color: #fff;
 }
+
 .summary-box-container.rag-summary.red th {
   background: #660000;
 }
@@ -1378,13 +1408,15 @@ th h2 {
   color: #0b0c0c;
 }
 
-.summary-box-container.rag-summary{
+.summary-box-container.rag-summary {
   background: #77ab59;
   color: #fff;
 }
+
 .summary-box-container.rag-summary th {
   background: #234d20;
 }
+
 .summary-box-container.rag-summary td {
   background: #36802d;
 }
@@ -1453,6 +1485,7 @@ th h2 {
   /* prevent too wide tooltip */
   max-width: 80em;
   z-index: 1000;
+
   .below {
     top: 1em;
   }
@@ -1508,13 +1541,13 @@ th h2 {
 }
 
 .arrivals__table__flight-code-value {
-    min-width: 53px;
-    display: inline-block;
+  min-width: 53px;
+  display: inline-block;
 }
 
 .arrivals__table__flight-code-wrapper {
-    width: 75px;
-    display: inline-block;
+  width: 75px;
+  display: inline-block;
 }
 
 .arrivals__table__flight-code {
@@ -1523,18 +1556,38 @@ th h2 {
 
 .arrivals__table__flight__chart-box {
   min-width: 850px;
+
+  .arrivals__table__flight__chart-box__chart {
+    width: 32%;
+  }
+}
+
+.arrivals__table__flight__chart-box-1 {
+  min-width: 330px;
+
+  .arrivals__table__flight__chart-box__chart {
+    width: 99%;
+  }
 }
 
 .arrivals__table__flight__chart-box__chart {
-  width: 32%;
   float: left;
   border-right: #f3f2f1 1px solid;
   margin-left: 1%;
 }
 
+.pax-of-interest {
+  width: 50px;
+  line-height: 50px;
+  border-radius: 50%;
+  text-align: center;
+  font-size: 32px;
+  border: 2px solid #666;
+}
+
 .arrivals__table__flight__chart-box__chart:last-child {
-  border-right: None;
-  margin-left: None;
+  border-right: 0;
+  margin-left: 0;
 }
 
 .arrivals__table__flight__chart-box__chart canvas {
@@ -1580,12 +1633,15 @@ th h2 {
 #arrivals thead th.gate-stand, #arrivals thead th.status {
   width: 7%;
 }
+
 #arrivals thead th.pcp {
   width: 12%;
 }
+
 #arrivals thead th.country {
   width: 9%;
 }
+
 #arrivals table {
   table-layout: fixed;
 }
@@ -1701,7 +1757,7 @@ a i.fa.fa-remove {
 }
 
 .feed-status-description {
-    height: 50px;
+  height: 50px;
 }
 
 .clear {
@@ -1798,66 +1854,67 @@ div.access-restricted {
 
 /***/
 .terminal-dashboard-queues {
-    width: 73%;
-    padding-top: 3%;
-    display: inline-block;
+  width: 73%;
+  padding-top: 3%;
+  display: inline-block;
 }
 
 .terminal-dashboard-side {
-    width: 20%;
-    display: inline-block;
-    vertical-align: top;
-    padding-top: 3%;
-    margin-left: 3%;
+  width: 20%;
+  display: inline-block;
+  vertical-align: top;
+  padding-top: 3%;
+  margin-left: 3%;
 }
 
 .show-arrivals-btn {
-    border-style: solid;
-    padding: 10px;
-    border-radius: 15px;
-    background-color: #d5e8fe;
-    position: relative;
-    font-size: 27px;
-    font-weight: bold;
-    text-align: center;
-    color: black;
-    display: inline-block;
+  border-style: solid;
+  padding: 10px;
+  border-radius: 15px;
+  background-color: #d5e8fe;
+  position: relative;
+  font-size: 27px;
+  font-weight: bold;
+  text-align: center;
+  color: black;
+  display: inline-block;
 }
+
 .show-arrivals-btn:hover {
-    text-decoration: none;
+  text-decoration: none;
 }
 
 .pax-bar {
-    border-style: solid;
-    padding: 10px;
-    border-radius: 15px;
-    background-color: #eee;
-    position:relative;
-    top: 20%;
-    font-size: 27px;
-    font-weight: bold;
-    text-align: center;
-    height: 2.5em;
-    margin-bottom: 2%;
+  border-style: solid;
+  padding: 10px;
+  border-radius: 15px;
+  background-color: #eee;
+  position: relative;
+  top: 20%;
+  font-size: 27px;
+  font-weight: bold;
+  text-align: center;
+  height: 2.5em;
+  margin-bottom: 2%;
 }
 
 
 .dashboard-arrivals-popup {
-    z-index: 1000;
-    background-color: #d5e8fe;
-    padding: 0 2% 2% 2%;
-    border: solid;
-    border-radius: 22px;
-    box-shadow: 0 6px 8px rgba(52, 73, 94, .2), 0 1px 1px rgba(52, 73, 94, 0.1);
-    position: fixed;
-    left: 0;
-    right: 0;
-    top: 18%;
-    margin-left: auto;
-    margin-right: auto;
-    width: 85%;
-    opacity: 95%;
-    min-width: 1100px;
+  z-index: 1000;
+  background-color: #d5e8fe;
+  padding: 0 2% 2% 2%;
+  border: solid;
+  border-radius: 22px;
+  box-shadow: 0 6px 8px rgba(52, 73, 94, .2), 0 1px 1px rgba(52, 73, 94, 0.1);
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 18%;
+  margin-left: auto;
+  margin-right: auto;
+  width: 85%;
+  opacity: 95%;
+  min-width: 1100px;
 }
 
 .arrivals-table__body:nth-child(odd) {
@@ -1869,59 +1926,61 @@ div.access-restricted {
 }
 
 .close-arrivals-popup {
-    float:right;
+  float: right;
 }
 
 .dashboard-arrivals-popup table tbody tr td {
-    vertical-align: middle;
+  vertical-align: middle;
 }
 
 .dashboard-arrivals-popup td.right {
-    text-align: right;
+  text-align: right;
 }
+
 .dashboard-arrivals-popup .table {
-    margin:0
+  margin: 0
 }
+
 .dashboard-arrivals-popup td.queue-split {
-    padding: 0;
+  padding: 0;
 }
 
 .dashboard-arrivals-popup th {
-    background-color: #2889c6;
+  background-color: #2889c6;
 }
 
 .dashboard-arrivals-popup thead {
-    background-color: #2989C6;
-    color: #fff;
+  background-color: #2989C6;
+  color: #fff;
 }
 
 .queue-box i {
-    height: 55px;
-    position: relative;
-    padding-right: 10px;
+  height: 55px;
+  position: relative;
+  padding-right: 10px;
 }
 
 .queue-box:last-child {
-    margin-right: 0px;
+  margin-right: 0px;
 }
 
 .queue-box {
-    padding: 10px;
-    height: 250px;
-    border-style: solid;
-    border-radius: 15px;
-    background-color: #eee;
-    transform: translateY(-10%);
-    position:relative;
-    font-size: 30px;
-    font-weight: bold;
-    text-align: center;
-    display: inline-block;
-    float: left;
-    margin-right: 3%;
-    margin-top: 3%;
-    min-width: 300px;
-    width: 31.3%;
+  padding: 10px;
+  height: 250px;
+  border-style: solid;
+  border-radius: 15px;
+  background-color: #eee;
+  transform: translateY(-10%);
+  position: relative;
+  font-size: 30px;
+  font-weight: bold;
+  text-align: center;
+  display: inline-block;
+  float: left;
+  margin-right: 3%;
+  margin-top: 3%;
+  min-width: 300px;
+  width: 31.3%;
 }
 
 .queue-box.red {
@@ -1933,94 +1992,94 @@ div.access-restricted {
 }
 
 .queue-box-text {
-    width: 85%;
-    position: relative;
-    font-size: 24px;
-    font-weight: bold;
-    text-align: left;
-    left: 10%;
-    top: 10%;
-    height: 20%;
+  width: 85%;
+  position: relative;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: left;
+  left: 10%;
+  top: 10%;
+  height: 20%;
 }
 
 .tb-bar {
-    background-color: #d5e8fe;
-    font-size: 27px;
-    font-weight: bold;
-    text-align: center;
-    border-style: solid;
-    border-radius: 15px;
-    height: 2.5em;
+  background-color: #d5e8fe;
+  font-size: 27px;
+  font-weight: bold;
+  text-align: center;
+  border-style: solid;
+  border-radius: 15px;
+  height: 2.5em;
 }
 
 .time-label {
-    width: 60%;
-    display: inline-block;
-    height: 100%;
-    vertical-align: middle;
-    margin: 0;
-    padding: 0.5em;
+  width: 60%;
+  display: inline-block;
+  height: 100%;
+  vertical-align: middle;
+  margin: 0;
+  padding: 0.5em;
 }
 
 .dashboard-time-switcher {
-    padding: 10px;
-    width: 8%;
-    border-radius: 15px;
-    background-color: #eee;
-    position: relative;
-    font-size: 27px;
-    font-weight: bold;
-    text-align: center;
-    height: 108%;
-    display: inline-block;
-    border-top: solid;
-    border-bottom: solid;
-    color: black;
-    margin-top: -0.25%;
+  padding: 10px;
+  width: 8%;
+  border-radius: 15px;
+  background-color: #eee;
+  position: relative;
+  font-size: 27px;
+  font-weight: bold;
+  text-align: center;
+  height: 108%;
+  display: inline-block;
+  border-top: solid;
+  border-bottom: solid;
+  color: black;
+  margin-top: -0.25%;
 }
 
-.terminal-dashboard-side__sidebar_widget{
-    border-style: solid;
-    padding: 10px;
-    border-radius: 15px;
-    background-color: #d5e8fe;
-    position: relative;
-    font-size: 27px;
-    font-weight: bold;
-    text-align: center;
-    color: black;
-    display: inline-block;
-    width: 100%;
-    margin-bottom: 5%;
+.terminal-dashboard-side__sidebar_widget {
+  border-style: solid;
+  padding: 10px;
+  border-radius: 15px;
+  background-color: #d5e8fe;
+  position: relative;
+  font-size: 27px;
+  font-weight: bold;
+  text-align: center;
+  color: black;
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 5%;
 }
 
 .terminal-dashboard-side__sidebar_widget__label {
-   margin-right: 0.3em;
+  margin-right: 0.3em;
 }
 
-.time-slot-changer{
-    font-size: 14px;
+.time-slot-changer {
+  font-size: 14px;
 }
 
 .prev-bar {
-    left: 0px;
-    border-right: solid;
-    float: left;
+  left: 0px;
+  border-right: solid;
+  float: left;
 }
 
 .next-bar {
-    left: 0px;
-    border-left: solid 3px;
-    float: right;
+  left: 0px;
+  border-left: solid 3px;
+  float: right;
 }
 
 .terminal-dashboard__arrivals_popup_table {
-    max-height: 400px;
-    overflow-y: scroll;
+  max-height: 400px;
+  overflow-y: scroll;
 }
 
 .faqs {
-    background-color: #eee;
+  background-color: #eee;
 }
 
 
@@ -2070,7 +2129,7 @@ div.access-restricted {
 
 /* Tooltip text left edge */
 .tooltipFaq .tooltipText-left {
-    left: 50%;
+  left: 50%;
 }
 
 /* Tooltip text right edge */
