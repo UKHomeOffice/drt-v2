@@ -1,7 +1,7 @@
 package actors.migration
 
-import actors.serializers.PortStateMessageConversion.{staffMinuteFromMessage, staffMinuteToMessage}
 import actors.acking.AckingReceiver.Ack
+import actors.serializers.PortStateMessageConversion.{staffMinuteFromMessage, staffMinuteToMessage}
 import actors.{PostgresTables, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{SaveSnapshotSuccess, SnapshotMetadata}

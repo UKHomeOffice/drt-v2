@@ -342,14 +342,13 @@ object Crunch {
       reduceIterables(reducedHead :: tail)(combine)
   }
 
-  def utcDaysInPeriod(start: SDateLike, end: SDateLike): Seq[SDateLike] = {
+  def utcDaysInPeriod(start: SDateLike, end: SDateLike): Seq[UtcDate] = {
     val startForTimeZone = SDate(start, Crunch.utcTimeZone)
     val endForTimeZone = SDate(end, Crunch.utcTimeZone)
 
     (startForTimeZone.millisSinceEpoch to endForTimeZone.millisSinceEpoch by MilliTimes.oneHourMillis)
-      .map(SDate(_).getUtcLastMidnight)
+      .map(SDate(_).toUtcDate)
       .distinct
-      .sortBy(_.millisSinceEpoch)
       .toList
   }
 

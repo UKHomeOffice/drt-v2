@@ -10,7 +10,8 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.FlightsApi.{FlightUpdates, FlightsWithSplits}
+import drt.shared.DataUpdates.FlightUpdates
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.dates.UtcDate
 import drt.shared.{ApiFlightWithSplits, SDateLike}

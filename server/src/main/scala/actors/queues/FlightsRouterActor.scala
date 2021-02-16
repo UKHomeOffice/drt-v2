@@ -1,18 +1,18 @@
 package actors.queues
 
 import actors.PartitionedPortStateActor._
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
-import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate, ProcessNextUpdateRequest}
-import actors.queues.QueueLikeActor.{NoAffect, UpdateAffect, UpdatedMillis}
+import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
+import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.routing.RouterActorLike
 import akka.NotUsed
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi._
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -20,8 +20,7 @@ import drt.shared.dates.UtcDate
 import services.SDate
 
 import scala.collection.immutable.NumericRange
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 object FlightsRouterActor {
@@ -91,13 +90,16 @@ object FlightsRouterActor {
     )
 }
 
-class FlightsRouterActor(val updatesSubscriber: ActorRef,
+class FlightsRouterActor(updatesSubscribers: ActorRef,
                          terminals: Iterable[Terminal],
                          flightsByDayLookup: FlightsLookup,
                          updateFlights: FlightsUpdate
                         ) extends RouterActorLike[FlightUpdates, (Terminal, UtcDate)] {
+  override var maybeUpdatesSubscriber: Option[ActorRef] = Option(updatesSubscribers)
+
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), "flights-router-actor-kill-actor")
-  val forwardRequestAndKillActor: (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] = FlightsRouterActor.forwardRequestAndKillActor(killActor)
+  val forwardRequestAndKillActor: (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] =
+    FlightsRouterActor.forwardRequestAndKillActor(killActor)
 
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
@@ -155,4 +157,9 @@ class FlightsRouterActor(val updatesSubscriber: ActorRef,
 
   def affectsFromUpdate(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[UpdatedMillis] =
     updateFlights(partition, updates)
+
+  override def shouldSendAffects: FlightUpdates => Boolean = {
+    case _: FlightsWithSplitsDiff => true
+    case _: SplitsForArrivals => false
+  }
 }

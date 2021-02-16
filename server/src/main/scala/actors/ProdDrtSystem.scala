@@ -179,9 +179,13 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   }
 }
 
-case class SetCrunchQueueActor(millisToCrunchActor: ActorRef)
+trait SetSubscriber {
+  val subscriber: ActorRef
+}
 
-case class SetDeploymentQueueActor(millisToDeployActor: ActorRef)
+case class SetCrunchQueueActor(subscriber: ActorRef) extends SetSubscriber
+
+case class SetDeploymentQueueActor(subscriber: ActorRef) extends SetSubscriber
 
 case class SetCrunchRequestQueue(source: SourceQueueWithComplete[CrunchRequest])
 

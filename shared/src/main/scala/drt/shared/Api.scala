@@ -1,6 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi._
+import drt.shared.DataUpdates.{FlightUpdates, MinuteUpdates}
 import drt.shared.EventTypes.{CI, DC, InvalidEventType}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.MilliTimes.{oneDayMillis, oneMinuteMillis}
@@ -667,6 +668,16 @@ object ApplicationConfig {
   implicit val rw: ReadWriter[ApplicationConfig] = macroRW
 }
 
+object DataUpdates {
+
+  trait Updates
+
+  trait FlightUpdates extends Updates
+
+  trait MinuteUpdates extends Updates
+
+}
+
 object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
@@ -719,10 +730,6 @@ object FlightsApi {
 
     def apply(flights: Iterable[ApiFlightWithSplits]): FlightsWithSplits = FlightsWithSplits(flights.map(fws => (fws.unique, fws)).toMap)
   }
-
-  trait Updates
-
-  trait FlightUpdates extends Updates
 
   case object NoFlightUpdates extends FlightUpdates
 
@@ -1049,7 +1056,7 @@ object CrunchApi {
     def empty[A, B <: WithTimeAccessor]: MinutesContainer[A, B] = MinutesContainer[A, B](Iterable())
   }
 
-  case class MinutesContainer[A, B <: WithTimeAccessor](minutes: Iterable[MinuteLike[A, B]]) {
+  case class MinutesContainer[A, B <: WithTimeAccessor](minutes: Iterable[MinuteLike[A, B]]) extends MinuteUpdates {
     def window(start: SDateLike, end: SDateLike): MinutesContainer[A, B] = {
       val startMillis = start.millisSinceEpoch
       val endMillis = end.millisSinceEpoch

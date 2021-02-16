@@ -79,8 +79,8 @@ object StreamingDesksExport {
                             )(implicit ec: ExecutionContext): Source[String, NotUsed] = {
 
     dates.mapAsync(1)(d => {
-      val futureMaybeCM: Future[Option[CrunchApi.MinutesContainer[CrunchMinute, TQM]]] = crunchMinuteLookup(terminal, SDate(d), maybePit)
-      val futureMaybeSM: Future[Option[CrunchApi.MinutesContainer[StaffMinute, TM]]] = staffMinuteLookup(terminal, SDate(d), maybePit)
+      val futureMaybeCM: Future[Option[CrunchApi.MinutesContainer[CrunchMinute, TQM]]] = crunchMinuteLookup((terminal, SDate(d).toUtcDate), maybePit)
+      val futureMaybeSM: Future[Option[CrunchApi.MinutesContainer[StaffMinute, TM]]] = staffMinuteLookup((terminal, SDate(d).toUtcDate), maybePit)
       for {
         maybeCMs <- futureMaybeCM
         maybeSMs <- futureMaybeSM

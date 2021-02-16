@@ -2,11 +2,13 @@ package actors.minutes
 
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors.minutes.MinutesActorLike.MinutesLookup
+import actors.queues.QueueLikeActor.{NoAffect, UpdatedMillis}
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
+import drt.shared.dates.UtcDate
 import drt.shared.{Queues, SDateLike, TQM}
 import services.SDate
 import services.crunch.CrunchTestLike
@@ -20,13 +22,13 @@ class QueueMinutesActorSpec extends CrunchTestLike {
   val date: SDateLike = SDate("2020-01-01T00:00")
   val myNow: () => SDateLike = () => date
 
-  def lookupWithData(crunchMinutes: MinutesContainer[CrunchMinute, TQM]): MinutesLookup[CrunchMinute, TQM] = (_: Terminal, _: SDateLike, _: Option[MillisSinceEpoch]) => Future(Option(crunchMinutes))
+  def lookupWithData(crunchMinutes: MinutesContainer[CrunchMinute, TQM]): MinutesLookup[CrunchMinute, TQM] = (_: (Terminal, UtcDate), _: Option[MillisSinceEpoch]) => Future(Option(crunchMinutes))
 
   val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
   val minutesContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(Iterable(crunchMinute))
 
-  val noopUpdates: (Terminal, SDateLike, MinutesContainer[CrunchMinute, TQM]) => Future[MinutesContainer[CrunchMinute, TQM]] =
-    (_: Terminal, _: SDateLike, _: MinutesContainer[CrunchMinute, TQM]) => Future(MinutesContainer(Iterable()))
+  val noopUpdates: ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[UpdatedMillis] =
+    (_: (Terminal, UtcDate), _: MinutesContainer[CrunchMinute, TQM]) => Future(UpdatedMillis(Seq()))
 
   "When I ask for CrunchMinutes" >> {
 

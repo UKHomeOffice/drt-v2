@@ -1,5 +1,6 @@
 package actors.daily
 
+import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.actor.Props
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
@@ -33,7 +34,7 @@ class RequestAndTerminateActorSpec extends CrunchTestLike {
       val result = Await.result(requestsActor.ask(RequestAndTerminate(actor, container)), 5 seconds)
 
       "I should get a diff of updated minutes back as an acknowledgement" >> {
-        result.isInstanceOf[MinutesContainer[CrunchMinute, TQM]]
+        result.isInstanceOf[UpdatedMillis]
       }
     }
   }

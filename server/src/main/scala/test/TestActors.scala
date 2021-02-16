@@ -167,8 +167,8 @@ object TestActors {
     var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
 
     private def addToTerminalDays(container: MinutesContainer[A, B]): Unit = {
-      groupByTerminalAndDay(container).keys.foreach {
-        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date.millisSinceEpoch))
+      partitionUpdates(container).keys.foreach {
+        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, SDate(date).millisSinceEpoch))
       }
     }
 

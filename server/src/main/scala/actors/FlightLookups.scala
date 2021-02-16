@@ -8,7 +8,8 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{FlightUpdates, FlightsWithSplits}
+import drt.shared.DataUpdates.FlightUpdates
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
