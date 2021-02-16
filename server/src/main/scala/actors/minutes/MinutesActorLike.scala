@@ -1,7 +1,6 @@
 package actors.minutes
 
 import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForDateRange, PointInTimeQuery, TerminalRequest}
-import actors.migration.{CrunchMinutesMessageMigration, StaffMinutesMessageMigration}
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.queues.QueueLikeActor
 import actors.queues.QueueLikeActor.UpdatedMillis
@@ -16,7 +15,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared.dates.UtcDate
 import drt.shared.{SDateLike, Terminals, WithTimeAccessor}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.SDate
 import services.graphstages.Crunch
 
@@ -31,10 +29,7 @@ object MinutesActorLike {
   type ManifestLookup = (UtcDate, Option[MillisSinceEpoch]) => Future[VoyageManifests]
 
   type MinutesUpdate[A, B <: WithTimeAccessor] = ((Terminals.Terminal, UtcDate), MinutesContainer[A, B]) => Future[UpdatedMillis]
-  type CrunchMinutesMigrationUpdate = (String, UtcDate, CrunchMinutesMessageMigration) => Future[Any]
-  type StaffMinutesMigrationUpdate = (String, UtcDate, StaffMinutesMessageMigration) => Future[Any]
   type FlightsUpdate = ((Terminals.Terminal, UtcDate), FlightUpdates) => Future[UpdatedMillis]
-  type FlightsMigrationUpdate = (String, UtcDate, FlightsWithSplitsDiffMessage) => Future[Any]
   type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[Any]
 
   case object ProcessNextUpdateRequest
