@@ -1,7 +1,8 @@
 package actors.daily
 
-import actors.serializers.PortStateMessageConversion.flightsFromMessages
+import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.serializers.FlightMessageConversion
+import actors.serializers.PortStateMessageConversion.flightsFromMessages
 import actors.{GetState, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
@@ -95,7 +96,7 @@ class TerminalDayFlightActor(
     val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch)
     state = updatedState
 
-    val replyToAndMessage = Option(sender(), minutesToUpdate)
+    val replyToAndMessage = Option(sender(), UpdatedMillis(minutesToUpdate))
     persistAndMaybeSnapshotWithAck(FlightMessageConversion.flightWithSplitsDiffToMessage(diff), replyToAndMessage)
   }
 

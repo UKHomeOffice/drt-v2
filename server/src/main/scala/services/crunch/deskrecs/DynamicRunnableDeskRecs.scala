@@ -1,9 +1,12 @@
 package services.crunch.deskrecs
 
 import akka.NotUsed
+import akka.actor.ActorRef
+import akka.pattern.ask
 import akka.stream.scaladsl.{Flow, Source}
+import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
@@ -42,6 +45,26 @@ object DynamicRunnableDeskRecs {
     Flow[CrunchRequest]
       .via(addArrivals(arrivalsProvider))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
+      .via(toDeskRecs(maxDesksProviders, flightsToLoads, loadsToQueueMinutes))
+
+  def crunchRequestsToQueueMinutes2(arrivalsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]],
+                                    liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
+                                    historicManifestsProvider: HistoricManifestsProvider,
+                                    splitsCalculator: SplitsCalculator,
+                                    splitsSink: ActorRef,
+                                    flightsToLoads: FlightsToLoads,
+                                    loadsToQueueMinutes: LoadsToQueueMinutes,
+                                    maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
+                                   (implicit ec: ExecutionContext, timeout: Timeout): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
+    Flow[CrunchRequest]
+      .via(addArrivals(arrivalsProvider))
+      .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
+      .mapAsync(1) {
+        case (cr, flights) =>
+          splitsSink
+            .ask(SplitsForArrivals(flights.map(fws => (fws.unique, fws.splits)).toMap))
+            .map(_ => (cr, flights))
+      }
       .via(toDeskRecs(maxDesksProviders, flightsToLoads, loadsToQueueMinutes))
 
   private def toDeskRecs(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],

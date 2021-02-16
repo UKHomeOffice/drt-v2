@@ -18,7 +18,6 @@ import drt.shared._
 import drt.shared.dates.UtcDate
 import org.slf4j.Logger
 import services.SDate
-import slickdb.ArrivalTable
 
 import scala.collection.immutable.SortedSet
 import scala.concurrent.Future
@@ -228,7 +227,7 @@ object TestActors {
     var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
 
     private def addToTerminalDays(container: FlightsWithSplitsDiff): Unit = {
-      groupByTerminalAndDay(container).keys.foreach {
+      partitionUpdates(container).keys.foreach {
         case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date))
       }
     }

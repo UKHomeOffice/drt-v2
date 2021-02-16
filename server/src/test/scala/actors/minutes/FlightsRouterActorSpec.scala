@@ -1,16 +1,16 @@
 package actors.minutes
 
-import controllers.ArrivalGenerator
 import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, PointInTimeQuery}
 import actors.queues.FlightsRouterActor
+import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
-import akka.actor.{Actor, ActorRef, Props}
+import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
-import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import controllers.ArrivalGenerator
+import drt.shared.FlightsApi.{FlightUpdates, FlightsWithSplits}
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.dates.UtcDate
 import drt.shared.{ApiFlightWithSplits, SDateLike}
@@ -33,8 +33,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
   implicit val mat: ActorMaterializer = ActorMaterializer.create(system)
 
-  val noopUpdates: (Terminal, UtcDate, FlightsWithSplitsDiff) => Future[Seq[MillisSinceEpoch]] =
-    (_: Terminal, _: UtcDate, _: FlightsWithSplitsDiff) => Future(Seq[MillisSinceEpoch]())
+  val noopUpdates: ((Terminal, UtcDate), FlightUpdates) => Future[UpdatedMillis] =
+    (_, _: FlightUpdates) => Future(UpdatedMillis(Iterable()))
 
 
   "Concerning visibility of flights (scheduled & pcp range)" >> {
