@@ -1,20 +1,21 @@
 ---
 kind: pipeline
 name: default
+type: kubernetes
 
 platform:
   os: linux
   arch: amd64
 
 steps:
-- name: sonar-scanner
-  pull: if-not-exists
-  image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
-  when:
-    branch:
-    - ${DRONE_BRANCH}
-    event:
-    - push
+#- name: sonar-scanner
+#  pull: if-not-exists
+#  image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
+#  when:
+#    branch:
+#    - ${DRONE_BRANCH}
+#    event:
+#    - push
 
 - name: drone_s3_cache_pull
   pull: if-not-exists
@@ -34,7 +35,7 @@ steps:
   image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
   commands:
   - /root/entrypoint.sh
-  - sbt --error test docker:stage
+  - sbt compile docker:stage
   environment:
     ARTIFACTORY_PASSWORD:
       from_secret: ARTIFACTORY_PASSWORD
@@ -43,30 +44,35 @@ steps:
     KEYTOOL_PASSWORD:
       from_secret: KEYTOOL_PASSWORD
   when:
-    branch:
-    - ${DRONE_BRANCH}
     event:
     - push
 
-- name: build_docker
-  pull: if-not-exists
-  image: quay.io/ukhomeofficedigital/drone-docker
-  settings:
-    registry: docker.digital.homeoffice.gov.uk
-    repo: docker.digital.homeoffice.gov.uk/drt/drt
-    tags:
-    - ${DRONE_BUILD_NUMBER}
-    - latest
-  environment:
-    DOCKER_HOST: tcp://172.17.0.1:2375
-    DOCKER_PASSWORD:
-      from_secret: docker_password
-    DOCKER_USERNAME: drt_ci
-  when:
-    branch:
-    - ${DRONE_BRANCH}
-    event:
-    - push
+- name: build-image
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+  commands:
+    # wait for docker service to be up before running docker build
+    - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
+    - docker build -t ${DRONE_BUILD_NUMBER} .
+
+#- name: build_docker
+#  pull: if-not-exists
+#  image: quay.io/ukhomeofficedigital/drone-docker
+#  settings:
+#    registry: docker.digital.homeoffice.gov.uk
+#    repo: docker.digital.homeoffice.gov.uk/drt/drt
+#    tags:
+#    - ${DRONE_BUILD_NUMBER}
+#    - latest
+#  environment:
+#    DOCKER_HOST: tcp://172.17.0.1:2375
+#    DOCKER_PASSWORD:
+#      from_secret: docker_password
+#    DOCKER_USERNAME: drt_ci
+#  when:
+#    branch:
+#    - ${DRONE_BRANCH}
+#    event:
+#    - push
 
 - name: cypress-e2e-test
   pull: if-not-exists
