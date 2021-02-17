@@ -17,6 +17,26 @@ steps:
 #    event:
 #    - push
 
+- name: ecr-login
+  pull: if-not-exists
+  image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
+  environment:
+    AWS_ACCESS_KEY_ID:
+      from_secret: aws_access_key_id
+    AWS_SECRET_ACCESS_KEY:
+      from_secret: aws_secret_access_key
+  commands:
+    # wait for docker service to be up before running docker build
+    - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
+    - aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+  volumes:
+    - name: dockerclientconfig
+      path: /root/.docker
+  when:
+    event:
+      - push
+      - tag
+
 - name: drone_s3_cache_pull
   pull: if-not-exists
   image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
@@ -76,6 +96,8 @@ steps:
       from_secret: aws_secret_access_key
     repo: drt/drt-v2
     registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+    tags:
+      - ${DRONE_BUILD_NUMBER}
 
 
 #- name: build-image
@@ -105,27 +127,26 @@ steps:
 #    event:
 #    - push
 #
-#- name: cypress-e2e-test
-#  pull: if-not-exists
-#  image: docker:18.06
-#  commands:
-#  - docker login -u $${DOCKER_USERNAME} -p $${DOCKER_PASSWORD} docker.digital.homeoffice.gov.uk
-#  - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e ENABLE_STATSD=false -e CONTACT_EMAIL=support@test.com -e OOH_PHONE=012345 -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g -Dconfig.resource=application-inmemory.conf" -e USE_API_PAX_NOS=true -e ADJUST_EGATES_USE_BY_U12S=true -e PORT_CODE="test" -e ENV="test" -e FORECAST_MAX_DAYS=2 -e STAGE_THROTTLE_MILLIS=50 -e BASE_DOMAIN=drt-test.homeoffice.gov.uk docker.digital.homeoffice.gov.uk/drt/drt:latest $${PLAY}
-#  - docker build -t drt-cypress -f cy-drt-dockfile .
-#  - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" drt-cypress /bin/bash -c "npm run test"
-#  environment:
-#    DOCKER_HOST: tcp://172.17.0.1:2375
-#    DOCKER_PASSWORD:
-#      from_secret: docker_password
-#    DOCKER_USERNAME: drt_ci
-#    PLAY:
-#      from_secret: play
-#  when:
-#    branch:
-#    - ${DRONE_BRANCH}
-#    event:
-#    - push
-#
+- name: e2e-tests
+  pull: if-not-exists
+  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+  environment:
+    AWS_REGION: eu-west-2
+    PLAY:
+      from_secret: play
+  commands:
+    - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e ENABLE_STATSD=false -e CONTACT_EMAIL=support@test.com -e OOH_PHONE=012345 -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g -Dconfig.resource=application-inmemory.conf" -e USE_API_PAX_NOS=true -e ADJUST_EGATES_USE_BY_U12S=true -e PORT_CODE="test" -e ENV="test" -e FORECAST_MAX_DAYS=2 -e STAGE_THROTTLE_MILLIS=50 -e BASE_DOMAIN=drt-test.homeoffice.gov.uk 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:${DRONE_BUILD_NUMBER} $${PLAY}
+    - docker build -t drt-cypress -f cy-drt-dockfile .
+    - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" drt-cypress /bin/bash -c "npm run test"
+  volumes:
+    - name: dockerclientconfig
+      path: /root/.docker
+  when:
+    event:
+      - push
+      - tag
+
+
 #- name: git_tag
 #  pull: if-not-exists
 #  image: alpine/git
@@ -167,4 +188,8 @@ steps:
 services:
   - name: docker
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+
+volumes:
+  - name: dockerclientconfig
+    temp: {}
 ...
