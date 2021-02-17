@@ -23,7 +23,6 @@ import scala.concurrent.duration._
 class MockProviderActor(minutes: MinutesContainer[CrunchMinute, TQM]) extends Actor {
   override def receive: Receive = {
     case _: GetStateForDateRange => sender() ! minutes
-    case msg => println(s"got $msg")
   }
 }
 
