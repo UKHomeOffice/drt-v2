@@ -7,7 +7,7 @@ import actors.{GetState, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.UtcDate
 import drt.shared.{SDateLike, UniqueArrival}
@@ -45,11 +45,9 @@ class TerminalDayFlightActor(
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
-
   var state: FlightsWithSplits = FlightsWithSplits.empty
 
   override def persistenceId: String = f"terminal-flights-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
-
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
@@ -75,6 +73,10 @@ class TerminalDayFlightActor(
         logDifferences(diff, filteredDiff)
 
       updateAndPersistDiffAndAck(filteredDiff)
+
+    case splits: SplitsForArrivals =>
+      val diff = splits.diff(state, now().millisSinceEpoch)
+      updateAndPersistDiffAndAck(diff)
 
     case GetState =>
       log.debug(s"Received GetState")
@@ -103,7 +105,7 @@ class TerminalDayFlightActor(
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: FlightsWithSplitsDiffMessage =>
       maybePointInTime match {
-        case Some(pit) if pit < diff.getCreatedAt  =>
+        case Some(pit) if pit < diff.getCreatedAt =>
           log.debug(s"Ignoring diff created more recently than the recovery point in time")
         case _ => handleDiffMessage(diff)
       }

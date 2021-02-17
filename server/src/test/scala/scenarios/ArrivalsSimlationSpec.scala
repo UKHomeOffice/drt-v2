@@ -2,9 +2,10 @@ package scenarios
 
 import actors.GetState
 import akka.NotUsed
-import akka.actor.Props
+import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
+import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
@@ -22,7 +23,7 @@ import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.OptimiserMocks.{mockHistoricManifestsProviderNoop, mockLiveManifestsProviderNoop}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
-import services.crunch.deskrecs.{DynamicRunnableDeskRecs, OptimisationProviders, PortDesksAndWaitsProvider, RunnableOptimisation}
+import services.crunch.deskrecs.{DynamicRunnableDeskRecs, MockSplitsSinkActor, OptimisationProviders, PortDesksAndWaitsProvider, RunnableOptimisation}
 import services.exports.StreamingFlightsExport
 import services.imports.{ArrivalCrunchSimulationActor, ArrivalImporter}
 import services.{Optimiser, SDate}
@@ -143,9 +144,11 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
       mockLiveManifestsProviderNoop,
       mockHistoricManifestsProviderNoop,
       splitsCalc,
+      system.actorOf(Props(new MockSplitsSinkActor)),
       dawp.flightsToLoads,
       dawp.loadsToDesks,
-      terminalDeskLimits)
+      terminalDeskLimits
+    )
 
     val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
 

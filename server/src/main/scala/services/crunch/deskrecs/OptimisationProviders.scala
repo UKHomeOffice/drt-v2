@@ -36,13 +36,11 @@ object OptimisationProviders {
 
   def arrivalsProvider(arrivalsActor: ActorRef)
                       (crunchRequest: CrunchRequest)
-                      (implicit timeout: Timeout, ec: ExecutionContext): Future[Source[List[Arrival], NotUsed]] = {
-    println(s"using implicit timeout: $timeout")
+                      (implicit timeout: Timeout, ec: ExecutionContext): Future[Source[List[Arrival], NotUsed]] =
     arrivalsActor
       .ask(GetFlights(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
       .mapTo[Source[FlightsWithSplits, NotUsed]]
       .map(_.map(_.flights.map(_._2.apiFlight).toList))
-  }
 
   def liveManifestsProvider(manifestsActor: ActorRef)
                            (crunchRequest: CrunchRequest)

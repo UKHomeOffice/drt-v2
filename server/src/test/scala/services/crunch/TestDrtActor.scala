@@ -8,6 +8,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
+import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.shared.Terminals.Terminal
 import drt.shared.{MilliTimes, PortCode, SDateLike, VoyageNumber}
@@ -125,6 +126,7 @@ class TestDrtActor extends Actor {
           OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
           OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups),
           splitsCalculator,
+          flightsActor,
           portDeskRecs.flightsToLoads,
           portDeskRecs.loadsToDesks,
           deskLimitsProviders)

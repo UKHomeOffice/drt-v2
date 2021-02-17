@@ -38,34 +38,26 @@ object DynamicRunnableDeskRecs {
                                    liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
                                    historicManifestsProvider: HistoricManifestsProvider,
                                    splitsCalculator: SplitsCalculator,
+                                   splitsSink: ActorRef,
                                    flightsToLoads: FlightsToLoads,
                                    loadsToQueueMinutes: LoadsToQueueMinutes,
                                    maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
-                                  (implicit ec: ExecutionContext): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
+                                  (implicit ec: ExecutionContext, timeout: Timeout): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
     Flow[CrunchRequest]
       .via(addArrivals(arrivalsProvider))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
+      .via(updateSplits(splitsSink))
       .via(toDeskRecs(maxDesksProviders, flightsToLoads, loadsToQueueMinutes))
 
-  def crunchRequestsToQueueMinutes2(arrivalsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]],
-                                    liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
-                                    historicManifestsProvider: HistoricManifestsProvider,
-                                    splitsCalculator: SplitsCalculator,
-                                    splitsSink: ActorRef,
-                                    flightsToLoads: FlightsToLoads,
-                                    loadsToQueueMinutes: LoadsToQueueMinutes,
-                                    maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
-                                   (implicit ec: ExecutionContext, timeout: Timeout): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
-    Flow[CrunchRequest]
-      .via(addArrivals(arrivalsProvider))
-      .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
+  private def updateSplits(splitsSink: ActorRef)
+                          (implicit ec: ExecutionContext, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+    Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (cr, flights) =>
           splitsSink
             .ask(SplitsForArrivals(flights.map(fws => (fws.unique, fws.splits)).toMap))
             .map(_ => (cr, flights))
       }
-      .via(toDeskRecs(maxDesksProviders, flightsToLoads, loadsToQueueMinutes))
 
   private def toDeskRecs(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
                          flightsToLoads: FlightsToLoads,

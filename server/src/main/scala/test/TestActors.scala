@@ -180,10 +180,7 @@ object TestActors {
 
       case ResetData =>
         Future
-          .sequence(terminalDaysUpdated.map { case (t, d) =>
-            println(s"\n\n**Sending ResetData to $t / ${SDate(d).toISOString()}")
-            resetData(t, d)
-          })
+          .sequence(terminalDaysUpdated.map { case (t, d) => resetData(t, d) })
           .map { _ =>
             terminalDaysUpdated = Set()
             Ack
@@ -269,8 +266,7 @@ object TestActors {
       flightUpdatesActor,
       now,
       queues,
-      journalType)
-  {
+      journalType) {
 
     val actorClearRequests = Map(
       flightsActor -> ResetData,

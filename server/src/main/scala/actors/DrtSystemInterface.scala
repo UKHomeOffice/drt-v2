@@ -237,6 +237,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
       OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
       splitsCalculator,
+      flightsActor,
       portDeskRecs.flightsToLoads,
       portDeskRecs.loadsToDesks,
       deskLimitsProviders)

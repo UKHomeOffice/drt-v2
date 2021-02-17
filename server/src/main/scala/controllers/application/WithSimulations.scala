@@ -79,6 +79,7 @@ trait WithSimulations {
       OptimisationProviders.liveManifestsProvider(ctrl.manifestsRouterActor),
       OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService),
       splitsCalculator,
+      ctrl.flightsActor,
       portDesksAndWaitsProvider.flightsToLoads,
       portDesksAndWaitsProvider.loadsToDesks,
       terminalDeskLimits)

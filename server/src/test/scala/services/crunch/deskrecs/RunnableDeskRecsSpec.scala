@@ -2,13 +2,14 @@ package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetFlights
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes}
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, SplitsForArrivals}
 import drt.shared.PaxTypes.{EeaMachineReadable, VisaNational}
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared.SplitRatiosNs.SplitSources
@@ -70,6 +71,11 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long) extends Ac
   }
 }
 
+class MockSplitsSinkActor() extends Actor {
+  override def receive: Receive = {
+    case _: SplitsForArrivals => sender() ! UpdatedMillis.empty
+  }
+}
 
 class RunnableDeskRecsSpec extends CrunchTestLike {
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
@@ -84,6 +90,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
   val flexDesks = false
   val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
+  val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   private def getDeskRecsGraph(mockPortStateActor: ActorRef, historicManifests: HistoricManifestsProvider, airportConfig: AirportConfig = defaultAirportConfig) = {
     val paxAllocation = PaxTypeQueueAllocation(
@@ -99,6 +106,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       mockLiveManifestsProviderNoop,
       historicManifests,
       splitsCalc,
+      mockSplitsSink,
       desksAndWaitsProvider.flightsToLoads,
       desksAndWaitsProvider.loadsToDesks,
       PortDeskLimits.flexed(airportConfig))

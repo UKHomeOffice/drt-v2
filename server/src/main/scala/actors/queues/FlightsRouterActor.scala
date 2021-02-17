@@ -141,9 +141,9 @@ class FlightsRouterActor(updatesSubscribers: ActorRef,
         }
 
     case container: FlightsWithSplitsDiff =>
-      val updates: Map[(Terminal, UtcDate), List[ApiFlightWithSplits]] = container.flightsToUpdate
+      val updates: Map[(Terminal, UtcDate), Iterable[ApiFlightWithSplits]] = container.flightsToUpdate
         .groupBy(flightWithSplits => (flightWithSplits.apiFlight.Terminal, SDate(flightWithSplits.apiFlight.Scheduled).toUtcDate))
-      val removals: Map[(Terminal, UtcDate), List[UniqueArrival]] = container.arrivalsToRemove
+      val removals: Map[(Terminal, UtcDate), Iterable[UniqueArrival]] = container.arrivalsToRemove
         .groupBy(ua => (ua.terminal, SDate(ua.scheduled).toUtcDate))
 
       val keys = updates.keys ++ removals.keys

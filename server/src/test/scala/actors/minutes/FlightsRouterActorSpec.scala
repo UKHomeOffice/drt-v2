@@ -1,7 +1,9 @@
 package actors.minutes
 
-import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, PointInTimeQuery}
+import actors.FlightLookups
+import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, PointInTimeQuery}
 import actors.queues.FlightsRouterActor
+import actors.queues.FlightsRouterActor.runAndCombine
 import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
@@ -11,10 +13,13 @@ import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.DataUpdates.FlightUpdates
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
+import drt.shared.PaxTypes.EeaNonMachineReadable
+import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
+import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.dates.UtcDate
-import drt.shared.{ApiFlightWithSplits, SDateLike}
+import drt.shared._
 import services.SDate
 import services.crunch.CrunchTestLike
 
@@ -257,6 +262,50 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
 
         result === flights
+      }
+    }
+  }
+
+  "Concerning persistence of flights" >> {
+    "Given a router, I should see updates sent to it are persisted" >> {
+      val lookups = FlightLookups(system, myNow, queuesByTerminal = Map(T1 -> Seq(EeaDesk, NonEeaDesk, EGate)), updatesSubscriber = TestProbe("").ref)
+      val router = lookups.flightsActor
+
+      val scheduled = "2021-06-01T00:00"
+      val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, terminal = T1)
+      val flightWithSplits = ApiFlightWithSplits(arrival, Set())
+      val requestForFlights = GetFlights(SDate(scheduled).millisSinceEpoch, SDate(scheduled).addHours(6).millisSinceEpoch)
+
+      "When I send it a flight with no splits" >> {
+        val eventualFlights = router
+          .ask(FlightsWithSplitsDiff(Iterable(flightWithSplits), Iterable()))
+          .flatMap(_ => runAndCombine(
+            router
+              .ask(requestForFlights)
+              .mapTo[Source[FlightsWithSplits, NotUsed]])
+            .map(_.flights.values.headOption))
+
+        val result = Await.result(eventualFlights, 1 second)
+
+        result === Option(ApiFlightWithSplits(arrival, Set()))
+      }
+
+      "When I send it a flight with no splits, followed by its splits" >> {
+        val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 1, None, None)), Historical, None, PaxNumbers)
+        val eventualFlights = router
+          .ask(FlightsWithSplitsDiff(Iterable(flightWithSplits), Iterable()))
+          .flatMap(_ => router
+            .ask(SplitsForArrivals(Map(arrival.unique -> Set(splits))))
+            .flatMap(_ => runAndCombine(
+              router
+                .ask(requestForFlights)
+                .mapTo[Source[FlightsWithSplits, NotUsed]])
+              .map(_.flights.values.headOption)))
+
+
+        val result = Await.result(eventualFlights, 1 second)
+
+        result === Option(ApiFlightWithSplits(arrival, Set(splits), lastUpdated = Option(myNow().millisSinceEpoch)))
       }
     }
   }
