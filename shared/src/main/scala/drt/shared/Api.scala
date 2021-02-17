@@ -741,7 +741,12 @@ object FlightsApi {
     def diff(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
       val updatedFlights = splits
         .map {
-          case (key, newSplits) => flights.flights.get(key).map(fws => fws.copy(splits = newSplits, lastUpdated = Option(nowMillis)))
+          case (key, newSplits) => flights.flights.get(key).map { fws =>
+            val updatedSplits = newSplits.diff(fws.splits)
+            val updatedSources = updatedSplits.map(_.source)
+            val mergedSplits = fws.splits.filterNot(s => updatedSources.contains(s.source)) ++ updatedSplits
+            fws.copy(splits = mergedSplits, lastUpdated = Option(nowMillis))
+          }
         }
         .collect { case Some(flight) => flight }
 
