@@ -100,7 +100,12 @@ object DynamicRunnableDeskRecs {
       }
       .mapAsync(1) { case (crunchRequest, flights) =>
         val arrivalsToLookup = flights.filter(_.splits.isEmpty).map(_.apiFlight)
-        historicManifestsProvider(arrivalsToLookup).map(manifests => (crunchRequest, flights, manifests))
+        val startMillis = System.currentTimeMillis()
+        historicManifestsProvider(arrivalsToLookup).map { manifests =>
+          val endMillis = System.currentTimeMillis()
+          log.info(f"Loading ${arrivalsToLookup.size} arrivals' historic manifests took ${endMillis - startMillis}ms")
+          (crunchRequest, flights, manifests)
+        }
       }
       .flatMapConcat {
         case (crunchRequest, flights, manifestsSource) =>
