@@ -65,13 +65,25 @@ steps:
     DRONE_S3_CACHE_BUCKET_NAME:
       from_secret: DRONE_S3_CACHE_BUCKET_NAME
 
+- name: publish
+  image: plugins/ecr
+  environment:
+    AWS_REGION: eu-west-2
+  settings:
+    access_key:
+      from_secret: aws_access_key_id
+    secret_key:
+      from_secret: aws_secret_access_key
+    repo: drt/drt-v2
+    registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
 
-- name: build-image
-  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
-  commands:
-    # wait for docker service to be up before running docker build
-    - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
-    - docker build -t ${DRONE_BUILD_NUMBER} .
+
+#- name: build-image
+#  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+#  commands:
+#    # wait for docker service to be up before running docker build
+#    - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
+#    - docker build -t B${DRONE_BUILD_NUMBER} .
 
 #- name: build_docker
 #  pull: if-not-exists
