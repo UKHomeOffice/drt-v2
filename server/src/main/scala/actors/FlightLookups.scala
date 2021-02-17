@@ -30,7 +30,6 @@ trait FlightLookupsLike {
   val updateFlights: FlightsUpdate = (partition: (Terminal, UtcDate), diff: FlightUpdates) => {
     val (terminal, date) = partition
     val actor = system.actorOf(TerminalDayFlightActor.props(terminal, date, now))
-//    system.log.info(s"About to update $terminal $date with ${diff.flightsToUpdate.size} flights")
     requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[UpdatedMillis]
   }
 

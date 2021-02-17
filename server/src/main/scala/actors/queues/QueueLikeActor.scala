@@ -31,12 +31,6 @@ object QueueLikeActor {
     def ++(other: UpdateAffect): UpdateAffect
   }
 
-  case object NoAffect extends UpdateAffect {
-    override def ++(other: UpdateAffect): UpdateAffect = other match {
-      case someAffect => someAffect
-    }
-  }
-
   object UpdatedMillis {
     val empty: UpdatedMillis = UpdatedMillis(Seq())
   }

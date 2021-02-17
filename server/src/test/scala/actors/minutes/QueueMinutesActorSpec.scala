@@ -2,7 +2,7 @@ package actors.minutes
 
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors.minutes.MinutesActorLike.MinutesLookup
-import actors.queues.QueueLikeActor.{NoAffect, UpdatedMillis}
+import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}

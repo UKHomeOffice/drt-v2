@@ -37,8 +37,8 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
 
   def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[UpdateAffect] = {
     processingRequest = true
-    val eventualUpdatesDiff = updateByTerminalDayAndGetDiff(updates)
-    eventualUpdatesDiff
+    val eventualAffects = sendUpdates(updates)
+    eventualAffects
       .map { updateAffect =>
         if (shouldSendAffects(updates)) maybeUpdatesSubscriber.foreach(_ ! updateAffect)
       }
@@ -47,14 +47,14 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
         replyTo ! Ack
         self ! ProcessNextUpdateRequest
       }
-    eventualUpdatesDiff
+    eventualAffects
   }
 
   def sendUpdatedMillisToSubscriber(eventualUpdatesDiff: Future[UpdateAffect]): Future[Unit] = eventualUpdatesDiff.collect {
     case diffMinutesContainer => maybeUpdatesSubscriber.foreach(_ ! diffMinutesContainer)
   }
 
-  def updateByTerminalDayAndGetDiff(updates: U): Future[UpdateAffect] = {
+  def sendUpdates(updates: U): Future[UpdateAffect] = {
     val eventualUpdatedMinutesDiff: Source[UpdateAffect, NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
         case (partition, updates) => affectsFromUpdate(partition, updates)
@@ -76,6 +76,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
   override def receive: Receive =
     receiveUtil orElse
       receiveUpdates orElse
+      receiveProcessRequest orElse
       receiveQueries orElse
       receiveUnexpected
 
@@ -95,7 +96,9 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
     case updates: U =>
       updateRequestsQueue = (sender(), updates) :: updateRequestsQueue
       self ! ProcessNextUpdateRequest
+  }
 
+  def receiveProcessRequest: Receive = {
     case ProcessNextUpdateRequest =>
       if (!processingRequest) {
         updateRequestsQueue match {
