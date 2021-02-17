@@ -118,11 +118,12 @@ object FlightsWithSplitsTable {
     .build
 
   def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue]): TagOf[TableSection] = {
+    val redListPassportHeading = "Red List Passports"
     val columns = List(
       ("Flight", None),
       ("Origin", None),
       ("Country", Option("country")),
-      ("Red List", None),
+      (redListPassportHeading, None),
       ("Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
       ("Sch", None),
@@ -138,7 +139,7 @@ object FlightsWithSplitsTable {
         case (label, _) => label != "Est Chox" || props.hasEstChox
       }
       .filter {
-        case (label, _) => label != "Red List" || props.loggedInUser.hasRole(RedListFeature)
+        case (label, _) => label != redListPassportHeading || props.loggedInUser.hasRole(RedListFeature)
       }
       .map {
         case (label, None) if label == "Flight" => <.th(
