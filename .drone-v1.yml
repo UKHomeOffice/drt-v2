@@ -18,7 +18,6 @@ steps:
 #    - push
 
 
-
 - name: ecr-login
   pull: if-not-exists
   image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
@@ -61,12 +60,14 @@ steps:
   commands:
     - ls -lah
     - ls -lah ~
-    - ls -lah ../
-    - ls -lah .ivy2
-    - ls -lah .cache
-    - ls -lah .sbt
+    - ls -lah ../../
+    - echo $DRONE_S3_CACHE_BUCKET_NAME
+  environment:
+    DRONE_S3_CACHE_BUCKET_NAME:
+      from_secret: DRONE_S3_CACHE_BUCKET_NAME
   depends_on:
     - drone-s3-cache-pull
+
 
 - name: publish-cypress
   image: plugins/ecr
