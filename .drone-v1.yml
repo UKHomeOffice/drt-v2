@@ -17,6 +17,16 @@ steps:
 #    event:
 #    - push
 
+- name: look-at-directory
+  pull: if-not-exists
+  image: alpine/git
+  commands:
+    - ls -lah
+    - ls -lah .ivy2
+    - ls -lah .cache
+    - ls -lah .sbt
+
+
 - name: ecr-login
   pull: if-not-exists
   image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
