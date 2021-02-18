@@ -72,7 +72,7 @@ steps:
   image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
   commands:
   - /root/entrypoint.sh
-  - sbt test docker:stage
+  - sbt --error test docker:stage
   environment:
     ARTIFACTORY_PASSWORD:
       from_secret: ARTIFACTORY_PASSWORD
