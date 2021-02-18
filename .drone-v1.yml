@@ -37,20 +37,20 @@ steps:
       - push
       - tag
 
-#- name: drone_s3_cache_pull
-#  pull: if-not-exists
-#  image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-#  settings:
-#    drone_s3_cache_mode: pull
-#  environment:
-#    DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
-#      from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-#    DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
-#      from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-#    DRONE_S3_CACHE_BUCKET_NAME:
-#      from_secret: DRONE_S3_CACHE_BUCKET_NAME
+- name: drone-s3-cache-pull
+  pull: if-not-exists
+  image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+  settings:
+    drone-s3-cache-mode: pull
+  environment:
+    DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
+      from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+    DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
+      from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+    DRONE_S3_CACHE_BUCKET_NAME:
+      from_secret: DRONE_S3_CACHE_BUCKET_NAME
 
-- name: Publish Cypress Test Container
+- name: publish-cypress-test
   image: plugins/ecr
   environment:
     AWS_REGION: eu-west-2
@@ -64,55 +64,63 @@ steps:
     dockerfile: cy-drt-dockfile
     tags:
       - latest
+  depends_on:
+    - drone-s3-cache-pull
 
-#- name: build
-#  pull: if-not-exists
-#  image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
-#  commands:
-#  - /root/entrypoint.sh
-#  - sbt test docker:stage
-#  environment:
-#    ARTIFACTORY_PASSWORD:
-#      from_secret: ARTIFACTORY_PASSWORD
-#    ARTIFACTORY_USERNAME: drt_ci
-#    ENV_LOG_LEVEL: ERROR
-#    KEYTOOL_PASSWORD:
-#      from_secret: KEYTOOL_PASSWORD
-#  when:
-#    event:
-#    - push
-#
-#- name: drone_s3_cache_push
-#  pull: if-not-exists
-#  image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-#  settings:
-#    drone_s3_cache_folders:
-#      - ./.ivy2
-#      - ./.sbt/boot
-#      - ./drone/src/github.com/UKHomeOffice/drt-v2/node_modules
-#      - ./drone/src/target
-#    drone_s3_cache_mode: push
-#  environment:
-#    DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
-#      from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-#    DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
-#      from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-#    DRONE_S3_CACHE_BUCKET_NAME:
-#      from_secret: DRONE_S3_CACHE_BUCKET_NAME
-#
-#- name: Publish DRT
-#  image: plugins/ecr
-#  environment:
-#    AWS_REGION: eu-west-2
-#  settings:
-#    access_key:
-#      from_secret: aws_access_key_id
-#    secret_key:
-#      from_secret: aws_secret_access_key
-#    repo: drt/drt-v2
-#    registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
-#    tags:
-#      - B${DRONE_BUILD_NUMBER}
+- name: build
+  pull: if-not-exists
+  image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
+  commands:
+  - /root/entrypoint.sh
+  - sbt test docker:stage
+  environment:
+    ARTIFACTORY_PASSWORD:
+      from_secret: ARTIFACTORY_PASSWORD
+    ARTIFACTORY_USERNAME: drt_ci
+    ENV_LOG_LEVEL: ERROR
+    KEYTOOL_PASSWORD:
+      from_secret: KEYTOOL_PASSWORD
+  when:
+    event:
+    - push
+  depends_on:
+    - drone-s3-cache-pull
+
+- name: drone-s3-cache-push
+  pull: if-not-exists
+  image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+  settings:
+    drone-s3-cache-folders:
+      - ./.ivy2
+      - ./.sbt/boot
+      - ./drone/src/github.com/UKHomeOffice/drt-v2/e2e/node_modules
+    drone-s3-cache-mode: push
+  environment:
+    DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
+      from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+    DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
+      from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+    DRONE_S3_CACHE_BUCKET_NAME:
+      from_secret: DRONE_S3_CACHE_BUCKET_NAME
+  depends_on:
+    - build
+    - publish-cypress-test
+
+- name: publish-drt
+  image: plugins/ecr
+  environment:
+    AWS_REGION: eu-west-2
+  settings:
+    access_key:
+      from_secret: aws_access_key_id
+    secret_key:
+      from_secret: aws_secret_access_key
+    repo: drt/drt-v2
+    registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+    tags:
+      - B${DRONE_BUILD_NUMBER}
+  depends_on:
+    - build
 
 - name: e2e-tests
   pull: if-not-exists
@@ -132,6 +140,9 @@ steps:
     event:
       - push
       - tag
+  depends_on:
+    - publish-drt
+    - publish-cypress-test
 
 - name: git_tag
   pull: if-not-exists
@@ -151,6 +162,8 @@ steps:
   when:
     event:
     - push
+  depends_on:
+    - e2e-tests
 
 - name: slack_notification
   pull: if-not-exists
@@ -166,6 +179,8 @@ steps:
     status:
     - success
     - failure
+  depends_on:
+    - e2e-tests
 
 services:
   - name: docker
