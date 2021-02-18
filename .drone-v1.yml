@@ -53,7 +53,7 @@ steps:
     event:
       - push
 
-- name: publish-cypress-test
+- name: publish-cypress
   image: plugins/ecr
   environment:
     AWS_REGION: eu-west-2
@@ -67,18 +67,18 @@ steps:
     dockerfile: cy-drt-dockfile
     tags:
       - latest
-#  depends_on:
-#    - drone-s3-cache-pull
+  depends_on:
+    - drone-s3-cache-pull
   when:
     event:
       - push
 
-- name: unit-test-and-build
+- name: build
   pull: if-not-exists
   image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
   commands:
   - /root/entrypoint.sh
-  - sbt --error test docker:stage
+  - sbt --error compile docker:stage
   environment:
     ARTIFACTORY_PASSWORD:
       from_secret: ARTIFACTORY_PASSWORD
@@ -89,27 +89,27 @@ steps:
   when:
     event:
     - push
-#  depends_on:
-#    - drone-s3-cache-pull
+  depends_on:
+    - drone-s3-cache-pull
 
-#- name: unit-test
-#  pull: if-not-exists
-#  image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
-#  commands:
-#  - /root/entrypoint.sh
-#  - sbt --error test
-#  environment:
-#    ARTIFACTORY_PASSWORD:
-#      from_secret: ARTIFACTORY_PASSWORD
-#    ARTIFACTORY_USERNAME: drt_ci
-#    ENV_LOG_LEVEL: ERROR
-#    KEYTOOL_PASSWORD:
-#      from_secret: KEYTOOL_PASSWORD
-#  when:
-#    event:
-#    - push
-#  depends_on:
-#    - build
+- name: unit-test
+  pull: if-not-exists
+  image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
+  commands:
+  - /root/entrypoint.sh
+  - sbt --error test
+  environment:
+    ARTIFACTORY_PASSWORD:
+      from_secret: ARTIFACTORY_PASSWORD
+    ARTIFACTORY_USERNAME: drt_ci
+    ENV_LOG_LEVEL: ERROR
+    KEYTOOL_PASSWORD:
+      from_secret: KEYTOOL_PASSWORD
+  when:
+    event:
+    - push
+  depends_on:
+    - build
 
 - name: publish-drt
   image: plugins/ecr
@@ -127,8 +127,8 @@ steps:
   when:
     event:
       - push
-#  depends_on:
-#    - build
+  depends_on:
+    - build
 
 - name: e2e-tests
   pull: if-not-exists
@@ -148,9 +148,9 @@ steps:
   when:
     event:
       - push
-#  depends_on:
-#    - publish-drt
-#    - publish-cypress-test
+  depends_on:
+    - publish-drt
+    - publish-cypress
 
 - name: drone-s3-cache-push
   pull: if-not-exists
@@ -171,9 +171,9 @@ steps:
   when:
     event:
       - push
-#  depends_on:
-#    - build
-#    - publish-cypress-test
+  depends_on:
+    - build
+    - publish-cypress
 
 - name: git_tag
   pull: if-not-exists
@@ -193,8 +193,8 @@ steps:
   when:
     event:
     - push
-#  depends_on:
-#    - e2e-tests
+  depends_on:
+    - e2e-tests
 
 - name: slack_notification
   pull: if-not-exists
@@ -213,8 +213,8 @@ steps:
   when:
     event:
       - push
-#  depends_on:
-#    - e2e-tests
+  depends_on:
+    - e2e-tests
 
 services:
   - name: docker
