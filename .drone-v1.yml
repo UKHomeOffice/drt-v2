@@ -72,7 +72,7 @@ steps:
   image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
   commands:
   - /root/entrypoint.sh
-  - sbt --error test docker:stage
+  - sbt --error compile docker:stage
   environment:
     ARTIFACTORY_PASSWORD:
       from_secret: ARTIFACTORY_PASSWORD
@@ -86,25 +86,24 @@ steps:
   depends_on:
     - drone-s3-cache-pull
 
-- name: drone-s3-cache-push
+- name: unit-test
   pull: if-not-exists
-  image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-  settings:
-    drone-s3-cache-folders:
-      - ./.ivy2
-      - ./.sbt/boot
-      - ./drone/src/github.com/UKHomeOffice/drt-v2/e2e/node_modules
-    drone-s3-cache-mode: push
+  image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
+  commands:
+  - /root/entrypoint.sh
+  - sbt --error test
   environment:
-    DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
-      from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-    DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
-      from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-    DRONE_S3_CACHE_BUCKET_NAME:
-      from_secret: DRONE_S3_CACHE_BUCKET_NAME
+    ARTIFACTORY_PASSWORD:
+      from_secret: ARTIFACTORY_PASSWORD
+    ARTIFACTORY_USERNAME: drt_ci
+    ENV_LOG_LEVEL: ERROR
+    KEYTOOL_PASSWORD:
+      from_secret: KEYTOOL_PASSWORD
+  when:
+    event:
+    - push
   depends_on:
     - build
-    - publish-cypress-test
 
 - name: publish-drt
   image: plugins/ecr
@@ -142,6 +141,26 @@ steps:
       - tag
   depends_on:
     - publish-drt
+    - publish-cypress-test
+
+- name: drone-s3-cache-push
+  pull: if-not-exists
+  image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+  settings:
+    drone-s3-cache-folders:
+      - ./.ivy2
+      - ./.sbt/boot
+      - ./drone/src/github.com/UKHomeOffice/drt-v2/e2e/node_modules
+    drone-s3-cache-mode: push
+  environment:
+    DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
+      from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+    DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
+      from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+    DRONE_S3_CACHE_BUCKET_NAME:
+      from_secret: DRONE_S3_CACHE_BUCKET_NAME
+  depends_on:
+    - build
     - publish-cypress-test
 
 - name: git_tag
