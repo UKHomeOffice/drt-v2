@@ -35,7 +35,7 @@ steps:
   when:
     event:
       - push
-      - tag
+
 
 - name: drone-s3-cache-pull
   pull: if-not-exists
@@ -49,23 +49,29 @@ steps:
       from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
     DRONE_S3_CACHE_BUCKET_NAME:
       from_secret: DRONE_S3_CACHE_BUCKET_NAME
+  when:
+    event:
+      - push
 
-#- name: publish-cypress-test
-#  image: plugins/ecr
-#  environment:
-#    AWS_REGION: eu-west-2
-#  settings:
-#    access_key:
-#      from_secret: cypress_aws_access_key_id
-#    secret_key:
-#      from_secret: cypress_aws_secret_access_key
-#    repo: drt/drt-v2-cypress
-#    registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
-#    dockerfile: cy-drt-dockfile
-#    tags:
-#      - latest
+- name: publish-cypress-test
+  image: plugins/ecr
+  environment:
+    AWS_REGION: eu-west-2
+  settings:
+    access_key:
+      from_secret: cypress_aws_access_key_id
+    secret_key:
+      from_secret: cypress_aws_secret_access_key
+    repo: drt/drt-v2-cypress
+    registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+    dockerfile: cy-drt-dockfile
+    tags:
+      - latest
 #  depends_on:
 #    - drone-s3-cache-pull
+  when:
+    event:
+      - push
 
 - name: unit-test-and-build
   pull: if-not-exists
@@ -118,6 +124,9 @@ steps:
     registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
     tags:
       - B${DRONE_BUILD_NUMBER}
+  when:
+    event:
+      - push
 #  depends_on:
 #    - build
 
@@ -139,7 +148,6 @@ steps:
   when:
     event:
       - push
-      - tag
 #  depends_on:
 #    - publish-drt
 #    - publish-cypress-test
@@ -160,6 +168,9 @@ steps:
       from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
     DRONE_S3_CACHE_BUCKET_NAME:
       from_secret: DRONE_S3_CACHE_BUCKET_NAME
+  when:
+    event:
+      - push
 #  depends_on:
 #    - build
 #    - publish-cypress-test
@@ -199,6 +210,9 @@ steps:
     status:
     - success
     - failure
+  when:
+    event:
+      - push
 #  depends_on:
 #    - e2e-tests
 
