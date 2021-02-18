@@ -17,14 +17,6 @@ steps:
 #    event:
 #    - push
 
-- name: look-at-directory
-  pull: if-not-exists
-  image: alpine/git
-  commands:
-    - ls -lah
-    - ls -lah .ivy2
-    - ls -lah .cache
-    - ls -lah .sbt
 
 
 - name: ecr-login
@@ -62,6 +54,19 @@ steps:
   when:
     event:
       - push
+
+- name: look-at-directory
+  pull: if-not-exists
+  image: alpine/git
+  commands:
+    - ls -lah
+    - ls -lah ~
+    - ls -lah ../
+    - ls -lah .ivy2
+    - ls -lah .cache
+    - ls -lah .sbt
+  depends_on:
+    - drone-s3-cache-pull
 
 - name: publish-cypress
   image: plugins/ecr
@@ -101,6 +106,17 @@ steps:
     - push
   depends_on:
     - drone-s3-cache-pull
+
+- name: look-at-directory2
+  pull: if-not-exists
+  image: alpine/git
+  commands:
+    - ls -lah
+    - ls -lah .ivy2
+    - ls -lah .cache
+    - ls -lah .sbt
+  depends_on:
+    - build
 
 - name: unit-test
   pull: if-not-exists
