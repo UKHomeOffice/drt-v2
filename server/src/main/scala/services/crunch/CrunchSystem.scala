@@ -1,20 +1,16 @@
 package services.crunch
 
-import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream._
-import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.api.Arrival
 import drt.shared.{SDateLike, _}
-import manifests.passengers.BestAvailableManifest
-import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
-import services.SplitsProvider.SplitProvider
 import services._
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike}
 import services.graphstages.Crunch._
@@ -115,24 +111,6 @@ object CrunchSystem {
     val forecastArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals, forecastMaxMillis)
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
-
-    val ptqa = paxTypeQueueAllocator(props.airportConfig)
-
-    val splitAdjustments = if (props.adjustEGateUseByUnder12s)
-      ChildEGateAdjustments(props.airportConfig.assumedAdultsPerChild)
-    else
-      AdjustmentsNoop
-
-    val splitsCalculator = SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits, splitAdjustments)
-
-    val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
-      name = props.logLabel,
-      optionalInitialFlights = initialFlightsWithSplits,
-      props.refreshManifestsOnStart,
-      splitsCalculator = splitsCalculator,
-      expireAfterMillis = props.expireAfterMillis,
-      now = props.now
-    )
 
     val staffGraphStage = new StaffGraphStage(
       initialShifts = props.initialShifts,
