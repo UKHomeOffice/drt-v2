@@ -1,20 +1,20 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
-import drt.shared.SplitRatiosNs.SplitSources._
+import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.Terminals.T1
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser._
-import server.feeds.{DqManifests, ManifestsFeedSuccess}
+import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
-import services.crunch.VoyageManifestGenerator._
+import services.crunch.VoyageManifestGenerator.{euIdCard, euPassport, euPassportWithIdentifier, inTransitCountry, inTransitFlag, manifestPax, visa}
 
 import scala.collection.immutable.{List, Map, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -51,12 +51,12 @@ class VoyageManifestsSpec extends CrunchTestLike {
           nonVisaNationalToDesk -> 25d / 60
         )),
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
-      ),
-      initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+      )
     ))
 
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
     offerAndWait(crunch.manifestsLiveInput, inputManifestsCi)
-    Thread.sleep(1500)
+    Thread.sleep(1000)
     offerAndWait(crunch.manifestsLiveInput, inputManifestsDc)
 
     val expectedNonZeroQueues = Set(NonEeaDesk)
@@ -95,10 +95,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
               )
             ),
             queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
-          ),
-          initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+          )
         ))
 
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
         offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
         val expected = Map(Queues.EeaDesk -> 2.0, Queues.EGate -> 8.0)
@@ -146,10 +146,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
             ),
             queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)),
             hasTransfer = true
-          ),
-          initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+          )
         ))
 
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
         offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
         val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 4.0, Queues.NonEeaDesk -> 0.0)
@@ -266,10 +266,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
             ),
             queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk)),
             hasTransfer = true
-          ),
-          initialPortState = Option(PortState(SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+          )
         ))
 
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
         offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
         val expected = Map(Queues.EeaDesk -> 1.2, Queues.EGate -> 0.8, Queues.NonEeaDesk -> 2.0)
@@ -316,15 +316,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
           visaNationalToDesk -> 25d / 60
         )),
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
-      ),
-      initialPortState = Option(
-        PortState(
-          SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())),
-          SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()
-        )
       )
     ))
 
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = 2
@@ -369,15 +364,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
           visaNationalToDesk -> 25d / 60
         )),
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
-      ),
-      initialPortState = Option(
-        PortState(
-          SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())),
-          SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()
-        )
       )
     ))
 
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = 3
@@ -422,15 +412,10 @@ class VoyageManifestsSpec extends CrunchTestLike {
           visaNationalToDesk -> 25d / 60
         )),
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
-      ),
-      initialPortState = Option(
-        PortState(
-          SortedMap(flight.unique -> ApiFlightWithSplits(flight, Set())),
-          SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()
-        )
       )
     ))
 
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = 2
@@ -483,6 +468,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
          |         }
          |    ]
          |}""".stripMargin
+
     val result = VoyageManifestParser.parseVoyagePassengerInfo(manifestString).get
 
     val expected = VoyageManifest(

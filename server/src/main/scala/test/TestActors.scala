@@ -93,8 +93,8 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestVoyageManifestsActor(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate)
-    extends ManifestRouterActor(manifestLookup, manifestsUpdate) with Resettable {
+  class TestVoyageManifestsActor(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate, updatesSubscriber: ActorRef)
+    extends ManifestRouterActor(manifestLookup, manifestsUpdate, updatesSubscriber) with Resettable {
 
     override def resetState(): Unit = state = initialState
 
@@ -223,14 +223,14 @@ object TestActors {
 
     var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
 
-    private def addToTerminalDays(container: FlightsWithSplitsDiff): Unit = {
+    private def addToTerminalDays(container: ArrivalsDiff): Unit = {
       partitionUpdates(container).keys.foreach {
         case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date))
       }
     }
 
     def resetReceive: Receive = {
-      case container: FlightsWithSplitsDiff =>
+      case container: ArrivalsDiff =>
         val replyTo = sender()
         addToTerminalDays(container)
         handleUpdatesAndAck(container, replyTo)

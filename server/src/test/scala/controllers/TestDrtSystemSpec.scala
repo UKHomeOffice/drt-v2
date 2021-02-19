@@ -4,10 +4,10 @@ import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince}
 import akka.pattern.ask
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.T1
-import drt.shared.{ApiFlightWithSplits, PortState}
+import drt.shared.api.Arrival
+import drt.shared.{ArrivalsDiff, PortState}
 import play.api.Configuration
 import services.crunch.CrunchTestLike
 import test.TestActors.ResetData
@@ -27,17 +27,17 @@ class TestDrtSystemSpec extends CrunchTestLike {
     val drtSystem = TestDrtSystem(configuration, defaultAirportConfig)
 
     "When I send its port state actor an arrival" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly), Set(), None)
-      Await.ready(drtSystem.portStateActor.ask(FlightsWithSplitsDiff(List(fws), List())), 1 second)
+      val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly)
+      Await.ready(drtSystem.portStateActor.ask(ArrivalsDiff(List(arrival), List())), 1 second)
 
       "Then I should see the arrival when I check its port state" >> {
-        val flightExists = doesFlightExist(drtSystem, fws) === true
+        val flightExists = doesFlightExist(drtSystem, arrival) === true
         val updatesExist = getUpdates(drtSystem).toList.flatMap(_.flights).size === 1
         flightExists && updatesExist
       }
 
       "Then I should see no arrivals after sending a Reset message to the reset actor" >> {
-        val existsBeforeReset = doesFlightExist(drtSystem, fws) === true
+        val existsBeforeReset = doesFlightExist(drtSystem, arrival) === true
         resetData(drtSystem)
         val emptyAfterReset = getPortState(drtSystem).flights.isEmpty
         val noUpdatesAfterReset = getUpdates(drtSystem).toList.flatMap(_.flights).isEmpty
@@ -100,8 +100,8 @@ class TestDrtSystemSpec extends CrunchTestLike {
     Await.result(drtSystem.portStateActor.ask(GetStateForDateRange(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1 second)
   }
 
-  private def doesFlightExist(drtSystem: TestDrtSystem, fws: ApiFlightWithSplits): Boolean =
-    getPortState(drtSystem).flights.values.map(_.copy(lastUpdated = None)) == Iterable(fws)
+  private def doesFlightExist(drtSystem: TestDrtSystem, arrival: Arrival): Boolean =
+    getPortState(drtSystem).flights.values.map(_.apiFlight) == Iterable(arrival)
 
   private def doesCrunchMinuteExist(drtSystem: TestDrtSystem, drm: DeskRecMinute): Boolean = {
     val ps = getPortState(drtSystem)

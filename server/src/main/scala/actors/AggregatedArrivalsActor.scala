@@ -23,11 +23,14 @@ class AggregatedArrivalsActor(arrivalTable: ArrivalTableLike) extends Actor {
       log.info("Stream initialized!")
       sender() ! Ack
 
-    case RemoveFlight(UniqueArrival(number, terminal, scheduled)) =>
-      handleRemoval(number, terminal, scheduled)
+    case ArrivalsDiff(toUpdate, toRemove) =>
+      sender() ! Ack
 
-    case arrival: Arrival =>
-      handleUpdate(arrival)
+//    case RemoveFlight(UniqueArrival(number, terminal, scheduled)) =>
+//      handleRemoval(number, terminal, scheduled)
+//
+//    case arrival: Arrival =>
+//      handleUpdate(arrival)
 
     case StreamFailure(t) =>
       log.error("Received stream failure", t)

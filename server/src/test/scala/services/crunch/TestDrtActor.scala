@@ -8,7 +8,6 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
-import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.shared.Terminals.Terminal
 import drt.shared.{MilliTimes, PortCode, SDateLike, VoyageNumber}
@@ -80,9 +79,9 @@ class TestDrtActor extends Actor {
       val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now))))
       val manifestLookups = ManifestLookups(system)
 
-      val manifestsRouterActor: ActorRef = system.actorOf(ManifestRouterActor.props(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests))
       val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(tc.now, journalType, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)))
       val deploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)))
+      val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)))
 
       val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, crunchQueueActor)
       val flightsActor: ActorRef = flightLookups.flightsActor
@@ -122,14 +121,14 @@ class TestDrtActor extends Actor {
         val historicManifestLookups: ManifestLookupLike = MockManifestLookupService
 
         val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-          OptimisationProviders.arrivalsProvider(portStateActor),
-          OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
-          OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups),
-          splitsCalculator,
-          flightsActor,
-          portDeskRecs.flightsToLoads,
-          portDeskRecs.loadsToDesks,
-          deskLimitsProviders)
+          arrivalsProvider = OptimisationProviders.arrivalsProvider(portStateActor),
+          liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
+          historicManifestsProvider = OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups),
+          splitsCalculator = splitsCalculator,
+          splitsSink = portStateActor,
+          flightsToLoads = portDeskRecs.flightsToLoads,
+          loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+          maxDesksProviders = deskLimitsProviders)
 
         val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
 
@@ -148,7 +147,7 @@ class TestDrtActor extends Actor {
 
         if (tc.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 
-        portStateActor ! SetDeploymentQueueActor(deploymentQueueActor)
+        portStateActor ! SetSubscriber(deploymentQueueActor)
         (deskRecsKillSwitch, deploymentsKillSwitch)
       }
 
@@ -177,6 +176,7 @@ class TestDrtActor extends Actor {
         airportConfig = tc.airportConfig,
         pcpArrival = tc.pcpArrivalTime,
         portStateActor = portStateActor,
+        flightsActor = flightsActor,
         maxDaysToCrunch = tc.maxDaysToCrunch,
         expireAfterMillis = tc.expireAfterMillis,
         actors = Map[String, ActorRef](

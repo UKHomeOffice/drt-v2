@@ -4,8 +4,8 @@ import akka.actor.ActorRef
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
-import scalapb.GeneratedMessage
 import org.slf4j.Logger
+import scalapb.GeneratedMessage
 
 object Sizes {
   val oneMegaByte: Int = 1024 * 1024

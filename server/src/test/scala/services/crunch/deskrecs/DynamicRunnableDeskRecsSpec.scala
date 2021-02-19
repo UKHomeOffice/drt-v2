@@ -26,7 +26,7 @@ import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsProvid
 import services.crunch.deskrecs.OptimiserMocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, TestDefaults, VoyageManifestGenerator}
-import services.graphstages.CrunchMocks
+import services.graphstages.{CrunchMocks, LiveArrivals}
 import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.Map
@@ -164,7 +164,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       val manifestsForArrival = manifestsByKey(manifest)
       val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
 
-      withLiveManifests === Seq(ApiFlightWithSplits(arrival, Set(splits)))
+      withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1)), Set(splits)))
     }
 
     "When I have no manifests matching the arrival I should get no splits added to the arrival" >> {
@@ -184,7 +184,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   "Given an arrival with 100 pax " >> {
 
-    val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = s"2021-06-01T12:00", origin = PortCode("JFK"))
+    val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = s"2021-06-01T12:00", origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
 
     "When I provide no live and no historic manifests, terminal splits should be applied (50% desk, 50% egates)" >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EGate) -> 50, (T1, EeaDesk) -> 50)

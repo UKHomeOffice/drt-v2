@@ -2,17 +2,14 @@ package services.crunch
 
 import actors.acking.AckingReceiver._
 import actors.queues.QueueLikeActor.UpdatedMillis
-import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
-import akka.stream.stage.GraphStage
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{Flights, FlightsWithSplitsDiff}
-import drt.shared.api.Arrival
+import drt.shared.FlightsApi.Flights
 import drt.shared._
-import manifests.passengers.BestAvailableManifest
+import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
 import services.StreamSupervision
@@ -39,7 +36,6 @@ object RunnableCrunch {
                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
-                                       arrivalSplitsStage: GraphStage[FanInShape2[ArrivalsDiff, List[BestAvailableManifest], FlightsWithSplitsDiff]],
                                        staffGraphStage: StaffGraphStage,
 
                                        forecastArrivalsDiffStage: ArrivalsDiffingStage,
@@ -105,18 +101,18 @@ object RunnableCrunch {
           fixedPointsKillSwitchSync,
           movementsKillSwitchSync
         ) =>
-          def newPortStateSink(): SinkShape[Any] = {
-            builder.add(Sink.actorRefWithAck(portStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure).async)
-          }
+          def ackingActorSink(actorRef: ActorRef): SinkShape[Any] =
+            builder.add(Sink.actorRefWithAck(actorRef, StreamInitialized, Ack, StreamCompleted, StreamFailure).async)
+
+          def simpleActorSink(actorRef: ActorRef): SinkShape[Any] =
+            builder.add(Sink.actorRef(actorRef, StreamCompleted).async)
 
           val arrivals = builder.add(arrivalsGraphStage)
-          val arrivalSplits = builder.add(arrivalSplitsStage)
           val staff = builder.add(staffGraphStage)
           val deploymentRequestSink = builder.add(Sink.actorRef(deploymentRequestActor, StreamCompleted))
-          val deskStatsSink = newPortStateSink()
-          val flightsWithSplitsSink = newPortStateSink()
+          val deskStatsSink = ackingActorSink(portStateActor)
 
-          val staffSink = newPortStateSink()
+          val staffSink = ackingActorSink(portStateActor)
           val fcstArrivalsDiffing = builder.add(forecastArrivalsDiffStage)
           val liveBaseArrivalsDiffing = builder.add(liveBaseArrivalsDiffStage)
           val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage)
@@ -126,19 +122,16 @@ object RunnableCrunch {
           val liveBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
           val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
 
-          val manifestsFanOut = builder.add(Broadcast[ManifestsFeedResponse](2))
-          val arrivalSplitsFanOut = builder.add(Broadcast[FlightsWithSplitsDiff](3))
+          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
           val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
 
-          val baseArrivalsSink = builder.add(Sink.actorRef(forecastBaseArrivalsActor, StreamCompleted))
-          val fcstArrivalsSink = builder.add(Sink.actorRef(forecastArrivalsActor, StreamCompleted))
-          val liveBaseArrivalsSink = builder.add(Sink.actorRef(liveBaseArrivalsActor, StreamCompleted))
-          val liveArrivalsSink = builder.add(Sink.actorRef(liveArrivalsActor, StreamCompleted))
-
-          val manifestsSink = builder.add(Sink.actorRef(manifestsActor, StreamCompleted))
-
-          val arrivalUpdatesSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
-          val arrivalRemovalsSink = builder.add(Sink.actorRefWithAck(aggregatedArrivalsStateActor, StreamInitialized, Ack, StreamCompleted, StreamFailure))
+          val baseArrivalsSink = simpleActorSink(forecastBaseArrivalsActor)
+          val fcstArrivalsSink = simpleActorSink(forecastArrivalsActor)
+          val liveBaseArrivalsSink = simpleActorSink(liveBaseArrivalsActor)
+          val liveArrivalsSink = simpleActorSink(liveArrivalsActor)
+          val manifestsSink = simpleActorSink(manifestsActor)
+          val flightsSink = ackingActorSink(portStateActor)
+          val aggregatedArrivalsSink = simpleActorSink(aggregatedArrivalsStateActor)
 
           // @formatter:off
           forecastBaseArrivalsSourceSync.out.map {
@@ -174,36 +167,15 @@ object RunnableCrunch {
                 acc ++ incoming } ~> arrivals.in3
           liveArrivalsFanOut ~> liveArrivalsSink
 
-          manifestsLiveSourceSync ~> manifestsLiveKillSwitchSync ~> manifestsFanOut
-
-          manifestsFanOut.out(0)
-            .collect { case ManifestsFeedSuccess(DqManifests(_, manifests), _) if manifests.nonEmpty => manifests.map(BestAvailableManifest(_)).toList }
-            .conflate[List[BestAvailableManifest]] { case (acc, incoming) =>
-                log.info(s"${acc.length + incoming.length} conflated API manifests")
-                acc ++ incoming } ~> arrivalSplits.in1
-
-          manifestsFanOut.out(1) ~> manifestsSink
+          manifestsLiveSourceSync ~> manifestsLiveKillSwitchSync ~> manifestsSink
 
           shiftsSourceAsync          ~> shiftsKillSwitchSync ~> staff.in0
           fixedPointsSourceAsync     ~> fixedPointsKillSwitchSync ~> staff.in1
           staffMovementsSourceAsync  ~> movementsKillSwitchSync ~> staff.in2
 
-          arrivals.out ~> arrivalSplits.in0
-
-          arrivalSplits.out ~> arrivalSplitsFanOut
-                               arrivalSplitsFanOut ~> flightsWithSplitsSink
-                               arrivalSplitsFanOut
-                                 .map(_.arrivalsToRemove.map(ua => RemoveFlight(ua)).toList)
-                                 .conflateWithSeed(List(_)) { case (acc, incoming) =>
-                                    log.info(s"${acc.length + incoming.length} conflated arrivals for removal sink")
-                                    acc :+ incoming }
-                                 .mapConcat(_.flatten) ~> arrivalRemovalsSink
-                               arrivalSplitsFanOut
-                                 .map(_.flightsToUpdate.map(_.apiFlight))
-                                 .conflateWithSeed(List(_)) { case (acc, incoming) =>
-                                    log.info(s"${acc.length + incoming.size} conflated arrivals for update sink")
-                                    acc :+ incoming }
-                                 .mapConcat(_.flatten) ~> arrivalUpdatesSink
+          arrivals.out ~> arrivalsFanOut
+                          arrivalsFanOut ~> flightsSink
+                          arrivalsFanOut ~> aggregatedArrivalsSink
 
           actualDesksAndWaitTimesSourceSync ~> deskStatsSink
 
@@ -219,18 +191,4 @@ object RunnableCrunch {
       .fromGraph(graph)
       .withAttributes(StreamSupervision.resumeStrategyWithLog(RunnableCrunch.getClass.getName))
   }
-
-  def withOnlyDescheduledRemovals(removals: List[RemoveFlight], now: SDateLike): List[RemoveFlight] = {
-    val nowMillis = now.millisSinceEpoch
-    removals.filterNot(_.flightKey.scheduled <= nowMillis)
-  }
-
-  def liveStart(now: () => SDateLike): SDateLike = now().getLocalLastMidnight.addDays(-1)
-
-  def liveEnd(now: () => SDateLike,
-              liveStateDaysAhead: Int): SDateLike = now().getLocalNextMidnight.addDays(liveStateDaysAhead)
-
-  def forecastEnd(now: () => SDateLike): SDateLike = now().getLocalNextMidnight.addDays(360)
-
-  def forecastStart(now: () => SDateLike): SDateLike = now().getLocalNextMidnight
 }

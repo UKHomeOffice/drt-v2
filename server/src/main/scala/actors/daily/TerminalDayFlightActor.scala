@@ -10,7 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.UtcDate
-import drt.shared.{SDateLike, UniqueArrival}
+import drt.shared.{ArrivalsDiff, SDateLike, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
@@ -40,8 +40,8 @@ class TerminalDayFlightActor(
     case Some(pit) => f"@${SDate(pit).toISOString()}"
   }
 
-  val firstMinuteOfDay = SDate(year, month, day, 0, 0)
-  val lastMinuteOfDay = firstMinuteOfDay.addDays(1).addMinutes(-1)
+  val firstMinuteOfDay: SDateLike = SDate(year, month, day, 0, 0)
+  val lastMinuteOfDay: SDateLike = firstMinuteOfDay.addDays(1).addMinutes(-1)
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
@@ -63,16 +63,12 @@ class TerminalDayFlightActor(
   }
 
   override def receiveCommand: Receive = {
-    case diff: FlightsWithSplitsDiff =>
-      val filteredDiff = diff.forTerminal(terminal)
+    case diff: ArrivalsDiff =>
+      val stateDiff = diff
+        .diffWith(state, now().millisSinceEpoch)
+        .forTerminal(terminal)
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
-
-      if (diff == filteredDiff)
-        log.info(s"Received FlightsWithSplits for persistence")
-      else
-        logDifferences(diff, filteredDiff)
-
-      updateAndPersistDiffAndAck(filteredDiff)
+      updateAndPersistDiffAndAck(stateDiff)
 
     case splits: SplitsForArrivals =>
       val diff = splits.diff(state, now().millisSinceEpoch)
@@ -87,12 +83,6 @@ class TerminalDayFlightActor(
 
     case m => log.warn(s"Got unexpected message: $m")
   }
-
-  def logDifferences(diff: FlightsWithSplitsDiff, filteredDiff: FlightsWithSplitsDiff): Unit = log.error(
-    s"Received flights for wrong day or terminal " +
-      s"${diff.flightsToUpdate.size} flights sent in ${filteredDiff.flightsToUpdate.size} persisted," +
-      s"${diff.arrivalsToRemove} removals sent in ${filteredDiff.arrivalsToRemove.size} persisted"
-  )
 
   def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit = {
     val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch)

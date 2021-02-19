@@ -7,6 +7,7 @@ import akka.stream.scaladsl.{Flow, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
+import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
@@ -92,7 +93,9 @@ object DynamicRunnableDeskRecs {
         liveManifestsProvider(crunchRequest).map(manifestsStream => (crunchRequest, flightsSource, manifestsStream))
       }
       .flatMapConcat { case (crunchRequest, arrivals, manifestsSource) =>
-        manifestsSource.fold(VoyageManifests.empty)(_ ++ _).map(manifests => (crunchRequest, arrivals, manifests))
+        manifestsSource.fold(VoyageManifests.empty)(_ ++ _).map { manifests =>
+          (crunchRequest, arrivals, manifests)
+        }
       }
       .map { case (crunchRequest, arrivals, manifests) =>
         val manifestsByKey = arrivalKeysToManifests(manifests.manifests)
@@ -145,7 +148,14 @@ object DynamicRunnableDeskRecs {
           .get(ArrivalKey(flight.apiFlight))
           .map(splitsForArrival(_, flight.apiFlight))
 
-        ApiFlightWithSplits(flight.apiFlight, maybeSplits.toSet)
+        val arrival = maybeSplits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages) match {
+          case None => flight.apiFlight
+          case Some(liveSplits) => flight.apiFlight.copy(
+            ApiPax = Option(liveSplits.totalExcludingTransferPax.toInt)
+          )
+        }
+
+        ApiFlightWithSplits(arrival, maybeSplits.toSet)
       }
     }
 }

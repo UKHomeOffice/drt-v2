@@ -13,13 +13,13 @@ import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.DataUpdates.FlightUpdates
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
+import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
 import drt.shared.PaxTypes.EeaNonMachineReadable
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.dates.UtcDate
 import drt.shared._
+import drt.shared.dates.UtcDate
 import services.SDate
 import services.crunch.CrunchTestLike
 
@@ -273,12 +273,11 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       val scheduled = "2021-06-01T00:00"
       val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, terminal = T1)
-      val flightWithSplits = ApiFlightWithSplits(arrival, Set())
       val requestForFlights = GetFlights(SDate(scheduled).millisSinceEpoch, SDate(scheduled).addHours(6).millisSinceEpoch)
 
       "When I send it a flight with no splits" >> {
         val eventualFlights = router
-          .ask(FlightsWithSplitsDiff(Iterable(flightWithSplits), Iterable()))
+          .ask(ArrivalsDiff(Iterable(arrival), Iterable()))
           .flatMap(_ => runAndCombine(
             router
               .ask(requestForFlights)
@@ -287,13 +286,13 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
         val result = Await.result(eventualFlights, 1 second)
 
-        result === Option(ApiFlightWithSplits(arrival, Set()))
+        result === Option(ApiFlightWithSplits(arrival, Set(), lastUpdated = Option(myNow().millisSinceEpoch)))
       }
 
       "When I send it a flight with no splits, followed by its splits" >> {
         val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 1, None, None)), Historical, None, PaxNumbers)
         val eventualFlights = router
-          .ask(FlightsWithSplitsDiff(Iterable(flightWithSplits), Iterable()))
+          .ask(ArrivalsDiff(Iterable(arrival), Iterable()))
           .flatMap(_ => router
             .ask(SplitsForArrivals(Map(arrival.unique -> Set(splits))))
             .flatMap(_ => runAndCombine(

@@ -66,7 +66,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
         val maxScheduledMillis = forecastMaxMillis()
         val incomingArrivals: Seq[(UniqueArrival, Arrival)] = latestArrivals.flights.filter(_.Scheduled <= maxScheduledMillis).map(a => (UniqueArrival(a), a))
         val newUpdates: Seq[(UniqueArrival, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
-        if (newUpdates.nonEmpty) log.info(s"Got ${newUpdates.size} new arrival updates")
+        if (newUpdates.nonEmpty) log.info(s"Got ${newUpdates.size} new arrival updates") else log.info(s"no updates!\n${incomingArrivals}\n${knownArrivals}")
         knownArrivals = SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals
         Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates.map(_._2))))
       case aff@ArrivalsFeedFailure(_, _) =>
@@ -81,8 +81,12 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
       .foldLeft(List[(UniqueArrival, Arrival)]()) {
         case (soFar, (key, arrival)) => existingArrivals.get(key) match {
           case None => (key, arrival) :: soFar
-          case Some(existingArrival) if existingArrival == arrival => soFar
-          case Some(existingArrival) if unchangedExistingActChox(arrival, existingArrival) => soFar
+          case Some(existingArrival) if existingArrival == arrival =>
+            log.info(s"the same: $existingArrival == $arrival")
+            soFar
+          case Some(existingArrival) if unchangedExistingActChox(arrival, existingArrival) =>
+            log.info(s"the same inc act chox: $existingArrival == $arrival")
+            soFar
           case _ => (key, arrival) :: soFar
         }
       }

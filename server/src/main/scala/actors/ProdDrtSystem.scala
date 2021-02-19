@@ -57,12 +57,12 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val liveArrivalsActor: ActorRef = system.actorOf(Props(new LiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-arrivals-actor")
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
-  override val manifestsRouterActor: ActorRef = system.actorOf(ManifestRouterActor.props(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests), name = "voyage-manifests-router-actor")
 
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
 
   override val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "crunch-queue-actor")
   override val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "staff-queue-actor")
+  override val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)), name = "voyage-manifests-router-actor")
 
   override val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
@@ -179,13 +179,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   }
 }
 
-trait SetSubscriber {
-  val subscriber: ActorRef
-}
-
-case class SetCrunchQueueActor(subscriber: ActorRef) extends SetSubscriber
-
-case class SetDeploymentQueueActor(subscriber: ActorRef) extends SetSubscriber
+case class SetSubscriber(subscriber: ActorRef)
 
 case class SetCrunchRequestQueue(source: SourceQueueWithComplete[CrunchRequest])
 

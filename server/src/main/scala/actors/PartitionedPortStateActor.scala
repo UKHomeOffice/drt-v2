@@ -8,16 +8,15 @@ import akka.NotUsed
 import akka.actor.{Actor, ActorContext, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.GraphDSL.Implicits.getClass
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.DataUpdates.FlightUpdates
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.StreamSupervision
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -99,7 +98,7 @@ object PartitionedPortStateActor {
     replyWithPortStateFn(_ => Future(Source(List[FlightsWithSplits]())), queueMins, staffMins)
 
   def forwardRequestAndKillActor(killActor: ActorRef)
-                                (implicit timeout: Timeout, ec: ExecutionContext, system: ActorContext): (ActorRef, ActorRef, DateRangeLike) => Future[Any] =
+                                (implicit timeout: Timeout, ec: ExecutionContext): (ActorRef, ActorRef, DateRangeLike) => Future[Any] =
     (tempActor: ActorRef, replyTo: ActorRef, message: DateRangeLike) => {
       killActor
         .ask(RequestAndTerminate(tempActor, message))
@@ -227,7 +226,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val askThenAck: AckingAsker = Acking.askThenAck
 
   def processMessage: Receive = {
-    case msg: SetDeploymentQueueActor =>
+    case msg: SetSubscriber =>
       log.info(s"Received deployment queue actor")
       queuesActor ! msg
 
@@ -237,9 +236,9 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
-    case flightsWithSplits: FlightsWithSplitsDiff =>
+    case updates: FlightUpdates =>
       val replyTo = sender()
-      askThenAck(flightsActor, flightsWithSplits, replyTo)
+      askThenAck(flightsActor, updates, replyTo)
 
     case noUpdates: PortStateMinutes[_, _] if noUpdates.isEmpty =>
       sender() ! Ack

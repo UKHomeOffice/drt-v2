@@ -1,6 +1,6 @@
 package actors.minutes
 
-import actors.SetDeploymentQueueActor
+import actors.SetSubscriber
 import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.queues.QueueLikeActor
 import actors.queues.QueueLikeActor.UpdatedMillis

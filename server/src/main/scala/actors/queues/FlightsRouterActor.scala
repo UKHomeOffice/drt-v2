@@ -16,6 +16,7 @@ import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi._
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.Arrival
 import drt.shared.dates.UtcDate
 import services.SDate
 
@@ -131,6 +132,8 @@ class FlightsRouterActor(updatesSubscribers: ActorRef,
     FlightsRouterActor.flightsByDaySource(flightsByDayLookup)
 
   override def partitionUpdates: PartialFunction[FlightUpdates, Map[(Terminal, UtcDate), FlightUpdates]] = {
+    case container: FlightsWithSplits =>
+      Map()
     case container: SplitsForArrivals =>
       container.splits
         .groupBy {
@@ -140,16 +143,18 @@ class FlightsRouterActor(updatesSubscribers: ActorRef,
           case (terminalDay, allSplits) => (terminalDay, SplitsForArrivals(allSplits))
         }
 
-    case container: FlightsWithSplitsDiff =>
-      val updates: Map[(Terminal, UtcDate), Iterable[ApiFlightWithSplits]] = container.flightsToUpdate
-        .groupBy(flightWithSplits => (flightWithSplits.apiFlight.Terminal, SDate(flightWithSplits.apiFlight.Scheduled).toUtcDate))
-      val removals: Map[(Terminal, UtcDate), Iterable[UniqueArrival]] = container.arrivalsToRemove
-        .groupBy(ua => (ua.terminal, SDate(ua.scheduled).toUtcDate))
+    case container: ArrivalsDiff =>
+      val updates: Map[(Terminal, UtcDate), Iterable[Arrival]] = container.toUpdate.values
+        .groupBy(arrivals => (arrivals.Terminal, SDate(arrivals.Scheduled).toUtcDate))
+      val removals: Map[(Terminal, UtcDate), Iterable[Arrival]] = container.toRemove
+        .groupBy(arrival => (arrival.Terminal, SDate(arrival.Scheduled).toUtcDate))
 
       val keys = updates.keys ++ removals.keys
       keys
         .map { terminalDay =>
-          val diff = FlightsWithSplitsDiff(updates.getOrElse(terminalDay, List()), removals.getOrElse(terminalDay, List()))
+          val terminalUpdates = updates.getOrElse(terminalDay, List())
+          val terminalRemovals = removals.getOrElse(terminalDay, List())
+          val diff = ArrivalsDiff(terminalUpdates, terminalRemovals)
           (terminalDay, diff)
         }
         .toMap
@@ -159,7 +164,7 @@ class FlightsRouterActor(updatesSubscribers: ActorRef,
     updateFlights(partition, updates)
 
   override def shouldSendAffects: FlightUpdates => Boolean = {
-    case _: FlightsWithSplitsDiff => true
+    case _: ArrivalsDiff => true
     case _: SplitsForArrivals => false
   }
 }

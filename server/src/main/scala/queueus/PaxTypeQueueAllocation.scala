@@ -6,10 +6,10 @@ import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
 
 case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAllocator: QueueAllocator) {
-  def toQueues(terminal: Terminal, manifest: ManifestLike): Map[Queue, List[(Queue, PaxType, ManifestPassengerProfile, Double)]] = {
+  def toQueues(terminal: Terminal, manifest: ManifestLike): Map[Queue, Iterable[(Queue, PaxType, ManifestPassengerProfile, Double)]] = {
     val queueAllocatorForFlight = queueAllocator(terminal, manifest) _
     val paxTypeAllocatorForFlight = paxTypeAllocator
-    manifest.passengers.flatMap(mpp => {
+    manifest.uniquePassengers.flatMap(mpp => {
       val paxType = paxTypeAllocatorForFlight(mpp)
       val queueAllocations = queueAllocatorForFlight(paxType)
       queueAllocations.map {

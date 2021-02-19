@@ -11,7 +11,6 @@ import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
-import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
@@ -169,6 +168,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTimeCalculator,
       portStateActor = portStateActor,
+      flightsActor = flightsActor,
       maxDaysToCrunch = params.forecastMaxDays,
       expireAfterMillis = DrtStaticParameters.expireAfterMillis,
       actors = Map(
@@ -233,14 +233,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
 
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-      OptimisationProviders.arrivalsProvider(portStateActor),
-      OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
-      OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
-      splitsCalculator,
-      flightsActor,
-      portDeskRecs.flightsToLoads,
-      portDeskRecs.loadsToDesks,
-      deskLimitsProviders)
+      arrivalsProvider = OptimisationProviders.arrivalsProvider(portStateActor),
+      liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
+      historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
+      splitsCalculator = splitsCalculator,
+      splitsSink = portStateActor,
+      flightsToLoads = portDeskRecs.flightsToLoads,
+      loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+      maxDesksProviders = deskLimitsProviders)
 
     val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
 
@@ -258,7 +258,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 
-    portStateActor ! SetDeploymentQueueActor(deploymentQueueActor)
+    portStateActor ! SetSubscriber(deploymentQueueActor)
 
     (deskRecsKillSwitch, deploymentsKillSwitch)
   }

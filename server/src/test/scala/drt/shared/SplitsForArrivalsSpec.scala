@@ -40,6 +40,20 @@ class SplitsForArrivalsSpec extends Specification {
       }
     }
 
+    "Given one new split and one matching arrival with an existing split with the same values as the new one" >> {
+      "Then I should get an empty FlightsWithSplits" >> {
+        val uniqueArrival = UniqueArrival(1, T1, 0L)
+        val existingSplits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1, None, None)), Historical, None, PaxNumbers)
+        val splitsForArrivals = SplitsForArrivals(Map(uniqueArrival -> Set(existingSplits)))
+        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1)
+        val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(existingSplits))))
+
+        val updated = splitsForArrivals.diff(flights, now)
+
+        updated === FlightsWithSplitsDiff.empty
+      }
+    }
+
     "Given one new split and one matching arrival with an existing split of the same source" >> {
       "Then I should get a FlightsWithSplits containing the matching arrival updated with the new split" >> {
         val uniqueArrival = UniqueArrival(1, T1, 0L)
@@ -66,7 +80,7 @@ class SplitsForArrivalsSpec extends Specification {
 
         val updated = splitsForArrivals.diff(flights, now)
 
-        updated === FlightsWithSplitsDiff(Seq(ApiFlightWithSplits(arrival, Set(newSplits, existingSplits), Option(now))), Seq())
+        updated === FlightsWithSplitsDiff(Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(ApiFeedSource), ApiPax = Option(1)), Set(newSplits, existingSplits), Option(now))), Seq())
       }
     }
 
@@ -82,7 +96,7 @@ class SplitsForArrivalsSpec extends Specification {
 
         val updated = splitsForArrivals.diff(flights, now)
 
-        updated === FlightsWithSplitsDiff(Seq(ApiFlightWithSplits(arrival, Set(newSplits, existingSplits1), Option(now))), Seq())
+        updated === FlightsWithSplitsDiff(Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(ApiFeedSource), ApiPax = Option(1)), Set(newSplits, existingSplits1), Option(now))), Seq())
       }
     }
 
