@@ -7,6 +7,8 @@ import drt.shared.SDateLike
 import org.slf4j.Logger
 import scalapb.GeneratedMessage
 
+import scala.util.Try
+
 object Sizes {
   val oneMegaByte: Int = 1024 * 1024
 }
@@ -101,9 +103,11 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
       postRecoveryComplete()
 
     case event: GeneratedMessage =>
-      bytesSinceSnapshotCounter += event.serializedSize
-      messagesPersistedSinceSnapshotCounter += 1
-      playRecoveryMessage(event)
+      Try {
+        bytesSinceSnapshotCounter += event.serializedSize
+        messagesPersistedSinceSnapshotCounter += 1
+        playRecoveryMessage(event)
+      }
   }
 
   private def logRecoveryTime(): Unit = {
