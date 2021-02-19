@@ -81,12 +81,8 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
       .foldLeft(List[(UniqueArrival, Arrival)]()) {
         case (soFar, (key, arrival)) => existingArrivals.get(key) match {
           case None => (key, arrival) :: soFar
-          case Some(existingArrival) if existingArrival == arrival =>
-            log.info(s"the same: $existingArrival == $arrival")
-            soFar
-          case Some(existingArrival) if unchangedExistingActChox(arrival, existingArrival) =>
-            log.info(s"the same inc act chox: $existingArrival == $arrival")
-            soFar
+          case Some(existingArrival) if existingArrival == arrival => soFar
+          case Some(existingArrival) if unchangedExistingActChox(arrival, existingArrival) => soFar
           case _ => (key, arrival) :: soFar
         }
       }

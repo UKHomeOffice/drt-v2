@@ -103,10 +103,8 @@ object DynamicRunnableDeskRecs {
       }
       .mapAsync(1) { case (crunchRequest, flights) =>
         val arrivalsToLookup = flights.filter(_.splits.isEmpty).map(_.apiFlight)
-        val startMillis = System.currentTimeMillis()
         historicManifestsProvider(arrivalsToLookup).map { manifests =>
-          val endMillis = System.currentTimeMillis()
-          log.info(f"Loading ${arrivalsToLookup.size} arrivals' historic manifests took ${endMillis - startMillis}ms")
+          log.info(f"Looking up ${arrivalsToLookup.size} arrivals' historic manifests")
           (crunchRequest, flights, manifests)
         }
       }
@@ -115,6 +113,7 @@ object DynamicRunnableDeskRecs {
           manifestsSource.fold[List[ManifestLike]](List[ManifestLike]())(_ :+ _).map(manifests => (crunchRequest, flights, manifests))
       }
       .map { case (crunchRequest, flights, manifests) =>
+        log.info(f"Adding historic manifests to flights")
         val manifestsByKey = arrivalKeysToManifests(manifests)
         (crunchRequest, addManifests(flights, manifestsByKey, splitsCalculator.splitsForArrival))
       }
