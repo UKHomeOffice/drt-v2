@@ -66,7 +66,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
         val maxScheduledMillis = forecastMaxMillis()
         val incomingArrivals: Seq[(UniqueArrival, Arrival)] = latestArrivals.flights.filter(_.Scheduled <= maxScheduledMillis).map(a => (UniqueArrival(a), a))
         val newUpdates: Seq[(UniqueArrival, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
-        if (newUpdates.nonEmpty) log.info(s"Got ${newUpdates.size} new arrival updates") else log.info(s"no updates!\n${incomingArrivals}\n${knownArrivals}")
+        if (newUpdates.nonEmpty) log.info(s"Got ${newUpdates.size} new arrival updates")
         knownArrivals = SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals
         Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates.map(_._2))))
       case aff@ArrivalsFeedFailure(_, _) =>
