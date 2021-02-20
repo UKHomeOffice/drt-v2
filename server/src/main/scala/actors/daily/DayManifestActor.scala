@@ -94,7 +94,6 @@ class DayManifestActor(
   def updateAndPersist(vms: VoyageManifests): Unit = {
     state = state ++ vms.toMap
 
-    println(s"\n%%%%%%%% persisting $vms")
     val replyToAndMessage = Option(sender(), UpdatedMillis(vms.manifests.map(_.scheduled.millisSinceEpoch)))
     persistAndMaybeSnapshotWithAck(ManifestMessageConversion.voyageManifestsToMessage(vms), replyToAndMessage)
   }

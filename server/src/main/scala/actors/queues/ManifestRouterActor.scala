@@ -168,10 +168,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     processingRequest = true
     val eventualAffects = sendUpdates(updates)
     eventualAffects
-      .map {
-        println(s"finished processing ${updates}")
-        updatesSubscriber ! _
-      }
+      .map(updatesSubscriber ! _)
       .onComplete { _ =>
         processingRequest = false
         replyTo ! Ack

@@ -63,7 +63,6 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
     objectToSerialize match {
-//      case m: GeneratedMessage => m.toByteArray
       case m: CrunchStateSnapshotMessage => m.toByteArray
       case m: CrunchMinutesMessage => m.toByteArray
       case m: FlightsWithSplitsMessage => m.toByteArray

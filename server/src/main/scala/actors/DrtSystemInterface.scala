@@ -81,8 +81,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val crunchQueueActor: ActorRef
   val deploymentQueueActor: ActorRef
 
-  val usePartitionedPortState: Boolean = config.get[Boolean]("feature-flags.use-partitioned-state")
-
   val minuteLookups: MinuteLookupsLike
 
   val portStateActor: ActorRef
