@@ -196,7 +196,7 @@ object TerminalContentComponent {
                           queueOrder,
                           props.airportConfig.hasEstChox,
                           props.arrivalSources,
-                          props.loggedInUser.hasRole(ArrivalSource),
+                          props.loggedInUser,
                           props.viewMode,
                           PcpPax.bestPaxEstimateWithApi,
                           walkTimes,
