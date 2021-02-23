@@ -4,7 +4,7 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.Ack
 import actors.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
-import actors.queues.QueueLikeActor.{UpdateAffect, UpdatedMillis}
+import actors.queues.QueueLikeActor.{UpdateEffect, UpdatedMillis}
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
 import actors.{FeedStateLike, GetFeedStatuses, GetState, RecoveryActorLike}
@@ -164,7 +164,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   }
 
   def handleUpdatesAndAck(updates: VoyageManifests,
-                          replyTo: ActorRef): Future[UpdateAffect] = {
+                          replyTo: ActorRef): Future[UpdateEffect] = {
     processingRequest = true
     val eventualAffects = sendUpdates(updates)
     eventualAffects
@@ -177,20 +177,20 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     eventualAffects
   }
 
-  def sendUpdates(updates: VoyageManifests): Future[UpdateAffect] = {
-    val eventualUpdatedMinutesDiff: Source[UpdateAffect, NotUsed] =
+  def sendUpdates(updates: VoyageManifests): Future[UpdateEffect] = {
+    val eventualUpdatedMinutesDiff: Source[UpdateEffect, NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
         case (partition, updates) => manifestsUpdate(partition, updates)
       }
     combineUpdateAffectsStream(eventualUpdatedMinutesDiff)
   }
 
-  private def combineUpdateAffectsStream(affects: Source[UpdateAffect, NotUsed]): Future[UpdateAffect] =
+  private def combineUpdateAffectsStream(affects: Source[UpdateEffect, NotUsed]): Future[UpdateEffect] =
     affects
-      .fold[UpdateAffect](UpdatedMillis.empty)(_ ++ _)
+      .fold[UpdateEffect](UpdatedMillis.empty)(_ ++ _)
       .log(getClass.getName)
       .runWith(Sink.seq)
-      .map(_.foldLeft[UpdateAffect](UpdatedMillis.empty)(_ ++ _))
+      .map(_.foldLeft[UpdateEffect](UpdatedMillis.empty)(_ ++ _))
       .recover { case t =>
         log.error("Failed to combine update affects", t)
         UpdatedMillis.empty

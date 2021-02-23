@@ -163,7 +163,7 @@ class FlightsRouterActor(updatesSubscribers: ActorRef,
   def affectsFromUpdate(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[UpdatedMillis] =
     updateFlights(partition, updates)
 
-  override def shouldSendAffects: FlightUpdates => Boolean = {
+  override def shouldSendEffectsToSubscriber: FlightUpdates => Boolean = {
     case _: ArrivalsDiff => true
     case _: SplitsForArrivals => false
   }

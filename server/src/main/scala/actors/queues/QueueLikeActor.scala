@@ -27,16 +27,16 @@ object QueueLikeActor {
 
   case object ReadyToEmit
 
-  trait UpdateAffect {
-    def ++(other: UpdateAffect): UpdateAffect
+  trait UpdateEffect {
+    def ++(other: UpdateEffect): UpdateEffect
   }
 
   object UpdatedMillis {
     val empty: UpdatedMillis = UpdatedMillis(Seq())
   }
 
-  case class UpdatedMillis(affects: Iterable[MillisSinceEpoch]) extends UpdateAffect {
-    override def ++(other: UpdateAffect): UpdateAffect = other match {
+  case class UpdatedMillis(affects: Iterable[MillisSinceEpoch]) extends UpdateEffect {
+    override def ++(other: UpdateEffect): UpdateEffect = other match {
       case UpdatedMillis(toAdd) => UpdatedMillis(affects ++ toAdd)
       case _ => this
     }

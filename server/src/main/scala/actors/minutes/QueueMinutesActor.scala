@@ -19,5 +19,5 @@ class QueueMinutesActor(terminals: Iterable[Terminal],
 
   override var maybeUpdatesSubscriber: Option[ActorRef] = None
 
-  override def shouldSendAffects: MinutesContainer[CrunchMinute, TQM] => Boolean = _.contains(classOf[DeskRecMinute])
+  override def shouldSendEffectsToSubscriber: MinutesContainer[CrunchMinute, TQM] => Boolean = _.contains(classOf[DeskRecMinute])
 }

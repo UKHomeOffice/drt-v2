@@ -11,5 +11,5 @@ class StaffMinutesActor(terminals: Iterable[Terminal],
                         updateMinutes: MinutesUpdate[StaffMinute, TM]) extends MinutesActorLike(terminals, lookup, updateMinutes) {
   override var maybeUpdatesSubscriber: Option[ActorRef] = None
 
-  override def shouldSendAffects: CrunchApi.MinutesContainer[StaffMinute, TM] => Boolean = _ => true
+  override def shouldSendEffectsToSubscriber: CrunchApi.MinutesContainer[StaffMinute, TM] => Boolean = _ => true
 }
