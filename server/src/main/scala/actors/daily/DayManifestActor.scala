@@ -1,11 +1,11 @@
 package actors.daily
 
-import actors.acking.AckingReceiver.Ack
+import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.serializers.ManifestMessageConversion
 import actors.{GetState, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
-import drt.shared.ArrivalKey
+import drt.shared.{ArrivalKey, SDateLike}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.dates.UtcDate
 import org.slf4j.{Logger, LoggerFactory}
@@ -37,8 +37,8 @@ class DayManifestActor(
     case Some(pit) => f"@${SDate(pit).toISOString()}"
   }
 
-  val firstMinuteOfDay = SDate(year, month, day, 0, 0)
-  val lastMinuteOfDay = firstMinuteOfDay.addDays(1).addMinutes(-1)
+  val firstMinuteOfDay: SDateLike = SDate(year, month, day, 0, 0)
+  val lastMinuteOfDay: SDateLike = firstMinuteOfDay.addDays(1).addMinutes(-1)
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
@@ -92,10 +92,9 @@ class DayManifestActor(
     .voyageManifestsToMessage(VoyageManifests(state.values.toSet))
 
   def updateAndPersist(vms: VoyageManifests): Unit = {
-
     state = state ++ vms.toMap
 
-    val replyToAndMessage = Option(sender(), Ack)
+    val replyToAndMessage = Option(sender(), UpdatedMillis(vms.manifests.map(_.scheduled.millisSinceEpoch)))
     persistAndMaybeSnapshotWithAck(ManifestMessageConversion.voyageManifestsToMessage(vms), replyToAndMessage)
   }
 

@@ -9,7 +9,7 @@ trait QueueAdjustments {
   def adjust(splits: Splits): Splits
 }
 
-case class AdjustmentsNoop() extends QueueAdjustments {
+case object AdjustmentsNoop extends QueueAdjustments {
   def adjust(splits: Splits): Splits = splits
 }
 

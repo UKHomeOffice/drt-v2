@@ -53,7 +53,6 @@ object WorkloadCalculator {
                                 ): Seq[FlightSplitMinute] = {
     val flight = flightWithSplits.apiFlight
     val splitsToUseOption = flightWithSplits.bestSplits
-
     splitsToUseOption.map(splitsToUse => {
       val totalPax = splitsToUse.splitStyle match {
         case UndefinedSplitStyle => 0

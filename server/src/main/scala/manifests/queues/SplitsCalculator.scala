@@ -16,7 +16,7 @@ object SplitsCalculator {
 
 case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
                             terminalDefaultSplitRatios: Map[Terminal, SplitRatios],
-                            adjustments: QueueAdjustments = AdjustmentsNoop()) {
+                            adjustments: QueueAdjustments = AdjustmentsNoop) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def terminalDefaultSplits(terminalName: Terminal): Splits = {

@@ -7,7 +7,7 @@ import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
-import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
+import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -22,11 +22,11 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
 
   val scheduled = "2019-11-20T00:00Z"
 
-  val flights = Flights(List(
+  val flights: Flights = Flights(List(
     ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = None, origin = PortCode("JFK"))
   ))
 
-  val manifests =
+  val manifests: ManifestsFeedResponse =
     ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(EventTypes.DC, defaultAirportConfig.portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2019-11-20"), ManifestTimeOfArrival("00:00"),
         List(
@@ -53,7 +53,6 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 15)
-
         resultSummary == expected
     }
 

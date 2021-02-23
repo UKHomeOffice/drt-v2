@@ -36,6 +36,7 @@ case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
           log.warn(s"${feedSource.name} has not been checked for $minutesSinceLastCheck minutes")
           feedSource
       }
+      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .runWith(Sink.seq)
       .map(_.isEmpty)
 

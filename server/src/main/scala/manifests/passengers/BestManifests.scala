@@ -38,6 +38,12 @@ trait ManifestLike {
       .PassengerList
       .filterNot(_.isInTransit(manifest.ArrivalPortCode))
   )
+
+  def maybeKey: Option[ArrivalKey] = voyageNumber match {
+    case vn: VoyageNumber =>
+      Option(ArrivalKey(departurePortCode, vn, scheduled.millisSinceEpoch))
+    case _ => None
+  }
 }
 
 case class BestAvailableManifest(source: SplitSource,

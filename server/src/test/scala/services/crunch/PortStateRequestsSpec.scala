@@ -15,9 +15,11 @@ import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
+import drt.shared.api.Arrival
 import services.SDate
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 
+import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -30,7 +32,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxDays = 10
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
-  val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, TestProbe().ref)
 
   val dummyLegacy1ActorProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
 
@@ -68,45 +70,49 @@ class PortStateRequestsSpec extends CrunchTestLike {
     ApiFlightWithSplits(flight, Set(), Option(myNow().millisSinceEpoch))
   }.toList
 
+  def arrival(params: Iterable[(String, String, Terminal)]): Seq[Arrival] = params.map { case (_, scheduled, _) =>
+    ArrivalGenerator.arrival("BA1000", schDt = scheduled, terminal = T1)
+  }.toList
+
   s"Given an empty PartitionedPortStateActor" >> {
     val ps = actorProvider()
 
     resetData(T1, myNow())
 
     "When I send it a flight and then ask for its flights" >> {
-      val fws = flightsWithSplits(List(("BA1000", scheduled, T1)))
-      val eventualAck = ps.ask(FlightsWithSplitsDiff(fws, List()))
+      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1)
+      val eventualAck = ps.ask(ArrivalsDiff(Iterable(arrival), List()))
 
       "Then I should see the flight I sent it" >> {
-        val result = Await.result(eventualFlights(eventualAck, myNow, ps), 1 second)
+        val result = Await.result(eventualFlights(eventualAck, myNow, ps), 1 second).flights.values.headOption.map(_.apiFlight)
 
-        result === FlightsWithSplits(setLastUpdated(myNow, fws))
+        result === Option(arrival)
       }
     }
 
     "When I send it a flight and then ask for updates since just before now" >> {
-      val fws = flightsWithSplits(List(("BA1000", scheduled, T1)))
-      val eventualAck = ps.ask(FlightsWithSplitsDiff(fws, List()))
+      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1)
+      val eventualAck = ps.ask(ArrivalsDiff(Iterable(arrival), List()))
 
       "Then I should see the flight I sent it in the port state" >> {
         val sinceMillis = myNow().addMinutes(-1).millisSinceEpoch
 
-        val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1 second)
+        val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1 second).get.flights.headOption.map(_.apiFlight)
 
-        result === Option(PortStateUpdates(myNow().millisSinceEpoch, setUpdatedFlights(fws, myNow().millisSinceEpoch).toSet, Set(), Set()))
+        result === Option(arrival)
       }
     }
 
     "When I send it 2 flights consecutively and then ask for its flights" >> {
       val scheduled2 = "2020-01-01T00:25"
-      val fws1 = flightsWithSplits(List(("BA1000", scheduled, T1)))
-      val fws2 = flightsWithSplits(List(("FR5000", scheduled2, T1)))
-      val eventualAck = ps.ask(FlightsWithSplitsDiff(fws1, List())).flatMap(_ => ps.ask(FlightsWithSplitsDiff(fws2, List())))
+      val arrival1 = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1)
+      val arrival2 = ArrivalGenerator.arrival(iata = "FR5000", schDt = scheduled2, terminal = T1)
+      val eventualAck = ps.ask(ArrivalsDiff(Seq(arrival1), List())).flatMap(_ => ps.ask(ArrivalsDiff(Seq(arrival2), List())))
 
       "Then I should see both flights I sent it" >> {
-        val result = Await.result(eventualFlights(eventualAck, myNow, ps), 1 second)
+        val result = Await.result(eventualFlights(eventualAck, myNow, ps), 1 second).flights.values.map(_.apiFlight)
 
-        result === FlightsWithSplits(setLastUpdated(myNow, fws1 ++ fws2))
+        result === Iterable(arrival1, arrival2)
       }
     }
 
@@ -181,13 +187,13 @@ class PortStateRequestsSpec extends CrunchTestLike {
     }
 
     "When I send it a flight, a queue & a staff minute, and ask for the terminal state" >> {
-      val fws = flightsWithSplits(List(("BA1000", scheduled, T1)))
+      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1)
       val drm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
       val sm1 = StaffMinute(T1, myNow().millisSinceEpoch, 1, 2, 3)
 
       val eventualAck1 = ps.ask(StaffMinutes(Seq(sm1)))
       val eventualAck2 = ps.ask(DeskRecMinutes(Seq(drm)))
-      val eventualAck3 = ps.ask(FlightsWithSplitsDiff(fws, List()))
+      val eventualAck3 = ps.ask(ArrivalsDiff(Seq(arrival), List()))
       val eventualAck = Future.sequence(Seq(eventualAck1, eventualAck2, eventualAck3))
 
       "Then I should see the flight, & corresponding crunch & staff minutes" >> {
@@ -195,7 +201,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
         val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
 
-        result === PortState(setUpdatedFlights(fws, myNow().millisSinceEpoch), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), setUpdatedSms(Seq(sm1), myNow().millisSinceEpoch))
+        result === PortState(setUpdatedFlights(Seq(ApiFlightWithSplits(arrival, Set())), myNow().millisSinceEpoch), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), setUpdatedSms(Seq(sm1), myNow().millisSinceEpoch))
       }
     }
 

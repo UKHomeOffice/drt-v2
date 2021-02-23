@@ -3,7 +3,7 @@ package services.crunch.deskrecs
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
-import drt.shared.{SimulationMinute, TQM}
+import drt.shared.{SimulationMinute, SimulationMinutes, TQM}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.graphstages.Crunch.LoadMinute
 
@@ -18,9 +18,9 @@ trait PortDesksAndWaitsProviderLike {
 
   def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
                    loads: Map[TQM, LoadMinute],
-                   maxDesksByTerminal: Map[Terminal, TerminalDeskLimitsLike]): DeskRecMinutes
+                   deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): DeskRecMinutes
 
   def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
                          loadsByQueue: Map[TQM, LoadMinute],
-                         deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): Map[TQM, SimulationMinute]
+                         deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): SimulationMinutes
 }

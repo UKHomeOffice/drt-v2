@@ -2,10 +2,11 @@ package actors.minutes
 
 import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import actors.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
+import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.queues.{ApiFeedState, ManifestRouterActor}
 import actors.{GetFeedStatuses, GetState, ManifestLookupsLike}
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
@@ -41,7 +42,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
     }
   }
 
-  val noopUpdates: ManifestsUpdate = (_: UtcDate, _: VoyageManifests) => Future(Unit)
+  val noopUpdates: ManifestsUpdate = (_: UtcDate, _: VoyageManifests) => Future(UpdatedMillis.empty)
 
   "When sending an ApiFeedResponse" >> {
     "Given a Success response with 1 manifest" >> {
@@ -181,6 +182,8 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
     }
   }
 
+  val mockSubscriber: ActorRef = TestProbe().ref
+
   "Given I request manifests for a date range at a point in time" >> {
     "Then manifests for all those dates should be returned in the stream" >> {
 
@@ -190,7 +193,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val manifestsLookup = MockManifestsLookup()
       val testManifests = VoyageManifests(Set(manifest1, manifest2, manifest3))
       val manifestRouterActor = system.actorOf(
-        ManifestRouterActor.props(manifestsLookup.lookup(testManifests), noopUpdates)
+        Props(new ManifestRouterActor(manifestsLookup.lookup(testManifests), noopUpdates, mockSubscriber))
       )
 
       val resultSource: Future[Source[VoyageManifests, NotUsed]] = manifestRouterActor.ask(
@@ -229,12 +232,12 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
     val mockLookup = MockManifestLookupWithTestProbe(system, probe.ref)
 
     system.actorOf(
-      ManifestRouterActor.props(mockLookup.manifestsByDayLookup, mockLookup.updateManifests)
+      Props(new ManifestRouterActor(mockLookup.manifestsByDayLookup, mockLookup.updateManifests, mockSubscriber))
     )
   }
 
   def manifestRouterActorWithMock(mock: MockManifestsLookup): ActorRef =
     system.actorOf(
-      ManifestRouterActor.props(mock.lookup(), mock.update)
+      Props(new ManifestRouterActor(mock.lookup(), mock.update, mockSubscriber))
     )
 }

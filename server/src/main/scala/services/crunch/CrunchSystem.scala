@@ -1,19 +1,16 @@
 package services.crunch
 
-import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream._
-import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.api.Arrival
 import drt.shared.{SDateLike, _}
-import manifests.passengers.BestAvailableManifest
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
-import services.SplitsProvider.SplitProvider
 import services._
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike}
 import services.graphstages.Crunch._
@@ -41,6 +38,7 @@ case class CrunchProps[FR](
                             airportConfig: AirportConfig,
                             pcpArrival: Arrival => MilliDate,
                             portStateActor: ActorRef,
+                            flightsActor: ActorRef,
                             maxDaysToCrunch: Int,
                             expireAfterMillis: Int,
                             crunchOffsetMillis: MillisSinceEpoch = 0,
@@ -50,9 +48,7 @@ case class CrunchProps[FR](
                             now: () => SDateLike = () => SDate.now(),
                             initialFlightsWithSplits: Option[FlightsWithSplitsDiff] = None,
                             manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
-                            manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
                             voyageManifestsActor: ActorRef,
-                            manifestRequestsSink: Sink[List[Arrival], NotUsed],
                             simulator: Simulator,
                             initialPortState: Option[PortState] = None,
                             initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
@@ -116,22 +112,6 @@ object CrunchSystem {
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
 
-    val ptqa = paxTypeQueueAllocator(props.airportConfig)
-
-    val splitAdjustments = if (props.adjustEGateUseByUnder12s)
-      ChildEGateAdjustments(props.airportConfig.assumedAdultsPerChild)
-    else
-      AdjustmentsNoop()
-
-    val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
-      name = props.logLabel,
-      optionalInitialFlights = initialFlightsWithSplits,
-      props.refreshManifestsOnStart,
-      splitsCalculator = manifests.queues.SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits, splitAdjustments),
-      expireAfterMillis = props.expireAfterMillis,
-      now = props.now
-    )
-
     val staffGraphStage = new StaffGraphStage(
       initialShifts = props.initialShifts,
       initialFixedPoints = props.initialFixedPoints,
@@ -146,13 +126,11 @@ object CrunchSystem {
       liveBaseArrivalsSource = props.arrivalsLiveBaseSource,
       liveArrivalsSource = props.arrivalsLiveSource,
       manifestsLiveSource = props.manifestsLiveSource,
-      manifestResponsesSource = props.manifestResponsesSource,
       shiftsSource = shiftsSource,
       fixedPointsSource = fixedPointsSource,
       staffMovementsSource = staffMovementsSource,
       actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
       arrivalsGraphStage = arrivalsStage,
-      arrivalSplitsStage = arrivalSplitsGraphStage,
       staffGraphStage = staffGraphStage,
       forecastArrivalsDiffStage = forecastArrivalsDiffingStage,
       liveBaseArrivalsDiffStage = liveBaseArrivalsDiffingStage,
@@ -163,7 +141,6 @@ object CrunchSystem {
       liveArrivalsActor = props.actors("live-arrivals"),
       applyPaxDeltas = PaxDeltas.applyAdjustmentsToArrivals(props.passengersActorProvider, props.aclPaxAdjustmentDays),
       manifestsActor = props.voyageManifestsActor,
-      manifestRequestsSink = props.manifestRequestsSink,
       portStateActor = props.portStateActor,
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
       deploymentRequestActor = props.actors("deployment-request"),

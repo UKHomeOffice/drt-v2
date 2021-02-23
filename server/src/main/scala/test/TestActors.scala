@@ -11,14 +11,13 @@ import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.UtcDate
 import org.slf4j.Logger
 import services.SDate
-import slickdb.ArrivalTable
 
 import scala.collection.immutable.SortedSet
 import scala.concurrent.Future
@@ -94,8 +93,8 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestVoyageManifestsActor(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate)
-    extends ManifestRouterActor(manifestLookup, manifestsUpdate) with Resettable {
+  class TestVoyageManifestsActor(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate, updatesSubscriber: ActorRef)
+    extends ManifestRouterActor(manifestLookup, manifestsUpdate, updatesSubscriber) with Resettable {
 
     override def resetState(): Unit = state = initialState
 
@@ -131,19 +130,14 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestAggregatedArrivalsActor() extends {
-    private val portCode = PortCode("TEST")
-  } with AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables)) {
-    def reset: Receive = {
-      case ResetData =>
-        sender() ! Ack
+  class MockAggregatedArrivalsActor extends Actor {
+    override def receive: Receive = {
+      case _ => sender() ! Ack
     }
-
-    override def receive: Receive = reset orElse super.receive
   }
 
-  class TestCrunchQueueActor(now: () => SDateLike, journalType: StreamingJournalLike, crunchOffsetMinutes: Int)
-    extends CrunchQueueActor(now, journalType, crunchOffsetMinutes) {
+  class TestCrunchQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
+    extends CrunchQueueActor(now, crunchOffsetMinutes, durationMinutes) {
     def reset: Receive = {
       case ResetData =>
         readyToEmit = true
@@ -155,8 +149,8 @@ object TestActors {
     override def receive: Receive = reset orElse super.receive
   }
 
-  class TestDeploymentQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int)
-    extends DeploymentQueueActor(now, crunchOffsetMinutes) {
+  class TestDeploymentQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
+    extends DeploymentQueueActor(now, crunchOffsetMinutes, durationMinutes) {
     def reset: Receive = {
       case ResetData =>
         readyToEmit = true
@@ -173,8 +167,8 @@ object TestActors {
     var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
 
     private def addToTerminalDays(container: MinutesContainer[A, B]): Unit = {
-      groupByTerminalAndDay(container).keys.foreach {
-        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date.millisSinceEpoch))
+      partitionUpdates(container).keys.foreach {
+        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, SDate(date).millisSinceEpoch))
       }
     }
 
@@ -186,10 +180,7 @@ object TestActors {
 
       case ResetData =>
         Future
-          .sequence(terminalDaysUpdated.map { case (t, d) =>
-            println(s"\n\n**Sending ResetData to $t / ${SDate(d).toISOString()}")
-            resetData(t, d)
-          })
+          .sequence(terminalDaysUpdated.map { case (t, d) => resetData(t, d) })
           .map { _ =>
             terminalDaysUpdated = Set()
             Ack
@@ -210,8 +201,9 @@ object TestActors {
   class TestQueueMinutesActor(terminals: Iterable[Terminal],
                               lookup: MinutesLookup[CrunchMinute, TQM],
                               updateMinutes: MinutesUpdate[CrunchMinute, TQM],
-                              val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends QueueMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[CrunchMinute, TQM] {
+                              val resetData: (Terminal, MillisSinceEpoch) => Future[Any],
+                              updatesSubscriber: ActorRef)
+    extends QueueMinutesActor(terminals, lookup, updateMinutes, updatesSubscriber) with TestMinuteActorLike[CrunchMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
@@ -232,14 +224,14 @@ object TestActors {
 
     var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
 
-    private def addToTerminalDays(container: FlightsWithSplitsDiff): Unit = {
-      groupByTerminalAndDay(container).keys.foreach {
+    private def addToTerminalDays(container: ArrivalsDiff): Unit = {
+      partitionUpdates(container).keys.foreach {
         case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date))
       }
     }
 
     def resetReceive: Receive = {
-      case container: FlightsWithSplitsDiff =>
+      case container: ArrivalsDiff =>
         val replyTo = sender()
         addToTerminalDays(container)
         handleUpdatesAndAck(container, replyTo)
@@ -275,8 +267,7 @@ object TestActors {
       flightUpdatesActor,
       now,
       queues,
-      journalType)
-  {
+      journalType) {
 
     val actorClearRequests = Map(
       flightsActor -> ResetData,

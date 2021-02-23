@@ -11,7 +11,8 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.DataUpdates.FlightUpdates
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -97,7 +98,7 @@ object PartitionedPortStateActor {
     replyWithPortStateFn(_ => Future(Source(List[FlightsWithSplits]())), queueMins, staffMins)
 
   def forwardRequestAndKillActor(killActor: ActorRef)
-                                (implicit timeout: Timeout, ec: ExecutionContext, system: ActorContext): (ActorRef, ActorRef, DateRangeLike) => Future[Any] =
+                                (implicit timeout: Timeout, ec: ExecutionContext): (ActorRef, ActorRef, DateRangeLike) => Future[Any] =
     (tempActor: ActorRef, replyTo: ActorRef, message: DateRangeLike) => {
       killActor
         .ask(RequestAndTerminate(tempActor, message))
@@ -140,7 +141,11 @@ object PartitionedPortStateActor {
                          eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
                          eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
                         (implicit ec: ExecutionContext, mat: ActorMaterializer): Future[PortState] = {
-    val eventualFlights = flightsStream.flatMap(_.runWith(Sink.seq).map(_.fold(FlightsWithSplits.empty)(_ ++ _)))
+    val eventualFlights = flightsStream
+      .flatMap(source => source
+        .log(getClass.getName)
+        .runWith(Sink.seq).map(_.fold(FlightsWithSplits.empty)(_ ++ _)))
+
     stateAsTuple(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).map {
       case (fs, cms, sms) => PortState(fs, cms, sms)
     }
@@ -221,19 +226,15 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val askThenAck: AckingAsker = Acking.askThenAck
 
   def processMessage: Receive = {
-    case msg: SetDeploymentQueueActor =>
-      log.info(s"Received deployment queue actor")
-      queuesActor ! msg
-
     case StreamInitialized => sender() ! Ack
 
     case StreamCompleted => log.info(s"Stream completed")
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
-    case flightsWithSplits: FlightsWithSplitsDiff =>
+    case updates: FlightUpdates =>
       val replyTo = sender()
-      askThenAck(flightsActor, flightsWithSplits, replyTo)
+      askThenAck(flightsActor, updates, replyTo)
 
     case noUpdates: PortStateMinutes[_, _] if noUpdates.isEmpty =>
       sender() ! Ack

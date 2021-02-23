@@ -4,36 +4,37 @@ import actors.acking.AckingReceiver.{Ack, StreamInitialized}
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.scaladsl.Source
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.dates.UtcDate
+import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
-import services.{SDate, TryCrunch}
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.Mocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{CrunchRequest, addManifests, createGraph}
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsProvider, addManifests}
+import services.crunch.deskrecs.OptimiserMocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
+import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, TestDefaults, VoyageManifestGenerator}
-import services.graphstages.CrunchMocks
+import services.graphstages.{CrunchMocks, LiveArrivals}
+import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object Mocks {
-
+object OptimiserMocks {
   class MockActor(somethingToReturn: List[Any]) extends Actor {
     override def receive: Receive = {
       case _ => sender() ! Source(somethingToReturn)
@@ -54,6 +55,15 @@ object Mocks {
                          (implicit ec: ExecutionContext): CrunchRequest => Future[Source[List[Arrival], NotUsed]] =
     _ => Future(Source(List(arrivals)))
 
+
+  def mockLiveManifestsProviderNoop(implicit ec: ExecutionContext): CrunchRequest => Future[Source[VoyageManifests, NotUsed]] = {
+    _ => Future(Source(List()))
+  }
+
+  def mockHistoricManifestsProviderNoop(implicit ec: ExecutionContext): HistoricManifestsProvider = {
+    _: Iterable[Arrival] => Future(Source(List()))
+  }
+
   def mockLiveManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]])
                                (implicit ec: ExecutionContext): CrunchRequest => Future[Source[VoyageManifests, NotUsed]] = {
     val manifests = maybePax match {
@@ -64,13 +74,31 @@ object Mocks {
     _ => Future(Source(List(manifests)))
   }
 
-  def mockHistoricManifestsProvider(maybePax: Option[List[PassengerInfoJson]])
-                                   (implicit ec: ExecutionContext): Iterable[Arrival] => Future[Map[ArrivalKey, VoyageManifest]] =
-    maybePax match {
-      case Some(pax) =>
-        (arrivals: Iterable[Arrival]) => Future(arrivals.map(arrival => (ArrivalKey(arrival), manifestForArrival(arrival, pax))).toMap)
-      case None => _ => Future(Map())
-    }
+  def mockHistoricManifestsProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
+                                   (implicit ec: ExecutionContext, mat: ActorMaterializer): HistoricManifestsProvider = {
+    OptimisationProviders.historicManifestsProvider(
+      PortCode("STN"),
+      MockManifestLookupService(arrivalsWithMaybePax.map { case (arrival, maybePax) =>
+        val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+        val maybeManifest = maybePax.map(pax => BestAvailableManifest(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
+        (key, maybeManifest)
+      })
+    )
+  }
+}
+
+import scala.concurrent.ExecutionContext.Implicits.global
+
+case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]]) extends ManifestLookupLike {
+  override def maybeBestAvailableManifest(arrivalPort: PortCode,
+                                          departurePort: PortCode,
+                                          voyageNumber: VoyageNumber,
+                                          scheduled: SDateLike)
+                                         (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = {
+    val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
+    val maybeManifest = bestAvailableManifests.get(key).flatten
+    Future((key, maybeManifest))
+  }
 }
 
 class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
@@ -83,9 +111,10 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   val ptqa: PaxTypeQueueAllocation = PaxTypeQueueAllocation(
     B5JPlusTypeAllocator,
     TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
-  val splitsCalculator: SplitsCalculator = manifests.queues.SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, AdjustmentsNoop())
+  val splitsCalculator: SplitsCalculator = manifests.queues.SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, AdjustmentsNoop)
 
   val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, pcpPaxCalcFn)
+  val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   def setupGraphAndCheckQueuePax(arrival: Arrival,
                                  livePax: Option[List[PassengerInfoJson]],
@@ -93,18 +122,21 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
                                  expectedQueuePax: Map[(Terminal, Queue), Int]): Any = {
     val probe = TestProbe()
 
-    val daysSourceQueue = Source(List(CrunchRequest(SDate(arrival.Scheduled).toUtcDate, 0, 1440)))
+    val request = CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440)
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
 
-    val deskRecs = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
+    val deskRecs = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
       mockFlightsProvider(List(arrival)),
       mockLiveManifestsProvider(arrival, livePax),
-      mockHistoricManifestsProvider(historicPax),
+      mockHistoricManifestsProvider(Map(arrival -> historicPax)),
       splitsCalculator,
-      desksAndWaitsProvider,
-      maxDesksProvider) _
+      mockSplitsSink,
+      desksAndWaitsProvider.flightsToLoads,
+      desksAndWaitsProvider.loadsToDesks,
+      maxDesksProvider)
 
-    createGraph(sink, daysSourceQueue, deskRecs).run()
+    val (queue, _) = RunnableOptimisation.createGraph(sink, deskRecs).run()
+    queue.offer(request)
 
     probe.fishForMessage(1 second) {
       case DeskRecMinutes(drms) =>
@@ -132,7 +164,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       val manifestsForArrival = manifestsByKey(manifest)
       val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
 
-      withLiveManifests === Seq(ApiFlightWithSplits(arrival, Set(splits)))
+      withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1)), Set(splits)))
     }
 
     "When I have no manifests matching the arrival I should get no splits added to the arrival" >> {
@@ -144,7 +176,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     }
   }
 
-   def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =
+  def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =
     List(manifest)
       .map { vm => vm.maybeKey.map(k => (k, vm)) }
       .collect { case Some(k) => k }
@@ -152,7 +184,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   "Given an arrival with 100 pax " >> {
 
-    val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = s"2021-06-01T12:00", origin = PortCode("JFK"))
+    val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = s"2021-06-01T12:00", origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
 
     "When I provide no live and no historic manifests, terminal splits should be applied (50% desk, 50% egates)" >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EGate) -> 50, (T1, EeaDesk) -> 50)

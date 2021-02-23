@@ -193,7 +193,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
     "Split source precedence " >> {
       "Given a flight with both api & csv splits " >> {
         "When I crunch " >> {
-          "I should see pax loads calculated from the api splits and applied to the arrival's pax " >> {
+          "I should see pax loads calculated from the api splits and applied to the arrival's pax" >> {
 
             val scheduled = "2017-01-01T00:00Z"
 
@@ -211,9 +211,10 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
                 terminalProcessingTimes = Map(T1 -> Map(
                   eeaMachineReadableToDesk -> 20d / 60,
                   eeaMachineReadableToEGate -> 35d / 60))
-              ),
-              initialPortState = Option(PortState(SortedMap(arrival.unique -> ApiFlightWithSplits(arrival, Set())), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+              )
             ))
+
+            offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival))))
 
             val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
               VoyageManifest(EventTypes.CI, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),

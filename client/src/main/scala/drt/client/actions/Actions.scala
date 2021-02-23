@@ -7,7 +7,7 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.{PassengerInfoSummary, WalkTime, WalkTimes}
+import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
 import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.auth.LoggedInUser

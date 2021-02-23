@@ -1,30 +1,45 @@
 package services.crunch
 
+import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
-import actors.daily.PassengersActor
+import actors.daily.{FlightUpdatesSupervisor, PassengersActor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.queues.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
+import akka.util.Timeout
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
-import drt.shared.{MilliTimes, SDateLike}
-import graphs.SinkToSourceBridge
+import drt.shared.{MilliTimes, PortCode, SDateLike, VoyageNumber}
 import manifests.passengers.BestAvailableManifest
+import manifests.queues.SplitsCalculator
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
+import queueus.AdjustmentsNoop
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.{PortDesksAndWaitsProvider, RunnableDeployments, RunnableDeskRecs}
+import services.crunch.deskrecs._
 import services.graphstages.Crunch
-import services.graphstages.Crunch.crunchStartWithOffset
+import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
 
 import scala.collection.immutable.Map
-import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
+
+case object MockManifestLookupService extends ManifestLookupLike {
+  implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
+
+  override def maybeBestAvailableManifest(arrivalPort: PortCode,
+                                          departurePort: PortCode,
+                                          voyageNumber: VoyageNumber,
+                                          scheduled: SDateLike)
+                                         (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+    Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+}
 
 class TestDrtActor extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -63,16 +78,21 @@ class TestDrtActor extends Actor {
 
       val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(tc.now)))
       val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now))))
-      val snapshotInterval = 1
       val manifestLookups = ManifestLookups(system)
-      val manifestsActor: ActorRef = system.actorOf(ManifestRouterActor.props(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests))
-      val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(tc.now, journalType, tc.airportConfig.crunchOffsetMinutes)))
-      val deploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes)))
+
+      val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)))
+      val deploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)))
+      val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)))
 
       val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, crunchQueueActor)
       val flightsActor: ActorRef = flightLookups.flightsActor
-
-      val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsActor, tc.now, tc.airportConfig)
+      val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal, deploymentQueueActor)
+      val queuesActor = minuteLookups.queueMinutesActor
+      val staffActor = minuteLookups.staffMinutesActor
+      val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
+      val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
+      val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
+      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal)))
 
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
@@ -83,7 +103,7 @@ class TestDrtActor extends Actor {
       else
         PortDeskLimits.fixed(tc.airportConfig)
 
-      val lookups: MinuteLookupsLike = TestMinuteLookups(system, tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal)
+      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig) _
 
       def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
         val today = tc.now()
@@ -95,20 +115,42 @@ class TestDrtActor extends Actor {
       }
 
       val startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch) = () => {
-        val (queueSourceForDaysToReCrunch, deskRecsKillSwitch: UniqueKillSwitch) = RunnableDeskRecs.start(portStateActor, portDeskRecs, deskLimitsProviders)
-        val terminalToIntsToTerminalToStaff = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig) _
-        val crunchStartDateProvider: SDateLike => SDateLike = crunchStartWithOffset(tc.airportConfig.crunchOffsetMinutes)
-        val (queueSourceForDaysToRedeploy, deploymentsKillSwitch) = RunnableDeployments.start(
-          portStateActor, lookups.queueMinutesActor, lookups.staffMinutesActor, terminalToIntsToTerminalToStaff, crunchStartDateProvider, deskLimitsProviders, tc.airportConfig.minutesToCrunch, portDeskRecs/*, tc.airportConfig.queuesByTerminal*/)
+        implicit val timeout: Timeout = new Timeout(1 second)
+        val ptqa = paxTypeQueueAllocator(tc.airportConfig)
 
+        val splitAdjustments = AdjustmentsNoop
+
+        val splitsCalculator = SplitsCalculator(ptqa, tc.airportConfig.terminalPaxSplits, splitAdjustments)
+
+        val historicManifestLookups: ManifestLookupLike = MockManifestLookupService
+
+        val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+          arrivalsProvider = OptimisationProviders.arrivalsProvider(portStateActor),
+          liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
+          historicManifestsProvider = OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups),
+          splitsCalculator = splitsCalculator,
+          splitsSink = portStateActor,
+          flightsToLoads = portDeskRecs.flightsToLoads,
+          loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+          maxDesksProviders = deskLimitsProviders)
+
+        val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
+
+        val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
+          OptimisationProviders.loadsProvider(minuteLookups.queueMinutesActor),
+          OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, tc.airportConfig.terminals),
+          staffToDeskLimits,
+          portDeskRecs.loadsToSimulations
+        )
+
+        val (deploymentRequestQueue, deploymentsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deploymentsProducer).run()
         maybeCrunchQueueActor = Option(crunchQueueActor)
         maybeDeploymentQueueActor = Option(deploymentQueueActor)
-        crunchQueueActor ! SetDaysQueueSource(queueSourceForDaysToReCrunch)
-        deploymentQueueActor ! SetDaysQueueSource(queueSourceForDaysToRedeploy)
+        crunchQueueActor ! SetCrunchRequestQueue(crunchRequestQueue)
+        deploymentQueueActor ! SetCrunchRequestQueue(deploymentRequestQueue)
 
         if (tc.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 
-        portStateActor ! SetDeploymentQueueActor(deploymentQueueActor)
         (deskRecsKillSwitch, deploymentsKillSwitch)
       }
 
@@ -117,9 +159,6 @@ class TestDrtActor extends Actor {
       val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
-
-      val (_, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
-      val (manifestResponsesSource, _, _) = SinkToSourceBridge[List[BestAvailableManifest]]
 
       val aclPaxAdjustmentDays = 7
       val maxDaysToConsider = 14
@@ -131,7 +170,7 @@ class TestDrtActor extends Actor {
       }
 
       val aggregatedArrivalsActor = tc.maybeAggregatedArrivalsActor match {
-        case None => TestDefaults.testProbe("aggregated-arrivals").ref
+        case None => system.actorOf(Props(new MockAggregatedArrivalsActor))
         case Some(actor) => actor
       }
 
@@ -140,6 +179,7 @@ class TestDrtActor extends Actor {
         airportConfig = tc.airportConfig,
         pcpArrival = tc.pcpArrivalTime,
         portStateActor = portStateActor,
+        flightsActor = flightsActor,
         maxDaysToCrunch = tc.maxDaysToCrunch,
         expireAfterMillis = tc.expireAfterMillis,
         actors = Map[String, ActorRef](
@@ -152,14 +192,12 @@ class TestDrtActor extends Actor {
           "live-arrivals" -> liveArrivalsProbe.ref,
           "aggregated-arrivals" -> aggregatedArrivalsActor,
           "deployment-request" -> deploymentQueueActor
-          ),
+        ),
         useNationalityBasedProcessingTimes = false,
         useLegacyManifests = tc.useLegacyManifests,
         now = tc.now,
         manifestsLiveSource = manifestsSource,
-        manifestResponsesSource = manifestResponsesSource,
-        voyageManifestsActor = manifestsActor,
-        manifestRequestsSink = manifestRequestsSink,
+        voyageManifestsActor = manifestsRouterActor,
         simulator = tc.simulator,
         initialPortState = tc.initialPortState,
         initialForecastBaseArrivals = tc.initialForecastBaseArrivals,
@@ -202,6 +240,6 @@ class TestDrtActor extends Actor {
         liveArrivalsTestProbe = liveArrivalsProbe,
         aggregatedArrivalsActor = aggregatedArrivalsActor,
         portStateActor = portStateActor
-        )
+      )
   }
 }

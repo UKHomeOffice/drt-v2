@@ -1,92 +1,82 @@
 package services.crunch.deskrecs
 
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import akka.NotUsed
 import akka.actor.ActorRef
-import akka.stream.ClosedShape
-import akka.stream.scaladsl.GraphDSL.Implicits
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
-import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
-import drt.shared.FlightsApi.FlightsWithSplits
+import akka.pattern.ask
+import akka.stream.scaladsl.{Flow, Source}
+import akka.util.Timeout
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
+import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.Terminals.Terminal
+import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.dates.UtcDate
-import drt.shared.{ApiFlightWithSplits, ArrivalKey, SDateLike, TQM}
+import manifests.passengers.ManifestLike
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.SDate
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import services.TimeLogger
 import services.crunch.desklimits.TerminalDeskLimitsLike
+import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
 
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 
+
 object DynamicRunnableDeskRecs {
   val log: Logger = LoggerFactory.getLogger(getClass)
+  val timeLogger: TimeLogger = TimeLogger("DeskRecs", 1000, log)
 
-  case class CrunchRequest(utcDate: UtcDate, offsetMinutes: Int, durationMinutes: Int) {
-    lazy val start: SDateLike = SDate(utcDate).addMinutes(offsetMinutes)
-    lazy val end: SDateLike = start.addMinutes(durationMinutes)
-    lazy val minutesInMillis: NumericRange[MillisSinceEpoch] = start.millisSinceEpoch until end.millisSinceEpoch by 60000
-  }
+  type HistoricManifestsProvider = Iterable[Arrival] => Future[Source[ManifestLike, NotUsed]]
 
-  def createGraph(deskRecsSinkActor: ActorRef,
-                  crunchRequestsSource: Source[CrunchRequest, NotUsed],
-                  crunchRequestsToDeskRecs: CrunchRequestsToDeskRecs)
-                 (implicit ec: ExecutionContext): RunnableGraph[NotUsed] = {
+  type LoadsToQueueMinutes = (NumericRange[MillisSinceEpoch], Map[TQM, Crunch.LoadMinute], Map[Terminal, TerminalDeskLimitsLike]) => PortStateQueueMinutes
 
-    val deskRecsSink = Sink.actorRefWithAck(deskRecsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
+  type FlightsToLoads = (FlightsWithSplits, MillisSinceEpoch) => Map[TQM, Crunch.LoadMinute]
 
-    val graph = GraphDSL.create(crunchRequestsSource) {
-      implicit builder =>
-        crunchRequestsAsync =>
-          crunchRequestsToDeskRecs(crunchRequestsAsync.out) ~> deskRecsSink
-          ClosedShape
-    }
+  def crunchRequestsToQueueMinutes(arrivalsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]],
+                                   liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
+                                   historicManifestsProvider: HistoricManifestsProvider,
+                                   splitsCalculator: SplitsCalculator,
+                                   splitsSink: ActorRef,
+                                   flightsToLoads: FlightsToLoads,
+                                   loadsToQueueMinutes: LoadsToQueueMinutes,
+                                   maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
+                                  (implicit ec: ExecutionContext, timeout: Timeout): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
+    Flow[CrunchRequest]
+      .via(addArrivals(arrivalsProvider))
+      .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
+      .via(updateSplits(splitsSink))
+      .via(toDeskRecs(maxDesksProviders, flightsToLoads, loadsToQueueMinutes))
 
-    RunnableGraph.fromGraph(graph)
-  }
+  private def updateSplits(splitsSink: ActorRef)
+                          (implicit ec: ExecutionContext, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+    Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
+      .mapAsync(1) {
+        case (cr, flights) =>
+          splitsSink
+            .ask(SplitsForArrivals(flights.map(fws => (fws.unique, fws.splits)).toMap))
+            .map(_ => (cr, flights))
+      }
 
-  type CrunchRequestsToDeskRecs = Implicits.PortOps[CrunchRequest] => Implicits.PortOps[DeskRecMinutes]
-
-  def crunchRequestsToDeskRecs(arrivalsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]],
-                               liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
-                               historicManifestsProvider: Iterable[Arrival] => Future[Map[ArrivalKey, VoyageManifest]],
-                               splitsCalculator: SplitsCalculator,
-                               portDeskRecs: PortDesksAndWaitsProviderLike,
-                               maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
-                              (crunchRequests: Implicits.PortOps[CrunchRequest])
-                              (implicit ec: ExecutionContext): Implicits.PortOps[DeskRecMinutes] = {
-    val withArrivals = addArrivals(crunchRequests, arrivalsProvider)
-    val withSplits = addSplits(withArrivals, liveManifestsProvider, historicManifestsProvider, splitsCalculator)
-    toDeskRecs(withSplits, portDeskRecs, maxDesksProviders)
-  }
-
-  private def toDeskRecs(dayAndFlights: Implicits.PortOps[(CrunchRequest, Iterable[ApiFlightWithSplits])],
-                         portDeskRecs: PortDesksAndWaitsProviderLike,
-                         maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike]
-                        ): Implicits.PortOps[DeskRecMinutes] = {
-    dayAndFlights
+  private def toDeskRecs(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
+                         flightsToLoads: FlightsToLoads,
+                         loadsToQueueMinutes: LoadsToQueueMinutes
+                        ): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), PortStateQueueMinutes, NotUsed] = {
+    Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .map { case (crunchDay, flights) =>
         log.info(s"Crunching ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
-        val startTime = System.currentTimeMillis()
-
-        val loadsFromFlights: Map[TQM, Crunch.LoadMinute] = portDeskRecs.flightsToLoads(FlightsWithSplits(flights), crunchDay.start.millisSinceEpoch)
-        val deskRecs: DeskRecMinutes = portDeskRecs.loadsToDesks(crunchDay.minutesInMillis, loadsFromFlights, maxDesksProviders)
-
-        val timeTaken = System.currentTimeMillis() - startTime
-        if (timeTaken > 1000) log.warn(s"Optimisation took ${timeTaken}ms")
-
-        deskRecs
+        timeLogger.time({
+          val loadsFromFlights: Map[TQM, Crunch.LoadMinute] = flightsToLoads(FlightsWithSplits(flights), crunchDay.start.millisSinceEpoch)
+          loadsToQueueMinutes(crunchDay.minutesInMillis, loadsFromFlights, maxDesksProviders)
+        })
       }
   }
 
-  private def addArrivals(days: Implicits.PortOps[CrunchRequest],
-                         flightsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]])
-                        (implicit ec: ExecutionContext): Implicits.PortOps[(CrunchRequest, List[Arrival])] =
-    days
+  private def addArrivals(flightsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]])
+                         (implicit ec: ExecutionContext): Flow[CrunchRequest, (CrunchRequest, List[Arrival]), NotUsed] =
+    Flow[CrunchRequest]
       .mapAsync(1) { crunchRequest =>
         flightsProvider(crunchRequest).map(flightsStream => (crunchRequest, flightsStream))
       }
@@ -94,29 +84,38 @@ object DynamicRunnableDeskRecs {
         flights.fold(List[Arrival]())(_ ++ _).map(flights => (crunchRequest, flights))
       }
 
-  private def addSplits(crunchRequestWithArrivals: Implicits.PortOps[(CrunchRequest, List[Arrival])],
-                        liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
-                        historicManifestsProvider: Iterable[Arrival] => Future[Map[ArrivalKey, VoyageManifest]],
+  private def addSplits(liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
+                        historicManifestsProvider: Iterable[Arrival] => Future[Source[ManifestLike, NotUsed]],
                         splitsCalculator: SplitsCalculator)
-                       (implicit ec: ExecutionContext): Implicits.PortOps[(CrunchRequest, Iterable[ApiFlightWithSplits])] =
-    crunchRequestWithArrivals
+                       (implicit ec: ExecutionContext): Flow[(CrunchRequest, List[Arrival]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+    Flow[(CrunchRequest, List[Arrival])]
       .mapAsync(1) { case (crunchRequest, flightsSource) =>
         liveManifestsProvider(crunchRequest).map(manifestsStream => (crunchRequest, flightsSource, manifestsStream))
       }
-      .flatMapConcat { case (crunchRequest, flights, manifestsSource) =>
-        manifestsSource.fold(VoyageManifests.empty)(_ ++ _).map(manifests => (crunchRequest, flights, manifests))
+      .flatMapConcat { case (crunchRequest, arrivals, manifestsSource) =>
+        manifestsSource.fold(VoyageManifests.empty)(_ ++ _).map { manifests =>
+          (crunchRequest, arrivals, manifests)
+        }
       }
       .map { case (crunchRequest, arrivals, manifests) =>
-        val manifestsByKey = arrivalKeysToManifests(manifests)
+        val manifestsByKey = arrivalKeysToManifests(manifests.manifests)
         (crunchRequest, addManifests(arrivals.map(ApiFlightWithSplits.fromArrival), manifestsByKey, splitsCalculator.splitsForArrival))
       }
-      .mapAsync(1) {
-        case (crunchRequest, flights) =>
-          val arrivalsToLookup = flights.filter(_.splits.isEmpty).map(_.apiFlight)
-
-          historicManifestsProvider(arrivalsToLookup).map { manifests =>
-            (crunchRequest, addManifests(flights, manifests, splitsCalculator.splitsForArrival))
-          }
+      .mapAsync(1) { case (crunchRequest, flights) =>
+        val arrivalsToLookup = flights.filter(_.splits.isEmpty).map(_.apiFlight)
+        historicManifestsProvider(arrivalsToLookup).map { manifests =>
+          log.info(f"Looking up ${arrivalsToLookup.size} arrivals' historic manifests")
+          (crunchRequest, flights, manifests)
+        }
+      }
+      .flatMapConcat {
+        case (crunchRequest, flights, manifestsSource) =>
+          manifestsSource.fold[List[ManifestLike]](List[ManifestLike]())(_ :+ _).map(manifests => (crunchRequest, flights, manifests))
+      }
+      .map { case (crunchRequest, flights, manifests) =>
+        log.info(f"Adding historic manifests to flights")
+        val manifestsByKey = arrivalKeysToManifests(manifests)
+        (crunchRequest, addManifests(flights, manifestsByKey, splitsCalculator.splitsForArrival))
       }
       .map {
         case (crunchRequest, flights) =>
@@ -129,8 +128,8 @@ object DynamicRunnableDeskRecs {
           (crunchRequest, allFlightsWithSplits)
       }
 
-  private def arrivalKeysToManifests(manifests: VoyageManifests): Map[ArrivalKey, VoyageManifest] =
-    manifests.manifests
+  private def arrivalKeysToManifests(manifests: Iterable[ManifestLike]): Map[ArrivalKey, ManifestLike] =
+    manifests
       .map { manifest =>
         manifest.maybeKey.map(arrivalKey => (arrivalKey, manifest))
       }
@@ -139,18 +138,23 @@ object DynamicRunnableDeskRecs {
       }.toMap
 
   def addManifests(flights: Iterable[ApiFlightWithSplits],
-                   manifests: Map[ArrivalKey, VoyageManifest],
+                   manifests: Map[ArrivalKey, ManifestLike],
                    splitsForArrival: SplitsForArrival): Iterable[ApiFlightWithSplits] =
     flights.map { flight =>
       if (flight.splits.nonEmpty) flight
       else {
-        val maybeSplits = manifests.get(ArrivalKey(flight.apiFlight)) match {
-          case Some(historicManifest) =>
-            Some(splitsForArrival(historicManifest, flight.apiFlight))
-          case None =>
-            None
+        val maybeSplits = manifests
+          .get(ArrivalKey(flight.apiFlight))
+          .map(splitsForArrival(_, flight.apiFlight))
+
+        val arrival = maybeSplits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages) match {
+          case None => flight.apiFlight
+          case Some(liveSplits) => flight.apiFlight.copy(
+            ApiPax = Option(liveSplits.totalExcludingTransferPax.toInt)
+          )
         }
-        ApiFlightWithSplits(flight.apiFlight, maybeSplits.toSet)
+
+        ApiFlightWithSplits(arrival, maybeSplits.toSet)
       }
     }
 }

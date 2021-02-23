@@ -3,6 +3,7 @@ package services
 import drt.shared.dates.{LocalDate, UtcDate}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
+import services.graphstages.Crunch.europeLondonTimeZone
 
 class ServerSDateSpec extends Specification {
   "When calling getDayOfWeek" >> {
@@ -154,13 +155,13 @@ class ServerSDateSpec extends Specification {
     }
   }
 
-  "When asking for getLocalLastMidnight" >> {
+  "When asking for getLocalLastMidnight with a non-UTC timezone" >> {
 
-    val date = SDate("2020-04-02T23:00:00Z")
-    val expected = SDate("2020-04-02T23:00:00Z")
+    val date = SDate("2020-04-02", europeLondonTimeZone)
+    val expected = LocalDate(2020, 4, 2)
 
-    s"Given ${date.toISOString()} then I should get ${expected.toISOString()}" >> {
-      val result = date.getLocalLastMidnight
+    s"Given ${date.toISOString()} then I should get $expected" >> {
+      val result = date.getLocalLastMidnight.toLocalDate
       expected === result
     }
   }

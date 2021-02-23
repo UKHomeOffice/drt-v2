@@ -5,7 +5,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.{Queue, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
-import drt.shared.{AirportConfig, PaxTypeAndQueue, SimulationMinute, TQM}
+import drt.shared.{AirportConfig, PaxTypeAndQueue, SimulationMinute, SimulationMinutes, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunch
 import services.crunch.desklimits.TerminalDeskLimitsLike
@@ -31,9 +31,9 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 
   override def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
                                   loadsByQueue: Map[TQM, LoadMinute],
-                                  deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): Map[TQM, SimulationMinute] = {
+                                  deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): SimulationMinutes = {
     val deskRecMinutes = loadsToDesks(minuteMillis, loadsByQueue, deskLimitProviders)
-    deskRecsToSimulations(deskRecMinutes.minutes)
+    SimulationMinutes(deskRecsToSimulations(deskRecMinutes.minutes).values)
   }
 
   def deskRecsToSimulations(terminalQueueDeskRecs: Seq[DeskRecMinute]): Map[TQM, SimulationMinute] = terminalQueueDeskRecs
@@ -80,8 +80,8 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 
   override def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
                             loads: Map[TQM, LoadMinute],
-                            maxDesksByTerminal: Map[Terminal, TerminalDeskLimitsLike]): DeskRecMinutes = {
-    val terminalQueueDeskRecs = maxDesksByTerminal.map {
+                            deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): DeskRecMinutes = {
+    val terminalQueueDeskRecs = deskLimitProviders.map {
       case (terminal, maxDesksProvider) =>
         val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loads)
         val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)

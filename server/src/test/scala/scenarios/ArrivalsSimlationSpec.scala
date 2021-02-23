@@ -1,10 +1,11 @@
 package scenarios
 
 import actors.GetState
-import akka.actor.Props
+import akka.NotUsed
+import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import akka.stream.UniqueKillSwitch
-import akka.stream.scaladsl.SourceQueueWithComplete
+import akka.stream.scaladsl.Source
+import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
@@ -14,15 +15,21 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.airportconfig.Lhr
 import drt.shared.api.Arrival
+import manifests.queues.SplitsCalculator
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.PortDeskLimits
-import services.crunch.deskrecs.{PortDesksAndWaitsProvider, RunnableDeskRecs}
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
+import services.crunch.deskrecs.OptimiserMocks.{mockHistoricManifestsProviderNoop, mockLiveManifestsProviderNoop}
+import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.crunch.deskrecs.{DynamicRunnableDeskRecs, MockSplitsSinkActor, OptimisationProviders, PortDesksAndWaitsProvider, RunnableOptimisation}
 import services.exports.StreamingFlightsExport
 import services.imports.{ArrivalCrunchSimulationActor, ArrivalImporter}
 import services.{Optimiser, SDate}
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class ArrivalsSimlationSpec extends CrunchTestLike {
 
@@ -108,7 +115,6 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
   }
 
   "Given a csv of arrivals for a day then I should get a desks and queues export for that day" >> {
-
     val flightsWithSplits = ArrivalImporter(csv, terminal)
 
     val lhrHalved = Lhr.config.copy(
@@ -125,16 +131,36 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(fws)))
     val dawp = PortDesksAndWaitsProvider(lhrHalved, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi)
 
-    val (runnableDeskRecs, _): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = RunnableDeskRecs(portStateActor, dawp, PortDeskLimits.fixed(lhrHalved)).run()
+    val terminalDeskLimits = PortDeskLimits.fixed(lhrHalved)
+
+    val paxAllocation = PaxTypeQueueAllocation(
+      B5JPlusTypeAllocator,
+      TerminalQueueAllocator(lhrHalved.terminalPaxTypeQueueAllocation))
+
+    val splitsCalc = SplitsCalculator(paxAllocation, lhrHalved.terminalPaxSplits, AdjustmentsNoop)
+
+    val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+      OptimisationProviders.arrivalsProvider(portStateActor),
+      mockLiveManifestsProviderNoop,
+      mockHistoricManifestsProviderNoop,
+      splitsCalc,
+      system.actorOf(Props(new MockSplitsSinkActor)),
+      dawp.flightsToLoads,
+      dawp.loadsToDesks,
+      terminalDeskLimits
+    )
+
+    val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
 
     val date = SDate("2020-06-17T05:30:00Z")
-    runnableDeskRecs.offer(date.millisSinceEpoch)
+    crunchRequestQueue.offer(CrunchRequest(date.millisSinceEpoch, lhrHalved.crunchOffsetMinutes, lhrHalved.minutesToCrunch))
 
     val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
       case drm: DeskRecMinutes => drm
     }
 
     val deskRecMinutes = Await.result(futureDeskRecMinutes, 5 seconds)
+    deskRecsKillSwitch.shutdown()
 
     val totalPax = deskRecMinutes.minutes.map(_.paxLoad).sum
 

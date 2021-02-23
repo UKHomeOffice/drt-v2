@@ -6,19 +6,20 @@ import actors.queues.FlightsRouterActor
 import akka.NotUsed
 import akka.actor.Props
 import akka.pattern.ask
-import akka.stream.UniqueKillSwitch
-import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming
 import controllers.application.exports.CsvFileStreaming.csvFileResult
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import manifests.queues.SplitsCalculator
 import play.api.mvc._
 import services.crunch.desklimits.PortDeskLimits
-import services.crunch.deskrecs.{PortDesksAndWaitsProvider, RunnableDeskRecs}
+import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.crunch.deskrecs.{DynamicRunnableDeskRecs, OptimisationProviders, PortDesksAndWaitsProvider, RunnableOptimisation}
 import services.exports.StreamingDesksExport
 import services.imports.ArrivalCrunchSimulationActor
 import services.{Optimiser, SDate}
@@ -51,7 +52,6 @@ trait WithSimulations {
             )).mapTo[Source[FlightsWithSplits, NotUsed]]
 
             FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
-
               retrieveSimulationDesks(simulationParams, simulationConfig, date, fws, simulationParams.terminal)
             }.flatten
 
@@ -62,28 +62,38 @@ trait WithSimulations {
     }
   }
 
-  def retrieveSimulationDesks(
-                               simulationParams: SimulationParams,
-                               simulationConfig: AirportConfig,
-                               date: SDateLike, fws: FlightsWithSplits,
-                               terminal: Terminal
-                             ): Future[Result] = {
+  def retrieveSimulationDesks(simulationParams: SimulationParams,
+                              simulationConfig: AirportConfig,
+                              date: SDateLike, fws: FlightsWithSplits,
+                              terminal: Terminal): Future[Result] = {
     implicit val timeout: Timeout = new Timeout(2 minutes)
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
 
-    val (runnableDeskRecs, _): (SourceQueueWithComplete[MillisSinceEpoch], UniqueKillSwitch) = RunnableDeskRecs(
-      portStateActor,
-      PortDesksAndWaitsProvider(simulationConfig, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi),
-      PortDeskLimits.fixed(simulationConfig)
-    ).run()
+    val splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments)
 
-    runnableDeskRecs.offer(date.millisSinceEpoch)
+    val portDesksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(simulationConfig, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi)
+    val terminalDeskLimits = PortDeskLimits.fixed(simulationConfig)
+
+    val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+      OptimisationProviders.arrivalsProvider(portStateActor),
+      OptimisationProviders.liveManifestsProvider(ctrl.manifestsRouterActor),
+      OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService),
+      splitsCalculator,
+      ctrl.flightsActor,
+      portDesksAndWaitsProvider.flightsToLoads,
+      portDesksAndWaitsProvider.loadsToDesks,
+      terminalDeskLimits)
+
+    val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
+
+    crunchRequestQueue.offer(CrunchRequest(date.millisSinceEpoch, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch))
 
     val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
       case drm: DeskRecMinutes => DeskRecMinutes(drm.minutes.filter(_.terminal == simulationParams.terminal))
     }
 
     futureDeskRecMinutes.map(deskRecMinutes => {
+      deskRecsKillSwitch.shutdown()
 
       val crunchMinutes: SortedMap[TQM, CrunchMinute] = SortedMap[TQM, CrunchMinute]() ++ deskRecMinutes
         .minutes

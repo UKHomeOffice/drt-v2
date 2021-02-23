@@ -70,10 +70,10 @@ object BigSummaryBoxes {
       }
   }
 
-  def aggregateSplits(bestFlightPax: Arrival => Int)(flights: Seq[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = {
+  def aggregateSplits(bestFlightPax: Arrival => Int)(flights: Iterable[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = {
     val newSplits = Map[PaxTypeAndQueue, Double]()
     val flightSplits = bestFlightSplits(bestFlightPax)
-    val allSplits: Seq[(PaxTypeAndQueue, Double)] = flights.flatMap(flightSplits)
+    val allSplits: Iterable[(PaxTypeAndQueue, Double)] = flights.flatMap(flightSplits)
     val splitsExcludingTransfers = allSplits.filter(_._1.queueType != Queues.Transfer)
     //    //todo import cats - it makes short, efficient work of this sort of aggregation.
     val aggSplits: Map[PaxTypeAndQueue, Double] = splitsExcludingTransfers.foldLeft(newSplits) {

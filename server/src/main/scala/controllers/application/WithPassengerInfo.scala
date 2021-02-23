@@ -58,7 +58,7 @@ trait WithPassengerInfo {
     val startOfDay = SDate(date)
     val endOfDay = startOfDay.addDays(1).addMinutes(-1)
 
-    ManifestRouterActor.runAndCombine(ctrl.voyageManifestsActor
+    ManifestRouterActor.runAndCombine(ctrl.manifestsRouterActor
       .ask(GetStateForDateRange(startOfDay.millisSinceEpoch, endOfDay.millisSinceEpoch))
       .mapTo[Source[VoyageManifests, NotUsed]])
   }

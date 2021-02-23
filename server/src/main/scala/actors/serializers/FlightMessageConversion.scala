@@ -22,13 +22,13 @@ object FlightMessageConversion {
     }.toList)
 
 
-  def flightWithSplitsDiffToMessage(diff: FlightsApi.FlightsWithSplitsDiff) = {
+  def flightWithSplitsDiffToMessage(diff: FlightsApi.FlightsWithSplitsDiff): FlightsWithSplitsDiffMessage = {
     FlightsWithSplitsDiffMessage(
       createdAt = Option(SDate.now().millisSinceEpoch),
       removals = diff.arrivalsToRemove.map(ua => {
         UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled))
-      }),
-      updates = diff.flightsToUpdate.map(flightWithSplitsToMessage)
+      }).toSeq,
+      updates = diff.flightsToUpdate.map(flightWithSplitsToMessage).toSeq
     )
   }
 

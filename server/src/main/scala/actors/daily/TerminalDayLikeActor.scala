@@ -1,8 +1,9 @@
 package actors.daily
 
+import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.{GetState, RecoveryActorLike, Sizes}
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
+import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.Terminals.Terminal
 import drt.shared.{SDateLike, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
@@ -81,13 +82,20 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
     diffFromMinutes(state, container.minutes) match {
-      case noDifferences if noDifferences.isEmpty => sender() ! MinutesContainer.empty[VAL, INDEX]
+      case noDifferences if noDifferences.isEmpty => sender() ! UpdatedMillis.empty
       case differences =>
         state = updateStateFromDiff(state, differences)
         val messageToPersist = containerToMessage(differences)
-        val replyToAndMessage = Option(sender(), MinutesContainer(differences))
+        val updatedMillis = if (shouldSendEffectsToSubscriber(container))
+          UpdatedMillis(differences.map(_.minute))
+        else UpdatedMillis.empty
+
+        val replyToAndMessage = Option(sender(), updatedMillis)
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)
     }
+
+  def shouldSendEffectsToSubscriber(container: MinutesContainer[VAL, INDEX]): Boolean =
+    container.contains(classOf[DeskRecMinute])
 
   def containerToMessage(differences: Iterable[VAL]): GeneratedMessage
 

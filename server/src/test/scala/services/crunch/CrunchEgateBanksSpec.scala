@@ -47,7 +47,8 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
           minMaxDesksByTerminalQueue24Hrs = Map(T1 -> Map(
             Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))),
             Queues.EGate -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))))),
-          slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25)
+          slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25),
+          minutesToCrunch = 30
           ),
         cruncher = Optimiser.crunch
       ))
@@ -59,7 +60,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
         Queues.EGate -> Seq.fill(15)(1)
       ))
 
-      crunch.portStateTestProbe.fishForMessage(3 seconds) {
+      crunch.portStateTestProbe.fishForMessage(1 seconds) {
         case ps: PortState =>
           val resultSummary = deskRecsFromPortState(ps, 15)
           resultSummary == expected

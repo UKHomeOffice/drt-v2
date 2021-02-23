@@ -3,14 +3,16 @@ package actors
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayFlightActor}
 import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import actors.queues.FlightsRouterActor
+import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.DataUpdates.FlightUpdates
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
 import drt.shared.SDateLike
+import drt.shared.Terminals.Terminal
 import drt.shared.dates.UtcDate
 
 import scala.concurrent.ExecutionContext
@@ -25,10 +27,10 @@ trait FlightLookupsLike {
   val now: () => SDateLike
   val requestAndTerminateActor: ActorRef
 
-  val updateFlights: FlightsUpdate = (terminal: Terminal, date: UtcDate, diff: FlightsWithSplitsDiff) => {
+  val updateFlights: FlightsUpdate = (partition: (Terminal, UtcDate), diff: FlightUpdates) => {
+    val (terminal, date) = partition
     val actor = system.actorOf(TerminalDayFlightActor.props(terminal, date, now))
-    system.log.info(s"About to update $terminal $date with ${diff.flightsToUpdate.size} flights")
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[Seq[MillisSinceEpoch]]
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[UpdatedMillis]
   }
 
   val flightsByDayLookup: FlightsLookup = (terminal: Terminal, date: UtcDate, maybePit: Option[MillisSinceEpoch]) => {

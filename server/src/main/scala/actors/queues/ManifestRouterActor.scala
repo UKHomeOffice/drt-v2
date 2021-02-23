@@ -4,11 +4,12 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.Ack
 import actors.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
+import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
 import actors.{FeedStateLike, GetFeedStatuses, GetState, RecoveryActorLike}
 import akka.NotUsed
-import akka.actor.{ActorRef, Props}
+import akka.actor.ActorRef
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
@@ -29,37 +30,29 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 object ManifestRouterActor {
-
-
   def manifestsByDaySource(manifestsByDayLookup: ManifestLookup)
                           (start: SDateLike,
                            end: SDateLike,
-                           maybePit: Option[MillisSinceEpoch]): Source[VoyageManifests, NotUsed] = {
-    DateRange.utcDateRangeSource(start, end)
-      .mapAsync(1) {
-        date =>
-          manifestsByDayLookup(date, maybePit)
-      }
-  }
+                           maybePit: Option[MillisSinceEpoch]): Source[VoyageManifests, NotUsed] =
+    DateRange
+      .utcDateRangeSource(start, end)
+      .mapAsync(1)(manifestsByDayLookup(_, maybePit))
 
-  def runAndCombine(source: Future[Source[VoyageManifests, NotUsed]])(implicit mat: ActorMaterializer, ec: ExecutionContext): Future[VoyageManifests] = source
-    .flatMap(
-      _.runWith(Sink.reduce[VoyageManifests](_ ++ _))
+  def runAndCombine(source: Future[Source[VoyageManifests, NotUsed]])
+                   (implicit mat: ActorMaterializer, ec: ExecutionContext): Future[VoyageManifests] = source
+    .flatMap(source => source
+      .log(getClass.getName)
+      .runWith(Sink.reduce[VoyageManifests](_ ++ _))
     )
-
-  def props(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate): Props = Props(
-    new ManifestRouterActor(manifestLookup, manifestsUpdate)
-  )
 }
 
 case class ApiFeedState(latestZipFilename: String, maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
   override def feedSource: FeedSource = ApiFeedSource
 }
 
-case class GetManifestForFlight(arrivalKey: ArrivalKey)
-
-class ManifestRouterActor(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate) extends RecoveryActorLike {
-
+class ManifestRouterActor(manifestLookup: ManifestLookup,
+                          manifestsUpdate: ManifestsUpdate,
+                          updatesSubscriber: ActorRef) extends RecoveryActorLike {
   override def persistenceId: String = "arrival-manifests"
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
@@ -113,7 +106,6 @@ class ManifestRouterActor(manifestLookup: ManifestLookup, manifestsUpdate: Manif
   )
 
   override def receiveCommand: Receive = {
-
     case ManifestsFeedSuccess(DqManifests(updatedLZF, newManifests), createdAt) =>
       updateRequestsQueue = (sender(), VoyageManifests(newManifests)) :: updateRequestsQueue
 
@@ -171,25 +163,41 @@ class ManifestRouterActor(manifestLookup: ManifestLookup, manifestsUpdate: Manif
     case unexpected => log.warn(s"Got an unexpected message: $unexpected")
   }
 
-  def handleUpdatesAndAck(vms: VoyageManifests,
-                          replyTo: ActorRef): Unit = {
+  def handleUpdatesAndAck(updates: VoyageManifests,
+                          replyTo: ActorRef): Future[UpdatedMillis] = {
     processingRequest = true
-    Future.sequence(
-      manifestsByDay(vms)
-        .map {
-          case (date, vms) => manifestsUpdate(date, vms)
-        }
-    )
+    val eventualEffects = sendUpdates(updates)
+    eventualEffects
+      .map(updatesSubscriber ! _)
       .onComplete { _ =>
         processingRequest = false
         replyTo ! Ack
         self ! ProcessNextUpdateRequest
       }
+    eventualEffects
   }
+
+  def sendUpdates(updates: VoyageManifests): Future[UpdatedMillis] = {
+    val eventualUpdatedMinutesDiff: Source[UpdatedMillis, NotUsed] =
+      Source(partitionUpdates(updates)).mapAsync(1) {
+        case (partition, updates) => manifestsUpdate(partition, updates)
+      }
+    combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
+  }
+
+  private def combineUpdateEffectsStream(effects: Source[UpdatedMillis, NotUsed]): Future[UpdatedMillis] =
+    effects
+      .fold[UpdatedMillis](UpdatedMillis.empty)(_ ++ _)
+      .log(getClass.getName)
+      .runWith(Sink.seq)
+      .map(_.foldLeft[UpdatedMillis](UpdatedMillis.empty)(_ ++ _))
+      .recover { case t =>
+        log.error("Failed to combine update effects", t)
+        UpdatedMillis.empty
+      }
 
   def persistLastSeenFileName(lastSeenFileName: String): Unit =
     persistAndMaybeSnapshot(latestFilenameToMessage(lastSeenFileName))
-
 
   def persistFeedStatus(feedStatus: FeedStatus): Unit = persistAndMaybeSnapshot(feedStatusToMessage(feedStatus))
 
@@ -199,7 +207,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup, manifestsUpdate: Manif
       latestFilename = Option(filename))
   }
 
-  def manifestsByDay(vms: VoyageManifests): Map[UtcDate, VoyageManifests] = vms
+  def partitionUpdates(vms: VoyageManifests): Map[UtcDate, VoyageManifests] = vms
     .manifests
     .groupBy(_.scheduleArrivalDateTime.map(_.toUtcDate))
     .collect {

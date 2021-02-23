@@ -2,8 +2,9 @@ package actors.serializers
 
 import akka.serialization.SerializerWithStringManifest
 import org.slf4j.{Logger, LoggerFactory}
+import scalapb.GeneratedMessage
 import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
-import server.protobuf.messages.CrunchState._
+import server.protobuf.messages.CrunchState.{CrunchRequestMessage, _}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
@@ -56,10 +57,12 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val OriginTerminalPaxCountsMgs: String    = classOf[OriginTerminalPaxCountsMessages].getName
   final val Days: String                          = classOf[DaysMessage].getName
   final val RemoveDay: String                     = classOf[RemoveDayMessage].getName
+  final val CrunchRequest: String                 = classOf[CrunchRequestMessage].getName
+  final val CrunchRequests: String                = classOf[CrunchRequestsMessage].getName
+  final val RemoveCrunchRequest: String           = classOf[RemoveCrunchRequestMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = {
     objectToSerialize match {
-      case m: CrunchDiffMessage => m.toByteArray
       case m: CrunchStateSnapshotMessage => m.toByteArray
       case m: CrunchMinutesMessage => m.toByteArray
       case m: FlightsWithSplitsMessage => m.toByteArray
@@ -96,6 +99,9 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case m: OriginTerminalPaxCountsMessages => m.toByteArray
       case m: DaysMessage => m.toByteArray
       case m: RemoveDayMessage => m.toByteArray
+      case m: CrunchRequestMessage => m.toByteArray
+      case m: CrunchRequestsMessage => m.toByteArray
+      case m: RemoveCrunchRequestMessage => m.toByteArray
     }
   }
 
@@ -140,6 +146,9 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case RemoveDay                      => RemoveDayMessage.parseFrom(bytes)
       case FlightsWithSplits              => FlightsWithSplitsMessage.parseFrom(bytes)
       case FlightsWithSplitsDiff          => FlightsWithSplitsDiffMessage.parseFrom(bytes)
+      case CrunchRequest                  => CrunchRequestMessage.parseFrom(bytes)
+      case CrunchRequests                 => CrunchRequestsMessage.parseFrom(bytes)
+      case RemoveCrunchRequest            => RemoveCrunchRequestMessage.parseFrom(bytes)
     }
   }
 }

@@ -1,9 +1,8 @@
 package controllers
 
-import actors.ArrivalGenerator
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.api.Arrival
-import drt.shared.{ApiFlightWithSplits, ArrivalStatus, FeedSource, Operator, PortCode, SDateLike}
+import drt.shared._
 import org.springframework.util.StringUtils
 import services.SDate
 
@@ -14,7 +13,7 @@ object ArrivalGenerator {
               actPax: Option[Int] = None,
               maxPax: Option[Int] = None,
               terminal: Terminal = T1,
-              origin: PortCode = PortCode(""),
+              origin: PortCode = PortCode("JFK"),
               operator: Option[Operator] = None,
               status: ArrivalStatus = ArrivalStatus(""),
               estDt: String = "",
@@ -62,4 +61,7 @@ object ArrivalGenerator {
   def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): ApiFlightWithSplits = ApiFlightWithSplits(
     ArrivalGenerator.arrival(schDt = date.toISOString(), terminal = terminal), Set(), Option(date.millisSinceEpoch)
   )
+
+  def arrivalForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): Arrival =
+    ArrivalGenerator.arrival(schDt = date.toISOString(), terminal = terminal)
 }
