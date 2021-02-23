@@ -3,7 +3,7 @@ package actors.routing
 import actors.SetSubscriber
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.ProcessNextUpdateRequest
-import actors.queues.QueueLikeActor.{UpdateEffect, UpdatedMillis}
+import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.stream.ActorMaterializer
@@ -27,13 +27,13 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
 
   def partitionUpdates: PartialFunction[U, Map[P, U]]
 
-  def effectsFromUpdate(partition: P, updates: U): Future[UpdateEffect]
+  def effectsFromUpdate(partition: P, updates: U): Future[UpdatedMillis]
 
   def receiveQueries: Receive
 
   def shouldSendEffectsToSubscriber: U => Boolean
 
-  def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[UpdateEffect] = {
+  def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[UpdatedMillis] = {
     processingRequest = true
     val eventualEffects = sendUpdates(updates)
     eventualEffects
@@ -48,24 +48,24 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
     eventualEffects
   }
 
-  def sendUpdatedMillisToSubscriber(eventualUpdatesDiff: Future[UpdateEffect]): Future[Unit] = eventualUpdatesDiff.collect {
+  def sendUpdatedMillisToSubscriber(eventualUpdatesDiff: Future[UpdatedMillis]): Future[Unit] = eventualUpdatesDiff.collect {
     case diffMinutesContainer => maybeUpdatesSubscriber.foreach(_ ! diffMinutesContainer)
   }
 
-  def sendUpdates(updates: U): Future[UpdateEffect] = {
-    val eventualUpdatedMinutesDiff: Source[UpdateEffect, NotUsed] =
+  def sendUpdates(updates: U): Future[UpdatedMillis] = {
+    val eventualUpdatedMinutesDiff: Source[UpdatedMillis, NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
         case (partition, updates) => effectsFromUpdate(partition, updates)
       }
     combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
   }
 
-  private def combineUpdateEffectsStream(effects: Source[UpdateEffect, NotUsed]): Future[UpdateEffect] =
+  private def combineUpdateEffectsStream(effects: Source[UpdatedMillis, NotUsed]): Future[UpdatedMillis] =
     effects
-      .fold[UpdateEffect](UpdatedMillis.empty)(_ ++ _)
+      .fold[UpdatedMillis](UpdatedMillis.empty)(_ ++ _)
       .log(getClass.getName)
       .runWith(Sink.seq)
-      .map(_.foldLeft[UpdateEffect](UpdatedMillis.empty)(_ ++ _))
+      .map(_.foldLeft[UpdatedMillis](UpdatedMillis.empty)(_ ++ _))
       .recover { case t =>
         log.error(t, "Failed to combine update effects")
         UpdatedMillis.empty

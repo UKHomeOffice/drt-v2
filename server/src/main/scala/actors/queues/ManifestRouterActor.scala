@@ -4,12 +4,12 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.Ack
 import actors.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
-import actors.queues.QueueLikeActor.{UpdateEffect, UpdatedMillis}
+import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
 import actors.{FeedStateLike, GetFeedStatuses, GetState, RecoveryActorLike}
 import akka.NotUsed
-import akka.actor.{ActorRef, Props}
+import akka.actor.ActorRef
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
@@ -164,7 +164,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   }
 
   def handleUpdatesAndAck(updates: VoyageManifests,
-                          replyTo: ActorRef): Future[UpdateEffect] = {
+                          replyTo: ActorRef): Future[UpdatedMillis] = {
     processingRequest = true
     val eventualEffects = sendUpdates(updates)
     eventualEffects
@@ -177,20 +177,20 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     eventualEffects
   }
 
-  def sendUpdates(updates: VoyageManifests): Future[UpdateEffect] = {
-    val eventualUpdatedMinutesDiff: Source[UpdateEffect, NotUsed] =
+  def sendUpdates(updates: VoyageManifests): Future[UpdatedMillis] = {
+    val eventualUpdatedMinutesDiff: Source[UpdatedMillis, NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
         case (partition, updates) => manifestsUpdate(partition, updates)
       }
     combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
   }
 
-  private def combineUpdateEffectsStream(effects: Source[UpdateEffect, NotUsed]): Future[UpdateEffect] =
+  private def combineUpdateEffectsStream(effects: Source[UpdatedMillis, NotUsed]): Future[UpdatedMillis] =
     effects
-      .fold[UpdateEffect](UpdatedMillis.empty)(_ ++ _)
+      .fold[UpdatedMillis](UpdatedMillis.empty)(_ ++ _)
       .log(getClass.getName)
       .runWith(Sink.seq)
-      .map(_.foldLeft[UpdateEffect](UpdatedMillis.empty)(_ ++ _))
+      .map(_.foldLeft[UpdatedMillis](UpdatedMillis.empty)(_ ++ _))
       .recover { case t =>
         log.error("Failed to combine update effects", t)
         UpdatedMillis.empty
