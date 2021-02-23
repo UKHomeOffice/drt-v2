@@ -91,12 +91,12 @@ object FlightsRouterActor {
     )
 }
 
-class FlightsRouterActor(updatesSubscribers: ActorRef,
+class FlightsRouterActor(updatesSubscriber: ActorRef,
                          terminals: Iterable[Terminal],
                          flightsByDayLookup: FlightsLookup,
                          updateFlights: FlightsUpdate
                         ) extends RouterActorLike[FlightUpdates, (Terminal, UtcDate)] {
-  override var maybeUpdatesSubscriber: Option[ActorRef] = Option(updatesSubscribers)
+  override var maybeUpdatesSubscriber: Option[ActorRef] = Option(updatesSubscriber)
 
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), "flights-router-actor-kill-actor")
   val forwardRequestAndKillActor: (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] =
@@ -132,8 +132,6 @@ class FlightsRouterActor(updatesSubscribers: ActorRef,
     FlightsRouterActor.flightsByDaySource(flightsByDayLookup)
 
   override def partitionUpdates: PartialFunction[FlightUpdates, Map[(Terminal, UtcDate), FlightUpdates]] = {
-    case container: FlightsWithSplits =>
-      Map()
     case container: SplitsForArrivals =>
       container.splits
         .groupBy {
