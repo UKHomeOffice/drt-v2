@@ -166,15 +166,15 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   def handleUpdatesAndAck(updates: VoyageManifests,
                           replyTo: ActorRef): Future[UpdateEffect] = {
     processingRequest = true
-    val eventualAffects = sendUpdates(updates)
-    eventualAffects
+    val eventualEffects = sendUpdates(updates)
+    eventualEffects
       .map(updatesSubscriber ! _)
       .onComplete { _ =>
         processingRequest = false
         replyTo ! Ack
         self ! ProcessNextUpdateRequest
       }
-    eventualAffects
+    eventualEffects
   }
 
   def sendUpdates(updates: VoyageManifests): Future[UpdateEffect] = {
@@ -182,17 +182,17 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       Source(partitionUpdates(updates)).mapAsync(1) {
         case (partition, updates) => manifestsUpdate(partition, updates)
       }
-    combineUpdateAffectsStream(eventualUpdatedMinutesDiff)
+    combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
   }
 
-  private def combineUpdateAffectsStream(affects: Source[UpdateEffect, NotUsed]): Future[UpdateEffect] =
-    affects
+  private def combineUpdateEffectsStream(effects: Source[UpdateEffect, NotUsed]): Future[UpdateEffect] =
+    effects
       .fold[UpdateEffect](UpdatedMillis.empty)(_ ++ _)
       .log(getClass.getName)
       .runWith(Sink.seq)
       .map(_.foldLeft[UpdateEffect](UpdatedMillis.empty)(_ ++ _))
       .recover { case t =>
-        log.error("Failed to combine update affects", t)
+        log.error("Failed to combine update effects", t)
         UpdatedMillis.empty
       }
 

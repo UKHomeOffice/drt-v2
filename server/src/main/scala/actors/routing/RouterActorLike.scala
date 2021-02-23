@@ -14,8 +14,6 @@ import drt.shared.DataUpdates.Updates
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-object RouterActorLike {
-}
 
 trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
   var maybeUpdatesSubscriber: Option[ActorRef]
@@ -29,7 +27,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
 
   def partitionUpdates: PartialFunction[U, Map[P, U]]
 
-  def affectsFromUpdate(partition: P, updates: U): Future[UpdateEffect]
+  def effectsFromUpdate(partition: P, updates: U): Future[UpdateEffect]
 
   def receiveQueries: Receive
 
@@ -37,8 +35,8 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
 
   def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[UpdateEffect] = {
     processingRequest = true
-    val eventualAffects = sendUpdates(updates)
-    eventualAffects
+    val eventualEffects = sendUpdates(updates)
+    eventualEffects
       .map { updateEffect =>
         if (shouldSendEffectsToSubscriber(updates)) maybeUpdatesSubscriber.foreach(_ ! updateEffect)
       }
@@ -47,7 +45,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
         replyTo ! Ack
         self ! ProcessNextUpdateRequest
       }
-    eventualAffects
+    eventualEffects
   }
 
   def sendUpdatedMillisToSubscriber(eventualUpdatesDiff: Future[UpdateEffect]): Future[Unit] = eventualUpdatesDiff.collect {
@@ -57,19 +55,19 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
   def sendUpdates(updates: U): Future[UpdateEffect] = {
     val eventualUpdatedMinutesDiff: Source[UpdateEffect, NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
-        case (partition, updates) => affectsFromUpdate(partition, updates)
+        case (partition, updates) => effectsFromUpdate(partition, updates)
       }
-    combineUpdateAffectsStream(eventualUpdatedMinutesDiff)
+    combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
   }
 
-  private def combineUpdateAffectsStream(affects: Source[UpdateEffect, NotUsed]): Future[UpdateEffect] =
-    affects
+  private def combineUpdateEffectsStream(effects: Source[UpdateEffect, NotUsed]): Future[UpdateEffect] =
+    effects
       .fold[UpdateEffect](UpdatedMillis.empty)(_ ++ _)
       .log(getClass.getName)
       .runWith(Sink.seq)
       .map(_.foldLeft[UpdateEffect](UpdatedMillis.empty)(_ ++ _))
       .recover { case t =>
-        log.error(t, "Failed to combine update affects")
+        log.error(t, "Failed to combine update effects")
         UpdatedMillis.empty
       }
 

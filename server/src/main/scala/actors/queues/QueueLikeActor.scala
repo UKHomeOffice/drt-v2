@@ -35,9 +35,9 @@ object QueueLikeActor {
     val empty: UpdatedMillis = UpdatedMillis(Seq())
   }
 
-  case class UpdatedMillis(affects: Iterable[MillisSinceEpoch]) extends UpdateEffect {
+  case class UpdatedMillis(effects: Iterable[MillisSinceEpoch]) extends UpdateEffect {
     override def ++(other: UpdateEffect): UpdateEffect = other match {
-      case UpdatedMillis(toAdd) => UpdatedMillis(affects ++ toAdd)
+      case UpdatedMillis(toAdd) => UpdatedMillis(effects ++ toAdd)
       case _ => this
     }
   }

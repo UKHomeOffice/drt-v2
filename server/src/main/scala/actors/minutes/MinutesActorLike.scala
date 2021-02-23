@@ -131,6 +131,6 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
       }
   }
 
-  override def affectsFromUpdate(partition: (Terminal, UtcDate), updates: MinutesContainer[A, B]): Future[QueueLikeActor.UpdateEffect] =
+  override def effectsFromUpdate(partition: (Terminal, UtcDate), updates: MinutesContainer[A, B]): Future[QueueLikeActor.UpdateEffect] =
     updateMinutes(partition, updates)
 }
