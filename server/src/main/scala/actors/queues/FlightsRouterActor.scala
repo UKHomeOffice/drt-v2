@@ -156,7 +156,7 @@ class FlightsRouterActor(val updatesSubscriber: ActorRef,
         .toMap
   }
 
-  def effectsFromUpdate(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[UpdatedMillis] =
+  def millisAffectedByUpdate(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[UpdatedMillis] =
     updateFlights(partition, updates)
 
   override def shouldSendEffectsToSubscriber: FlightUpdates => Boolean = {

@@ -161,7 +161,7 @@ class ServerSDateSpec extends Specification {
     val expected = LocalDate(2020, 4, 2)
 
     s"Given ${date.toISOString()} then I should get $expected" >> {
-      val result = date.addMinutes(0).getLocalLastMidnight.toLocalDate
+      val result = date.getLocalLastMidnight.toLocalDate
       expected === result
     }
   }

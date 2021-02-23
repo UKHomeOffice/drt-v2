@@ -181,8 +181,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     portStateProbe.fishForMessage(2 seconds) {
       case DeskRecMinutes(drms) =>
         val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queue, drm.paxLoad, drm.minute)).toSet
-        println(s"got: $result")
-        println(s"exp: $expectedLoads")
         result == expectedLoads
       case _ => false
     }
