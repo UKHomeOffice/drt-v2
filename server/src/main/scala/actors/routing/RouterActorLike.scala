@@ -1,6 +1,5 @@
 package actors.routing
 
-import actors.SetSubscriber
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.minutes.MinutesActorLike.ProcessNextUpdateRequest
 import actors.queues.QueueLikeActor.UpdatedMillis
@@ -13,10 +12,19 @@ import drt.shared.DataUpdates.Updates
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.language.postfixOps
 
+trait RouterActorLikeWithSubscriber[U <: Updates, P] extends RouterActorLike[U, P] {
+  val updatesSubscriber: ActorRef
+
+  override def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[UpdatedMillis] =
+    super.handleUpdatesAndAck(updates, replyTo).map { updatedMillis =>
+      if (shouldSendEffectsToSubscriber(updates)) updatesSubscriber ! updatedMillis
+      updatedMillis
+    }
+}
 
 trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
-  var maybeUpdatesSubscriber: Option[ActorRef]
   var processingRequest: Boolean = false
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
@@ -37,19 +45,12 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
     processingRequest = true
     val eventualEffects = sendUpdates(updates)
     eventualEffects
-      .map { updateEffect =>
-        if (shouldSendEffectsToSubscriber(updates)) maybeUpdatesSubscriber.foreach(_ ! updateEffect)
-      }
       .onComplete { _ =>
         processingRequest = false
         replyTo ! Ack
         self ! ProcessNextUpdateRequest
       }
     eventualEffects
-  }
-
-  def sendUpdatedMillisToSubscriber(eventualUpdatesDiff: Future[UpdatedMillis]): Future[Unit] = eventualUpdatesDiff.collect {
-    case diffMinutesContainer => maybeUpdatesSubscriber.foreach(_ ! diffMinutesContainer)
   }
 
   def sendUpdates(updates: U): Future[UpdatedMillis] = {
@@ -84,10 +85,6 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
     case StreamCompleted => log.info(s"Stream completed")
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
-
-    case setSubscriber: SetSubscriber =>
-      log.info(s"Received subscriber actor")
-      maybeUpdatesSubscriber = Option(setSubscriber.subscriber)
   }
 
   def receiveUpdates: Receive = {

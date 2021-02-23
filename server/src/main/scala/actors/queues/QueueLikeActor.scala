@@ -104,7 +104,6 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
     case UpdatedMillis(millis) =>
       val requests = millis.map(CrunchRequest(_, crunchOffsetMinutes, durationMinutes)).toSet
-      log.info(s"Received UpdatedMillis covering ${requests.size}")
       updateState(requests)
       emitNextDayIfReady()
       persistAndMaybeSnapshot(CrunchRequestsMessage(requests.map(crunchRequestToMessage).toList))

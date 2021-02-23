@@ -41,7 +41,8 @@ class MockPortStateActorForDeployments(probe: TestProbe, responseDelayMillis: Lo
 class TestQueueMinutesActor(probe: ActorRef,
                             terminals: Iterable[Terminal],
                             lookup: MinutesLookup[CrunchMinute, TQM],
-                            updateMinutes: MinutesUpdate[CrunchMinute, TQM]) extends QueueMinutesActor(terminals, lookup, updateMinutes) {
+                            updateMinutes: MinutesUpdate[CrunchMinute, TQM],
+                            updatesSubscriber: ActorRef) extends QueueMinutesActor(terminals, lookup, updateMinutes, updatesSubscriber) {
 
   override def receive: Receive = testReceives
 
@@ -56,11 +57,12 @@ case class TestMinuteLookups(queueProbe: ActorRef,
                              system: ActorSystem,
                              now: () => SDateLike,
                              expireAfterMillis: Int,
-                             queuesByTerminal: Map[Terminal, Seq[Queue]])
+                             queuesByTerminal: Map[Terminal, Seq[Queue]],
+                             deploymentsQueueSubscriber: ActorRef)
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
 
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queueProbe, queuesByTerminal.keys, queuesLookup, updateCrunchMinutes)))
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queueProbe, queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, deploymentsQueueSubscriber)))
 
   override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes)))
 }

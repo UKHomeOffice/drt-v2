@@ -4,7 +4,7 @@ import actors.PartitionedPortStateActor._
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import actors.queues.QueueLikeActor.UpdatedMillis
-import actors.routing.RouterActorLike
+import actors.routing.RouterActorLikeWithSubscriber
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.pattern.{ask, pipe}
@@ -91,13 +91,11 @@ object FlightsRouterActor {
     )
 }
 
-class FlightsRouterActor(updatesSubscriber: ActorRef,
+class FlightsRouterActor(val updatesSubscriber: ActorRef,
                          terminals: Iterable[Terminal],
                          flightsByDayLookup: FlightsLookup,
                          updateFlights: FlightsUpdate
-                        ) extends RouterActorLike[FlightUpdates, (Terminal, UtcDate)] {
-  override var maybeUpdatesSubscriber: Option[ActorRef] = Option(updatesSubscriber)
-
+                        ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate)] {
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), "flights-router-actor-kill-actor")
   val forwardRequestAndKillActor: (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] =
     FlightsRouterActor.forwardRequestAndKillActor(killActor)

@@ -16,7 +16,8 @@ import scala.concurrent.{ExecutionContext, Future}
 case class TestMinuteLookups(system: ActorSystem,
                              now: () => SDateLike,
                              expireAfterMillis: Int,
-                             queuesByTerminal: Map[Terminal, Seq[Queue]])
+                             queuesByTerminal: Map[Terminal, Seq[Queue]],
+                             deploymentsQueueActor: ActorRef)
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
 
@@ -32,7 +33,7 @@ case class TestMinuteLookups(system: ActorSystem,
     actor.ask(ResetData).map(_ => actor ! PoisonPill)
   }
 
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, resetQueuesData)))
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, resetQueuesData, deploymentsQueueActor)))
 
   override val staffMinutesActor: ActorRef = system.actorOf(Props(new TestStaffMinutesActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes, resetStaffData)))
 }

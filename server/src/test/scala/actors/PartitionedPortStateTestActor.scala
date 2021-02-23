@@ -18,18 +18,6 @@ import drt.shared._
 
 import scala.concurrent.ExecutionContext
 
-object PartitionedPortStateTestActor {
-  def apply(testProbe: TestProbe, flightsActor: ActorRef, now: () => SDateLike, airportConfig: AirportConfig)
-           (implicit system: ActorSystem, ec: ExecutionContext): ActorRef = {
-    val lookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-    val queuesActor = lookups.queueMinutesActor
-    val staffActor = lookups.staffMinutesActor
-    val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-queues")
-    val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-staff")
-    val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, InMemoryStreamingJournal))), "updates-supervisor-flight")
-    system.actorOf(Props(new PartitionedPortStateTestActor(testProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, now, airportConfig.queuesByTerminal)))
-  }
-}
 
 class PartitionedPortStateTestActor(probe: ActorRef,
                                     flightsActor: ActorRef,

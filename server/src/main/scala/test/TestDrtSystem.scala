@@ -53,12 +53,12 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   override val fixedPointsActor: ActorRef = system.actorOf(Props(new TestFixedPointsActor(now)))
   override val staffMovementsActor: ActorRef = system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()))
-  override val crunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "crunch-queue-actor")
+  override val crunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "crunch-queue-actor")
   override val deploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "staff-queue-actor")
   override val manifestsRouterActor: ActorRef = system.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)), name = "voyage-manifests-router-actor")
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
-  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, deploymentQueueActor)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal, crunchQueueActor)
   override val flightsActor: ActorRef = flightLookups.flightsActor
   override val queuesActor: ActorRef = minuteLookups.queueMinutesActor

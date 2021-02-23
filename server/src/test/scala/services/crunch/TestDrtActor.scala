@@ -1,7 +1,8 @@
 package services.crunch
 
+import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
-import actors.daily.PassengersActor
+import actors.daily.{FlightUpdatesSupervisor, PassengersActor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.queues.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
@@ -79,14 +80,19 @@ class TestDrtActor extends Actor {
       val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now))))
       val manifestLookups = ManifestLookups(system)
 
-      val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(tc.now, journalType, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)))
+      val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)))
       val deploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)))
       val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)))
 
       val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, crunchQueueActor)
       val flightsActor: ActorRef = flightLookups.flightsActor
-
-      val portStateActor = PartitionedPortStateTestActor(portStateProbe, flightsActor, tc.now, tc.airportConfig)
+      val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal, deploymentQueueActor)
+      val queuesActor = minuteLookups.queueMinutesActor
+      val staffActor = minuteLookups.staffMinutesActor
+      val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
+      val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
+      val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
+      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal)))
 
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
@@ -98,8 +104,6 @@ class TestDrtActor extends Actor {
         PortDeskLimits.fixed(tc.airportConfig)
 
       val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig) _
-
-      val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal)
 
       def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
         val today = tc.now()
@@ -147,7 +151,6 @@ class TestDrtActor extends Actor {
 
         if (tc.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
 
-        portStateActor ! SetSubscriber(deploymentQueueActor)
         (deskRecsKillSwitch, deploymentsKillSwitch)
       }
 

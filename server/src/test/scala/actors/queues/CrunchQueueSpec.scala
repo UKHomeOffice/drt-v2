@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 
 
 class TestCrunchQueueActor(now: () => SDateLike, offsetMinutes: Int, durationMinutes: Int)
-  extends CrunchQueueActor(now, InMemoryStreamingJournal, offsetMinutes, durationMinutes) {
+  extends CrunchQueueActor(now, offsetMinutes, durationMinutes) {
   override val maybeSnapshotInterval: Option[Int] = Option(1)
 }
 

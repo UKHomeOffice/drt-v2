@@ -11,7 +11,7 @@ import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -136,8 +136,8 @@ object TestActors {
     }
   }
 
-  class TestCrunchQueueActor(now: () => SDateLike, journalType: StreamingJournalLike, crunchOffsetMinutes: Int, durationMinutes: Int)
-    extends CrunchQueueActor(now, journalType, crunchOffsetMinutes, durationMinutes) {
+  class TestCrunchQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
+    extends CrunchQueueActor(now, crunchOffsetMinutes, durationMinutes) {
     def reset: Receive = {
       case ResetData =>
         readyToEmit = true
@@ -201,8 +201,9 @@ object TestActors {
   class TestQueueMinutesActor(terminals: Iterable[Terminal],
                               lookup: MinutesLookup[CrunchMinute, TQM],
                               updateMinutes: MinutesUpdate[CrunchMinute, TQM],
-                              val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends QueueMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[CrunchMinute, TQM] {
+                              val resetData: (Terminal, MillisSinceEpoch) => Future[Any],
+                              updatesSubscriber: ActorRef)
+    extends QueueMinutesActor(terminals, lookup, updateMinutes, updatesSubscriber) with TestMinuteActorLike[CrunchMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 

@@ -226,10 +226,6 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val askThenAck: AckingAsker = Acking.askThenAck
 
   def processMessage: Receive = {
-    case msg: SetSubscriber =>
-      log.info(s"Received deployment queue actor")
-      queuesActor ! msg
-
     case StreamInitialized => sender() ! Ack
 
     case StreamCompleted => log.info(s"Stream completed")
