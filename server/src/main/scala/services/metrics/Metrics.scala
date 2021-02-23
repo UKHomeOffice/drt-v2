@@ -20,8 +20,8 @@ class StatsDMetrics extends MetricsCollectorLike {
 
 class LoggingMetrics extends MetricsCollectorLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
-  override def timer(name: String, milliseconds: Double): Unit = Unit//log.info(s"$name took ${milliseconds}ms")
-  override def counter(name: String, value: Double): Unit = Unit//log.info(s"$name count: $value")
+  override def timer(name: String, milliseconds: Double): Unit = log.info(s"$name took ${milliseconds}ms")
+  override def counter(name: String, value: Double): Unit = log.info(s"$name count: $value")
 }
 
 object Metrics {
