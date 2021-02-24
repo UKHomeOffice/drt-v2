@@ -877,14 +877,11 @@ object PassengerSplits {
 }
 
 object MilliTimes {
-  val oneMinuteMillis: Int = 60000
-  val oneHourMillis: Int = oneMinuteMillis * 60
-  val oneDayMillis: Int = oneHourMillis * 24
+  val oneSecondMillis: Int = 1000
+  val oneMinuteMillis: Int = 60 * oneSecondMillis
+  val oneHourMillis: Int = 60 * oneMinuteMillis
+  val oneDayMillis: Int = 24 * oneHourMillis
   val minutesInADay: Int = 60 * 24
-
-  def isHistoric(now: () => SDateLike, from: SDateLike): Boolean = {
-    from.millisSinceEpoch <= now().getLocalLastMidnight.addDays(-1).millisSinceEpoch
-  }
 }
 
 object CrunchApi {
