@@ -11,9 +11,8 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.{PassengerInfoSummary, WalkTime, WalkTimes}
+import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -21,7 +20,7 @@ import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
-import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, ArrivalSource, Role, StaffMovementsExport}
+import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
 import uk.gov.homeoffice.drt.auth._
 
 import scala.collection.immutable.Map

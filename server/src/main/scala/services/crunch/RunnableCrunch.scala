@@ -2,7 +2,7 @@ package services.crunch
 
 import actors.acking.AckingReceiver._
 import actors.queues.QueueLikeActor.UpdatedMillis
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import drt.chroma.ArrivalsDiffingStage
@@ -16,7 +16,6 @@ import services.StreamSupervision
 import services.graphstages._
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 object RunnableCrunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -54,10 +53,8 @@ object RunnableCrunch {
                                        aggregatedArrivalsStateActor: ActorRef,
                                        deploymentRequestActor: ActorRef,
 
-                                       forecastMaxMillis: () => MillisSinceEpoch,
-                                       throttleDurationPer: FiniteDuration
-                                      )
-                                      (implicit mat: Materializer, system: ActorSystem): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                       forecastMaxMillis: () => MillisSinceEpoch
+                                      ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsFeedResponse]
     val manifestsLiveKillSwitch = KillSwitches.single[ManifestsFeedResponse]

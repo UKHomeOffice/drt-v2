@@ -1,13 +1,12 @@
 package actors.daily
 
+import actors.StreamingJournalLike
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import actors.serializers.{FlightMessageConversion, PortStateMessageConversion}
-import actors.StreamingJournalLike
 import akka.actor.PoisonPill
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer}
-import akka.stream.scaladsl.GraphDSL.Implicits.getClass
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}

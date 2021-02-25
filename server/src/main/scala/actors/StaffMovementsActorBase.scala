@@ -1,7 +1,5 @@
 package actors
 
-import java.util.UUID
-
 import actors.Sizes.oneMegaByte
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.Scheduler
@@ -10,12 +8,13 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
-import drt.shared.{HasExpireables, MilliDate, SDateLike, StaffMovement, StaffMovements}
+import drt.shared.{MilliDate, SDateLike, StaffMovement, StaffMovements}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import services.OfferHandler
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
@@ -118,7 +117,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
       log.info(s"Added $movementsToAdd. We have ${state.staffMovements.movements.length} movements after purging")
       val movements: StaffMovements = StaffMovements(movementsToAdd)
       val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements), Option(now().millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(messagesToPersist, Option(sender(), AddStaffMovementsAck(movementsToAdd)))
+      persistAndMaybeSnapshotWithAck(messagesToPersist, Option((sender(), AddStaffMovementsAck(movementsToAdd))))
 
     case RemoveStaffMovements(uuidToRemove) =>
       val updatedStaffMovements = state.staffMovements - Seq(uuidToRemove)
@@ -126,7 +125,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
       log.info(s"Removed $uuidToRemove. We have ${state.staffMovements.movements.length} movements after purging")
       val messagesToPersist: RemoveStaffMovementMessage = RemoveStaffMovementMessage(Option(uuidToRemove.toString), Option(now().millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(messagesToPersist, Option(sender(), RemoveStaffMovementsAck(uuidToRemove)))
+      persistAndMaybeSnapshotWithAck(messagesToPersist, Option((sender(), RemoveStaffMovementsAck(uuidToRemove))))
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
