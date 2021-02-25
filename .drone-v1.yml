@@ -38,32 +38,14 @@ steps:
       - push
 
 
-#- name: drone-s3-cache-pull
-#  pull: if-not-exists
-#  image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-#  settings:
-#    drone-s3-cache-mode: pull
-#  environment:
-#    DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
-#      from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-#    DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
-#      from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-#    DRONE_S3_CACHE_BUCKET_NAME:
-#      from_secret: DRONE_S3_CACHE_BUCKET_NAME
-#  when:
-#    event:
-#      - push
-
 - name: drone-s3-cache-pull
-  image: plugins/s3-cache
+  pull: if-not-exists
+  image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
   settings:
-    pull: true
-    endpoint: https://s3.amazonaws.com/drt-drone-cache
-    access_key:
-      from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-    secret_key:
-      from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-    restore: true
+    drone-s3-cache-mode: pull
+  when:
+    event:
+      - push
 
 - name: look-at-directory
   pull: if-not-exists
@@ -188,44 +170,29 @@ steps:
     - publish-drt
     - publish-cypress
 
-#- name: drone-s3-cache-push
-#  pull: if-not-exists
-#  image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-#  settings:
-#    drone-s3-cache-folders:
-#      - ./.ivy2
-#      - ./.sbt/boot
-#      - ./drone/src/github.com/UKHomeOffice/drt-v2/e2e/node_modules
-#    drone-s3-cache-mode: push
-#  environment:
-#    DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
-#      from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-#    DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
-#      from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-#    DRONE_S3_CACHE_BUCKET_NAME:
-#      from_secret: DRONE_S3_CACHE_BUCKET_NAME
-#  when:
-#    event:
-#      - push
-#  depends_on:
-#    - build
-#    - publish-cypress
-
-- name: build-cache
-  image: plugins/s3-cache
+- name: drone-s3-cache-push
+  pull: if-not-exists
+  image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
   settings:
-    pull: true
-    bucket: drt-drone-cache
-    access_key:
+    drone-s3-cache-folders:
+      - ./.ivy2
+      - ./.sbt/boot
+      - ./drone/src/github.com/UKHomeOffice/drt-v2/e2e/node_modules
+    drone-s3-cache-mode: push
+  environment:
+    DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
       from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-    secret_key:
+    DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
       from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-    rebuild: true
-    mount:
-      - .sbt
-      - e2e/node_modules
+    DRONE_S3_CACHE_BUCKET_NAME:
+      from_secret: DRONE_S3_CACHE_BUCKET_NAME
+  when:
+    event:
+      - push
   depends_on:
-    - e2e-tests
+    - build
+    - publish-cypress
+
 
 - name: git_tag
   pull: if-not-exists
