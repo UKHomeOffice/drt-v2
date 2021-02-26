@@ -1,7 +1,6 @@
 package drt.client.components
 
 import diode.UseValueEq
-import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
@@ -16,11 +15,11 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom
-import org.scalajs.dom.html.{Div, TableCell}
+import org.scalajs.dom.html.Div
 import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 
-import scala.collection.immutable
 import scala.util.{Success, Try}
 
 

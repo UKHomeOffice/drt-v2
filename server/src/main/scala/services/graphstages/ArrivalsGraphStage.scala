@@ -1,6 +1,5 @@
 package services.graphstages
 
-import actors.Ports
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.Terminals.{InvalidTerminal, Terminal}
@@ -229,7 +228,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def isFlightRelevant(flight: Arrival): Boolean = {
       val isValidSuffix = !flight.FlightCodeSuffix.exists(fcs => fcs.suffix == "P" || fcs.suffix == "F")
-      validPortTerminals.contains(flight.Terminal) && !Ports.domesticPorts.contains(flight.Origin) && isValidSuffix
+      validPortTerminals.contains(flight.Terminal) && !flight.Origin.isDomestic && isValidSuffix
     }
 
     def pushIfAvailable(arrivalsToPush: Option[ArrivalsDiff], outlet: Outlet[ArrivalsDiff]): Unit = {

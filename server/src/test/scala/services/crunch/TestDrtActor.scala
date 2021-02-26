@@ -214,7 +214,6 @@ class TestDrtActor extends Actor {
         initialStaffMovements = tc.initialStaffMovements,
         refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
         refreshManifestsOnStart = tc.refreshManifestsOnStart,
-        stageThrottlePer = 50 milliseconds,
         pcpPaxFn = tc.pcpPaxFn,
         adjustEGateUseByUnder12s = false,
         optimiser = tc.cruncher,

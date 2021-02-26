@@ -1,18 +1,18 @@
 package services.exports.flights
 
 import java.util.UUID
-
 import actors.pointInTime.ArrivalsReadActor
-import actors.{ArrivalsState, GetState, Ports}
+import actors.{ArrivalsState, GetState}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.Ports.domestic
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
-import drt.shared.{FeedSource, SDateLike, UniqueArrival}
+import drt.shared.{FeedSource, Ports, SDateLike, UniqueArrival}
 import services.SDate
 import services.exports.Exports
 
@@ -67,7 +67,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
 
     val arrivalsForDay = arrivals
       .values
-      .filter(a => a.Terminal == terminal && !Ports.domesticPorts.contains(a.Origin))
+      .filter(a => a.Terminal == terminal && !a.Origin.isDomestic)
       .filter(a => isScheduledForExportDay(a, exportDay))
 
     val csvData = arrivalsForDay

@@ -200,7 +200,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       refreshManifestsOnStart = refreshManifestsOnStart,
-      stageThrottlePer = config.get[Int]("crunch.stage-throttle-millis") milliseconds,
       pcpPaxFn = pcpPaxFn,
       adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
       optimiser = optimiser,

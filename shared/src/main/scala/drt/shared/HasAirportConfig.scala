@@ -125,7 +125,7 @@ object Queues {
     FastTrack -> "Fast Track",
     Transfer -> "Tx",
     QueueDesk -> "Desk"
-    )
+  )
 
   val forecastExportQueueOrderSansFastTrack = List(EeaDesk, NonEeaDesk, EGate)
   val forecastExportQueueOrderWithFastTrack = List(EeaDesk, NonEeaDesk, EGate, FastTrack)
@@ -137,7 +137,7 @@ object Queues {
     NonEeaDesk -> "NON-EEA",
     EGate -> "E-GATES",
     FastTrack -> "FAST TRACK"
-    )
+  )
 }
 
 sealed trait PaxType {
@@ -237,7 +237,7 @@ object ProcessingTimes {
     "ECU" -> 78.6, "LBY" -> 82.2, "URY" -> 94.5, "CRI" -> 89.1, "ZMB" -> 85.4, "BIH" -> 72.3, "COD" -> 90.2,
     "ISL" -> 28.3, "None" -> 30.0, "MKD" -> 72.6, "GEO" -> 83.4, "AGO" -> 94.8, "GMB" -> 81.3, "UZB" -> 72.6,
     "KNA" -> 83.8, "SOM" -> 90.6, "LCA" -> 89.3, "GRD" -> 105.9
-    )
+  )
 }
 
 case class AirportConfig(portCode: PortCode,
@@ -320,7 +320,7 @@ object AirportConfig {
   implicit val rwQueues: ReadWriter[SortedMap[Terminal, Seq[Queue]]] = readwriter[Map[Terminal, Seq[Queue]]].bimap[SortedMap[Terminal, Seq[Queue]]](
     sm => Map[Terminal, Seq[Queue]]() ++ sm,
     m => SortedMap[Terminal, Seq[Queue]]() ++ m
-    )
+  )
 
   implicit val rw: ReadWriter[AirportConfig] = macroRW
 
@@ -376,7 +376,7 @@ object PaxTypesAndQueues {
     visaNationalToFastTrack -> "Fast Track (Visa)",
     nonVisaNationalToFastTrack -> "Fast Track (Non Visa)",
     transitToTransfer -> "Transfer"
-    )
+  )
 
   val inOrder = List(
     eeaMachineReadableToEGate, eeaMachineReadableToDesk, eeaNonMachineReadableToDesk, visaNationalToDesk, nonVisaNationalToDesk, visaNationalToFastTrack, nonVisaNationalToFastTrack)
@@ -388,6 +388,10 @@ case class PortCode(iata: String) extends Ordered[PortCode] {
   override def compare(that: PortCode): Int = iata.compareTo(that.iata)
 
   def nonEmpty: Boolean = iata.nonEmpty
+
+  lazy val isDomestic: Boolean = Ports.isDomestic(this)
+  lazy val isCta: Boolean = Ports.isCta(this)
+  lazy val isDomesticOrCta: Boolean = Ports.isDomesticOrCta(this)
 }
 
 object PortCode {
@@ -426,7 +430,7 @@ object AirportConfigDefaults {
     EeaDesk -> 20,
     EGate -> 25,
     NonEeaDesk -> 45
-    )
+  )
 
   import PaxTypesAndQueues._
 

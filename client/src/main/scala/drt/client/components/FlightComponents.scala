@@ -10,24 +10,29 @@ import org.scalajs.dom.html.Div
 
 object FlightComponents {
 
-  def paxComp(pcpPaxFn: Arrival => Int)(flightWithSplits: ApiFlightWithSplits): TagMod = <.div(
-    ^.title := paxComponentTitle(flightWithSplits.apiFlight),
-    ^.className := "right",
-    pcpPaxFn(flightWithSplits.apiFlight)
-  )
-
-  def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = flightWithSplits.bestSplits match {
-    case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-api"
-    case Some(Splits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
-    case Some(Splits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
-    case _ => "pax-unknown"
+  def paxComp(pcpPaxFn: Arrival => Int)(flightWithSplits: ApiFlightWithSplits): TagMod = {
+    val pax = pcpPaxFn(flightWithSplits.apiFlight)
+    <.div(
+      ^.title := paxComponentTitle(flightWithSplits.apiFlight),
+      ^.className := s"right",
+      pax
+    )
   }
 
-  def hasApiSplits(flightWithSplits: ApiFlightWithSplits) = flightWithSplits.bestSplits match {
+  def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String =
+    if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
+      "pax-no-splits"
+    else flightWithSplits.bestSplits match {
+      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-api"
+      case Some(Splits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
+      case Some(Splits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
+      case _ => "pax-unknown"
+    }
+
+  def hasApiSplits(flightWithSplits: ApiFlightWithSplits): Boolean = flightWithSplits.bestSplits match {
     case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => true
     case _ => false
   }
-
 
   def paxComponentTitle(flight: Arrival): String = {
     val max: String = flight.MaxPax.filter(_ > 0).map(_.toString).getOrElse("n/a")
@@ -41,10 +46,13 @@ object FlightComponents {
         |Max: $max $apiPax""".stripMargin
   }
 
-  def paxTransferComponent(flight: Arrival) = <.div(
-    ^.className := "right",
-    s"${flight.TranPax.getOrElse("-")}"
-  )
+  def paxTransferComponent(flight: Arrival): VdomTagOf[Div] = {
+    val transPax = if (flight.Origin.isCta) "-" else flight.TranPax.getOrElse("-")
+    <.div(
+      ^.className := "right",
+      s"$transPax"
+    )
+  }
 
   def maxCapacityLine(maxFlightPax: Int, flight: Arrival): TagMod = {
     flight.MaxPax.filter(_ > 0).map { maxPaxMillis =>

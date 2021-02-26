@@ -1,10 +1,6 @@
 package drt.client.components
 
-import java.util.UUID
-
 import diode.data.Pot
-import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import drt.client.actions.Actions._
 import drt.client.components.FixedPoints._
 import drt.client.logger.{Logger, LoggerFactory}
@@ -19,9 +15,11 @@ import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Anchor, Div, Table}
 import org.scalajs.dom.raw.HTMLElement
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 
+import java.util.UUID
 import scala.collection.immutable.NumericRange
-import scala.scalajs.js.Date
 import scala.util.Success
 
 

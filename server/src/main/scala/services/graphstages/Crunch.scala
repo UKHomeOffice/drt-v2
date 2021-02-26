@@ -12,8 +12,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services._
 
 import scala.collection.immutable.{Map, SortedMap, SortedSet}
-import scala.collection.{immutable, mutable}
-import scala.util.{Failure, Success, Try}
+import scala.collection.mutable
 
 object Crunch {
   val paxOffPerMinute: Int = 20

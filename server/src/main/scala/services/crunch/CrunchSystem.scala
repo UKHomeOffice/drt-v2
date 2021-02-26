@@ -65,7 +65,6 @@ case class CrunchProps[FR](
                             initialStaffMovements: Seq[StaffMovement] = Seq(),
                             refreshArrivalsOnStart: Boolean,
                             refreshManifestsOnStart: Boolean,
-                            stageThrottlePer: FiniteDuration,
                             adjustEGateUseByUnder12s: Boolean,
                             optimiser: TryCrunch,
                             aclPaxAdjustmentDays: Int,
@@ -144,8 +143,7 @@ object CrunchSystem {
       portStateActor = props.portStateActor,
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
       deploymentRequestActor = props.actors("deployment-request"),
-      forecastMaxMillis = forecastMaxMillis,
-      throttleDurationPer = props.stageThrottlePer
+      forecastMaxMillis = forecastMaxMillis
     )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run

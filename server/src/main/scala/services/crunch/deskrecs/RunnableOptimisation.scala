@@ -5,13 +5,13 @@ import akka.NotUsed
 import akka.actor.ActorRef
 import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
 import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
-import akka.stream.{ActorAttributes, ClosedShape, KillSwitches, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.{ClosedShape, KillSwitches, OverflowStrategy, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.dates.LocalDate
 import drt.shared.{PortStateQueueMinutes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
-import services.{SDate, StreamSupervision, TimeLogger}
 import services.graphstages.Crunch.europeLondonTimeZone
+import services.{SDate, StreamSupervision, TimeLogger}
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
@@ -43,8 +43,9 @@ object RunnableOptimisation {
     }
   }
 
-  def createGraph(deskRecsSinkActor: ActorRef, crunchRequestsToQueueMinutes: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed])
-                 (implicit ec: ExecutionContext): RunnableGraph[(SourceQueueWithComplete[CrunchRequest], UniqueKillSwitch)] = {
+  def createGraph(deskRecsSinkActor: ActorRef,
+                  crunchRequestsToQueueMinutes: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed]
+                 ): RunnableGraph[(SourceQueueWithComplete[CrunchRequest], UniqueKillSwitch)] = {
 
     val crunchRequestSource = Source.queue[CrunchRequest](1, OverflowStrategy.backpressure)
     val deskRecsSink = Sink.actorRefWithAck(deskRecsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)

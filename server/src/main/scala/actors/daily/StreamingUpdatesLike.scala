@@ -6,7 +6,6 @@ import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.actor.PoisonPill
 import akka.persistence.query.PersistenceQuery
 import akka.persistence.{PersistentActor, RecoveryCompleted}
-import akka.stream.scaladsl.GraphDSL.Implicits.getClass
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
