@@ -12,10 +12,9 @@ object FlightComponents {
 
   def paxComp(pcpPaxFn: Arrival => Int)(flightWithSplits: ApiFlightWithSplits): TagMod = {
     val pax = pcpPaxFn(flightWithSplits.apiFlight)
-    val className = if (flightWithSplits.apiFlight.Origin.isCta) "arrivals__table__flight-cta-pax" else ""
     <.div(
       ^.title := paxComponentTitle(flightWithSplits.apiFlight),
-      ^.className := s"right $className",
+      ^.className := s"right",
       pax
     )
   }

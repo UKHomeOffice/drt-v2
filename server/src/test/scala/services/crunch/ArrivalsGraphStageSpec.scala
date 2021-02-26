@@ -216,7 +216,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       success
     }
   }
-  
+
   "Given a live arrival and a cirium arrival" >> {
     "When they have matching number, schedule, terminal and origin" >> {
       "I should see the live arrival with the cirium arrival's status merged" >> {
