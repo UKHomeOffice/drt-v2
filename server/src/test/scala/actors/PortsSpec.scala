@@ -24,5 +24,10 @@ class PortsSpec extends Specification {
       val abb = PortCode("ABB")
       abb.isCta === false
     }
+
+    "It should know if it's not in the CTA" >> {
+      val abb = PortCode("ABB")
+      abb.isCta === false
+    }
   }
 }

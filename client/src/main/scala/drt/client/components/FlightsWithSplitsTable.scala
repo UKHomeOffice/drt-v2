@@ -107,7 +107,8 @@ object FlightsWithSplitsTable {
                     props.hasTransfer
                   ))
               }.toTagMod)
-          )
+          ),
+          "* Passengers from CTA arrivals do not contribute to PCP workload"
         )
       }
       else
@@ -252,6 +253,8 @@ object FlightTableRow {
       else
         "arrivals__table__flight-code"
 
+      val ctaMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
+      val flightCodes = s"${allCodes.mkString(" - ")}$ctaMarker"
       val flightCodeElement = if (props.loggedInUser.hasRole(ArrivalSource))
         <.span(
           ^.cls := "arrivals__table__flight-code-value",
@@ -265,11 +268,11 @@ object FlightTableRow {
                 GetArrivalSources(props.flightWithSplits.unique)
             }
           }),
-          allCodes.mkString(" - "))
+          flightCodes)
       else
         <.span(
           ^.cls := "arrivals__table__flight-code-value",
-          allCodes.mkString(" - ")
+          flightCodes
         )
 
       val firstCells = List[TagMod](
@@ -319,9 +322,14 @@ object FlightTableRow {
 
       val timeLineTagMod = props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod
 
-      val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass${if (flight.isCancelled) " arrival-cancelled" else ""}"
+      val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
+      val ctaClass = if (flight.Origin.isCta) " arrival-cta" else ""
+      val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass$cancelledClass$ctaClass"
 
-      val queueTagMod = props.splitsQueueOrder.map(q => <.td(<.span(s"${queuePax.getOrElse(q, 0)}"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")).toTagMod
+      val queueTagMod = props.splitsQueueOrder.map { q =>
+        val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0) else "-"
+        <.td(<.span(s"$pax"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")
+      }.toTagMod
 
       if (props.hasTransfer) {
         <.tr(
