@@ -37,20 +37,23 @@ steps:
     event:
       - push
 
-
 - name: drone-s3-cache-pull
-  pull: if-not-exists
-  image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+  image: quay.io/ukhomeofficedigital/drone-s3cache:latest
   settings:
-    drone-s3-cache-mode: pull
-  when:
-    event:
-      - push
+    drone_s3_cache_mode: "pull"
+  environment:
+    DRONE_S3_CACHE_BUCKET_NAME:
+      from_secret: DRONE_S3_CACHE_BUCKET_NAME
+    AWS_ACCESS_KEY_ID:
+      from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY:
+      from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
 
 - name: look-at-directory
   pull: if-not-exists
   image: alpine/git
   commands:
+    - sleep 3
     - ls -lah
     - ls -lah ~
     - ls -lah ../../
