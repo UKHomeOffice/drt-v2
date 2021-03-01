@@ -8,146 +8,197 @@ platform:
   arch: amd64
 
 steps:
-- name: sonar-scanner
-  pull: if-not-exists
-  image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
-  when:
-    branch:
-    - ${DRONE_BRANCH}
-    event:
-    - push
 
-- name: ecr-login
-  pull: if-not-exists
-  image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
-  environment:
-    AWS_ACCESS_KEY_ID:
-      from_secret: aws_access_key_id
-    AWS_SECRET_ACCESS_KEY:
-      from_secret: aws_secret_access_key
-  commands:
-    # wait for docker service to be up before running docker build
-    - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
-    - aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 340268328991.dkr.ecr.eu-west-2.amazonaws.com
-  volumes:
-    - name: dockerclientconfig
-      path: /root/.docker
-  when:
+  - name: ecr-login
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: aws_access_key_id
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws_secret_access_key
+    commands:
+      # wait for docker service to be up before running docker build
+      - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
+      - aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+    volumes:
+      - name: dockerclientconfig
+        path: /root/.docker
+    when:
+      event:
+        - push
+
+  - name: drone-s3-cache-pull
+    image: quay.io/ukhomeofficedigital/drone-s3cache:latest
+    settings:
+      drone_s3_cache_mode: "pull"
+    environment:
+      DRONE_S3_CACHE_BUCKET_NAME:
+        from_secret: DRONE_S3_CACHE_BUCKET_NAME
+      AWS_ACCESS_KEY_ID:
+        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+
+  - name: publish-cypress
+    image: plugins/ecr
+    environment:
+      AWS_REGION: eu-west-2
+    settings:
+      access_key:
+        from_secret: cypress_aws_access_key_id
+      secret_key:
+        from_secret: cypress_aws_secret_access_key
+      repo: drt/drt-v2-cypress
+      registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+      dockerfile: cy-drt-dockfile
+      tags:
+        - latest
+    depends_on:
+      - drone-s3-cache-pull
+    when:
+      event:
+        - push
+
+  - name: build
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error compile docker:stage
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+    depends_on:
+      - drone-s3-cache-pull
+
+  - name: unit-test
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error test
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+    depends_on:
+      - build
+
+  - name: publish-drt
+    image: plugins/ecr
+    environment:
+      AWS_REGION: eu-west-2
+    settings:
+      access_key:
+        from_secret: aws_access_key_id
+      secret_key:
+        from_secret: aws_secret_access_key
+      repo: drt/drt-v2
+      registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+      tags:
+        - B${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+    depends_on:
+      - build
+
+  - name: e2e-tests
+    pull: if-not-exists
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+    environment:
+      AWS_REGION: eu-west-2
+      PLAY:
+        from_secret: play
+    commands:
+      - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e ENABLE_STATSD=false -e CONTACT_EMAIL=support@test.com -e OOH_PHONE=012345 -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g -Dconfig.resource=application-inmemory.conf" -e USE_API_PAX_NOS=true -e ADJUST_EGATES_USE_BY_U12S=true -e PORT_CODE="test" -e ENV="test" -e FORECAST_MAX_DAYS=2 -e STAGE_THROTTLE_MILLIS=50 -e BASE_DOMAIN=drt-test.homeoffice.gov.uk 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:B3589 $${PLAY}
+      - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2-cypress:latest /bin/bash -c "npm run test"
+    volumes:
+      - name: dockerclientconfig
+        path: /root/.docker
+    when:
+      event:
+        - push
+    depends_on:
+      - publish-drt
+      - publish-cypress
+
+  - name: drone-s3-cache-push
+    image: quay.io/ukhomeofficedigital/drone-s3cache:latest
+    settings:
+      drone_s3_cache_mode: "push"
+      drone_s3_cache_folders:
+        - ./.ivy2
+        - ./e2e/node_modules
+    environment:
+      DRONE_S3_CACHE_BUCKET_NAME:
+        from_secret: DRONE_S3_CACHE_BUCKET_NAME
+      AWS_ACCESS_KEY_ID:
+        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
     event:
       - push
+    depends_on:
+      - build
+      - publish-cypress
+      - e2e-tests
 
-- name: publish-cypress
-  image: plugins/ecr
-  environment:
-    AWS_REGION: eu-west-2
-  settings:
-    access_key:
-      from_secret: cypress_aws_access_key_id
-    secret_key:
-      from_secret: cypress_aws_secret_access_key
-    repo: drt/drt-v2-cypress
-    registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
-    dockerfile: cy-drt-dockfile
-    tags:
-      - latest
-  when:
-    event:
-      - push
 
-- name: build
-  pull: if-not-exists
-  image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
-  commands:
-  - /root/entrypoint.sh
-  - sbt --error compile docker:stage
-  environment:
-    ARTIFACTORY_PASSWORD:
-      from_secret: ARTIFACTORY_PASSWORD
-    ARTIFACTORY_USERNAME: drt_ci
-    ENV_LOG_LEVEL: ERROR
-    KEYTOOL_PASSWORD:
-      from_secret: KEYTOOL_PASSWORD
-  when:
-    event:
-    - push
+  - name: git_tag
+    pull: if-not-exists
+    image: alpine/git
+    commands:
+      - mkdir /root/.ssh/ && echo "$SSH_KEY" > /root/.ssh/id_rsa && chmod 0600 /root/.ssh/id_rsa
+      - ssh-keyscan github.com >> /root/.ssh/known_hosts && chmod 600 /root/.ssh/known_hosts
+      - printf  "Host github.com\n   Hostname github.com\n   IdentityFile /root/.ssh/id_rsa\n" > /root/.ssh/config
+      - chmod 0600 /root/.ssh/config
+      - printf "[github]\n[user]\n user = git" > /root/.gitconfig
+      - git remote add tag-origin  git@github.com:UKHomeOffice/drt-v2.git
+      - git tag B${DRONE_BUILD_NUMBER}
+      - git push tag-origin B${DRONE_BUILD_NUMBER}
+    environment:
+      SSH_KEY:
+        from_secret: ssh_key
+    when:
+      event:
+        - push
+    depends_on:
+      - e2e-tests
 
-- name: unit-test
-  pull: if-not-exists
-  image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
-  commands:
-  - /root/entrypoint.sh
-  - sbt --error test
-  environment:
-    ARTIFACTORY_PASSWORD:
-      from_secret: ARTIFACTORY_PASSWORD
-    ARTIFACTORY_USERNAME: drt_ci
-    ENV_LOG_LEVEL: ERROR
-    KEYTOOL_PASSWORD:
-      from_secret: KEYTOOL_PASSWORD
-  when:
-    event:
-    - push
-  depends_on:
-    - build
-
-- name: publish-drt
-  image: plugins/ecr
-  environment:
-    AWS_REGION: eu-west-2
-  settings:
-    access_key:
-      from_secret: aws_access_key_id
-    secret_key:
-      from_secret: aws_secret_access_key
-    repo: drt/drt-v2
-    registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
-    tags:
-      - B${DRONE_BUILD_NUMBER}
-  when:
-    event:
-      - push
-  depends_on:
-    - build
-
-- name: e2e-tests
-  pull: if-not-exists
-  image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
-  environment:
-    AWS_REGION: eu-west-2
-    PLAY:
-      from_secret: play
-  commands:
-    - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e ENABLE_STATSD=false -e CONTACT_EMAIL=support@test.com -e OOH_PHONE=012345 -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g -Dconfig.resource=application-inmemory.conf" -e USE_API_PAX_NOS=true -e ADJUST_EGATES_USE_BY_U12S=true -e PORT_CODE="test" -e ENV="test" -e FORECAST_MAX_DAYS=2 -e STAGE_THROTTLE_MILLIS=50 -e BASE_DOMAIN=drt-test.homeoffice.gov.uk 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:B3589 $${PLAY}
-    - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2-cypress:latest /bin/bash -c "npm run test"
-  volumes:
-    - name: dockerclientconfig
-      path: /root/.docker
-  when:
-    event:
-      - push
-  depends_on:
-    - publish-drt
-    - publish-cypress
-
-- name: slack_notification
-  pull: if-not-exists
-  image: plugins/slack
-  settings:
-    channel: devs
-    template: "*{{repo.name}}: _{{build.status}}_*\nCompleted build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*\n*Triggered by*: _${DRONE_COMMIT_AUTHOR}_\n*Message*: ${DRONE_COMMIT_MESSAGE}\n{{build.link}}\n"
-    username: drone
-  environment:
-    SLACK_WEBHOOK:
-      from_secret: slack_webhook
-  when:
-    status:
-    - success
-    - failure
-  when:
-    event:
-      - push
-  depends_on:
-    - e2e-tests
+  - name: slack_notification
+    pull: if-not-exists
+    image: plugins/slack
+    settings:
+      channel: devs
+      template: "*{{repo.name}}: _{{build.status}}_*\nCompleted build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*\n*Triggered by*: _${DRONE_COMMIT_AUTHOR}_\n*Message*: ${DRONE_COMMIT_MESSAGE}\n{{build.link}}\n"
+      username: drone
+    environment:
+      SLACK_WEBHOOK:
+        from_secret: slack_webhook
+    when:
+      status:
+        - success
+        - failure
+    when:
+      event:
+        - push
+    depends_on:
+      - e2e-tests
 
 services:
   - name: docker
