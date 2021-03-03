@@ -111,7 +111,7 @@ object DashboardTerminalSummary {
                    crunchMinutes: List[CrunchMinute],
                    staffMinutes: List[StaffMinute],
                    terminal: Terminal,
-                   paxTypeAndQueues: Seq[PaxTypeAndQueue],
+                   paxTypeAndQueues: Iterable[PaxTypeAndQueue],
                    queues: Seq[Queue],
                    timeWindowStart: SDateLike,
                    timeWindowEnd: SDateLike,

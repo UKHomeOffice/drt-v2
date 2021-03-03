@@ -710,7 +710,7 @@ object DataUpdates {
 
 object FlightsApi {
 
-  case class Flights(flights: Seq[Arrival])
+  case class Flights(flights: Iterable[Arrival])
 
   case class FlightsWithSplits(flights: Map[UniqueArrival, ApiFlightWithSplits]) {
     def scheduledSince(sinceMillis: MillisSinceEpoch): FlightsWithSplits = FlightsWithSplits(flights.filter {

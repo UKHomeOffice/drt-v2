@@ -71,7 +71,7 @@ object FlightComponents {
 
   object SplitsGraph {
 
-    case class Props(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)])
+    case class Props(splitTotal: Int, splits: Iterable[(PaxTypeAndQueue, Int)])
 
     def splitsGraphComponentColoured(props: Props): TagOf[Div] = {
       import props._

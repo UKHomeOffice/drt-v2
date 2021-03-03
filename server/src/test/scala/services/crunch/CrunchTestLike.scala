@@ -10,7 +10,8 @@ import akka.stream.{ActorMaterializer, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
 import drt.shared.PaxTypes._
-import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk}
+import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk, nonVisaNationalToDesk, visaNationalToDesk}
+import drt.shared.PortState.empty.crunchMinutes
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.{T1, T2, Terminal}
@@ -24,6 +25,7 @@ import services._
 import slickdb.Tables
 import uk.gov.homeoffice.drt.auth.Roles.STN
 
+import scala.collection.immutable
 import scala.collection.immutable.{Map, SortedMap}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
@@ -92,6 +94,7 @@ object TestDefaults {
     desksByTerminal = Map(T1 -> 40, T2 -> 40),
     feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
   )
+
   val airportConfigWithEgates: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
     queuesByTerminal = SortedMap(
@@ -134,6 +137,44 @@ object TestDefaults {
     desksByTerminal = Map(T1 -> 40),
     feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
   )
+
+  def airportConfigForSplits(splits: Map[PaxTypeAndQueue, Double]): AirportConfig = {
+    val queues = splits.map(_._1.queueType).toSet
+    val queueOrder = Seq(Queues.EGate, Queues.EeaDesk, Queues.NonEeaDesk)
+    val slas = Map[Queue, Int](Queues.EGate -> 25, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45).filterKeys(queues.contains)
+    val ratios: immutable.Iterable[SplitRatio] = splits.map {
+      case (pt, q) => SplitRatio(pt, q)
+    }
+    val procTimes = Map(
+      eeaMachineReadableToDesk -> 25d / 60,
+      eeaMachineReadableToEGate -> 20d / 60,
+      eeaNonMachineReadableToDesk -> 25d / 60,
+      nonVisaNationalToDesk -> 45d / 60,
+      visaNationalToDesk -> 60d / 60,
+    )
+    val minMax = (List.fill[Int](24)(1), List.fill[Int](24)(20))
+    val paxTypeQueues: Map[PaxType, List[(Queue, Double)]] = splits.groupBy(_._1.passengerType).map {
+      case (pt, queueRatios) => (pt, queueRatios.map{ case (PaxTypeAndQueue(_, q), r) => (q, r)}.toList)
+    }
+
+    AirportConfig(
+      portCode = PortCode("STN"),
+      queuesByTerminal = SortedMap(
+        T1 -> queueOrder.filter(queues.contains)
+      ),
+      slaByQueue = slas,
+      minutesToCrunch = 30,
+      defaultWalkTimeMillis = Map(),
+      terminalPaxSplits = Map(T1 -> SplitRatios(ratios, SplitSources.TerminalAverage)),
+      terminalProcessingTimes = Map(T1 -> procTimes.filterKeys { case PaxTypeAndQueue(_, q) => queues.contains(q) }),
+      minMaxDesksByTerminalQueue24Hrs = Map(T1 -> queues.map(q => (q, minMax)).toMap),
+      timeToChoxMillis = 120000L,
+      role = STN,
+      terminalPaxTypeQueueAllocation = Map(T1 -> paxTypeQueues),
+      desksByTerminal = Map(T1 -> 40),
+      feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
+    )
+  }
 
   val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
   val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {
@@ -195,6 +236,49 @@ class CrunchTestLike
     drtActor ! Stop
     expectMsgClass(classOf[Terminated])
   }
+
+  def expectArrivals(arrivalsToExpect: Iterable[Arrival])(implicit crunch: CrunchGraphInputsAndProbes): Unit =
+    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+      case ps: PortState =>
+        ps.flights.values.map(_.apiFlight) == arrivalsToExpect
+    }
+
+  def expectUniqueArrival(uniqueArrival: UniqueArrival)(implicit crunch: CrunchGraphInputsAndProbes): Unit =
+    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+      case ps: PortState =>
+        ps.flights.contains(uniqueArrival)
+    }
+
+  def expectNoUniqueArrival(uniqueArrival: UniqueArrival)(implicit crunch: CrunchGraphInputsAndProbes): Unit =
+    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+      case ps: PortState =>
+        !ps.flights.contains(uniqueArrival)
+    }
+
+  def expectFeedSources(sourcesToExpect: Set[FeedSource])(implicit crunch: CrunchGraphInputsAndProbes): Unit =
+    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+      case ps: PortState =>
+        ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet == sourcesToExpect
+    }
+
+  def expectPaxNos(totalPaxToExpect: Double)(implicit crunch: CrunchGraphInputsAndProbes): Unit =
+    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+      case ps: PortState =>
+        ps.crunchMinutes.values.map(_.paxLoad).sum == totalPaxToExpect
+    }
+
+  def expectPaxByQueue(paxByQueueToExpect: Map[Queue, Double])(implicit crunch: CrunchGraphInputsAndProbes): Unit =
+    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+      case ps: PortState =>
+        val paxByQueue = ps.crunchMinutes.values
+          .groupBy(_.queue)
+          .map {
+            case (queue, mins) => (queue, mins.map(_.paxLoad).sum)
+          }
+        val asExpected = paxByQueue == paxByQueueToExpect
+        if (!asExpected) println(s"\nNo match yet\ngot: $paxByQueue\nexp: $paxByQueueToExpect")
+        asExpected
+    }
 
   def paxLoadsFromPortState(portState: PortState,
                             minsToTake: Int,

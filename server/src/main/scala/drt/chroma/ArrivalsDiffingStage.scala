@@ -64,8 +64,8 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
     def processFeedResponse(arrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = arrivalsFeedResponse match {
       case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
         val maxScheduledMillis = forecastMaxMillis()
-        val incomingArrivals: Seq[(UniqueArrival, Arrival)] = latestArrivals.flights.filter(_.Scheduled <= maxScheduledMillis).map(a => (UniqueArrival(a), a))
-        val newUpdates: Seq[(UniqueArrival, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
+        val incomingArrivals: Iterable[(UniqueArrival, Arrival)] = latestArrivals.flights.filter(_.Scheduled <= maxScheduledMillis).map(a => (UniqueArrival(a), a))
+        val newUpdates: Iterable[(UniqueArrival, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
         if (newUpdates.nonEmpty) log.info(s"Got ${newUpdates.size} new arrival updates")
         knownArrivals = SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals
         Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates.map(_._2))))
@@ -77,7 +77,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
         None
     }
 
-    def filterArrivalsWithUpdates(existingArrivals: SortedMap[UniqueArrival, Arrival], newArrivals: Seq[(UniqueArrival, Arrival)]): Seq[(UniqueArrival, Arrival)] = newArrivals
+    def filterArrivalsWithUpdates(existingArrivals: SortedMap[UniqueArrival, Arrival], newArrivals: Iterable[(UniqueArrival, Arrival)]): Iterable[(UniqueArrival, Arrival)] = newArrivals
       .foldLeft(List[(UniqueArrival, Arrival)]()) {
         case (soFar, (key, arrival)) => existingArrivals.get(key) match {
           case None => (key, arrival) :: soFar
