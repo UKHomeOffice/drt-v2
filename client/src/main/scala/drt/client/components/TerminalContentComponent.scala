@@ -6,6 +6,7 @@ import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.TooltipComponent._
+import drt.client.components.scenarios.ScenarioSimulationComponent
 import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -208,7 +209,14 @@ object TerminalContentComponent {
                     <.div(^.id := "simluations", ^.className := s"tab-pane in $simulationsActive", {
                       if (state.activeTab == "simulations") {
 
-                        SimulateArrivalsComponent(props.viewMode.dayStart.toLocalDate, props.terminalPageTab.terminal, props.airportConfig)
+                        props.portStatePot.renderReady(ps =>
+                          ScenarioSimulationComponent(
+                            props.viewMode.dayStart.toLocalDate,
+                            props.terminalPageTab.terminal,
+                            props.airportConfig,
+                            ps.window(props.viewMode.dayStart, props.viewMode.dayStart.getLocalNextMidnight)
+                          )
+                        )
                       } else "not rendering"
                     }),
                     ArrivalSimulationUpload,

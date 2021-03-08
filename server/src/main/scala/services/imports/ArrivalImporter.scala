@@ -2,8 +2,8 @@ package services.imports
 
 import actors.GetState
 import actors.PartitionedPortStateActor.GetFlights
-import actors.acking.AckingReceiver.{Ack, StreamInitialized}
-import akka.actor.{Actor, ActorLogging}
+import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
+import akka.actor.{Actor, ActorLogging, PoisonPill}
 import akka.pattern.pipe
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
@@ -130,6 +130,9 @@ class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor with Ac
 
     case StreamInitialized =>
       sender() ! Ack
+
+    case StreamCompleted =>
+    self ! PoisonPill
 
     case unexpected =>
       log.warning(s"Got and unexpected message $unexpected")

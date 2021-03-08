@@ -119,7 +119,7 @@ lazy val server = (project in file("server"))
     commands += ReleaseCmd,
     // connect to the client project
     scalaJSProjects := clients,
-    pipelineStages := Seq(scalaJSProd, digest, gzip),
+//    pipelineStages := Seq(scalaJSProd, digest, gzip),
     pipelineStages in Assets := Seq(scalaJSPipeline),
     // triggers scalaJSPipeline when using compile or continuous compilation
     compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,

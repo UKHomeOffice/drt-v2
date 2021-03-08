@@ -28,12 +28,13 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int],
                      deskLimitsProvider: TerminalDeskLimitsLike): Iterable[DeskRecMinute] = {
     val queueDesksAndWaits = desksAndWaits(minuteMillis, terminalWork, deskLimitsProvider)
 
-    queueDesksAndWaits.flatMap {
+    val minutes = queueDesksAndWaits.flatMap {
       case (queue, (desks, waits)) =>
         minuteMillis.zip(terminalPax(queue).zip(terminalWork(queue))).zip(desks.zip(waits)).map {
           case ((minute, (pax, work)), (desk, wait)) => DeskRecMinute(terminal, queue, minute, pax, work, desk, wait)
         }
     }
+    minutes
   }
 
   def desksAndWaits(minuteMillis: NumericRange[MillisSinceEpoch],
