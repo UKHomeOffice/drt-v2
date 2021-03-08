@@ -3,6 +3,8 @@ package drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import upickle.default.{macroRW, ReadWriter => RW}
 
+import scala.concurrent.duration.FiniteDuration
+
 sealed trait FeedStatus {
   val date: MillisSinceEpoch
 }
@@ -49,13 +51,6 @@ case class FeedStatuses(
                         lastSuccessAt: Option[MillisSinceEpoch],
                         lastFailureAt: Option[MillisSinceEpoch],
                         lastUpdatesAt: Option[MillisSinceEpoch]) {
-  def ragStatus(now: MillisSinceEpoch): RagStatus = (lastSuccessAt, lastFailureAt) match {
-    case (Some(s), Some(f)) if f > s => Red
-    case (Some(_), Some(f)) if f > now - (5 * MilliTimes.oneMinuteMillis) => Amber
-    case (None, Some(_)) => Red
-    case _ => Green
-  }
-
   def hasConnectedAtLeastOnce: Boolean = lastSuccessAt.isDefined
 
   def addStatus(createdAt: SDateLike, updateCount: Int): FeedStatuses = {
@@ -82,4 +77,14 @@ case class FeedStatuses(
 }
 object FeedStatuses {
   implicit val rw: RW[FeedStatuses] = macroRW
+
+  def ragStatus(now: MillisSinceEpoch,
+                lastSuccessThreshold: FiniteDuration,
+                feedStatus: FeedStatuses): RagStatus = (feedStatus.lastSuccessAt, feedStatus.lastFailureAt, feedStatus.lastUpdatesAt) match {
+    case (None, Some(_), _) => Red
+    case (Some(lastSuccess), Some(lastFailure), _) if lastFailure > lastSuccess => Red
+    case (_, _, Some(lastUpdate)) if lastUpdate < now - lastSuccessThreshold.toMillis => Red
+    case (Some(_), Some(f), _) if f > now - (5 * MilliTimes.oneMinuteMillis) => Amber
+    case _ => Green
+  }
 }
