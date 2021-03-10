@@ -447,7 +447,7 @@ case object ForecastFeedSource extends FeedSource {
 case object LiveFeedSource extends FeedSource {
   val name: String = "Port live"
 
-  val lastUpdateThreshold: FiniteDuration = 6 hours
+  val lastUpdateThreshold: FiniteDuration = 12 hours
 
   val description: Boolean => String = _ => "Up-to-date passenger numbers, estimated and actual arrival times, gates and stands."
 }
@@ -455,7 +455,7 @@ case object LiveFeedSource extends FeedSource {
 case object LiveBaseFeedSource extends FeedSource {
   val name: String = "Cirium live"
 
-  val lastUpdateThreshold: FiniteDuration = 6 hours
+  val lastUpdateThreshold: FiniteDuration = 12 hours
 
   val description: Boolean => String = isLiveFeedAvailable => if (isLiveFeedAvailable)
     "Estimated and actual arrival time updates where not available from live feed."
