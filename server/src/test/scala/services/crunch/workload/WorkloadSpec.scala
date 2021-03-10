@@ -3,7 +3,6 @@ package services.crunch.workload
 import controllers.ArrivalGenerator
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
-import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.WorkloadCalculator
@@ -18,8 +17,6 @@ class WorkloadSpec extends Specification {
     Nationality("FRA") -> fraSeconds,
     Nationality("ZAR") -> zaSeconds
   )
-
-  def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
 
   "Given an arrival with 1 pax and 1 split containing 1 pax with no nationality data " +
     "When I ask for the workload for this arrival " +
@@ -39,8 +36,7 @@ class WorkloadSpec extends Specification {
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
         emptyNatProcTimes,
-        true,
-        pcpPaxFn
+        useNationalityBasedProcTimes = true
       )
       .toList
       .map(_.workLoad)
@@ -64,8 +60,9 @@ class WorkloadSpec extends Specification {
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
-        Map()
-        , false, pcpPaxFn)
+        Map(),
+        useNationalityBasedProcTimes = false
+      )
       .toList
 
     val startTime = SDate(flightSplitMinutes.head.minute).toISOString()
@@ -90,8 +87,7 @@ class WorkloadSpec extends Specification {
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
         natProcTimes,
-        true,
-        pcpPaxFn
+        useNationalityBasedProcTimes = true
       )
       .toList
       .map(_.workLoad)
@@ -116,8 +112,7 @@ class WorkloadSpec extends Specification {
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
         natProcTimes,
-        true,
-        pcpPaxFn
+        useNationalityBasedProcTimes = true
       )
       .toList
       .map(_.workLoad)
@@ -142,8 +137,7 @@ class WorkloadSpec extends Specification {
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
         natProcTimes,
-        true,
-        pcpPaxFn
+        useNationalityBasedProcTimes = true
       )
       .toList
       .map(_.workLoad)
@@ -168,8 +162,7 @@ class WorkloadSpec extends Specification {
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
         natProcTimes,
-        true,
-        pcpPaxFn
+        useNationalityBasedProcTimes = true
       )
       .toList
       .map(_.workLoad)
@@ -202,8 +195,7 @@ class WorkloadSpec extends Specification {
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
         natProcTimes,
-        true,
-        pcpPaxFn
+        useNationalityBasedProcTimes = true
       )
       .toList
       .map(_.workLoad)
@@ -244,8 +236,7 @@ class WorkloadSpec extends Specification {
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
         natProcTimes,
-        true,
-        pcpPaxFn
+        useNationalityBasedProcTimes = true
       )
       .toList
       .map(_.workLoad)
@@ -286,8 +277,7 @@ class WorkloadSpec extends Specification {
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
         natProcTimes,
-        true,
-        pcpPaxFn
+        useNationalityBasedProcTimes = true
       )
       .map(m => (m.paxType, m.queueName, m.workLoad))
 
@@ -319,8 +309,7 @@ class WorkloadSpec extends Specification {
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
         emptyNatProcTimes,
-        true,
-        PcpPax.bestPaxEstimateWithApi
+        useNationalityBasedProcTimes = true
       )
       .toList
       .map(_.workLoad)
@@ -346,8 +335,7 @@ class WorkloadSpec extends Specification {
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
         emptyNatProcTimes,
-        true,
-        PcpPax.bestPaxEstimateWithApi
+        useNationalityBasedProcTimes = true
       )
       .toList
       .map(_.workLoad)

@@ -24,8 +24,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      minutesToCrunch: Int,
                                      crunchOffsetMinutes: Int,
                                      eGateBankSize: Int,
-                                     tryCrunch: TryCrunch,
-                                     pcpPaxFn: Arrival => Int
+                                     tryCrunch: TryCrunch
                                     ) extends PortDesksAndWaitsProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -45,7 +44,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSize)
 
   def queueLoadsFromFlights(flights: FlightsWithSplits): Map[TQM, LoadMinute] = WorkloadCalculator
-    .flightLoadMinutes(flights, terminalProcessingTimes, pcpPaxFn).minutes
+    .flightLoadMinutes(flights, terminalProcessingTimes).minutes
     .groupBy {
       case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
         TQM(t, finalQueueName, m)
@@ -95,7 +94,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 }
 
 object PortDesksAndWaitsProvider {
-  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, pcpPaxFn: Arrival => Int): PortDesksAndWaitsProvider =
+  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch): PortDesksAndWaitsProvider =
     PortDesksAndWaitsProvider(
       airportConfig.queuesByTerminal,
       airportConfig.divertedQueues,
@@ -106,7 +105,6 @@ object PortDesksAndWaitsProvider {
       airportConfig.minutesToCrunch,
       airportConfig.crunchOffsetMinutes,
       airportConfig.eGateBankSize,
-      tryCrunch,
-      pcpPaxFn
+      tryCrunch
     )
 }

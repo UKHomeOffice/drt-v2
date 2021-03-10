@@ -96,7 +96,7 @@ class TestDrtActor extends Actor {
 
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
-      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, tc.pcpPaxFn)
+      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher)
 
       val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
         PortDeskLimits.flexed(tc.airportConfig)
@@ -214,7 +214,6 @@ class TestDrtActor extends Actor {
         initialStaffMovements = tc.initialStaffMovements,
         refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
         refreshManifestsOnStart = tc.refreshManifestsOnStart,
-        pcpPaxFn = tc.pcpPaxFn,
         adjustEGateUseByUnder12s = false,
         optimiser = tc.cruncher,
         aclPaxAdjustmentDays = aclPaxAdjustmentDays,

@@ -12,11 +12,8 @@ import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
 import services.exports.flights.ArrivalToCsv
 
-case class StreamingFlightsExport(
-                                   pcpPaxFn: Arrival => Int,
-                                   millisToDateStringFn: MillisSinceEpoch => String,
-                                   millisToTimeStringFn: MillisSinceEpoch => String
-                                 ) {
+case class StreamingFlightsExport(millisToDateStringFn: MillisSinceEpoch => String,
+                                  millisToTimeStringFn: MillisSinceEpoch => String) {
 
   val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
 
@@ -97,7 +94,7 @@ case class StreamingFlightsExport(
       millisToDateStringFn,
       millisToTimeStringFn
     ) ++
-      List(pcpPaxFn(fws.apiFlight).toString) ++ splitsForSources
+      List(fws.apiFlight.bestPaxEstimate.toString) ++ splitsForSources
   }
 
   def queueSplits(queueNames: Seq[Queue],
@@ -109,7 +106,7 @@ case class StreamingFlightsExport(
     fws
       .splits
       .find(_.source == splitSource)
-      .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws.apiFlight, pcpPaxFn))
+      .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws.apiFlight))
       .getOrElse(Map())
 
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares

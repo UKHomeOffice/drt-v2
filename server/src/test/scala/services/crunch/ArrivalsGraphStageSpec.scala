@@ -182,7 +182,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       }
     }
   }
-  
+
   "Given an ACL arrival and a cirium arrival scheduled within 5 minutes of each other" >> {
     "When they have matching number, terminal & origin and are scheduled within the next 24 hours" >> {
       "I should see cirium arrival's data merged" >> {

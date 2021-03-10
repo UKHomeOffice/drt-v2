@@ -50,7 +50,7 @@ object BigSummaryBoxes {
     })
   }
 
-  def bestFlightSplits(bestFlightPax: Arrival => Int): ApiFlightWithSplits => Set[(PaxTypeAndQueue, Double)] = {
+  val bestFlightSplits: ApiFlightWithSplits => Set[(PaxTypeAndQueue, Double)] = {
     case ApiFlightWithSplits(_, s, _) if s.isEmpty => Set()
     case ApiFlightWithSplits(flight, splits, _) =>
       if (splits.exists { case Splits(_, _, _, t) => t == PaxNumbers }) {
@@ -64,16 +64,15 @@ object BigSummaryBoxes {
         splits.find { case Splits(_, _, _, t) => t == Percentage } match {
           case None => Set()
           case Some(apiSplits) => apiSplits.splits.map {
-            s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * bestFlightPax(flight))
+            s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * flight.bestPaxEstimate)
           }
         }
       }
   }
 
-  def aggregateSplits(bestFlightPax: Arrival => Int)(flights: Iterable[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = {
+  def aggregateSplits(flights: Iterable[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = {
     val newSplits = Map[PaxTypeAndQueue, Double]()
-    val flightSplits = bestFlightSplits(bestFlightPax)
-    val allSplits: Iterable[(PaxTypeAndQueue, Double)] = flights.flatMap(flightSplits)
+    val allSplits: Iterable[(PaxTypeAndQueue, Double)] = flights.flatMap(bestFlightSplits)
     val splitsExcludingTransfers = allSplits.filter(_._1.queueType != Queues.Transfer)
     //    //todo import cats - it makes short, efficient work of this sort of aggregation.
     val aggSplits: Map[PaxTypeAndQueue, Double] = splitsExcludingTransfers.foldLeft(newSplits) {

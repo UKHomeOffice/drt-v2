@@ -31,11 +31,10 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
 
   val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig)
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
-  val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
+  val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPaxEstimate
 
   val staffToDeskLimits: StaffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig)
-  val desksAndWaitsProvider: PortDesksAndWaitsProvider =
-    PortDesksAndWaitsProvider(airportConfig, mockCrunch, pcpPaxCalcFn)
+  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch)
 
   def setupGraphAndCheckQueuePax(minutes: MinutesContainer[CrunchMinute, TQM],
                                  expectedQueuePax: PartialFunction[Any, Boolean]): Any = {
