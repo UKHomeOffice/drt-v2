@@ -295,7 +295,9 @@ class ArrivalsGraphStage(name: String = "",
           mergeApproxIfFoundElseNone(ciriumArrival, ciriumArrival.Origin, arrivalSources(List(LiveArrivals, BaseArrivals)))
 
         case (None, None, Some(aclArrival)) =>
-          mergeApproxIfFoundElseOriginal(aclArrival, aclArrival.Origin, arrivalSources(List(LiveBaseArrivals)))
+          if (SDate(aclArrival.Scheduled) < now().addHours(24))
+            mergeApproxIfFoundElseOriginal(aclArrival, aclArrival.Origin, arrivalSources(List(LiveBaseArrivals)))
+          else Option(aclArrival)
 
         case (None, None, None) => None
       }

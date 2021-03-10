@@ -15,6 +15,7 @@ import server.feeds._
 import services.SDate
 
 import scala.collection.immutable.List
+import scala.concurrent.duration._
 
 class ArrivalsGraphStageSpec extends CrunchTestLike {
   private val date = "2017-01-01"
@@ -179,9 +180,63 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           success
         }
       }
+    }
+  }
+  
+  "Given an ACL arrival and a cirium arrival scheduled within 5 minutes of each other" >> {
+    "When they have matching number, terminal & origin and are scheduled within the next 24 hours" >> {
+      "I should see cirium arrival's data merged" >> {
+        val now = "2021-06-01T12:00"
+        val aclScheduled = "2021-06-02T11:00"
+        val ciriumScheduled = "2021-06-02T11:05"
+        val aclArrival = ArrivalGenerator.arrival("AA0001", schDt = aclScheduled, terminal = T1, origin = PortCode("AAA"))
+        val ciriumArrival = ArrivalGenerator.arrival("AA0001", schDt = ciriumScheduled, terminal = T1, origin = PortCode("AAA"), estDt = scheduled)
 
-      crunch.shutdown()
-      success
+        val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(now)))
+
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival))))
+
+        crunch.portStateTestProbe.fishForMessage(1 second) {
+          case PortState(flights, _, _) => flights.nonEmpty
+        }
+
+        offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
+
+        crunch.portStateTestProbe.fishForMessage(1 second) {
+          case PortState(flights, _, _) => flights.values.exists(_.apiFlight.Estimated == Option(SDate(scheduled).millisSinceEpoch))
+        }
+
+        success
+      }
+    }
+
+    "When they have matching number, terminal & origin and are scheduled further than 24 hours ahead" >> {
+      "I should not see the cirium arrival's data merged because we only look for fuzzy matches for the next 24 hours of flights" >> {
+        val now = "2021-06-01T12:00"
+        val aclScheduled = "2021-06-02T11:00"
+        val ciriumScheduled = "2021-06-02T12:05"
+        val aclArrival = ArrivalGenerator.arrival("AA0001", schDt = aclScheduled, terminal = T1, origin = PortCode("AAA"), actPax = Option(100))
+        val ciriumArrival = ArrivalGenerator.arrival("AA0001", schDt = ciriumScheduled, terminal = T1, origin = PortCode("AAA"), estDt = ciriumScheduled)
+        val forecastArrival = ArrivalGenerator.arrival("AA0001", schDt = aclScheduled, terminal = T1, origin = PortCode("AAA"), actPax = Option(101))
+
+        val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(now)))
+
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival))))
+
+        crunch.portStateTestProbe.fishForMessage(1 second) {
+          case PortState(flights, _, _) => flights.nonEmpty
+        }
+
+        offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
+        offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(Flights(List(forecastArrival))))
+
+        crunch.portStateTestProbe.fishForMessage(1 second) {
+          case PortState(flights, _, _) =>
+            flights.values.exists(_.apiFlight == forecastArrival.copy(FeedSources = Set(AclFeedSource, ForecastFeedSource)))
+        }
+
+        success
+      }
     }
   }
 }
