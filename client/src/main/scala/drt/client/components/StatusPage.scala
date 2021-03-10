@@ -7,8 +7,11 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+
+import scala.language.postfixOps
 
 object StatusPage {
 
@@ -16,7 +19,7 @@ object StatusPage {
 
   case class Props()
 
-  val component = ScalaComponent.builder[Props]("StatusPage")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StatusPage")
     .render_P { _ =>
 
       val feedStatusesRCP = SPACircuit.connect(_.feedStatuses)
@@ -32,7 +35,9 @@ object StatusPage {
             val allFeedStatusesSeq = allFeedStatuses.filter(_.feedSource == ApiFeedSource) ++ allFeedStatuses.filterNot(_.feedSource == ApiFeedSource)
 
             allFeedStatusesSeq.map(feed => {
-              <.div(^.className := s"feed-status ${feed.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)}",
+              val ragStatus = FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, feed.feedSource.lastUpdateThreshold, feed.feedStatuses)
+
+              <.div(^.className := s"feed-status $ragStatus",
               if (feed.feedSource.name == "API")
                 <.h3(feed.feedSource.name, " ", apiDataTooltip)
               else
