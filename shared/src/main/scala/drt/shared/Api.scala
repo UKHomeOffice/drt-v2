@@ -420,7 +420,7 @@ trait FeedSource {
 case object ApiFeedSource extends FeedSource {
   val name: String = "API"
 
-  val lastUpdateThreshold: FiniteDuration = 6 hours
+  val lastUpdateThreshold: FiniteDuration = 12 hours
 
   val description: Boolean => String = isLiveFeedAvailable => if (isLiveFeedAvailable)
     "Actual passenger nationality and age data when available."
