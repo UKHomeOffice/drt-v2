@@ -41,7 +41,7 @@ object MainMenu {
   val forecastUploadFile: Int => MenuItem = (position: Int) => MenuItem(position, _ => "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
 
   def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
-    val statuses = feeds.map(f => FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, f.feedSource.lastUpdateThreshold, f.feedStatuses))
+    val statuses = feeds.map(f => FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, f.feedSource.maybeLastUpdateThreshold, f.feedStatuses))
     val rag = if (statuses.contains(Red)) Red
     else if (statuses.contains(Amber)) Amber
     else Green

@@ -6,7 +6,7 @@ import scala.concurrent.duration._
 class FeedStatusesSpec extends Specification {
   "Given a feed status and a success threshold of 36 hours" >> {
     val now = MilliTimes.oneDayMillis
-    val updateThreshold: FiniteDuration = 36 hours
+    val updateThreshold: Option[FiniteDuration] = Option(36 hours)
     val oneHourAgo = Option(now - MilliTimes.oneHourMillis.toLong)
     val twoHoursAgo = Option(now - MilliTimes.oneHourMillis.toLong * 2)
     val thirtySevenHoursAgo = Option(now - MilliTimes.oneHourMillis.toLong * 37)

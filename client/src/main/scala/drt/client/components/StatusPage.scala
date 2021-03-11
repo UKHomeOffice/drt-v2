@@ -35,7 +35,7 @@ object StatusPage {
             val allFeedStatusesSeq = allFeedStatuses.filter(_.feedSource == ApiFeedSource) ++ allFeedStatuses.filterNot(_.feedSource == ApiFeedSource)
 
             allFeedStatusesSeq.map(feed => {
-              val ragStatus = FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, feed.feedSource.lastUpdateThreshold, feed.feedStatuses)
+              val ragStatus = FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, feed.feedSource.maybeLastUpdateThreshold, feed.feedStatuses)
 
               <.div(^.className := s"feed-status $ragStatus",
               if (feed.feedSource.name == "API")

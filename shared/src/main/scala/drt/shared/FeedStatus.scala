@@ -75,16 +75,17 @@ case class FeedStatuses(
     }
   }
 }
+
 object FeedStatuses {
   implicit val rw: RW[FeedStatuses] = macroRW
 
   def ragStatus(now: MillisSinceEpoch,
-                lastSuccessThreshold: FiniteDuration,
-                feedStatus: FeedStatuses): RagStatus = (feedStatus.lastSuccessAt, feedStatus.lastFailureAt, feedStatus.lastUpdatesAt) match {
-    case (None, Some(_), _) => Red
-    case (Some(lastSuccess), Some(lastFailure), _) if lastFailure > lastSuccess => Red
-    case (_, _, Some(lastUpdate)) if lastUpdate < now - lastSuccessThreshold.toMillis => Red
-    case (Some(_), Some(f), _) if f > now - (5 * MilliTimes.oneMinuteMillis) => Amber
+                lastSuccessThreshold: Option[FiniteDuration],
+                statuses: FeedStatuses): RagStatus = (statuses.lastSuccessAt, statuses.lastFailureAt, statuses.lastUpdatesAt, lastSuccessThreshold) match {
+    case (None, Some(_), _, _) => Red
+    case (Some(lastSuccess), Some(lastFailure), _, _) if lastFailure > lastSuccess => Red
+    case (_, _, Some(lastUpdate), Some(threshold)) if lastUpdate < now - threshold.toMillis => Red
+    case (Some(_), Some(f), _, _) if f > now - (5 * MilliTimes.oneMinuteMillis) => Amber
     case _ => Green
   }
 }
