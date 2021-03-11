@@ -20,10 +20,10 @@ object BigSummaryBoxes {
     start.millisSinceEpoch <= bt && bt <= end.millisSinceEpoch
   }
 
-  def bestFlightSplitPax(bestFlightPax: Arrival => Int): PartialFunction[ApiFlightWithSplits, Double] = {
+  def bestFlightSplitPax: PartialFunction[ApiFlightWithSplits, Double] = {
     case ApiFlightWithSplits(flight, splits, _) =>
       splits.find { case Splits(_, _, _, t) => t == PaxNumbers } match {
-        case None => bestFlightPax(flight)
+        case None => flight.bestPaxEstimate
         case Some(apiSplits) => apiSplits.totalExcludingTransferPax
       }
   }
