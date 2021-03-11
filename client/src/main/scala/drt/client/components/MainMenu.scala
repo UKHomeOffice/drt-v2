@@ -14,7 +14,6 @@ import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, LI}
-import uk.gov.homeoffice.drt.Urls
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles._
 
@@ -42,8 +41,9 @@ object MainMenu {
   val forecastUploadFile: Int => MenuItem = (position: Int) => MenuItem(position, _ => "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
 
   def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
-    val rag = if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Red)) Red
-    else if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Amber)) Amber
+    val statuses = feeds.map(f => FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, f.feedSource.maybeLastUpdateThreshold, f.feedStatuses))
+    val rag = if (statuses.contains(Red)) Red
+    else if (statuses.contains(Amber)) Amber
     else Green
 
     rag.toString

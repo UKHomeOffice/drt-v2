@@ -22,6 +22,8 @@ import java.lang.Math.round
 import java.util.UUID
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
+import scala.concurrent.duration._
+import scala.language.postfixOps
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
@@ -409,6 +411,8 @@ object FeedSourceArrival {
 trait FeedSource {
   val name: String
 
+  val maybeLastUpdateThreshold: Option[FiniteDuration]
+
   val description: Boolean => String
 
   override val toString: String = getClass.getSimpleName.split("\\$").last
@@ -416,6 +420,8 @@ trait FeedSource {
 
 case object ApiFeedSource extends FeedSource {
   val name: String = "API"
+
+  val maybeLastUpdateThreshold: Option[FiniteDuration] = None
 
   val description: Boolean => String = isLiveFeedAvailable => if (isLiveFeedAvailable)
     "Actual passenger nationality and age data when available."
@@ -426,11 +432,15 @@ case object ApiFeedSource extends FeedSource {
 case object AclFeedSource extends FeedSource {
   val name: String = "ACL"
 
+  val maybeLastUpdateThreshold: Option[FiniteDuration] = Option(36 hours)
+
   val description: Boolean => String = _ => "Flight schedule for up to 6 months."
 }
 
 case object ForecastFeedSource extends FeedSource {
   val name: String = "Port forecast"
+
+  val maybeLastUpdateThreshold: Option[FiniteDuration] = None
 
   val description: Boolean => String = _ => "Updated forecast of passenger numbers."
 }
@@ -438,11 +448,15 @@ case object ForecastFeedSource extends FeedSource {
 case object LiveFeedSource extends FeedSource {
   val name: String = "Port live"
 
+  val maybeLastUpdateThreshold: Option[FiniteDuration] = Option(12 hours)
+
   val description: Boolean => String = _ => "Up-to-date passenger numbers, estimated and actual arrival times, gates and stands."
 }
 
 case object LiveBaseFeedSource extends FeedSource {
   val name: String = "Cirium live"
+
+  val maybeLastUpdateThreshold: Option[FiniteDuration] = Option(12 hours)
 
   val description: Boolean => String = isLiveFeedAvailable => if (isLiveFeedAvailable)
     "Estimated and actual arrival time updates where not available from live feed."
@@ -452,6 +466,8 @@ case object LiveBaseFeedSource extends FeedSource {
 
 case object UnknownFeedSource extends FeedSource {
   val name: String = "Unknown"
+
+  val maybeLastUpdateThreshold: Option[FiniteDuration] = None
 
   val description: Boolean => String = _ => ""
 }
