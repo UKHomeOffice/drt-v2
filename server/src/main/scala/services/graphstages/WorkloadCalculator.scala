@@ -11,25 +11,14 @@ import services.workloadcalculator.PaxLoadCalculator.Load
 
 import scala.collection.immutable.Map
 
-object WorkloadCalculator {
+case class WorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]) extends WorkloadCalculatorLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def flightLoadMinutes(flights: FlightsWithSplits,
-                        defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]): SplitMinutes = {
-    val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
-      .flights.values.toList
-      .sortBy(_.apiFlight.ActPax.getOrElse(0))
-      .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }
-      .toMap.values
-
+  override def flightLoadMinutes(flights: FlightsWithSplits): SplitMinutes = {
     val minutes = new SplitMinutes
 
-    uniqueFlights
-      .filter { fws =>
-        !fws.apiFlight.isCancelled &&
-          defaultProcTimes.contains(fws.apiFlight.Terminal) &&
-          !fws.apiFlight.Origin.isCta
-      }
+    val uniqueFlights = combineCodeShares(flights.flights.values)
+    flightsWithPcpWorkload(uniqueFlights)
       .foreach { incoming =>
         val procTimes = defaultProcTimes(incoming.apiFlight.Terminal)
         val flightMinutes = flightToFlightSplitMinutes(

@@ -2,6 +2,7 @@ package services.crunch.workload
 
 import controllers.ArrivalGenerator
 import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.Terminals.T1
 import drt.shared._
 import org.specs2.mutable.Specification
 import services.SDate
@@ -30,12 +31,12 @@ class WorkloadSpec extends Specification {
         Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val emptyNatProcTimes: Map[Nationality, Double] = Map()
-    val workloads = WorkloadCalculator
+
+    val workloads = WorkloadCalculator(Map(T1 -> procTimes))
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
-        emptyNatProcTimes,
+        Map(),
         useNationalityBasedProcTimes = true
       )
       .toList
@@ -56,7 +57,7 @@ class WorkloadSpec extends Specification {
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
 
-    val flightSplitMinutes = WorkloadCalculator
+    val workloads = WorkloadCalculator(Map(T1 -> procTimes))
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
@@ -65,7 +66,7 @@ class WorkloadSpec extends Specification {
       )
       .toList
 
-    val startTime = SDate(flightSplitMinutes.head.minute).toISOString()
+    val startTime = SDate(workloads.head.minute).toISOString()
 
     startTime === "2018-08-28T17:07:00Z"
   }
@@ -82,7 +83,8 @@ class WorkloadSpec extends Specification {
         Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val workloads = WorkloadCalculator
+
+    val workloads = WorkloadCalculator(Map(T1 -> procTimes))
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
@@ -107,7 +109,8 @@ class WorkloadSpec extends Specification {
         Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val workloads = WorkloadCalculator
+
+    val workloads = WorkloadCalculator(Map(T1 -> procTimes))
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
@@ -132,7 +135,8 @@ class WorkloadSpec extends Specification {
         Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val workloads = WorkloadCalculator
+
+    val workloads = WorkloadCalculator(Map(T1 -> procTimes))
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
@@ -157,7 +161,8 @@ class WorkloadSpec extends Specification {
         Option(EventTypes.DC),
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val workloads = WorkloadCalculator
+
+    val workloads = WorkloadCalculator(Map(T1 -> procTimes))
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
@@ -190,7 +195,7 @@ class WorkloadSpec extends Specification {
       PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5,
       PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk) -> 5.5
     )
-    val workloads = WorkloadCalculator
+    val workloads = WorkloadCalculator(Map(T1 -> procTimes))
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
@@ -231,7 +236,8 @@ class WorkloadSpec extends Specification {
       Nationality("ZBW") -> zbwSeconds,
       Nationality("ZAR") -> zaSeconds
     )
-    val workloads = WorkloadCalculator
+
+    val workloads = WorkloadCalculator(Map(T1 -> procTimes))
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
@@ -272,7 +278,7 @@ class WorkloadSpec extends Specification {
       Nationality("ZBW") -> zbwSeconds,
       Nationality("ZAR") -> zaSeconds
     )
-    val workloads = WorkloadCalculator
+    val workloads = WorkloadCalculator(Map(T1 -> procTimes))
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
@@ -304,7 +310,7 @@ class WorkloadSpec extends Specification {
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val emptyNatProcTimes: Map[Nationality, Double] = Map()
-    val workloads = WorkloadCalculator
+    val workloads = WorkloadCalculator(Map(T1 -> procTimes))
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,
@@ -330,7 +336,7 @@ class WorkloadSpec extends Specification {
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val emptyNatProcTimes: Map[Nationality, Double] = Map()
-    val workloads = WorkloadCalculator
+    val workloads = WorkloadCalculator(Map(T1 -> procTimes))
       .flightToFlightSplitMinutes(
         ApiFlightWithSplits(arrival, splits, None),
         procTimes,

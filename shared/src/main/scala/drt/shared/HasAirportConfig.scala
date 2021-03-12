@@ -80,6 +80,12 @@ object Terminals {
 
 object Queues {
 
+  sealed trait QueueStatus
+
+  case object Open extends QueueStatus
+
+  case object Closed extends QueueStatus
+
   sealed trait Queue extends ClassNameForToString with Ordered[Queue] {
     override def compare(that: Queue): Int = toString.compareTo(that.toString)
   }
