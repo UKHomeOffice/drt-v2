@@ -1,5 +1,6 @@
 package drt.shared
 
+import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import drt.shared.PaxTypes._
 import drt.shared.Queues._
@@ -7,7 +8,6 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import ujson.Js.Value
-
 import upickle.default._
 
 import scala.collection.immutable.SortedMap
@@ -154,14 +154,14 @@ sealed trait PaxType {
 
 object PaxType {
   def apply(paxTypeString: String): PaxType = paxTypeString match {
-    case "EeaNonMachineReadable$" => EeaNonMachineReadable
-    case "Transit$" => Transit
-    case "VisaNational$" => VisaNational
     case "EeaMachineReadable$" => EeaMachineReadable
+    case "EeaNonMachineReadable$" => EeaNonMachineReadable
+    case "EeaBelowEGateAge$" => EeaBelowEGateAge
+    case "VisaNational$" => VisaNational
     case "NonVisaNational$" => NonVisaNational
     case "B5JPlusNational$" => B5JPlusNational
-    case "EeaBelowEGateAge$" => EeaBelowEGateAge
     case "B5JPlusNationalBelowEGateAge$" => B5JPlusNationalBelowEGateAge
+    case "Transit$" => Transit
     case _ => UndefinedPaxType
   }
 
@@ -171,21 +171,21 @@ object PaxType {
 
 object PaxTypes {
 
-  case object EeaNonMachineReadable extends PaxType
-
-  case object Transit extends PaxType
-
-  case object VisaNational extends PaxType
-
   case object EeaMachineReadable extends PaxType
 
+  case object EeaNonMachineReadable extends PaxType
+
   case object EeaBelowEGateAge extends PaxType
+
+  case object VisaNational extends PaxType
 
   case object NonVisaNational extends PaxType
 
   case object B5JPlusNational extends PaxType
 
   case object B5JPlusNationalBelowEGateAge extends PaxType
+
+  case object Transit extends PaxType
 
   case object UndefinedPaxType extends PaxType
 
@@ -320,6 +320,15 @@ case class AirportConfig(portCode: PortCode,
   def nonTransferQueues(terminalName: Terminal): Seq[Queue] = queuesByTerminal(terminalName).collect {
     case queue if queue != Queues.Transfer => queue
   }
+
+  def queueStatusProvider(sdateProvider: MillisSinceEpoch => SDateLike): (Terminal, Queue, MillisSinceEpoch) => QueueStatus =
+    (terminal: Terminal, queue: Queue, minute: MillisSinceEpoch) => {
+      val hour = sdateProvider(minute).getHours()
+      maxDesksByTerminalAndQueue24Hrs.get(terminal).flatMap(_.get(queue).flatMap(_.lift(hour))) match {
+        case Some(maxDesksForHour) if maxDesksForHour > 0 => Open
+        case _ => Closed
+      }
+    }
 }
 
 object AirportConfig {
@@ -337,6 +346,7 @@ object AirportConfig {
     .reduce[List[Int]] {
       case (max1, max2) => max1.zip(max2).map { case (m1, m2) => m1 + m2 }
     }
+
 }
 
 case class ContactDetails(supportEmail: Option[String], oohPhone: Option[String])

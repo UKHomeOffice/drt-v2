@@ -4,14 +4,13 @@ import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.{Closed, Open, Queue, Transfer}
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
-import drt.shared.{AirportConfig, PaxTypeAndQueue, Queues, SimulationMinute, SimulationMinutes, TQM}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.{SDate, TryCrunch}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.Crunch.{LoadMinute, europeLondonTimeZone}
-import services.graphstages.{WorkloadCalculator, WorkloadCalculatorLike}
+import services.graphstages.{DynamicWorkloadCalculator, WorkloadCalculatorLike}
+import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 
@@ -25,8 +24,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      crunchOffsetMinutes: Int,
                                      eGateBankSize: Int,
                                      tryCrunch: TryCrunch,
-                                     workloadCalculator: WorkloadCalculatorLike,
-                                     queueStatusAt: (Terminal, Queue, MillisSinceEpoch) => Queues.QueueStatus
+                                     workloadCalculator: WorkloadCalculatorLike
                                     ) extends PortDesksAndWaitsProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -94,13 +92,9 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 
 object PortDesksAndWaitsProvider {
   def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch): PortDesksAndWaitsProvider = {
-    val queueStatusAt = (terminal: Terminal, queue: Queue, minute: MillisSinceEpoch) => {
-      val hour = SDate(minute, europeLondonTimeZone).getHours()
-      airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal).flatMap(_.get(queue).flatMap(_.lift(hour))) match {
-        case Some(maxDesksForHour) if maxDesksForHour > 0 => Open
-        case _ => Closed
-      }
-    }
+    val calculator = DynamicWorkloadCalculator(
+      airportConfig.terminalProcessingTimes,
+      airportConfig.queueStatusProvider(millis => SDate(millis, europeLondonTimeZone)))
 
     PortDesksAndWaitsProvider(
       queuesByTerminal = airportConfig.queuesByTerminal,
@@ -113,8 +107,7 @@ object PortDesksAndWaitsProvider {
       crunchOffsetMinutes = airportConfig.crunchOffsetMinutes,
       eGateBankSize = airportConfig.eGateBankSize,
       tryCrunch = tryCrunch,
-      workloadCalculator = WorkloadCalculator(airportConfig.terminalProcessingTimes),
-      queueStatusAt = queueStatusAt
+      workloadCalculator = calculator
     )
   }
 }

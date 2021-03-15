@@ -2,6 +2,8 @@ package services.graphstages
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
+import drt.shared.Queues.{Closed, EGate, EeaDesk, NonEeaDesk, Open, Queue, QueueStatus}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
@@ -12,6 +14,8 @@ import services.workloadcalculator.PaxLoadCalculator.Load
 import scala.collection.immutable.Map
 
 trait WorkloadCalculatorLike {
+  val queueStatusAt: (Terminal, Queue, MillisSinceEpoch) => Queues.QueueStatus
+
   val defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]
 
   def flightLoadMinutes(flights: FlightsWithSplits): SplitMinutes
@@ -31,10 +35,29 @@ trait WorkloadCalculatorLike {
         defaultProcTimes.contains(fws.apiFlight.Terminal) &&
         !fws.apiFlight.Origin.isCta
     }
+
+  def paxTypeAndQueueCountsFromSplits(splitsToUse: Splits): Set[ApiPaxTypeAndQueueCount] = {
+    val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
+      case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
+      case PaxNumbers =>
+        val splitsWithoutTransit = splitsToUse.splits.filter(_.queueType != Queues.Transfer)
+        val totalSplitsPax: Load = splitsWithoutTransit.toList.map(_.paxCount).sum
+        if (totalSplitsPax == 0.0)
+          splitsWithoutTransit
+        else
+          splitsWithoutTransit.map(qc => qc.copy(paxCount = qc.paxCount / totalSplitsPax))
+      case _ => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
+    }
+    splitRatios
+  }
+
 }
 
 
-case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]) extends WorkloadCalculatorLike {
+case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
+                                     queueStatusAt: (Terminal, Queue, MillisSinceEpoch) => Queues.QueueStatus)
+  extends WorkloadCalculatorLike {
+
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def flightLoadMinutes(flights: FlightsWithSplits): SplitMinutes = {
@@ -53,28 +76,43 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
         val flight = flightWithSplits.apiFlight
 
         flightWithSplits.bestSplits.map(splitsToUse => {
-          val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
-            case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
-            case PaxNumbers =>
-              val splitsWithoutTransit = splitsToUse.splits.filter(_.queueType != Queues.Transfer)
-              val totalSplitsPax: Load = splitsWithoutTransit.toList.map(_.paxCount).sum
-              if (totalSplitsPax == 0.0)
-                splitsWithoutTransit
-              else
-                splitsWithoutTransit.map(qc => qc.copy(paxCount = qc.paxCount / totalSplitsPax))
-            case _ => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
-          }
+          val paxTypeAndQueueCounts = paxTypeAndQueueCountsFromSplits(splitsToUse)
 
-          val splitsWithoutTransit = splitRatios.filterNot(_.queueType == Queues.Transfer)
+          val paxTypesAndQueuesMinusTransit = paxTypeAndQueueCounts.filterNot(_.queueType == Queues.Transfer)
 
           flight.paxDeparturesByMinute(20)
             .flatMap {
               case (minuteMillis, flightPaxInMinute) =>
-                splitsWithoutTransit
-                  .map(split => flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, split))
+                paxTypesAndQueuesMinusTransit
+                  .map { case ptqc@ApiPaxTypeAndQueueCount(pt, queue, _, _, _) =>
+                    def findAlternativeQueue(originalQueue: Queue, queuesToTry: Iterable[Queue]): Queue = {
+                      queuesToTry.find(queueStatusAt(flight.Terminal, _, minuteMillis) == Open) match {
+                        case Some(queue) => queue
+                        case None =>
+                          log.error(s"Failed to find alternative queue for $pt. Reverting to $originalQueue")
+                          originalQueue
+                      }
+                    }
+
+                    val finalPtqc = queueStatusAt(flight.Terminal, queue, minuteMillis) match {
+                      case Closed =>
+                        val newQueue = (queue, pt) match {
+                          case (EGate, EeaMachineReadable | EeaNonMachineReadable | EeaBelowEGateAge) =>
+                            findAlternativeQueue(EGate, Iterable(EeaDesk, NonEeaDesk))
+                          case (EGate, VisaNational | NonVisaNational | B5JPlusNational | B5JPlusNationalBelowEGateAge) =>
+                            findAlternativeQueue(EGate, Iterable(NonEeaDesk, EeaDesk))
+                        }
+                        ptqc.copy(queueType = newQueue)
+                      case Open =>
+                        ptqc
+                    }
+
+                    flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, finalPtqc)
+                  }
             }
         }).getOrElse(Seq())
     }
+
 
   def flightSplitMinute(arrival: Arrival,
                         procTimes: Map[PaxTypeAndQueue, Load],

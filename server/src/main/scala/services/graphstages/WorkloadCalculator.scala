@@ -2,6 +2,7 @@ package services.graphstages
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.Queues.Open
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
@@ -13,6 +14,8 @@ import scala.collection.immutable.Map
 
 case class WorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]) extends WorkloadCalculatorLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  override val queueStatusAt: (Terminal, Queues.Queue, MillisSinceEpoch) => Queues.QueueStatus = (_, _, _) => Open
 
   override def flightLoadMinutes(flights: FlightsWithSplits): SplitMinutes = {
     val minutes = new SplitMinutes
@@ -41,26 +44,16 @@ case class WorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueu
     val flight = flightWithSplits.apiFlight
     val splitsToUseOption = flightWithSplits.bestSplits
     splitsToUseOption.map(splitsToUse => {
-      val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
-        case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
-        case PaxNumbers =>
-          val splitsWithoutTransit = splitsToUse.splits.filter(_.queueType != Queues.Transfer)
-          val totalSplitsPax: Load = splitsWithoutTransit.toList.map(_.paxCount).sum
-          if (totalSplitsPax == 0.0)
-            splitsWithoutTransit
-          else
-            splitsWithoutTransit.map(qc => qc.copy(paxCount = qc.paxCount / totalSplitsPax))
-        case _ => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
-      }
+      val paxTypeAndQueueCounts = paxTypeAndQueueCountsFromSplits(splitsToUse)
 
-      val splitsWithoutTransit = splitRatios.filterNot(_.queueType == Queues.Transfer)
+      val paxTypesAndQueuesMinusTransit = paxTypeAndQueueCounts.filterNot(_.queueType == Queues.Transfer)
 
-      val totalPaxWithNationality = splitsWithoutTransit.toList.flatMap(_.nationalities.map(_.values.sum)).sum
+      val totalPaxWithNationality = paxTypesAndQueuesMinusTransit.toList.flatMap(_.nationalities.map(_.values.sum)).sum
 
       flight.paxDeparturesByMinute(20)
         .flatMap {
           case (minuteMillis, flightPaxInMinute) =>
-            splitsWithoutTransit
+            paxTypesAndQueuesMinusTransit
               .map(apiSplit => {
                 flightSplitMinute(
                   flight,

@@ -56,7 +56,7 @@ class QueueDiversionSpec extends CrunchTestLike {
       val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), actPax = Option(pax))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
-      expectPaxByQueue(Map(EeaDesk -> 100))
+      expectPaxByQueue(Map(EeaDesk -> 100, EGate -> 0))
 
       success
     }
