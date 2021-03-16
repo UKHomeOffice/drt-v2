@@ -275,9 +275,15 @@ class CrunchTestLike
           .map {
             case (queue, mins) => (queue, mins.map(_.paxLoad).sum)
           }
-        val asExpected = paxByQueue == paxByQueueToExpect
-        if (!asExpected) println(s"\nNo match yet\ngot: $paxByQueue\nexp: $paxByQueueToExpect")
-        asExpected
+          .filter {
+            case (_, mins) => mins > 0
+          }
+        val nonZerosToExpect = paxByQueueToExpect
+          .filter {
+            case (_, mins) => mins > 0
+          }
+
+        paxByQueue == nonZerosToExpect
     }
 
   def paxLoadsFromPortState(portState: PortState,

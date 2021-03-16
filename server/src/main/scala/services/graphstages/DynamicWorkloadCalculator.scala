@@ -3,18 +3,20 @@ package services.graphstages
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
+import drt.shared.QueueStatusProviders.QueueStatusProvider
 import drt.shared.Queues.{Closed, EGate, EeaDesk, NonEeaDesk, Open, Queue, QueueStatus}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import services.SDate
 import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
 import services.workloadcalculator.PaxLoadCalculator.Load
 
 import scala.collection.immutable.Map
 
 trait WorkloadCalculatorLike {
-  val queueStatusAt: (Terminal, Queue, MillisSinceEpoch) => Queues.QueueStatus
+  val queueStatusProvider: QueueStatusProvider
 
   val defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]
 
@@ -55,7 +57,7 @@ trait WorkloadCalculatorLike {
 
 
 case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
-                                     queueStatusAt: (Terminal, Queue, MillisSinceEpoch) => Queues.QueueStatus)
+                                     queueStatusProvider: QueueStatusProvider)
   extends WorkloadCalculatorLike {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -86,7 +88,7 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                 paxTypesAndQueuesMinusTransit
                   .map { case ptqc@ApiPaxTypeAndQueueCount(pt, queue, _, _, _) =>
                     def findAlternativeQueue(originalQueue: Queue, queuesToTry: Iterable[Queue]): Queue = {
-                      queuesToTry.find(queueStatusAt(flight.Terminal, _, minuteMillis) == Open) match {
+                      queuesToTry.find(queueStatusProvider.statusAt(flight.Terminal, _, SDate(minuteMillis).getHours()) == Open) match {
                         case Some(queue) => queue
                         case None =>
                           log.error(s"Failed to find alternative queue for $pt. Reverting to $originalQueue")
@@ -94,7 +96,7 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                       }
                     }
 
-                    val finalPtqc = queueStatusAt(flight.Terminal, queue, minuteMillis) match {
+                    val finalPtqc = queueStatusProvider.statusAt(flight.Terminal, queue, SDate(minuteMillis).getHours()) match {
                       case Closed =>
                         val newQueue = (queue, pt) match {
                           case (EGate, EeaMachineReadable | EeaNonMachineReadable | EeaBelowEGateAge) =>

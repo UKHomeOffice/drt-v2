@@ -1,13 +1,14 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.auth.Roles.Role
 import drt.shared.PaxTypes._
-import drt.shared.Queues._
+import drt.shared.QueueStatusProviders.QueueStatusProvider
+import drt.shared.Queues.{Queue, QueueStatus, _}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
 import ujson.Js.Value
+import uk.gov.homeoffice.drt.auth.Roles.Role
+import upickle.default
 import upickle.default._
 
 import scala.collection.immutable.SortedMap
@@ -81,6 +82,10 @@ object Terminals {
 object Queues {
 
   sealed trait QueueStatus
+
+  object QueueStatus {
+    implicit val rw: ReadWriter[QueueStatus] = macroRW
+  }
 
   case object Open extends QueueStatus
 
@@ -246,6 +251,32 @@ object ProcessingTimes {
   )
 }
 
+object QueueStatusProviders {
+
+  sealed trait QueueStatusProvider {
+    def statusAt(terminal: Terminal, queue: Queue, hour: Int): QueueStatus
+  }
+
+  object QueueStatusProvider {
+    implicit val rw: default.ReadWriter[QueueStatusProvider] = macroRW
+  }
+
+  case object QueuesAlwaysOpen extends QueueStatusProvider {
+    implicit val rw: ReadWriter[QueueStatusProvider] = macroRW
+    override def statusAt(terminal: Terminal, queue: Queue, hour: Int): QueueStatus = Open
+  }
+
+  case class HourlyStatuses(statusByTerminalQueueHour: Map[Terminal, Map[Queue, IndexedSeq[QueueStatus]]]) extends QueueStatusProvider {
+    override def statusAt(terminal: Terminal, queue: Queue, hour: Int): QueueStatus =
+      statusByTerminalQueueHour.get(terminal)
+        .flatMap(_.get(queue).flatMap { statues => statues.lift(hour % 24) }).getOrElse(Closed)
+  }
+
+  object HourlyStatuses {
+    implicit val rw: ReadWriter[HourlyStatuses] = macroRW
+  }
+}
+
 case class AirportConfig(portCode: PortCode,
                          queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
                          divertedQueues: Map[Queue, Queue] = Map(),
@@ -257,6 +288,7 @@ case class AirportConfig(portCode: PortCode,
                          terminalPaxSplits: Map[Terminal, SplitRatios],
                          terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                          minMaxDesksByTerminalQueue24Hrs: Map[Terminal, Map[Queue, (List[Int], List[Int])]],
+                         queueStatusProvider: QueueStatusProvider = QueueStatusProviders.QueuesAlwaysOpen,
                          fixedPointExamples: Seq[String] = Seq(),
                          hasActualDeskStats: Boolean = false,
                          eGateBankSize: Int = 10,
@@ -320,15 +352,6 @@ case class AirportConfig(portCode: PortCode,
   def nonTransferQueues(terminalName: Terminal): Seq[Queue] = queuesByTerminal(terminalName).collect {
     case queue if queue != Queues.Transfer => queue
   }
-
-  def queueStatusProvider(sdateProvider: MillisSinceEpoch => SDateLike): (Terminal, Queue, MillisSinceEpoch) => QueueStatus =
-    (terminal: Terminal, queue: Queue, minute: MillisSinceEpoch) => {
-      val hour = sdateProvider(minute).getHours()
-      maxDesksByTerminalAndQueue24Hrs.get(terminal).flatMap(_.get(queue).flatMap(_.lift(hour))) match {
-        case Some(maxDesksForHour) if maxDesksForHour > 0 => Open
-        case _ => Closed
-      }
-    }
 }
 
 object AirportConfig {
@@ -347,6 +370,7 @@ object AirportConfig {
       case (max1, max2) => max1.zip(max2).map { case (m1, m2) => m1 + m2 }
     }
 
+  val defaultQueueStatusProvider: (Terminal, Queue, MillisSinceEpoch) => QueueStatus = (_, _, _) => Open
 }
 
 case class ContactDetails(supportEmail: Option[String], oohPhone: Option[String])

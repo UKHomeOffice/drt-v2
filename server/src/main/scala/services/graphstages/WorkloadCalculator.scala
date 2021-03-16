@@ -2,6 +2,7 @@ package services.graphstages
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.QueueStatusProviders.QueuesAlwaysOpen
 import drt.shared.Queues.Open
 import drt.shared.Terminals.Terminal
 import drt.shared._
@@ -15,7 +16,7 @@ import scala.collection.immutable.Map
 case class WorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]) extends WorkloadCalculatorLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override val queueStatusAt: (Terminal, Queues.Queue, MillisSinceEpoch) => Queues.QueueStatus = (_, _, _) => Open
+  override val queueStatusProvider: QueueStatusProviders.QueueStatusProvider = QueuesAlwaysOpen
 
   override def flightLoadMinutes(flights: FlightsWithSplits): SplitMinutes = {
     val minutes = new SplitMinutes

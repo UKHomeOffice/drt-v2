@@ -94,7 +94,7 @@ object PortDesksAndWaitsProvider {
   def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch): PortDesksAndWaitsProvider = {
     val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,
-      airportConfig.queueStatusProvider(millis => SDate(millis, europeLondonTimeZone)))
+      airportConfig.queueStatusProvider)
 
     PortDesksAndWaitsProvider(
       queuesByTerminal = airportConfig.queuesByTerminal,

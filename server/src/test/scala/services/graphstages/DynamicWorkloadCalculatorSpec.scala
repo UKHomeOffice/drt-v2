@@ -3,17 +3,16 @@ package services.graphstages
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
+import drt.shared.QueueStatusProviders.HourlyStatuses
+import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{AirportConfig, ApiFlightWithSplits, ApiPaxTypeAndQueueCount, Splits}
-import services.SDate
+import drt.shared._
 import services.crunch.CrunchTestLike
-import services.graphstages.Crunch.europeLondonTimeZone
 
 class DynamicWorkloadCalculatorSpec extends CrunchTestLike {
   def calcForConfig(config: AirportConfig): DynamicWorkloadCalculator = {
-    DynamicWorkloadCalculator(config.terminalProcessingTimes, config.queueStatusProvider(millis => SDate(millis, europeLondonTimeZone)))
+    DynamicWorkloadCalculator(config.terminalProcessingTimes, config.queueStatusProvider)
   }
 
   "Given a dynamic workload calculator" >> {
@@ -38,13 +37,13 @@ class DynamicWorkloadCalculatorSpec extends CrunchTestLike {
     }
 
     "When I ask for the workload of a flight with only egate passengers at a time when the egates are closed" >> {
-      val egatesClosed: Map[Terminal, Map[Queue, (List[Int], List[Int])]] = Map(T1 -> Map(
-        EGate -> (List.fill(24)(0), List.fill(24)(0)),
-        EeaDesk -> (List.fill(24)(1), List.fill(24)(10)),
-        NonEeaDesk -> (List.fill(24)(1), List.fill(24)(10)),
+      val egatesClosed: Map[Terminal, Map[Queue, IndexedSeq[Queues.QueueStatus]]] = Map(T1 -> Map(
+        EGate -> IndexedSeq.fill(24)(Closed),
+        EeaDesk -> IndexedSeq.fill(24)(Open),
+        NonEeaDesk -> IndexedSeq.fill(24)(Open),
       ))
 
-      val calc = calcForConfig(defaultAirportConfig.copy(minMaxDesksByTerminalQueue24Hrs = egatesClosed))
+      val calc = calcForConfig(defaultAirportConfig.copy(queueStatusProvider = HourlyStatuses(egatesClosed)))
 
       "I should see the workload for those passengers diverted to the eea queue" >> {
         val loads = calc.flightLoadMinutes(FlightsWithSplits(Iterable(allEgatePaxFlight)))
@@ -58,13 +57,13 @@ class DynamicWorkloadCalculatorSpec extends CrunchTestLike {
     }
 
     "When I ask for the workload of a flight with only egate passengers at a time when the egates and eea queue are closed" >> {
-      val egatesClosed: Map[Terminal, Map[Queue, (List[Int], List[Int])]] = Map(T1 -> Map(
-        EGate -> (List.fill(24)(0), List.fill(24)(0)),
-        EeaDesk -> (List.fill(24)(0), List.fill(24)(0)),
-        NonEeaDesk -> (List.fill(24)(1), List.fill(24)(10)),
+      val egatesClosed: Map[Terminal, Map[Queue, IndexedSeq[Queues.QueueStatus]]] = Map(T1 -> Map(
+        EGate -> IndexedSeq.fill(24)(Closed),
+        EeaDesk -> IndexedSeq.fill(24)(Closed),
+        NonEeaDesk -> IndexedSeq.fill(24)(Open),
       ))
 
-      val calc = calcForConfig(defaultAirportConfig.copy(minMaxDesksByTerminalQueue24Hrs = egatesClosed))
+      val calc = calcForConfig(defaultAirportConfig.copy(queueStatusProvider = HourlyStatuses(egatesClosed)))
 
       "I should see the workload for those passengers diverted to the non-eea queue" >> {
         val loads = calc.flightLoadMinutes(FlightsWithSplits(Iterable(allEgatePaxFlight)))
@@ -78,13 +77,13 @@ class DynamicWorkloadCalculatorSpec extends CrunchTestLike {
     }
 
     "When I ask for the workload of a flight with only B5JSSK+ passengers at a time when the egates are closed" >> {
-      val egatesClosed: Map[Terminal, Map[Queue, (List[Int], List[Int])]] = Map(T1 -> Map(
-        EGate -> (List.fill(24)(0), List.fill(24)(0)),
-        EeaDesk -> (List.fill(24)(1), List.fill(24)(10)),
-        NonEeaDesk -> (List.fill(24)(1), List.fill(24)(10)),
+      val egatesClosed: Map[Terminal, Map[Queue, IndexedSeq[Queues.QueueStatus]]] = Map(T1 -> Map(
+        EGate -> IndexedSeq.fill(24)(Closed),
+        EeaDesk -> IndexedSeq.fill(24)(Open),
+        NonEeaDesk -> IndexedSeq.fill(24)(Open),
       ))
 
-      val calc = calcForConfig(defaultAirportConfig.copy(minMaxDesksByTerminalQueue24Hrs = egatesClosed))
+      val calc = calcForConfig(defaultAirportConfig.copy(queueStatusProvider = HourlyStatuses(egatesClosed)))
 
       "I should see the workload for those passengers diverted to the non-eea queue" >> {
         val loads = calc.flightLoadMinutes(FlightsWithSplits(Iterable(allB5JSSKPaxFlight)))
