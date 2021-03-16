@@ -129,24 +129,24 @@ steps:
       - publish-drt
       - publish-cypress
 
-  - name: slack_notification
-    pull: if-not-exists
-    image: plugins/slack
-    settings:
-      channel: devs
-      template: "*{{repo.name}}: _{{build.status}}_*\nCompleted build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*\n*Triggered by*: _${DRONE_COMMIT_AUTHOR}_\n*Message*: ${DRONE_COMMIT_MESSAGE}\n{{build.link}}\n"
-      username: drone
-    environment:
-      SLACK_WEBHOOK:
-        from_secret: slack_webhook
-    when:
-      status:
-        - success
-        - failure
-      event:
-        - push
-    depends_on:
-      - e2e-tests
+#  - name: slack_notification
+#    pull: if-not-exists
+#    image: plugins/slack
+#    settings:
+#      channel: devs
+#      template: "*{{repo.name}}: _{{build.status}}_*\nCompleted build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*\n*Triggered by*: _${DRONE_COMMIT_AUTHOR}_\n*Message*: ${DRONE_COMMIT_MESSAGE}\n{{build.link}}\n"
+#      username: drone
+#    environment:
+#      SLACK_WEBHOOK:
+#        from_secret: slack_webhook
+#    when:
+#      status:
+#        - success
+#        - failure
+#      event:
+#        - push
+#    depends_on:
+#      - e2e-tests
 
 services:
   - name: docker
