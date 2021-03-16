@@ -103,6 +103,10 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                             findAlternativeQueue(EGate, Iterable(EeaDesk, NonEeaDesk))
                           case (EGate, VisaNational | NonVisaNational | B5JPlusNational | B5JPlusNationalBelowEGateAge) =>
                             findAlternativeQueue(EGate, Iterable(NonEeaDesk, EeaDesk))
+                          case (EeaDesk, _) =>
+                            findAlternativeQueue(EeaDesk, Iterable(NonEeaDesk))
+                          case (NonEeaDesk, _) =>
+                            findAlternativeQueue(NonEeaDesk, Iterable(EeaDesk))
                         }
                         ptqc.copy(queueType = newQueue)
                       case Open =>
