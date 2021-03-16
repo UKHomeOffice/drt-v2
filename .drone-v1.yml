@@ -134,7 +134,7 @@ steps:
     image: plugins/slack
     settings:
       channel: devs
-      template: "*{{repo.name}}: _{{build.status}}_*\nCompleted build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*\n*Triggered by*: _${DRONE_COMMIT_AUTHOR}_\n*Message*: ${DRONE_COMMIT_MESSAGE}\n{{build.link}}\n"
+      template: "*{{repo.name}}: _{{build.status}}_*\nCompleted build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*\n{{build.link}}\n"
       username: drone
     environment:
       SLACK_WEBHOOK:
