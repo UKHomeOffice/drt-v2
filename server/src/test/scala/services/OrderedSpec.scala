@@ -67,33 +67,33 @@ class OrderedSpec extends Specification {
   }
 
   "UniqueArrival" >> {
-    "Given two UniqueArrival with identical voyage number, terminal & scheduled " +
+    "Given two UniqueArrival with identical origin, voyage number, terminal & scheduled " +
       "When adding them to a Set " +
       "The Set's size should be 1" >> {
-      val cs1 = UniqueArrival(0, T1, 0L)
-      val cs2 = UniqueArrival(0, T1, 0L)
+      val cs1 = UniqueArrivalWithOrigin(0, T1, 0L, PortCode("JFK"))
+      val cs2 = UniqueArrivalWithOrigin(0, T1, 0L, PortCode("JFK"))
 
       val setSize = Set(cs1, cs2).size
 
       setSize === 1
     }
 
-    "Given two UniqueArrival with identical voyage number & terminal, but scheduled of 0 & 1 " +
+    "Given two UniqueArrival with identical origin, voyage number & terminal, but scheduled of 0 & 1 " +
       "When adding them to a SortedSet " +
       "They should be ordered with 0 first, and 1 last" >> {
-      val cs1 = UniqueArrival(0, T1, 1L)
-      val cs2 = UniqueArrival(0, T1, 0L)
+      val cs1 = UniqueArrivalWithOrigin(0, T1, 1L, PortCode("JFK"))
+      val cs2 = UniqueArrivalWithOrigin(0, T1, 0L, PortCode("JFK"))
 
       val sorted = SortedSet(cs1, cs2).toSeq
 
       sorted === Seq(cs2, cs1)
     }
 
-    "Given two UniqueArrival with identical voyage number & scheduled, but terminals of T1 & T2 " +
+    "Given two UniqueArrival with identical origin, voyage number & scheduled, but terminals of T1 & T2 " +
       "When adding them to a SortedSet " +
       "They should be ordered with 0 first, and 1 last" >> {
-      val cs1 = UniqueArrival(0, T2, 0L)
-      val cs2 = UniqueArrival(0, T1, 0L)
+      val cs1 = UniqueArrivalWithOrigin(0, T2, 0L, PortCode("JFK"))
+      val cs2 = UniqueArrivalWithOrigin(0, T1, 0L, PortCode("JFK"))
 
       val sorted = SortedSet(cs1, cs2).toSeq
 
@@ -103,8 +103,8 @@ class OrderedSpec extends Specification {
     "Given two UniqueArrival with identical scheduled & terminal, but voyage numbers of 0 & 1 " +
       "When adding them to a SortedSet " +
       "They should be ordered with 0 first, and 1 last" >> {
-      val cs1 = UniqueArrival(1, T1, 0L)
-      val cs2 = UniqueArrival(0, T1, 0L)
+      val cs1 = UniqueArrivalWithOrigin(1, T1, 0L, PortCode("JFK"))
+      val cs2 = UniqueArrivalWithOrigin(0, T1, 0L, PortCode("JFK"))
 
       val sorted = SortedSet(cs1, cs2).toSeq
 

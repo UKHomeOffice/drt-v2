@@ -211,7 +211,7 @@ trait WithLastUpdated {
 }
 
 case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpdated: Option[MillisSinceEpoch] = None)
-  extends WithUnique[UniqueArrival]
+  extends WithUnique[UniqueArrivalWithOrigin]
     with WithLastUpdated {
 
   def equals(candidate: ApiFlightWithSplits): Boolean = {
@@ -243,7 +243,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
 
   def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
 
-  override val unique: UniqueArrival = apiFlight.unique
+  override val unique: UniqueArrivalWithOrigin = apiFlight.unique
 }
 
 object ApiFlightWithSplits {
@@ -268,15 +268,52 @@ trait WithTerminal[A] extends Ordered[A] {
   def terminal: Terminal
 }
 
-case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch)
-  extends WithLegacyUniqueId[Int, UniqueArrival]
-    with WithTimeAccessor
-    with WithTerminal[UniqueArrival] {
+//case class UniqueArrivalWithOrigin(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch)
+//  extends WithLegacyUniqueId[Int, UniqueArrivalWithOrigin]
+//    with WithTimeAccessor
+//    with WithTerminal[UniqueArrivalWithOrigin] {
+//
+//  override def compare(that: UniqueArrivalWithOrigin): Int =
+//    scheduled.compare(that.scheduled) match {
+//      case 0 => terminal.compare(that.terminal) match {
+//        case 0 => number.compare(that.number)
+//        case c => c
+//      }
+//      case c => c
+//    }
+//
+//  override def timeValue: MillisSinceEpoch = scheduled
+//
+//  override def uniqueId: Int = s"$terminal$scheduled$number".hashCode
+//
+//  val equalWithinScheduledWindow: (UniqueArrivalWithOrigin, Int) => Boolean = (searchKey, windowMillis) =>
+//    searchKey.number == this.number && searchKey.terminal == this.terminal && Math.abs(searchKey.scheduled - this.scheduled) <= windowMillis
+//}
 
-  override def compare(that: UniqueArrival): Int =
+//object UniqueArrivalWithOrigin {
+//  implicit val rw: ReadWriter[UniqueArrivalWithOrigin] = macroRW
+//
+//  def apply(arrival: Arrival): UniqueArrivalWithOrigin = UniqueArrivalWithOrigin(arrival.VoyageNumber.numeric, arrival.Terminal, arrival.Scheduled)
+//
+//  def apply(number: Int,
+//            terminalName: String,
+//            scheduled: MillisSinceEpoch): UniqueArrivalWithOrigin = UniqueArrivalWithOrigin(number, Terminal(terminalName), scheduled)
+//
+//  def atTime: MillisSinceEpoch => UniqueArrivalWithOrigin = (time: MillisSinceEpoch) => UniqueArrivalWithOrigin(0, "", time)
+//}
+
+case class UniqueArrivalWithOrigin(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch, origin: PortCode)
+  extends WithLegacyUniqueId[Int, UniqueArrivalWithOrigin]
+    with WithTimeAccessor
+    with WithTerminal[UniqueArrivalWithOrigin] {
+
+  override def compare(that: UniqueArrivalWithOrigin): Int =
     scheduled.compare(that.scheduled) match {
       case 0 => terminal.compare(that.terminal) match {
-        case 0 => number.compare(that.number)
+        case 0 => number.compare(that.number) match {
+          case 0 => origin.iata.compare(that.origin.iata)
+          case c => c
+        }
         case c => c
       }
       case c => c
@@ -284,22 +321,23 @@ case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSince
 
   override def timeValue: MillisSinceEpoch = scheduled
 
-  override def uniqueId: Int = s"$terminal$scheduled$number".hashCode
+  override def uniqueId: Int = s"$terminal$scheduled$number$origin".hashCode
 
-  val equalWithinScheduledWindow: (UniqueArrival, Int) => Boolean = (searchKey, windowMillis) =>
+  val equalWithinScheduledWindow: (UniqueArrivalWithOrigin, Int) => Boolean = (searchKey, windowMillis) =>
     searchKey.number == this.number && searchKey.terminal == this.terminal && Math.abs(searchKey.scheduled - this.scheduled) <= windowMillis
 }
 
-object UniqueArrival {
-  implicit val rw: ReadWriter[UniqueArrival] = macroRW
+object UniqueArrivalWithOrigin {
+  implicit val rw: ReadWriter[UniqueArrivalWithOrigin] = macroRW
 
-  def apply(arrival: Arrival): UniqueArrival = UniqueArrival(arrival.VoyageNumber.numeric, arrival.Terminal, arrival.Scheduled)
+  def apply(arrival: Arrival): UniqueArrivalWithOrigin = UniqueArrivalWithOrigin(arrival.VoyageNumber.numeric, arrival.Terminal, arrival.Scheduled, arrival.Origin)
 
   def apply(number: Int,
             terminalName: String,
-            scheduled: MillisSinceEpoch): UniqueArrival = UniqueArrival(number, Terminal(terminalName), scheduled)
+            scheduled: MillisSinceEpoch,
+            origin: String): UniqueArrivalWithOrigin = UniqueArrivalWithOrigin(number, Terminal(terminalName), scheduled, PortCode(origin))
 
-  def atTime: MillisSinceEpoch => UniqueArrival = (time: MillisSinceEpoch) => UniqueArrival(0, "", time)
+  def atTime: MillisSinceEpoch => UniqueArrivalWithOrigin = (time: MillisSinceEpoch) => UniqueArrivalWithOrigin(0, "", time, "")
 }
 
 case class CodeShareKeyOrderedBySchedule(scheduled: Long,
@@ -511,11 +549,11 @@ case class ArrivalUpdate(old: Arrival, updated: Arrival)
 
 object ArrivalsDiff {
   def apply(toUpdate: Iterable[Arrival], toRemove: Iterable[Arrival]): ArrivalsDiff = ArrivalsDiff(
-    ISortedMap[UniqueArrival, Arrival]() ++ toUpdate.map(a => (a.unique, a)), toRemove
+    Map[UniqueArrivalWithOrigin, Arrival]() ++ toUpdate.map(a => (a.unique, a)), toRemove
   )
 }
 
-case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: Iterable[Arrival]) extends FlightUpdates {
+case class ArrivalsDiff(toUpdate: Map[UniqueArrivalWithOrigin, Arrival], toRemove: Iterable[Arrival]) extends FlightUpdates {
   private val minutesFromUpdate: Iterable[MillisSinceEpoch] = toUpdate.values.flatMap(_.pcpRange())
   private val minutesFromRemoval: Iterable[MillisSinceEpoch] = toRemove.flatMap(_.pcpRange())
   val updateMinutes: Iterable[MillisSinceEpoch] = minutesFromUpdate ++ minutesFromRemoval
@@ -653,7 +691,7 @@ trait SDateLike {
   def isHistoricDate(now: SDateLike): Boolean = millisSinceEpoch < now.getLocalLastMidnight.millisSinceEpoch
 }
 
-case class RemoveFlight(flightKey: UniqueArrival)
+case class RemoveFlight(flightKey: UniqueArrivalWithOrigin)
 
 trait MinuteComparison[A <: WithLastUpdated] {
   def maybeUpdated(existing: A, now: MillisSinceEpoch): Option[A]
@@ -728,9 +766,9 @@ object FlightsApi {
 
   case class Flights(flights: Seq[Arrival])
 
-  case class FlightsWithSplits(flights: Map[UniqueArrival, ApiFlightWithSplits]) {
+  case class FlightsWithSplits(flights: Map[UniqueArrivalWithOrigin, ApiFlightWithSplits]) {
     def scheduledSince(sinceMillis: MillisSinceEpoch): FlightsWithSplits = FlightsWithSplits(flights.filter {
-      case (UniqueArrival(_, _, scheduledMillis), _) => scheduledMillis >= sinceMillis
+      case (UniqueArrivalWithOrigin(_, _, scheduledMillis, _), _) => scheduledMillis >= sinceMillis
     })
 
     def window(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): FlightsWithSplits = {
@@ -762,9 +800,9 @@ object FlightsApi {
         case (_, fws) => fws.lastUpdated.getOrElse(0L) > sinceMillis
       })
 
-    def --(toRemove: Iterable[UniqueArrival]): FlightsWithSplits = FlightsWithSplits(flights -- toRemove)
+    def --(toRemove: Iterable[UniqueArrivalWithOrigin]): FlightsWithSplits = FlightsWithSplits(flights -- toRemove)
 
-    def ++(toUpdate: Iterable[(UniqueArrival, ApiFlightWithSplits)]): FlightsWithSplits = FlightsWithSplits(flights ++ toUpdate)
+    def ++(toUpdate: Iterable[(UniqueArrivalWithOrigin, ApiFlightWithSplits)]): FlightsWithSplits = FlightsWithSplits(flights ++ toUpdate)
 
     def +(toAdd: ApiFlightWithSplits): FlightsWithSplits = FlightsWithSplits(flights.updated(toAdd.unique, toAdd))
 
@@ -772,7 +810,7 @@ object FlightsApi {
   }
 
   object FlightsWithSplits {
-    val empty: FlightsWithSplits = FlightsWithSplits(Map[UniqueArrival, ApiFlightWithSplits]())
+    val empty: FlightsWithSplits = FlightsWithSplits(Map[UniqueArrivalWithOrigin, ApiFlightWithSplits]())
 
     def apply(flights: Iterable[ApiFlightWithSplits]): FlightsWithSplits = FlightsWithSplits(flights.map(fws => (fws.unique, fws)).toMap)
   }
@@ -783,7 +821,7 @@ object FlightsApi {
     val empty: SplitsForArrivals = SplitsForArrivals(Map())
   }
 
-  case class SplitsForArrivals(splits: Map[UniqueArrival, Set[Splits]]) extends FlightUpdates {
+  case class SplitsForArrivals(splits: Map[UniqueArrivalWithOrigin, Set[Splits]]) extends FlightUpdates {
     val updatedMillis: Iterable[MillisSinceEpoch] = splits.keys.map(_.scheduled)
 
     def diff(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
@@ -814,10 +852,10 @@ object FlightsApi {
       FlightsWithSplitsDiff(updatedFlights, List())
     }
 
-    def ++(tuple: (UniqueArrival, Set[Splits])): IMap[UniqueArrival, Set[Splits]] = splits + tuple
+    def ++(tuple: (UniqueArrivalWithOrigin, Set[Splits])): IMap[UniqueArrivalWithOrigin, Set[Splits]] = splits + tuple
   }
 
-  case class FlightsWithSplitsDiff(flightsToUpdate: Iterable[ApiFlightWithSplits], arrivalsToRemove: Iterable[UniqueArrival]) extends FlightUpdates {
+  case class FlightsWithSplitsDiff(flightsToUpdate: Iterable[ApiFlightWithSplits], arrivalsToRemove: Iterable[UniqueArrivalWithOrigin]) extends FlightUpdates {
     def isEmpty: Boolean = flightsToUpdate.isEmpty && arrivalsToRemove.isEmpty
 
     def nonEmpty: Boolean = !isEmpty
@@ -829,7 +867,7 @@ object FlightsApi {
       val updated = flightsWithSplits.flights ++ flightsToUpdate.map(f => (f.apiFlight.unique, f.copy(lastUpdated = Option(nowMillis))))
       val minusRemovals = updated -- arrivalsToRemove
 
-      val asMap: IMap[UniqueArrival, ApiFlightWithSplits] = flightsWithSplits.flights
+      val asMap: IMap[UniqueArrivalWithOrigin, ApiFlightWithSplits] = flightsWithSplits.flights
 
       val minutesFromRemovalsInExistingState: Iterable[MillisSinceEpoch] = arrivalsToRemove
         .flatMap(r => asMap.get(r).map(_.apiFlight.pcpRange().toList).getOrElse(List()))

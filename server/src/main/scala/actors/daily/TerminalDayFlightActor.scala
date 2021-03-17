@@ -10,7 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.UtcDate
-import drt.shared.{ArrivalsDiff, SDateLike, UniqueArrival}
+import drt.shared.{ArrivalsDiff, SDateLike, UniqueArrivalWithOrigin}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
@@ -114,8 +114,8 @@ class TerminalDayFlightActor(
     log.debug(s"Recovery: state contains ${state.flights.size} flights")
   }
 
-  def uniqueArrivalFromMessage(uam: UniqueArrivalMessage): UniqueArrival =
-    UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled)
+  def uniqueArrivalFromMessage(uam: UniqueArrivalMessage): UniqueArrivalWithOrigin =
+    UniqueArrivalWithOrigin(uam.getNumber, uam.getTerminalName, uam.getScheduled, uam.origin.getOrElse(""))
 
   def setStateFromSnapshot(flightMessages: Seq[FlightWithSplitsMessage]): Unit = {
     state = FlightsWithSplits(flightsFromMessages(flightMessages))

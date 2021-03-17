@@ -332,6 +332,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
   }
 
   private def flightExists(withoutSuffix: Arrival, ps: PortState) = {
-    ps.flights.contains(UniqueArrival(withoutSuffix))
+    ps.flights.contains(UniqueArrivalWithOrigin(withoutSuffix))
   }
 }

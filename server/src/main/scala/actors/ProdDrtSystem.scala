@@ -6,7 +6,7 @@ import actors.queues.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, Mani
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, OverflowStrategy}
+import akka.stream.{Materializer, OverflowStrategy}
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
@@ -26,7 +26,6 @@ import uk.gov.homeoffice.drt.auth.Roles.Role
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 
@@ -37,7 +36,7 @@ object PostgresTables extends {
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
 case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
-                        (implicit val materializer: ActorMaterializer,
+                        (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem) extends DrtSystemInterface {
 
@@ -114,7 +113,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     } else userRolesFromHeader(headers)
 
   def run(): Unit = {
-    val futurePortStates: Future[(Option[PortState], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]])] = {
+    val futurePortStates: Future[(Option[PortState], Option[SortedMap[UniqueArrivalWithOrigin, Arrival]], Option[SortedMap[UniqueArrivalWithOrigin, Arrival]], Option[SortedMap[UniqueArrivalWithOrigin, Arrival]])] = {
       val maybeLivePortState = initialFlightsPortState(portStateActor, params.forecastMaxDays)
       val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
@@ -135,7 +134,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
           maybePortState,
           maybeBaseArrivals,
           maybeForecastArrivals,
-          Option(SortedMap[UniqueArrival, Arrival]()),
+          Option(SortedMap[UniqueArrivalWithOrigin, Arrival]()),
           maybeLiveArrivals,
           params.refreshArrivalsOnStart,
           params.refreshManifestsOnStart,

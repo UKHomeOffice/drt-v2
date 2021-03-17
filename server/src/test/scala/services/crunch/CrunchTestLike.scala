@@ -27,7 +27,6 @@ import uk.gov.homeoffice.drt.auth.Roles.STN
 import scala.collection.immutable.{Map, SortedMap}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
-import scala.languageFeature.postfixOps
 
 
 object H2Tables extends {

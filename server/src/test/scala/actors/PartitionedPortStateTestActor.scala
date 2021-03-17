@@ -1,22 +1,18 @@
 package actors
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
+import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.acking.Acking.AckingAsker
 import actors.acking.AckingReceiver.{Ack, StreamFailure}
-import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.queues.FlightsRouterActor
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
-import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
-
-import scala.concurrent.ExecutionContext
 
 
 class PartitionedPortStateTestActor(probe: ActorRef,

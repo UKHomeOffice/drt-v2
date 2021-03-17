@@ -105,7 +105,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     }
   }
 
-  def updateAndTrimFlights(crunchUpdates: PortStateUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): SortedMap[UniqueArrival, ApiFlightWithSplits] = {
+  def updateAndTrimFlights(crunchUpdates: PortStateUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): SortedMap[UniqueArrivalWithOrigin, ApiFlightWithSplits] = {
     val thirtyMinutesMillis = 30 * 60000
     val relevantFlights = existingState.flights
       .filter { case (_, fws) => fws.apiFlight.PcpTime.isDefined }

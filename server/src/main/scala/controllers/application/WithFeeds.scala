@@ -37,13 +37,14 @@ trait WithFeeds {
 
   def getArrival(number: Int,
                  terminal: String,
-                 scheduled: MillisSinceEpoch): Action[AnyContent] = authByRole(ArrivalSource) {
+                 scheduled: MillisSinceEpoch,
+                 origin: String): Action[AnyContent] = authByRole(ArrivalSource) {
     Action.async { _ =>
       Source(ctrl.feedActorsForPort)
         .mapAsync(1) {
           case (_, feed) =>
             feed
-              .ask(UniqueArrival(number, terminal, scheduled))
+              .ask(UniqueArrivalWithOrigin(number, terminal, scheduled, origin))
               .map {
                 case Some(fsa: FeedSourceArrival) if ctrl.isValidFeedSource(fsa.feedSource) => Option(fsa)
                 case _ => None
@@ -57,8 +58,10 @@ trait WithFeeds {
 
   def getArrivalAtPointInTime(
                                pointInTime: MillisSinceEpoch,
-                               number: Int, terminal: String,
-                               scheduled: MillisSinceEpoch
+                               number: Int,
+                               terminal: String,
+                               scheduled: MillisSinceEpoch,
+                               origin: String
                              ): Action[AnyContent] = authByRole(ArrivalSource) {
     val arrivalActorPersistenceIds = Seq(
       ("actors.LiveBaseArrivalsActor-live-base", LiveBaseFeedSource),
@@ -78,7 +81,7 @@ trait WithFeeds {
       Source(pointInTimeActorSources.toList)
         .mapAsync(1)((feedActor: ActorRef) => {
           feedActor
-            .ask(UniqueArrival(number, terminal, scheduled))
+            .ask(UniqueArrivalWithOrigin(number, terminal, scheduled, origin))
             .map {
               case Some(fsa: FeedSourceArrival) =>
                 feedActor ! PoisonPill

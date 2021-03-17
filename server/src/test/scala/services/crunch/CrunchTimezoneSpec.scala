@@ -4,7 +4,7 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
-import drt.shared.Queues.{EeaDesk, Queue}
+import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess

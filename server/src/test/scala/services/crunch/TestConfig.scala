@@ -11,10 +11,10 @@ import services.{Simulator, SplitsProvider, TryCrunch}
 
 import scala.collection.immutable.SortedMap
 
-case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
-                      initialForecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
-                      initialLiveBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
-                      initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
+case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrivalWithOrigin, Arrival] = SortedMap(),
+                      initialForecastArrivals: SortedMap[UniqueArrivalWithOrigin, Arrival] = SortedMap(),
+                      initialLiveBaseArrivals: SortedMap[UniqueArrivalWithOrigin, Arrival] = SortedMap(),
+                      initialLiveArrivals: SortedMap[UniqueArrivalWithOrigin, Arrival] = SortedMap(),
                       initialPortState: Option[PortState] = None,
                       airportConfig: AirportConfig = TestDefaults.airportConfig,
                       csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,

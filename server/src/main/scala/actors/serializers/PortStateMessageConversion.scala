@@ -77,7 +77,7 @@ object PortStateMessageConversion {
     movements = Option(sm.movements),
     lastUpdated = sm.lastUpdated)
 
-  def flightsFromMessages(flightMessages: Seq[FlightWithSplitsMessage]): Map[UniqueArrival, ApiFlightWithSplits] =
+  def flightsFromMessages(flightMessages: Seq[FlightWithSplitsMessage]): Map[UniqueArrivalWithOrigin, ApiFlightWithSplits] =
     flightMessages.map(message => {
       val fws = flightWithSplitsFromMessage(message)
       (fws.unique, fws)

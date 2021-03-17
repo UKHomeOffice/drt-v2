@@ -3,7 +3,7 @@ package services.arrivals
 import actors.ArrivalGenerator
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
-import drt.shared.{ArrivalsDiff, UniqueArrival}
+import drt.shared.{ArrivalsDiff, UniqueArrivalWithOrigin}
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.SortedMap
@@ -13,7 +13,7 @@ class EdiFlightAdjustmentsSpec extends Specification {
   val ediAdjusterWithNoHistoricMappings: EdiArrivalsTerminalAdjustments = EdiArrivalsTerminalAdjustments(Map())
 
   def toArrivalsDiff(updated: List[Arrival] = List(), toRemove: List[Arrival] = List()) = {
-    ArrivalsDiff(SortedMap[UniqueArrival, Arrival]() ++ updated.map(a => a.unique -> a).toMap, toRemove.toSet)
+    ArrivalsDiff(SortedMap[UniqueArrivalWithOrigin, Arrival]() ++ updated.map(a => a.unique -> a).toMap, toRemove.toSet)
   }
 
   "Given an arrivals diff with a flight that has no baggage carousel then it should use the default A1" >> {

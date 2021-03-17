@@ -1,14 +1,13 @@
 package services.crunch.deskrecs
 
 import akka.NotUsed
-import akka.stream.{ActorAttributes, Supervision}
+import akka.stream.ActorAttributes
 import akka.stream.scaladsl.{Sink, Source}
-import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import services.crunch.CrunchTestLike
 
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 object SomeAwesomeObject {
   def source(implicit ec: ExecutionContext): Source[Int, NotUsed] = Source(List(1, 2, 3))

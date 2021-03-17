@@ -1,7 +1,5 @@
 package feeds.lhr.forecast
 
-import java.util.TimeZone
-
 import com.typesafe.config.ConfigFactory
 import drt.server.feeds.lhr.forecast.{LHRForecastEmail, LHRForecastXLSExtractor}
 import org.joda.time.DateTimeZone

@@ -9,7 +9,7 @@ import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
@@ -55,7 +55,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 
 trait DrtSystemInterface extends UserRoleProviderLike {
-  implicit val materializer: ActorMaterializer
+  implicit val materializer: Materializer
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
 
@@ -147,10 +147,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
   def startCrunchSystem(initialPortState: Option[PortState],
-                        initialForecastBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
-                        initialForecastArrivals: Option[SortedMap[UniqueArrival, Arrival]],
-                        initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
-                        initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
+                        initialForecastBaseArrivals: Option[SortedMap[UniqueArrivalWithOrigin, Arrival]],
+                        initialForecastArrivals: Option[SortedMap[UniqueArrivalWithOrigin, Arrival]],
+                        initialLiveBaseArrivals: Option[SortedMap[UniqueArrivalWithOrigin, Arrival]],
+                        initialLiveArrivals: Option[SortedMap[UniqueArrivalWithOrigin, Arrival]],
                         refreshArrivalsOnStart: Boolean,
                         refreshManifestsOnStart: Boolean,
                         startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {

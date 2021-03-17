@@ -1,14 +1,14 @@
 package services
 
+import actors.GetFeedStatuses
 import actors.PartitionedPortStateActor.GetStateForDateRange
-import actors.{GetFeedStatuses, GetState}
 import akka.actor.{Actor, Props}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import services.crunch.CrunchTestLike
 
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 class MockFeedsActor(lastUpdated: MillisSinceEpoch) extends Actor {
   override def receive: Receive = {

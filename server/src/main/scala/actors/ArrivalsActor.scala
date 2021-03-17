@@ -32,7 +32,7 @@ trait FeedStateLike {
   }
 }
 
-case class ArrivalsState(arrivals: SortedMap[UniqueArrival, Arrival],
+case class ArrivalsState(arrivals: SortedMap[UniqueArrivalWithOrigin, Arrival],
                          feedSource: FeedSource,
                          maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
   def clear(): ArrivalsState = {
@@ -61,7 +61,7 @@ class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
     val (removals, updates) = Crunch.baseArrivalsRemovalsAndUpdates(incomingArrivalsWithKeys, state.arrivals)
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
 
-    state = state.copy(arrivals = SortedMap[UniqueArrival, Arrival]() ++ incomingArrivalsWithKeys, maybeSourceStatuses = Option(state.addStatus(newStatus)))
+    state = state.copy(arrivals = SortedMap[UniqueArrivalWithOrigin, Arrival]() ++ incomingArrivalsWithKeys, maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
     if (removals.nonEmpty || updates.nonEmpty) persistArrivalUpdates(removals, updates)
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size))
@@ -111,7 +111,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Int,
                              feedSource: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
-  val restorer = new RestorerWithLegacy[Int, UniqueArrival, Arrival]
+  val restorer = new RestorerWithLegacy[Int, UniqueArrivalWithOrigin, Arrival]
   var state: ArrivalsState = initialState
 
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
@@ -138,10 +138,10 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   override def postRecoveryComplete(): Unit = {
     restorer.finish()
-    val arrivals = SortedMap[UniqueArrival, Arrival]() ++ restorer.items
+    val arrivals = SortedMap[UniqueArrivalWithOrigin, Arrival]() ++ restorer.items
     restorer.clear()
 
-    state = state.copy(arrivals = Crunch.purgeExpired(arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt))
+    state = state.copy(arrivals = Crunch.purgeExpired(arrivals, UniqueArrivalWithOrigin.atTime, now, expireAfterMillis.toInt))
 
     log.info(s"Recovered ${state.arrivals.size} arrivals for ${state.feedSource}")
     super.postRecoveryComplete()
@@ -154,9 +154,10 @@ abstract class ArrivalsActor(now: () => SDateLike,
   def consumeRemovals(diffsMessage: FlightsDiffMessage): Unit = {
     logRecoveryMessage(s"Consuming ${diffsMessage.removals.length} removals")
     restorer.removeLegacies(diffsMessage.removalsOLD)
-    restorer.remove(diffsMessage.removals.map(uam =>
-      UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled)
-    ))
+    restorer.remove(diffsMessage.removals.collect {
+      case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), maybeOrigin) =>
+        UniqueArrivalWithOrigin(number, terminalName, scheduled, maybeOrigin.getOrElse(""))
+    })
   }
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage): Unit = {
@@ -178,7 +179,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
       log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
 
-    case ua: UniqueArrival =>
+    case ua: UniqueArrivalWithOrigin =>
       sender() ! state.arrivals.get(ua).map(a => FeedSourceArrival(feedSource, a))
 
     case SaveSnapshotSuccess(md) =>
@@ -213,7 +214,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)
   }
 
-  def persistArrivalUpdates(removals: Set[UniqueArrival], updatedArrivals: Iterable[Arrival]): Unit = {
+  def persistArrivalUpdates(removals: Set[UniqueArrivalWithOrigin], updatedArrivals: Iterable[Arrival]): Unit = {
     val updateMessages = updatedArrivals.map(apiFlightToFlightMessage).toSeq
     val removalMessages = removals.map(ua => UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled))).toSeq
     val diffMessage = FlightsDiffMessage(

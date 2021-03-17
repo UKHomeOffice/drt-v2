@@ -8,7 +8,7 @@ import actors.routing.RouterActorLikeWithSubscriber
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.pattern.{ask, pipe}
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -22,7 +22,7 @@ import services.SDate
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
+
 
 object FlightsRouterActor {
 
@@ -84,7 +84,7 @@ object FlightsRouterActor {
     }
 
   def runAndCombine(eventualSource: Future[Source[FlightsWithSplits, NotUsed]])
-                   (implicit mat: ActorMaterializer, ec: ExecutionContext): Future[FlightsWithSplits] = eventualSource
+                   (implicit mat: Materializer, ec: ExecutionContext): Future[FlightsWithSplits] = eventualSource
     .flatMap(source => source
       .log(getClass.getName)
       .runWith(Sink.reduce[FlightsWithSplits](_ ++ _))

@@ -51,10 +51,10 @@ case class CrunchProps[FR](
                             voyageManifestsActor: ActorRef,
                             simulator: Simulator,
                             initialPortState: Option[PortState] = None,
-                            initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
-                            initialForecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
-                            initialLiveBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
-                            initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
+                            initialForecastBaseArrivals: SortedMap[UniqueArrivalWithOrigin, Arrival] = SortedMap[UniqueArrivalWithOrigin, Arrival](),
+                            initialForecastArrivals: SortedMap[UniqueArrivalWithOrigin, Arrival] = SortedMap[UniqueArrivalWithOrigin, Arrival](),
+                            initialLiveBaseArrivals: SortedMap[UniqueArrivalWithOrigin, Arrival] = SortedMap[UniqueArrivalWithOrigin, Arrival](),
+                            initialLiveArrivals: SortedMap[UniqueArrivalWithOrigin, Arrival] = SortedMap[UniqueArrivalWithOrigin, Arrival](),
                             arrivalsForecastBaseSource: Source[ArrivalsFeedResponse, FR], arrivalsForecastSource: Source[ArrivalsFeedResponse, FR],
                             pcpPaxFn: Arrival => Int,
                             arrivalsLiveBaseSource: Source[ArrivalsFeedResponse, FR],
@@ -88,14 +88,14 @@ object CrunchSystem {
 
     val forecastMaxMillis: () => MillisSinceEpoch = () => props.now().addDays(props.maxDaysToCrunch).millisSinceEpoch
 
-    val initialMergedArrivals = SortedMap[UniqueArrival, Arrival]() ++ initialFlightsWithSplits.map(_.flightsToUpdate.map(fws => (fws.apiFlight.unique, fws.apiFlight))).getOrElse(List())
+    val initialMergedArrivals = SortedMap[UniqueArrivalWithOrigin, Arrival]() ++ initialFlightsWithSplits.map(_.flightsToUpdate.map(fws => (fws.apiFlight.unique, fws.apiFlight))).getOrElse(List())
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
-      initialForecastBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastBaseArrivals,
-      initialForecastArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals,
-      initialLiveBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals,
-      initialLiveArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals,
+      initialForecastBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrivalWithOrigin, Arrival]() else props.initialForecastBaseArrivals,
+      initialForecastArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrivalWithOrigin, Arrival]() else props.initialForecastArrivals,
+      initialLiveBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrivalWithOrigin, Arrival]() else props.initialLiveBaseArrivals,
+      initialLiveArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrivalWithOrigin, Arrival]() else props.initialLiveArrivals,
       initialMergedArrivals = initialMergedArrivals,
       pcpArrivalTime = props.pcpArrival,
       validPortTerminals = props.airportConfig.terminals.toSet,
@@ -107,9 +107,9 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       now = props.now)
 
-    val forecastArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals, forecastMaxMillis)
-    val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
-    val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
+    val forecastArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrivalWithOrigin, Arrival]() else props.initialForecastArrivals, forecastMaxMillis)
+    val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrivalWithOrigin, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
+    val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrivalWithOrigin, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
 
     val staffGraphStage = new StaffGraphStage(
       initialShifts = props.initialShifts,

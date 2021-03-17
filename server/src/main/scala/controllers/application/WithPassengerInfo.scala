@@ -17,7 +17,6 @@ import uk.gov.homeoffice.drt.auth.Roles.EnhancedApiView
 import upickle.default.write
 
 import scala.concurrent.Future
-import scala.language.postfixOps
 
 
 trait WithPassengerInfo {

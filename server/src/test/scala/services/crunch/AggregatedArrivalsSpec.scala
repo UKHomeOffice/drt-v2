@@ -9,7 +9,6 @@ import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.T1
-import drt.shared.UniqueArrival
 import drt.shared.api.Arrival
 import org.specs2.specification.BeforeEach
 import server.feeds.ArrivalsFeedSuccess
@@ -19,7 +18,7 @@ import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
 import test.feeds.test.GetArrivals
 
-import scala.collection.immutable.{List, Seq, SortedMap}
+import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.util.Try

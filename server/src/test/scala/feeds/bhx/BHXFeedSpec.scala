@@ -4,7 +4,7 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
@@ -200,7 +200,7 @@ class BHXFeedSpec extends CrunchTestLike {
     var mockInitialResponse: immutable.Seq[ArrivalsFeedResponse] = initialResponses
     var mockUpdateResponses: immutable.Seq[ArrivalsFeedResponse] = updateResponses
 
-    override def initialFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = mockInitialResponse match {
+    override def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = mockInitialResponse match {
       case head :: tail =>
         mockInitialResponse = tail
         Future(head)
@@ -208,7 +208,7 @@ class BHXFeedSpec extends CrunchTestLike {
         Future(ArrivalsFeedFailure("No more mock esponses"))
     }
 
-    override def updateFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] =
+    override def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] =
       mockUpdateResponses match {
         case head :: tail =>
           mockUpdateResponses = tail

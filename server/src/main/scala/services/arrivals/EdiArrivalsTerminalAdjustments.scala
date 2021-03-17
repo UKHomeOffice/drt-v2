@@ -1,8 +1,8 @@
 package services.arrivals
 
-import drt.shared.{ArrivalsDiff, UniqueArrival}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
+import drt.shared.{ArrivalsDiff, UniqueArrivalWithOrigin}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
@@ -12,13 +12,13 @@ case class EdiArrivalsTerminalAdjustments(historicFlightTerminalMap: Map[String,
 
   val defaultTerminal: Terminal = Terminal("A1")
 
-  override def apply(originalArrivalsDiff: ArrivalsDiff, allArrivalKeys: Iterable[UniqueArrival]): ArrivalsDiff = {
+  override def apply(originalArrivalsDiff: ArrivalsDiff, allArrivalKeys: Iterable[UniqueArrivalWithOrigin]): ArrivalsDiff = {
     log.info(s"Adjusting terminals ${originalArrivalsDiff.toUpdate.size} updates and ${originalArrivalsDiff.toRemove.size} deletions")
     val arrivalsDiffWithTerminalUpdates = applyBaggageReclaimIdRule(
       applyHistoricTerminalRule(originalArrivalsDiff)
     )
 
-    val arrivalsWithoutTerminalUpdates: Set[UniqueArrival] = allArrivalKeys.toSet -- arrivalsDiffWithTerminalUpdates.toUpdate.keys.toSet
+    val arrivalsWithoutTerminalUpdates: Set[UniqueArrivalWithOrigin] = allArrivalKeys.toSet -- arrivalsDiffWithTerminalUpdates.toUpdate.keys.toSet
     val arrivalsThatHaveMovedTerminals = arrivalsWithoutTerminalUpdates.flatMap(ua => originalArrivalsDiff.toUpdate.get(ua))
 
     arrivalsDiffWithTerminalUpdates.copy(toRemove = arrivalsDiffWithTerminalUpdates.toRemove ++ arrivalsThatHaveMovedTerminals)

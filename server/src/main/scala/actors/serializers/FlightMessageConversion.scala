@@ -17,8 +17,8 @@ import scala.util.{Success, Try}
 object FlightMessageConversion {
   def flightWithSplitsDiffFromMessage(diffMessage: FlightsWithSplitsDiffMessage): FlightsWithSplitsDiff =
     FlightsWithSplitsDiff(diffMessage.updates.map(flightWithSplitsFromMessage).toList, diffMessage.removals.collect {
-      case UniqueArrivalMessage(Some(number), Some(terminal), Some(scheduled)) =>
-        UniqueArrival(number, terminal, scheduled)
+      case UniqueArrivalMessage(Some(number), Some(terminal), Some(scheduled), maybeOrigin) =>
+        UniqueArrivalWithOrigin(number, terminal, scheduled, maybeOrigin.getOrElse(""))
     }.toList)
 
 
@@ -54,7 +54,7 @@ object FlightMessageConversion {
     case s: FeedStatusFailure => FeedStatusMessage(Option(s.date), None, Option(s.message))
   }
 
-  def restoreArrivalsFromSnapshot(restorer: RestorerWithLegacy[Int, UniqueArrival, Arrival],
+  def restoreArrivalsFromSnapshot(restorer: RestorerWithLegacy[Int, UniqueArrivalWithOrigin, Arrival],
                                   snMessage: FlightStateSnapshotMessage): Unit = {
     restorer.update(snMessage.flightMessages.map(flightMessageToApiFlight))
   }

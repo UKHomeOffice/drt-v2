@@ -35,7 +35,7 @@ class PortStateMessageConversionSpec extends Specification {
       StaffMinute(T1, correctedMillis, 2, 0, 0, None)
       ).map(m => (m.key, m))
 
-    val expected = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), expectedCrunchMinutes, expectedStaffMinutes)
+    val expected = PortState(SortedMap[UniqueArrivalWithOrigin, ApiFlightWithSplits](), expectedCrunchMinutes, expectedStaffMinutes)
 
     state === expected
   }
