@@ -49,7 +49,7 @@ case class StreamingFlightsExport(
   def fwsToCsv(fws: FlightsWithSplits, csvRowFn: ApiFlightWithSplits => String): String =
     uniqueArrivalsWithCodeShares(fws.flights.values.toSeq)
       .sortBy {
-        case (fws, _) => fws.apiFlight.PcpTime
+        case (fws, _) => (fws.apiFlight.PcpTime, fws.apiFlight.Scheduled, fws.apiFlight.VoyageNumber.numeric)
       }
       .map {
         case (fws, _) => csvRowFn(fws) + "\n"

@@ -268,40 +268,6 @@ trait WithTerminal[A] extends Ordered[A] {
   def terminal: Terminal
 }
 
-//case class UniqueArrivalWithOrigin(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch)
-//  extends WithLegacyUniqueId[Int, UniqueArrivalWithOrigin]
-//    with WithTimeAccessor
-//    with WithTerminal[UniqueArrivalWithOrigin] {
-//
-//  override def compare(that: UniqueArrivalWithOrigin): Int =
-//    scheduled.compare(that.scheduled) match {
-//      case 0 => terminal.compare(that.terminal) match {
-//        case 0 => number.compare(that.number)
-//        case c => c
-//      }
-//      case c => c
-//    }
-//
-//  override def timeValue: MillisSinceEpoch = scheduled
-//
-//  override def uniqueId: Int = s"$terminal$scheduled$number".hashCode
-//
-//  val equalWithinScheduledWindow: (UniqueArrivalWithOrigin, Int) => Boolean = (searchKey, windowMillis) =>
-//    searchKey.number == this.number && searchKey.terminal == this.terminal && Math.abs(searchKey.scheduled - this.scheduled) <= windowMillis
-//}
-
-//object UniqueArrivalWithOrigin {
-//  implicit val rw: ReadWriter[UniqueArrivalWithOrigin] = macroRW
-//
-//  def apply(arrival: Arrival): UniqueArrivalWithOrigin = UniqueArrivalWithOrigin(arrival.VoyageNumber.numeric, arrival.Terminal, arrival.Scheduled)
-//
-//  def apply(number: Int,
-//            terminalName: String,
-//            scheduled: MillisSinceEpoch): UniqueArrivalWithOrigin = UniqueArrivalWithOrigin(number, Terminal(terminalName), scheduled)
-//
-//  def atTime: MillisSinceEpoch => UniqueArrivalWithOrigin = (time: MillisSinceEpoch) => UniqueArrivalWithOrigin(0, "", time)
-//}
-
 case class UniqueArrivalWithOrigin(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch, origin: PortCode)
   extends WithLegacyUniqueId[Int, UniqueArrivalWithOrigin]
     with WithTimeAccessor
@@ -549,11 +515,11 @@ case class ArrivalUpdate(old: Arrival, updated: Arrival)
 
 object ArrivalsDiff {
   def apply(toUpdate: Iterable[Arrival], toRemove: Iterable[Arrival]): ArrivalsDiff = ArrivalsDiff(
-    Map[UniqueArrivalWithOrigin, Arrival]() ++ toUpdate.map(a => (a.unique, a)), toRemove
+    ISortedMap[UniqueArrivalWithOrigin, Arrival]() ++ toUpdate.map(a => (a.unique, a)), toRemove
   )
 }
 
-case class ArrivalsDiff(toUpdate: Map[UniqueArrivalWithOrigin, Arrival], toRemove: Iterable[Arrival]) extends FlightUpdates {
+case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrivalWithOrigin, Arrival], toRemove: Iterable[Arrival]) extends FlightUpdates {
   private val minutesFromUpdate: Iterable[MillisSinceEpoch] = toUpdate.values.flatMap(_.pcpRange())
   private val minutesFromRemoval: Iterable[MillisSinceEpoch] = toRemove.flatMap(_.pcpRange())
   val updateMinutes: Iterable[MillisSinceEpoch] = minutesFromUpdate ++ minutesFromRemoval
