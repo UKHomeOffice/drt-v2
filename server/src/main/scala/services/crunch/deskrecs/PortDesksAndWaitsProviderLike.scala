@@ -17,8 +17,6 @@ trait PortDesksAndWaitsProviderLike {
 
   def flightsToLoads(flights: FlightsWithSplits): Map[TQM, LoadMinute]
 
-  //  def flightsToDynamicLoads(flights: FlightsWithSplits): Map[TQM, LoadMinute]
-
   def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
                    loads: Map[TQM, LoadMinute],
                    deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): DeskRecMinutes

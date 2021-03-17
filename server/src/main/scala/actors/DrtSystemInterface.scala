@@ -73,8 +73,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(params.gateWalkTimesFilePath)
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(params.standWalkTimesFilePath)
 
-//  def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimate
-
   val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)), name = "alerts-actor")
   val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
