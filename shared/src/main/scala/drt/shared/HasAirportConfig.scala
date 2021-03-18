@@ -91,6 +91,21 @@ object Queues {
 
   case object Closed extends QueueStatus
 
+  case class QueueFallbacks(queues: Map[Terminal, Seq[Queue]]) {
+    val fallbacks: PartialFunction[(Queue, PaxType), Seq[Queue]] = {
+      case (EGate, _: EeaPaxType) => Seq(EeaDesk, NonEeaDesk, QueueDesk)
+      case (EGate, _: NonEeaPaxType) => Seq(NonEeaDesk, EeaDesk, QueueDesk)
+      case (EeaDesk, _: PaxType) => Seq(EeaDesk, QueueDesk)
+      case (NonEeaDesk, _: PaxType) => Seq(EeaDesk, QueueDesk)
+      case (_, _) => Seq()
+    }
+
+    def availableFallbacks(terminal: Terminal, queue: Queue, paxType: PaxType): Iterable[Queue] = {
+      val availableQueues: List[Queue] = queues.get(terminal).toList.flatten
+      fallbacks((queue, paxType)).filter(availableQueues.contains)
+    }
+  }
+
   sealed trait Queue extends ClassNameForToString with Ordered[Queue] {
     override def compare(that: Queue): Int = toString.compareTo(that.toString)
   }
@@ -157,6 +172,10 @@ sealed trait PaxType {
   def cleanName: String = getClass.getSimpleName.dropRight(1)
 }
 
+sealed trait EeaPaxType extends PaxType
+
+sealed trait NonEeaPaxType extends PaxType
+
 object PaxType {
   def apply(paxTypeString: String): PaxType = paxTypeString match {
     case "EeaMachineReadable$" => EeaMachineReadable
@@ -176,19 +195,19 @@ object PaxType {
 
 object PaxTypes {
 
-  case object EeaMachineReadable extends PaxType
+  case object EeaMachineReadable extends EeaPaxType
 
-  case object EeaNonMachineReadable extends PaxType
+  case object EeaNonMachineReadable extends EeaPaxType
 
-  case object EeaBelowEGateAge extends PaxType
+  case object EeaBelowEGateAge extends EeaPaxType
 
-  case object VisaNational extends PaxType
+  case object VisaNational extends NonEeaPaxType
 
-  case object NonVisaNational extends PaxType
+  case object NonVisaNational extends NonEeaPaxType
 
-  case object B5JPlusNational extends PaxType
+  case object B5JPlusNational extends NonEeaPaxType
 
-  case object B5JPlusNationalBelowEGateAge extends PaxType
+  case object B5JPlusNationalBelowEGateAge extends NonEeaPaxType
 
   case object Transit extends PaxType
 
@@ -263,6 +282,7 @@ object QueueStatusProviders {
 
   case object QueuesAlwaysOpen extends QueueStatusProvider {
     implicit val rw: ReadWriter[QueueStatusProvider] = macroRW
+
     override def statusAt(terminal: Terminal, queue: Queue, hour: Int): QueueStatus = Open
   }
 
@@ -275,6 +295,7 @@ object QueueStatusProviders {
   object HourlyStatuses {
     implicit val rw: ReadWriter[HourlyStatuses] = macroRW
   }
+
 }
 
 case class AirportConfig(portCode: PortCode,

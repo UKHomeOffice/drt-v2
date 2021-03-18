@@ -2,9 +2,8 @@ package services.graphstages
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.QueueStatusProviders.QueueStatusProvider
-import drt.shared.Queues.{Closed, EGate, EeaDesk, NonEeaDesk, Open, Queue, QueueStatus}
+import drt.shared.Queues.{Closed, Open, Queue, QueueFallbacks}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
@@ -55,9 +54,9 @@ trait WorkloadCalculatorLike {
 
 }
 
-
 case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
-                                     queueStatusProvider: QueueStatusProvider)
+                                     queueStatusProvider: QueueStatusProvider,
+                                     fallbacksProvider: QueueFallbacks)
   extends WorkloadCalculatorLike {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -91,23 +90,15 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                       queuesToTry.find(queueStatusProvider.statusAt(flight.Terminal, _, SDate(minuteMillis).getHours()) == Open) match {
                         case Some(queue) => queue
                         case None =>
-                          log.error(s"Failed to find alternative queue for $pt. Reverting to $originalQueue")
+                          log.error(s"Failed to find alternative queue for $pt ($queuesToTry). Reverting to $originalQueue")
                           originalQueue
                       }
                     }
 
                     val finalPtqc = queueStatusProvider.statusAt(flight.Terminal, queue, SDate(minuteMillis).getHours()) match {
                       case Closed =>
-                        val newQueue = (queue, pt) match {
-                          case (EGate, EeaMachineReadable | EeaNonMachineReadable | EeaBelowEGateAge) =>
-                            findAlternativeQueue(EGate, Iterable(EeaDesk, NonEeaDesk))
-                          case (EGate, VisaNational | NonVisaNational | B5JPlusNational | B5JPlusNationalBelowEGateAge) =>
-                            findAlternativeQueue(EGate, Iterable(NonEeaDesk, EeaDesk))
-                          case (EeaDesk, _) =>
-                            findAlternativeQueue(EeaDesk, Iterable(NonEeaDesk))
-                          case (NonEeaDesk, _) =>
-                            findAlternativeQueue(NonEeaDesk, Iterable(EeaDesk))
-                        }
+                        val fallbacks = fallbacksProvider.availableFallbacks(flight.Terminal, queue, pt)
+                        val newQueue = findAlternativeQueue(queue, fallbacks)
                         ptqc.copy(queueType = newQueue)
                       case Open =>
                         ptqc

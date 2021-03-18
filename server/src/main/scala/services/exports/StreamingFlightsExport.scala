@@ -46,7 +46,7 @@ case class StreamingFlightsExport(millisToDateStringFn: MillisSinceEpoch => Stri
   def fwsToCsv(fws: FlightsWithSplits, csvRowFn: ApiFlightWithSplits => String): String =
     uniqueArrivalsWithCodeShares(fws.flights.values.toSeq)
       .sortBy {
-        case (fws, _) => fws.apiFlight.PcpTime
+        case (fws, _) => (fws.apiFlight.PcpTime, fws.apiFlight.VoyageNumber.numeric, fws.apiFlight.Origin.iata)
       }
       .map {
         case (fws, _) => csvRowFn(fws) + "\n"

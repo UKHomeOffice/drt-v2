@@ -2,7 +2,7 @@ package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.{Closed, Open, Queue, Transfer}
+import drt.shared.Queues.{Closed, Open, Queue, QueueFallbacks, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
@@ -94,7 +94,9 @@ object PortDesksAndWaitsProvider {
   def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch): PortDesksAndWaitsProvider = {
     val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,
-      airportConfig.queueStatusProvider)
+      airportConfig.queueStatusProvider,
+      QueueFallbacks(airportConfig.queuesByTerminal)
+    )
 
     PortDesksAndWaitsProvider(
       queuesByTerminal = airportConfig.queuesByTerminal,
