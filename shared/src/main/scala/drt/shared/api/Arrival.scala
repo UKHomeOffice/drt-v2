@@ -44,6 +44,22 @@ case class Arrival(Operator: Option[Operator],
     case Some(s) => s.suffix
   }
 
+  def displayStatus: ArrivalStatus = {
+
+    val fifteenMinutes = 15 * 60 * 1000
+
+    this.Estimated match {
+      case _ if this.ActualChox.nonEmpty => ArrivalStatus("On Chocks")
+      case _ if this.Actual.nonEmpty => ArrivalStatus("Landed")
+      case Some(e) if this.Scheduled + fifteenMinutes < e => ArrivalStatus("Delayed")
+      case Some(_) => ArrivalStatus("Expected")
+      case _ if this.Status.description.toLowerCase  == "redirected" | this.Status.description.toLowerCase  == "diverted" => ArrivalStatus("Diverted")
+      case _ if this.Status.description.toLowerCase  == "cancelled"  => ArrivalStatus("Cancelled")
+      case None  => ArrivalStatus("Scheduled")
+
+    }
+  }
+
   val flightCode: FlightCode = FlightCode(CarrierCode, VoyageNumber, FlightCodeSuffix)
 
   def flightCodeString: String = flightCode.toString

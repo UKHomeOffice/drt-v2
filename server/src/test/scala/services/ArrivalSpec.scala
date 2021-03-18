@@ -1,7 +1,8 @@
 package services
 
-import drt.shared.api.Arrival
 import controllers.ArrivalGenerator
+import drt.shared.ArrivalStatus
+import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 
 class ArrivalSpec extends Specification {
@@ -162,6 +163,58 @@ class ArrivalSpec extends Specification {
 
       val result = flightsInRange.filter(Arrival.isRelevantToPeriod(startTime, endTime))
       result === flightsInRange
+    }
+  }
+
+  "Given an arrival flight details" >> {
+    "When flight Actual Chox time exists" >> {
+      "display status should On Chocks" >> {
+        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+        val result = arrival.displayStatus
+        result === ArrivalStatus("On Chocks")
+      }
+    }
+    "When flight Actual time exists and Actual Chox time does not exists" >> {
+      "display status should Landed" >> {
+        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), actDt = "2020-10-22T13:00Z")
+        val result = arrival.displayStatus
+        result === ArrivalStatus("Landed")
+      }
+    }
+    "When flight Estimated arrival is less than 15 minutes of scheduled time" >> {
+      "display status should Delayed" >> {
+        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:20Z")
+        val result = arrival.displayStatus
+        result === ArrivalStatus("Delayed")
+      }
+    }
+    "When flight Estimated arrival is greater than 15 mins of scheduled time" >> {
+      "display status should Expected" >> {
+        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z")
+        val result = arrival.displayStatus
+        result === ArrivalStatus("Expected")
+      }
+    }
+    "When flight status is redirected" >> {
+      "display status should Diverted" >> {
+        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("redirected"))
+        val result = arrival.displayStatus
+        result === ArrivalStatus("Diverted")
+      }
+    }
+    "When flight Estimated arrival is greater than 15 mins of scheduled time" >> {
+      "display status should Diverted" >> {
+        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("DIVERTED"))
+        val result = arrival.displayStatus
+        result === ArrivalStatus("Diverted")
+      }
+    }
+    "When flight Estimated arrival is greater than 15 mins of scheduled time" >> {
+      "display status should Cancelled" >> {
+        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("CANCELLED"))
+        val result = arrival.displayStatus
+        result === ArrivalStatus("Cancelled")
+      }
     }
   }
 }

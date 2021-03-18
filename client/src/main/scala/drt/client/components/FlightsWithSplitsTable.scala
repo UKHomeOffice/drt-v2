@@ -303,7 +303,7 @@ object FlightTableRow {
         else
           EmptyVdom,
         <.td(gateOrStand(props.walkTimes, props.defaultWalkTime, flight)),
-        <.td(flight.Status.description),
+        <.td(flight.displayStatus.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
         <.td(localDateTimeWithPopup(flight.Estimated)),
         <.td(localDateTimeWithPopup(flight.Actual))
