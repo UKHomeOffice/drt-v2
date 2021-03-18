@@ -202,16 +202,37 @@ class ArrivalSpec extends Specification {
         result === ArrivalStatus("Diverted")
       }
     }
-    "When flight Estimated arrival is greater than 15 mins of scheduled time" >> {
+    "When flight status is DIVERTED" >> {
       "display status should Diverted" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("DIVERTED"))
         val result = arrival.displayStatus
         result === ArrivalStatus("Diverted")
       }
     }
-    "When flight Estimated arrival is greater than 15 mins of scheduled time" >> {
+    "When flight status is CANCELLED" >> {
       "display status should Cancelled" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("CANCELLED"))
+        val result = arrival.displayStatus
+        result === ArrivalStatus("Cancelled")
+      }
+    }
+    "When flight status is C" >> {
+      "display status should Cancelled" >> {
+        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("C"))
+        val result = arrival.displayStatus
+        result === ArrivalStatus("Cancelled")
+      }
+    }
+    "When flight status is Canceled" >> {
+      "display status should Cancelled" >> {
+        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("Canceled"))
+        val result = arrival.displayStatus
+        result === ArrivalStatus("Cancelled")
+      }
+    }
+    "When flight status is Deleted / Removed Flight Record" >> {
+      "display status should Cancelled" >> {
+        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("Deleted / Removed Flight Record"))
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }

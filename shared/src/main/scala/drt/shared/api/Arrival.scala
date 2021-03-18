@@ -54,11 +54,13 @@ case class Arrival(Operator: Option[Operator],
       case Some(e) if this.Scheduled + fifteenMinutes < e => ArrivalStatus("Delayed")
       case Some(_) => ArrivalStatus("Expected")
       case _ if this.Status.description.toLowerCase  == "redirected" | this.Status.description.toLowerCase  == "diverted" => ArrivalStatus("Diverted")
-      case _ if this.Status.description.toLowerCase  == "cancelled"  => ArrivalStatus("Cancelled")
+      case _ if isCancelledStatus(this.Status.description.toLowerCase)  => ArrivalStatus("Cancelled")
       case None  => ArrivalStatus("Scheduled")
 
     }
   }
+
+  val isCancelledStatus : String => Boolean = description =>  description == "c" | description == "canceled" | description == "deleted / removed flight record" | description == "cancelled" | description.contains("deleted")
 
   val flightCode: FlightCode = FlightCode(CarrierCode, VoyageNumber, FlightCodeSuffix)
 
