@@ -10,7 +10,7 @@ class ArrivalSpec extends Specification {
     "When I ask for the minimum value of the pcp range" >> {
       "I should get zero" >> {
         val arrival = ArrivalGenerator.arrival(actPax = Option(-1))
-        val result = arrival.pcpRange().min
+        val result = arrival.pcpRange.min
         result === 0
       }
     }
@@ -40,7 +40,7 @@ class ArrivalSpec extends Specification {
     val pcpTime = "2019-01-01T12:00"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", actPax = Option(100), pcpDt = "2019-01-01T12:00")
 
-    val pcpRange = arrival.pcpRange()
+    val pcpRange = arrival.pcpRange
 
     "When I ask how many minutes I should see 5" >> {
       pcpRange.length === 5
@@ -65,7 +65,7 @@ class ArrivalSpec extends Specification {
     val pcpTime = "2019-01-01T12:00"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", actPax = Option(99), pcpDt = "2019-01-01T12:00")
 
-    val pcpRange = arrival.pcpRange()
+    val pcpRange = arrival.pcpRange
 
     "When I ask how many minutes I should see 5" >> {
       pcpRange.length === 5
@@ -90,7 +90,7 @@ class ArrivalSpec extends Specification {
     val pcpTime = "2019-01-01T12:00"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", actPax = Option(101), pcpDt = "2019-01-01T12:00")
 
-    val pcpRange = arrival.pcpRange()
+    val pcpRange = arrival.pcpRange
 
     "When I ask how many minutes I should see 6" >> {
       pcpRange.length === 6

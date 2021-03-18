@@ -30,13 +30,11 @@ trait WithFlightsExport {
   def csvForUser(user: LoggedInUser): Source[FlightsWithSplits, NotUsed] => Source[String, NotUsed] = {
     if (user.hasRole(ApiView))
       StreamingFlightsExport(
-        ctrl.pcpPaxFn,
         SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
         SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
       ).toCsvStreamWithActualApi _
     else
       StreamingFlightsExport(
-        ctrl.pcpPaxFn,
         SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
         SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
       ).toCsvStreamWithoutActualApi _

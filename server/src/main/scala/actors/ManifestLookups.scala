@@ -16,7 +16,7 @@ import scala.language.postfixOps
 
 trait ManifestLookupsLike {
   val system: ActorSystem
-  implicit val ec: ExecutionContext
+  implicit val ec: ExecutionContext = system.dispatcher
   implicit val timeout: Timeout = new Timeout(60 seconds)
 
   val requestAndTerminateActor: ActorRef
@@ -38,7 +38,7 @@ trait ManifestLookupsLike {
 
 }
 
-case class ManifestLookups(system: ActorSystem)(implicit val ec: ExecutionContext) extends ManifestLookupsLike {
+case class ManifestLookups(system: ActorSystem) extends ManifestLookupsLike {
   override val requestAndTerminateActor: ActorRef = system
     .actorOf(Props(new RequestAndTerminateActor()), "manifests-lookup-kill-actor")
 }

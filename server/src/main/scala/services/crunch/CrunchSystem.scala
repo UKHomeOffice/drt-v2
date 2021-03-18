@@ -18,7 +18,6 @@ import services.graphstages._
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 
 
 case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
@@ -56,7 +55,6 @@ case class CrunchProps[FR](
                             initialLiveBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
                             initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
                             arrivalsForecastBaseSource: Source[ArrivalsFeedResponse, FR], arrivalsForecastSource: Source[ArrivalsFeedResponse, FR],
-                            pcpPaxFn: Arrival => Int,
                             arrivalsLiveBaseSource: Source[ArrivalsFeedResponse, FR],
                             arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
                             passengersActorProvider: () => ActorRef,

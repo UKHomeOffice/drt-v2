@@ -67,7 +67,7 @@ object FlightsRouterActor {
         case FlightsWithSplits(flights) =>
           FlightsWithSplits(flights.filter { case (_, fws) =>
             val scheduledMatches = scheduledInRange(start, end, fws.apiFlight.Scheduled)
-            val pcpMatches = pcpFallsInRange(start, end, fws.apiFlight.pcpRange())
+            val pcpMatches = pcpFallsInRange(start, end, fws.apiFlight.pcpRange)
             scheduledMatches || pcpMatches
           })
       }

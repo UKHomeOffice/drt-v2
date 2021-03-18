@@ -7,7 +7,7 @@ import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
 
 case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAllocator: QueueAllocator) {
   def toQueues(terminal: Terminal, manifest: ManifestLike): Map[Queue, Iterable[(Queue, PaxType, ManifestPassengerProfile, Double)]] = {
-    val queueAllocatorForFlight = queueAllocator(terminal, manifest) _
+    val queueAllocatorForFlight: PaxType => Seq[(Queue, Double)] = queueAllocator.forTerminalAndManifest(terminal, manifest)
     val paxTypeAllocatorForFlight = paxTypeAllocator
     manifest.uniquePassengers.flatMap(mpp => {
       val paxType = paxTypeAllocatorForFlight(mpp)

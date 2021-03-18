@@ -21,7 +21,7 @@ import scala.language.postfixOps
 
 trait FlightLookupsLike {
   val system: ActorSystem
-  implicit val ec: ExecutionContext
+  implicit val ec: ExecutionContext = system.dispatcher
   implicit val timeout: Timeout = new Timeout(60 seconds)
 
   val now: () => SDateLike
@@ -50,7 +50,7 @@ case class FlightLookups(system: ActorSystem,
                          now: () => SDateLike,
                          queuesByTerminal: Map[Terminal, Seq[Queue]],
                          updatesSubscriber: ActorRef
-                        )(implicit val ec: ExecutionContext) extends FlightLookupsLike {
+                        ) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
 
   override val flightsActor: ActorRef = system.actorOf(

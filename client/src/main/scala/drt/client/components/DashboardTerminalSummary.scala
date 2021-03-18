@@ -103,7 +103,7 @@ object DashboardTerminalSummary {
     }
   }
 
-  def aggSplits(pcpPaxFn: Arrival => Int): Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits(pcpPaxFn)
+  def aggSplits: Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits
 
   def paxInPeriod(cms: Seq[CrunchMinute]): Double = cms.map(_.paxLoad).sum
 
@@ -111,11 +111,10 @@ object DashboardTerminalSummary {
                    crunchMinutes: List[CrunchMinute],
                    staffMinutes: List[StaffMinute],
                    terminal: Terminal,
-                   paxTypeAndQueues: Seq[PaxTypeAndQueue],
+                   paxTypeAndQueues: Iterable[PaxTypeAndQueue],
                    queues: Seq[Queue],
                    timeWindowStart: SDateLike,
-                   timeWindowEnd: SDateLike,
-                   pcpPaxFn: Arrival => Int
+                   timeWindowEnd: SDateLike
                   )
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
@@ -135,7 +134,7 @@ object DashboardTerminalSummary {
         val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.available).getOrElse(0)
         val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
         
-        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.pcpPaxFn)(props.flights)
+        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.flights)
         val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
         val queueTotals = totalsByQueue(summary)
 
