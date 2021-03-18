@@ -1,14 +1,12 @@
 package actors.flights
 
 import actors.ArrivalGenerator
-import actors.minutes.MockFlightsLookup
-import actors.queues.{DateRange, FlightsRouterActor}
 import actors.queues.FlightsRouterActor._
-import akka.stream.scaladsl.Sink
+import actors.queues.{DateRange, FlightsRouterActor}
+import drt.shared.ApiFlightWithSplits
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.ApiFlightWithSplits
 import drt.shared.dates.UtcDate
 import services.SDate
 import services.crunch.CrunchTestLike
@@ -48,7 +46,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     "When I ask if its pcp range falls within 2020-09-28" >> {
       "Then I should get a true response" >> {
         val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-29T12:00Z", pcpDt = "2020-09-28T12:00Z", actPax = Option(100)), Set())
-        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange())
+        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange)
         result === true
       }
     }
@@ -58,7 +56,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     "When I ask if its pcp range falls within 2020-09-28" >> {
       "Then I should get a true response" >> {
         val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-27T12:00Z", pcpDt = "2020-09-28T12:00Z", actPax = Option(100)), Set())
-        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange())
+        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange)
         result === true
       }
     }

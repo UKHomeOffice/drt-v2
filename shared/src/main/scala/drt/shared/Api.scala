@@ -18,6 +18,7 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import upickle.default._
 
+import java.lang.Math.round
 import java.util.UUID
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
@@ -516,8 +517,8 @@ object ArrivalsDiff {
 }
 
 case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: Iterable[Arrival]) extends FlightUpdates {
-  private val minutesFromUpdate: Iterable[MillisSinceEpoch] = toUpdate.values.flatMap(_.pcpRange())
-  private val minutesFromRemoval: Iterable[MillisSinceEpoch] = toRemove.flatMap(_.pcpRange())
+  private val minutesFromUpdate: Iterable[MillisSinceEpoch] = toUpdate.values.flatMap(_.pcpRange)
+  private val minutesFromRemoval: Iterable[MillisSinceEpoch] = toRemove.flatMap(_.pcpRange)
   val updateMinutes: Iterable[MillisSinceEpoch] = minutesFromUpdate ++ minutesFromRemoval
 
   def diffWith(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
@@ -726,22 +727,12 @@ object DataUpdates {
 
 object FlightsApi {
 
-  case class Flights(flights: Seq[Arrival])
+  case class Flights(flights: Iterable[Arrival])
 
   case class FlightsWithSplits(flights: Map[UniqueArrival, ApiFlightWithSplits]) {
     def scheduledSince(sinceMillis: MillisSinceEpoch): FlightsWithSplits = FlightsWithSplits(flights.filter {
       case (UniqueArrival(_, _, scheduledMillis), _) => scheduledMillis >= sinceMillis
     })
-
-    def window(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): FlightsWithSplits = {
-      val inWindow = flights.filter {
-        case (_, fws) =>
-          val pcpRange = fws.apiFlight.pcpRange()
-          (startMillis <= pcpRange.min && pcpRange.max <= endMillis) ||
-            (startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis)
-      }
-      FlightsWithSplits(inWindow)
-    }
 
     def scheduledWindow(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): FlightsWithSplits = {
       val inWindow = flights.filter {
@@ -822,7 +813,7 @@ object FlightsApi {
 
     def nonEmpty: Boolean = !isEmpty
 
-    val updateMinutes: Iterable[MillisSinceEpoch] = flightsToUpdate.flatMap(_.apiFlight.pcpRange())
+    val updateMinutes: Iterable[MillisSinceEpoch] = flightsToUpdate.flatMap(_.apiFlight.pcpRange)
 
     def applyTo(flightsWithSplits: FlightsWithSplits,
                 nowMillis: MillisSinceEpoch): (FlightsWithSplits, Iterable[MillisSinceEpoch]) = {
@@ -832,18 +823,18 @@ object FlightsApi {
       val asMap: IMap[UniqueArrival, ApiFlightWithSplits] = flightsWithSplits.flights
 
       val minutesFromRemovalsInExistingState: Iterable[MillisSinceEpoch] = arrivalsToRemove
-        .flatMap(r => asMap.get(r).map(_.apiFlight.pcpRange().toList).getOrElse(List()))
+        .flatMap(r => asMap.get(r).map(_.apiFlight.pcpRange).getOrElse(List()))
 
       val minutesFromExistingStateUpdatedFlights = flightsToUpdate
         .flatMap { fws =>
           asMap.get(fws.unique) match {
             case None => List()
-            case Some(f) => f.apiFlight.pcpRange()
+            case Some(f) => f.apiFlight.pcpRange
           }
         }
 
       val removalMinutes: Iterable[MillisSinceEpoch] = arrivalsToRemove.flatMap(ua => {
-        asMap.get(ua).toList.flatMap(_.apiFlight.pcpRange())
+        asMap.get(ua).toList.flatMap(_.apiFlight.pcpRange)
       })
 
       val updatedMinutesFromFlights = removalMinutes ++ minutesFromRemovalsInExistingState ++ updateMinutes ++
@@ -898,6 +889,8 @@ object MilliTimes {
   val oneHourMillis: Int = 60 * oneMinuteMillis
   val oneDayMillis: Int = 24 * oneHourMillis
   val minutesInADay: Int = 60 * 24
+
+  def timeToNearestMinute(t: MillisSinceEpoch): MillisSinceEpoch = round(t / 60000d) * 60000
 }
 
 object CrunchApi {

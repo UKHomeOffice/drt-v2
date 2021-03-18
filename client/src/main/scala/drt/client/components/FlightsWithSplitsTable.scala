@@ -35,7 +35,6 @@ object FlightsWithSplitsTable {
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    loggedInUser: LoggedInUser,
                    viewMode: ViewMode,
-                   pcpPaxFn: Arrival => Int,
                    walkTimes: WalkTimes,
                    defaultWalkTime: Long,
                    hasTransfer: Boolean
@@ -96,7 +95,6 @@ object FlightsWithSplitsTable {
                     idx,
                     timelineComponent = timelineComponent,
                     originMapper = originMapper,
-                    pcpPaxFn = props.pcpPaxFn,
                     splitsGraphComponent = splitsGraphComponent,
                     splitsQueueOrder = props.queueOrder,
                     hasEstChox = props.hasEstChox,
@@ -203,7 +201,6 @@ object FlightTableRow {
                    idx: Int,
                    timelineComponent: Option[Arrival => html_<^.VdomNode],
                    originMapper: OriginMapperF = portCode => portCode.toString,
-                   pcpPaxFn: Arrival => Int,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean,
@@ -246,7 +243,7 @@ object FlightTableRow {
       val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
-        .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits, props.pcpPaxFn).getOrElse(Map())
+        .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
 
       val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
         "arrivals__table__flight-code arrivals__table__flight-code--clickable"
@@ -311,8 +308,8 @@ object FlightTableRow {
       val estCell = List(<.td(localDateTimeWithPopup(flight.EstimatedChox)))
       val lastCells = List[TagMod](
         <.td(localDateTimeWithPopup(flight.ActualChox)),
-        <.td(pcpTimeRange(flight, props.pcpPaxFn)),
-        <.td(FlightComponents.paxComp(props.pcpPaxFn)(flightWithSplits))
+        <.td(pcpTimeRange(flight)),
+        <.td(FlightComponents.paxComp(flightWithSplits))
       )
       val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells
 

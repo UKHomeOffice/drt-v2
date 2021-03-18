@@ -2,6 +2,7 @@ package services
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliDate
+import drt.shared.MilliTimes.timeToNearestMinute
 import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, WalkTime}
 import org.slf4j.{Logger, LoggerFactory}
@@ -64,7 +65,6 @@ object PcpArrival {
   }
 
   import Math.round
-  def timeToNearestMinute(t: MillisSinceEpoch): MillisSinceEpoch = round(t / 60000d) * 60000
 
   type GateOrStand = String
   type GateOrStandWalkTime = (GateOrStand, Terminal) => Option[MillisSinceEpoch]

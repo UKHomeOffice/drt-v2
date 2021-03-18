@@ -33,7 +33,7 @@ object DynamicRunnableDeskRecs {
 
   type LoadsToQueueMinutes = (NumericRange[MillisSinceEpoch], Map[TQM, Crunch.LoadMinute], Map[Terminal, TerminalDeskLimitsLike]) => PortStateQueueMinutes
 
-  type FlightsToLoads = (FlightsWithSplits, MillisSinceEpoch) => Map[TQM, Crunch.LoadMinute]
+  type FlightsToLoads = FlightsWithSplits => Map[TQM, Crunch.LoadMinute]
 
   def crunchRequestsToQueueMinutes(arrivalsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]],
                                    liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
@@ -68,7 +68,7 @@ object DynamicRunnableDeskRecs {
       .map { case (crunchDay, flights) =>
         log.info(s"Crunching ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
         timeLogger.time({
-          val loadsFromFlights: Map[TQM, Crunch.LoadMinute] = flightsToLoads(FlightsWithSplits(flights), crunchDay.start.millisSinceEpoch)
+          val loadsFromFlights: Map[TQM, Crunch.LoadMinute] = flightsToLoads(FlightsWithSplits(flights))
           loadsToQueueMinutes(crunchDay.minutesInMillis, loadsFromFlights, maxDesksProviders)
         })
       }

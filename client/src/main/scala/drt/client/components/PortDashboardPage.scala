@@ -85,19 +85,16 @@ object PortDashboardPage {
                       val terminalQueuesInOrder = Queues.inOrder(queues.getOrElse(terminalName, Seq()))
 
                       portDashboardModel.featureFlags.renderReady(ff => {
-
-                        val pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
-
                         DashboardTerminalSummary(
-                          DashboardTerminalSummary.Props(scheduledFlightsInTerminal,
+                          DashboardTerminalSummary.Props(
+                            scheduledFlightsInTerminal,
                             terminalCrunchMinutes,
                             terminalStaffMinutes,
                             terminalName,
                             paxTypeAndQueueOrder(terminalName).splits.map(_.paxType),
                             terminalQueuesInOrder,
                             displayPeriod.start,
-                            displayPeriod.end,
-                            pcpPaxFn
+                            displayPeriod.end
                           )
                         )
                       }

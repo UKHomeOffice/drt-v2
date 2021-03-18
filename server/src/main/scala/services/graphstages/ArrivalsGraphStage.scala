@@ -228,7 +228,9 @@ class ArrivalsGraphStage(name: String = "",
 
     def isFlightRelevant(flight: Arrival): Boolean = {
       val isValidSuffix = !flight.FlightCodeSuffix.exists(fcs => fcs.suffix == "P" || fcs.suffix == "F")
-      validPortTerminals.contains(flight.Terminal) && !flight.Origin.isDomestic && isValidSuffix
+      val validTerminal = validPortTerminals.contains(flight.Terminal)
+      val isDomestic = !flight.Origin.isDomestic
+      validTerminal && isDomestic && isValidSuffix
     }
 
     def pushIfAvailable(arrivalsToPush: Option[ArrivalsDiff], outlet: Outlet[ArrivalsDiff]): Unit = {

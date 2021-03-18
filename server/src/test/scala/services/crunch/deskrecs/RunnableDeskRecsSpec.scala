@@ -89,7 +89,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
   val nowFromSDate: () => SDateLike = () => SDate.now()
 
   val flexDesks = false
-  val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
+  val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPaxEstimate
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   private def getDeskRecsGraph(mockPortStateActor: ActorRef, historicManifests: HistoricManifestsProvider, airportConfig: AirportConfig = defaultAirportConfig) = {
@@ -98,7 +98,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
 
     val splitsCalc = SplitsCalculator(paxAllocation, airportConfig.terminalPaxSplits, AdjustmentsNoop)
-    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, pcpPaxCalcFn)
+    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch)
 
     implicit val timeout: Timeout = new Timeout(50 milliseconds)
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(

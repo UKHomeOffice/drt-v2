@@ -42,7 +42,6 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
 
   def fwsToCsv(flights: Seq[ApiFlightWithSplits]): String =
     StreamingFlightsExport(
-      PcpPax.bestPaxEstimateWithApi,
       (millis: MillisSinceEpoch) => SDate(millis).toISODateOnly,
       (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes
     ).toCsvWithActualApi(List(FlightsWithSplits(flights)))
@@ -129,7 +128,7 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
     val fws = FlightsWithSplits(flightsWithSplits.map(f => f.unique -> f).toMap)
 
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(fws)))
-    val dawp = PortDesksAndWaitsProvider(lhrHalved, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi)
+    val dawp = PortDesksAndWaitsProvider(lhrHalved, Optimiser.crunch)
 
     val terminalDeskLimits = PortDeskLimits.fixed(lhrHalved)
 

@@ -15,8 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 case class TestFlightLookups(system: ActorSystem,
                              now: () => SDateLike,
                              queuesByTerminal: Map[Terminal, Seq[Queue]],
-                             updatesSubscriber: ActorRef)
-                            (implicit val ec: ExecutionContext) extends FlightLookupsLike {
+                             updatesSubscriber: ActorRef) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-flights-lookup-kill-actor")
 
   val resetFlightsData: (Terminal, UtcDate) => Future[Unit] = (terminal: Terminal, date: UtcDate) => {
