@@ -181,14 +181,14 @@ class ArrivalSpec extends Specification {
         result === ArrivalStatus("Landed")
       }
     }
-    "When flight Estimated Arrival is no more than 15 minutes later than scheduled time" >> {
+    "When flight Estimated Arrival is more than 15 minutes later than scheduled time" >> {
       "display status should be Delayed" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:20Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Delayed")
       }
     }
-    "When flight Estimated Arrival is more than 15 minutes later than scheduled time" >> {
+    "When flight Estimated Arrival is less than 15 minutes later than scheduled time" >> {
       "display status should be Expected" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z")
         val result = arrival.displayStatus
