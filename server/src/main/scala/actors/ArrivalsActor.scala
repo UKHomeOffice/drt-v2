@@ -55,7 +55,7 @@ class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
     consumeUpdates(diffsMessage)
   }
 
-  override def handleFeedSuccess(incomingArrivals: Seq[Arrival], createdAt: SDateLike): Unit = {
+  override def handleFeedSuccess(incomingArrivals: Iterable[Arrival], createdAt: SDateLike): Unit = {
     log.info(s"Received arrivals (base)")
     val incomingArrivalsWithKeys = incomingArrivals.map(a => (a.unique, a)).toMap
     val (removals, updates) = Crunch.baseArrivalsRemovalsAndUpdates(incomingArrivalsWithKeys, state.arrivals)
@@ -200,7 +200,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     persistFeedStatus(FeedStatusFailure(createdAt.millisSinceEpoch, message))
   }
 
-  def handleFeedSuccess(incomingArrivals: Seq[Arrival], createdAt: SDateLike): Unit = {
+  def handleFeedSuccess(incomingArrivals: Iterable[Arrival], createdAt: SDateLike): Unit = {
     log.info(s"Received arrivals")
 
     val updatedArrivals = incomingArrivals.toSet

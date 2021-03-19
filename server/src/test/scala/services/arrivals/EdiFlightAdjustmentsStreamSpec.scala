@@ -28,6 +28,8 @@ class EdiFlightAdjustmentsStreamSpec extends CrunchTestLike {
       offerAndCheck(arrivalOne)
       val result = offerAndCheck(arrivalTwo)
 
+      println(s"${result.flights.keys}")
+
       result.flights(arrivalTwo.unique.copy(terminal = A2)).apiFlight.ActPax === arrivalTwo.ActPax
       result.flights.get(arrivalOne.unique) === None
       result.flights.size mustEqual (1)

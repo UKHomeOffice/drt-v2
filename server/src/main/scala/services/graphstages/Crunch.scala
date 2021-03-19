@@ -22,7 +22,7 @@ object Crunch {
   class SplitMinutes {
     val minutes: mutable.Map[TQM, LoadMinute] = mutable.Map()
 
-    def ++=(incoming: Seq[FlightSplitMinute]): Unit = {
+    def ++=(incoming: Iterable[FlightSplitMinute]): Unit = {
       incoming.foreach(fsm => +=(LoadMinute(fsm.terminalName, fsm.queueName, fsm.paxLoad, fsm.workLoad, fsm.minute)))
     }
 

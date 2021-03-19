@@ -10,12 +10,11 @@ import org.scalajs.dom.html.Div
 
 object FlightComponents {
 
-  def paxComp(pcpPaxFn: Arrival => Int)(flightWithSplits: ApiFlightWithSplits): TagMod = {
-    val pax = pcpPaxFn(flightWithSplits.apiFlight)
+  def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = {
     <.div(
       ^.title := paxComponentTitle(flightWithSplits.apiFlight),
       ^.className := s"right",
-      pax
+      flightWithSplits.apiFlight.bestPaxEstimate
     )
   }
 
@@ -71,7 +70,7 @@ object FlightComponents {
 
   object SplitsGraph {
 
-    case class Props(splitTotal: Int, splits: Seq[(PaxTypeAndQueue, Int)])
+    case class Props(splitTotal: Int, splits: Iterable[(PaxTypeAndQueue, Int)])
 
     def splitsGraphComponentColoured(props: Props): TagOf[Div] = {
       import props._

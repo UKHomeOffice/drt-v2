@@ -6,7 +6,7 @@ import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.shared.FlightsApi.Flights
-import drt.shared.LiveFeedSource
+import drt.shared.{FlightCode, LiveFeedSource}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}

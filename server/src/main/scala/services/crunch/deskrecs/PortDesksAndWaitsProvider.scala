@@ -2,16 +2,15 @@ package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.{Queue, Transfer}
+import drt.shared.Queues.{Closed, Open, Queue, QueueFallbacks, Transfer}
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
-import drt.shared.{AirportConfig, PaxTypeAndQueue, SimulationMinute, SimulationMinutes, TQM}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.TryCrunch
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
-import services.graphstages.Crunch.LoadMinute
-import services.graphstages.WorkloadCalculator
+import services.graphstages.Crunch.{LoadMinute, europeLondonTimeZone}
+import services.graphstages.{DynamicWorkloadCalculator, WorkloadCalculatorLike}
+import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 
@@ -25,7 +24,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      crunchOffsetMinutes: Int,
                                      eGateBankSize: Int,
                                      tryCrunch: TryCrunch,
-                                     pcpPaxFn: Arrival => Int
+                                     workloadCalculator: WorkloadCalculatorLike
                                     ) extends PortDesksAndWaitsProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -44,8 +43,8 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
   def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
     deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSize)
 
-  def queueLoadsFromFlights(flights: FlightsWithSplits): Map[TQM, LoadMinute] = WorkloadCalculator
-    .flightLoadMinutes(flights, terminalProcessingTimes, pcpPaxFn).minutes
+  override def flightsToLoads(flights: FlightsWithSplits): Map[TQM, LoadMinute] = workloadCalculator
+    .flightLoadMinutes(flights).minutes
     .groupBy {
       case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
         TQM(t, finalQueueName, m)
@@ -75,9 +74,6 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }
     .toMap
 
-  override def flightsToLoads(flights: FlightsWithSplits,
-                              crunchStartMillis: MillisSinceEpoch): Map[TQM, LoadMinute] = queueLoadsFromFlights(flights)
-
   override def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
                             loads: Map[TQM, LoadMinute],
                             deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike]): DeskRecMinutes = {
@@ -95,18 +91,25 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 }
 
 object PortDesksAndWaitsProvider {
-  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, pcpPaxFn: Arrival => Int): PortDesksAndWaitsProvider =
-    PortDesksAndWaitsProvider(
-      airportConfig.queuesByTerminal,
-      airportConfig.divertedQueues,
-      airportConfig.desksByTerminal,
-      airportConfig.queuePriority,
-      airportConfig.slaByQueue,
+  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch): PortDesksAndWaitsProvider = {
+    val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,
-      airportConfig.minutesToCrunch,
-      airportConfig.crunchOffsetMinutes,
-      airportConfig.eGateBankSize,
-      tryCrunch,
-      pcpPaxFn
+      airportConfig.queueStatusProvider,
+      QueueFallbacks(airportConfig.queuesByTerminal)
     )
+
+    PortDesksAndWaitsProvider(
+      queuesByTerminal = airportConfig.queuesByTerminal,
+      divertedQueues = airportConfig.divertedQueues,
+      desksByTerminal = airportConfig.desksByTerminal,
+      flexedQueuesPriority = airportConfig.queuePriority,
+      slas = airportConfig.slaByQueue,
+      terminalProcessingTimes = airportConfig.terminalProcessingTimes,
+      minutesToCrunch = airportConfig.minutesToCrunch,
+      crunchOffsetMinutes = airportConfig.crunchOffsetMinutes,
+      eGateBankSize = airportConfig.eGateBankSize,
+      tryCrunch = tryCrunch,
+      workloadCalculator = calculator
+    )
+  }
 }

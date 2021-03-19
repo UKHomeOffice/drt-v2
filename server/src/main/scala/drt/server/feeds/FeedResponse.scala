@@ -18,7 +18,7 @@ case class StoreFeedImportArrivals(arrivals: Flights)
 case object GetFeedImportArrivals
 
 case class ArrivalsFeedSuccess(arrivals: Flights, createdAt: SDateLike) extends ArrivalsFeedResponse {
-  override val length: Int = arrivals.flights.length
+  override val length: Int = arrivals.flights.size
 }
 case object ArrivalsFeedSuccessAck
 

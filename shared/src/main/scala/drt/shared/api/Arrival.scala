@@ -6,7 +6,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import upickle.default.{ReadWriter, macroRW}
 
-import scala.collection.immutable.NumericRange
+import scala.collection.immutable.{List, NumericRange}
 import scala.util.matching.Regex
 
 case class FlightCodeSuffix(suffix: String)
@@ -44,6 +44,25 @@ case class Arrival(Operator: Option[Operator],
     case Some(s) => s.suffix
   }
 
+  def displayStatus: ArrivalStatus = {
+
+    val fifteenMinutes = 15 * 60 * 1000
+
+    (this.Estimated, this.ActualChox, this.Actual) match {
+      case (_, _, _) if isCancelledStatus(this.Status.description.toLowerCase) => ArrivalStatus("Cancelled")
+      case (_, _, _) if isDivertedStatus(this.Status.description.toLowerCase) => ArrivalStatus("Diverted")
+      case (_, Some(_), _) => ArrivalStatus("On Chocks")
+      case (_, _, Some(_)) => ArrivalStatus("Landed")
+      case (Some(e), _, _) if this.Scheduled + fifteenMinutes < e => ArrivalStatus("Delayed")
+      case (Some(_), _, _) => ArrivalStatus("Expected")
+      case (None, _, _) => ArrivalStatus("Scheduled")
+
+    }
+  }
+
+  val isDivertedStatus: String => Boolean = description => description == "redirected" | description == "diverted"
+  val isCancelledStatus: String => Boolean = description => description == "c" | description == "canceled" | description == "deleted / removed flight record" | description == "cancelled" | description.contains("deleted")
+
   val flightCode: FlightCode = FlightCode(CarrierCode, VoyageNumber, FlightCodeSuffix)
 
   def flightCodeString: String = flightCode.toString
@@ -57,7 +76,7 @@ case class Arrival(Operator: Option[Operator],
 
   def hasPcpDuring(start: SDateLike, end: SDateLike): Boolean = {
     val firstPcpMilli = PcpTime.getOrElse(0L)
-    val lastPcpMilli = firstPcpMilli + millisToDisembark(ActPax.getOrElse(0))
+    val lastPcpMilli = firstPcpMilli + millisToDisembark(ActPax.getOrElse(0), 20)
     val firstInRange = start.millisSinceEpoch <= firstPcpMilli && firstPcpMilli <= end.millisSinceEpoch
     val lastInRange = start.millisSinceEpoch <= lastPcpMilli && lastPcpMilli <= end.millisSinceEpoch
     firstInRange || lastInRange
@@ -66,22 +85,34 @@ case class Arrival(Operator: Option[Operator],
   def isRelevantToPeriod(rangeStart: SDateLike, rangeEnd: SDateLike): Boolean =
     Arrival.isRelevantToPeriod(rangeStart, rangeEnd)(this)
 
-  def millisToDisembark(pax: Int): Long = {
-    val minutesToDisembark = (pax.toDouble / 20).ceil
+  def millisToDisembark(pax: Int, paxPerMinute: Int): Long = {
+    val minutesToDisembark = (pax.toDouble / paxPerMinute).ceil
     val oneMinuteInMillis = 60 * 1000
     (minutesToDisembark * oneMinuteInMillis).toLong
   }
 
-  lazy val pax: Int = ActPax.getOrElse(0)
+  val bestPaxEstimate: Int = PcpPax.bestPaxEstimate(this)
 
-  lazy val minutesOfPaxArrivals: Int =
-    if (pax <= 0) 0
-    else (pax.toDouble / paxOffPerMinute).ceil.toInt - 1
+  def minutesOfPaxArrivals: Int = {
+    val totalPax = bestPaxEstimate
+    if (totalPax <= 0) 0
+    else (totalPax.toDouble / paxOffPerMinute).ceil.toInt - 1
+  }
 
-  def pcpRange(): NumericRange[MillisSinceEpoch] = {
-    val pcpStart = PcpTime.getOrElse(0L)
+  lazy val pcpRange: NumericRange[MillisSinceEpoch] = {
+    val pcpStart = MilliTimes.timeToNearestMinute(PcpTime.getOrElse(0L))
     val pcpEnd = pcpStart + oneMinuteMillis * minutesOfPaxArrivals
     pcpStart to pcpEnd by oneMinuteMillis
+  }
+
+  def paxDeparturesByMinute(departRate: Int): Iterable[(MillisSinceEpoch, Int)] = {
+    val totalPax = bestPaxEstimate
+    val maybeRemainingPax = totalPax % departRate match {
+      case 0 => None
+      case someLeftovers => Option(someLeftovers)
+    }
+    val paxByMinute = List.fill(totalPax / departRate)(departRate) ::: maybeRemainingPax.toList
+    pcpRange.zip(paxByMinute)
   }
 
   lazy val unique: UniqueArrivalWithOrigin = UniqueArrivalWithOrigin(VoyageNumber.numeric, Terminal, Scheduled, Origin)
@@ -97,7 +128,7 @@ case class Arrival(Operator: Option[Operator],
 object Arrival {
   val flightCodeRegex: Regex = "^([A-Z0-9]{2,3}?)([0-9]{1,4})([A-Z]*)$".r
 
-  def isInRange(rangeStart: MillisSinceEpoch, rangeEnd: MillisSinceEpoch)(needle: MillisSinceEpoch) =
+  def isInRange(rangeStart: MillisSinceEpoch, rangeEnd: MillisSinceEpoch)(needle: MillisSinceEpoch): Boolean =
     rangeStart < needle && needle < rangeEnd
 
   def isRelevantToPeriod(rangeStart: SDateLike, rangeEnd: SDateLike)(arrival: Arrival): Boolean = {

@@ -71,7 +71,7 @@ trait WithSimulations {
 
     val splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments)
 
-    val portDesksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(simulationConfig, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi)
+    val portDesksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(simulationConfig, Optimiser.crunch)
     val terminalDeskLimits = PortDeskLimits.fixed(simulationConfig)
 
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(

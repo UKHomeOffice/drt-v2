@@ -1,13 +1,14 @@
 package drt.shared
 
-import uk.gov.homeoffice.drt.auth.Roles.Role
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.PaxTypes._
-import drt.shared.Queues._
+import drt.shared.QueueStatusProviders.QueueStatusProvider
+import drt.shared.Queues.{Queue, QueueStatus, _}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
 import ujson.Js.Value
-
+import uk.gov.homeoffice.drt.auth.Roles.Role
+import upickle.default
 import upickle.default._
 
 import scala.collection.immutable.SortedMap
@@ -80,6 +81,31 @@ object Terminals {
 
 object Queues {
 
+  sealed trait QueueStatus
+
+  object QueueStatus {
+    implicit val rw: ReadWriter[QueueStatus] = macroRW
+  }
+
+  case object Open extends QueueStatus
+
+  case object Closed extends QueueStatus
+
+  case class QueueFallbacks(queues: Map[Terminal, Seq[Queue]]) {
+    val fallbacks: PartialFunction[(Queue, PaxType), Seq[Queue]] = {
+      case (EGate, _: EeaPaxType) => Seq(EeaDesk, QueueDesk, NonEeaDesk)
+      case (EGate, _: NonEeaPaxType) => Seq(NonEeaDesk, QueueDesk, EeaDesk)
+      case (EeaDesk, _: PaxType) => Seq(EeaDesk, QueueDesk)
+      case (NonEeaDesk, _: PaxType) => Seq(EeaDesk, QueueDesk)
+      case (_, _) => Seq()
+    }
+
+    def availableFallbacks(terminal: Terminal, queue: Queue, paxType: PaxType): Iterable[Queue] = {
+      val availableQueues: List[Queue] = queues.get(terminal).toList.flatten
+      fallbacks((queue, paxType)).filter(availableQueues.contains)
+    }
+  }
+
   sealed trait Queue extends ClassNameForToString with Ordered[Queue] {
     override def compare(that: Queue): Int = toString.compareTo(that.toString)
   }
@@ -146,16 +172,20 @@ sealed trait PaxType {
   def cleanName: String = getClass.getSimpleName.dropRight(1)
 }
 
+sealed trait EeaPaxType extends PaxType
+
+sealed trait NonEeaPaxType extends PaxType
+
 object PaxType {
   def apply(paxTypeString: String): PaxType = paxTypeString match {
-    case "EeaNonMachineReadable$" => EeaNonMachineReadable
-    case "Transit$" => Transit
-    case "VisaNational$" => VisaNational
     case "EeaMachineReadable$" => EeaMachineReadable
+    case "EeaNonMachineReadable$" => EeaNonMachineReadable
+    case "EeaBelowEGateAge$" => EeaBelowEGateAge
+    case "VisaNational$" => VisaNational
     case "NonVisaNational$" => NonVisaNational
     case "B5JPlusNational$" => B5JPlusNational
-    case "EeaBelowEGateAge$" => EeaBelowEGateAge
     case "B5JPlusNationalBelowEGateAge$" => B5JPlusNationalBelowEGateAge
+    case "Transit$" => Transit
     case _ => UndefinedPaxType
   }
 
@@ -165,21 +195,21 @@ object PaxType {
 
 object PaxTypes {
 
-  case object EeaNonMachineReadable extends PaxType
+  case object EeaMachineReadable extends EeaPaxType
+
+  case object EeaNonMachineReadable extends EeaPaxType
+
+  case object EeaBelowEGateAge extends EeaPaxType
+
+  case object VisaNational extends NonEeaPaxType
+
+  case object NonVisaNational extends NonEeaPaxType
+
+  case object B5JPlusNational extends NonEeaPaxType
+
+  case object B5JPlusNationalBelowEGateAge extends NonEeaPaxType
 
   case object Transit extends PaxType
-
-  case object VisaNational extends PaxType
-
-  case object EeaMachineReadable extends PaxType
-
-  case object EeaBelowEGateAge extends PaxType
-
-  case object NonVisaNational extends PaxType
-
-  case object B5JPlusNational extends PaxType
-
-  case object B5JPlusNationalBelowEGateAge extends PaxType
 
   case object UndefinedPaxType extends PaxType
 
@@ -240,6 +270,34 @@ object ProcessingTimes {
   )
 }
 
+object QueueStatusProviders {
+
+  sealed trait QueueStatusProvider {
+    def statusAt(terminal: Terminal, queue: Queue, hour: Int): QueueStatus
+  }
+
+  object QueueStatusProvider {
+    implicit val rw: default.ReadWriter[QueueStatusProvider] = macroRW
+  }
+
+  case object QueuesAlwaysOpen extends QueueStatusProvider {
+    implicit val rw: ReadWriter[QueueStatusProvider] = macroRW
+
+    override def statusAt(terminal: Terminal, queue: Queue, hour: Int): QueueStatus = Open
+  }
+
+  case class HourlyStatuses(statusByTerminalQueueHour: Map[Terminal, Map[Queue, IndexedSeq[QueueStatus]]]) extends QueueStatusProvider {
+    override def statusAt(terminal: Terminal, queue: Queue, hour: Int): QueueStatus =
+      statusByTerminalQueueHour.get(terminal)
+        .flatMap(_.get(queue).flatMap { statues => statues.lift(hour % 24) }).getOrElse(Closed)
+  }
+
+  object HourlyStatuses {
+    implicit val rw: ReadWriter[HourlyStatuses] = macroRW
+  }
+
+}
+
 case class AirportConfig(portCode: PortCode,
                          queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
                          divertedQueues: Map[Queue, Queue] = Map(),
@@ -251,6 +309,7 @@ case class AirportConfig(portCode: PortCode,
                          terminalPaxSplits: Map[Terminal, SplitRatios],
                          terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                          minMaxDesksByTerminalQueue24Hrs: Map[Terminal, Map[Queue, (List[Int], List[Int])]],
+                         queueStatusProvider: QueueStatusProvider = QueueStatusProviders.QueuesAlwaysOpen,
                          fixedPointExamples: Seq[String] = Seq(),
                          hasActualDeskStats: Boolean = false,
                          eGateBankSize: Int = 10,
@@ -331,6 +390,8 @@ object AirportConfig {
     .reduce[List[Int]] {
       case (max1, max2) => max1.zip(max2).map { case (m1, m2) => m1 + m2 }
     }
+
+  val defaultQueueStatusProvider: (Terminal, Queue, MillisSinceEpoch) => QueueStatus = (_, _, _) => Open
 }
 
 case class ContactDetails(supportEmail: Option[String], oohPhone: Option[String])

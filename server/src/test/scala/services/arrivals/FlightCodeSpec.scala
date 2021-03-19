@@ -19,16 +19,4 @@ class FlightCodeSpec extends CrunchTestLike {
     FlightCode("RYR836", "") === FlightCode(CarrierCode("RYR"), VoyageNumber("836"), None)
     FlightCode("RYR836F", "") === FlightCode(CarrierCode("RYR"), VoyageNumber("836"), Option(FlightCodeSuffix("F")))
   }
-
-  "Voyage Number should be padded to 4 digits" >> {
-    "3 digits should pad to 4" in {
-      PcpPax.padTo4Digits("123") === "0123"
-    }
-    "4 digits should remain 4 " in {
-      PcpPax.padTo4Digits("0123") === "0123"
-    }
-    "we think 5 is invalid, but we should return unharmed" in {
-      PcpPax.padTo4Digits("45123") === "45123"
-    }
-  }
 }

@@ -72,7 +72,7 @@ class MagFeedSpec extends CrunchTestLike {
       case _ => List()
     }
 
-    result.length === 1
+    result.size === 1
   }
 
   "Given a mock json response containing a single valid flight with 0 for passenger count and max pax " +

@@ -31,7 +31,7 @@ case class ChromaLiveFeed(chromaFetcher: ChromaFetcher[ChromaLiveFlight]) {
     }
   }
 
-  def correctEdiTerminals(afs: ArrivalsFeedSuccess): Seq[Arrival] = afs.arrivals.flights
+  def correctEdiTerminals(afs: ArrivalsFeedSuccess): Iterable[Arrival] = afs.arrivals.flights
     .map(csf => csf.copy(Terminal = A1))
 
   def chromaVanillaFlights(frequency: FiniteDuration)(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {

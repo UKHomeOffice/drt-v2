@@ -106,14 +106,14 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig)
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
-  val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
+  val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPaxEstimate
 
   val ptqa: PaxTypeQueueAllocation = PaxTypeQueueAllocation(
     B5JPlusTypeAllocator,
     TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
   val splitsCalculator: SplitsCalculator = manifests.queues.SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, AdjustmentsNoop)
 
-  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, pcpPaxCalcFn)
+  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch)
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   def setupGraphAndCheckQueuePax(arrival: Arrival,

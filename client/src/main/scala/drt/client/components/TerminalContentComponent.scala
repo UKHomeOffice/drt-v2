@@ -197,7 +197,6 @@ object TerminalContentComponent {
                           props.arrivalSources,
                           props.loggedInUser,
                           props.viewMode,
-                          PcpPax.bestPaxEstimateWithApi,
                           walkTimes,
                           props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
                           props.airportConfig.hasTransfer,

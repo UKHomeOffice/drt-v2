@@ -92,7 +92,6 @@ object TerminalDashboardComponent {
                       None,
                       p.loggedInUser,
                       ViewLive,
-                      PcpPax.bestPaxEstimateWithApi,
                       walkTimes,
                       p.airportConfig.defaultWalkTimeMillis(p.terminalPageTabLoc.terminal),
                       hasTransfer = p.airportConfig.hasTransfer,

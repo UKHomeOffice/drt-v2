@@ -75,7 +75,7 @@ object FeedSourceRow {
         <.td(arrival.flightCodeString),
         <.td(arrival.Origin.toString),
         <.td(s"${arrival.Gate.getOrElse("")}/${arrival.Stand.getOrElse("")}"),
-        <.td(arrival.Status.description),
+        <.td(arrival.displayStatus.description),
         <.td(localDateTimeWithPopup(Option(arrival.Scheduled))),
         <.td(localDateTimeWithPopup(arrival.Estimated)),
         <.td(localDateTimeWithPopup(arrival.Actual)),

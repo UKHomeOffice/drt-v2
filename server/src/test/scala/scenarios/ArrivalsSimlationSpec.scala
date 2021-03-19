@@ -30,14 +30,13 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
 
   val csv: String =
     """|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track,API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates
-       |TST100,TST100,SIN,/535,Landed,2020-06-17,05:50,05:38,05:38,05:45,05:45,05:53,30,14,,,,,9,4,1,,7,2,5,0,0.0,0.0,8.0,7.0,1.0,1.0,13.0,46.0"""
+       |TST100,TST100,SIN,/535,On Chocks,2020-06-17,05:50,05:38,05:38,05:45,05:45,05:53,30,14,,,,,9,4,1,,7,2,5,0,0.0,0.0,8.0,7.0,1.0,1.0,13.0,46.0"""
       .stripMargin
 
   val terminal: Terminal = Terminal("T5")
 
   def fwsToCsv(flights: Seq[ApiFlightWithSplits]): String =
     StreamingFlightsExport(
-      PcpPax.bestPaxEstimateWithApi,
       (millis: MillisSinceEpoch) => SDate(millis).toISODateOnly,
       (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes
     ).toCsvWithActualApi(List(FlightsWithSplits(flights)))
@@ -124,7 +123,7 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
     val fws = FlightsWithSplits(flightsWithSplits.map(f => f.unique -> f).toMap)
 
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(fws)))
-    val dawp = PortDesksAndWaitsProvider(lhrHalved, Optimiser.crunch, PcpPax.bestPaxEstimateWithApi)
+    val dawp = PortDesksAndWaitsProvider(lhrHalved, Optimiser.crunch)
 
     val terminalDeskLimits = PortDeskLimits.fixed(lhrHalved)
 
