@@ -36,6 +36,10 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
     def toggleEGateHour(hour: Int) = copy(simulationParams = simulationParams.toggleEgateHour(hour))
 
+    def openEgatesAllDay = copy(simulationParams = simulationParams.openEgatesAllDay)
+
+    def closeEgatesAllDay = copy(simulationParams = simulationParams.closeEgatesAllDay)
+
   }
 
   case class Props(
@@ -51,7 +55,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
     .renderS {
 
       (scope, state) =>
-
+        
         def changePassengerWeighting(e: ReactEventFromInput): Callback = Try(e.target.value.toDouble) match {
           case Success(weight) =>
             scope.setState(state.copy(simulationParams = state.simulationParams.copy(passengerWeighting = weight)))
@@ -115,6 +119,10 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
         }
 
         def toggleEGateHour(hour: Int): CallbackTo[Unit] = scope.modState(_.toggleEGateHour(hour))
+
+        def openEgatesAllDay = scope.modState(_.openEgatesAllDay)
+
+        def closeEgatesAllDay = scope.modState(_.closeEgatesAllDay)
 
         def passengerWeightingFields = {
 
@@ -220,15 +228,19 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
           )
         }
 
-        def eGatesOpen = MuiFormGroup()((0 to 23)
-          .map(hour =>
-            <.div(MuiInputLabel()(f"$hour%02d:00"), MuiCheckbox()(
-              ^.value := hour,
-              ^.checked := state.simulationParams.eGateOpenHours.contains(hour),
-              ^.onClick --> toggleEGateHour(hour)
-            )
-            )
-          ).toVdomArray)
+        def eGatesOpen =
+          MuiFormGroup()(
+            MuiButton()("Select All", onClick --> openEgatesAllDay),
+            MuiButton()("De-select All", onClick --> closeEgatesAllDay),
+            (0 to 23)
+              .map(hour =>
+                <.div(MuiInputLabel()(f"$hour%02d:00"), MuiCheckbox()(
+                  ^.value := hour,
+                  ^.checked := state.simulationParams.eGateOpenHours.contains(hour),
+                  ^.onClick --> toggleEGateHour(hour)
+                )
+                )
+              ).toVdomArray)
 
         def togglePanel(panel: String): CallbackTo[Unit] = scope.modState(_.toggle(panel))
 

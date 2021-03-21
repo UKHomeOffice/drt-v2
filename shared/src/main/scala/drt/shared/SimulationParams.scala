@@ -27,6 +27,11 @@ case class SimulationParams(
   else
     copy(eGateOpenHours = eGateOpenHours :+ hour)
 
+
+  def closeEgatesAllDay: SimulationParams = copy(eGateOpenHours = Seq())
+
+  def openEgatesAllDay: SimulationParams = copy(eGateOpenHours = SimulationParams.fullDay)
+
   def applyToAirportConfig(airportConfig: AirportConfig) = {
     val openDesks: Map[Queues.Queue, (List[Int], List[Int])] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
       case (q, (origMinDesks, origMaxDesks)) =>
@@ -99,22 +104,26 @@ object SimulationParams {
 
   implicit val rw: ReadWriter[SimulationParams] = macroRW
 
-  def apply(terminal: Terminal, date: LocalDate, airportConfig: AirportConfig): SimulationParams = SimulationParams(
-    terminal,
-    date,
-    1.0,
-    airportConfig.terminalProcessingTimes(terminal).mapValues(m => (m * 60).toInt),
-    airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
-      case (q, (min, _)) => q -> min.max
-    },
-    airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
-      case (q, (_, max)) => q -> max.max
-    },
-    eGateBanksSize = airportConfig.eGateBankSize,
-    slaByQueue = airportConfig.slaByQueue,
-    crunchOffsetMinutes = 0,
-    eGateOpenHours = Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
-  )
+  val fullDay = Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
+
+  def apply(terminal: Terminal, date: LocalDate, airportConfig: AirportConfig): SimulationParams = {
+    SimulationParams(
+      terminal,
+      date,
+      1.0,
+      airportConfig.terminalProcessingTimes(terminal).mapValues(m => (m * 60).toInt),
+      airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
+        case (q, (min, _)) => q -> min.max
+      },
+      airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
+        case (q, (_, max)) => q -> max.max
+      },
+      eGateBanksSize = airportConfig.eGateBankSize,
+      slaByQueue = airportConfig.slaByQueue,
+      crunchOffsetMinutes = 0,
+      eGateOpenHours = fullDay
+    )
+  }
 
   val requiredFields = List(
     "terminal",
