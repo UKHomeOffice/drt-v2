@@ -68,7 +68,7 @@ trait WithSimulations {
             simulationResultAsCsv(simulationParams, simulationParams.terminal, futureDeskRecs)
           case Failure(e) =>
             log.error("Invalid Simulation attempt", e)
-            Future(BadRequest(e.getMessage))
+            Future(BadRequest("Unable to parse parameters: " + e.getMessage))
         }
     }
   }
@@ -91,7 +91,6 @@ trait WithSimulations {
               simulationParams.terminal
             )).mapTo[Source[FlightsWithSplits, NotUsed]]
 
-
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws => {
               val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
               simulationResult(
@@ -112,7 +111,7 @@ trait WithSimulations {
             })
           case Failure(e) =>
             log.error("Invalid Simulation attempt", e)
-            Future(BadRequest(e.getMessage))
+            Future(BadRequest("Unable to parse parameters: " + e.getMessage))
         }
     }
   }

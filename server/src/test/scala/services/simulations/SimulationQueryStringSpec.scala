@@ -8,7 +8,7 @@ import play.api.test.FakeRequest
 
 import scala.util.{Failure, Success}
 
-class SimulationQuerySrtingSpec extends Specification {
+class SimulationQueryStringSpec extends Specification {
 
   "Given I am converting simulation params into a query string with a minimal data set" >> {
 
@@ -21,7 +21,8 @@ class SimulationQuerySrtingSpec extends Specification {
       Map(),
       5,
       Map(),
-      0
+      0,
+      Seq(1)
     )
 
     val result = simulationParams.toQueryStringParams
@@ -82,7 +83,7 @@ class SimulationQuerySrtingSpec extends Specification {
 
     "Then I should get a valid query string back" >> {
 
-      val expected = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0"
+      val expected = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&eGateOpenHours=1"
 
       result === expected
     }
@@ -100,7 +101,8 @@ class SimulationQuerySrtingSpec extends Specification {
       Map(Queues.EGate -> 3, Queues.NonEeaDesk -> 3),
       5,
       Map(Queues.EGate -> 10, Queues.EeaDesk -> 15),
-      0
+      0,
+      Seq(1, 2)
     )
 
     val result = simulationParams.toQueryStringParams
@@ -132,6 +134,7 @@ class SimulationQuerySrtingSpec extends Specification {
     "The I should get a valid query string back" >> {
 
       result === "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&" +
+        "eGateOpenHours=1,2&" +
         "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=30&" +
         "EGate_min=1&NonEeaDesk_min=1&" +
         "EGate_max=3&NonEeaDesk_max=3&" +
@@ -142,7 +145,7 @@ class SimulationQuerySrtingSpec extends Specification {
 
   "When parsing a query string back into a simulations params object" >> {
     "Given a query string map containing all require fields then I should get back a successful SimulationParams" >> {
-      val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0"
+      val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&eGateOpenHours=1,2"
       val fakeRequest = FakeRequest("GET", s"/endpoint?$qs")
       val qsValues: Map[String, Seq[String]] = fakeRequest.queryString
 
@@ -155,7 +158,8 @@ class SimulationQuerySrtingSpec extends Specification {
         Map(),
         5,
         Map(),
-        0
+        0,
+        Seq(1, 2)
       ))
 
       val result = SimulationParams.fromQueryStringParams(qsValues)
@@ -166,10 +170,12 @@ class SimulationQuerySrtingSpec extends Specification {
 
   "Given a query string map containing all require fields then I should get back a successful SimulationParams" >> {
     val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&" +
+      "eGateOpenHours=1,2&" +
       "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=30&" +
       "EGate_min=1&NonEeaDesk_min=1&" +
       "EGate_max=3&NonEeaDesk_max=3&" +
       "EGate_sla=10&EeaDesk_sla=15"
+
     val fakeRequest = FakeRequest("GET", s"/endpoint?$qs")
     val qsValues: Map[String, Seq[String]] = fakeRequest.queryString
 
@@ -182,7 +188,8 @@ class SimulationQuerySrtingSpec extends Specification {
       Map(Queues.EGate -> 3, Queues.NonEeaDesk -> 3),
       5,
       Map(Queues.EGate -> 10, Queues.EeaDesk -> 15),
-      0
+      0,
+      Seq(1, 2)
     ))
 
     val result = SimulationParams.fromQueryStringParams(qsValues)
@@ -192,10 +199,12 @@ class SimulationQuerySrtingSpec extends Specification {
 
   "Given a query string map containing all invalid types then they should be ignored if they are not required" >> {
     val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&" +
+      "eGateOpenHours=1,2&" +
       "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=x&" +
       "EGate_min=1&NonEeaDesk_min=x&" +
       "EGate_max=3&NonEeaDesk_max=x&" +
       "EGate_sla=10&EeaDesk_sla=x"
+
     val fakeRequest = FakeRequest("GET", s"/endpoint?$qs")
     val qsValues: Map[String, Seq[String]] = fakeRequest.queryString
 
@@ -208,7 +217,8 @@ class SimulationQuerySrtingSpec extends Specification {
       Map(Queues.EGate -> 3),
       5,
       Map(Queues.EGate -> 10),
-      0
+      0,
+      Seq(1,2)
     ))
 
     val result = SimulationParams.fromQueryStringParams(qsValues)
@@ -229,5 +239,4 @@ class SimulationQuerySrtingSpec extends Specification {
 
     result.isInstanceOf[Failure[SimulationParams]]
   }
-
 }

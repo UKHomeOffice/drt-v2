@@ -1,6 +1,5 @@
 package drt.shared
 
-import drt.shared.CrunchApi.{CrunchMinutes, DeskRecMinutes}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
@@ -18,8 +17,16 @@ case class SimulationParams(
                              maxDesks: Map[Queue, Int],
                              eGateBanksSize: Int,
                              slaByQueue: Map[Queue, Int],
-                             crunchOffsetMinutes: Int
+                             crunchOffsetMinutes: Int,
+                             eGateOpenHours: Seq[Int],
                            ) {
+  def eGateOpenAt(hour: Int) = eGateOpenHours.contains(hour)
+
+  def toggleEgateHour(hour: Int): SimulationParams = if (eGateOpenAt(hour))
+    copy(eGateOpenHours = eGateOpenHours.filter(_ != hour))
+  else
+    copy(eGateOpenHours = eGateOpenHours :+ hour)
+
   def applyToAirportConfig(airportConfig: AirportConfig) = {
     val openDesks: Map[Queues.Queue, (List[Int], List[Int])] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
       case (q, (origMinDesks, origMaxDesks)) =>
@@ -42,6 +49,7 @@ case class SimulationParams(
             .map(s => s.toDouble / 60)
             .getOrElse(defaultValue)
       }),
+      queueStatusProvider = QueueStatusProviders.FlexibleEGatesForSimulation(eGateOpenHours)
     )
 
   }
@@ -62,7 +70,8 @@ case class SimulationParams(
       s"date=$date",
       s"passengerWeighting=$passengerWeighting",
       s"eGateBankSize=$eGateBanksSize",
-      s"crunchOffsetMinutes=$crunchOffsetMinutes"
+      s"crunchOffsetMinutes=$crunchOffsetMinutes",
+      s"eGateOpenHours=${eGateOpenHours.mkString(",")}"
     ) ::
       processingTimes.map {
         case (ptq, value) => s"${ptq.key}=$value"
@@ -103,7 +112,8 @@ object SimulationParams {
     },
     eGateBanksSize = airportConfig.eGateBankSize,
     slaByQueue = airportConfig.slaByQueue,
-    crunchOffsetMinutes = 0
+    crunchOffsetMinutes = 0,
+    eGateOpenHours = Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
   )
 
   val requiredFields = List(
@@ -111,7 +121,8 @@ object SimulationParams {
     "date",
     "passengerWeighting",
     "eGateBankSize",
-    "crunchOffsetMinutes"
+    "crunchOffsetMinutes",
+    "eGateOpenHours"
   )
 
   def fromQueryStringParams(qsMap: Map[String, Seq[String]]): Try[SimulationParams] = Try {
@@ -137,6 +148,7 @@ object SimulationParams {
 
       eGateBankSizeString: String <- maybeSimulationFieldsStrings("eGateBankSize")
       crunchOffsetMinutes: String <- maybeSimulationFieldsStrings("crunchOffsetMinutes")
+      eGateOpenHours: String <- maybeSimulationFieldsStrings("eGateOpenHours")
     } yield SimulationParams(
       Terminal(terminal),
       localDate,
@@ -146,7 +158,8 @@ object SimulationParams {
       qMaxDesks,
       eGateBankSizeString.toInt,
       qSlas,
-      crunchOffsetMinutes.toInt
+      crunchOffsetMinutes.toInt,
+      eGateOpenHours.split(",").map(_.toInt)
     )
 
     maybeParams match {

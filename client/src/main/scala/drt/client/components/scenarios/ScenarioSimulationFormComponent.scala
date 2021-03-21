@@ -33,6 +33,9 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
     def toggle(panel: String) = copy(
       panelStatus = panelStatus + (panel -> !isOpen(panel))
     )
+
+    def toggleEGateHour(hour: Int) = copy(simulationParams = simulationParams.toggleEgateHour(hour))
+
   }
 
   case class Props(
@@ -111,6 +114,8 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             }
         }
 
+        def toggleEGateHour(hour: Int): CallbackTo[Unit] = scope.modState(_.toggleEGateHour(hour))
+
         def passengerWeightingFields = {
 
           <.div(
@@ -176,7 +181,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
                   ^.className := "form-check",
                   MuiFormLabel()(
                     DefaultFormFieldsStyle.labelWide,
-                    s"${Queues.queueDisplayNames(q)} ${Queues.queueDisplayNames(q)}"
+                    s"${Queues.queueDisplayNames(q)}"
                   ),
                   MuiTextField(
                     label = s"Min".toVdom,
@@ -214,6 +219,16 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             ),
           )
         }
+
+        def eGatesOpen = MuiFormGroup()((0 to 23)
+          .map(hour =>
+            <.div(MuiInputLabel()(f"$hour%02d:00"), MuiCheckbox()(
+              ^.value := hour,
+              ^.checked := state.simulationParams.eGateOpenHours.contains(hour),
+              ^.onClick --> toggleEGateHour(hour)
+            )
+            )
+          ).toVdomArray)
 
         def togglePanel(panel: String): CallbackTo[Unit] = scope.modState(_.toggle(panel))
 
@@ -257,6 +272,15 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
               )
             ),
             MuiExpansionPanelDetails()(minMaxDesksFields)
+          ),
+          MuiExpansionPanel(square = true, expanded = isOpen("configureEGatesFields"))(
+            onChange --> togglePanel("configureEGatesFields"),
+            MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
+              MuiTypography()(
+                "Adjust eGate Open Times"
+              )
+            ),
+            MuiExpansionPanelDetails()(eGatesOpen)
           ),
           MuiDivider(variant = MuiDivider.Variant.middle)(),
           <.div(

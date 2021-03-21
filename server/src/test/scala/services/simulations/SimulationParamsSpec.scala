@@ -22,7 +22,8 @@ class SimulationParamsSpec extends Specification {
     testConfig.queuesByTerminal(terminal).map(q => q -> 10).toMap,
     5,
     testConfig.slaByQueue,
-    0
+    0,
+    Seq()
   )
 
   "Given I am applying a simulation to an airport config" >> {
