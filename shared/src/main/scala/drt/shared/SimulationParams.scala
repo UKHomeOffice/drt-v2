@@ -6,7 +6,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
 import upickle.default.{ReadWriter, macroRW}
 
-import scala.util.Try
+import scala.util.{Success, Try}
 
 case class SimulationParams(
                              terminal: Terminal,
@@ -26,7 +26,6 @@ case class SimulationParams(
     copy(eGateOpenHours = eGateOpenHours.filter(_ != hour))
   else
     copy(eGateOpenHours = eGateOpenHours :+ hour)
-
 
   def closeEgatesAllDay: SimulationParams = copy(eGateOpenHours = Seq())
 
@@ -111,7 +110,12 @@ object SimulationParams {
       terminal,
       date,
       1.0,
-      airportConfig.terminalProcessingTimes(terminal).mapValues(m => (m * 60).toInt),
+      airportConfig.terminalProcessingTimes(terminal).filterNot {
+        case (paxTypeAndQueue: PaxTypeAndQueue, _) =>
+          paxTypeAndQueue.queueType == Queues.Transfer
+
+      }
+        .mapValues(m => (m * 60).toInt),
       airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
         case (q, (min, _)) => q -> min.max
       },
@@ -168,7 +172,9 @@ object SimulationParams {
       eGateBankSizeString.toInt,
       qSlas,
       crunchOffsetMinutes.toInt,
-      eGateOpenHours.split(",").map(_.toInt)
+      eGateOpenHours.split(",").map(s => Try(s.toInt)).collect{
+        case Success(i) => i
+      }
     )
 
     maybeParams match {

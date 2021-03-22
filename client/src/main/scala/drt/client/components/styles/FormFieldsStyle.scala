@@ -1,6 +1,6 @@
 package drt.client.components.styles
 
-import ScalaCssImplicits.CssSettings._
+import drt.client.components.styles.ScalaCssImplicits.CssSettings._
 import scalacss.internal.mutable.StyleSheet
 
 case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends StyleSheet.Inline {
@@ -35,7 +35,16 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
   )
 
   val regularText = style(
-    fontSize :=! theme.typography.pxToRem(15)
+    fontSize :=! 1.2.rem,
+    unsafeChild("p")(
+      fontSize :=! 1.2.rem
+    )
+  )
+
+  val formHelperText = style(
+    unsafeChild("span")(
+      fontSize(1.rem)
+    )
   )
 
   val dense = style(

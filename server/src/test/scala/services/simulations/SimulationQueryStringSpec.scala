@@ -226,6 +226,35 @@ class SimulationQueryStringSpec extends Specification {
     expected === result
   }
 
+  "Given a query string containing no open egate hours I should get back a valid SimulationParams with an empty Seq for eGate open hours" >> {
+    val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&" +
+      "eGateOpenHours=&" +
+      "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=x&" +
+      "EGate_min=1&NonEeaDesk_min=x&" +
+      "EGate_max=3&NonEeaDesk_max=x&" +
+      "EGate_sla=10&EeaDesk_sla=x"
+
+    val fakeRequest = FakeRequest("GET", s"/endpoint?$qs")
+    val qsValues: Map[String, Seq[String]] = fakeRequest.queryString
+
+    val expected = Success(SimulationParams(
+      Terminal("T1"),
+      LocalDate(2020, 2, 2),
+      1.0,
+      Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60),
+      Map(Queues.EGate -> 1),
+      Map(Queues.EGate -> 3),
+      5,
+      Map(Queues.EGate -> 10),
+      0,
+      Seq()
+    ))
+
+    val result = SimulationParams.fromQueryStringParams(qsValues)
+
+    expected === result
+  }
+
   "Missing required fields then I should get back a failure" >> {
     val qs = "date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&" +
       "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=x&" +
