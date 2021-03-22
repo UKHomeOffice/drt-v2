@@ -172,10 +172,10 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           expectUniqueArrival(liveArrival.unique)
 
           offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
-          expectArrivals(Iterable(liveArrival.copy(FeedSources = Set(LiveFeedSource, LiveBaseFeedSource))))
+          expectArrivals(Iterable(liveArrival.copy(FeedSources = Set(LiveFeedSource))))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(updatedArrival))))
-          expectArrivals(Iterable(updatedArrival.copy(FeedSources = Set(LiveFeedSource, LiveBaseFeedSource))))
+          expectArrivals(Iterable(updatedArrival.copy(FeedSources = Set(LiveFeedSource))))
 
           success
         }

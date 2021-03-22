@@ -26,7 +26,7 @@ object FlightMessageConversion {
     FlightsWithSplitsDiffMessage(
       createdAt = Option(SDate.now().millisSinceEpoch),
       removals = diff.arrivalsToRemove.map(ua => {
-        UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled))
+        UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled), Option(ua.origin.toString))
       }).toSeq,
       updates = diff.flightsToUpdate.map(flightWithSplitsToMessage).toSeq
     )
