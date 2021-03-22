@@ -2,7 +2,7 @@ package drt.client.components.scenarios
 
 import drt.client.SPAMain
 import drt.client.actions.Actions.GetSimulation
-import drt.client.components.Helpers._
+import drt.client.components.styles.ScalaCssImplicits._
 import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
@@ -48,14 +48,14 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
                     airportConfig: AirportConfig,
                   )
 
-  val component = ScalaComponent.builder[Props]("SimulationConfiguration")
+  val component = ScalaComponent.builder[Props]("SimulationFormComponent")
     .initialStateFromProps(p =>
       State(SimulationParams(p.terminal, p.date, p.airportConfig), Map())
     )
     .renderS {
 
       (scope, state) =>
-        
+
         def changePassengerWeighting(e: ReactEventFromInput): Callback = Try(e.target.value.toDouble) match {
           case Success(weight) =>
             scope.setState(state.copy(simulationParams = state.simulationParams.copy(passengerWeighting = weight)))
@@ -253,6 +253,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             onChange --> togglePanel("passengerWeighting"),
             MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography()(
+                DefaultFormFieldsStyle.regularText,
                 "Adjust Passenger Numbers"
               )
             ),

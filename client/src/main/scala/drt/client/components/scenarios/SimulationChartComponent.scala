@@ -1,7 +1,7 @@
 package drt.client.components.scenarios
 
 import drt.client.components.ChartJSComponent._
-import drt.client.components.Helpers.StringExtended
+import drt.client.components.styles.ScalaCssImplicits.StringExtended
 import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.components.{ChartJSComponent, potReactForwarder}
 import drt.client.services.JSDateConversions.SDate
@@ -9,7 +9,7 @@ import drt.client.services.SPACircuit
 import drt.shared.Queues.{Queue, queueDisplayNames}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.{MuiCard, MuiCircularProgress, MuiLinearProgress}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiCard, MuiLinearProgress}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.vdom.all.VdomElement
@@ -25,7 +25,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
                     airportConfig: AirportConfig,
                     terminal: Terminal
                   ) {
-    def queueOrder = airportConfig.desksExportQueueOrder
+    def queueOrder: List[Queue] = airportConfig.desksExportQueueOrder
   }
 
   case class State(activeTab: String) {
@@ -122,7 +122,6 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
             Option(0)
           ),
         )
-
         q -> ChartJSComponent.Bar(
           ChartJsProps(
             data = ChartJsData(dataSets, Option(labels)),
@@ -170,21 +169,6 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
     )
 
     Seq(paxDataSet, workDataSet, waitDataSet)
-  }
-
-
-  def inQueuesBy15Minutes(ps: PortState, start: SDateLike, queues: List[Queue], terminal: Terminal): Map[Queues.Queue, List[CrunchApi.CrunchMinute]] = {
-    println(s"summarising ${ps.crunchMinutes.size} minutes")
-    ps
-      .crunchSummary(start, MilliTimes.fifteenMinuteSlotsInDay, 15, terminal, queues)
-      .values
-      .flatten
-      .toList
-      .collect {
-        case (_, cm) => cm
-      }
-      .groupBy(_.queue)
-      .mapValues(_.sortBy(_.minute))
   }
 
   def apply(

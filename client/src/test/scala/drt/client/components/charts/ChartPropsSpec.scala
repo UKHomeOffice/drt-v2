@@ -75,8 +75,6 @@ object ChartPropsSpec extends TestSuite {
             |    }
             |}""".stripMargin)
 
-      println(jsonString(result))
-      println(jsonString(expected))
       assert(jsonString(result) == jsonString(expected))
     }
 

@@ -38,7 +38,7 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
                   )
 
 
-  val component = ScalaComponent.builder[Props]("SimulationConfiguration")
+  val component = ScalaComponent.builder[Props]("SimulationComponent")
     .initialStateFromProps(p =>
       State(SimulationParams(p.terminal, p.date, p.airportConfig), Map())
     )
@@ -47,22 +47,17 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
       (props, state) =>
 
         <.div(
-          <.div(<.h2("Arrival Simulations")),
-          <.div(
-            <.div(
-              <.div(
-                MuiPaper()(
-                  DefaultFormFieldsStyle.simulation,
-                  MuiGrid(direction = MuiGrid.Direction.row, container = true, spacing = 16)(
-                    MuiGrid(item = true, xs = 2)(
-                      ScenarioSimulationFormComponent(props.date, props.terminal, props.airportConfig)
-                    ),
-                    MuiGrid(item = true, xs = 10)(
-                      SimulationChartComponent(state.simulationParams, props.airportConfig, props.terminal)
-                    )
-                  ),
-                ),
+          <.h2("Arrival Scenario Simulation"),
+
+          MuiPaper()(
+            DefaultFormFieldsStyle.simulation,
+            MuiGrid(direction = MuiGrid.Direction.row, container = true, spacing = 16)(
+              MuiGrid(item = true, xs = 2)(
+                ScenarioSimulationFormComponent(props.date, props.terminal, props.airportConfig)
               ),
+              MuiGrid(item = true, xs = 10)(
+                SimulationChartComponent(state.simulationParams, props.airportConfig, props.terminal)
+              )
             )
           )
         )
