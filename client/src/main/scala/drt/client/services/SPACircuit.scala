@@ -186,6 +186,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v))),
       new ForecastFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v))),
       new WalkTimeHandler(zoomRW(_.walkTimes)((m, v) => m.copy(walkTimes = v))),
+      new SimulationHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
     )
 
     composedHandlers
