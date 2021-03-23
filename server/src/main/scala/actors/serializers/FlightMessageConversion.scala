@@ -2,7 +2,7 @@ package actors.serializers
 
 import actors.ArrivalsState
 import PortStateMessageConversion.splitMessageToApiSplits
-import actors.restore.RestorerWithLegacy
+import actors.restore.ArrivalsRestorer
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
@@ -15,6 +15,8 @@ import services.SDate
 import scala.util.{Success, Try}
 
 object FlightMessageConversion {
+  val log: Logger = LoggerFactory.getLogger(getClass.toString)
+
   def flightWithSplitsDiffFromMessage(diffMessage: FlightsWithSplitsDiffMessage): FlightsWithSplitsDiff =
     FlightsWithSplitsDiff(diffMessage.updates.map(flightWithSplitsFromMessage).toList, diffMessage.removals.collect {
       case UniqueArrivalMessage(Some(number), Some(terminal), Some(scheduled), maybeOrigin) =>
@@ -25,14 +27,23 @@ object FlightMessageConversion {
   def flightWithSplitsDiffToMessage(diff: FlightsApi.FlightsWithSplitsDiff): FlightsWithSplitsDiffMessage = {
     FlightsWithSplitsDiffMessage(
       createdAt = Option(SDate.now().millisSinceEpoch),
-      removals = diff.arrivalsToRemove.map(ua => {
-        UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled), Option(ua.origin.toString))
-      }).toSeq,
+      removals = diff.arrivalsToRemove.map {
+        case UniqueArrival(number, terminal, scheduled, origin) =>
+          UniqueArrivalMessage(Option(number), Option(terminal.toString), Option(scheduled), Option(origin.toString))
+        case LegacyUniqueArrival(number, terminal, scheduled) =>
+          UniqueArrivalMessage(Option(number), Option(terminal.toString), Option(scheduled), None)
+      }.toSeq,
       updates = diff.flightsToUpdate.map(flightWithSplitsToMessage).toSeq
     )
   }
 
-  val log: Logger = LoggerFactory.getLogger(getClass.toString)
+  def uniqueArrivalsFromMessages(uniqueArrivalMessages: Seq[UniqueArrivalMessage]): Seq[UniqueArrivalLike] =
+    uniqueArrivalMessages.collect {
+      case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), Some(origin)) =>
+        UniqueArrival(number, terminalName, scheduled, origin)
+      case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), None) =>
+        LegacyUniqueArrival(number, terminalName, scheduled)
+    }
 
   def arrivalsStateToSnapshotMessage(state: ArrivalsState): FlightStateSnapshotMessage = {
     val maybeStatusMessages = state.maybeSourceStatuses.flatMap(feedStatuses => feedStatusesToMessage(feedStatuses.feedStatuses))
@@ -54,7 +65,7 @@ object FlightMessageConversion {
     case s: FeedStatusFailure => FeedStatusMessage(Option(s.date), None, Option(s.message))
   }
 
-  def restoreArrivalsFromSnapshot(restorer: RestorerWithLegacy,
+  def restoreArrivalsFromSnapshot(restorer: ArrivalsRestorer,
                                   snMessage: FlightStateSnapshotMessage): Unit = {
     restorer.update(snMessage.flightMessages.map(flightMessageToApiFlight))
   }

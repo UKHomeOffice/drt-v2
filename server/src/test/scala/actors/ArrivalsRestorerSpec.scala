@@ -1,15 +1,15 @@
 package actors
 
-import actors.restore.RestorerWithLegacy
+import actors.restore.ArrivalsRestorer
+import drt.shared.PortCode
 import drt.shared.Terminals.{T1, T2}
 import drt.shared.api.Arrival
-import drt.shared.{PortCode, WithLegacyUniqueId, WithUnique}
 import org.specs2.mutable.Specification
 
 import scala.collection.mutable
 
-class RestorerWithLegacySpec extends Specification {
-  def newRestorer = new RestorerWithLegacy
+class ArrivalsRestorerSpec extends Specification {
+  def newRestorer = new ArrivalsRestorer
 
   val arrival1: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = "2021-05-01T10:20")
   val arrival2: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T2, schDt = "2021-05-02T07:40", origin = PortCode("JFK"))
@@ -21,11 +21,11 @@ class RestorerWithLegacySpec extends Specification {
 
     restorer.update(Seq(arrival1))
 
-    restorer.items === mutable.SortedMap(arrival1.unique -> arrival1)
+    restorer.arrivals === mutable.SortedMap(arrival1.unique -> arrival1)
 
     restorer.finish()
 
-    restorer.items.isEmpty === true
+    restorer.arrivals.isEmpty === true
   }
 
   "Given updates containing arrival1 & arrival2 & arrival3 and one legacy hash removal for arrival2" +
@@ -36,7 +36,7 @@ class RestorerWithLegacySpec extends Specification {
     restorer.update(items)
     restorer.removeHashLegacies(Seq(arrival2.unique.legacyUniqueId))
 
-    restorer.items === mutable.Map(arrival1.unique -> arrival1)
+    restorer.arrivals === mutable.Map(arrival1.unique -> arrival1)
   }
 
   "Given updates containing arrival1 & arrival2 & arrival3 and one legacy non-hash removal for arrival2" +
@@ -47,7 +47,7 @@ class RestorerWithLegacySpec extends Specification {
     restorer.update(items)
     restorer.remove(Seq(arrival2.unique.legacyUniqueArrival))
 
-    restorer.items === mutable.Map(arrival1.unique -> arrival1)
+    restorer.arrivals === mutable.Map(arrival1.unique -> arrival1)
   }
 
   "Given updates containing arrival1 & arrival2 & arrival3 and one non-legacy removal for arrival2" +
@@ -58,7 +58,7 @@ class RestorerWithLegacySpec extends Specification {
     restorer.update(items)
     restorer.remove(Seq(arrival2.unique))
 
-    restorer.items === mutable.Map(arrival1.unique -> arrival1, arrival3.unique -> arrival3)
+    restorer.arrivals === mutable.Map(arrival1.unique -> arrival1, arrival3.unique -> arrival3)
   }
 }
 

@@ -2,7 +2,7 @@ package actors
 
 import actors.serializers.FlightMessageConversion._
 import actors.acking.AckingReceiver.StreamCompleted
-import actors.restore.RestorerWithLegacy
+import actors.restore.ArrivalsRestorer
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
@@ -111,7 +111,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Int,
                              feedSource: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
-  val restorer = new RestorerWithLegacy
+  val restorer = new ArrivalsRestorer
   var state: ArrivalsState = initialState
 
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
@@ -137,7 +137,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def postRecoveryComplete(): Unit = {
-    val arrivals = SortedMap[UniqueArrival, Arrival]() ++ restorer.items
+    val arrivals = SortedMap[UniqueArrival, Arrival]() ++ restorer.arrivals
     restorer.finish()
 
     state = state.copy(arrivals = Crunch.purgeExpired(arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt))
@@ -155,12 +155,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
       restorer.removeHashLegacies(diffsMessage.removalsOLD)
 
     if (diffsMessage.removals.nonEmpty)
-      restorer.remove(diffsMessage.removals.collect {
-        case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), Some(origin)) =>
-          UniqueArrival(number, terminalName, scheduled, origin)
-        case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), None) =>
-          LegacyUniqueArrival(number, terminalName, scheduled)
-      })
+      restorer.remove(uniqueArrivalsFromMessages(diffsMessage.removals))
   }
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage): Unit = {

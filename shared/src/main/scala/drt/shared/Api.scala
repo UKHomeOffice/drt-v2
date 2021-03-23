@@ -21,6 +21,7 @@ import upickle.default._
 import java.lang.Math.round
 import java.util.UUID
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
+import scala.collection.{SortedMap, mutable}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -742,6 +743,54 @@ object DataUpdates {
 
 }
 
+class ArrivalsRestorer {
+  var arrivals: SortedMap[UniqueArrival, Arrival] = mutable.SortedMap()
+
+  def removeHashLegacies(theRemoves: Iterable[Int]): Unit = theRemoves.foreach(keyToRemove => arrivals = arrivals.filterKeys(_.legacyUniqueId != keyToRemove))
+
+  def update(theUpdates: Iterable[Arrival]): Unit = theUpdates.foreach { update =>
+    arrivals = arrivals + ((update.unique, update))
+  }
+
+  def remove(removals: Iterable[UniqueArrivalLike]): Unit =
+    arrivals = ArrivalsRemoval.removeArrivals(removals, arrivals)
+
+  def finish(): Unit = arrivals = SortedMap()
+}
+
+object ArrivalsRemoval {
+//  def remove(removals: Iterable[UniqueArrivalLike], arrivals: Iterable[(UniqueArrival, Arrival)]): Iterable[(UniqueArrival, Arrival)] = {
+//    val keys = removals.collect { case k: UniqueArrival => k }
+//    val minusRemovals = arrivals.toMap -- keys
+//    val legacyKeys = removals.collect { case lk: LegacyUniqueArrival => lk }
+//    if (legacyKeys.nonEmpty) {
+//      legacyKeys.foldLeft(minusRemovals) {
+//        case (acc, legacyKey) => acc.filterKeys(_.legacyUniqueArrival != legacyKey)
+//      }
+//    } else minusRemovals
+//  }
+  def removeArrivals[A](removals: Iterable[UniqueArrivalLike], arrivals: SortedMap[UniqueArrival, A]): SortedMap[UniqueArrival, A] = {
+    val keys = removals.collect { case k: UniqueArrival => k }
+    val minusRemovals = arrivals -- keys
+    val legacyKeys = removals.collect { case lk: LegacyUniqueArrival => lk }
+    if (legacyKeys.nonEmpty) {
+      legacyKeys.foldLeft(minusRemovals) {
+        case (acc, legacyKey) => acc.filterKeys(_.legacyUniqueArrival != legacyKey)
+      }
+    } else minusRemovals
+  }
+//  def removeFlightsWithSplits(removals: Iterable[UniqueArrivalLike], arrivals: SortedMap[UniqueArrival, ApiFlightWithSplits]): SortedMap[UniqueArrival, ApiFlightWithSplits] = {
+//    val keys = removals.collect { case k: UniqueArrival => k }
+//    val minusRemovals = arrivals -- keys
+//    val legacyKeys = removals.collect { case lk: LegacyUniqueArrival => lk }
+//    if (legacyKeys.nonEmpty) {
+//      legacyKeys.foldLeft(minusRemovals) {
+//        case (acc, legacyKey) => acc.filterKeys(_.legacyUniqueArrival != legacyKey)
+//      }
+//    } else minusRemovals
+//  }
+}
+
 object FlightsApi {
 
   case class Flights(flights: Iterable[Arrival])
@@ -825,7 +874,7 @@ object FlightsApi {
     def ++(tuple: (UniqueArrival, Set[Splits])): IMap[UniqueArrival, Set[Splits]] = splits + tuple
   }
 
-  case class FlightsWithSplitsDiff(flightsToUpdate: Iterable[ApiFlightWithSplits], arrivalsToRemove: Iterable[UniqueArrival]) extends FlightUpdates {
+  case class FlightsWithSplitsDiff(flightsToUpdate: Iterable[ApiFlightWithSplits], arrivalsToRemove: Iterable[UniqueArrivalLike]) extends FlightUpdates {
     def isEmpty: Boolean = flightsToUpdate.isEmpty && arrivalsToRemove.isEmpty
 
     def nonEmpty: Boolean = !isEmpty
@@ -835,7 +884,8 @@ object FlightsApi {
     def applyTo(flightsWithSplits: FlightsWithSplits,
                 nowMillis: MillisSinceEpoch): (FlightsWithSplits, Iterable[MillisSinceEpoch]) = {
       val updated = flightsWithSplits.flights ++ flightsToUpdate.map(f => (f.apiFlight.unique, f.copy(lastUpdated = Option(nowMillis))))
-      val minusRemovals = updated -- arrivalsToRemove
+//      val minusRemovals = updated -- arrivalsToRemove
+      val minusRemovals = ArrivalsRemoval.removeArrivals(arrivalsToRemove, SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ updated)
 
       val asMap: IMap[UniqueArrival, ApiFlightWithSplits] = flightsWithSplits.flights
 

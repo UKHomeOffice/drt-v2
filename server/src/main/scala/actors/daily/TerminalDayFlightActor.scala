@@ -109,7 +109,9 @@ class TerminalDayFlightActor(
   override def stateToMessage: GeneratedMessage = FlightMessageConversion.flightsToMessage(state.flights.values)
 
   def handleDiffMessage(diff: FlightsWithSplitsDiffMessage): Unit = {
-    state = state -- diff.removals.map(uniqueArrivalFromMessage)
+    state = state -- diff.removals.collect {
+      case UniqueArrivalMessage() =>
+    }
     state = state ++ flightsFromMessages(diff.updates)
     log.debug(s"Recovery: state contains ${state.flights.size} flights")
   }
