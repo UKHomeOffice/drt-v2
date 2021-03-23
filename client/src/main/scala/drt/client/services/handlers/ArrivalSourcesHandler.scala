@@ -4,19 +4,19 @@ import diode.data.{Pending, Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions._
 import drt.client.services.{DrtApi, PollDelay}
-import drt.shared.{FeedSourceArrival, SDateLike, UniqueArrivalWithOrigin}
+import drt.shared.{FeedSourceArrival, SDateLike, UniqueArrival}
 import upickle.default.read
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class ArrivalSourcesHandler[M](modelRW: ModelRW[M, Option[(UniqueArrivalWithOrigin, Pot[List[Option[FeedSourceArrival]]])]]) extends LoggingActionHandler(modelRW) {
+class ArrivalSourcesHandler[M](modelRW: ModelRW[M, Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])]]) extends LoggingActionHandler(modelRW) {
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetArrivalSources(ua) =>
       val endpoint = s"arrival/${ua.number}/${ua.terminal.toString}/${ua.scheduled}/${ua.origin}"
       updated(Option((ua, Pending())), effect(ua, endpoint))
 
-    case GetArrivalSourcesForPointInTime(pointInTime: SDateLike, ua: UniqueArrivalWithOrigin) =>
+    case GetArrivalSourcesForPointInTime(pointInTime: SDateLike, ua: UniqueArrival) =>
       val endpoint = s"arrival/${pointInTime.millisSinceEpoch}/${ua.number}/${ua.terminal.toString}/${ua.scheduled}/${ua.origin}"
       updated(Option((ua, Pending())), effect(ua, endpoint))
 
@@ -27,7 +27,7 @@ class ArrivalSourcesHandler[M](modelRW: ModelRW[M, Option[(UniqueArrivalWithOrig
       updated(None)
   }
 
-  private def effect(ua: UniqueArrivalWithOrigin, endpoint: String) = {
+  private def effect(ua: UniqueArrival, endpoint: String) = {
     Effect(DrtApi.get(endpoint)
       .map { response =>
         val arrivalSources = read[List[Option[FeedSourceArrival]]](response.responseText)

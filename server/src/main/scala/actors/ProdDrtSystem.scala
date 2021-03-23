@@ -113,7 +113,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     } else userRolesFromHeader(headers)
 
   def run(): Unit = {
-    val futurePortStates: Future[(Option[PortState], Option[SortedMap[UniqueArrivalWithOrigin, Arrival]], Option[SortedMap[UniqueArrivalWithOrigin, Arrival]], Option[SortedMap[UniqueArrivalWithOrigin, Arrival]])] = {
+    val futurePortStates: Future[(Option[PortState], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]])] = {
       val maybeLivePortState = initialFlightsPortState(portStateActor, params.forecastMaxDays)
       val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
@@ -134,7 +134,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
           maybePortState,
           maybeBaseArrivals,
           maybeForecastArrivals,
-          Option(SortedMap[UniqueArrivalWithOrigin, Arrival]()),
+          Option(SortedMap[UniqueArrival, Arrival]()),
           maybeLiveArrivals,
           params.refreshArrivalsOnStart,
           params.refreshManifestsOnStart,

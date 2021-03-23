@@ -12,7 +12,7 @@ import org.specs2.mutable.Specification
 class SplitsForArrivalsSpec extends Specification {
 
   val now: MillisSinceEpoch = 10L
-  val uniqueArrival = UniqueArrivalWithOrigin(1, T1, 0L, PortCode("JFK"))
+  val uniqueArrival = UniqueArrival(1, T1, 0L, PortCode("JFK"))
 
   "When I apply SplitsForArrivals to FlightsWithSplits" >> {
     "Given one new split and no arrivals" >> {
@@ -97,7 +97,7 @@ class SplitsForArrivalsSpec extends Specification {
 
     "Given 2 splits and two arrivals, with only one matching and with an existing split" >> {
       "Then I should get a FlightsWithSplits containing the matching arrival updated with the correct new split" >> {
-        val uniqueArrival2 = UniqueArrivalWithOrigin(200, T1, 0L, PortCode("JFK"))
+        val uniqueArrival2 = UniqueArrival(200, T1, 0L, PortCode("JFK"))
         val existingSplits1 = Splits(Set(ApiPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 1, None, None)), Historical, None, PaxNumbers)
         val existingSplits2 = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1, None, None)), Historical, None, PaxNumbers)
         val newSplits1 = Splits(Set(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 1, None, None)), Historical, None, PaxNumbers)

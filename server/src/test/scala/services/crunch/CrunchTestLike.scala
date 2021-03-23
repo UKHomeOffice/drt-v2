@@ -242,13 +242,13 @@ class CrunchTestLike
         ps.flights.values.map(_.apiFlight) == arrivalsToExpect
     }
 
-  def expectUniqueArrival(uniqueArrival: UniqueArrivalWithOrigin)(implicit crunch: CrunchGraphInputsAndProbes): Unit =
+  def expectUniqueArrival(uniqueArrival: UniqueArrival)(implicit crunch: CrunchGraphInputsAndProbes): Unit =
     crunch.portStateTestProbe.fishForMessage(1 seconds) {
       case ps: PortState =>
         ps.flights.contains(uniqueArrival)
     }
 
-  def expectNoUniqueArrival(uniqueArrival: UniqueArrivalWithOrigin)(implicit crunch: CrunchGraphInputsAndProbes): Unit =
+  def expectNoUniqueArrival(uniqueArrival: UniqueArrival)(implicit crunch: CrunchGraphInputsAndProbes): Unit =
     crunch.portStateTestProbe.fishForMessage(1 seconds) {
       case ps: PortState =>
         !ps.flights.contains(uniqueArrival)

@@ -1,7 +1,7 @@
 package services.graphstages
 
 import drt.shared.api.Arrival
-import drt.shared.{MilliTimes, PortCode, UniqueArrivalWithOrigin}
+import drt.shared.{MilliTimes, PortCode, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import services.arrivals.LiveArrivalsUtil
 
@@ -9,9 +9,9 @@ import services.arrivals.LiveArrivalsUtil
 object ApproximateScheduleMatch {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def findInScheduledWindow(uniqueArrival: UniqueArrivalWithOrigin,
+  def findInScheduledWindow(uniqueArrival: UniqueArrival,
                             origin: PortCode,
-                            arrivalsToSearch: Map[UniqueArrivalWithOrigin, Arrival],
+                            arrivalsToSearch: Map[UniqueArrival, Arrival],
                             windowMillis: Int): Either[Arrival, List[Arrival]] = {
     val approxMatches = arrivalsToSearch
       .filterKeys(_.equalWithinScheduledWindow(uniqueArrival, windowMillis))
@@ -30,7 +30,7 @@ object ApproximateScheduleMatch {
 
   def mergeApproxIfFoundElseNone(arrival: Arrival,
                                  origin: PortCode,
-                                 sourcesToSearch: List[(ArrivalsSourceType, Map[UniqueArrivalWithOrigin, Arrival])]): Option[Arrival] =
+                                 sourcesToSearch: List[(ArrivalsSourceType, Map[UniqueArrival, Arrival])]): Option[Arrival] =
     sourcesToSearch.foldLeft[Option[Arrival]](None) {
       case (Some(found), _) => Some(found)
       case (None, (sourceToSearch, arrivalsForSource)) => maybeMergeApproxMatch(arrival, origin, sourceToSearch, arrivalsForSource)
@@ -38,7 +38,7 @@ object ApproximateScheduleMatch {
 
   def mergeApproxIfFoundElseOriginal(arrival: Arrival,
                                      origin: PortCode,
-                                     sourcesToSearch: List[(ArrivalsSourceType, Map[UniqueArrivalWithOrigin, Arrival])]): Option[Arrival] =
+                                     sourcesToSearch: List[(ArrivalsSourceType, Map[UniqueArrival, Arrival])]): Option[Arrival] =
     mergeApproxIfFoundElseNone(arrival, origin, sourcesToSearch) match {
       case Some(found) => Some(found)
       case None => Some(arrival)
@@ -47,7 +47,7 @@ object ApproximateScheduleMatch {
   def maybeMergeApproxMatch(arrival: Arrival,
                             origin: PortCode,
                             searchSource: ArrivalsSourceType,
-                            arrivalsToSearch: Map[UniqueArrivalWithOrigin, Arrival]): Option[Arrival] = {
+                            arrivalsToSearch: Map[UniqueArrival, Arrival]): Option[Arrival] = {
     val key = arrival.unique
     findInScheduledWindow(key, origin, arrivalsToSearch, MilliTimes.oneHourMillis) match {
       case Left(matchedArrival) =>

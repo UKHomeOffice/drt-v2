@@ -32,7 +32,7 @@ trait FeedStateLike {
   }
 }
 
-case class ArrivalsState(arrivals: SortedMap[UniqueArrivalWithOrigin, Arrival],
+case class ArrivalsState(arrivals: SortedMap[UniqueArrival, Arrival],
                          feedSource: FeedSource,
                          maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
   def clear(): ArrivalsState = {
@@ -61,7 +61,7 @@ class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
     val (removals, updates) = Crunch.baseArrivalsRemovalsAndUpdates(incomingArrivalsWithKeys, state.arrivals)
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
 
-    state = state.copy(arrivals = SortedMap[UniqueArrivalWithOrigin, Arrival]() ++ incomingArrivalsWithKeys, maybeSourceStatuses = Option(state.addStatus(newStatus)))
+    state = state.copy(arrivals = SortedMap[UniqueArrival, Arrival]() ++ incomingArrivalsWithKeys, maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
     if (removals.nonEmpty || updates.nonEmpty) persistArrivalUpdates(removals, updates)
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size))
@@ -137,10 +137,10 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def postRecoveryComplete(): Unit = {
-    val arrivals = SortedMap[UniqueArrivalWithOrigin, Arrival]() ++ restorer.items
+    val arrivals = SortedMap[UniqueArrival, Arrival]() ++ restorer.items
     restorer.finish()
 
-    state = state.copy(arrivals = Crunch.purgeExpired(arrivals, UniqueArrivalWithOrigin.atTime, now, expireAfterMillis.toInt))
+    state = state.copy(arrivals = Crunch.purgeExpired(arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt))
 
     log.info(s"Recovered ${state.arrivals.size} arrivals for ${state.feedSource}")
     super.postRecoveryComplete()
@@ -151,12 +151,16 @@ abstract class ArrivalsActor(now: () => SDateLike,
   def consumeDiffsMessage(message: FlightsDiffMessage): Unit
 
   def consumeRemovals(diffsMessage: FlightsDiffMessage): Unit = {
-    logRecoveryMessage(s"Consuming ${diffsMessage.removals.length} removals")
-    restorer.removeHashLegacies(diffsMessage.removalsOLD)
-    restorer.remove(diffsMessage.removals.collect {
-      case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), maybeOrigin) =>
-        UniqueArrivalWithOrigin(number, terminalName, scheduled, maybeOrigin.getOrElse(""))
-    })
+    if (diffsMessage.removalsOLD.nonEmpty)
+      restorer.removeHashLegacies(diffsMessage.removalsOLD)
+
+    if (diffsMessage.removals.nonEmpty)
+      restorer.remove(diffsMessage.removals.collect {
+        case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), Some(origin)) =>
+          UniqueArrival(number, terminalName, scheduled, origin)
+        case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), None) =>
+          LegacyUniqueArrival(number, terminalName, scheduled)
+      })
   }
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage): Unit = {
@@ -178,7 +182,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
       log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
 
-    case ua: UniqueArrivalWithOrigin =>
+    case ua: UniqueArrival =>
       sender() ! state.arrivals.get(ua).map(a => FeedSourceArrival(feedSource, a))
 
     case SaveSnapshotSuccess(md) =>
@@ -213,7 +217,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)
   }
 
-  def persistArrivalUpdates(removals: Set[UniqueArrivalWithOrigin], updatedArrivals: Iterable[Arrival]): Unit = {
+  def persistArrivalUpdates(removals: Set[UniqueArrival], updatedArrivals: Iterable[Arrival]): Unit = {
     val updateMessages = updatedArrivals.map(apiFlightToFlightMessage).toSeq
     val removalMessages = removals.map(ua => UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled))).toSeq
     val diffMessage = FlightsDiffMessage(

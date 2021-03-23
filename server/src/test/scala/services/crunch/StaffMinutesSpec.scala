@@ -328,7 +328,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(TestConfig(
       now = () => now,
       maxDaysToCrunch = daysToCrunch,
-      initialPortState = Option(PortState(SortedMap[UniqueArrivalWithOrigin, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled)))
+      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled)))
     ))
 
     offerAndWait(crunch.fixedPointsInput, fixedPoints)
@@ -367,7 +367,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => now,
       airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
       maxDaysToCrunch = daysToCrunch,
-      initialPortState = Option(PortState(SortedMap[UniqueArrivalWithOrigin, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     ))
 
     offerAndWait(crunch.shiftsInput, shifts)
@@ -404,7 +404,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => now,
       airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
       maxDaysToCrunch = daysToCrunch,
-      initialPortState = Option(PortState(SortedMap[UniqueArrivalWithOrigin, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     ))
 
     offerAndWait(crunch.fixedPointsInput, fixedPoints)
@@ -442,7 +442,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => now,
       airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
       maxDaysToCrunch = daysToCrunch,
-      initialPortState = Option(PortState(SortedMap[UniqueArrivalWithOrigin, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     ))
 
     offerAndWait(crunch.liveStaffMovementsInput, Seq(staffMovement1, staffMovement2))

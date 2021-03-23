@@ -297,8 +297,8 @@ object Crunch {
     }
     .toSeq
 
-  def baseArrivalsRemovalsAndUpdates(incoming: Map[UniqueArrivalWithOrigin, Arrival],
-                                     existing: Map[UniqueArrivalWithOrigin, Arrival]): (Set[UniqueArrivalWithOrigin], Iterable[Arrival]) = {
+  def baseArrivalsRemovalsAndUpdates(incoming: Map[UniqueArrival, Arrival],
+                                     existing: Map[UniqueArrival, Arrival]): (Set[UniqueArrival], Iterable[Arrival]) = {
     val removals = existing.keys.toSet -- incoming.keys.toSet
 
     val updates = incoming.collect {

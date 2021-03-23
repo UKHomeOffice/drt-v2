@@ -32,7 +32,7 @@ object FlightsWithSplitsTable {
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],
                    passengerInfoSummaryByDay: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
                    queueOrder: Seq[Queue], hasEstChox: Boolean,
-                   arrivalSources: Option[(UniqueArrivalWithOrigin, Pot[List[Option[FeedSourceArrival]]])],
+                   arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    loggedInUser: LoggedInUser,
                    viewMode: ViewMode,
                    walkTimes: WalkTimes,

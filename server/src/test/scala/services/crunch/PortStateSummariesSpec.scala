@@ -22,7 +22,7 @@ class PortStateSummariesSpec extends Specification {
     }
 
     val cmsMap = SortedMap[TQM, CrunchMinute]() ++ cmsList.map(cm => (TQM(cm), cm)).toMap
-    val portState = PortState(SortedMap[UniqueArrivalWithOrigin, ApiFlightWithSplits](), cmsMap, SortedMap[TM, StaffMinute]())
+    val portState = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), cmsMap, SortedMap[TM, StaffMinute]())
 
     val periods = 4
     val periodSize = 15
@@ -63,7 +63,7 @@ class PortStateSummariesSpec extends Specification {
     }
 
     val cmsMap = SortedMap[TQM, CrunchMinute]() ++ cmsList.map(cm => (TQM(cm), cm)).toMap
-    val portState = PortState(SortedMap[UniqueArrivalWithOrigin, ApiFlightWithSplits](), cmsMap, SortedMap[TM, StaffMinute]())
+    val portState = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), cmsMap, SortedMap[TM, StaffMinute]())
 
     val periods = 1
     val periodSize = 15
@@ -86,7 +86,7 @@ class PortStateSummariesSpec extends Specification {
     val smsList = (0 to 29).map(minute => StaffMinute(terminal, minute.toLong * 60000, minute, minute, minute))
 
     val smsMap = SortedMap[TM, StaffMinute]() ++ smsList.map(sm => (TM(sm), sm)).toMap
-    val portState = PortState(SortedMap[UniqueArrivalWithOrigin, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), smsMap)
+    val portState = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), smsMap)
 
     val periods = 4
     val periodSize = 15

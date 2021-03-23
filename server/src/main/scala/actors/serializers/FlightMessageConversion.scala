@@ -18,7 +18,7 @@ object FlightMessageConversion {
   def flightWithSplitsDiffFromMessage(diffMessage: FlightsWithSplitsDiffMessage): FlightsWithSplitsDiff =
     FlightsWithSplitsDiff(diffMessage.updates.map(flightWithSplitsFromMessage).toList, diffMessage.removals.collect {
       case UniqueArrivalMessage(Some(number), Some(terminal), Some(scheduled), maybeOrigin) =>
-        UniqueArrivalWithOrigin(number, terminal, scheduled, maybeOrigin.getOrElse(""))
+        UniqueArrival(number, terminal, scheduled, maybeOrigin.getOrElse(""))
     }.toList)
 
 

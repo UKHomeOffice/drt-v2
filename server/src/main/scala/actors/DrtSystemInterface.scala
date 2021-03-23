@@ -145,10 +145,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
   def startCrunchSystem(initialPortState: Option[PortState],
-                        initialForecastBaseArrivals: Option[SortedMap[UniqueArrivalWithOrigin, Arrival]],
-                        initialForecastArrivals: Option[SortedMap[UniqueArrivalWithOrigin, Arrival]],
-                        initialLiveBaseArrivals: Option[SortedMap[UniqueArrivalWithOrigin, Arrival]],
-                        initialLiveArrivals: Option[SortedMap[UniqueArrivalWithOrigin, Arrival]],
+                        initialForecastBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
+                        initialForecastArrivals: Option[SortedMap[UniqueArrival, Arrival]],
+                        initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
+                        initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         refreshArrivalsOnStart: Boolean,
                         refreshManifestsOnStart: Boolean,
                         startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {

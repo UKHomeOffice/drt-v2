@@ -3,7 +3,7 @@ package drt.chroma
 import akka.stream._
 import akka.stream.stage._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.UniqueArrivalWithOrigin
+import drt.shared.UniqueArrival
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -12,7 +12,7 @@ import services.metrics.StageTimer
 import scala.collection.immutable.SortedMap
 
 
-final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrivalWithOrigin, Arrival],
+final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, Arrival],
                                  forecastMaxMillis: () => MillisSinceEpoch)
   extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]]
 {
@@ -25,7 +25,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrivalWi
   override val shape: FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse] = FlowShape.of(in, out)
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var knownArrivals: SortedMap[UniqueArrivalWithOrigin, Arrival] = SortedMap[UniqueArrivalWithOrigin, Arrival]()
+    var knownArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival]()
     var maybeResponseToPush: Option[ArrivalsFeedResponse] = None
 
     knownArrivals = knownArrivals ++ initialKnownArrivals
@@ -64,10 +64,10 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrivalWi
     def processFeedResponse(arrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = arrivalsFeedResponse match {
       case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
         val maxScheduledMillis = forecastMaxMillis()
-        val incomingArrivals: Iterable[(UniqueArrivalWithOrigin, Arrival)] = latestArrivals.flights.filter(_.Scheduled <= maxScheduledMillis).map(a => (UniqueArrivalWithOrigin(a), a))
-        val newUpdates: Iterable[(UniqueArrivalWithOrigin, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
+        val incomingArrivals: Iterable[(UniqueArrival, Arrival)] = latestArrivals.flights.filter(_.Scheduled <= maxScheduledMillis).map(a => (UniqueArrival(a), a))
+        val newUpdates: Iterable[(UniqueArrival, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
         if (newUpdates.nonEmpty) log.info(s"Got ${newUpdates.size} new arrival updates")
-        knownArrivals = SortedMap[UniqueArrivalWithOrigin, Arrival]() ++ incomingArrivals
+        knownArrivals = SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals
         Option(afs.copy(arrivals = latestArrivals.copy(flights = newUpdates.map(_._2))))
       case aff@ArrivalsFeedFailure(_, _) =>
         log.info("Passing ArrivalsFeedFailure through. Nothing to diff. No updates to knownArrivals")
@@ -77,9 +77,9 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrivalWi
         None
     }
 
-    def filterArrivalsWithUpdates(existingArrivals: SortedMap[UniqueArrivalWithOrigin, Arrival],
-                                  newArrivals: Iterable[(UniqueArrivalWithOrigin, Arrival)]): Iterable[(UniqueArrivalWithOrigin, Arrival)] = newArrivals
-      .foldLeft(List[(UniqueArrivalWithOrigin, Arrival)]()) {
+    def filterArrivalsWithUpdates(existingArrivals: SortedMap[UniqueArrival, Arrival],
+                                  newArrivals: Iterable[(UniqueArrival, Arrival)]): Iterable[(UniqueArrival, Arrival)] = newArrivals
+      .foldLeft(List[(UniqueArrival, Arrival)]()) {
         case (soFar, (key, arrival)) => existingArrivals.get(key) match {
           case None => (key, arrival) :: soFar
           case Some(existingArrival) if existingArrival == arrival => soFar

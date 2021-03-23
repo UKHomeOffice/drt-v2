@@ -5,7 +5,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.UtcDate
-import drt.shared.{ApiFlightWithSplits, UniqueArrivalWithOrigin}
+import drt.shared.{ApiFlightWithSplits, UniqueArrival}
 import services.SDate
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -17,7 +17,7 @@ case class MockFlightsLookup() {
 
   def lookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup = {
 
-    val byDay: Map[UtcDate, Map[UniqueArrivalWithOrigin, ApiFlightWithSplits]] = mockData.flights.groupBy {
+    val byDay: Map[UtcDate, Map[UniqueArrival, ApiFlightWithSplits]] = mockData.flights.groupBy {
       case (_, fws) => SDate(fws.apiFlight.Scheduled).toUtcDate
     }
     (t: Terminal, d: UtcDate, pit: Option[MillisSinceEpoch]) => {

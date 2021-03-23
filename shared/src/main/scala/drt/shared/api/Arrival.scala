@@ -36,7 +36,7 @@ case class Arrival(Operator: Option[Operator],
                    CarrierScheduled: Option[MillisSinceEpoch],
                    ApiPax: Option[Int],
                    ScheduledDeparture: Option[MillisSinceEpoch],
-                  ) extends WithUnique[UniqueArrivalWithOrigin] {
+                  ) extends WithUnique[UniqueArrival] {
   val paxOffPerMinute = 20
 
   def suffixString: String = FlightCodeSuffix match {
@@ -115,7 +115,7 @@ case class Arrival(Operator: Option[Operator],
     pcpRange.zip(paxByMinute)
   }
 
-  lazy val unique: UniqueArrivalWithOrigin = UniqueArrivalWithOrigin(VoyageNumber.numeric, Terminal, Scheduled, Origin)
+  lazy val unique: UniqueArrival = UniqueArrival(VoyageNumber.numeric, Terminal, Scheduled, Origin)
 
   def isCancelled: Boolean = Status.description match {
     case st if st.toLowerCase.contains("cancelled") => true

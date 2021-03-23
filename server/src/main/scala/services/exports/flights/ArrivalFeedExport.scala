@@ -12,7 +12,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Ports.domestic
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
-import drt.shared.{FeedSource, Ports, SDateLike, UniqueArrivalWithOrigin}
+import drt.shared.{FeedSource, Ports, SDateLike, UniqueArrival}
 import services.SDate
 import services.exports.Exports
 
@@ -61,7 +61,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
   }
 
   def arrivalsToCsvRows(terminal: Terminal,
-                        arrivals: SortedMap[UniqueArrivalWithOrigin, Arrival],
+                        arrivals: SortedMap[UniqueArrival, Arrival],
                         exportDay: SDateLike
                        ): Iterable[List[String]] = {
 

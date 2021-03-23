@@ -44,7 +44,7 @@ object TerminalComponent {
                             minuteTicker: Int,
                             maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState],
                             featureFlags: Pot[Map[String, Boolean]],
-                            arrivalSources: Option[(UniqueArrivalWithOrigin, Pot[List[Option[FeedSourceArrival]]])],
+                            arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                             potWalkTimes: Pot[WalkTimes]
                           ) extends UseValueEq
 

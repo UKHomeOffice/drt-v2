@@ -44,7 +44,7 @@ trait WithFeeds {
         .mapAsync(1) {
           case (_, feed) =>
             feed
-              .ask(UniqueArrivalWithOrigin(number, terminal, scheduled, origin))
+              .ask(UniqueArrival(number, terminal, scheduled, origin))
               .map {
                 case Some(fsa: FeedSourceArrival) if ctrl.isValidFeedSource(fsa.feedSource) => Option(fsa)
                 case _ => None
@@ -81,7 +81,7 @@ trait WithFeeds {
       Source(pointInTimeActorSources.toList)
         .mapAsync(1)((feedActor: ActorRef) => {
           feedActor
-            .ask(UniqueArrivalWithOrigin(number, terminal, scheduled, origin))
+            .ask(UniqueArrival(number, terminal, scheduled, origin))
             .map {
               case Some(fsa: FeedSourceArrival) =>
                 feedActor ! PoisonPill
