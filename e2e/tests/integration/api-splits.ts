@@ -43,6 +43,27 @@ describe('API splits', () => {
 
     });
 
+
+    it('should ignore the API splits if they are more than 5% different in passenger numbers to the live feed', () => {
+        const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 10));
+
+        cy
+            .addFlight(
+                {
+                    "ActPax": 12,
+                    "SchDT": scheduledTime.format()
+                }
+            )
+            .asABorderForceOfficer()
+            .waitForFlightToAppear("TS0123")
+            .addManifest(apiManifest)//we need to wait here to make sure that the API data has been processed before testing that this class doesn't exist.
+            .wait(1000) //try figure out if we can do this without
+            .get('.pax-api')
+            .should("not.exist")
+        ;
+
+    });
+
     it('should count multiple entries with the same PassengerIdentifier as one passenger', () => {
         const apiManifest = manifest(
             ofPassengerProfile(ukAdultWithId("1"), 3).concat(
