@@ -1,64 +1,64 @@
 package actors
 
 import actors.restore.RestorerWithLegacy
-import drt.shared.{WithLegacyUniqueId, WithUnique}
+import drt.shared.Terminals.{T1, T2}
+import drt.shared.api.Arrival
+import drt.shared.{PortCode, WithLegacyUniqueId, WithUnique}
 import org.specs2.mutable.Specification
 
 import scala.collection.mutable
 
 class RestorerWithLegacySpec extends Specification {
-  def newRestorer = new RestorerWithLegacy[Int, MyIndex, MyItem]
+  def newRestorer = new RestorerWithLegacy
 
-  private val item1 = new MyItem("1")
-  private val item2 = new MyItem("2")
-  private val item3 = new MyItem("3")
-  private val item4 = new MyItem("4")
+  val arrival1: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = "2021-05-01T10:20")
+  val arrival2: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T2, schDt = "2021-05-02T07:40", origin = PortCode("JFK"))
+  val arrival3: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T2, schDt = "2021-05-02T07:40", origin = PortCode("TFF"))
 
   "Given one update and no removals " +
-    "The state after tidyUp() should have an empty legacyMap and the one item" >> {
+    "The state should first contain the arrival, and then after calling finish() should contain no arrivals" >> {
     val restorer = newRestorer
 
-    restorer.update(Seq(item1))
+    restorer.update(Seq(arrival1))
+
+    restorer.items === mutable.SortedMap(arrival1.unique -> arrival1)
 
     restorer.finish()
 
-    restorer.legacyMap.isEmpty === true && restorer.items === mutable.Map(item1.unique -> item1)
+    restorer.items.isEmpty === true
   }
 
-//  "Given updates containing item1 & item2 and one legacy removal for item1" +
-//    "The state after tidyUp() should have an empty legacyMap and just item2" >> {
-//    val items = Seq(item1, item2)
-//    val restorer = newRestorer
-//
-//    restorer.update(items)
-//    restorer.removeLegacies(Seq(item1.unique.legacyUniqueId))
-//
-//    restorer.finish()
-//
-//    restorer.legacyMap.isEmpty === true && restorer.items === mutable.Map(item2.unique -> item2)
-//  }
+  "Given updates containing arrival1 & arrival2 & arrival3 and one legacy hash removal for arrival2" +
+    "The state should contain just arrival1, as the hash will match both arrival2 & 3 (they are the same apart from their origin)" >> {
+    val items = Seq(arrival1, arrival2, arrival3)
+    val restorer = newRestorer
 
-//  "Given updates containing items 1 through 4, followed by a legacy removal for item 1 and regular removal for item 2 " +
-//    "The state after tidyUp() should have an empty legacyMap and items 3 & 4" >> {
-//    val items = Seq(item1, item2, item3, item4)
-//    val restorer = newRestorer
-//
-//    restorer.update(items)
-//    restorer.removeLegacies(Seq(item1.unique.legacyUniqueId))
-//    restorer.remove(Seq(item2.unique))
-//
-//    restorer.finish()
-//
-//    restorer.legacyMap.isEmpty === true && restorer.items === mutable.Map(item3.unique -> item3, item4.unique -> item4)
-//  }
+    restorer.update(items)
+    restorer.removeHashLegacies(Seq(arrival2.unique.legacyUniqueId))
+
+    restorer.items === mutable.Map(arrival1.unique -> arrival1)
+  }
+
+  "Given updates containing arrival1 & arrival2 & arrival3 and one legacy non-hash removal for arrival2" +
+    "The state should contain just arrival1, as the legacy unique arrival will match both arrival2 & 3 (they are the same apart from their origin)" >> {
+    val items = Seq(arrival1, arrival2, arrival3)
+    val restorer = newRestorer
+
+    restorer.update(items)
+    restorer.remove(Seq(arrival2.unique.legacyUniqueArrival))
+
+    restorer.items === mutable.Map(arrival1.unique -> arrival1)
+  }
+
+  "Given updates containing arrival1 & arrival2 & arrival3 and one non-legacy removal for arrival2" +
+    "The state should contain arrival1 & arrival3 - the new unique arrival containing the origin only matches arrival2" >> {
+    val items = Seq(arrival1, arrival2, arrival3)
+    val restorer = newRestorer
+
+    restorer.update(items)
+    restorer.remove(Seq(arrival2.unique))
+
+    restorer.items === mutable.Map(arrival1.unique -> arrival1, arrival3.unique -> arrival3)
+  }
 }
 
-class MyIndex(val name: String) extends WithLegacyUniqueId[Int, MyIndex] {
-  override def legacyUniqueId: Int = hashCode()
-
-  override def compare(that: MyIndex): Int = this.name.compare(that.name)
-}
-
-class MyItem(name: String) extends WithUnique[MyIndex] {
-  override val unique: MyIndex = new MyIndex(name)
-}

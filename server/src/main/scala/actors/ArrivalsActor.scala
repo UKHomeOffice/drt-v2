@@ -111,7 +111,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Int,
                              feedSource: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
-//  val restorer = new RestorerWithLegacy[Int, UniqueArrivalWithOrigin, Arrival]
+  val restorer = new RestorerWithLegacy
   var state: ArrivalsState = initialState
 
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
@@ -137,9 +137,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def postRecoveryComplete(): Unit = {
-    restorer.finish()
     val arrivals = SortedMap[UniqueArrivalWithOrigin, Arrival]() ++ restorer.items
-    restorer.clear()
+    restorer.finish()
 
     state = state.copy(arrivals = Crunch.purgeExpired(arrivals, UniqueArrivalWithOrigin.atTime, now, expireAfterMillis.toInt))
 
@@ -153,7 +152,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   def consumeRemovals(diffsMessage: FlightsDiffMessage): Unit = {
     logRecoveryMessage(s"Consuming ${diffsMessage.removals.length} removals")
-    restorer.removeLegacies(diffsMessage.removalsOLD)
+    restorer.removeHashLegacies(diffsMessage.removalsOLD)
     restorer.remove(diffsMessage.removals.collect {
       case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), maybeOrigin) =>
         UniqueArrivalWithOrigin(number, terminalName, scheduled, maybeOrigin.getOrElse(""))

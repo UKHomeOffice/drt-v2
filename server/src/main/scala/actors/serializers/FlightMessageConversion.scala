@@ -54,7 +54,7 @@ object FlightMessageConversion {
     case s: FeedStatusFailure => FeedStatusMessage(Option(s.date), None, Option(s.message))
   }
 
-  def restoreArrivalsFromSnapshot(restorer: RestorerWithLegacy[Int, UniqueArrivalWithOrigin, Arrival],
+  def restoreArrivalsFromSnapshot(restorer: RestorerWithLegacy,
                                   snMessage: FlightStateSnapshotMessage): Unit = {
     restorer.update(snMessage.flightMessages.map(flightMessageToApiFlight))
   }
