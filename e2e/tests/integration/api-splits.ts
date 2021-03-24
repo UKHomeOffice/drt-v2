@@ -57,7 +57,6 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)//we need to wait here to make sure that the API data has been processed before testing that this class doesn't exist.
-            .wait(1000) //try figure out if we can do this without
             .get('.pax-api')
             .should("not.exist")
         ;
