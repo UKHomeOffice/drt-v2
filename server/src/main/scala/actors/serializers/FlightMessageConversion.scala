@@ -26,11 +26,14 @@ object FlightMessageConversion {
     FlightsWithSplitsDiffMessage(
       createdAt = Option(SDate.now().millisSinceEpoch),
       removals = diff.arrivalsToRemove.map(ua => {
-        UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled))
+        uniqueArrivalToMessage(ua)
       }).toSeq,
       updates = diff.flightsToUpdate.map(flightWithSplitsToMessage).toSeq
     )
   }
+
+  def uniqueArrivalToMessage(ua: UniqueArrival) =
+    UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled))
 
   val log: Logger = LoggerFactory.getLogger(getClass.toString)
 

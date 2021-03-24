@@ -192,6 +192,7 @@ class ArrivalsGraphStage(name: String = "",
       val newArrivalsKeys = aclArrivals.keys.toSet ++ liveArrivals.keys.toSet
       val arrivalsWithUpdates = getUpdatesFromBaseArrivals
 
+      //here's where we need to not remove flights from yesterday.
       val removedArrivals = (existingArrivalsKeys -- newArrivalsKeys).map(merged(_))
 
       arrivalsWithUpdates.foreach { case (ak, mergedArrival) =>
