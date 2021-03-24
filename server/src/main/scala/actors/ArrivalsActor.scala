@@ -1,8 +1,7 @@
 package actors
 
-import actors.serializers.FlightMessageConversion._
 import actors.acking.AckingReceiver.StreamCompleted
-import actors.restore.ArrivalsRestorer
+import actors.serializers.FlightMessageConversion._
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights

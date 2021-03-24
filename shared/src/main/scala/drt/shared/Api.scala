@@ -20,8 +20,8 @@ import upickle.default._
 
 import java.lang.Math.round
 import java.util.UUID
-import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
-import scala.collection.{SortedMap, mutable}
+import scala.collection.immutable.{NumericRange, Map => IMap, SortedMap => ISortedMap}
+import scala.collection.{AbstractSeq, SortedMap, immutable, mutable}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -270,7 +270,11 @@ trait WithTerminal[A] extends Ordered[A] {
   def terminal: Terminal
 }
 
-sealed trait UniqueArrivalLike
+sealed trait UniqueArrivalLike {
+  val number: Int
+  val terminal: Terminal
+  val scheduled: MillisSinceEpoch
+}
 
 case class LegacyUniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch) extends UniqueArrivalLike
 
@@ -306,6 +310,9 @@ case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSince
 
   val equalWithinScheduledWindow: (UniqueArrival, Int) => Boolean = (searchKey, windowMillis) =>
     searchKey.number == this.number && searchKey.terminal == this.terminal && Math.abs(searchKey.scheduled - this.scheduled) <= windowMillis
+
+  def equalsLegacy(lua: LegacyUniqueArrival): Boolean =
+    lua.number == number && lua.scheduled == scheduled && lua.terminal == terminal
 }
 
 object UniqueArrival {
@@ -759,16 +766,16 @@ class ArrivalsRestorer {
 }
 
 object ArrivalsRemoval {
-//  def remove(removals: Iterable[UniqueArrivalLike], arrivals: Iterable[(UniqueArrival, Arrival)]): Iterable[(UniqueArrival, Arrival)] = {
-//    val keys = removals.collect { case k: UniqueArrival => k }
-//    val minusRemovals = arrivals.toMap -- keys
-//    val legacyKeys = removals.collect { case lk: LegacyUniqueArrival => lk }
-//    if (legacyKeys.nonEmpty) {
-//      legacyKeys.foldLeft(minusRemovals) {
-//        case (acc, legacyKey) => acc.filterKeys(_.legacyUniqueArrival != legacyKey)
-//      }
-//    } else minusRemovals
-//  }
+  //  def remove(removals: Iterable[UniqueArrivalLike], arrivals: Iterable[(UniqueArrival, Arrival)]): Iterable[(UniqueArrival, Arrival)] = {
+  //    val keys = removals.collect { case k: UniqueArrival => k }
+  //    val minusRemovals = arrivals.toMap -- keys
+  //    val legacyKeys = removals.collect { case lk: LegacyUniqueArrival => lk }
+  //    if (legacyKeys.nonEmpty) {
+  //      legacyKeys.foldLeft(minusRemovals) {
+  //        case (acc, legacyKey) => acc.filterKeys(_.legacyUniqueArrival != legacyKey)
+  //      }
+  //    } else minusRemovals
+  //  }
   def removeArrivals[A](removals: Iterable[UniqueArrivalLike], arrivals: SortedMap[UniqueArrival, A]): SortedMap[UniqueArrival, A] = {
     val keys = removals.collect { case k: UniqueArrival => k }
     val minusRemovals = arrivals -- keys
@@ -779,16 +786,17 @@ object ArrivalsRemoval {
       }
     } else minusRemovals
   }
-//  def removeFlightsWithSplits(removals: Iterable[UniqueArrivalLike], arrivals: SortedMap[UniqueArrival, ApiFlightWithSplits]): SortedMap[UniqueArrival, ApiFlightWithSplits] = {
-//    val keys = removals.collect { case k: UniqueArrival => k }
-//    val minusRemovals = arrivals -- keys
-//    val legacyKeys = removals.collect { case lk: LegacyUniqueArrival => lk }
-//    if (legacyKeys.nonEmpty) {
-//      legacyKeys.foldLeft(minusRemovals) {
-//        case (acc, legacyKey) => acc.filterKeys(_.legacyUniqueArrival != legacyKey)
-//      }
-//    } else minusRemovals
-//  }
+
+  //  def removeFlightsWithSplits(removals: Iterable[UniqueArrivalLike], arrivals: SortedMap[UniqueArrival, ApiFlightWithSplits]): SortedMap[UniqueArrival, ApiFlightWithSplits] = {
+  //    val keys = removals.collect { case k: UniqueArrival => k }
+  //    val minusRemovals = arrivals -- keys
+  //    val legacyKeys = removals.collect { case lk: LegacyUniqueArrival => lk }
+  //    if (legacyKeys.nonEmpty) {
+  //      legacyKeys.foldLeft(minusRemovals) {
+  //        case (acc, legacyKey) => acc.filterKeys(_.legacyUniqueArrival != legacyKey)
+  //      }
+  //    } else minusRemovals
+  //  }
 }
 
 object FlightsApi {
@@ -884,13 +892,18 @@ object FlightsApi {
     def applyTo(flightsWithSplits: FlightsWithSplits,
                 nowMillis: MillisSinceEpoch): (FlightsWithSplits, Iterable[MillisSinceEpoch]) = {
       val updated = flightsWithSplits.flights ++ flightsToUpdate.map(f => (f.apiFlight.unique, f.copy(lastUpdated = Option(nowMillis))))
-//      val minusRemovals = updated -- arrivalsToRemove
-      val minusRemovals = ArrivalsRemoval.removeArrivals(arrivalsToRemove, SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ updated)
+
+      val minusRemovals: SortedMap[UniqueArrival, ApiFlightWithSplits] = ArrivalsRemoval.removeArrivals(arrivalsToRemove, SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ updated)
 
       val asMap: IMap[UniqueArrival, ApiFlightWithSplits] = flightsWithSplits.flights
 
       val minutesFromRemovalsInExistingState: Iterable[MillisSinceEpoch] = arrivalsToRemove
-        .flatMap(r => asMap.get(r).map(_.apiFlight.pcpRange).getOrElse(List()))
+        .flatMap {
+          case r: UniqueArrival =>
+            asMap.get(r).map(_.apiFlight.pcpRange).getOrElse(List())
+          case r: LegacyUniqueArrival =>
+            asMap.collect { case (ua, a) if ua.equalsLegacy(r) => a }.flatMap(_.apiFlight.pcpRange)
+        }
 
       val minutesFromExistingStateUpdatedFlights = flightsToUpdate
         .flatMap { fws =>
@@ -900,14 +913,11 @@ object FlightsApi {
           }
         }
 
-      val removalMinutes: Iterable[MillisSinceEpoch] = arrivalsToRemove.flatMap(ua => {
-        asMap.get(ua).toList.flatMap(_.apiFlight.pcpRange)
-      })
-
-      val updatedMinutesFromFlights = removalMinutes ++ minutesFromRemovalsInExistingState ++ updateMinutes ++
+      val updatedMinutesFromFlights = minutesFromRemovalsInExistingState ++
+        updateMinutes ++
         minutesFromExistingStateUpdatedFlights
 
-      (FlightsWithSplits(minusRemovals), updatedMinutesFromFlights)
+      (FlightsWithSplits(minusRemovals.toMap), updatedMinutesFromFlights)
     }
 
     lazy val terminals: Set[Terminal] = flightsToUpdate.map(_.apiFlight.Terminal).toSet ++
