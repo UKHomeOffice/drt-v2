@@ -58,6 +58,24 @@ object TestableArrivalsGraphStage {
 
     RunnableGraph.fromGraph(graph)
   }
+
+  def buildArrivalsGraphStage(pcpCalcFn: Arrival => MilliDate,
+                              now: SDateLike,
+                              sanitiser: ArrivalDataSanitiser = ArrivalDataSanitiser(None, None)
+                             ) = new ArrivalsGraphStage(
+    "",
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    SortedMap[UniqueArrival, Arrival](),
+    pcpCalcFn,
+    Set(T1),
+    sanitiser,
+    ArrivalsAdjustmentsNoop,
+    oneDayMillis,
+    () => now
+  )
 }
 
 class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEach {
@@ -82,7 +100,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
   }
 
   "Given a live arrival and a base live arrival I should get a merged arrival" >> {
-    val (_, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+    val (_, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
     val liveEstimated = Option(scheduled.millisSinceEpoch)
     val liveBaseActual = Option(scheduled.millisSinceEpoch)
 
@@ -95,7 +113,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
   "Given a live arrival with a status of UNK and a base live arrival with a status of Scheduled " +
     "Then I should get the base live arrival status" >> {
-    val (_, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+    val (_, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
     val liveBaseActual = Option(scheduled.millisSinceEpoch)
 
     liveSource.offer(List(arrival(estimated = liveBaseActual, status = ArrivalStatus("UNK"))))
@@ -108,7 +126,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
   "Given a live arrival with a scheduled arrival time and a base live arrival within 60 minutes scheduled arrival time" +
     "Then they should get merged and have scheduled Departure" >> {
-    val (_, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+    val (_, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
 
     val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
     offerAndCheck(liveSource, List(arrival()), (_: Arrival) => true)
@@ -122,7 +140,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
   "Given a forecast Base arrival with a scheduled arrival time and a base live arrival with in 60 minutes scheduled arrival time " +
     "Then they should get merged and have scheduled Departure" >> {
-    val (forecastBaseArrivalsSource, _, liveBaseSource, _) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+    val (forecastBaseArrivalsSource, _, liveBaseSource, _) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
 
     val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
 
@@ -137,7 +155,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
   "Given a forecast arrival with a scheduled arrival time and a live arrival with in 60 minutes scheduled arrival time" +
     "Then they should not merged and scheduled Departure not present" >> {
-    val (forecastBaseArrivalsSource, _, _, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+    val (forecastBaseArrivalsSource, _, _, liveSource) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
 
     val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
 
@@ -151,7 +169,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
   "Given a forecast base arrival with a scheduled arrival time and a live base arrival with in 60 minutes scheduled arrival time and forecast arrival with scheduled same as forecast base" +
     "Then they should merged and scheduled Departure present and actual pax count should exists" >> {
-    val (forecastBaseArrivalsSource, forecastArrivalSource, liveBaseSource, _) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+    val (forecastBaseArrivalsSource, forecastArrivalSource, liveBaseSource, _) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
 
     val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
 
@@ -169,7 +187,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
   "Given a live arrival with a scheduled arrival time and a live base arrival with in 60 minutes scheduled arrival time and forecast arrival with scheduled same as forecast base" +
     "Then they should merged and scheduled Departure present" >> {
-    val (_, forecastArrivalSource, liveBaseSource, liveArrivalSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+    val (_, forecastArrivalSource, liveBaseSource, liveArrivalSource) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
 
     val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
 
@@ -190,7 +208,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
   "Given a base live arrival with an estimated time that is outside the defined acceptable data threshold " +
     "Then the estimated times should be ignored" >> {
     val (forecastBaseSource, _, liveBaseSource, _) = TestableArrivalsGraphStage(
-      probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
+      probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled, ArrivalDataSanitiser(Option(4), None))
     ).run
 
     forecastBaseSource.offer(List(arrival()))
@@ -203,7 +221,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
   "Given a port live arrival with an estimated time that is outside the defined acceptable data threshold " +
     "Then the estimated times should still be used" >> {
     val (forecastBaseSource, _, _, liveSource) = TestableArrivalsGraphStage(
-      probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
+      probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled, ArrivalDataSanitiser(Option(4), None))
     ).run
 
     forecastBaseSource.offer(List(arrival()))
@@ -219,7 +237,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     "And a Base Live arrival with an estimated chox that is before the port live est time " +
     "Then the EstChox field should be ignored" >> {
     val (forecastBaseSource, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(
-      probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
+      probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled, ArrivalDataSanitiser(Option(4), None))
     ).run
 
     forecastBaseSource.offer(List(arrival()))
@@ -236,7 +254,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     "And a Base Live arrival with an estimated chox that is the same as the live est time " +
     "Then the EstChox field should be ignored" >> {
     val (forecastBaseSource, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(
-      probe, buildArrivalsGraphStageWithSanitiser(ArrivalDataSanitiser(Option(4), None))
+      probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled, ArrivalDataSanitiser(Option(4), None))
     ).run
 
     forecastBaseSource.offer(List(arrival()))
@@ -250,7 +268,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
   }
 
   "Given a base live arrival only we should not get anything back" >> {
-    val (_, _, liveBaseSource, _) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+    val (_, _, liveBaseSource, _) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
     val liveBaseActual = Option(scheduled.millisSinceEpoch)
 
     liveBaseSource.offer(List(arrival(actual = liveBaseActual)))
@@ -263,7 +281,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
   }
 
   "Given a base live arrival with an estimated time and a base forecast arrival we should get the arrival with estimated time on it" >> {
-    val (forecastBaseSource, _, liveBaseSource, _) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+    val (forecastBaseSource, _, liveBaseSource, _) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
     val baseLiveEstimated = Option(scheduled.millisSinceEpoch)
 
     liveBaseSource.offer(List(arrival(estimated = baseLiveEstimated)))
@@ -273,41 +291,11 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     success
   }
 
-  private def buildArrivalsGraphStageWithSanitiser(sanitiser: ArrivalDataSanitiser) = new ArrivalsGraphStage(
-    "",
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    pcpTimeCalc,
-    Set(T1),
-    sanitiser,
-    ArrivalsAdjustmentsNoop,
-    oneDayMillis,
-    () => scheduled
-  )
-
-  private def buildArrivalsGraphStage = new ArrivalsGraphStage(
-    "",
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    pcpTimeCalc,
-    Set(T1),
-    ArrivalDataSanitiser(None, None),
-    ArrivalsAdjustmentsNoop,
-    oneDayMillis,
-    () => scheduled
-  )
-
   def pcpTimeCalc(a: Arrival): MilliDate = PcpArrival.pcpFrom(0, 0, _ => 0)(a)
 
   "Given a base live arrival with an estimated time and a port live arrival with only scheduled time " +
     "Then PCP time should be calculated from the base live arrival time." >> {
-    val (_, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+    val (_, _, liveBaseSource, liveSource) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
     val baseLiveEstimated = Option(SDate("2019-10-22T14:00:00Z").millisSinceEpoch)
 
     liveBaseSource.offer(List(arrival(estimated = baseLiveEstimated)))
@@ -319,7 +307,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
   "Given a base live arrival with an estimated time and an ACL arrival" +
     " Then we should calculate PCP time from the base live arrival." >> {
-    val (aclSource, _, liveBaseSource, _) = TestableArrivalsGraphStage(probe, buildArrivalsGraphStage).run
+    val (aclSource, _, liveBaseSource, _) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
     val baseLiveEstimated = Option(SDate("2019-10-22T14:00:00Z").millisSinceEpoch)
 
     liveBaseSource.offer(List(arrival(estimated = baseLiveEstimated)))

@@ -110,12 +110,15 @@ class TerminalDayFlightActor(
 
   def handleDiffMessage(diff: FlightsWithSplitsDiffMessage): Unit = {
 
-    if (diff.createdAt.exists(_ >= firstMinuteOfDay.addDays(1).millisSinceEpoch))
+    if (messageReceivedBeforeEndOfDay(diff))
       state = state -- diff.removals.map(uniqueArrivalFromMessage)
 
     state = state ++ flightsFromMessages(diff.updates)
     log.debug(s"Recovery: state contains ${state.flights.size} flights")
   }
+
+  def messageReceivedBeforeEndOfDay(diff: FlightsWithSplitsDiffMessage): Boolean =
+    diff.createdAt.exists(_ < firstMinuteOfDay.addDays(1).millisSinceEpoch)
 
   def uniqueArrivalFromMessage(uam: UniqueArrivalMessage): UniqueArrival =
     UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled)

@@ -82,7 +82,7 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
       }
     }
 
-    "When I have a delete message that came through after the day for this actor " >> {
+    "When I have a removal message that came through after the day for this actor " >> {
       "Then the removal message should be ignored" >> {
         val terminal: Terminal = T1
         val dateInQuestion: SDateLike = SDate("2021-01-01T00:00Z")
