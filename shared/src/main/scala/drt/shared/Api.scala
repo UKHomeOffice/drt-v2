@@ -221,10 +221,11 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   }
 
 
-  def withinValidDataThreshold(apiSplitsDc: Option[Splits], threshold: Double = 0.05) = {
+  def isDCSplitsExists = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC)).isDefined
+  def apiSplitDataFromDC(threshold: Double = 0.05): Option[Splits] = {
+    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
     val paxCount: Double = apiSplitsDc.map(_.splits.map(_.paxCount).sum).getOrElse(0)
     val isValidThreshold = paxCount != 0 && Math.abs(paxCount - apiFlight.ActPax.getOrElse(0)) / paxCount < threshold
-
       if (isValidThreshold && apiFlight.FeedSources.contains(LiveFeedSource))
         apiSplitsDc
       else
@@ -232,7 +233,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   }
 
   def bestSplits: Option[Splits] = {
-    val apiSplitsDc: Option[Splits] = withinValidDataThreshold(splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC)))
+    val apiSplitsDc: Option[Splits] = apiSplitDataFromDC()
 //        val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.CI))
 //        val apiSplitsAny = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
 //        val predictedSplits = splits.find(s => s.source == SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages)
