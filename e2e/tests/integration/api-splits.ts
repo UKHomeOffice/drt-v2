@@ -45,12 +45,12 @@ describe('API splits', () => {
 
 
     it('should ignore the API splits if they are more than 5% different in passenger numbers to the live feed', () => {
-        const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 14));
+        const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 10));
 
         cy
             .addFlight(
                 {
-                    "ActPax": 11,
+                    "ActPax": 12,
                     "SchDT": scheduledTime.format()
                 }
             )
@@ -59,7 +59,7 @@ describe('API splits', () => {
             .addManifest(apiManifest)
             .wait(2000)
             .get('.notApiData')
-            .contains("11")
+            .contains("12")
         ;
 
     });

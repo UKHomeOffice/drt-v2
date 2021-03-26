@@ -224,7 +224,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   def isDCSplitsExists = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC)).isDefined
   def apiSplitDataFromDC(threshold: Double = 0.05): Option[Splits] = {
     val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
-    val paxCount: Double = apiSplitsDc.map(_.splits.map(_.paxCount).sum).getOrElse(0)
+    val paxCount: Double = apiSplitsDc.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
     val isValidThreshold = paxCount != 0 && Math.abs(paxCount - apiFlight.ActPax.getOrElse(0)) / paxCount < threshold
       if (isValidThreshold && apiFlight.FeedSources.contains(LiveFeedSource))
         apiSplitsDc
