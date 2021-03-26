@@ -81,12 +81,12 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
       }
     }
 
-    val cutOffThreshold = 60000L
+    val cutOffThreshold = 1 second
 
     def actorForTerminalAndDate(terminal: Terminal, date: UtcDate): ActorRef = {
       system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), cutOffThreshold))
     }
-    
+
     "When I have a removal message that came through after the day for this actor " >> {
       "Then the removal message should be ignored" >> {
         val terminal: Terminal = T1
@@ -114,7 +114,7 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
         )
 
         val nextDayMessageWithDeletion = FlightsWithSplitsDiffMessage(
-          Option(dateInQuestion.addDays(1).addMillis(cutOffThreshold).millisSinceEpoch),
+          Option(dateInQuestion.addDays(1).addMillis(cutOffThreshold.toMillis).millisSinceEpoch),
           Seq(FlightMessageConversion.uniqueArrivalToMessage(flightWithRemovalMessageOutsideThreshold.unique)),
           Seq()
         )

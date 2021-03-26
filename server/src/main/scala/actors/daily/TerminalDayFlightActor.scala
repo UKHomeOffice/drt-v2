@@ -17,12 +17,14 @@ import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWit
 import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
 import services.SDate
 
+import scala.concurrent.duration.FiniteDuration
+
 
 object TerminalDayFlightActor {
   def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
     Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, None))
 
-  def propsWithRemovalsCutoff(terminal: Terminal, date: UtcDate, now: () => SDateLike, cutOff: MillisSinceEpoch) =
+  def propsWithRemovalsCutoff(terminal: Terminal, date: UtcDate, now: () => SDateLike, cutOff: FiniteDuration) =
     Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, Option(cutOff)))
 
   def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
@@ -36,7 +38,7 @@ class TerminalDayFlightActor(
                               terminal: Terminal,
                               val now: () => SDateLike,
                               maybePointInTime: Option[MillisSinceEpoch],
-                              maybeRemovalMessageCutOff: Option[MillisSinceEpoch]
+                              maybeRemovalMessageCutOff: Option[FiniteDuration]
                             ) extends RecoveryActorLike {
 
   val loggerSuffix: String = maybePointInTime match {
@@ -119,16 +121,15 @@ class TerminalDayFlightActor(
     else
       log.warn(s"Received a delete message after the end of the day ${diff.createdAt.map(SDate(_)).getOrElse("No timestamp")}")
 
-
     state = state ++ flightsFromMessages(diff.updates)
     log.debug(s"Recovery: state contains ${state.flights.size} flights")
   }
 
   def removalArrivedBeforeCutoff(diff: FlightsWithSplitsDiffMessage): Boolean = {
-    maybeRemovalMessageCutOff.forall(thresholdMillis =>
+    maybeRemovalMessageCutOff.forall(duration =>
       diff
         .createdAt
-        .exists(_ < firstMinuteOfDay.addDays(1).addMillis(thresholdMillis.toInt).millisSinceEpoch)
+        .exists(_ < firstMinuteOfDay.addDays(1).addMillis(duration.toMillis).millisSinceEpoch)
     )
   }
 
