@@ -1,16 +1,29 @@
 package drt.client.services.handlers
 
-import diode.{ActionResult, ModelRW}
-import diode.data.Pot
+import diode.data.{Empty, Pending, Pot, Ready}
+import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions._
+import drt.client.services.{DrtApi, PollDelay}
 import drt.shared.SimulationResult
-import org.scalajs.dom._
+import upickle.default.read
+
+import scala.concurrent.Future
+import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class SimulationHandler[M](simulationResult: ModelRW[M, Pot[SimulationResult]]) extends LoggingActionHandler(simulationResult) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SimulationExport(simulation) =>
+    case GetSimulation(params) =>
 
-    noChange
+      updated(Pending(), Effect(DrtApi.get(s"desk-rec-simulation?${params.toQueryStringParams}")
+        .map(r => SetSimulation(read[SimulationResult](r.responseText))).recoverWith {
+        case e =>
+          Future(RetryActionAfter(GetSimulation(params), PollDelay.recoveryDelay))
+      }))
+    case SetSimulation(simulation) =>
 
+      updated(Ready(simulation))
+    case ReSetSimulation =>
+
+      updated(Empty)
   }
 }

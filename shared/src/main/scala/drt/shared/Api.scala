@@ -619,6 +619,8 @@ trait SDateLike {
 
   def addMillis(millisToAdd: Int): SDateLike
 
+  def addMillis(millisToAdd: MillisSinceEpoch): SDateLike = addMillis(millisToAdd.toInt)
+
   def roundToMinute(): SDateLike = {
     val remainder = millisSinceEpoch % 60000
     addMillis(-1 * remainder.toInt)
@@ -865,7 +867,6 @@ object FlightsApi {
                     case None =>
                       fws.apiFlight
                     case Some(liveSplit) =>
-                      println(s"adding live splits. sources: ${fws.apiFlight.FeedSources + ApiFeedSource}")
                       fws.apiFlight.copy(
                         ApiPax = Option(Math.round(liveSplit.totalExcludingTransferPax).toInt),
                         FeedSources = fws.apiFlight.FeedSources + ApiFeedSource)
@@ -968,6 +969,8 @@ object MilliTimes {
   val minutesInADay: Int = 60 * 24
 
   def timeToNearestMinute(t: MillisSinceEpoch): MillisSinceEpoch = round(t / 60000d) * 60000
+  val fifteenMinutesMillis: Int = oneMinuteMillis * 15
+  val fifteenMinuteSlotsInDay: Int = 4 * 24
 }
 
 object CrunchApi {

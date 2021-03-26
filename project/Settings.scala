@@ -96,7 +96,10 @@ object Settings {
     "chart.js" -> "2.5",
     "@tippyjs/react" -> "4.1.0",
     "react-chartjs-2" -> "2.10.0",
-    "react-markdown" -> "4.0.6"
+    "react-markdown" -> "4.0.6",
+    "@material-ui/core"  -> "3.9.0",
+    "@material-ui/icons" -> "3.0.2",
+    "@material-ui/lab"   -> "3.0.0-alpha.30"
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
@@ -114,7 +117,11 @@ object Settings {
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "com.lihaoyi" %% "pprint" % pprint,
-    "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs
+    "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs,
+
+    "io.kinoplan" %%% "scalajs-react-material-ui-core" % "0.2.1",
+    "io.kinoplan" %%% "scalajs-react-material-ui-icons" % "0.2.1",
+    "io.kinoplan" %%% "scalajs-react-material-ui-lab" % "0.2.1"
   ))
 
   val clientNpmDevDependencies = "expose-loader" -> exposeLoader

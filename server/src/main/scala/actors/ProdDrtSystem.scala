@@ -67,11 +67,14 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, deploymentQueueActor)
 
+
+
   val flightLookups: FlightLookups = FlightLookups(
     system,
     now,
     airportConfig.queuesByTerminal,
-    crunchQueueActor
+    crunchQueueActor,
+    params.maybeRemovalCutOffSeconds
   )
   override val flightsActor: ActorRef = flightLookups.flightsActor
   override val queuesActor: ActorRef = minuteLookups.queueMinutesActor

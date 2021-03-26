@@ -6,9 +6,9 @@ import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.{Children, JsComponent}
 
 import scala.scalajs.js
-import scala.scalajs.js.Dictionary
 import scala.scalajs.js.JSConverters._
 import scala.scalajs.js.annotation.JSImport
+import scala.scalajs.js.{Dictionary, undefined}
 
 /**
  * Sets some helpful defaults for your data set
@@ -43,6 +43,25 @@ object ChartJSComponent {
 
       props
     }
+  }
+
+  case class RGBA(red: Int, green: Int, blue: Int, alpha: Double = 1.0) {
+    override def toString = s"rgba($red,$green,$blue,$alpha)"
+
+    def asStringWithAlpha(newAlpha: Double): String = this.copy(alpha = newAlpha).toString
+  }
+
+  object RGBA {
+    val blue1: RGBA = RGBA(0, 25, 105)
+    val blue2: RGBA = RGBA(55, 103, 152)
+    val blue3: RGBA = RGBA(111, 185, 196)
+
+    val red1: RGBA = RGBA(132, 0, 0)
+    val red2: RGBA = RGBA(213, 69, 77)
+    val red3: RGBA = RGBA(255, 159, 149)
+
+    val green1: RGBA = RGBA(92, 245, 21)
+
 
   }
 
@@ -63,10 +82,39 @@ object ChartJSComponent {
                              backgroundColor: js.UndefOr[String] = js.undefined,
                              borderColor: js.UndefOr[String] = js.undefined,
                              borderWidth: js.UndefOr[Int] = js.undefined,
-                             hoverBackgroundColor: js.UndefOr[String] = js.undefined
+                             hoverBackgroundColor: js.UndefOr[String] = js.undefined,
+                             `type`: js.UndefOr[String] = js.undefined,
+                             pointRadius: js.UndefOr[Int] = js.undefined,
                            ) {
 
     def toJs: js.Object = JSMacro[ChartJsDataSet](this)
+  }
+
+  object ChartJsDataSet {
+    def bar(label: String, data: Seq[Double], colour: RGBA): ChartJsDataSet =
+      ChartJsDataSet(
+        data = data.toJSArray,
+        label = label,
+        backgroundColor = colour.asStringWithAlpha(0.2),
+        borderColor = colour.asStringWithAlpha(1),
+        borderWidth = 1,
+        hoverBackgroundColor = colour.asStringWithAlpha(0.4),
+        hoverBorderColor = colour.asStringWithAlpha(1),
+        `type` = "bar"
+      )
+
+    def line(label: String, data: Seq[Double], colour: RGBA, pointRadius: Option[Int] = None): ChartJsDataSet =
+      ChartJsDataSet(
+        data = data.toJSArray,
+        label = label,
+        backgroundColor = colour.asStringWithAlpha(0.2),
+        borderColor = colour.asStringWithAlpha(1),
+        borderWidth = 1,
+        hoverBackgroundColor = colour.asStringWithAlpha(0.4),
+        hoverBorderColor = colour.asStringWithAlpha(1),
+        `type` = "line",
+        pointRadius = pointRadius.orUndefined
+      )
   }
 
   case class ChartJsOptions(
@@ -82,7 +130,12 @@ object ChartJSComponent {
 
     def apply(title: String): ChartJsOptions = options(title, None)
 
-    def options(title: String, suggestedMax: Option[Double]): ChartJsOptions = {
+    def withMultipleDataSets(title: String, maxTicks: Int): ChartJsOptions =
+      options(title, None, displayLegend = true, Option(maxTicks))
+
+    def options(title: String, suggestedMax: Option[Double], displayLegend: Boolean = false, maxTicks: Option[Int] = None): ChartJsOptions = {
+      val autoSkip = if (maxTicks.isDefined) true else undefined
+
       val scales: Dictionary[js.Any] = js.Dictionary(
         "yAxes" ->
           js.Array(
@@ -98,7 +151,9 @@ object ChartJSComponent {
             js.Dictionary("ticks" ->
               js.Dictionary(
                 "beginAtZero" -> true,
-                "suggestedMax" -> suggestedMax.orUndefined
+                "suggestedMax" -> suggestedMax.orUndefined,
+                "autoSkip" -> autoSkip,
+                "maxTicksLimit" -> maxTicks.orUndefined
               )
             )
           )
@@ -110,7 +165,7 @@ object ChartJSComponent {
       )
 
       val legend: Dictionary[js.Any] = js.Dictionary(
-        "display" -> false
+        "display" -> displayLegend
       )
 
       ChartJsOptions(scales, t, legend)

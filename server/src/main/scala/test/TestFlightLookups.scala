@@ -31,7 +31,7 @@ case class TestFlightLookups(system: ActorSystem,
       new TestFlightsRouterActor(
         updatesSubscriber,
         queuesByTerminal.keys,
-        flightsByDayLookup,
+        flightsByDayLookup(None),
         updateFlights,
         resetFlightsData
       )))

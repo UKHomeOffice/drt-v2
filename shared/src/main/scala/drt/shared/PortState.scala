@@ -99,7 +99,6 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
           .map { minute => staffMinutes.get(TM(terminal, minute)) }
           .collect { case Some(sm) => sm }
           .toList
-        val completeList = staffMinutes.range(TM.atTime(startMillis), TM.atTime(endMillis))
         (periodStart, staffPeriodSummary(terminal, periodStart, slotMinutes))
       }
       .toMap
@@ -114,10 +113,23 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
       workLoad = slotMinutes.map(_.workLoad).sum,
       deskRec = slotMinutes.map(_.deskRec).max,
       waitTime = slotMinutes.map(_.waitTime).max,
-      deployedDesks = if (slotMinutes.exists(cm => cm.deployedDesks.isDefined)) Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max) else None,
-      deployedWait = if (slotMinutes.exists(cm => cm.deployedWait.isDefined)) Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max) else None,
-      actDesks = if (slotMinutes.exists(cm => cm.actDesks.isDefined)) Option(slotMinutes.map(_.actDesks.getOrElse(0)).max) else None,
-      actWait = if (slotMinutes.exists(cm => cm.actWait.isDefined)) Option(slotMinutes.map(_.actWait.getOrElse(0)).max) else None)
+      deployedDesks = if (slotMinutes.exists(cm => cm.deployedDesks.isDefined))
+        Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max)
+      else
+        None,
+      deployedWait = if (slotMinutes.exists(cm => cm.deployedWait.isDefined))
+        Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max)
+      else
+        None,
+      actDesks = if (slotMinutes.exists(cm => cm.actDesks.isDefined))
+        Option(slotMinutes.map(_.actDesks.getOrElse(0)).max)
+      else
+        None,
+      actWait = if (slotMinutes.exists(cm => cm.actWait.isDefined))
+        Option(slotMinutes.map(_.actWait.getOrElse(0)).max)
+      else
+        None
+    )
     else CrunchMinute(
       terminal = terminal,
       queue = queue,
