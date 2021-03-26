@@ -68,10 +68,8 @@ class PartitionedPortStateTestActor(probe: ActorRef,
             .runAndCombine(eventualSource)
             .foreach {
               case FlightsWithSplits(flights) =>
-                if (flightsWithSplitsDiff.toRemove.nonEmpty) println(s"removing ${flightsWithSplitsDiff.toRemove.map(_.unique)}")
                 val updatedFlights = (state.flights ++ flights) -- flightsWithSplitsDiff.toRemove.map(_.unique)
                 state = state.copy(flights = updatedFlights)
-                if (flightsWithSplitsDiff.toRemove.nonEmpty) println(s"state: ${state.flights -- flightsWithSplitsDiff.toRemove.map(_.unique)}")
                 sendStateToProbe()
             }
 
