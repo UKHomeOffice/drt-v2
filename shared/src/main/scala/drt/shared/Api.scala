@@ -258,10 +258,6 @@ trait WithTimeAccessor {
   def timeValue: MillisSinceEpoch
 }
 
-trait WithLegacyUniqueId[LI, I] extends Ordered[I] {
-  def legacyUniqueId: LI
-}
-
 trait WithUnique[I] {
   def unique: I
 }
@@ -285,8 +281,7 @@ object LegacyUniqueArrival {
 }
 
 case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch, origin: PortCode)
-  extends WithLegacyUniqueId[Int, UniqueArrival]
-    with WithTimeAccessor
+  extends WithTimeAccessor
     with WithTerminal[UniqueArrival]
     with UniqueArrivalLike {
 
@@ -306,7 +301,7 @@ case class UniqueArrival(number: Int, terminal: Terminal, scheduled: MillisSince
 
   override def timeValue: MillisSinceEpoch = scheduled
 
-  override def legacyUniqueId: Int = s"$terminal$scheduled$number".hashCode
+  def legacyUniqueId: Int = s"$terminal$scheduled$number".hashCode
 
   val equalWithinScheduledWindow: (UniqueArrival, Int) => Boolean = (searchKey, windowMillis) =>
     searchKey.number == this.number && searchKey.terminal == this.terminal && Math.abs(searchKey.scheduled - this.scheduled) <= windowMillis
