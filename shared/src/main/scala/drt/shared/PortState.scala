@@ -9,7 +9,7 @@ import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.collection.{Map, SortedMap}
 
 
-case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
+case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
                      crunchMinutes: ISortedMap[TQM, CrunchMinute],
                      staffMinutes: ISortedMap[TM, StaffMinute]) extends PortStateLike {
   def window(start: SDateLike, end: SDateLike): PortState = {
@@ -32,16 +32,6 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
     val sms = staffMinuteRangeWithTerminals(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues.keys.toSeq)
 
     PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
-  }
-
-  def purgeOlderThanDate(thresholdMillis: MillisSinceEpoch): PortState = PortState(
-    purgeExpired(flights, UniqueArrival.atTime, thresholdMillis),
-    purgeExpired(crunchMinutes, TQM.atTime, thresholdMillis),
-    purgeExpired(staffMinutes, TM.atTime, thresholdMillis)
-  )
-
-  def purgeExpired[A <: WithTimeAccessor, B](expireable: ISortedMap[A, B], atTime: MillisSinceEpoch => A, thresholdMillis: MillisSinceEpoch): ISortedMap[A, B] = {
-    expireable -- expireable.range(atTime(0L), atTime(thresholdMillis - 1)).keys
   }
 
   def flightsRange(roundedStart: SDateLike, roundedEnd: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits]
@@ -189,7 +179,7 @@ object PortState {
     PortState(ISortedMap[UniqueArrival, ApiFlightWithSplits]() ++ t._1, ISortedMap[TQM, CrunchMinute]() ++ t._2, ISortedMap[TM, StaffMinute]() ++ t._3)
   }
 
-  private def portStateToTuple(ps: PortState): (ISortedMap[UniqueArrival, ApiFlightWithSplits], ISortedMap[TQM, CrunchMinute], ISortedMap[TM, StaffMinute]) = {
+  private def portStateToTuple(ps: PortState): (IMap[UniqueArrival, ApiFlightWithSplits], ISortedMap[TQM, CrunchMinute], ISortedMap[TM, StaffMinute]) = {
     (ps.flights, ps.crunchMinutes, ps.staffMinutes)
   }
 

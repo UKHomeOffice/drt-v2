@@ -76,7 +76,8 @@ class PartitionedPortStateTestActor(probe: ActorRef,
             }
 
         case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.nonEmpty =>
-          val updatedFlights = (state.flights -- flightsWithSplitsDiff.arrivalsToRemove) ++ flightsWithSplitsDiff.flightsToUpdate.map(fws => (fws.unique, fws))
+          val minusRemovals = ArrivalsRemoval.removeArrivals(flightsWithSplitsDiff.arrivalsToRemove, state.flights)
+          val updatedFlights = minusRemovals ++ flightsWithSplitsDiff.flightsToUpdate.map(fws => (fws.unique, fws))
           state = state.copy(flights = updatedFlights)
           sendStateToProbe()
 

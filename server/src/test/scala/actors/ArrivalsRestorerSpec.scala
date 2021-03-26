@@ -1,9 +1,9 @@
 package actors
 
-import actors.restore.ArrivalsRestorer
 import drt.shared.PortCode
 import drt.shared.Terminals.{T1, T2}
 import drt.shared.api.Arrival
+import drt.shared.ArrivalsRestorer
 import org.specs2.mutable.Specification
 
 import scala.collection.mutable

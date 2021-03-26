@@ -14,6 +14,9 @@ import services.SDate
 import scala.util.{Success, Try}
 
 object FlightMessageConversion {
+  def uniqueArrivalToMessage(unique: UniqueArrival): UniqueArrivalMessage =
+    UniqueArrivalMessage(Option(unique.number), Option(unique.terminal.toString), Option(unique.scheduled), Option(unique.origin.toString))
+
   val log: Logger = LoggerFactory.getLogger(getClass.toString)
 
   def flightWithSplitsDiffFromMessage(diffMessage: FlightsWithSplitsDiffMessage): FlightsWithSplitsDiff =

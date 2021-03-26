@@ -10,7 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.UtcDate
-import drt.shared.{ArrivalsDiff, SDateLike, UniqueArrival}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
@@ -115,10 +115,11 @@ class TerminalDayFlightActor(
   override def stateToMessage: GeneratedMessage = FlightMessageConversion.flightsToMessage(state.flights.values)
 
   def handleDiffMessage(diff: FlightsWithSplitsDiffMessage): Unit = {
-
-    if (removalArrivedBeforeCutoff(diff))
-      state = state -- diff.removals.map(uniqueArrivalFromMessage)
-    else
+    if (removalArrivedBeforeCutoff(diff)) {
+      val removals = diff.removals.map(uniqueArrivalFromMessage)
+      val minusRemovals = ArrivalsRemoval.removeArrivals(removals, state.flights)
+      state = state.copy(flights = minusRemovals)
+    } else
       log.warn(s"Received a delete message after the end of the day ${diff.createdAt.map(SDate(_)).getOrElse("No timestamp")}")
 
     state = state ++ flightsFromMessages(diff.updates)
@@ -133,8 +134,12 @@ class TerminalDayFlightActor(
     )
   }
 
-  def uniqueArrivalFromMessage(uam: UniqueArrivalMessage): UniqueArrival =
-    UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled, uam.origin.getOrElse(""))
+  def uniqueArrivalFromMessage(uam: UniqueArrivalMessage): UniqueArrivalLike = uam match {
+    case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), Some(origin)) =>
+      UniqueArrival(number, terminalName, scheduled, origin)
+    case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), None) =>
+      LegacyUniqueArrival(number, terminalName, scheduled)
+  }
 
   def setStateFromSnapshot(flightMessages: Seq[FlightWithSplitsMessage]): Unit = {
     state = FlightsWithSplits(flightsFromMessages(flightMessages))
