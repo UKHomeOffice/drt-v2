@@ -2,19 +2,18 @@ package actors.daily
 
 import actors.queues.QueueLikeActor.UpdatedMillis
 import actors.serializers.FlightMessageConversion
-import actors.serializers.PortStateMessageConversion.flightsFromMessages
+import actors.serializers.FlightMessageConversion.{flightWithSplitsFromMessage, uniqueArrivalsFromMessages}
 import actors.{GetState, RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
 import drt.shared.Terminals.Terminal
-import drt.shared.dates.UtcDate
 import drt.shared._
+import drt.shared.dates.UtcDate
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{FlightWithSplitsMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
-import server.protobuf.messages.FlightsMessage.UniqueArrivalMessage
+import server.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import services.SDate
 
 import scala.concurrent.duration.FiniteDuration
@@ -24,7 +23,7 @@ object TerminalDayFlightActor {
   def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
     Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, None))
 
-  def propsWithRemovalsCutoff(terminal: Terminal, date: UtcDate, now: () => SDateLike, cutOff: FiniteDuration) =
+  def propsWithRemovalsCutoff(terminal: Terminal, date: UtcDate, now: () => SDateLike, cutOff: FiniteDuration): Props =
     Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, Option(cutOff)))
 
   def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
@@ -49,8 +48,12 @@ class TerminalDayFlightActor(
   val firstMinuteOfDay: SDateLike = SDate(year, month, day, 0, 0)
   val lastMinuteOfDay: SDateLike = firstMinuteOfDay.addDays(1).addMinutes(-1)
 
+  val maybeRemovalsCutoffTimestamp: Option[MillisSinceEpoch] = maybeRemovalMessageCutOff
+    .map(cutoff => firstMinuteOfDay.addDays(1).addMillis(cutoff.toMillis).millisSinceEpoch)
+
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
+  val restorer = new ArrivalsRestorer[ApiFlightWithSplits]
   var state: FlightsWithSplits = FlightsWithSplits.empty
 
   override def persistenceId: String = f"terminal-flights-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
@@ -66,6 +69,11 @@ class TerminalDayFlightActor(
     case Some(pointInTime) =>
       val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
       Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
+  }
+
+  override def postRecoveryComplete(): Unit = {
+    state = state.copy(flights = restorer.arrivals)
+    restorer.finish()
   }
 
   override def receiveCommand: Receive = {
@@ -98,50 +106,28 @@ class TerminalDayFlightActor(
     persistAndMaybeSnapshotWithAck(FlightMessageConversion.flightWithSplitsDiffToMessage(diff), replyToAndMessage)
   }
 
+  def isBeforeCutoff(timestamp: Long): Boolean = maybeRemovalsCutoffTimestamp match {
+    case Some(removalsCutoffTimestamp) => timestamp < removalsCutoffTimestamp
+    case None => true
+  }
+
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case diff: FlightsWithSplitsDiffMessage =>
+    case FlightsWithSplitsDiffMessage(Some(createdAt), removals, updates) =>
       maybePointInTime match {
-        case Some(pit) if pit < diff.getCreatedAt =>
+        case Some(pit) if pit < createdAt =>
           log.debug(s"Ignoring diff created more recently than the recovery point in time")
-        case _ => handleDiffMessage(diff)
+        case _ =>
+          if (isBeforeCutoff(createdAt))
+            restorer.remove(uniqueArrivalsFromMessages(removals))
+          restorer.update(updates.map(flightWithSplitsFromMessage))
       }
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case FlightsWithSplitsMessage(flightMessages) =>
-      setStateFromSnapshot(flightMessages)
+    case m: FlightsWithSplitsMessage =>
+      val flights = m.flightWithSplits.map(FlightMessageConversion.flightWithSplitsFromMessage)
+      restorer.update(flights)
   }
 
   override def stateToMessage: GeneratedMessage = FlightMessageConversion.flightsToMessage(state.flights.values)
-
-  def handleDiffMessage(diff: FlightsWithSplitsDiffMessage): Unit = {
-    if (removalArrivedBeforeCutoff(diff)) {
-      val removals = diff.removals.map(uniqueArrivalFromMessage)
-      val minusRemovals = ArrivalsRemoval.removeArrivals(removals, state.flights)
-      state = state.copy(flights = minusRemovals)
-    } else
-      log.warn(s"Received a delete message after the end of the day ${diff.createdAt.map(SDate(_)).getOrElse("No timestamp")}")
-
-    state = state ++ flightsFromMessages(diff.updates)
-    log.debug(s"Recovery: state contains ${state.flights.size} flights")
-  }
-
-  def removalArrivedBeforeCutoff(diff: FlightsWithSplitsDiffMessage): Boolean = {
-    maybeRemovalMessageCutOff.forall(duration =>
-      diff
-        .createdAt
-        .exists(_ < firstMinuteOfDay.addDays(1).addMillis(duration.toMillis).millisSinceEpoch)
-    )
-  }
-
-  def uniqueArrivalFromMessage(uam: UniqueArrivalMessage): UniqueArrivalLike = uam match {
-    case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), Some(origin)) =>
-      UniqueArrival(number, terminalName, scheduled, origin)
-    case UniqueArrivalMessage(Some(number), Some(terminalName), Some(scheduled), None) =>
-      LegacyUniqueArrival(number, terminalName, scheduled)
-  }
-
-  def setStateFromSnapshot(flightMessages: Seq[FlightWithSplitsMessage]): Unit = {
-    state = FlightsWithSplits(flightsFromMessages(flightMessages))
-  }
 }
