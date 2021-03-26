@@ -18,7 +18,7 @@ object FlightMessageConversion {
 
   def flightWithSplitsDiffFromMessage(diffMessage: FlightsWithSplitsDiffMessage): FlightsWithSplitsDiff =
     FlightsWithSplitsDiff(diffMessage.updates.map(flightWithSplitsFromMessage).toList, uniqueArrivalsFromMessages(diffMessage.removals))
-  
+
   def uniqueArrivalToMessage(unique: UniqueArrival): UniqueArrivalMessage =
     UniqueArrivalMessage(Option(unique.number), Option(unique.terminal.toString), Option(unique.scheduled), Option(unique.origin.toString))
 
@@ -63,7 +63,7 @@ object FlightMessageConversion {
     case s: FeedStatusFailure => FeedStatusMessage(Option(s.date), None, Option(s.message))
   }
 
-  def restoreArrivalsFromSnapshot(restorer: ArrivalsRestorer,
+  def restoreArrivalsFromSnapshot(restorer: ArrivalsRestorer[Arrival],
                                   snMessage: FlightStateSnapshotMessage): Unit = {
     restorer.update(snMessage.flightMessages.map(flightMessageToApiFlight))
   }

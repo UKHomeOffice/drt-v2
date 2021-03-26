@@ -9,7 +9,7 @@ import org.specs2.mutable.Specification
 import scala.collection.mutable
 
 class ArrivalsRestorerSpec extends Specification {
-  def newRestorer = new ArrivalsRestorer
+  def newRestorer = new ArrivalsRestorer[Arrival]
 
   val arrival1: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = "2021-05-01T10:20")
   val arrival2: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T2, schDt = "2021-05-02T07:40", origin = PortCode("JFK"))

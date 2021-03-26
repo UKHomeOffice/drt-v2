@@ -110,7 +110,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Int,
                              feedSource: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
-  val restorer = new ArrivalsRestorer
+  val restorer = new ArrivalsRestorer[Arrival]
   var state: ArrivalsState = initialState
 
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
