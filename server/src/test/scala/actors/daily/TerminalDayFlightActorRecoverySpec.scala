@@ -8,8 +8,8 @@ import akka.pattern.ask
 import akka.persistence.PersistentActor
 import controllers.ArrivalGenerator.flightWithSplitsForDayAndTerminal
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.SDateLike
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.dates.UtcDate
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
@@ -68,21 +68,76 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
         )
 
         val persistingActor = system.actorOf(PersistMessageForIdActor.props(persistenceId))
-        val futureAck1 =  persistingActor.ask(beforeRecoveryPointMessage)
-        val futureAck2 =  persistingActor.ask(afterRecoveryPointMessage)
+        val futureAck1 = persistingActor.ask(beforeRecoveryPointMessage)
+        val futureAck2 = persistingActor.ask(afterRecoveryPointMessage)
         Await.ready(Future.sequence(List(futureAck1, futureAck2)), 1 second)
 
         val terminalDayFlightActorForPointInTime = actorForTerminalAndDatePit(terminal, recoveryPit.toUtcDate, recoveryPit)
 
         val state = Await.result(terminalDayFlightActorForPointInTime.ask(GetState).mapTo[FlightsWithSplits], 1 second)
 
-        state.flights.keys must(contain((fws1.unique)))
-        state.flights.keys must(not(contain(fws2.unique)))
+        state.flights.keys must (contain((fws1.unique)))
+        state.flights.keys must (not(contain(fws2.unique)))
+      }
+    }
+
+    val cutOffThreshold = 1 second
+
+    def actorForTerminalAndDate(terminal: Terminal, date: UtcDate): ActorRef = {
+      system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), cutOffThreshold))
+    }
+
+    "When I have a removal message that came through after the day for this actor " >> {
+      "Then the removal message should be ignored" >> {
+        val terminal: Terminal = T1
+        val dateInQuestion: SDateLike = SDate("2021-01-01T00:00Z")
+
+        val flightWithRemovalMessageOutsideThreshold = flightWithSplitsForDayAndTerminal(dateInQuestion.addHours(1), terminal)
+        val flightWithRemovalMessageOnDay = flightWithSplitsForDayAndTerminal(dateInQuestion.addHours(2), terminal)
+
+
+        val persistenceId = f"terminal-flights-${terminal.toString.toLowerCase}-${dateInQuestion.getFullYear()}-${dateInQuestion.getMonth()}%02d-${dateInQuestion.getDate()}%02d"
+
+        val onDayMessageWithFlight: FlightsWithSplitsDiffMessage = FlightsWithSplitsDiffMessage(
+          Option(dateInQuestion.millisSinceEpoch),
+          Seq(),
+          Seq(
+            FlightMessageConversion.flightWithSplitsToMessage(flightWithRemovalMessageOutsideThreshold),
+            FlightMessageConversion.flightWithSplitsToMessage(flightWithRemovalMessageOnDay),
+          )
+        )
+
+        val onDayMessageWithDeletion: FlightsWithSplitsDiffMessage = FlightsWithSplitsDiffMessage(
+          Option(dateInQuestion.addHours(1).millisSinceEpoch),
+          Seq(FlightMessageConversion.uniqueArrivalToMessage(flightWithRemovalMessageOnDay.unique)),
+          Seq()
+        )
+
+        val nextDayMessageWithDeletion = FlightsWithSplitsDiffMessage(
+          Option(dateInQuestion.addDays(1).addMillis(cutOffThreshold.toMillis).millisSinceEpoch),
+          Seq(FlightMessageConversion.uniqueArrivalToMessage(flightWithRemovalMessageOutsideThreshold.unique)),
+          Seq()
+        )
+
+        val persistingActor = system.actorOf(PersistMessageForIdActor.props(persistenceId))
+        val futureAck1 = persistingActor.ask(onDayMessageWithFlight)
+        val futureAck2 = persistingActor.ask(onDayMessageWithDeletion)
+        val futureAck3 = persistingActor.ask(nextDayMessageWithDeletion)
+        Await.ready(Future.sequence(List(futureAck1, futureAck2, futureAck3)), 1 second)
+
+        val terminalDayFlightActor = actorForTerminalAndDate(terminal, dateInQuestion.toUtcDate)
+
+        val state = Await.result(terminalDayFlightActor.ask(GetState).mapTo[FlightsWithSplits], 1 second)
+
+        state.flights.keys must (contain((flightWithRemovalMessageOutsideThreshold.unique)))
+        state.flights.keys must (not(contain(flightWithRemovalMessageOnDay.unique)))
       }
     }
   }
 
-  private def actorForTerminalAndDatePit(terminal: Terminal, date: UtcDate, pit: SDateLike): ActorRef = {
+
+
+  def actorForTerminalAndDatePit(terminal: Terminal, date: UtcDate, pit: SDateLike): ActorRef = {
     system.actorOf(TerminalDayFlightActor.propsPointInTime(terminal, date, () => SDate(date), pit.millisSinceEpoch))
   }
 }

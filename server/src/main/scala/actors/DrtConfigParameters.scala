@@ -6,7 +6,7 @@ import com.typesafe.config.ConfigFactory
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
-
+import scala.concurrent.duration._
 case class DrtConfigParameters(config: Configuration) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -90,5 +90,8 @@ case class DrtConfigParameters(config: Configuration) {
   val lcyLivePassword: String = config.get[String]("feeds.lcy.live.password")
 
   val maybeEdiTerminalMapCsvUrl: Option[String] = config.getOptional[String]("feeds.edi.terminal-map-csv-url")
+
+  //ignore ACL flight removals X seconds after the end of the day.
+  val maybeRemovalCutOffSeconds: Option[FiniteDuration] = config.getOptional[Int]("acl.removal-cutoff-seconds").map(s => s seconds)
 
 }

@@ -594,6 +594,8 @@ trait SDateLike {
 
   def addMillis(millisToAdd: Int): SDateLike
 
+  def addMillis(millisToAdd: MillisSinceEpoch): SDateLike = addMillis(millisToAdd.toInt)
+
   def roundToMinute(): SDateLike = {
     val remainder = millisSinceEpoch % 60000
     addMillis(-1 * remainder.toInt)

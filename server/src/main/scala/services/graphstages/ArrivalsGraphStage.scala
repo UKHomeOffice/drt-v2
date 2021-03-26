@@ -192,15 +192,15 @@ class ArrivalsGraphStage(name: String = "",
       val newArrivalsKeys = aclArrivals.keys.toSet ++ liveArrivals.keys.toSet
       val arrivalsWithUpdates = getUpdatesFromBaseArrivals
 
-      val removedArrivals = (existingArrivalsKeys -- newArrivalsKeys).map(merged(_))
+      val removedArrivalsInFuture = filterArrivalsBeforeToday((existingArrivalsKeys -- newArrivalsKeys).map(merged(_)))
 
       arrivalsWithUpdates.foreach { case (ak, mergedArrival) =>
         merged += (ak -> mergedArrival)
       }
 
-      if (arrivalsWithUpdates.nonEmpty || removedArrivals.nonEmpty) {
+      if (arrivalsWithUpdates.nonEmpty || removedArrivalsInFuture.nonEmpty) {
         val updates = SortedMap[UniqueArrival, Arrival]() ++ arrivalsWithUpdates
-        Option(ArrivalsDiff(updates, removedArrivals))
+        Option(ArrivalsDiff(updates, removedArrivalsInFuture))
       }
       else None
     }
@@ -351,6 +351,10 @@ class ArrivalsGraphStage(name: String = "",
         ciriumArrivals.get(uniqueArrival).map(_ => LiveBaseFeedSource)
       ).flatten.toSet
     }
+  }
+
+  private def filterArrivalsBeforeToday(removedArrivals: Set[Arrival]) = {
+    removedArrivals.filterNot(_.Scheduled < now().getUtcLastMidnight.millisSinceEpoch)
   }
 
   private def paxDefined(baseArrival: Arrival): Boolean = baseArrival.ActPax.isDefined
