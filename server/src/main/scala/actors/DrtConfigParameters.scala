@@ -91,4 +91,7 @@ case class DrtConfigParameters(config: Configuration) {
 
   val maybeEdiTerminalMapCsvUrl: Option[String] = config.getOptional[String]("feeds.edi.terminal-map-csv-url")
 
+  //ignore ACL flight removals X millis after the end of the day.
+  val maybeRemovalCutOffMillis: Option[MillisSinceEpoch] = config.getOptional[Long]("feeds.acl.removal-cutoff-millis")
+
 }

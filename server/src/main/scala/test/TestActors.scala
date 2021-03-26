@@ -315,7 +315,7 @@ object TestActors {
                                    month: Int,
                                    day: Int,
                                    terminal: Terminal,
-                                   now: () => SDateLike) extends TerminalDayFlightActor(year, month, day, terminal, now, None) with Resettable {
+                                   now: () => SDateLike) extends TerminalDayFlightActor(year, month, day, terminal, now, None, None) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
