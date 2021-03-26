@@ -76,7 +76,6 @@ class TerminalDayFlightUpdatesActor(
       log.error(s"Unexpected message: ${unexpected.getClass}")
   }
 
-
   def updateState(flightsWithSplitsDiffMessage: FlightsWithSplitsDiffMessage): Unit = {
     val (updated, _) = FlightMessageConversion
       .flightWithSplitsDiffFromMessage(flightsWithSplitsDiffMessage)
@@ -84,7 +83,6 @@ class TerminalDayFlightUpdatesActor(
     state = updated
 
     purgeOldUpdates()
-
   }
 
   def setState(message: FlightsWithSplitsMessage): Unit = {

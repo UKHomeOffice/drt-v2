@@ -14,17 +14,13 @@ import services.SDate
 import scala.util.{Success, Try}
 
 object FlightMessageConversion {
-  def uniqueArrivalToMessage(unique: UniqueArrival): UniqueArrivalMessage =
-    UniqueArrivalMessage(Option(unique.number), Option(unique.terminal.toString), Option(unique.scheduled), Option(unique.origin.toString))
-
   val log: Logger = LoggerFactory.getLogger(getClass.toString)
 
   def flightWithSplitsDiffFromMessage(diffMessage: FlightsWithSplitsDiffMessage): FlightsWithSplitsDiff =
-    FlightsWithSplitsDiff(diffMessage.updates.map(flightWithSplitsFromMessage).toList, diffMessage.removals.collect {
-      case UniqueArrivalMessage(Some(number), Some(terminal), Some(scheduled), maybeOrigin) =>
-        UniqueArrival(number, terminal, scheduled, maybeOrigin.getOrElse(""))
-    }.toList)
-
+    FlightsWithSplitsDiff(diffMessage.updates.map(flightWithSplitsFromMessage).toList, uniqueArrivalsFromMessages(diffMessage.removals))
+  
+  def uniqueArrivalToMessage(unique: UniqueArrival): UniqueArrivalMessage =
+    UniqueArrivalMessage(Option(unique.number), Option(unique.terminal.toString), Option(unique.scheduled), Option(unique.origin.toString))
 
   def flightWithSplitsDiffToMessage(diff: FlightsApi.FlightsWithSplitsDiff): FlightsWithSplitsDiffMessage = {
     FlightsWithSplitsDiffMessage(
