@@ -34,9 +34,11 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
-            .get('.egate-queue-pax > span')
+            .get('.egate-queue-pax')
+            .get('span')
             .contains("8")
-            .get('.eeadesk-queue-pax > span')
+            .get('.eeadesk-queue-pax')
+            .get('span')
             .contains("2")
         ;
 
@@ -56,7 +58,7 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
-            .get('.right notApiData',{ timeout: 5000 })
+            .get('.notApiData',{ timeout: 5000 })
             .contains("10")
         ;
 
@@ -141,11 +143,13 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
-            .get('.pax-api')
-            .get('.egate-queue-pax > span')
+            .get('.pax-api',{timeout: 5000})
+            .get('.egate-queue-pax')
+            .get('span')
             .contains("7")
-            .get('.eeadesk-queue-pax > span')
-            .contains("4")
+            .get('.eeadesk-queue-pax')
+            .get('span')
+            .contains("3")
             .request({
                 method: 'GET',
                 url: "/manifest/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
