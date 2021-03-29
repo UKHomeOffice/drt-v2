@@ -24,7 +24,6 @@ describe('API splits', () => {
 
     it('should have 8 egates pax and 2 EEA queue pax when there are 10 UK Adults on board a flight', () => {
         const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 10));
-
         cy
             .addFlight(
                 {
@@ -45,24 +44,24 @@ describe('API splits', () => {
 
 
     it('should ignore the API splits if they are more than 5% different in passenger numbers to the live feed', () => {
-        const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 10));
+        const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 12));
 
         cy
             .addFlight(
                 {
-                    "ActPax": 12,
+                    "ActPax": 10,
                     "SchDT": scheduledTime.format()
                 }
             )
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
-            .wait(2000)
-            .get('.notApiData')
-            .contains("12")
+            .get('.notApiData',{ timeout: 2000 })
+            .contains("10")
         ;
 
     });
+
 
     it('should count multiple entries with the same PassengerIdentifier as one passenger', () => {
         const apiManifest = manifest(
@@ -93,6 +92,7 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
+            .wait(2000)
             .get('.pax-api')
             .request({
                 method: 'GET',
@@ -142,6 +142,7 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
+            .wait(2000)
             .get('.pax-api')
             .get('.egate-queue-pax > span')
             .contains("7")

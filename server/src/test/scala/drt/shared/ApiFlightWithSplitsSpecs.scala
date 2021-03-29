@@ -46,18 +46,13 @@ class ApiFlightWithSplitsSpecs extends Specification {
   "flight Arrival" should {
     val apiFlightWithSplits = new ApiFlightWithSplits(flight, Set(splitsWithinFivePercentageThreshold))
 
-    "have splits with DC event type" in {
-
-      apiFlightWithSplits.isDCSplitsExists mustEqual true
-
-    }
-
     "return DC splits while pax count within 5% threshold of splits pax count for api and DC event type" in {
       val apiSplitDataFromDC = apiFlightWithSplits.apiSplitDataFromDC()
       val apiSplitsDc: Option[Splits] = apiFlightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
       val paxCount: Double = apiSplitsDc.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
       splitsWithinFivePercentageThreshold mustEqual apiSplitsDc.get
       paxCount mustEqual 39
+      apiFlightWithSplits.isDCSplitsExists mustEqual true
       apiSplitDataFromDC.isDefined mustEqual true
     }
 
@@ -67,6 +62,7 @@ class ApiFlightWithSplitsSpecs extends Specification {
       val apiSplitsDc = flightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
       val paxCount: Double = apiSplitsDc.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
       paxCount mustEqual 36
+      apiFlightWithSplits.isDCSplitsExists mustEqual true
       apiSplitDataFromDC.isDefined mustEqual false
     }
 

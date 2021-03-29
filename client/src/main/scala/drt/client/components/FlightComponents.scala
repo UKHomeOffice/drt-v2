@@ -11,13 +11,13 @@ import org.scalajs.dom.html.Div
 object FlightComponents {
 
   def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = {
-    val isNotApiData = (flightWithSplits.isDCSplitsExists , flightWithSplits.apiSplitDataFromDC().isEmpty) match {
-      case (true,true) => "notApiData"
-      case _=> ""
+    val isNotApiData = (flightWithSplits.isDCSplitsExists, flightWithSplits.apiSplitDataFromDC().isEmpty) match {
+      case (true, true) => "right notApiData"
+      case _ => "right"
     }
     <.div(
       ^.title := paxComponentTitle(flightWithSplits.apiFlight),
-      ^.className := s"right $isNotApiData",
+      ^.className := s"$isNotApiData",
       flightWithSplits.apiFlight.bestPaxEstimate
     )
   }
