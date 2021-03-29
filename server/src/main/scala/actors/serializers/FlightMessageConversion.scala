@@ -65,7 +65,7 @@ object FlightMessageConversion {
 
   def restoreArrivalsFromSnapshot(restorer: ArrivalsRestorer[Arrival],
                                   snMessage: FlightStateSnapshotMessage): Unit = {
-    restorer.update(snMessage.flightMessages.map(flightMessageToApiFlight))
+    restorer.applyUpdates(snMessage.flightMessages.map(flightMessageToApiFlight))
   }
 
   def feedStatusesFromSnapshotMessage(snMessage: FlightStateSnapshotMessage): Option[FeedStatuses] = {

@@ -119,14 +119,14 @@ class TerminalDayFlightActor(
         case _ =>
           if (isBeforeCutoff(createdAt))
             restorer.remove(uniqueArrivalsFromMessages(removals))
-          restorer.update(updates.map(flightWithSplitsFromMessage))
+          restorer.applyUpdates(updates.map(flightWithSplitsFromMessage))
       }
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case m: FlightsWithSplitsMessage =>
       val flights = m.flightWithSplits.map(FlightMessageConversion.flightWithSplitsFromMessage)
-      restorer.update(flights)
+      restorer.applyUpdates(flights)
   }
 
   override def stateToMessage: GeneratedMessage = FlightMessageConversion.flightsToMessage(state.flights.values)

@@ -120,11 +120,11 @@ class TerminalDayFlightUpdatesActor(
     case SnapshotOffer(SnapshotMetadata(_, _, ts), m: FlightsWithSplitsMessage) =>
       log.debug(s"Processing snapshot offer from ${SDate(ts).toISOString()}")
       val flights = m.flightWithSplits.map(FlightMessageConversion.flightWithSplitsFromMessage)
-      restorer.update(flights)
+      restorer.applyUpdates(flights)
 
     case m: FlightsWithSplitsDiffMessage =>
       restorer.remove(uniqueArrivalsFromMessages(m.removals))
-      restorer.update(m.updates.map(flightWithSplitsFromMessage))
+      restorer.applyUpdates(m.updates.map(flightWithSplitsFromMessage))
   }
 
   def updatesFromMessages(minuteMessages: Seq[GeneratedMessage]): Seq[CrunchMinute] = minuteMessages.map {

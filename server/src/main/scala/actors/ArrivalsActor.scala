@@ -159,7 +159,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage): Unit = {
     logRecoveryMessage(s"Consuming ${diffsMessage.updates.length} updates")
-    restorer.update(diffsMessage.updates.map(flightMessageToApiFlight))
+    restorer.applyUpdates(diffsMessage.updates.map(flightMessageToApiFlight))
   }
 
   override def receiveCommand: Receive = {
