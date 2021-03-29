@@ -56,7 +56,7 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
-            .get('.notApiData',{ timeout: 2000 })
+            .get('.notApiData',{ timeout: 5000 })
             .contains("10")
         ;
 
@@ -92,7 +92,6 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
-            .wait(2000)
             .get('.pax-api')
             .request({
                 method: 'GET',
@@ -142,7 +141,6 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
-            .wait(2000)
             .get('.pax-api')
             .get('.egate-queue-pax > span')
             .contains("7")
