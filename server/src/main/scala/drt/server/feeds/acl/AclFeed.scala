@@ -3,7 +3,6 @@ package drt.server.feeds.acl
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
-
 import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
 import drt.shared
@@ -242,9 +241,51 @@ object AclFeed {
   }
 
   def aclToPortMapping(portCode: PortCode): Terminal => Terminal = portCode match {
-    case PortCode("LGW") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> S, T2 -> N).getOrElse(tIn, tIn)
+    case PortCode("LGW") => (tIn: Terminal) =>
+      Map[Terminal, Terminal](
+        T1 -> S,
+        T2 -> N,
+        SouthDomestic -> S,
+        NorthDomestic -> N
+      ).getOrElse(tIn, tIn)
     case PortCode("EDI") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> A1).getOrElse(tIn, tIn)
-    case PortCode("LCY") => (tIn: Terminal) => Map[Terminal, Terminal](ACLTER -> T1).getOrElse(tIn, tIn)
+    case PortCode("LCY") => (tIn: Terminal) =>
+      Map[Terminal, Terminal](
+        ACLTER -> T1,
+        MainApron -> T1,
+      ).getOrElse(tIn, tIn)
+    case PortCode("BHX") =>
+      (tIn: Terminal) => Map[Terminal, Terminal](
+        T2Domestic -> T2,
+      ).getOrElse(tIn, tIn)
+    case PortCode("BRS") =>
+      (tIn: Terminal) => Map[Terminal, Terminal](
+        DomesticArrivals -> T1,
+      ).getOrElse(tIn, tIn)
+    case PortCode("EMA") =>
+      (tIn: Terminal) => Map[Terminal, Terminal](
+        Cargo -> T1,
+      ).getOrElse(tIn, tIn)
+    case PortCode("GLA") =>
+      (tIn: Terminal) => Map[Terminal, Terminal](
+        DomesticArrivals -> T1,
+      ).getOrElse(tIn, tIn)
+    case PortCode("STN") =>
+      (tIn: Terminal) => Map[Terminal, Terminal](
+        CTA -> T1,
+      ).getOrElse(tIn, tIn)
+    case PortCode("LHR") =>
+      (tIn: Terminal) => Map[Terminal, Terminal](
+        T2Domestic -> T2,
+      ).getOrElse(tIn, tIn)
+    case PortCode("LPL") =>
+      (tIn: Terminal) => Map[Terminal, Terminal](
+        DomesticArrivals -> T1,
+      ).getOrElse(tIn, tIn)
+    case PortCode("LTN") =>
+      (tIn: Terminal) => Map[Terminal, Terminal](
+        DomesticArrivals -> T1,
+      ).getOrElse(tIn, tIn)
     case _ => (tIn: Terminal) => tIn
   }
 }
