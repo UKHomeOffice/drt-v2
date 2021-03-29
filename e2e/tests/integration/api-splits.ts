@@ -56,7 +56,7 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
-            .get('.notApiData',{ timeout: 5000 })
+            .get('.right notApiData',{ timeout: 5000 })
             .contains("10")
         ;
 
