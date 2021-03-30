@@ -28,16 +28,14 @@ trait WithFlightsExport {
   self: Application =>
 
   def csvForUser(user: LoggedInUser): Source[FlightsWithSplits, NotUsed] => Source[String, NotUsed] = {
+    val export = StreamingFlightsExport(
+      SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
+      SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
+    )
     if (user.hasRole(ApiView))
-      StreamingFlightsExport(
-        SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
-        SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
-      ).toCsvStreamWithActualApi _
+      export.toCsvStreamWithActualApi
     else
-      StreamingFlightsExport(
-        SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
-        SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
-      ).toCsvStreamWithoutActualApi _
+      export.toCsvStreamWithoutActualApi
   }
 
   def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDayString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {

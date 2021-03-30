@@ -153,7 +153,9 @@ case class ApiPaxTypeAndQueueCount(
                                     paxCount: Double,
                                     nationalities: Option[IMap[Nationality, Double]],
                                     ages: Option[IMap[PaxAge, Double]]
-                                  )
+                                  ) {
+  val paxTypeAndQueue: PaxTypeAndQueue = PaxTypeAndQueue(passengerType, queueType)
+}
 
 object ApiPaxTypeAndQueueCount {
   implicit val rw: ReadWriter[ApiPaxTypeAndQueueCount] = macroRW
