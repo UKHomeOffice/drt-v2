@@ -435,6 +435,10 @@ object PaxTypesAndQueues {
   val visaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.VisaNational, Queues.FastTrack)
   val transitToTransfer = PaxTypeAndQueue(PaxTypes.Transit, Queues.Transfer)
   val nonVisaNationalToFastTrack = PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.FastTrack)
+  val undefinedToEea = PaxTypeAndQueue(PaxTypes.UndefinedPaxType, Queues.EeaDesk)
+  val undefinedToNonEea = PaxTypeAndQueue(PaxTypes.UndefinedPaxType, Queues.NonEeaDesk)
+  val undefinedToEgate = PaxTypeAndQueue(PaxTypes.UndefinedPaxType, Queues.EGate)
+  val undefinedToFastTrack = PaxTypeAndQueue(PaxTypes.UndefinedPaxType, Queues.FastTrack)
 
   def displayName: Map[PaxTypeAndQueue, String] = Map(
     eeaMachineReadableToEGate -> "eGates",
@@ -448,7 +452,11 @@ object PaxTypesAndQueues {
     nonVisaNationalToDesk -> "Non EEA (Non Visa)",
     visaNationalToFastTrack -> "Fast Track (Visa)",
     nonVisaNationalToFastTrack -> "Fast Track (Non Visa)",
-    transitToTransfer -> "Transfer"
+    transitToTransfer -> "Transfer",
+    undefinedToEea -> "EEA (Undefined)",
+    undefinedToNonEea -> "Non EEA (Undefined)",
+    undefinedToEgate -> "eGates (Undefined)",
+    undefinedToEgate -> "eGates (Undefined)",
   )
 
   val inOrder = List(
