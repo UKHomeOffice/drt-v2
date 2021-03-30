@@ -3,32 +3,33 @@ moment.locale("en-gb");
 
 const todayAtUtcString = (hours: number, minutes: number): string =>
     moment()
+        .utc()
         .hour(hours)
         .minute(minutes)
         .seconds(0)
-        .utc()
         .format()
 
 const inDaysAtTimeUtcString = (daysToAdd: number, hours: number, minutes: number): string =>
     moment()
+        .utc()
         .hour(hours)
         .minute(minutes)
         .seconds(0)
         .add(daysToAdd, 'days')
-        .utc()
         .format()
 
 const todayAtUtc = (hours: number, minutes: number): moment.Moment =>
     moment()
+        .utc()
         .hour(hours)
         .minute(minutes)
         .seconds(0)
-        .utc()
+
 
 const currentTimeString = (): string =>
     moment()
-        .seconds(0)
         .utc()
+        .seconds(0)
         .format()
 
 export {

@@ -111,10 +111,10 @@ const ukAdultWithId = (id: String) => {
 }
 
 
-const manifestForDateTime = (sheduled: moment.Moment, passengerList): object => {
+const manifestForDateTime = (scheduled: moment.Moment, passengerList): object => {
 
-    const dateString = sheduled.format("YYYY-MM-DD");
-    const timeString = sheduled.format("HH:mm:ss");
+    const dateString = scheduled.utc().format("YYYY-MM-DD");
+    const timeString = scheduled.utc().format("HH:mm:ss");
 
     return {
         "EventCode": "DC",
