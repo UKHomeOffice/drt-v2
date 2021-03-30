@@ -20,8 +20,7 @@ import upickle.default._
 
 import java.lang.Math.round
 import java.util.UUID
-import scala.collection.immutable.{NumericRange, Map => IMap, SortedMap => ISortedMap}
-import scala.collection.{AbstractSeq, SortedMap, immutable, mutable}
+import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -154,7 +153,9 @@ case class ApiPaxTypeAndQueueCount(
                                     paxCount: Double,
                                     nationalities: Option[IMap[Nationality, Double]],
                                     ages: Option[IMap[PaxAge, Double]]
-                                  )
+                                  ) {
+  val paxTypeAndQueue: PaxTypeAndQueue = PaxTypeAndQueue(passengerType, queueType)
+}
 
 object ApiPaxTypeAndQueueCount {
   implicit val rw: ReadWriter[ApiPaxTypeAndQueueCount] = macroRW
@@ -220,8 +221,21 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
   }
 
-  def bestSplits: Option[Splits] = {
+
+  val eGateAndFTSplitsExists = splits.exists(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
+
+  def apiSplitDataFromDC(threshold: Double = 0.05): Option[Splits] = {
     val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
+    val paxCount: Double = apiSplitsDc.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
+    val isValidThreshold = paxCount != 0 && Math.abs(paxCount - apiFlight.ActPax.getOrElse(0)) / paxCount < threshold
+    if (isValidThreshold && apiFlight.FeedSources.contains(LiveFeedSource))
+      apiSplitsDc
+    else
+      None
+  }
+
+  def bestSplits: Option[Splits] = {
+    val apiSplitsDc = apiSplitDataFromDC()
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.CI))
     val apiSplitsAny = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
     val predictedSplits = splits.find(s => s.source == SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages)
@@ -578,10 +592,10 @@ trait SDateLike {
   def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
 
   /**
-   * Days of the week 1 to 7 (Monday is 1)
-   *
-   * @return
-   */
+    * Days of the week 1 to 7 (Monday is 1)
+    *
+    * @return
+    */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int
@@ -943,6 +957,7 @@ object MilliTimes {
   val minutesInADay: Int = 60 * 24
 
   def timeToNearestMinute(t: MillisSinceEpoch): MillisSinceEpoch = round(t / 60000d) * 60000
+
   val fifteenMinutesMillis: Int = oneMinuteMillis * 15
   val fifteenMinuteSlotsInDay: Int = 4 * 24
 }
