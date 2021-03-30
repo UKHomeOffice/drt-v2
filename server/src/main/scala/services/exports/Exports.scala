@@ -1,6 +1,7 @@
 package services.exports
 
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.PaxTypes.UndefinedPaxType
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -22,10 +23,12 @@ object Exports {
     .splits
     .collect {
       case s: Splits if s.source == SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages =>
-        s.splits.map(s => {
-          val paxTypeAndQueue = PaxTypeAndQueue(s.passengerType, s.queueType)
-          (s"API Actual - ${PaxTypesAndQueues.displayName(paxTypeAndQueue)}", s.paxCount)
-        })
+        s.splits
+          .map(s =>
+            (PaxTypesAndQueues.displayName.get(s.paxTypeAndQueue), s.paxCount))
+          .collect {
+            case (Some(displayName), paxCount) => (s"API Actual - $displayName", paxCount)
+          }
     }
     .flatten
 

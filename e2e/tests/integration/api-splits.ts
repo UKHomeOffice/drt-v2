@@ -24,6 +24,29 @@ describe('API splits', () => {
 
     it('should have 8 egates pax and 2 EEA queue pax when there are 10 UK Adults on board a flight', () => {
         const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 10));
+        cy
+            .addFlight(
+                {
+                    "ActPax": 10,
+                    "SchDT": scheduledTime.format()
+                }
+            )
+            .asABorderForceOfficer()
+            .waitForFlightToAppear("TS0123")
+            .addManifest(apiManifest)
+            .get('.egate-queue-pax')
+            .get('span')
+            .contains("8")
+            .get('.eeadesk-queue-pax')
+            .get('span')
+            .contains("2")
+        ;
+
+    });
+
+
+    it('should ignore the API splits if they are more than 5% different in passenger numbers to the live feed', () => {
+        const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 12));
 
         cy
             .addFlight(
@@ -35,13 +58,12 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
-            .get('.egate-queue-pax > span')
-            .contains("8")
-            .get('.eeadesk-queue-pax > span')
-            .contains("2")
+            .get('.notApiData',{ timeout: 5000 })
+            .contains("10")
         ;
 
     });
+
 
     it('should count multiple entries with the same PassengerIdentifier as one passenger', () => {
         const apiManifest = manifest(
@@ -121,11 +143,13 @@ describe('API splits', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(apiManifest)
-            .get('.pax-api')
-            .get('.egate-queue-pax > span')
+            .get('.pax-api',{timeout: 5000})
+            .get('.egate-queue-pax')
+            .get('span')
             .contains("7")
-            .get('.eeadesk-queue-pax > span')
-            .contains("4")
+            .get('.eeadesk-queue-pax')
+            .get('span')
+            .contains("3")
             .request({
                 method: 'GET',
                 url: "/manifest/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
