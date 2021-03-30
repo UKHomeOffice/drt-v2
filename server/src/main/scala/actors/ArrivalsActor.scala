@@ -150,11 +150,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
   def consumeDiffsMessage(message: FlightsDiffMessage): Unit
 
   def consumeRemovals(diffsMessage: FlightsDiffMessage): Unit = {
-    if (diffsMessage.removalsOLD.nonEmpty)
-      restorer.removeHashLegacies(diffsMessage.removalsOLD)
-
-    if (diffsMessage.removals.nonEmpty)
-      restorer.remove(uniqueArrivalsFromMessages(diffsMessage.removals))
+    restorer.removeHashLegacies(diffsMessage.removalsOLD)
+    restorer.remove(uniqueArrivalsFromMessages(diffsMessage.removals))
   }
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage): Unit = {

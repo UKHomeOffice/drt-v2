@@ -764,9 +764,9 @@ object DataUpdates {
 class ArrivalsRestorer[A <: WithUnique[UniqueArrival]] {
   var arrivals: Map[UniqueArrival, A] = Map()
 
-  def removeHashLegacies(theRemoves: Iterable[Int]): Unit = theRemoves.foreach(keyToRemove => arrivals = arrivals.filterKeys(_.legacyUniqueId != keyToRemove))
+  def removeHashLegacies(removals: Iterable[Int]): Unit = removals.foreach(keyToRemove => arrivals = arrivals.filterKeys(_.legacyUniqueId != keyToRemove))
 
-  def applyUpdates(theUpdates: Iterable[A]): Unit = theUpdates.foreach { update =>
+  def applyUpdates(updates: Iterable[A]): Unit = updates.foreach { update =>
     arrivals = arrivals + ((update.unique, update))
   }
 
