@@ -52,7 +52,7 @@ class ApiFlightWithSplitsSpecs extends Specification {
       val paxCount: Double = apiSplitsDc.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
       splitsWithinFivePercentageThreshold mustEqual apiSplitsDc.get
       paxCount mustEqual 39
-      apiFlightWithSplits.isDCSplitsExists mustEqual true
+      apiFlightWithSplits.eGateAndFTSplitsExists mustEqual true
       apiSplitDataFromDC.isDefined mustEqual true
     }
 
@@ -62,7 +62,7 @@ class ApiFlightWithSplitsSpecs extends Specification {
       val apiSplitsDc = flightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
       val paxCount: Double = apiSplitsDc.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
       paxCount mustEqual 36
-      apiFlightWithSplits.isDCSplitsExists mustEqual true
+      apiFlightWithSplits.eGateAndFTSplitsExists mustEqual true
       apiSplitDataFromDC.isDefined mustEqual false
     }
 
