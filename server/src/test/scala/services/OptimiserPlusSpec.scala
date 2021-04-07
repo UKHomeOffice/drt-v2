@@ -9,74 +9,109 @@ import scala.util.{Failure, Success, Try}
 case class OptimizerConfig2(sla: Int, processorUnitSize: Processors)
 
 class OptimiserPlusSpec extends Specification {
-  //  "Given some 1 minutes of workload per minute, and desks fixed at 1 per minute" >> {
-  //    "I should see all the workload completed each minute, leaving zero wait times" >> {
-  //      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(Seq.fill(30)(1), Seq.fill(30)(1), Seq.fill(30)(1), OptimizerConfig2(20, None))
-  //
-  //      val expected = Seq.fill(30)(0)
-  //
-  //      result.get.waitTimes === expected
-  //    }
-  //  }
-  //
-  //  "Given some 2 minutes of workload per minute, and desks fixed at 1 per minute" >> {
-  //    "I should see workload spilling over each minute, leaving increasing wait times" >> {
-  //      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(Seq.fill(30)(2), Seq.fill(30)(1), Seq.fill(30)(1), OptimizerConfig2(20, None))
-  //
-  //      val expected = Seq(1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10 , 11, 11, 12, 12, 13, 13, 14, 14, 15, 15)
-  //
-  //      result.get.waitTimes === expected
-  //    }
-  //  }
-
-  "Given some 10 minutes of workload per minute, and egate banks of size 10 gates fixed at 1 bank per minute" >> {
+  "Given 1 minutes incoming workload per minute, and desks fixed at 1 per minute" >> {
     "I should see all the workload completed each minute, leaving zero wait times" >> {
-      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(60)(10), Seq.fill(60)(1), Seq.fill(60)(1), OptimizerConfig2(20, Processors(Iterable(10, 10, 10))))
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(Seq.fill(30)(1), Seq.fill(30)(1), Seq.fill(30)(1), OptimizerConfig2(20, Processors(Iterable(1))))
 
-      val expected = OptimizerCrunchResult(immutable.IndexedSeq.fill(60)(1), Seq.fill(60)(0))
+      val expected = Seq.fill(30)(0)
+
+      result.get.waitTimes === expected
+    }
+  }
+
+  "Given 2 minutes incoming workload per minute, and desks fixed at 1 per minute" >> {
+    "I should see workload spilling over each minute, leaving increasing wait times" >> {
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(Seq.fill(30)(2), Seq.fill(30)(1), Seq.fill(30)(1), OptimizerConfig2(20, Processors(Iterable(1))))
+
+      val expected = Seq(1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15)
+
+      result.get.waitTimes === expected
+    }
+  }
+
+  "Given 10 minutes incoming workload per minute, and egate banks of size 10 gates fixed at 1 bank per minute" >> {
+    "I should see all the workload completed each minute, leaving zero wait times" >> {
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(30)(1), Seq.fill(30)(1), OptimizerConfig2(20, Processors(Iterable(10))))
+
+      val expected = Seq.fill(30)(0)
+
+      result.get.waitTimes === expected
+    }
+  }
+
+  "Given 10 minutes incoming workload per minute, and egate banks of size 5 gates fixed at 1 bank per minute" >> {
+    "I should see wait times creeping up by a minute every 2 minutes" >> {
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(30)(1), Seq.fill(30)(1), OptimizerConfig2(20, Processors(Iterable(5))))
+
+      val expected = Seq(
+        1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
+        7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12,
+        13, 13, 14, 14, 15, 15
+      )
+
+      result.get.waitTimes === expected
+    }
+  }
+
+  "Given 20 minutes incoming workload per minute, and egate banks of size 15 gates fixed at 1 bank per minute" >> {
+    "I should see wait times creeping up by a minute every 4 minutes" >> {
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(20), Seq.fill(30)(1), Seq.fill(30)(1), OptimizerConfig2(20, Processors(Iterable(15))))
+
+      val expected = Seq(
+        1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3,
+        4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6,
+        7, 7, 7, 7, 8, 8
+      )
+
+      result.get.waitTimes === expected
+    }
+  }
+
+  "Given 10 minutes incoming workload per minute, and egate banks of sizes 5 & 5 gates fixed at 1 bank for 15 mins followed by 2 banks for 15 mins" >> {
+    "I should see wait times creeping up by a minute every 2 minutes for the first 15 minutes and then holding steady for the remaining time" >> {
+      val bankSizes = Iterable(5, 5)
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(15)(1) ++ Seq.fill(15)(2), Seq.fill(15)(1) ++ Seq.fill(15)(2), OptimizerConfig2(20, Processors(bankSizes)))
+
+      val expected = Seq(
+        1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8,
+        8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8
+      )
+
+      result.get.waitTimes === expected
+    }
+  }
+
+  "Given 10 minutes incoming workload per minute, and egate banks of sizes 5 & 10 gates fixed at 1 bank for 15 mins followed by 2 banks for 15 mins" >> {
+    "I should see wait times creeping up by a minute every 2 minutes for the first 15 minutes and then falling for the remaining time" >> {
+      val bankSizes = Iterable(5, 10)
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(15)(1) ++ Seq.fill(15)(2), Seq.fill(15)(1) ++ Seq.fill(15)(2), OptimizerConfig2(20, Processors(bankSizes)))
+
+      val expected = Seq(
+        1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8,
+        7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0
+      )
+
+      result.get.waitTimes === expected
+    }
+  }
+
+  "Given 10 minutes incoming workload per minute, and egate banks of sizes 5 & 10 gates with min 1 and max 3, and small SLA of 5 minutes" >> {
+    "The optimiser should decide on 2 banks (9 gates) for 15 minutes followed by 3 banks (11 gates), with wait times slowly climbing and then slowly falling" >> {
+      val bankSizes = Iterable(6, 3, 2)
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(30)(1), Seq.fill(30)(3), OptimizerConfig2(5, Processors(bankSizes)))
+
+      val expected = OptimizerCrunchResult(
+        Vector(
+          2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,
+          3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+        ),
+        Seq(
+          1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2,
+          2, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0)
+      )
 
       result.get === expected
     }
-  }
-
-  "Given some 10 minutes of workload per minute, and egate banks of size 10 gates fixed at 1 bank per minute" >> {
-    "I should see all the workload completed each minute, leaving zero wait times" >> {
-      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(60)(20), Seq.fill(60)(1), Seq.fill(60)(1), OptimizerConfig2(20, Processors(Iterable(19, 10, 10))))
-
-      val expected = OptimizerCrunchResult(immutable.IndexedSeq.fill(60)(1), Seq.fill(60)(0))
-
-      result.get === expected
-    }
-  }
-}
-
-case class Processors(processors: Iterable[Int]) {
-  val processorsWithZero: Iterable[Int] = processors.headOption match {
-    case None => Iterable(0)
-    case Some(zero) if zero == 0 => processors
-    case Some(_) => Iterable(0) ++ processors
-  }
-
-  val cumulativeCapacity: List[Int] = processorsWithZero
-    .foldLeft(List[Int]()) {
-      case (acc, processors) => acc.sum + processors :: acc
-    }
-    .reverse
-
-  val capacityForUnits: Map[Int, Int] = cumulativeCapacity.indices.zip(cumulativeCapacity).toMap
-
-  val byWorkload: Map[Int, Int] = cumulativeCapacity
-    .sliding(2).toList.zipWithIndex
-    .flatMap {
-      case (capacities, idx) => ((capacities.min + 1) to capacities.max).map(c => (c, idx + 1))
-    }.toMap + (0 -> 0)
-
-  val maxCapacity: Int = byWorkload.keys.max
-  val maxProcessorUnits: Int = byWorkload.values.max
-
-  val forWorkload: PartialFunction[Double, Int] = {
-    case noWorkload if noWorkload <= 0 => 0
-    case someWorkload => byWorkload.getOrElse(someWorkload.ceil.toInt, maxProcessorUnits)
   }
 }
 
@@ -98,10 +133,10 @@ object OptimiserPlus {
     val indexedWork = workloads.toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
-    val bestMaxDesks = /*if (workloads.size >= 60) {
+    val bestMaxDesks = if (workloads.size >= 60) {
       val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processorUnitSize)
       fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
-    } else*/ maxDesks.toIndexedSeq
+    } else maxDesks.toIndexedSeq
 
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
@@ -121,31 +156,31 @@ object OptimiserPlus {
     i.map(_ * ratio).toList
   }
 
-  //  def leftwardDesks(work: IndexedSeq[Double],
-  //                    xmin: IndexedSeq[Int],
-  //                    xmax: IndexedSeq[Int],
-  //                    blockSize: Int,
-  //                    backlog: Double): IndexedSeq[Int] = {
-  //    val workWithMinMaxDesks: Iterator[(IndexedSeq[Double], (IndexedSeq[Int], IndexedSeq[Int]))] = work.grouped(blockSize).zip(xmin.grouped(blockSize).zip(xmax.grouped(blockSize)))
-  //
-  //    workWithMinMaxDesks.foldLeft((List[Int](), backlog)) {
-  //      case ((desks, bl), (workBlock, (xminBlock, xmaxBlock))) =>
-  //        var guess = List(((bl + workBlock.sum) / blockSize).round.toInt, xmaxBlock.head).min
-  //
-  //        while (cumulativeSum(workBlock.map(_ - guess)).min < 0 - bl && guess > xminBlock.head) {
-  //          guess = guess - 1
-  //        }
-  //
-  //        guess = List(guess, xminBlock.head).max
-  //
-  //        val newBacklog = (0 until blockSize).foldLeft(bl) {
-  //          case (accBl, i) =>
-  //            List(accBl + workBlock(i) - guess, 0).max
-  //        }
-  //
-  //        (desks ++ List.fill(blockSize)(guess), newBacklog)
-  //    }._1.toIndexedSeq
-  //  }
+  def leftwardDesks(work: IndexedSeq[Double],
+                    xmin: IndexedSeq[Int],
+                    xmax: IndexedSeq[Int],
+                    blockSize: Int,
+                    backlog: Double): IndexedSeq[Int] = {
+    val workWithMinMaxDesks: Iterator[(IndexedSeq[Double], (IndexedSeq[Int], IndexedSeq[Int]))] = work.grouped(blockSize).zip(xmin.grouped(blockSize).zip(xmax.grouped(blockSize)))
+
+    workWithMinMaxDesks.foldLeft((List[Int](), backlog)) {
+      case ((desks, bl), (workBlock, (xminBlock, xmaxBlock))) =>
+        var guess = List(((bl + workBlock.sum) / blockSize).round.toInt, xmaxBlock.head).min
+
+        while (cumulativeSum(workBlock.map(_ - guess)).min < 0 - bl && guess > xminBlock.head) {
+          guess = guess - 1
+        }
+
+        guess = List(guess, xminBlock.head).max
+
+        val newBacklog = (0 until blockSize).foldLeft(bl) {
+          case (accBl, i) =>
+            List(accBl + workBlock(i) - guess, 0).max
+        }
+
+        (desks ++ List.fill(blockSize)(guess), newBacklog)
+    }._1.toIndexedSeq
+  }
 
   def tryProcessWork(work: IndexedSeq[Double],
                      capacity: IndexedSeq[Int],
@@ -194,58 +229,58 @@ object OptimiserPlus {
     }
   }
 
-  //  def rollingFairXmax(work: IndexedSeq[Double], xmin: IndexedSeq[Int], blockSize: Int, sla: Int, targetWidth: Int, rollingBuffer: Int, processors: Processors): IndexedSeq[Int] = {
-  //    val workWithOverrun = work ++ List.fill(targetWidth)(0d)
-  //    val xminWithOverrun = xmin ++ List.fill(targetWidth)(xmin.takeRight(1).head)
-  //
-  //    var backlog = 0d
-  //
-  //    val result = (workWithOverrun.indices by targetWidth).foldLeft(IndexedSeq[Int]()) { case (acc, startSlot) =>
-  //      val winStart: Int = List(startSlot - rollingBuffer, 0).max
-  //      val i = startSlot + targetWidth + rollingBuffer
-  //      val i1 = workWithOverrun.size
-  //      val winStop: Int = List(i, i1).min
-  //      val winWork = workWithOverrun.slice(winStart, winStop)
-  //      val winXmin = xminWithOverrun.slice(winStart, winStop)
-  //
-  //      if (winStart == 0) backlog = 0
-  //
-  //      val runAv = runningAverage(winWork, List(blockSize, sla).min, processors)
-  //      val guessMax: Int = runAv.max.ceil.toInt
-  //
-  //      val lowerLimit = List(winXmin.max, (winWork.sum / winWork.size).ceil.toInt).max
-  //
-  //      var winXmax = guessMax
-  //      var hasExcessWait = false
-  //      var lowerLimitReached = false
-  //
-  //      if (guessMax <= lowerLimit)
-  //        winXmax = lowerLimit
-  //      else {
-  //        do {
-  //          val trialDesks = leftwardDesks(winWork, winXmin, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog)
-  //          val trialProcessExcessWait = tryProcessWork(winWork, trialDesks, sla, IndexedSeq(0)) match {
-  //            case Success(pw) => pw.excessWait
-  //            case Failure(t) => throw t
-  //          }
-  //          if (trialProcessExcessWait > 0) {
-  //            winXmax = List(winXmax + 1, guessMax).min
-  //            hasExcessWait = true
-  //          }
-  //          if (winXmax <= lowerLimit) lowerLimitReached = true
-  //          if (!lowerLimitReached && !hasExcessWait) winXmax = winXmax - 1
-  //        } while (!lowerLimitReached && !hasExcessWait)
-  //      }
-  //
-  //      val newXmax = acc ++ List.fill(targetWidth)(winXmax)
-  //      0 until targetWidth foreach { j =>
-  //        backlog = List(backlog + winWork(j) - newXmax(winStart), 0).max
-  //      }
-  //      newXmax
-  //    }.take(work.size)
-  //
-  //    result
-  //  }
+  def rollingFairXmax(work: IndexedSeq[Double], xmin: IndexedSeq[Int], blockSize: Int, sla: Int, targetWidth: Int, rollingBuffer: Int, processors: Processors): IndexedSeq[Int] = {
+    val workWithOverrun = work ++ List.fill(targetWidth)(0d)
+    val xminWithOverrun = xmin ++ List.fill(targetWidth)(xmin.takeRight(1).head)
+
+    var backlog = 0d
+
+    val result = (workWithOverrun.indices by targetWidth).foldLeft(IndexedSeq[Int]()) { case (acc, startSlot) =>
+      val winStart: Int = List(startSlot - rollingBuffer, 0).max
+      val i = startSlot + targetWidth + rollingBuffer
+      val i1 = workWithOverrun.size
+      val winStop: Int = List(i, i1).min
+      val winWork = workWithOverrun.slice(winStart, winStop)
+      val winXmin = xminWithOverrun.slice(winStart, winStop)
+
+      if (winStart == 0) backlog = 0
+
+      val runAv = runningAverage(winWork, List(blockSize, sla).min, processors)
+      val guessMax: Int = runAv.max.ceil.toInt
+
+      val lowerLimit = List(winXmin.max, (winWork.sum / winWork.size).ceil.toInt).max
+
+      var winXmax = guessMax
+      var hasExcessWait = false
+      var lowerLimitReached = false
+
+      if (guessMax <= lowerLimit)
+        winXmax = lowerLimit
+      else {
+        do {
+          val trialDesks = leftwardDesks(winWork, winXmin, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog)
+          val trialProcessExcessWait = tryProcessWork(winWork, trialDesks, sla, IndexedSeq(0), processors) match {
+            case Success(pw) => pw.excessWait
+            case Failure(t) => throw t
+          }
+          if (trialProcessExcessWait > 0) {
+            winXmax = List(winXmax + 1, guessMax).min
+            hasExcessWait = true
+          }
+          if (winXmax <= lowerLimit) lowerLimitReached = true
+          if (!lowerLimitReached && !hasExcessWait) winXmax = winXmax - 1
+        } while (!lowerLimitReached && !hasExcessWait)
+      }
+
+      val newXmax = acc ++ List.fill(targetWidth)(winXmax)
+      0 until targetWidth foreach { j =>
+        backlog = List(backlog + winWork(j) - newXmax(winStart), 0).max
+      }
+      newXmax
+    }.take(work.size)
+
+    result
+  }
 
   def runningAverage(work: Iterable[Double], windowLength: Int, processors: Processors): Iterable[Int] = {
     val slidingAverages = work
