@@ -112,7 +112,7 @@ trait UserRoleProviderLike {
 
 object DrtActorSystem extends AirportConfProvider {
   implicit val actorSystem: ActorSystem = ActorSystem("DRT")
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(actorSystem)
+  implicit val mat: Materializer = ActorMaterializer.create(actorSystem)
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   val config: Configuration = new Configuration(ConfigFactory.load)
 
@@ -148,7 +148,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithDebug {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
-  implicit val mat: ActorMaterializer = DrtActorSystem.mat
+  implicit val mat: Materializer = DrtActorSystem.mat
   implicit val ec: ExecutionContext = DrtActorSystem.ec
 
   implicit val timeout: Timeout = new Timeout(30 seconds)

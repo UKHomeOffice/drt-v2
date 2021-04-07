@@ -2,7 +2,7 @@ package drt.server.feeds.lcy
 
 import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.server.feeds.common.HttpClient
 import drt.shared.FlightsApi.Flights
@@ -40,14 +40,14 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
 
     val success = ArrivalsFeedSuccess(Flights(List()))
 
-    lcyClient.initialFlights(anyObject[ActorSystem], anyObject[ActorMaterializer]) returns Future(success)
-    lcyClient.updateFlights(anyObject[ActorSystem], anyObject[ActorMaterializer]) returns Future(success)
+    lcyClient.initialFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(success)
+    lcyClient.updateFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(success)
 
     val feed: Source[ArrivalsFeedResponse, Cancellable] = LCYFeed(lcyClient, 1 millisecond, 1 millisecond)
 
     val result = Await.result(feed.take(4).runWith(Sink.seq), 1 second)
-    verify(lcyClient, times(1)).initialFlights(anyObject[ActorSystem], anyObject[ActorMaterializer])
-    verify(lcyClient, times(3)).updateFlights(anyObject[ActorSystem], anyObject[ActorMaterializer])
+    verify(lcyClient, times(1)).initialFlights(anyObject[ActorSystem], anyObject[Materializer])
+    verify(lcyClient, times(3)).updateFlights(anyObject[ActorSystem], anyObject[Materializer])
     result.toList.size mustEqual 4
   }
 
@@ -57,14 +57,14 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
     val success = ArrivalsFeedSuccess(Flights(List()))
     val failure = ArrivalsFeedFailure("Failure")
 
-    lcyClient.initialFlights(anyObject[ActorSystem], anyObject[ActorMaterializer]) returns Future(failure)
-    lcyClient.updateFlights(anyObject[ActorSystem], anyObject[ActorMaterializer]) returns Future(success)
+    lcyClient.initialFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(failure)
+    lcyClient.updateFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(success)
 
     val feed: Source[ArrivalsFeedResponse, Cancellable] = LCYFeed(lcyClient, 1 millisecond, 1 millisecond)
 
     val result = Await.result(feed.take(4).runWith(Sink.seq), 1 second)
-    verify(lcyClient, times(4)).initialFlights(anyObject[ActorSystem], anyObject[ActorMaterializer])
-    verify(lcyClient, times(0)).updateFlights(anyObject[ActorSystem], anyObject[ActorMaterializer])
+    verify(lcyClient, times(4)).initialFlights(anyObject[ActorSystem], anyObject[Materializer])
+    verify(lcyClient, times(0)).updateFlights(anyObject[ActorSystem], anyObject[Materializer])
     result.toList.size mustEqual 4
   }
 

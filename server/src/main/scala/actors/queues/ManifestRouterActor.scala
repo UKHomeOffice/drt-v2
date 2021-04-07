@@ -11,8 +11,8 @@ import actors.{FeedStateLike, GetFeedStatuses, GetState, RecoveryActorLike}
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.util.Timeout
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -39,7 +39,7 @@ object ManifestRouterActor {
       .mapAsync(1)(manifestsByDayLookup(_, maybePit))
 
   def runAndCombine(source: Future[Source[VoyageManifests, NotUsed]])
-                   (implicit mat: ActorMaterializer, ec: ExecutionContext): Future[VoyageManifests] = source
+                   (implicit mat: Materializer, ec: ExecutionContext): Future[VoyageManifests] = source
     .flatMap(source => source
       .log(getClass.getName)
       .runWith(Sink.reduce[VoyageManifests](_ ++ _))

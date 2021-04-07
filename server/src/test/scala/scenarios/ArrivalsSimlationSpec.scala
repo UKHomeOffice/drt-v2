@@ -115,7 +115,7 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
       minMaxDesksByTerminalQueue24Hrs = Lhr.config.minMaxDesksByTerminalQueue24Hrs.mapValues(_.map {
         case (q, (_, max)) =>
           val openDesks = max.map(x => x / 2)
-          q -> (openDesks, openDesks)
+          q -> ((openDesks, openDesks))
       }),
       eGateBankSize = 5,
       slaByQueue = Lhr.config.slaByQueue.mapValues(_ => 15)

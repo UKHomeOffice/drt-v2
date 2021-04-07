@@ -77,7 +77,8 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
         None
     }
 
-    def filterArrivalsWithUpdates(existingArrivals: SortedMap[UniqueArrival, Arrival], newArrivals: Iterable[(UniqueArrival, Arrival)]): Iterable[(UniqueArrival, Arrival)] = newArrivals
+    def filterArrivalsWithUpdates(existingArrivals: SortedMap[UniqueArrival, Arrival],
+                                  newArrivals: Iterable[(UniqueArrival, Arrival)]): Iterable[(UniqueArrival, Arrival)] = newArrivals
       .foldLeft(List[(UniqueArrival, Arrival)]()) {
         case (soFar, (key, arrival)) => existingArrivals.get(key) match {
           case None => (key, arrival) :: soFar

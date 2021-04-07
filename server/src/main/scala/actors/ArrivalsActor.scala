@@ -1,8 +1,7 @@
 package actors
 
-import actors.serializers.FlightMessageConversion._
 import actors.acking.AckingReceiver.StreamCompleted
-import actors.restore.RestorerWithLegacy
+import actors.serializers.FlightMessageConversion._
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
@@ -111,7 +110,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Int,
                              feedSource: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
-  val restorer = new RestorerWithLegacy[Int, UniqueArrival, Arrival]
+  val restorer = new ArrivalsRestorer[Arrival]
   var state: ArrivalsState = initialState
 
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
@@ -137,9 +136,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def postRecoveryComplete(): Unit = {
+    val arrivals = SortedMap[UniqueArrival, Arrival]() ++ restorer.arrivals
     restorer.finish()
-    val arrivals = SortedMap[UniqueArrival, Arrival]() ++ restorer.items
-    restorer.clear()
 
     state = state.copy(arrivals = Crunch.purgeExpired(arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt))
 
@@ -152,16 +150,13 @@ abstract class ArrivalsActor(now: () => SDateLike,
   def consumeDiffsMessage(message: FlightsDiffMessage): Unit
 
   def consumeRemovals(diffsMessage: FlightsDiffMessage): Unit = {
-    logRecoveryMessage(s"Consuming ${diffsMessage.removals.length} removals")
-    restorer.removeLegacies(diffsMessage.removalsOLD)
-    restorer.remove(diffsMessage.removals.map(uam =>
-      UniqueArrival(uam.getNumber, uam.getTerminalName, uam.getScheduled)
-    ))
+    restorer.removeHashLegacies(diffsMessage.removalsOLD)
+    restorer.remove(uniqueArrivalsFromMessages(diffsMessage.removals))
   }
 
   def consumeUpdates(diffsMessage: FlightsDiffMessage): Unit = {
     logRecoveryMessage(s"Consuming ${diffsMessage.updates.length} updates")
-    restorer.update(diffsMessage.updates.map(flightMessageToApiFlight))
+    restorer.applyUpdates(diffsMessage.updates.map(flightMessageToApiFlight))
   }
 
   override def receiveCommand: Receive = {
@@ -215,7 +210,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   def persistArrivalUpdates(removals: Set[UniqueArrival], updatedArrivals: Iterable[Arrival]): Unit = {
     val updateMessages = updatedArrivals.map(apiFlightToFlightMessage).toSeq
-    val removalMessages = removals.map(ua => UniqueArrivalMessage(Option(ua.number), Option(ua.terminal.toString), Option(ua.scheduled))).toSeq
+    val removalMessages = removals.map(uniqueArrivalToMessage).toSeq
     val diffMessage = FlightsDiffMessage(
       createdAt = Option(SDate.now().millisSinceEpoch),
       removals = removalMessages,

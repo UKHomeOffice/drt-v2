@@ -3,6 +3,7 @@ package actors.daily
 import actors.StreamingJournalLike
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.daily.StreamingUpdatesLike.StopUpdates
+import actors.serializers.FlightMessageConversion.{flightWithSplitsFromMessage, uniqueArrivalsFromMessages}
 import actors.serializers.{FlightMessageConversion, PortStateMessageConversion}
 import akka.actor.PoisonPill
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
@@ -12,7 +13,7 @@ import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
-import drt.shared.{ApiFlightWithSplits, MilliTimes, SDateLike}
+import drt.shared.{ApiFlightWithSplits, ArrivalsRestorer, MilliTimes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
@@ -33,6 +34,7 @@ class TerminalDayFlightUpdatesActor(
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
 
+  val restorer = new ArrivalsRestorer[ApiFlightWithSplits]
   var state: FlightsWithSplits = FlightsWithSplits.empty
 
   val startUpdatesStream: MillisSinceEpoch => Unit = (sequenceNumber: Long) => if (maybeKillSwitch.isEmpty) {
@@ -70,12 +72,14 @@ class TerminalDayFlightUpdatesActor(
   def streamingUpdatesReceiveRecover: Receive = {
     case RecoveryCompleted =>
       log.info(s"Recovered. Starting updates stream")
+      state = state.copy(flights = restorer.arrivals)
+      restorer.finish()
+
       startUpdatesStream(lastSequenceNr)
 
     case unexpected =>
       log.error(s"Unexpected message: ${unexpected.getClass}")
   }
-
 
   def updateState(flightsWithSplitsDiffMessage: FlightsWithSplitsDiffMessage): Unit = {
     val (updated, _) = FlightMessageConversion
@@ -84,14 +88,6 @@ class TerminalDayFlightUpdatesActor(
     state = updated
 
     purgeOldUpdates()
-
-  }
-
-  def setState(message: FlightsWithSplitsMessage): Unit = {
-    state = FlightsWithSplits(message.flightWithSplits.map(fwsm => {
-      val fws = FlightMessageConversion.flightWithSplitsFromMessage(fwsm)
-      (fws.apiFlight.unique, fws)
-    }).toMap)
   }
 
   def expireBeforeMillis: MillisSinceEpoch = now().millisSinceEpoch - MilliTimes.oneMinuteMillis
@@ -123,10 +119,12 @@ class TerminalDayFlightUpdatesActor(
   def myReceiveRecover: Receive = {
     case SnapshotOffer(SnapshotMetadata(_, _, ts), m: FlightsWithSplitsMessage) =>
       log.debug(s"Processing snapshot offer from ${SDate(ts).toISOString()}")
-      setState(m)
+      val flights = m.flightWithSplits.map(FlightMessageConversion.flightWithSplitsFromMessage)
+      restorer.applyUpdates(flights)
 
     case m: FlightsWithSplitsDiffMessage =>
-      updateState(m)
+      restorer.remove(uniqueArrivalsFromMessages(m.removals))
+      restorer.applyUpdates(m.updates.map(flightWithSplitsFromMessage))
   }
 
   def updatesFromMessages(minuteMessages: Seq[GeneratedMessage]): Seq[CrunchMinute] = minuteMessages.map {

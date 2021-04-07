@@ -3,8 +3,8 @@ package services.crunch.deskrecs
 import actors.acking.AckingReceiver.{Ack, StreamInitialized}
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.DeskRecMinutes
@@ -26,7 +26,7 @@ import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsProvid
 import services.crunch.deskrecs.OptimiserMocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, TestDefaults, VoyageManifestGenerator}
-import services.graphstages.{CrunchMocks, LiveArrivals}
+import services.graphstages.CrunchMocks
 import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.Map
@@ -75,7 +75,7 @@ object OptimiserMocks {
   }
 
   def mockHistoricManifestsProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
-                                   (implicit ec: ExecutionContext, mat: ActorMaterializer): HistoricManifestsProvider = {
+                                   (implicit ec: ExecutionContext, mat: Materializer): HistoricManifestsProvider = {
     OptimisationProviders.historicManifestsProvider(
       PortCode("STN"),
       MockManifestLookupService(arrivalsWithMaybePax.map { case (arrival, maybePax) =>

@@ -53,7 +53,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         ), SplitRatiosNs.SplitSources.Historical, None))
   )
 
-  val flightWithAllTypesOfAPISplitAndNoLiveNos = ApiFlightWithSplits(
+  val flightWithAllTypesOfAPISplitAndNoLiveNos: ApiFlightWithSplits = ApiFlightWithSplits(
     arrival(
       iata = "SA324",
       icao = "SA0324",

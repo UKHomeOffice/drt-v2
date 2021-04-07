@@ -1,17 +1,12 @@
 package drt.server.feeds.api
 
 import akka.NotUsed
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
-import akka.testkit.TestKit
 import akka.util.ByteString
 import com.amazonaws.auth.AWSCredentials
 import com.mfglabs.commons.aws.s3.AmazonS3Client
-import com.typesafe.config.ConfigFactory
 import drt.shared.SDateLike
 import org.specs2.mock.Mockito
-import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.Scope
 import services.SDate
 import services.crunch.CrunchTestLike
