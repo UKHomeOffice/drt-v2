@@ -1,12 +1,10 @@
 package services.`export`
 
 import actors.minutes.MockMinutesLookup
-import actors.queues.DateRange
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.Terminals.T1
-import drt.shared.dates.LocalDate
 import drt.shared.{Queues, SDateLike, TM, TQM}
 import services.SDate
 import services.`export`.CsvTestHelper.{dropHeadings, resultStreamToCSV, takeCSVLines}
@@ -87,40 +85,36 @@ class StreamingDesksBstExportSpec extends CrunchTestLike {
     ))
 
 
-
     "Given an export spanning 1 local date, I should get back the desk recs for that time period" >> {
 
-      val exportDate = LocalDate(2021, 4, 6)
-      val exportStart: SDateLike = SDate(exportDate).getLocalLastMidnight
-      val exportEnd: SDateLike = SDate(exportDate).getLocalNextMidnight.addMinutes(-1)
-
-
-      val dates: Source[LocalDate, NotUsed] = DateRange.localDateRangeSource(exportStart, exportEnd)
+      val exportStart: SDateLike = SDate("2021-04-06").getLocalLastMidnight
+      val exportEnd: SDateLike = exportStart.getLocalNextMidnight.addMinutes(-1)
 
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
-        dates,
+        exportStart,
+        exportEnd,
         T1,
         defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
-        staffMinuteLookup)
+        staffMinuteLookup
+      )
 
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 8)
 
-//      val expected =
-//        s"""|2021-04-06,00:00,${Math.round(firstHourPax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(firstHourPax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(firstHourPax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-//            |2021-04-06,00:15,${Math.round(firstHourPax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(firstHourPax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(firstHourPax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-//            |2021-04-06,00:30,${Math.round(firstHourPax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(firstHourPax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(firstHourPax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-//            |2021-04-06,00:45,${Math.round(firstHourPax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(firstHourPax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(firstHourPax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-//            |2021-04-06,01:00,${Math.round(secondHourPax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(secondHourPax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(secondHourPax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-//            |2021-04-06,01:15,${Math.round(secondHourPax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(secondHourPax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(secondHourPax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-//            |2021-04-06,01:30,${Math.round(secondHourPax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(secondHourPax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(secondHourPax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-//            |2021-04-06,01:45,${Math.round(secondHourPax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(secondHourPax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(secondHourPax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-//            |"""
-//          .stripMargin
-      val expected = ""
+            val expected =
+              s"""|2021-04-06,00:00,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
+                  |2021-04-06,00:15,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
+                  |2021-04-06,00:30,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
+                  |2021-04-06,00:45,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
+                  |2021-04-06,01:00,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14
+                  |2021-04-06,01:15,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14
+                  |2021-04-06,01:30,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14
+                  |2021-04-06,01:45,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14"""
+                .stripMargin
+
 
       result === expected
     }

@@ -52,4 +52,18 @@ class DateRangeSpec extends Specification {
       }
     }
   }
+
+  "Given a date range that spans two dates but less than 24 hours" >> {
+    "When I ask for the local date range" >> {
+      "I should get 2 dates back in the range" >> {
+
+        val date1 = SDate("2020-01-01T12:00")
+        val date2 = SDate("2020-01-02T10:00")
+        val range: Seq[DateLike] = DateRange.localDateRange(date1, date2)
+
+        range === Seq(LocalDate(2020, 1, 1), LocalDate(2020, 1, 2))
+
+      }
+    }
+  }
 }

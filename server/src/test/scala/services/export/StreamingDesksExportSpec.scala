@@ -3,18 +3,14 @@ package services.`export`
 import actors.minutes.MockMinutesLookup
 import actors.queues.DateRange
 import akka.NotUsed
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.Terminals.T1
-import drt.shared.dates.LocalDate
 import drt.shared.{Queues, TM, TQM}
 import services.SDate
+import services.`export`.CsvTestHelper._
 import services.crunch.CrunchTestLike
 import services.exports.StreamingDesksExport
-import CsvTestHelper._
-
-import scala.concurrent.Await
-import scala.concurrent.duration._
 
 class StreamingDesksExportSpec extends CrunchTestLike {
 
@@ -58,7 +54,6 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       StaffMinute(T1, minute2.millisSinceEpoch, shifts, misc, moves),
     ))
 
-    val dates = DateRange.localDateRangeSource(minute1, minute1)
 
     "When I ask for a desk recs CSV I should get back a stream of CSV strings matching those minutes" >> {
 
@@ -66,7 +61,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
-        dates,
+        minute1,
+        minute2,
         T1,
         defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
@@ -88,7 +84,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deploymentsToCSVStreamWithHeaders(
-        dates,
+        minute1,
+        minute2,
         T1,
         defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
@@ -110,7 +107,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
-        dates,
+        minute1,
+        minute2,
         T1,
         defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
@@ -134,7 +132,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deploymentsToCSVStreamWithHeaders(
-        dates,
+        minute1,
+        minute2,
         T1,
         defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
@@ -158,7 +157,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
-        dates,
+        minute1,
+        minute2,
         T1,
         defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
@@ -179,10 +179,13 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
-      val dates = DateRange.localDateRangeSource(SDate("2020-11-01"), SDate("2020-11-03"))
+      val start = SDate("2020-11-01")
+      val end = SDate("2020-11-03").getLocalNextMidnight.addMinutes(-1)
+      val dates = DateRange.utcDateRangeSource(start, end)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
-        dates,
+        start,
+        end,
         T1,
         defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
@@ -204,10 +207,13 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
-      val dates = DateRange.localDateRangeSource(SDate("2020-11-01"), SDate("2020-11-02"))
+      val start = SDate("2020-11-01")
+      val end = SDate("2020-11-02")
+      val dates = DateRange.utcDateRangeSource(start, end)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
-        dates,
+        start,
+        end,
         T1,
         defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,
@@ -236,10 +242,10 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
-      val dates = DateRange.localDateRangeSource(minute1, minute1)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
-        dates,
+        minute1,
+        minute2,
         T1,
         defaultAirportConfig.forecastExportQueueOrder,
         crunchMinuteLookup,

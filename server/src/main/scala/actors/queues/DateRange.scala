@@ -24,8 +24,8 @@ object DateRange {
   def dateRange[A <: DateLike](start: SDateLike, end: SDateLike, millisToDate: MillisToDateLike[A]): Seq[A] = {
     val lookupStartMillis = start.millisSinceEpoch
     val lookupEndMillis = end.millisSinceEpoch
-    val daysRangeMillis = lookupStartMillis to lookupEndMillis by MilliTimes.oneDayMillis
-    daysRangeMillis.map(millisToDate)
+    val daysRangeMillis = (lookupStartMillis to lookupEndMillis by MilliTimes.oneDayMillis) :+ end.millisSinceEpoch
+    daysRangeMillis.map(millisToDate).distinct
   }
 
   def dateRangeSource[A <: DateLike](start: SDateLike, end: SDateLike, millisToDate: MillisToDateLike[A]): Source[A, NotUsed] =
