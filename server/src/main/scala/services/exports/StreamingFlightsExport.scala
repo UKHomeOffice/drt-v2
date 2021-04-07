@@ -58,7 +58,7 @@ case class StreamingFlightsExport(millisToDateStringFn: MillisSinceEpoch => Stri
   }
 
   val csvHeader: String =
-    ArrivalToCsv.rawArrivalHeadings + ",PCP Pax,Invalid Api data," +
+    ArrivalToCsv.rawArrivalHeadings + ",PCP Pax," +
       headingsForSplitSource(queueNames, "API") + "," +
       headingsForSplitSource(queueNames, "Historical") + "," +
       headingsForSplitSource(queueNames, "Terminal Average")
@@ -94,11 +94,8 @@ case class StreamingFlightsExport(millisToDateStringFn: MillisSinceEpoch => Stri
       millisToDateStringFn,
       millisToTimeStringFn
     ) ++
-      List(fws.apiFlight.bestPaxEstimate.toString) ++ List(invalidApiData(fws.apiSplitDataFromDC().isEmpty)) ++ splitsForSources
+      List(fws.apiFlight.bestPaxEstimate.toString) ++ splitsForSources
   }
-
-
-  val invalidApiData : Boolean => String =  isEmpty => if(isEmpty) "true" else ""
 
   def queueSplits(queueNames: Seq[Queue],
                   fws: ApiFlightWithSplits,
