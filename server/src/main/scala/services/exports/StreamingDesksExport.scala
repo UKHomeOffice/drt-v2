@@ -110,16 +110,6 @@ object StreamingDesksExport {
   type MaybeStaffMinutes = Option[CrunchApi.MinutesContainer[StaffMinute, TM]]
   type MinutesTuple = (MaybeCrunchMinutes, MaybeStaffMinutes)
 
-  def crunchMinutesToRecsExportWithHeaders(terminal: Terminal,
-                                           exportQueuesInOrder: List[Queue],
-                                           utcDate: UtcDate,
-                                           start: SDateLike,
-                                           end: SDateLike,
-                                           crunchMinutes: Iterable[CrunchMinute],
-                                          ): String =
-    csvHeader(exportQueuesInOrder, "req") +
-      minutesToCsv(terminal, exportQueuesInOrder, utcDate, start, end, crunchMinutes, List(), deskRecsCsv)
-
   def minutesToCsv(terminal: Terminal,
                    exportQueuesInOrder: List[Queue],
                    utcDate: UtcDate,
@@ -136,7 +126,7 @@ object StreamingDesksExport {
     )
 
     val terminalCrunchMinutes = portState
-      .crunchSummary(start, 24 * 4, 15, terminal, exportQueuesInOrder)
+      .crunchSummary(SDate(utcDate), 24 * 4, 15, terminal, exportQueuesInOrder)
     val terminalCrunchMinutesWithinRange: SortedMap[MillisSinceEpoch, Map[Queue, CrunchMinute]] = terminalCrunchMinutes.filter {
       case (millis, _) => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch
     }
