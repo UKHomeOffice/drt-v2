@@ -44,9 +44,11 @@ trait WithSimulations {
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
 
             val date = SDate(simulationParams.date)
+            val start = date.getLocalLastMidnight
+            val end = date.getLocalNextMidnight
             val eventualFlightsWithSplitsStream: Future[Source[FlightsWithSplits, NotUsed]] = (ctrl.portStateActor ? GetFlightsForTerminalDateRange(
-              date.getLocalLastMidnight.millisSinceEpoch,
-              date.getLocalNextMidnight.millisSinceEpoch,
+              start.millisSinceEpoch,
+              end.millisSinceEpoch,
               simulationParams.terminal
             )).mapTo[Source[FlightsWithSplits, NotUsed]]
 
@@ -151,7 +153,7 @@ trait WithSimulations {
         terminal,
         airportConfig.desksExportQueueOrder,
         date.toUtcDate,
-        date.getLocalNextMidnight,
+        date.getLocalLastMidnight,
         date.getLocalNextMidnight,
         crunchMinutes.map {
           case (_, cm) => cm

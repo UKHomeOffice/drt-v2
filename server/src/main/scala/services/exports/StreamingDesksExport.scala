@@ -135,30 +135,32 @@ object StreamingDesksExport {
       staffMinutes
     )
 
-    val terminalCrunchMinutes: SortedMap[MillisSinceEpoch, Map[Queue, CrunchMinute]] = portState
-      .crunchSummary(SDate(utcDate), 24 * 4, 15, terminal, exportQueuesInOrder).filter {
+    val terminalCrunchMinutes = portState
+      .crunchSummary(start, 24 * 4, 15, terminal, exportQueuesInOrder)
+    val terminalCrunchMinutesWithinRange: SortedMap[MillisSinceEpoch, Map[Queue, CrunchMinute]] = terminalCrunchMinutes.filter {
       case (millis, _) => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch
     }
 
-    val terminalStaffMinutes: Map[MillisSinceEpoch, StaffMinute] = portState
-      .staffSummary(SDate(utcDate), 24 * 4, 15, terminal).filter {
+    val terminalStaffMinutes = portState
+      .staffSummary(SDate(utcDate), 24 * 4, 15, terminal)
+    val terminalStaffMinutesWithinRange: Map[MillisSinceEpoch, StaffMinute] = terminalStaffMinutes.filter {
       case (millis, _) => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch
     }
 
-    terminalCrunchMinutes.map {
+    terminalCrunchMinutesWithinRange.map {
       case (minute, qcm) =>
         val qcms: immutable.Seq[CrunchMinute] = exportQueuesInOrder.map(q => qcm.get(q)).collect {
           case Some(qcm) => qcm
         }
         val qsCsv: String = qcms.map(deskExportFn).mkString(",")
-        val staffMinutesCsv = terminalStaffMinutes.get(minute) match {
+        val staffMinutesCsv = terminalStaffMinutesWithinRange.get(minute) match {
           case Some(sm) =>
             s"${sm.fixedPoints},${sm.movements},${sm.shifts}"
           case _ => "Missing staffing data for this period,,"
         }
         val total = qcms.map(_.deskRec).sum
         val localMinute = SDate(minute, Crunch.europeLondonTimeZone)
-        val misc = terminalStaffMinutes.get(minute).map(_.fixedPoints).getOrElse(0)
+        val misc = terminalStaffMinutesWithinRange.get(minute).map(_.fixedPoints).getOrElse(0)
         s"${localMinute.toISODateOnly},${localMinute.prettyTime()},$qsCsv,$staffMinutesCsv,${total + misc}\n"
 
     }.mkString
