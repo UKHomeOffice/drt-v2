@@ -1,6 +1,7 @@
 package controllers.application
 
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
+import actors.minutes.MinutesActorLike.MinutesLookup
 import actors.queues.FlightsRouterActor
 import akka.NotUsed
 import akka.actor.Props
@@ -9,11 +10,12 @@ import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming
-import controllers.application.exports.CsvFileStreaming.csvFileResult
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes}
+import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.dates.UtcDate
 import manifests.queues.SplitsCalculator
 import play.api.mvc._
 import services.SDate
@@ -28,7 +30,7 @@ import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 trait WithSimulations {
   self: Application =>
@@ -44,9 +46,11 @@ trait WithSimulations {
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
 
             val date = SDate(simulationParams.date)
+            val start = date.getLocalLastMidnight
+            val end = date.getLocalNextMidnight
             val eventualFlightsWithSplitsStream: Future[Source[FlightsWithSplits, NotUsed]] = (ctrl.portStateActor ? GetFlightsForTerminalDateRange(
-              date.getLocalLastMidnight.millisSinceEpoch,
-              date.getLocalNextMidnight.millisSinceEpoch,
+              start.millisSinceEpoch,
+              end.millisSinceEpoch,
               simulationParams.terminal
             )).mapTo[Source[FlightsWithSplits, NotUsed]]
 
@@ -147,24 +151,37 @@ trait WithSimulations {
         .minutes
         .map(dr => dr.key -> dr.toMinute).toMap
 
-      val desks: String = StreamingDesksExport.crunchMinutesToRecsExportWithHeaders(
-        terminal,
-        airportConfig.desksExportQueueOrder,
-        date.toLocalDate,
-        crunchMinutes.map {
-          case (_, cm) => cm
-        }
+      val fileName = CsvFileStreaming.makeFileName(s"simulation-${simulationParams.passengerWeighting}",
+        simulationParams.terminal,
+        date,
+        date,
+        airportConfig.portCode
       )
 
-      csvFileResult(
-        CsvFileStreaming.makeFileName(s"simulation-${simulationParams.passengerWeighting}",
-          simulationParams.terminal,
-          date,
-          date,
-          airportConfig.portCode
-        ),
-        desks
+      val stream = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
+        date.getLocalLastMidnight,
+        date.getLocalNextMidnight,
+        terminal,
+        airportConfig.desksExportQueueOrder,
+        simulationQueuesLookup(crunchMinutes),
+        staffLookupNoop,
+        None
       )
+
+      Try(sourceToCsvResponse(stream, fileName)) match {
+        case Success(value) => value
+        case Failure(t) =>
+          log.error("Failed to get CSV export", t)
+          BadRequest("Failed to get CSV export")
+      }
+
     })
   }
+
+  def simulationQueuesLookup(cms: SortedMap[TQM, CrunchMinute])(
+    terminalDate: (Terminal, UtcDate),
+    maybePit: Option[MillisSinceEpoch]
+  ): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = Future(Option(MinutesContainer(cms.values)))
+
+  def staffLookupNoop: MinutesLookup[StaffMinute, TM] = (terminalDate: (Terminal, UtcDate), maybePit: Option[MillisSinceEpoch]) => Future(None)
 }

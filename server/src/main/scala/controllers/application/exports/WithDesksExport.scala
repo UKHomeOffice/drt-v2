@@ -1,6 +1,5 @@
 package controllers.application.exports
 
-import actors.queues.DateRange
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import controllers.Application
@@ -117,17 +116,14 @@ trait WithDesksExport {
                                                          start: SDateLike,
                                                          end: SDateLike,
                                                          terminalName: String,
-                                                         exportSourceFn: (Source[LocalDate, NotUsed], Terminal) =>
+                                                         exportSourceFn: (SDateLike, SDateLike, Terminal) =>
                                                            Source[String, NotUsed],
                                                          filePrefix: String
                                                        ): Action[AnyContent] = Action.async {
-    val dates = DateRange.localDateRangeSource(start, end)
-    val terminal = Terminal(terminalName)
-
-    val exportSource: Source[String, NotUsed] = exportSourceFn(dates, terminal)
+    val exportSource: Source[String, NotUsed] = exportSourceFn(start, end, Terminal(terminalName))
     log.info(s"Exporting between $start and $end")
 
-    val fileName = makeFileName(filePrefix, terminal, start, end, airportConfig.portCode)
+    val fileName = makeFileName(filePrefix, Terminal(terminalName), start, end, airportConfig.portCode)
 
     Try(sourceToCsvResponse(exportSource, fileName)) match {
       case Success(value) => Future(value)
@@ -138,11 +134,13 @@ trait WithDesksExport {
   }
 
   def deskRecsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
-    dates: Source[LocalDate, NotUsed],
+    start: SDateLike,
+    end: SDateLike,
     terminal: Terminal
   ): Source[String, NotUsed] =
     StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
-      dates,
+      start,
+      end,
       terminal,
       airportConfig.desksExportQueueOrder,
       ctrl.minuteLookups.queuesLookup,
@@ -151,11 +149,13 @@ trait WithDesksExport {
     )
 
   def deploymentsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
-    dates: Source[LocalDate, NotUsed],
+    start: SDateLike,
+    end: SDateLike,
     terminal: Terminal
   ): Source[String, NotUsed] =
     StreamingDesksExport.deploymentsToCSVStreamWithHeaders(
-      dates,
+      start,
+      end,
       terminal,
       airportConfig.desksExportQueueOrder,
       ctrl.minuteLookups.queuesLookup,

@@ -1,13 +1,14 @@
 package services.exports
 
 import actors.minutes.MinutesActorLike.MinutesLookup
+import actors.queues.DateRange
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.dates.LocalDate
+import drt.shared.dates.UtcDate
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch
@@ -38,7 +39,8 @@ object StreamingDesksExport {
     .flatMap(qn => List.fill(colHeadings().length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(",")
 
   def deskRecsToCSVStreamWithHeaders(
-                                      dates: Source[LocalDate, NotUsed],
+                                      start: SDateLike,
+                                      end: SDateLike,
                                       terminal: Terminal,
                                       exportQueuesInOrder: List[Queue],
                                       crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
@@ -46,7 +48,8 @@ object StreamingDesksExport {
                                       maybePit: Option[MillisSinceEpoch] = None
                                     )(implicit ec: ExecutionContext): Source[String, NotUsed] =
     exportDesksToCSVStream(
-      dates,
+      start,
+      end,
       terminal,
       exportQueuesInOrder,
       crunchMinuteLookup,
@@ -57,19 +60,21 @@ object StreamingDesksExport {
 
 
   def deploymentsToCSVStreamWithHeaders(
-                                         dates: Source[LocalDate, NotUsed],
+                                         start: SDateLike,
+                                         end: SDateLike,
                                          terminal: Terminal,
                                          exportQueuesInOrder: List[Queue],
                                          crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
                                          staffMinuteLookup: MinutesLookup[StaffMinute, TM],
                                          maybePit: Option[MillisSinceEpoch] = None
                                        )(implicit ec: ExecutionContext): Source[String, NotUsed] =
-    exportDesksToCSVStream(dates, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup, deploymentsCsv, maybePit)
+    exportDesksToCSVStream(start, end, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup, deploymentsCsv, maybePit)
       .prepend(Source(List(csvHeader(exportQueuesInOrder, "dep"))))
 
 
   def exportDesksToCSVStream(
-                              dates: Source[LocalDate, NotUsed],
+                              start: SDateLike,
+                              end: SDateLike,
                               terminal: Terminal,
                               exportQueuesInOrder: List[Queue],
                               crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
@@ -78,36 +83,38 @@ object StreamingDesksExport {
                               maybePit: Option[MillisSinceEpoch] = None
                             )(implicit ec: ExecutionContext): Source[String, NotUsed] = {
 
-    dates.mapAsync(1)(d => {
-      val futureMaybeCM: Future[Option[CrunchApi.MinutesContainer[CrunchMinute, TQM]]] = crunchMinuteLookup((terminal, SDate(d).toUtcDate), maybePit)
-      val futureMaybeSM: Future[Option[CrunchApi.MinutesContainer[StaffMinute, TM]]] = staffMinuteLookup((terminal, SDate(d).toUtcDate), maybePit)
-      for {
-        maybeCMs <- futureMaybeCM
-        maybeSMs <- futureMaybeSM
-      } yield {
-        minutesToCsv(
-          terminal,
-          exportQueuesInOrder,
-          d,
-          maybeCMs.map(_.minutes.map(_.toMinute)).getOrElse(List()),
-          maybeSMs.map(_.minutes.map(_.toMinute)).getOrElse(List()),
-          deskExportFn
-        )
-      }
-    })
+    DateRange.utcDateRangeSource(start, end)
+      .mapAsync(1)(crunchUtcDate => {
+
+        val futureMaybeCM: Future[Option[CrunchApi.MinutesContainer[CrunchMinute, TQM]]] = crunchMinuteLookup((terminal, crunchUtcDate), maybePit)
+        val futureMaybeSM: Future[Option[CrunchApi.MinutesContainer[StaffMinute, TM]]] = staffMinuteLookup((terminal, crunchUtcDate), maybePit)
+        for {
+          maybeCMs <- futureMaybeCM
+          maybeSMs <- futureMaybeSM
+        } yield {
+          minutesToCsv(
+            terminal,
+            exportQueuesInOrder,
+            crunchUtcDate,
+            start,
+            end,
+            maybeCMs.map(_.minutes.map(_.toMinute)).getOrElse(List()),
+            maybeSMs.map(_.minutes.map(_.toMinute)).getOrElse(List()),
+            deskExportFn
+          )
+        }
+      })
   }
 
-  def crunchMinutesToRecsExportWithHeaders(terminal: Terminal,
-                                           exportQueuesInOrder: List[Queue],
-                                           localDate: LocalDate,
-                                           crunchMinutes: Iterable[CrunchMinute],
-                                          ): String =
-    csvHeader(exportQueuesInOrder, "req") +
-      minutesToCsv(terminal, exportQueuesInOrder, localDate, crunchMinutes, List(), deskRecsCsv)
+  type MaybeCrunchMinutes = Option[CrunchApi.MinutesContainer[CrunchMinute, TQM]]
+  type MaybeStaffMinutes = Option[CrunchApi.MinutesContainer[StaffMinute, TM]]
+  type MinutesTuple = (MaybeCrunchMinutes, MaybeStaffMinutes)
 
   def minutesToCsv(terminal: Terminal,
                    exportQueuesInOrder: List[Queue],
-                   localDate: LocalDate,
+                   utcDate: UtcDate,
+                   start: SDateLike,
+                   end: SDateLike,
                    crunchMinutes: Iterable[CrunchMinute],
                    staffMinutes: Iterable[StaffMinute],
                    deskExportFn: CrunchMinute => String,
@@ -118,26 +125,32 @@ object StreamingDesksExport {
       staffMinutes
     )
 
-    val terminalCrunchMinutes: SortedMap[MillisSinceEpoch, Map[Queue, CrunchMinute]] = portState
-      .crunchSummary(SDate(localDate), 24 * 4, 15, terminal, exportQueuesInOrder)
+    val terminalCrunchMinutes = portState
+      .crunchSummary(SDate(utcDate), 24 * 4, 15, terminal, exportQueuesInOrder)
+    val terminalCrunchMinutesWithinRange: SortedMap[MillisSinceEpoch, Map[Queue, CrunchMinute]] = terminalCrunchMinutes.filter {
+      case (millis, _) => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch
+    }
 
-    val terminalStaffMinutes: Map[MillisSinceEpoch, StaffMinute] = portState
-      .staffSummary(SDate(localDate), 24 * 4, 15, terminal)
+    val terminalStaffMinutes = portState
+      .staffSummary(SDate(utcDate), 24 * 4, 15, terminal)
+    val terminalStaffMinutesWithinRange: Map[MillisSinceEpoch, StaffMinute] = terminalStaffMinutes.filter {
+      case (millis, _) => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch
+    }
 
-    terminalCrunchMinutes.map {
+    terminalCrunchMinutesWithinRange.map {
       case (minute, qcm) =>
         val qcms: immutable.Seq[CrunchMinute] = exportQueuesInOrder.map(q => qcm.get(q)).collect {
           case Some(qcm) => qcm
         }
         val qsCsv: String = qcms.map(deskExportFn).mkString(",")
-        val staffMinutesCsv = terminalStaffMinutes.get(minute) match {
+        val staffMinutesCsv = terminalStaffMinutesWithinRange.get(minute) match {
           case Some(sm) =>
             s"${sm.fixedPoints},${sm.movements},${sm.shifts}"
           case _ => "Missing staffing data for this period,,"
         }
         val total = qcms.map(_.deskRec).sum
         val localMinute = SDate(minute, Crunch.europeLondonTimeZone)
-        val misc = terminalStaffMinutes.get(minute).map(_.fixedPoints).getOrElse(0)
+        val misc = terminalStaffMinutesWithinRange.get(minute).map(_.fixedPoints).getOrElse(0)
         s"${localMinute.toISODateOnly},${localMinute.prettyTime()},$qsCsv,$staffMinutesCsv,${total + misc}\n"
 
     }.mkString
