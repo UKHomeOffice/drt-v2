@@ -113,11 +113,11 @@ object PortConfigDetails {
       <.tbody(
         <.tr(
           <.th(^.className := "col", "Gate"),
-          <.th(^.className := "col", "Walk time seconds")
+          <.th(^.className := "col", "Walk time minutes")
         ),
         <.tr(
           <.th(^.scope := "row", "Default"),
-          <.td(^.className := "text-right", (defaultWalkTime / 1000).toInt)
+          <.td(^.className := "text-right", (defaultWalkTime / 60000).toInt)
         )
 
       )

@@ -46,7 +46,7 @@ object PcpPaxSummariesComponent {
       <.div(^.className := "pcp-pax-summaries",
         if (props.viewMode.isLive) {
           props.portStatePot.render { cs =>
-            val boxes = Seq("next 5 mins", "5-10 mins", "10-15 mins")
+            val boxes = Seq("next 5 minutes", "5-10 minutes", "10-15 minutes")
             <.div(
               boxes.zipWithIndex.map {
                 case (label, box) =>
