@@ -33,7 +33,7 @@ object TooltipComponent {
 
   val currentTooltip = tooltip("The Current view uses the latest data available to provide information about the day being viewed.")
 
-  val monthlyStaffingTooltip = tooltip("You have permission to add staff to DRT. Add them directly into the spreadsheet in hourly or 15 minute slots, or copy and paste from an existing spreadsheet if you have one in the same format.")
+  val monthlyStaffingTooltip = tooltip("You have permission to add staff to DRT. Add them directly into the spreadsheet in hourly or 15 minutes slots, or copy and paste from an existing spreadsheet if you have one in the same format.")
 
   val snapshotTooltip = tooltip("The Snapshot view uses the data that was available to DRT at the point in time selected.")
 

@@ -12,14 +12,14 @@ class WalkTimesSpec extends Specification {
       val millis = 60000L
       val result: String = WalkTime.millisToMinutes(millis)
 
-      result === "1 minute"
+      result === "1 minutes"
     }
 
     "Given 90s I should get back 1 minute" >> {
       val millis = 90000L
       val result: String = WalkTime.millisToMinutes(millis)
 
-      result === "1 minute"
+      result === "1 minutes"
     }
   }
 
@@ -117,21 +117,21 @@ class WalkTimesSpec extends Specification {
 
         val result = walkTimeProvider(None, None, T1)
 
-        result === "5 minute (default walk time for terminal)"
+        result === "5 minutes (default walk time for terminal)"
       }
 
       "Given a non existent gate I should get back the default walk time" >> {
 
         val result = walkTimeProvider(Option("notValid"), None, T1)
 
-        result === "5 minute (default walk time for terminal)"
+        result === "5 minutes (default walk time for terminal)"
       }
 
       "Given a non existent stand I should get back the default walk time" >> {
 
         val result = walkTimeProvider(None, Option("notValid"), T1)
 
-        result === "5 minute (default walk time for terminal)"
+        result === "5 minutes (default walk time for terminal)"
       }
 
       "Given a non existent gate and a valid stand I should get back the stand time" >> {
