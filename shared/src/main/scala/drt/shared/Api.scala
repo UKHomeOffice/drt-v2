@@ -224,7 +224,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
 
   val eGateAndFTSplitsExistsForLiveFeedSource: Boolean = splits.exists(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) && apiFlight.FeedSources.contains(LiveFeedSource)
 
-  def apiSplitData(threshold: Double = 0.05): Option[Splits] = {
+   def apiSplitData(threshold: Double = 0.05): Option[Splits] = {
     val apiSplits = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
     val paxCount: Double = apiSplits.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
     val isValidThreshold = paxCount != 0 && Math.abs(paxCount - apiFlight.ActPax.getOrElse(0)) / paxCount < threshold

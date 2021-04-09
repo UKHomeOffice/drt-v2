@@ -160,7 +160,7 @@ describe('Arrivals page', () => {
           ukPassport
         ]
       ))
-      .get('.pax-api')
+      .get('.pax-unknown')
       .contains("2")
 
   });
@@ -202,7 +202,7 @@ describe('Arrivals page', () => {
           ukPassportWithIdentifier("id2")
         ]
       ))
-      .get('.pax-api')
+      .get('.pax-unknown')
       .contains("2")
   });
 
@@ -226,7 +226,7 @@ describe('Arrivals page', () => {
           inTransitPassenger
         ]
       ))
-      .get('.pax-api')
+      .get('.pax-unknown')
       .contains("2")
   });
 
