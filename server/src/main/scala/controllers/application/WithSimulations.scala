@@ -38,7 +38,7 @@ trait WithSimulations {
   def simulationExport(): Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
     Action(parse.defaultBodyParser).async {
       request =>
-        implicit val timeout: Timeout = new Timeout(2 minutes)
+        implicit val timeout: Timeout = new Timeout(10 minutes)
 
         SimulationParams
           .fromQueryStringParams(request.queryString) match {
@@ -80,7 +80,7 @@ trait WithSimulations {
   def simulation(): Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
     Action(parse.defaultBodyParser).async {
       request =>
-        implicit val timeout: Timeout = new Timeout(2 minutes)
+        implicit val timeout: Timeout = new Timeout(10 minutes)
 
 
         SimulationParams
@@ -142,7 +142,6 @@ trait WithSimulations {
   def simulationResultAsCsv(simulationParams: SimulationParams,
                             terminal: Terminal,
                             futureDeskRecMinutes: Future[DeskRecMinutes]): Future[Result] = {
-    implicit val timeout: Timeout = new Timeout(2 minutes)
 
     val date = SDate(simulationParams.date)
 
