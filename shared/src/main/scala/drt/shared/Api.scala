@@ -222,36 +222,29 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   }
 
 
-  val eGateAndFTSplitsExists = splits.exists(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
+  val eGateAndFTSplitsExistsForLiveFeedSource: Boolean = splits.exists(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) && apiFlight.FeedSources.contains(LiveFeedSource)
 
-  def apiSplitDataFromDC(threshold: Double = 0.05): Option[Splits] = {
-    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
-    val paxCount: Double = apiSplitsDc.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
+  def apiSplitData(threshold: Double = 0.05): Option[Splits] = {
+    val apiSplits = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
+    val paxCount: Double = apiSplits.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
     val isValidThreshold = paxCount != 0 && Math.abs(paxCount - apiFlight.ActPax.getOrElse(0)) / paxCount < threshold
-    if (isValidThreshold && apiFlight.FeedSources.contains(LiveFeedSource))
-      apiSplitsDc
-    else
-      None
+
+    if (apiFlight.FeedSources.contains(LiveFeedSource)) {
+      if (isValidThreshold) apiSplits else None
+    } else {
+      apiSplits
+    }
+
   }
 
   def bestSplits: Option[Splits] = {
-    val apiSplitsDc = apiSplitDataFromDC()
+    val apiSplits = apiSplitData()
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.CI))
-    val apiSplitsAny = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
     val predictedSplits = splits.find(s => s.source == SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages)
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
-    List(apiSplitsDc, apiSplitsCi, apiSplitsAny, predictedSplits, historicalSplits, terminalSplits).find {
-      case Some(_) => true
-      case _ => false
-    }.flatten
-  }
-
-  def apiSplits: Option[Splits] = {
-    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
-
-    List(apiSplitsDc).find {
+    List(apiSplits, apiSplitsCi, predictedSplits, historicalSplits, terminalSplits).find {
       case Some(_) => true
       case _ => false
     }.flatten
@@ -592,10 +585,10 @@ trait SDateLike {
   def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
 
   /**
-    * Days of the week 1 to 7 (Monday is 1)
-    *
-    * @return
-    */
+   * Days of the week 1 to 7 (Monday is 1)
+   *
+   * @return
+   */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int

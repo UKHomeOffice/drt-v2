@@ -58,7 +58,7 @@ class ApiFlightWithSplitsSpecs extends Specification {
 
     "does not return DC splits while pax count not within 5% threshold of splits pax count for api and DC event type" in {
       val flightWithSplits = new ApiFlightWithSplits(flight, Set(splitsNotWithinFivePercentageThreshold))
-      val apiSplitDataFromDC = flightWithSplits.apiSplitDataFromDC()
+      val apiSplitDataFromDC = flightWithSplits.apiSplitData()
       val apiSplitsDc = flightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
       val paxCount: Double = apiSplitsDc.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
       paxCount mustEqual 36
