@@ -1,4 +1,4 @@
-package services.inputfeeds
+package feeds.lhr
 
 import drt.server.feeds.lhr.forecast.{LhrForecastArrival, LhrForecastArrivals}
 import drt.shared.Terminals.T3
