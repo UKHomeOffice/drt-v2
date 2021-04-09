@@ -22,7 +22,8 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable.ArrayBuffer
 import scala.util.{Failure, Success, Try}
 
-case class AclFeed(ftpServer: String, username: String, path: String, portCode: PortCode, terminalMapping: Terminal => Terminal, minBytes: Long) {
+case class
+AclFeed(ftpServer: String, username: String, path: String, portCode: PortCode, terminalMapping: Terminal => Terminal, minBytes: Long) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def ssh: SSHClient = sshClient(ftpServer, username, path)
