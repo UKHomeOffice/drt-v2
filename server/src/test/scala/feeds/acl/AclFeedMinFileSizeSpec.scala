@@ -1,4 +1,4 @@
-package services.inputfeeds
+package feeds.acl
 
 import drt.server.feeds.acl.AclFeed.latestFileForPort
 import drt.shared._
