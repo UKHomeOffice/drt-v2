@@ -23,7 +23,7 @@ object FlightComponents {
     if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
       "pax-no-splits"
     else flightWithSplits.bestSplits match {
-      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-api"
+      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) if isLiveAndApiPaxCountWithinThreshold(flightWithSplits) => "pax-api"
       case Some(Splits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
       case Some(Splits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
       case _ => "pax-unknown"
@@ -34,7 +34,8 @@ object FlightComponents {
     if (flightWithSplits.apiFlight.FeedSources.contains(LiveFeedSource)) {
     val apiSplits = flightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
     val paxCount: Double = apiSplits.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
-    val isValidThreshold = paxCount != 0 && Math.abs(paxCount - flightWithSplits.apiFlight.ActPax.getOrElse(0)) / paxCount < threshold
+    val portDirectPax: Int = flightWithSplits.apiFlight.ActPax.getOrElse(0) - flightWithSplits.apiFlight.TranPax.getOrElse(0)
+    val isValidThreshold = paxCount != 0 && Math.abs(paxCount - portDirectPax) / paxCount < threshold
       if (isValidThreshold) true else false
     } else {
       true
