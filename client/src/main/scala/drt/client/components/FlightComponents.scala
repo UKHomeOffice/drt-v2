@@ -11,10 +11,7 @@ import org.scalajs.dom.html.Div
 object FlightComponents {
 
   def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = {
-    val isNotApiData = (flightWithSplits.eGateAndFTSplitsExistsForLiveFeedSource, flightWithSplits.apiSplitData().isEmpty) match {
-      case (true, true) => "right notApiData"
-      case _ => "right"
-    }
+    val isNotApiData = if (isLiveAndApiPaxCountWithinThreshold(flightWithSplits)) "right notApiData" else "right"
     <.div(
       ^.title := paxComponentTitle(flightWithSplits.apiFlight),
       ^.className := s"$isNotApiData",
@@ -32,8 +29,20 @@ object FlightComponents {
       case _ => "pax-unknown"
     }
 
+
+  def isLiveAndApiPaxCountWithinThreshold(flightWithSplits: ApiFlightWithSplits, threshold: Double = 0.05) : Boolean = {
+    if (flightWithSplits.apiFlight.FeedSources.contains(LiveFeedSource)) {
+    val apiSplits = flightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
+    val paxCount: Double = apiSplits.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
+    val isValidThreshold = paxCount != 0 && Math.abs(paxCount - flightWithSplits.apiFlight.ActPax.getOrElse(0)) / paxCount < threshold
+      if (isValidThreshold) true else false
+    } else {
+      true
+    }
+  }
+
   def hasApiSplits(flightWithSplits: ApiFlightWithSplits): Boolean = flightWithSplits.bestSplits match {
-    case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => true
+    case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) if isLiveAndApiPaxCountWithinThreshold(flightWithSplits) => true
     case _ => false
   }
 
