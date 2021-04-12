@@ -11,7 +11,7 @@ import org.scalajs.dom.html.Div
 object FlightComponents {
 
   def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = {
-    val isNotApiData = if (isLiveAndApiPaxCountWithinThreshold(flightWithSplits)) "right notApiData" else "right"
+    val isNotApiData = if (isLiveAndApiPaxCountWithinThreshold(flightWithSplits)) "right" else "right notApiData"
     <.div(
       ^.title := paxComponentTitle(flightWithSplits.apiFlight),
       ^.className := s"$isNotApiData",
