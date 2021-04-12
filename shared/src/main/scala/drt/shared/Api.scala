@@ -221,11 +221,10 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
   }
 
-
   val eGateAndFTSplitsExistsForLiveFeedSource: Boolean = splits.exists(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) && apiFlight.FeedSources.contains(LiveFeedSource)
 
    def apiSplitData(threshold: Double = 0.05): Option[Splits] = {
-    val apiSplits = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
+    val apiSplits = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
     val paxCount: Double = apiSplits.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
     val isValidThreshold = paxCount != 0 && Math.abs(paxCount - apiFlight.ActPax.getOrElse(0)) / paxCount < threshold
 
@@ -238,18 +237,18 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   }
 
   def bestSplits: Option[Splits] = {
-    val apiSplits = apiSplitData()
+    val apiSplitsDc = apiSplitData()
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.CI))
+    val apiSplitsAny = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
     val predictedSplits = splits.find(s => s.source == SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages)
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
-    List(apiSplits, apiSplitsCi, predictedSplits, historicalSplits, terminalSplits).find {
+    List(apiSplitsDc, apiSplitsCi, apiSplitsAny, predictedSplits, historicalSplits, terminalSplits).find {
       case Some(_) => true
       case _ => false
     }.flatten
   }
-
   def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
 
   override val unique: UniqueArrival = apiFlight.unique
