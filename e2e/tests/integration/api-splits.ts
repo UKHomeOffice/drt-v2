@@ -39,13 +39,12 @@ describe('API splits', () => {
             .contains("8")
             .get('.eeadesk-queue-pax')
             .get('span')
-            .contains("2")
-        ;
+            .contains("2");
 
     });
 
 
-    it('should ignore the API splits if they are more than 5% different in passenger numbers to the live feed', () => {
+    it('should ignore the API splits if they are more than 5% different in passenger numbers to the live feed and flight charts option not exist', () => {
         const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 12));
 
         cy
@@ -60,8 +59,9 @@ describe('API splits', () => {
             .addManifest(apiManifest)
             .get('.notApiData',{ timeout: 5000 })
             .contains("10")
+            .get("[aria-expanded=\"false\"]")
+            .should('not.exist')
         ;
-
     });
 
 

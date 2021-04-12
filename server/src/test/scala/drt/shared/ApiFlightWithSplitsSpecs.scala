@@ -42,31 +42,4 @@ class ApiFlightWithSplitsSpecs extends Specification {
     ApiPaxTypeAndQueueCount(Transit, Queues.Transfer, 7.0, None, None),
     ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 8.0, None, None)
   ), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
-
-  "flight Arrival" should {
-    val apiFlightWithSplits = new ApiFlightWithSplits(flight, Set(splitsWithinFivePercentageThreshold))
-
-    "return splits while pax count within 5% threshold of splits pax count for api and DC event type" in {
-      val apiSplitData = apiFlightWithSplits.apiSplitData()
-      val apiSplits: Option[Splits] = apiFlightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
-      val paxCount: Double = apiSplits.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
-      splitsWithinFivePercentageThreshold mustEqual apiSplits.get
-      paxCount mustEqual 39
-      apiFlightWithSplits.eGateAndFTSplitsExistsForLiveFeedSource mustEqual true
-      apiSplitData.isDefined mustEqual true
-    }
-
-    "does not return splits while pax count not within 5% threshold of splits pax count for api and DC event type" in {
-      val flightWithSplits = new ApiFlightWithSplits(flight, Set(splitsNotWithinFivePercentageThreshold))
-      val apiSplitData = flightWithSplits.apiSplitData()
-      val apiSplits = flightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
-      val paxCount: Double = apiSplits.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
-      paxCount mustEqual 36
-      apiFlightWithSplits.eGateAndFTSplitsExistsForLiveFeedSource mustEqual true
-      apiSplitData.isDefined mustEqual false
-    }
-
-  }
-
-
 }
