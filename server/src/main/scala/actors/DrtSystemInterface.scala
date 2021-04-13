@@ -118,7 +118,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
 
-  val optimiser: TryCrunch = if (config.get[Boolean]("crunch.use-legacy-optimiser")) TryRenjin.crunch else Optimiser.crunch
+  val optimiser: TryCrunch = OptimiserPlus.crunch
 
   val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser)
 
@@ -182,7 +182,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       useLegacyManifests = params.useLegacyManifests,
       manifestsLiveSource = voyageManifestsLiveSource,
       voyageManifestsActor = manifestsRouterActor,
-      simulator = Optimiser.runSimulationOfWork,
+      simulator = OptimiserPlus.runSimulationOfWork,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(SortedMap()),
       initialForecastArrivals = initialForecastArrivals.getOrElse(SortedMap()),

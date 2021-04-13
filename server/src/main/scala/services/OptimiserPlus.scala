@@ -5,7 +5,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
-case class OptimiserPlusConfig(sla: Int, processorUnitSize: Processors)
+case class OptimiserPlusConfig(sla: Int, processors: ProcessorsLike)
 
 object OptimiserPlus {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -26,20 +26,20 @@ object OptimiserPlus {
     val indexedMinDesks = minDesks.toIndexedSeq
 
     val bestMaxDesks = if (workloads.size >= 60) {
-      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processorUnitSize)
+      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processors)
       fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toIndexedSeq
 
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
     for {
-      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processorUnitSize)
-      processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq(), config.processorUnitSize)
+      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
+      processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq(), config.processors)
     } yield OptimizerCrunchResult(desks.toIndexedSeq, processedWork.waits)
   }
 
-  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimizerConfig): Try[Seq[Int]] =
-    Optimiser.tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq()).map(_.waits)
+  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserPlusConfig): Try[Seq[Int]] =
+    OptimiserPlus.tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq(), config.processors).map(_.waits)
 
   def approx(x: IndexedSeq[Int], y: IndexedSeq[Int], i: Seq[Double]): List[Double] = {
     val diffX = x(1) - x.head
@@ -53,7 +53,7 @@ object OptimiserPlus {
                     xmax: IndexedSeq[Int],
                     blockSize: Int,
                     backlog: Double,
-                    processors: Processors): IndexedSeq[Int] = {
+                    processors: ProcessorsLike): IndexedSeq[Int] = {
     val workWithMinMaxDesks: Iterator[(IndexedSeq[Double], (IndexedSeq[Int], IndexedSeq[Int]))] = work.grouped(blockSize).zip(xmin.grouped(blockSize).zip(xmax.grouped(blockSize)))
 
     workWithMinMaxDesks.foldLeft((List[Int](), backlog)) {
@@ -79,7 +79,7 @@ object OptimiserPlus {
                      capacity: IndexedSeq[Int],
                      sla: Int,
                      qstart: IndexedSeq[Double],
-                     processors: Processors): Try[ProcessedWork] = {
+                     processors: ProcessorsLike): Try[ProcessedWork] = {
     if (capacity.length != work.length) {
       Failure(new Exception(s"capacity & work don't match: ${capacity.length} vs ${work.length}"))
     } else Try {
@@ -122,7 +122,7 @@ object OptimiserPlus {
     }
   }
 
-  def rollingFairXmax(work: IndexedSeq[Double], xmin: IndexedSeq[Int], blockSize: Int, sla: Int, targetWidth: Int, rollingBuffer: Int, processors: Processors): IndexedSeq[Int] = {
+  def rollingFairXmax(work: IndexedSeq[Double], xmin: IndexedSeq[Int], blockSize: Int, sla: Int, targetWidth: Int, rollingBuffer: Int, processors: ProcessorsLike): IndexedSeq[Int] = {
     val workWithOverrun = work ++ List.fill(targetWidth)(0d)
     val xminWithOverrun = xmin ++ List.fill(targetWidth)(xmin.takeRight(1).head)
 
@@ -174,7 +174,7 @@ object OptimiserPlus {
     result
   }
 
-  def runningAverage(work: Iterable[Double], windowLength: Int, processors: Processors): Iterable[Int] = {
+  def runningAverage(work: Iterable[Double], windowLength: Int, processors: ProcessorsLike): Iterable[Int] = {
     val slidingAverages = work
       .sliding(windowLength)
       .map(_.sum / windowLength).toList
@@ -213,7 +213,7 @@ object OptimiserPlus {
            weightSla: Double,
            qStart: IndexedSeq[Double],
            churnStart: Int)
-          (capacity: IndexedSeq[Int], processors: Processors): Cost = {
+          (capacity: IndexedSeq[Int], processors: ProcessorsLike): Cost = {
     var simRes = tryProcessWork(work, capacity, sla, qStart, processors) match {
       case Success(pw) => pw
       case Failure(t) => throw t
@@ -256,9 +256,9 @@ object OptimiserPlus {
     val churnPenalty = churn(churnStart, capacity :+ finalCapacity)
 
     val totalPenalty = (weightPax * paxPenalty) +
-      (weightStaff * staffPenalty.toDouble) +
+      (weightStaff * staffPenalty) +
       (weightChurn * churnPenalty.toDouble) +
-      (weightSla * slaPenalty.toDouble)
+      (weightSla * slaPenalty)
 
     Cost(paxPenalty.toInt, slaPenalty.toInt, staffPenalty, churnPenalty, totalPenalty)
   }
@@ -318,7 +318,7 @@ object OptimiserPlus {
                      weightPax: Double,
                      weightStaff: Double,
                      weightSla: Double,
-                     processors: Processors): Try[IndexedSeq[Int]] = {
+                     processors: ProcessorsLike): Try[IndexedSeq[Int]] = {
     if (work.length != minDesks.length) {
       Failure(new Exception(s"work & minDesks are not equal length: ${work.length} vs ${minDesks.length}"))
     } else if (work.length != maxDesks.length) {

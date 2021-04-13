@@ -173,7 +173,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
           )
         ),
         now = () => shiftStart,
-        cruncher = Optimiser.crunch
+        cruncher = OptimiserPlus.crunch
       ))
 
       offerAndWait(crunch.shiftsInput, initialShifts)

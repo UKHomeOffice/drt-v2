@@ -19,7 +19,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(),
       Map(),
       Map(),
-      5,
+      Iterable.fill(5)(5),
       Map(),
       0,
       Seq(1)
@@ -60,25 +60,25 @@ class SimulationQueryStringSpec extends Specification {
     "Then I should not see an entry for minDesks" >> {
       val expectedNot = "minDesks"
 
-      result must not contain (expectedNot)
+      result must not contain expectedNot
     }
 
     "Then I should not see an entry for maxDesks" >> {
       val expectedNot = "maxDesks"
 
-      result must not contain (expectedNot)
+      result must not contain expectedNot
     }
 
     "Then I should not see an entry for processingTimes" >> {
       val expectedNot = "processingTimes"
 
-      result must not contain (expectedNot)
+      result must not contain expectedNot
     }
 
     "Then I should not see an entry for slaByQueue" >> {
       val expectedNot = "slaByQueue"
 
-      result must not contain (expectedNot)
+      result must not contain expectedNot
     }
 
     "Then I should get a valid query string back" >> {
@@ -99,7 +99,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60, PaxTypesAndQueues.eeaMachineReadableToEGate -> 30),
       Map(Queues.EGate -> 1, Queues.NonEeaDesk -> 1),
       Map(Queues.EGate -> 3, Queues.NonEeaDesk -> 3),
-      5,
+      Iterable.fill(5)(5),
       Map(Queues.EGate -> 10, Queues.EeaDesk -> 15),
       0,
       Seq(1, 2)
@@ -156,7 +156,7 @@ class SimulationQueryStringSpec extends Specification {
         Map(),
         Map(),
         Map(),
-        5,
+        Iterable.fill(5)(5),
         Map(),
         0,
         Seq(1, 2)
@@ -186,7 +186,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60, PaxTypesAndQueues.eeaMachineReadableToEGate -> 30),
       Map(Queues.EGate -> 1, Queues.NonEeaDesk -> 1),
       Map(Queues.EGate -> 3, Queues.NonEeaDesk -> 3),
-      5,
+      Iterable.fill(5)(5),
       Map(Queues.EGate -> 10, Queues.EeaDesk -> 15),
       0,
       Seq(1, 2)
@@ -215,7 +215,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60),
       Map(Queues.EGate -> 1),
       Map(Queues.EGate -> 3),
-      5,
+      Iterable.fill(5)(5),
       Map(Queues.EGate -> 10),
       0,
       Seq(1,2)
@@ -244,7 +244,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60),
       Map(Queues.EGate -> 1),
       Map(Queues.EGate -> 3),
-      5,
+      Iterable.fill(5)(5),
       Map(Queues.EGate -> 10),
       0,
       Seq()

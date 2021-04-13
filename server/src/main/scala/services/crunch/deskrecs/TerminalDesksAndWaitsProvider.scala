@@ -5,7 +5,7 @@ import drt.shared.Queues.{EGate, Queue}
 import drt.shared.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.{OptimizerConfig, OptimizerCrunchResult, SDate, TryCrunch}
+import services._
 
 import scala.collection.immutable.{Map, NumericRange}
 import scala.util.{Failure, Success}
@@ -13,13 +13,8 @@ import scala.util.{Failure, Success}
 case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int],
                                          queuePriority: List[Queue],
                                          cruncher: TryCrunch,
-                                         bankSize: Int) {
+                                         bankSizes: Iterable[Int]) {
   val log: Logger = LoggerFactory.getLogger(getClass)
-
-  def adjustedWork(queue: Queue, work: Seq[Double]): Seq[Double] = queue match {
-    case EGate => work.map(_ / bankSize)
-    case _ => work
-  }
 
   def workToDeskRecs(terminal: Terminal,
                      minuteMillis: NumericRange[MillisSinceEpoch],
@@ -47,7 +42,7 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int],
       .foldLeft(Map[Queue, (Iterable[Int], Iterable[Int])]()) {
         case (queueRecsSoFar, queue) =>
           log.debug(s"Optimising $queue")
-          val queueWork = adjustedWork(queue, loadsByQueue(queue))
+          val queueWork = loadsByQueue(queue)
           val queueDeskAllocations = queueRecsSoFar.mapValues { case (desks, _) => desks.toList }
 
           val (minDesks, maxDesks) = deskLimitsProvider.deskLimitsForMinutes(minuteMillis, queue, queueDeskAllocations)
@@ -58,7 +53,8 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int],
               queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0))))
             case someWork =>
               val start = System.currentTimeMillis()
-              val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks.toSeq, OptimizerConfig(slas(queue))) match {
+              val processors = if (queue == EGate) EGateProcessors(bankSizes) else DeskProcessors
+              val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks.toSeq, OptimiserPlusConfig(slas(queue), processors)) match {
                 case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queue -> ((desks.toList, waits.toList)))
                 case Failure(t) =>
                   log.error(s"Crunch failed for $queue", t)
