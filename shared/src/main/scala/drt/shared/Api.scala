@@ -234,6 +234,28 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
       case _ => false
     }.flatten
   }
+
+  def hasApiWithinThreshold: Boolean = {
+    val threshold: Double = 0.05
+    val apiSplits = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
+    if (apiFlight.FeedSources.contains(LiveFeedSource)) {
+      val paxCount: Double = apiSplits.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
+      val portDirectPax: Int = apiFlight.ActPax.getOrElse(0) - apiFlight.TranPax.getOrElse(0)
+      val isWithinThreshold = paxCount != 0 && Math.abs(paxCount - portDirectPax) / paxCount < threshold
+      if (isWithinThreshold) true else false
+    } else {
+      true
+    }
+  }
+
+
+  //
+
+  //  def hasApiSplits: Boolean = bestSplits match {
+  //    case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => true
+  //    case _ => false
+  //  }
+
   def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
 
   override val unique: UniqueArrival = apiFlight.unique

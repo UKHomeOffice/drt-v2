@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
-import drt.client.components.FlightComponents.{SplitsGraph, hasApiSplits}
+import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.TooltipComponent._
 import drt.client.services.JSDateConversions.SDate
@@ -279,7 +279,7 @@ object FlightTableRow {
           <.div(
             ^.cls := "arrivals__table__flight-code-wrapper",
             flightCodeElement,
-            if (hasApiSplits(flightWithSplits: ApiFlightWithSplits))
+            if (flightWithSplits.hasApiWithinThreshold)
               props
                 .maybePassengerInfoSummary
                 .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
