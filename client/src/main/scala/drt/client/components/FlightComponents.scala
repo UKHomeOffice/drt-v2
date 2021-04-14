@@ -11,7 +11,7 @@ import org.scalajs.dom.html.Div
 object FlightComponents {
 
   def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = {
-    val isNotApiData = if (flightWithSplits.hasApiWithinThreshold) "right" else "right notApiData"
+    val isNotApiData = if (flightWithSplits.hasValidApi) "right" else "right notApiData"
     <.div(
       ^.title := paxComponentTitle(flightWithSplits.apiFlight),
       ^.className := s"$isNotApiData",
@@ -23,7 +23,7 @@ object FlightComponents {
     if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
       "pax-no-splits"
     else flightWithSplits.bestSplits match {
-      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) if flightWithSplits.hasApiWithinThreshold => "pax-api"
+      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) if flightWithSplits.hasValidApi => "pax-api"
       case Some(Splits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
       case Some(Splits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
       case _ => "pax-unknown"

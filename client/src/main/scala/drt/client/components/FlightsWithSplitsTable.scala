@@ -279,7 +279,7 @@ object FlightTableRow {
           <.div(
             ^.cls := "arrivals__table__flight-code-wrapper",
             flightCodeElement,
-            if (flightWithSplits.hasApiWithinThreshold)
+            if (flightWithSplits.hasValidApi)
               props
                 .maybePassengerInfoSummary
                 .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
