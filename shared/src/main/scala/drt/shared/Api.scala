@@ -236,25 +236,22 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   }
 
   def hasApiWithinThreshold: Boolean = {
-    val threshold: Double = 0.05
-    val apiSplits = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
-    if (apiFlight.FeedSources.contains(LiveFeedSource)) {
-      val paxCount: Double = apiSplits.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
-      val portDirectPax: Int = apiFlight.ActPax.getOrElse(0) - apiFlight.TranPax.getOrElse(0)
-      val isWithinThreshold = paxCount != 0 && Math.abs(paxCount - portDirectPax) / paxCount < threshold
-      if (isWithinThreshold) true else false
-    } else {
-      true
+
+    val maybeApiSplits = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
+    val hasLiveSource = apiFlight.FeedSources.contains(LiveFeedSource)
+    (maybeApiSplits, hasLiveSource) match {
+      case (Some(_), false) => true
+      case (Some(api), true) if isWithinThreshold(api) => true
+      case _ => false
     }
   }
 
-
-  //
-
-  //  def hasApiSplits: Boolean = bestSplits match {
-  //    case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => true
-  //    case _ => false
-  //  }
+  def isWithinThreshold(apiSplits: Splits): Boolean = {
+    val apiPaxNo = apiSplits.splits.toList.map(_.paxCount).sum.toInt
+    val threshold: Double = 0.05
+    val portDirectPax: Int = apiFlight.ActPax.getOrElse(0) - apiFlight.TranPax.getOrElse(0)
+    apiPaxNo != 0 && Math.abs(apiPaxNo - portDirectPax) / apiPaxNo < threshold
+  }
 
   def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
 
