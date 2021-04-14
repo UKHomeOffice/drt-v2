@@ -249,7 +249,6 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     val apiPaxNo = apiSplits.splits.toList.map(_.paxCount).sum.toInt
     val threshold: Double = 0.05
     val portDirectPax: Double = apiFlight.ActPax.getOrElse(0) - apiFlight.TranPax.getOrElse(0)
-    println(s"apiPaxNo=$apiPaxNo portDirectPax=$portDirectPax Math.abs(apiPaxNo - portDirectPax) / apiPaxNo > ${Math.abs(apiPaxNo - portDirectPax) / apiPaxNo}")
     apiPaxNo != 0 && Math.abs(apiPaxNo - portDirectPax) / apiPaxNo < threshold
   }
 
