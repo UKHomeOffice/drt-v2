@@ -40,6 +40,7 @@ message UniqueArrivalMessage {
     optional int32 number = 1;
     optional string terminalName = 2;
     optional int64 scheduled = 3;
+    optional string origin = 4;
 }
 
 message FlightsDiffMessage {

@@ -1,11 +1,10 @@
 package services.arrivals
 
-import java.net.URL
-
 import drt.shared.Terminals.Terminal
 import drt.shared.{ArrivalsDiff, PortCode, UniqueArrival}
 import org.slf4j.LoggerFactory
 
+import java.net.URL
 import scala.util.{Failure, Success}
 
 trait ArrivalsAdjustmentsLike {

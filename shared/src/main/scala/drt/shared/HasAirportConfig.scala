@@ -43,6 +43,13 @@ object Terminals {
       case "n" => N
       case "s" => S
       case "mt" => T1
+      case "domestic" | "domestic arrivals" | "domestic arrs" => DomesticArrivals
+      case "terminal 2 (domestic)" | "t2-dom" => T2Domestic
+      case "cargo" => Cargo
+      case "cta" => CTA
+      case "mainapron" => MainApron
+      case "south domestic" => SouthDomestic
+      case "north domestic" => NorthDomestic
       case _ => InvalidTerminal
     }
   }
@@ -76,6 +83,20 @@ object Terminals {
   case object N extends Terminal
 
   case object S extends Terminal
+
+  case object DomesticArrivals extends Terminal
+
+  case object SouthDomestic extends Terminal
+
+  case object NorthDomestic extends Terminal
+
+  case object T2Domestic extends Terminal
+
+  case object MainApron extends Terminal
+
+  case object CTA extends Terminal
+
+  case object Cargo extends Terminal
 
 }
 

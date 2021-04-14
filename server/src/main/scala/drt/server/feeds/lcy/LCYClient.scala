@@ -5,7 +5,7 @@ import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.model.headers.{BasicHttpCredentials, ModeledCustomHeader, ModeledCustomHeaderCompanion}
 import akka.http.scaladsl.model.{HttpRequest, _}
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import drt.server.feeds.common.HttpClient
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
@@ -52,19 +52,19 @@ trait LcyClientSupport extends ScalaXmlSupport {
 
   def password: String
 
-  def initialFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
+  def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
 
     log.info(s"Making initial Live Feed Request")
     sendXMLRequest(fullRefreshXml(lcyLiveFeedUser))
   }
 
-  def updateFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
+  def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
 
     log.info(s"Making update Feed Request")
     sendXMLRequest(updateXml()(lcyLiveFeedUser))
   }
 
-  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
+  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
 
     implicit val xmlToResUM: Unmarshaller[NodeSeq, LCYFlightsResponse] = LCYFlightTransform.unmarshaller
     implicit val resToLCYResUM: Unmarshaller[HttpResponse, LCYFlightsResponse] = LCYFlightTransform.responseToAUnmarshaller

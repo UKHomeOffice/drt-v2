@@ -163,7 +163,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
                   )(
                     DefaultFormFieldsStyle.textField,
                     `type` := "number",
-                    id := "egate-bank-size",
+                    id := s"${ptq.passengerType}_${ptq.queueType}",
                     value := state.simulationParams.processingTimes(ptq),
                     onChange ==> changeProcessingTimes(ptq)
                   )
@@ -183,7 +183,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
                   )(
                     DefaultFormFieldsStyle.textField,
                     `type` := "number",
-                    id := "egate-bank-size",
+                    id := s"${q}_sla",
                     value := state.simulationParams.slaByQueue(q),
                     onChange ==> changeQueueSla(q)
                   )
@@ -266,6 +266,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             onChange --> togglePanel("passengerWeighting"),
             MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
+                ^.id := "adjust_passenger_numbers",
                 "Adjust Passenger Numbers"
               )
             ),
@@ -275,6 +276,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             onChange --> togglePanel("processingTimes"),
             MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
+                ^.id := "adjust_processing_times",
                 "Adjust Processing Times"
               )
             ),
@@ -284,6 +286,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             onChange --> togglePanel("slaFields"),
             MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
+                ^.id := "adjust_queue_slas",
                 "Adjust Queue SLAs"
               )
             ),
@@ -293,6 +296,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             onChange --> togglePanel("minMaxDesksFields"),
             MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
+                ^.id := "adjust_available_desks",
                 "Adjust Available Desks"
               )
             ),
@@ -302,6 +306,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             onChange --> togglePanel("configureEGatesFields"),
             MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
+                ^.id := "adjust_egate_open_times",
                 "Adjust eGate Open Times"
               )
             ),
@@ -323,6 +328,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             )(
               ^.className := "button",
               ^.target := "_blank",
+              ^.id := "export-simulation",
               ^.href := SPAMain.absoluteUrl(s"export/desk-rec-simulation?${state.simulationParams.toQueryStringParams}"),
               "Export"
             )

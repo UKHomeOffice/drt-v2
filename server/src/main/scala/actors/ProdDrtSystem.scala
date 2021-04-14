@@ -6,7 +6,7 @@ import actors.queues.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, Mani
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, OverflowStrategy}
+import akka.stream.{Materializer, OverflowStrategy}
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
@@ -26,7 +26,6 @@ import uk.gov.homeoffice.drt.auth.Roles.Role
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 
@@ -37,7 +36,7 @@ object PostgresTables extends {
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
 case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
-                        (implicit val materializer: ActorMaterializer,
+                        (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem) extends DrtSystemInterface {
 

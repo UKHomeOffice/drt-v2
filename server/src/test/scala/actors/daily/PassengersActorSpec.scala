@@ -1,6 +1,5 @@
 package actors.daily
 
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import org.specs2.mutable.Specification
 import server.protobuf.messages.PaxMessage.PaxCountMessage

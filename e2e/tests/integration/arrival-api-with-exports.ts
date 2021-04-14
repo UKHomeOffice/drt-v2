@@ -10,6 +10,7 @@ describe('Arrivals CSV Export', () => {
 
   const scheduledDateTime = todayAtUtc(0, 55);
 
+
   const estTime = todayAtUtc(1, 5);
   const actTime = todayAtUtc(1, 7);
   const estChoxTime = todayAtUtc(1, 11);
@@ -45,7 +46,7 @@ describe('Arrivals CSV Export', () => {
   const eGatePax = "25";
   const eeaDesk = "9";
   const nonEEADesk = "17";
-  const dataWithoutActApi = "TS0123,TS0123,AMS,46/44R,On Chox," +
+  const dataWithoutActApi = "TS0123,TS0123,AMS,46/44R,On Chocks," +
     schDateLocal + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
     totalPax + "," + totalPax + "," +
     eGatePax + "," + eeaDesk + "," + nonEEADesk + ",," +

@@ -7,7 +7,7 @@ import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal, Unmarshaller}
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
 import drt.server.feeds.common.FlightStatus
@@ -31,7 +31,7 @@ object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(client: BHXClientLike, pollFrequency: FiniteDuration, initialDelay: FiniteDuration)
-           (implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Source[ArrivalsFeedResponse, Cancellable] = {
+           (implicit actorSystem: ActorSystem, materializer: Materializer): Source[ArrivalsFeedResponse, Cancellable] = {
     var initialRequest = true
     val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelay, pollFrequency, NotUsed)
       .mapAsync(1)(_ => {
@@ -96,19 +96,19 @@ trait BHXClientLike extends ScalaXmlSupport {
   val bhxLiveFeedUser: String
   val soapEndPoint: String
 
-  def initialFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
+  def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
 
     log.info(s"Making initial Live Feed Request")
     sendXMLRequest(fullRefreshXml(bhxLiveFeedUser))
   }
 
-  def updateFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
+  def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
 
     log.info(s"Making update Feed Request")
     sendXMLRequest(updateXml()(bhxLiveFeedUser))
   }
 
-  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
+  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
 
     implicit val xmlToResUM: Unmarshaller[NodeSeq, BHXFlightsResponse] = BHXFlight.unmarshaller
     implicit val resToBHXResUM: Unmarshaller[HttpResponse, BHXFlightsResponse] = BHXFlight.responseToAUnmarshaller

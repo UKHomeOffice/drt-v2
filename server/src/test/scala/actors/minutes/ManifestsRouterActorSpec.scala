@@ -8,7 +8,6 @@ import actors.{GetFeedStatuses, GetState, ManifestLookupsLike}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -28,8 +27,6 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
 
   val date: SDateLike = SDate("2020-01-01T00:00")
 
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(system)
-
   case class MockManifestLookupWithTestProbe(system: ActorSystem, testActor: ActorRef) extends ManifestLookupsLike {
 
     override implicit val ec: ExecutionContext = system.dispatcher
@@ -37,7 +34,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
     override val requestAndTerminateActor: ActorRef = testActor
 
     override val manifestsByDayLookup: ManifestLookup = (date: UtcDate, maybePit: Option[MillisSinceEpoch]) => {
-      requestAndTerminateActor ! (date, maybePit)
+      requestAndTerminateActor ! ((date, maybePit))
       Future(VoyageManifests.empty)
     }
   }

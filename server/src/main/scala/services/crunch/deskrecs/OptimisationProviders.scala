@@ -4,14 +4,14 @@ import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange}
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
-import drt.shared.{MilliTimes, PortCode, TM, TQM}
 import drt.shared.api.Arrival
+import drt.shared.{MilliTimes, PortCode, TM, TQM}
 import manifests.ManifestLookupLike
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
@@ -24,7 +24,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object OptimisationProviders {
   def historicManifestsProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
-                               (implicit mat: ActorMaterializer, ec: ExecutionContext): HistoricManifestsProvider = arrivals => {
+                               (implicit mat: Materializer, ec: ExecutionContext): HistoricManifestsProvider = arrivals => {
     Future(
       Source(arrivals.toList)
         .mapAsync(1) { arrival =>

@@ -115,7 +115,7 @@ case class Arrival(Operator: Option[Operator],
     pcpRange.zip(paxByMinute)
   }
 
-  lazy val unique: UniqueArrival = UniqueArrival(VoyageNumber.numeric, Terminal, Scheduled)
+  lazy val unique: UniqueArrival = UniqueArrival(VoyageNumber.numeric, Terminal, Scheduled, Origin)
 
   def isCancelled: Boolean = Status.description match {
     case st if st.toLowerCase.contains("cancelled") => true

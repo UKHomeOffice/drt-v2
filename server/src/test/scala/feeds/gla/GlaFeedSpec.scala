@@ -220,7 +220,7 @@ class GlaFeedSpec extends CrunchTestLike {
 
     Await.result(mockFeed.requestArrivals(), 1 second) match {
       case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) =>
-        (arrival.ActPax, arrival.MaxPax) === (Some(0), Some(0))
+        (arrival.ActPax, arrival.MaxPax) === ((Some(0), Some(0)))
     }
   }
 

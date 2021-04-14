@@ -6,7 +6,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Prop
 import akka.pattern.ask
 import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
 import akka.stream.scaladsl.Source
-import akka.stream.{ActorMaterializer, KillSwitch, Materializer}
+import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
 import drt.shared._
 import manifests.passengers.BestAvailableManifest
@@ -35,7 +35,7 @@ case class MockManifestLookupService(implicit ec: ExecutionContext) extends Mani
 }
 
 case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
-                        (implicit val materializer: ActorMaterializer,
+                        (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem) extends DrtSystemInterface {
 

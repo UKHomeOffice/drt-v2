@@ -3,6 +3,7 @@ package actors.queues
 import drt.shared.dates.{DateLike, LocalDate, UtcDate}
 import org.specs2.mutable.Specification
 import services.SDate
+import services.graphstages.Crunch
 
 class DateRangeSpec extends Specification {
   "Concerning BST dates" >> {
@@ -24,6 +25,18 @@ class DateRangeSpec extends Specification {
           val range: Seq[DateLike] = DateRange.localDateRange(date, date)
 
           range === Seq(LocalDate(2020, 5, 1))
+        }
+      }
+    }
+
+    "Given a start and end date that span two UTC dates but one BST date" >> {
+      "When I ask for a UTC Date range" >> {
+        "I should get back both UTC Dates in the range" >> {
+          val date1 = SDate("2020-04-02T00:00", Crunch.europeLondonTimeZone)
+          val date2 = SDate("2020-04-02T02:00", Crunch.europeLondonTimeZone)
+          val range: Seq[DateLike] = DateRange.utcDateRange(date1, date2)
+
+          range === Seq(UtcDate(2020, 4, 1), UtcDate(2020, 4, 2))
         }
       }
     }
@@ -49,6 +62,20 @@ class DateRangeSpec extends Specification {
 
           range === Seq(LocalDate(2020, 1, 1))
         }
+      }
+    }
+  }
+
+  "Given a date range that spans two dates but less than 24 hours" >> {
+    "When I ask for the local date range" >> {
+      "I should get 2 dates back in the range" >> {
+
+        val date1 = SDate("2020-01-01T12:00")
+        val date2 = SDate("2020-01-02T10:00")
+        val range: Seq[DateLike] = DateRange.localDateRange(date1, date2)
+
+        range === Seq(LocalDate(2020, 1, 1), LocalDate(2020, 1, 2))
+
       }
     }
   }

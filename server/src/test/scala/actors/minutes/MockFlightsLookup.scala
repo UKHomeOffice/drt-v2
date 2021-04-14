@@ -21,7 +21,7 @@ case class MockFlightsLookup() {
       case (_, fws) => SDate(fws.apiFlight.Scheduled).toUtcDate
     }
     (t: Terminal, d: UtcDate, pit: Option[MillisSinceEpoch]) => {
-      paramsLookup = paramsLookup :+ (t, d, pit)
+      paramsLookup = paramsLookup :+ ((t, d, pit))
       Future(FlightsWithSplits(byDay.getOrElse(d, Map())))
     }
   }

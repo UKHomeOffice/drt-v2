@@ -67,7 +67,7 @@ object WalkTime {
     val inSeconds = millis / 1000
     val minutes = inSeconds / 60
 
-    s"$minutes minute"
+    s"$minutes minutes"
   }
 
 }

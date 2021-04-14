@@ -8,7 +8,7 @@ import actors.queues.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import akka.stream.ActorMaterializer
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
@@ -37,11 +37,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
   val testProbe: TestProbe = TestProbe()
 
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(system)
-
   val noopUpdates: ((Terminal, UtcDate), FlightUpdates) => Future[UpdatedMillis] =
     (_, _: FlightUpdates) => Future(UpdatedMillis(Iterable()))
-
 
   "Concerning visibility of flights (scheduled & pcp range)" >> {
     "Given a flight that is scheduled within the range of dates" >> {

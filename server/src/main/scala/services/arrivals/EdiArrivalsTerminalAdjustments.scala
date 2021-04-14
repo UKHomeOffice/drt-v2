@@ -1,10 +1,12 @@
 package services.arrivals
 
-import drt.shared.{ArrivalsDiff, UniqueArrival}
-import drt.shared.Terminals.Terminal
+import drt.shared.Terminals.{A1, A2, Terminal}
 import drt.shared.api.Arrival
+import drt.shared.{ArrivalsDiff, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+
+import scala.collection.immutable
 
 case class EdiArrivalsTerminalAdjustments(historicFlightTerminalMap: Map[String, Map[String, Terminal]])
   extends ArrivalsAdjustmentsLike {
@@ -42,22 +44,25 @@ case class EdiArrivalsTerminalAdjustments(historicFlightTerminalMap: Map[String,
   }
 
   def applyBaggageReclaimIdRule(arrivalsDiff: ArrivalsDiff): ArrivalsDiff = {
-    arrivalsDiff
-      .copy(
-        toUpdate = arrivalsDiff.toUpdate.map {
-          case (_, a) if a.BaggageReclaimId.contains("7") =>
-            val withAdjustedTerminal = a.copy(Terminal = Terminal("A2"))
-            withAdjustedTerminal.unique -> withAdjustedTerminal
-          case (_, a) if a.BaggageReclaimId.isDefined =>
-            val withAdjustedTerminal = a.copy(Terminal = Terminal("A1"))
-            withAdjustedTerminal.unique -> withAdjustedTerminal
-          case useHistoric => useHistoric
-        },
-        toRemove = arrivalsDiff.toRemove.map {
-          case a if a.BaggageReclaimId.contains("7") => a.copy(Terminal = Terminal("A2"))
-          case a if a.BaggageReclaimId.isDefined => a.copy(Terminal = Terminal("A1"))
-          case other => other
-        }
-      )
+    val updatesWithAdjustment = arrivalsDiff.toUpdate.map {
+      case (_, a) if a.BaggageReclaimId.contains("7") => adjustTerminal(a, A2)
+      case (_, a) if a.BaggageReclaimId.isDefined => adjustTerminal(a, A1)
+      case noAdjustment => noAdjustment
+    }
+    val removalsWithAdjustment = arrivalsDiff.toRemove.map {
+      case a if a.BaggageReclaimId.contains("7") => a.copy(Terminal = A2)
+      case a if a.BaggageReclaimId.isDefined => a.copy(Terminal = A1)
+      case noAdjustment => noAdjustment
+    }
+
+    arrivalsDiff.copy(
+      toUpdate = updatesWithAdjustment,
+      toRemove = removalsWithAdjustment
+    )
+  }
+
+  private def adjustTerminal(a: Arrival, terminal: Terminal): (UniqueArrival, Arrival) = {
+    val withAdjustedTerminal = a.copy(Terminal = terminal)
+    withAdjustedTerminal.unique -> withAdjustedTerminal
   }
 }

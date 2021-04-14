@@ -2,7 +2,6 @@ package feeds.lhr
 
 import akka.NotUsed
 import akka.pattern.pipe
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
