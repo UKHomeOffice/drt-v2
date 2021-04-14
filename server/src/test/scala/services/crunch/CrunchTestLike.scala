@@ -63,11 +63,12 @@ object TestDefaults {
       T1 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))),
+        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(2)))),
       T2 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))))),
+        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(2))))),
+    eGateBankSizes = Iterable(10, 10),
     timeToChoxMillis = 120000L,
     role = STN,
     terminalPaxTypeQueueAllocation = Map(
