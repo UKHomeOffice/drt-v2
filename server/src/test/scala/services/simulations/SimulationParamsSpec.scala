@@ -3,7 +3,7 @@ package services.simulations
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Terminals.Terminal
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.dates.LocalDate
 import org.specs2.mutable.Specification
@@ -98,7 +98,7 @@ class SimulationParamsSpec extends Specification {
 
       val simulationWithMinDesks = simulation.copy(eGateBanksSizes = Iterable(7, 7, 7))
 
-      val expected = Iterable(7, 7, 7)
+      val expected = Map(T1 -> Iterable(7, 7, 7))
 
       val result = simulationWithMinDesks
         .applyToAirportConfig(testConfig)

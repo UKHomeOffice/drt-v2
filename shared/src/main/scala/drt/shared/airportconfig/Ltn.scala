@@ -37,6 +37,7 @@ object Ltn extends AirportConfigLike {
         Queues.NonEeaDesk -> (List.fill(24)(1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
     ),
+    eGateBankSizes = Map(T1 -> Iterable(10, 5)),
     role = LTN,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(

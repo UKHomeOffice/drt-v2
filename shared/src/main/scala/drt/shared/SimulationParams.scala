@@ -42,7 +42,7 @@ case class SimulationParams(
 
     airportConfig.copy(
       minMaxDesksByTerminalQueue24Hrs = airportConfig.minMaxDesksByTerminalQueue24Hrs + (terminal -> openDesks),
-      eGateBankSizes = eGateBanksSizes,
+      eGateBankSizes = Map(terminal -> eGateBanksSizes),
       slaByQueue = airportConfig.slaByQueue.map {
         case (q, v) => q -> slaByQueue.getOrElse(q, v)
       },
@@ -123,7 +123,7 @@ object SimulationParams {
       airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
         case (q, (_, max)) => q -> max.max
       },
-      eGateBanksSizes = airportConfig.eGateBankSizes,
+      eGateBanksSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()),
       slaByQueue = airportConfig.slaByQueue,
       crunchOffsetMinutes = 0,
       eGateOpenHours = fullDay
@@ -155,27 +155,30 @@ object SimulationParams {
     }.toMap
 
     val maybeParams = for {
-      terminal: String <- maybeSimulationFieldsStrings("terminal")
+      terminalName: String <- maybeSimulationFieldsStrings("terminal")
       dateString: String <- maybeSimulationFieldsStrings("date")
       localDate <- LocalDate.parse(dateString)
       passengerWeightingString: String <- maybeSimulationFieldsStrings("passengerWeighting")
       eGateBankSizeString: String <- maybeSimulationFieldsStrings("eGateBankSizes")
       crunchOffsetMinutes: String <- maybeSimulationFieldsStrings("crunchOffsetMinutes")
       eGateOpenHours: String <- maybeSimulationFieldsStrings("eGateOpenHours")
-    } yield SimulationParams(
-      Terminal(terminal),
-      localDate,
-      passengerWeightingString.toDouble,
-      procTimes,
-      qMinDesks,
-      qMaxDesks,
-      eGateBankSizeString.split(",").map(_.toInt),
-      qSlas,
-      crunchOffsetMinutes.toInt,
-      eGateOpenHours.split(",").map(s => Try(s.toInt)).collect {
-        case Success(i) => i
-      }
-    )
+    } yield {
+      val terminal = Terminal(terminalName)
+      SimulationParams(
+        terminal,
+        localDate,
+        passengerWeightingString.toDouble,
+        procTimes,
+        qMinDesks,
+        qMaxDesks,
+        eGateBankSizeString.split(",").map(_.toInt),
+        qSlas,
+        crunchOffsetMinutes.toInt,
+        eGateOpenHours.split(",").map(s => Try(s.toInt)).collect {
+          case Success(i) => i
+        }
+      )
+    }
 
     maybeParams match {
       case Some(simulationParams) => simulationParams

@@ -14,7 +14,7 @@ object Memory {
   def printUsedSince(lastUsed: Long): Unit = println(s"${(used - lastUsed) / mb}MB")
 }
 
-class SimulationParamsSpec extends Specification {
+class OptimiserSimulationSpec extends Specification {
   val simService: (Seq[Double], Seq[Int], OptimiserPlusConfig) => Try[Seq[Int]] = OptimiserPlus.runSimulationOfWork
   val optimizerConfig: OptimiserPlusConfig = OptimiserPlusConfig(25, DeskProcessors)
 

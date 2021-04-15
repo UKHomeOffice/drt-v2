@@ -22,7 +22,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                                      minutesToCrunch: Int,
                                      crunchOffsetMinutes: Int,
-                                     eGateBankSizes: Iterable[Int],
+                                     eGateBankSizes: Map[Terminal, Iterable[Int]],
                                      tryCrunch: TryCrunch,
                                      workloadCalculator: WorkloadCalculatorLike
                                     ) extends PortDesksAndWaitsProviderLike {
@@ -41,7 +41,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }.toMap
 
   def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
-    deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSizes)
+    deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSizes.getOrElse(terminal, Iterable()))
 
   override def flightsToLoads(flights: FlightsWithSplits): Map[TQM, LoadMinute] = workloadCalculator
     .flightLoadMinutes(flights).minutes

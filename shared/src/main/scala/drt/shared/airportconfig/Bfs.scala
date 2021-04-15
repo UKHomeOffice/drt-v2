@@ -46,6 +46,7 @@ object Bfs extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4))
       )
     ),
+    eGateBankSizes = Map(),
     role = BFS,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (

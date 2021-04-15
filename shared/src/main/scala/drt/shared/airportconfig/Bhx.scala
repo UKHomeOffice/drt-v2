@@ -66,6 +66,7 @@ object Bhx extends AirportConfigLike {
           List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1))
       )
     ),
+    eGateBankSizes = Map(T1 -> Iterable(10, 5)),
     hasEstChox = false,
     role = BHX,
     terminalPaxTypeQueueAllocation = Map(

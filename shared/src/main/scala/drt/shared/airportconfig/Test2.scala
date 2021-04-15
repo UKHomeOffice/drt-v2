@@ -54,6 +54,10 @@ object Test2 extends AirportConfigLike {
         Queues.FastTrack -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
       )
     ),
+    eGateBankSizes = Map(
+      T1 -> Iterable(10, 10, 10),
+      T2 -> Iterable(10, 10, 10),
+    ),
     role = TEST2,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(

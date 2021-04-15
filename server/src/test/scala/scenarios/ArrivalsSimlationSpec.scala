@@ -117,7 +117,6 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
           val openDesks = max.map(x => x / 2)
           q -> ((openDesks, openDesks))
       }),
-      eGateBankSizes = Iterable(5, 5, 5),
       slaByQueue = Lhr.config.slaByQueue.mapValues(_ => 15)
     )
     val fws = FlightsWithSplits(flightsWithSplits.map(f => f.unique -> f).toMap)

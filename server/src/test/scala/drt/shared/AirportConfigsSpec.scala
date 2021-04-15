@@ -55,6 +55,7 @@ class AirportConfigsSpec extends Specification {
         terminalPaxSplits = Map(),
         terminalProcessingTimes = Map(),
         minMaxDesksByTerminalQueue24Hrs = Map(),
+        eGateBankSizes = Map(),
         role = LHR,
         terminalPaxTypeQueueAllocation = Map(T1 -> defaultQueueRatios),
         desksByTerminal = Map[Terminal, Int](),
