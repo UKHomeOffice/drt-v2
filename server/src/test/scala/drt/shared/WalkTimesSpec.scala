@@ -12,14 +12,14 @@ class WalkTimesSpec extends Specification {
       val millis = 60000L
       val result: String = WalkTime.millisToMinutes(millis)
 
-      result === "1 minutes"
+      result === "1 minute"
     }
 
     "Given 90s I should get back 1 minute" >> {
       val millis = 90000L
       val result: String = WalkTime.millisToMinutes(millis)
 
-      result === "1 minutes"
+      result === "1 minute"
     }
   }
 
