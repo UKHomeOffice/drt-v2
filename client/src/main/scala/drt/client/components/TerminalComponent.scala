@@ -3,7 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
-import drt.client.components.TooltipComponent._
+import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate

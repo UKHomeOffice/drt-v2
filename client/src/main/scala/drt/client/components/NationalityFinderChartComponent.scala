@@ -20,7 +20,7 @@ object NationalityFinderChartComponent {
 
       val nationalityData = ChartJsData(sortedNats.map(_._1.code), sortedNats.map(_._2.toDouble), "Live API")
 
-      TippyJSComponent(
+      Tippy.interactive(
         <.div(^.cls := "container arrivals__table__flight__chart-box-1",
           <.div(^.cls := "row",
             if (sortedNats.toMap.values.sum > 0)
@@ -36,7 +36,9 @@ object NationalityFinderChartComponent {
             else
               EmptyVdom
           )
-        ).rawElement, interactive = true, p.trigger)
+        ),
+        p.trigger
+      )
     })
     .build
 

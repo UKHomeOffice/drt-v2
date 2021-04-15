@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.components.TooltipComponent._
+import drt.client.components.ToolTips._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch

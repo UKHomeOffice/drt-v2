@@ -1,10 +1,10 @@
 package drt.client.components.styles
 
-import japgolly.scalajs.react.vdom.VdomNode
+import japgolly.scalajs.react.vdom.{VdomElement, VdomNode}
 import scalacss.defaults.Exports
 import scalacss.internal.StyleA
 import scalacss.internal.mutable.Settings
-
+import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import scala.scalajs.js
 import scala.scalajs.js.Dictionary
 import scala.scalajs.js.JSConverters.JSRichOption

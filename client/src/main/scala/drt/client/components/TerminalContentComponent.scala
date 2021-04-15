@@ -5,7 +5,7 @@ import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
-import drt.client.components.TooltipComponent._
+import drt.client.components.ToolTips._
 import drt.client.components.scenarios.ScenarioSimulationComponent
 import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
@@ -57,13 +57,12 @@ object TerminalContentComponent {
 
   def airportWrapper(portCode: PortCode): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
-  def originMapper(portCode: PortCode): VdomElement = {
-    airportWrapper(portCode) { proxy: ModelProxy[Pot[AirportInfo]] =>
+  def originMapper(portCode: PortCode): VdomElement = airportWrapper(portCode) {
+    proxy: ModelProxy[Pot[AirportInfo]] =>
       <.span(
-        proxy().render(ai => <.span(^.title := s"${ai.airportName}, ${ai.city}, ${ai.country}", portCode.toString)),
+        proxy().render(ai => Tippy.describe(<.span(s"${}, ${ai.city}, ${ai.country}"), portCode.toString)),
         proxy().renderEmpty(<.span(portCode.toString))
       )
-    }
   }
 
   class Backend() {
