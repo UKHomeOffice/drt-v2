@@ -7,8 +7,8 @@ import upickle.default.{macroRW, _}
 
 import scala.collection.immutable.Map
 
-case class WalkTime(gateOrStand: String, terminal: Terminal, walkTimeMillis: Long) {
-  val inMinutes: String = millisToMinutes(walkTimeMillis)
+case class WalkTime(gateOrStand: String, terminal: Terminal, walkTimeMillis: Long, unitDisplayAsSubject: Boolean) {
+  val inMinutes: String = millisToMinutes(walkTimeMillis, unitDisplayAsSubject)
 }
 
 case class TerminalWalkTimes(gateWalktimes: Map[String, WalkTime], standWalkTimes: Map[String, WalkTime])
@@ -21,7 +21,7 @@ case class WalkTimes(byTerminal: Map[Terminal, TerminalWalkTimes]) {
 
   def walkTimeForArrival(defaultWalkTime: Long)
                         (gate: Option[String], stand: Option[String], terminal: Terminal): String = {
-    val defaultString = s"${millisToMinutes(defaultWalkTime)} (default walk time for terminal)"
+    val defaultString = s"${millisToMinutes(defaultWalkTime, false)} (default walk time for terminal)"
     val maybeWalkTime: Option[String] = (gate, stand, byTerminal.get(terminal)) match {
       case (Some(g), _, Some(t)) if t.gateWalktimes.contains(g) =>
         byTerminal(terminal).gateWalktimes.get(g).map(_.inMinutes + " walk time")
@@ -63,11 +63,10 @@ object WalkTimes {
 object WalkTime {
   implicit val rw: ReadWriter[WalkTime] = macroRW
 
-  def millisToMinutes(millis: MillisSinceEpoch): String = {
+  def millisToMinutes(millis: MillisSinceEpoch, unitDisplayAsSubject: Boolean): String = {
     val inSeconds = millis / 1000
     val minutes = inSeconds / 60
-
-    val minuteText = if(minutes == 1 || minutes == 0) "minute" else "minutes"
+    val minuteText = if (unitDisplayAsSubject || minutes == 1) "minute" else "minutes"
     s"$minutes $minuteText"
   }
 

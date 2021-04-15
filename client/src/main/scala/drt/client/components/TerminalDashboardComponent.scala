@@ -12,7 +12,7 @@ import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.{PassengerInfoSummary, WalkTime, WalkTimes}
+import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl

@@ -20,7 +20,7 @@ class PcpArrivalSpec extends SpecificationLike {
       val validCsvLine = "101,45,T1"
 
       val result = walkTimeFromStringWithRounding(validCsvLine)
-      val expected = Some(WalkTime("101", T1, 60000L))
+      val expected = Some(WalkTime("101", T1, 60000L, false))
 
       result === expected
     }
@@ -30,7 +30,7 @@ class PcpArrivalSpec extends SpecificationLike {
       val validCsvLine = "101,65,T1"
 
       val result = walkTimeFromStringWithRounding(validCsvLine)
-      val expected = Some(WalkTime("101", T1, 60000L))
+      val expected = Some(WalkTime("101", T1, 60000L, false))
 
       result === expected
     }
@@ -40,7 +40,7 @@ class PcpArrivalSpec extends SpecificationLike {
       val validCsvLine = "101,125,T1"
 
       val result = walkTimeFromStringWithRounding(validCsvLine)
-      val expected = Some(WalkTime("101", T1, 120000L))
+      val expected = Some(WalkTime("101", T1, 120000L, false))
 
       result === expected
     }
@@ -53,7 +53,7 @@ class PcpArrivalSpec extends SpecificationLike {
       val validCsvLine = "101,475,T1"
 
       val result = walkTimeFromString(validCsvLine)
-      val expected = Some(WalkTime("101", T1, 475000L))
+      val expected = Some(WalkTime("101", T1, 475000L, false))
 
       result === expected
     }
