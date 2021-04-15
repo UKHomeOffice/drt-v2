@@ -160,7 +160,7 @@ describe('Arrivals page', () => {
           ukPassport
         ]
       ))
-      .get('.pax-api')
+      .get('.pax-unknown')
       .contains("2")
 
   });
@@ -202,7 +202,7 @@ describe('Arrivals page', () => {
           ukPassportWithIdentifier("id2")
         ]
       ))
-      .get('.pax-api')
+      .get('.pax-unknown')
       .contains("2")
   });
 
@@ -226,8 +226,28 @@ describe('Arrivals page', () => {
           inTransitPassenger
         ]
       ))
-      .get('.pax-api')
+      .get('.pax-unknown')
       .contains("2")
   });
 
+  it('does have green bar (pax-api) when API pax count within 5% threshold of Live source splits passenger count', () => {
+    cy
+      .addFlight({
+        "SchDT": todayAtUtcString(0, 55),
+        "ActPax": 2,
+        "MaxPax": 0,
+      })
+      .asABorderForceOfficer()
+      .waitForFlightToAppear("TS0123")
+      .get(totalPaxSelector)
+      .contains("2")
+      .addManifest(manifest(
+        [
+          ukPassport,
+          ukPassport,
+        ]
+      ))
+      .get('.pax-api')
+      .contains("2")
+  });
 });

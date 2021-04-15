@@ -221,21 +221,8 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
   }
 
-
-  val eGateAndFTSplitsExists = splits.exists(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
-
-  def apiSplitDataFromDC(threshold: Double = 0.05): Option[Splits] = {
-    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
-    val paxCount: Double = apiSplitsDc.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
-    val isValidThreshold = paxCount != 0 && Math.abs(paxCount - apiFlight.ActPax.getOrElse(0)) / paxCount < threshold
-    if (isValidThreshold && apiFlight.FeedSources.contains(LiveFeedSource))
-      apiSplitsDc
-    else
-      None
-  }
-
   def bestSplits: Option[Splits] = {
-    val apiSplitsDc = apiSplitDataFromDC()
+    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.CI))
     val apiSplitsAny = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
     val predictedSplits = splits.find(s => s.source == SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages)
@@ -248,13 +235,21 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     }.flatten
   }
 
-  def apiSplits: Option[Splits] = {
-    val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
-
-    List(apiSplitsDc).find {
-      case Some(_) => true
+  def hasValidApi: Boolean = {
+    val maybeApiSplits = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
+    val hasLiveSource = apiFlight.FeedSources.contains(LiveFeedSource)
+    (maybeApiSplits, hasLiveSource) match {
+      case (Some(_), false) => true
+      case (Some(api), true) if isWithinThreshold(api) => true
       case _ => false
-    }.flatten
+    }
+  }
+
+  def isWithinThreshold(apiSplits: Splits): Boolean = {
+    val apiPaxNo = apiSplits.splits.toList.map(_.paxCount).sum.toInt
+    val threshold: Double = 0.05
+    val portDirectPax: Double = apiFlight.ActPax.getOrElse(0) - apiFlight.TranPax.getOrElse(0)
+    apiPaxNo != 0 && Math.abs(apiPaxNo - portDirectPax) / apiPaxNo < threshold
   }
 
   def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
@@ -592,10 +587,10 @@ trait SDateLike {
   def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
 
   /**
-    * Days of the week 1 to 7 (Monday is 1)
-    *
-    * @return
-    */
+   * Days of the week 1 to 7 (Monday is 1)
+   *
+   * @return
+   */
   def getDayOfWeek(): Int
 
   def getFullYear(): Int

@@ -11,10 +11,7 @@ import org.scalajs.dom.html.Div
 object FlightComponents {
 
   def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = {
-    val isNotApiData = (flightWithSplits.eGateAndFTSplitsExists, flightWithSplits.apiSplitDataFromDC().isEmpty) match {
-      case (true, true) => "right notApiData"
-      case _ => "right"
-    }
+    val isNotApiData = if (flightWithSplits.hasValidApi) "right" else "right notApiData"
     <.div(
       ^.title := paxComponentTitle(flightWithSplits.apiFlight),
       ^.className := s"$isNotApiData",
@@ -26,16 +23,11 @@ object FlightComponents {
     if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
       "pax-no-splits"
     else flightWithSplits.bestSplits match {
-      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-api"
+      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) if flightWithSplits.hasValidApi => "pax-api"
       case Some(Splits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
       case Some(Splits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
       case _ => "pax-unknown"
     }
-
-  def hasApiSplits(flightWithSplits: ApiFlightWithSplits): Boolean = flightWithSplits.bestSplits match {
-    case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => true
-    case _ => false
-  }
 
   def paxComponentTitle(flight: Arrival): String = {
     val max: String = flight.MaxPax.filter(_ > 0).map(_.toString).getOrElse("n/a")

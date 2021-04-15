@@ -3,7 +3,7 @@ package drt.shared
 import controllers.ArrivalGenerator
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.SplitSources
-import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
+import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, PredictedSplitsWithHistoricalEGateAndFTPercentages}
 import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
@@ -43,30 +43,33 @@ class ApiFlightWithSplitsSpecs extends Specification {
     ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EGate, 8.0, None, None)
   ), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
 
+
   "flight Arrival" should {
     val apiFlightWithSplits = new ApiFlightWithSplits(flight, Set(splitsWithinFivePercentageThreshold))
 
-    "return DC splits while pax count within 5% threshold of splits pax count for api and DC event type" in {
-      val apiSplitDataFromDC = apiFlightWithSplits.apiSplitDataFromDC()
-      val apiSplitsDc: Option[Splits] = apiFlightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
-      val paxCount: Double = apiSplitsDc.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
-      splitsWithinFivePercentageThreshold mustEqual apiSplitsDc.get
-      paxCount mustEqual 39
-      apiFlightWithSplits.eGateAndFTSplitsExists mustEqual true
-      apiSplitDataFromDC.isDefined mustEqual true
+    "has valid Api when api splits sum pax count is within 5% Threshold of LiveSourceFeed pax count" in {
+      val apiSplits = apiFlightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages).get
+      apiFlightWithSplits.isWithinThreshold(apiSplits) mustEqual true
+      apiFlightWithSplits.hasValidApi mustEqual true
     }
 
-    "does not return DC splits while pax count not within 5% threshold of splits pax count for api and DC event type" in {
+    "has not valid Api when api splits sum pax count is not within 5% Threshold of LiveSourceFeed pax count" in {
       val flightWithSplits = new ApiFlightWithSplits(flight, Set(splitsNotWithinFivePercentageThreshold))
-      val apiSplitDataFromDC = flightWithSplits.apiSplitDataFromDC()
-      val apiSplitsDc = flightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
-      val paxCount: Double = apiSplitsDc.map(_.splits.toList.map(_.paxCount).sum).getOrElse(0)
-      paxCount mustEqual 36
-      apiFlightWithSplits.eGateAndFTSplitsExists mustEqual true
-      apiSplitDataFromDC.isDefined mustEqual false
+      val apiSplits = flightWithSplits.splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages).get
+      flightWithSplits.isWithinThreshold(apiSplits) mustEqual false
+      flightWithSplits.hasValidApi mustEqual false
+    }
+
+    "has not valid Api splits when source is not ApiSplitsWithHistoricalEGateAndFTPercentages" in {
+      val flightWithSplits = new ApiFlightWithSplits(flight, Set(splitsNotWithinFivePercentageThreshold.copy(source = PredictedSplitsWithHistoricalEGateAndFTPercentages)))
+      flightWithSplits.hasValidApi mustEqual false
+    }
+
+    "has valid Api splits when source is not LiveFeedSource" in {
+      val flightWithSplits = new ApiFlightWithSplits(flight.copy(FeedSources=Set(ForecastFeedSource)), Set(splitsNotWithinFivePercentageThreshold))
+      flightWithSplits.hasValidApi mustEqual true
     }
 
   }
-
 
 }
