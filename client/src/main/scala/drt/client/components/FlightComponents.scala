@@ -14,7 +14,7 @@ object FlightComponents {
     val isNotApiData = if (flightWithSplits.hasValidApi) "right" else "right notApiData"
     <.div(
       ^.className := s"$isNotApiData",
-      Tippy.describe(paxComponentDescription(flightWithSplits.apiFlight), flightWithSplits.apiFlight.bestPaxEstimate)
+      Tippy.describe(paxNumberSources(flightWithSplits.apiFlight), flightWithSplits.apiFlight.bestPaxEstimate)
     )
   }
 
@@ -28,7 +28,7 @@ object FlightComponents {
       case _ => "pax-unknown"
     }
 
-  def paxComponentDescription(flight: Arrival): VdomTagOf[Span] = {
+  def paxNumberSources(flight: Arrival): VdomTagOf[Span] = {
     val max: String = flight.MaxPax.filter(_ > 0).map(_.toString).getOrElse("n/a")
     val portDirectPax: Int = flight.ActPax.getOrElse(0) - flight.TranPax.getOrElse(0)
 
