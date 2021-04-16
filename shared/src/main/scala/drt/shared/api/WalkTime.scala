@@ -2,7 +2,7 @@ package drt.shared.api
 
 import drt.shared.Terminals.Terminal
 import drt.shared.TimeUtil._
-import drt.shared.{MinuteAsAdjective, MinuteAsNoun}
+import drt.shared.{MinuteAsNoun, MinuteAsAdjective}
 import upickle.default.{macroRW, _}
 
 import scala.collection.immutable.Map
@@ -22,12 +22,12 @@ case class WalkTimes(byTerminal: Map[Terminal, TerminalWalkTimes]) {
 
   def walkTimeForArrival(defaultWalkTime: Long)
                         (gate: Option[String], stand: Option[String], terminal: Terminal): String = {
-    val defaultString = s"${MinuteAsAdjective(millisToMinutes(defaultWalkTime)).display} (default walk time for terminal)"
+    val defaultString = s"${MinuteAsNoun(millisToMinutes(defaultWalkTime)).display} (default walk time for terminal)"
     val maybeWalkTime: Option[String] = (gate, stand, byTerminal.get(terminal)) match {
       case (Some(g), _, Some(t)) if t.gateWalktimes.contains(g) =>
-        byTerminal(terminal).gateWalktimes.get(g).map(g => MinuteAsNoun(g.inMinutes).display + " walk time")
+        byTerminal(terminal).gateWalktimes.get(g).map(g => MinuteAsAdjective(g.inMinutes).display + " walk time")
       case (_, Some(s), Some(t)) if t.standWalkTimes.contains(s) =>
-        byTerminal(terminal).standWalkTimes.get(s).map(g => MinuteAsNoun(g.inMinutes).display + " walk time")
+        byTerminal(terminal).standWalkTimes.get(s).map(g => MinuteAsAdjective(g.inMinutes).display + " walk time")
       case _ => None
     }
 

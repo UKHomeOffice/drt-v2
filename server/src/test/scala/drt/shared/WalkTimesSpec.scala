@@ -10,14 +10,14 @@ class WalkTimesSpec extends Specification {
 
     "Given a round minute I should get back the minute with nos mentioned" >> {
       val millis = 60000L
-      val result: String = MinuteAsAdjective(millisToMinutes(millis)).display
+      val result: String = MinuteAsNoun(millisToMinutes(millis)).display
 
       result === "1 minute"
     }
 
     "Given 90s I should get back 1 minute" >> {
       val millis = 90000L
-      val result: String =  MinuteAsAdjective(millisToMinutes(millis)).display
+      val result: String =  MinuteAsNoun(millisToMinutes(millis)).display
 
       result === "1 minute"
     }
@@ -96,21 +96,21 @@ class WalkTimesSpec extends Specification {
 
       val result = walkTimeProvider(Option("gate1"), None, T1)
 
-      result === MinuteAsNoun(gate1T1.inMinutes).display + " walk time"
+      result === s"${gate1T1.inMinutes} minute walk time"
     }
 
     "Given a stand and no gate I should get back the stand walk time" >> {
 
       val result = walkTimeProvider(None, Option("stand1"), T1)
 
-      result === MinuteAsNoun(stand1T1.inMinutes).display + " walk time"
+      result === s"${stand1T1.inMinutes} minute walk time"
     }
 
     "Given a gate and a stand I should get back the gate walk time" >> {
 
       val result = walkTimeProvider(Option("gate1"), Option("stand1"), T1)
 
-      result === MinuteAsNoun(gate1T1.inMinutes).display + " walk time"
+      result === s"${gate1T1.inMinutes} minute walk time"
     }
 
     "Given no gate or stand I should get back the default walk time" >> {
@@ -138,14 +138,14 @@ class WalkTimesSpec extends Specification {
 
       val result = walkTimeProvider(Option("notValid"), Option("stand1"), T1)
 
-      result === MinuteAsNoun(stand1T1.inMinutes).display + " walk time"
+      result === s"${stand1T1.inMinutes} minute walk time"
     }
 
     "Given a non existent stand and a valid gate I should get back the gate time" >> {
 
       val result = walkTimeProvider(Option("gate1"), Option("notValid"), T1)
 
-      result === MinuteAsNoun(gate1T1.inMinutes).display + " walk time"
+      result === s"${gate1T1.inMinutes} minute walk time"
     }
   }
 
