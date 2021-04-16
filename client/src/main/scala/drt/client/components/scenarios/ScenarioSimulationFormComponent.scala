@@ -65,10 +65,13 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             Callback.empty
         }
 
-        def changeBankSize(e: ReactEventFromInput): Callback = Try(e.target.value.toInt) match {
-          case Success(bs) =>
+        def changeBankSize(bankIndex: Int)(e: ReactEventFromInput): Callback = Try(e.target.value.toInt) match {
+          case Success(newBankSize) =>
             val maxEgates = state.simulationParams.maxDesks.getOrElse(EGate, 0)
-            scope.setState(state.copy(simulationParams = state.simulationParams.copy(eGateBanksSizes = List.fill(maxEgates)(bs))))
+            val updatedBanks = state.simulationParams.eGateBanksSizes.indices.zip(state.simulationParams.eGateBanksSizes).map {
+              case (idx, existingBankSize) => if (idx == bankIndex) newBankSize else existingBankSize
+            }
+            scope.setState(state.copy(simulationParams = state.simulationParams.copy(eGateBanksSizes = updatedBanks)))
           case _ =>
             Callback.empty
         }
@@ -225,15 +228,17 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             }.toTagMod,
             <.div(
               state.simulationParams.eGateBanksSizes.zipWithIndex.map { case (bankSize, idx) =>
-                MuiTextField(
-                  label = s"E-Gate bank ${idx + 1} size".toVdom,
-                  margin = MuiTextField.Margin.normal
-                )(
-                  DefaultFormFieldsStyle.textField,
-                  `type` := "number",
-                  id := s"egate-bank-size-$idx",
-                  value := bankSize,
-                  onChange ==> changeBankSize
+                <.div(
+                  MuiTextField(
+                    label = s"e-Gates in bank ${idx + 1}".toVdom,
+                    margin = MuiTextField.Margin.normal
+                  )(
+                    DefaultFormFieldsStyle.textField,
+                    `type` := "number",
+                    id := s"egate-bank-size-$idx",
+                    value := bankSize,
+                    onChange ==> changeBankSize(idx)
+                  )
                 )
               }.toTagMod
             ),

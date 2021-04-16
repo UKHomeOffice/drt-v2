@@ -15,7 +15,7 @@ class ProcessorsSpec extends Specification {
 
   private def expectCapacityForUnits(processor: EGateProcessors, units: Int, expected: Int): Fragment =
     s"The capacity for $units unit should be $expected" >> {
-      processor.capacityForUnits(units) === expected
+      processor.capacityForServers(units) === expected
     }
 
   "Given two units of sizes 1, 2" >> {

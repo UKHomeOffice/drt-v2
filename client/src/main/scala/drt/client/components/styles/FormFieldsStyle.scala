@@ -16,7 +16,7 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
   val textField = style(
     marginLeft(theme.spacing.unit.px),
     marginRight(theme.spacing.unit.px),
-    width(200.px),
+    width(150.px),
     unsafeChild("label")(
       fontSize(1.5.rem)
     )

@@ -58,9 +58,9 @@ object OptimiserPlus {
 
     workWithMinMaxDesks.foldLeft((List[Int](), backlog)) {
       case ((desks, bl), (workBlock, (xminBlock, xmaxBlock))) =>
-        var guess = List(((bl + workBlock.sum) / (blockSize * processors.capacityForUnits(1))).round.toInt, xmaxBlock.head).min
+        var guess = List(((bl + workBlock.sum) / (blockSize * processors.capacityForServers(1))).round.toInt, xmaxBlock.head).min
 
-        while (cumulativeSum(workBlock.map(_ - processors.capacityForUnits(guess))).min < 0 - bl && guess > xminBlock.head) {
+        while (cumulativeSum(workBlock.map(_ - processors.capacityForServers(guess))).min < 0 - bl && guess > xminBlock.head) {
           guess = guess - 1
         }
 
@@ -68,7 +68,7 @@ object OptimiserPlus {
 
         val newBacklog = (0 until blockSize).foldLeft(bl) {
           case (accBl, i) =>
-            List(accBl + workBlock(i) - processors.capacityForUnits(guess), 0).max
+            List(accBl + workBlock(i) - processors.capacityForServers(guess), 0).max
         }
 
         (desks ++ List.fill(blockSize)(guess), newBacklog)
@@ -90,7 +90,7 @@ object OptimiserPlus {
       val (finalWait, finalUtil) = work.indices.foldLeft((List[Int](), List[Double]())) {
         case ((wait, util), minute) =>
           q = work(minute) +: q
-          val totalResourceForMinute = processors.capacityForUnits(capacity(minute))
+          val totalResourceForMinute = processors.capacityForServers(capacity(minute))
           var resource: Double = totalResourceForMinute.toDouble
           var age = q.size
 
@@ -141,7 +141,7 @@ object OptimiserPlus {
       val runAv = runningAverage(winWork, List(blockSize, sla).min, processors)
       val guessMax: Int = runAv.max.ceil.toInt
 
-      val lowerLimit = List(winXmin.max, (winWork.sum / (winWork.size * processors.capacityForUnits(winXmin.max))).ceil.toInt).max
+      val lowerLimit = List(winXmin.max, (winWork.sum / (winWork.size * processors.capacityForServers(winXmin.max))).ceil.toInt).max
       var winXmax = guessMax
       var hasExcessWait = false
       var lowerLimitReached = false

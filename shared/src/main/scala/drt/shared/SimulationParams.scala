@@ -15,7 +15,7 @@ case class SimulationParams(
                              processingTimes: Map[PaxTypeAndQueue, Int],
                              minDesks: Map[Queue, Int],
                              maxDesks: Map[Queue, Int],
-                             eGateBanksSizes: Iterable[Int],
+                             eGateBanksSizes: IndexedSeq[Int],
                              slaByQueue: Map[Queue, Int],
                              crunchOffsetMinutes: Int,
                              eGateOpenHours: Seq[Int],
@@ -123,7 +123,7 @@ object SimulationParams {
       airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
         case (q, (_, max)) => q -> max.max
       },
-      eGateBanksSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()),
+      eGateBanksSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq,
       slaByQueue = airportConfig.slaByQueue,
       crunchOffsetMinutes = 0,
       eGateOpenHours = fullDay
