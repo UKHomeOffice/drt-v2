@@ -5,7 +5,7 @@ import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
-import drt.client.components.TooltipComponent._
+import drt.client.components.ToolTips._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -16,7 +16,7 @@ import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
-import japgolly.scalajs.react.vdom.html_<^.{<, _}
+import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, Span, TableSection}
@@ -178,9 +178,8 @@ object FlightsWithSplitsTable {
 
   private def gateOrStandTh = {
     <.span(
-      TippyJSComponent(
-        <.span("Hover over any gate / stand below to see the walk time. If it's not correct, contact us and we'll change it for you.").rawElement,
-        interactive = false, <.span(Icon.infoCircle)
+      Tippy.info(
+        "Select any gate / stand below to see the walk time. If it's not correct, contact us and we'll change it for you."
       )
     )
   }
@@ -357,9 +356,8 @@ object FlightTableRow {
     val walkTimeProvider: (Option[String], Option[String], Terminal) => String =
       walkTimes.walkTimeForArrival(defaultWalkTime)
     val gateOrStand = <.span(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}")
-    val gateOrStandWithWalkTimes = TippyJSComponent(
-      <.span(walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal)).rawElement,
-      interactive = true,
+    val gateOrStandWithWalkTimes = Tippy.interactive(
+      <.span(walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal)),
       gateOrStand
     )
     val displayGatesOrStands = if (walkTimes.isEmpty) gateOrStand else <.span(gateOrStandWithWalkTimes)

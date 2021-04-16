@@ -4,7 +4,7 @@ import diode.UseValueEq
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
-import drt.client.components.TooltipComponent._
+import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.{SPACircuit, ViewMode}
@@ -88,25 +88,24 @@ object TerminalDesksAndQueues {
         val headings = state.viewType match {
           case ViewDeps =>
             val h = List(<.th(
-              ^.title := "Suggested deployment given available staff",
-              s"Dep ${deskUnitLabel(queueName)}", " ", depTooltip(queueName) ,^.className := queueColumnClass)
+              s"Dep ${deskUnitLabel(queueName)}", " ", depBanksOrDesksTip(queueName) ,^.className := queueColumnClass)
             )
             if (showWaitColumn)
-              h :+ <.th(^.title := "Wait times with suggested deployments", "Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
+              h :+ <.th("Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
             else
               h
           case ViewRecs =>
-            val h = List(<.th(^.title := "Recommendations to best meet SLAs", s"Rec ${deskUnitLabel(queueName)}", ^.className := queueColumnClass))
+            val h = List(<.th(s"Rec ${deskUnitLabel(queueName)} ", recBanksOrDesksTip(queueName), ^.className := queueColumnClass))
             if (showWaitColumn)
-              h :+ <.th(^.title := "Wait times with recommendations", "Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
+              h :+ <.th("Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
             else
               h
         }
 
         if (props.airportConfig.hasActualDeskStats && state.showActuals)
           headings ++ List(
-            <.th(^.title := "Actual desks used", s"Act ${deskUnitLabel(queueName)}", ^.className := queueColumnActualsClass),
-            <.th(^.title := "Actual wait times", "Act wait", ^.className := queueColumnActualsClass))
+            <.th(Tippy.describe(<.span("Actual desks used"), s"Act ${deskUnitLabel(queueName)}"), ^.className := queueColumnActualsClass),
+            <.th(Tippy.describe(<.span("Actual wait times"), "Act wait"), ^.className := queueColumnActualsClass))
         else headings
       }
 
@@ -114,11 +113,11 @@ object TerminalDesksAndQueues {
         val queueSubHeadings = queueNames.flatMap(queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName, showWaitColumn)).toTagMod
 
         List(queueSubHeadings,
-          <.th(^.className := "non-pcp", "Misc", " ", miscTooltip, ^.title := "Miscellaneous staff"),
-          <.th(^.className := "non-pcp", "Moves"," ", movesTooltip, ^.title := "Staff movements"),
-          <.th(^.className := "total-deployed", "Rec", " ", recToolTip, ^.title := "Total staff recommended for desks"),
-          <.th(^.className := "total-deployed", "Dep", ^.title := "Total staff deployed based on assignments entered"),
-          <.th(^.className := "total-deployed", "Avail", " ", availTooltip, ^.colSpan := 2, ^.title := "Total staff available based on staff entered"))
+          <.th(^.className := "non-pcp", "Misc", " ", miscTooltip),
+          <.th(^.className := "non-pcp", "Moves"," ", movesTooltip),
+          <.th(^.className := "total-deployed", "Rec", " ", recToolTip),
+          <.th(^.className := "total-deployed", "Dep"),
+          <.th(^.className := "total-deployed", "Avail", " ", availTooltip, ^.colSpan := 2))
       }
 
       def qth(queue: Queue, xs: TagMod*) = <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)

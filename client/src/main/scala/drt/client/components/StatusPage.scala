@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.components.TooltipComponent._
+import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -54,7 +54,10 @@ object StatusPage {
                 <.ul(^.className := "times-summary", times.zipWithIndex.map {
                   case (((label, description), maybeSDate), idx) =>
                     val className = if (idx == times.length - 1) "last" else ""
-                    <.li(^.className := className, <.div(^.className := "vert-align", <.div(<.div(<.h4(label, ^.title := description)), <.div(s"${
+                    <.li(
+                      ^.className := className,
+                      <.div(^.className := "vert-align",
+                      <.div(<.div(Tippy.describe(<.span(description), <.h4(label))), <.div(s"${
                       maybeSDate.map(lu => s"${timeAgo(lu)}").getOrElse("n/a")
                     }"))))
                 }.toVdomArray)
