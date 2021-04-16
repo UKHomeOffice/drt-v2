@@ -29,7 +29,7 @@ object PcpArrival {
   def walkTimeFromString(walkTimeCsvLine: String): Option[WalkTime] = walkTimeCsvLine.split(",") match {
     case Array(from, walkTime, terminal) =>
       Try(walkTime.toInt) match {
-        case Success(s) => Some(WalkTime(from, Terminal(terminal), s * 1000L, false))
+        case Success(s) => Some(WalkTime(from, Terminal(terminal), s * 1000L))
         case f =>
           log.info(s"Failed to parse walk time ($from, $terminal, $walkTime): $f")
           None
