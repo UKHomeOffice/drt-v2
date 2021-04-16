@@ -95,7 +95,12 @@ object Tippy extends ScalaCssReactImplicits {
   val component = ScalaComponent.builder[Props]("FlightChart")
     .render_P(props => {
 
-      val triggerWithTabIndex = <.span(DefaultToolTipsStyle.triggerHoverIndicator, props.trigger, ^.tabIndex := 0)
+      val triggerWithTabIndex = <.span(
+        ^.className := "tooltip-trigger",
+        DefaultToolTipsStyle.triggerHoverIndicator,
+        props.trigger,
+        ^.tabIndex := 0
+      )
 
       val plugins: js.Array[js.Any] = js.Array(new HideOnEsc())
 

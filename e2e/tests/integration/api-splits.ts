@@ -59,7 +59,7 @@ describe('API splits', () => {
             .addManifest(apiManifest)
             .get('.notApiData',{ timeout: 5000 })
             .contains("10")
-            .get("[aria-expanded=\"false\"]")
+            .get(".arrivals__table__flight-code > .arrivals__table__flight-code-wrapper > .tooltip-trigger")
             .should('not.exist')
         ;
     });
@@ -156,8 +156,8 @@ describe('API splits', () => {
             }).then((resp) => {
             expect(resp.body).to.equal(JSON.stringify(expectedNationalitySummary), "Api splits incorrect for regular users")
         })
-            .get("[aria-expanded=\"false\"]")
-            .trigger("mouseenter")
+            .get(".arrivals__table__flight-code > .arrivals__table__flight-code-wrapper > .tooltip-trigger")
+            .trigger("focus")
             .get(".nationality-chart")
             .should("be.visible")
             .get(".passenger-type-chart")
