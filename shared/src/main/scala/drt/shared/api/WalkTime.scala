@@ -1,14 +1,15 @@
 package drt.shared.api
 
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
-import drt.shared.api.WalkTime.millisToMinutes
+import drt.shared.TimeUtil._
+import drt.shared.{MinuteAsNoun, MinuteAsAdjective}
 import upickle.default.{macroRW, _}
 
 import scala.collection.immutable.Map
 
 case class WalkTime(gateOrStand: String, terminal: Terminal, walkTimeMillis: Long) {
-  val inMinutes: String = millisToMinutes(walkTimeMillis)
+  val inMinutes: Int = millisToMinutes(walkTimeMillis)
+
 }
 
 case class TerminalWalkTimes(gateWalktimes: Map[String, WalkTime], standWalkTimes: Map[String, WalkTime])
@@ -21,12 +22,12 @@ case class WalkTimes(byTerminal: Map[Terminal, TerminalWalkTimes]) {
 
   def walkTimeForArrival(defaultWalkTime: Long)
                         (gate: Option[String], stand: Option[String], terminal: Terminal): String = {
-    val defaultString = s"${millisToMinutes(defaultWalkTime)} (default walk time for terminal)"
+    val defaultString = s"${MinuteAsNoun(millisToMinutes(defaultWalkTime)).display} (default walk time for terminal)"
     val maybeWalkTime: Option[String] = (gate, stand, byTerminal.get(terminal)) match {
       case (Some(g), _, Some(t)) if t.gateWalktimes.contains(g) =>
-        byTerminal(terminal).gateWalktimes.get(g).map(_.inMinutes + " walk time")
+        byTerminal(terminal).gateWalktimes.get(g).map(g => MinuteAsAdjective(g.inMinutes).display + " walk time")
       case (_, Some(s), Some(t)) if t.standWalkTimes.contains(s) =>
-        byTerminal(terminal).standWalkTimes.get(s).map(_.inMinutes + " walk time")
+        byTerminal(terminal).standWalkTimes.get(s).map(g => MinuteAsAdjective(g.inMinutes).display + " walk time")
       case _ => None
     }
 
@@ -62,12 +63,4 @@ object WalkTimes {
 
 object WalkTime {
   implicit val rw: ReadWriter[WalkTime] = macroRW
-
-  def millisToMinutes(millis: MillisSinceEpoch): String = {
-    val inSeconds = millis / 1000
-    val minutes = inSeconds / 60
-
-    s"$minutes minutes"
-  }
-
 }
