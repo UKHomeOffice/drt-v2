@@ -1,12 +1,16 @@
 package services
 
 trait WorkloadProcessorsLike {
+  val averageServerSize: Int
+
   def capacityForServers(servers: Int): Int
 
   val forWorkload: PartialFunction[Double, Int]
 }
 
 case object DeskWorkloadProcessors extends WorkloadProcessorsLike {
+  override val averageServerSize: Int = 1
+
   override def capacityForServers(servers: Int): Int = servers
 
   override val forWorkload: PartialFunction[Double, Int] = {
@@ -15,6 +19,12 @@ case object DeskWorkloadProcessors extends WorkloadProcessorsLike {
 }
 
 case class EGateWorkloadProcessors(processors: Iterable[Int]) extends WorkloadProcessorsLike {
+  override val averageServerSize: Int = processors.size match {
+    case 0 => 0
+    case numberOfProcessors =>
+      (processors.sum.toDouble / numberOfProcessors).round.toInt
+  }
+
   val processorsIncludingZero: Iterable[Int] = processors.headOption match {
     case None => Iterable(0)
     case Some(zero) if zero == 0 => processors

@@ -194,7 +194,6 @@ class TestDrtActor extends Actor {
           "deployment-request" -> deploymentQueueActor
         ),
         useNationalityBasedProcessingTimes = false,
-        useLegacyManifests = tc.useLegacyManifests,
         now = tc.now,
         manifestsLiveSource = manifestsSource,
         voyageManifestsActor = manifestsRouterActor,

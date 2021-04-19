@@ -29,24 +29,31 @@ object Optimiser {
              minDesks: Iterable[Int],
              maxDesks: Iterable[Int],
              config: OptimiserConfig): Try[OptimizerCrunchResult] = {
-    val indexedWork = workloads.toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
+    val normalisedWorkload = config.processors.averageServerSize match {
+      case 0 =>
+        throw new Exception("No processors available for workload")
+      case 1 =>
+        workloads.toIndexedSeq
+      case processors =>
+        workloads.map(_ / processors).toIndexedSeq
+    }
 
     val bestMaxDesks = if (workloads.size >= 60) {
-      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer)
+      val fairMaxDesks = rollingFairXmax(normalisedWorkload, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer)
       fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toIndexedSeq
 
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
     for {
-      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla)
-      processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq())
+      desks <- tryOptimiseWin(normalisedWorkload, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla)
+      processedWork <- tryProcessWork(normalisedWorkload, desks, config.sla, IndexedSeq())
     } yield OptimizerCrunchResult(desks.toIndexedSeq, processedWork.waits)
   }
 
   def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserConfig): Try[Seq[Int]] =
-    Optimiser.tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq()).map(_.waits)
+    tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq()).map(_.waits)
 
   def approx(x: IndexedSeq[Int], y: IndexedSeq[Int], i: Seq[Double]): List[Double] = {
     val diffX = x(1) - x.head
@@ -266,9 +273,9 @@ object Optimiser {
     val churnPenalty = churn(churnStart, capacity :+ finalCapacity)
 
     val totalPenalty = (weightPax * paxPenalty) +
-      (weightStaff * staffPenalty.toDouble) +
+      (weightStaff * staffPenalty) +
       (weightChurn * churnPenalty.toDouble) +
-      (weightSla * slaPenalty.toDouble)
+      (weightSla * slaPenalty)
 
     Cost(paxPenalty.toInt, slaPenalty.toInt, staffPenalty, churnPenalty, totalPenalty)
   }

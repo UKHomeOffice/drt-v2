@@ -167,12 +167,6 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     staffingStates.onComplete {
       case Success(NotUsed) =>
         system.log.info(s"Successfully restored initial staffing states for App")
-        if (params.snapshotStaffOnStart) {
-          log.info(s"Snapshotting staff as requested by feature flag")
-          shiftsActor ! SaveSnapshot
-          fixedPointsActor ! SaveSnapshot
-          staffMovementsActor ! SaveSnapshot
-        }
 
       case Failure(error) =>
         system.log.error(error, s"Failed to restore initial staffing state for App")

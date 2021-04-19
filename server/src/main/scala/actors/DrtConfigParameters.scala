@@ -42,8 +42,6 @@ case class DrtConfigParameters(config: Configuration) {
 
   val manifestLookupBatchSize: Int = config.getOptional[Int]("crunch.manifests.lookup-batch-size").getOrElse(10)
 
-  val useLegacyManifests: Boolean = config.getOptional[Boolean]("feature-flags.use-legacy-manifests").getOrElse(false)
-
   val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")
   val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
   val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
@@ -75,8 +73,6 @@ case class DrtConfigParameters(config: Configuration) {
   val maybeGlaLiveToken: Option[String] = config.getOptional[String]("feeds.gla.token")
   val maybeGlaLivePassword: Option[String] = config.getOptional[String]("feeds.gla.password")
   val maybeGlaLiveUsername: Option[String] = config.getOptional[String]("feeds.gla.username")
-
-  val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
 
   val useApiPaxNos: Boolean = config.getOptional[Boolean]("feature-flags.use-api-pax-nos").getOrElse(false)
 

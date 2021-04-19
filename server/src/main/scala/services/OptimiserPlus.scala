@@ -39,7 +39,7 @@ object OptimiserPlus {
   }
 
   def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserConfig): Try[Seq[Int]] =
-    OptimiserPlus.tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq(), config.processors).map(_.waits)
+    tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq(), config.processors).map(_.waits)
 
   def approx(x: IndexedSeq[Int], y: IndexedSeq[Int], i: Seq[Double]): List[Double] = {
     val diffX = x(1) - x.head

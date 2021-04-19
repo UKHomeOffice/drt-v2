@@ -7,7 +7,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.{OptimiserPlus, SDate}
+import services.{Optimiser, OptimiserPlus, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -63,8 +63,6 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(1 seconds) {
         case ps: PortState =>
           val resultSummary = deskRecsFromPortState(ps, 15)
-          println(s"result: $resultSummary")
-          println(s"expect: $expected")
           resultSummary == expected
       }
 
