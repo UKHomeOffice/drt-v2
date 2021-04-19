@@ -5,20 +5,16 @@ import drt.shared._
 import drt.shared.api.Arrival
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray}
-import org.scalajs.dom.html.Div
+import org.scalajs.dom.html.{Div, Span}
 
 
 object FlightComponents {
 
   def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = {
-    val isNotApiData = (flightWithSplits.eGateAndFTSplitsExists, flightWithSplits.apiSplitDataFromDC().isEmpty) match {
-      case (true, true) => "right notApiData"
-      case _ => "right"
-    }
+    val isNotApiData = if (flightWithSplits.hasValidApi) "right" else "right notApiData"
     <.div(
-      ^.title := paxComponentTitle(flightWithSplits.apiFlight),
       ^.className := s"$isNotApiData",
-      flightWithSplits.apiFlight.bestPaxEstimate
+      Tippy.describe(paxNumberSources(flightWithSplits.apiFlight), flightWithSplits.apiFlight.bestPaxEstimate)
     )
   }
 
@@ -26,27 +22,21 @@ object FlightComponents {
     if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
       "pax-no-splits"
     else flightWithSplits.bestSplits match {
-      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-api"
+      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) if flightWithSplits.hasValidApi => "pax-api"
       case Some(Splits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
       case Some(Splits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
       case _ => "pax-unknown"
     }
 
-  def hasApiSplits(flightWithSplits: ApiFlightWithSplits): Boolean = flightWithSplits.bestSplits match {
-    case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) => true
-    case _ => false
-  }
-
-  def paxComponentTitle(flight: Arrival): String = {
+  def paxNumberSources(flight: Arrival): VdomTagOf[Span] = {
     val max: String = flight.MaxPax.filter(_ > 0).map(_.toString).getOrElse("n/a")
     val portDirectPax: Int = flight.ActPax.getOrElse(0) - flight.TranPax.getOrElse(0)
-    val apiPax = flight.ApiPax match {
-      case Some(api) =>
-        s"\nAPI: $api"
-      case _ => ""
-    }
-    s"""|Pax: $portDirectPax (${flight.ActPax.getOrElse(0)} - ${flight.TranPax.getOrElse(0)} transfer)
-        |Max: $max $apiPax""".stripMargin
+
+    val paxNos = List(
+      <.p(s"Pax: $portDirectPax (${flight.ActPax.getOrElse(0)} - ${flight.TranPax.getOrElse(0)} transfer)"),
+      <.p(s"Max: $max")
+    ) :+ flight.ApiPax.map(p => <.span(s"API: $p")).getOrElse(EmptyVdom)
+    <.span(paxNos.toVdomArray)
   }
 
   def paxTransferComponent(flight: Arrival): VdomTagOf[Div] = {

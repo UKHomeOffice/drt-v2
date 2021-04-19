@@ -64,8 +64,6 @@ object PcpArrival {
     walkTimes.mapValues(timeToNearestMinute)
   }
 
-  import Math.round
-
   type GateOrStand = String
   type GateOrStandWalkTime = (GateOrStand, Terminal) => Option[MillisSinceEpoch]
   type FlightPcpArrivalTimeCalculator = Arrival => MilliDate

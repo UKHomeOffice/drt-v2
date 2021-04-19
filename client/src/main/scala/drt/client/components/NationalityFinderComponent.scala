@@ -72,7 +72,7 @@ object NationalityFinderComponent {
     "South Africa" -> "ZAF",
     "Suriname" -> "SUR",
     "Tanzania" -> "TZA",
-    "United Arab Emirates (UAE)" -> "ARE",
+    "United Arab Emirates" -> "ARE",
     "Uruguay" -> "URY",
     "Venezuela" -> "VEN",
     "Zambia" -> "ZMB",

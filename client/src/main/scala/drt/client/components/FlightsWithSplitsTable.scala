@@ -3,9 +3,10 @@ package drt.client.components
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
-import drt.client.components.FlightComponents.{SplitsGraph, hasApiSplits}
+import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
-import drt.client.components.TooltipComponent._
+import drt.client.components.ToolTips._
+import drt.client.components.styles.{ArrivalsPageStyles, ArrivalsPageStylesDefault}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -16,12 +17,13 @@ import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
-import japgolly.scalajs.react.vdom.html_<^.{<, _}
+import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, Span, TableSection}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, RedListFeature}
+import scalacss.{ScalaCssReact, ScalaCssReactFns, ScalaCssReactImplicits}
 
 import scala.collection.immutable.Map
 
@@ -178,9 +180,8 @@ object FlightsWithSplitsTable {
 
   private def gateOrStandTh = {
     <.span(
-      TippyJSComponent(
-        <.span("Hover over any gate / stand below to see the walk time. If it's not correct, contact us and we'll change it for you.").rawElement,
-        interactive = false, <.span(Icon.infoCircle)
+      Tippy.info(
+        "Select any gate / stand below to see the walk time. If it's not correct, contact us and we'll change it for you."
       )
     )
   }
@@ -279,7 +280,7 @@ object FlightTableRow {
           <.div(
             ^.cls := "arrivals__table__flight-code-wrapper",
             flightCodeElement,
-            if (hasApiSplits(flightWithSplits: ApiFlightWithSplits))
+            if (flightWithSplits.hasValidApi)
               props
                 .maybePassengerInfoSummary
                 .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
@@ -291,7 +292,18 @@ object FlightTableRow {
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(
             proxy().renderEmpty(<.span()),
-            proxy().render(ai => <.span(ai.country))
+            proxy().render(ai => {
+              val style = if (NationalityFinderComponent.redList.keys.exists(_.toLowerCase == ai.country.toLowerCase)) {
+                ScalaCssReact.scalacssStyleaToTagMod(
+                ArrivalsPageStylesDefault.redListCountryField)
+              } else
+                EmptyVdom
+
+              <.span(
+                style,
+                ai.country
+              )
+            })
           )
         }),
         if (props.loggedInUser.hasRole(RedListFeature))
@@ -357,9 +369,8 @@ object FlightTableRow {
     val walkTimeProvider: (Option[String], Option[String], Terminal) => String =
       walkTimes.walkTimeForArrival(defaultWalkTime)
     val gateOrStand = <.span(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}")
-    val gateOrStandWithWalkTimes = TippyJSComponent(
-      <.span(walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal)).rawElement,
-      interactive = true,
+    val gateOrStandWithWalkTimes = Tippy.interactive(
+      <.span(walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal)),
       gateOrStand
     )
     val displayGatesOrStands = if (walkTimes.isEmpty) gateOrStand else <.span(gateOrStandWithWalkTimes)

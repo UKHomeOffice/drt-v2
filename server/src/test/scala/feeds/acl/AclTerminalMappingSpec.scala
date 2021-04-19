@@ -78,42 +78,48 @@ class AclTerminalMappingSpec extends Specification {
 
         val portAclTerminalToExpectedTerminal = Map(
           "BHX" -> Map(
-            "terminal 2 (domestic)" -> T2,
+            "1D" -> T1,
+            "2D" -> T2,
+          ),
+          "BFS" -> Map(
+            "1D" -> T1,
           ),
           "BRS" -> Map(
-            "Domestic Arrivals" -> T1,
+            "1D" -> T1,
           ),
           "EMA" -> Map(
-            "Cargo" -> T1,
+            "1D" -> T1,
           ),
           "GLA" -> Map(
-            "Domestic Arrs" -> T1,
+            "1D" -> T1,
           ),
           "LCY" -> Map(
             "MainApron" -> T1,
           ),
           "LGW" -> Map(
-            "South Domestic" -> S,
-            "North Domestic" -> N,
+            "1D" -> S,
+            "2D" -> N,
           ),
           "LHR" -> Map(
-            "T2-Dom" -> T2,
+            "2D" -> T2,
+            "5D" -> T5,
           ),
           "LPL" -> Map(
-            "Domestic Arrivals" -> T1,
+            "1D" -> T1,
           ),
           "LTN" -> Map(
-            "Domestic Arrivals" -> T1,
+            "1D" -> T1,
           ),
           "STN" -> Map(
             "CTA" -> T1,
           )
         )
-
+        
         portAclTerminalToExpectedTerminal.map {
           case (portCode, terminalMap) =>
             terminalMap.map {
               case (mapFrom, mapTo) =>
+
                 s"$portCode ${AclFeed.aclToPortMapping(PortCode(portCode))(Terminal(mapFrom))}" === s"$portCode ${mapTo}"
             }
         }

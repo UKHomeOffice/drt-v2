@@ -29,7 +29,7 @@ object FlightChartComponent {
         case (pt, _) => PaxTypes.displayNameShort(pt)
       }, sortedPaxTypes.map(_._2.toDouble), "Live API")
 
-      TippyJSComponent(
+      Tippy.interactiveInfo(
         <.div(^.cls := "container arrivals__table__flight__chart-box",
           <.div(^.cls := "row",
             if (sortedNats.toMap.values.sum > 0)
@@ -68,7 +68,7 @@ object FlightChartComponent {
             else
               EmptyVdom
           )
-        ).rawElement, interactive = true, <.span(Icon.infoCircle))
+        ))
     })
     .build
 

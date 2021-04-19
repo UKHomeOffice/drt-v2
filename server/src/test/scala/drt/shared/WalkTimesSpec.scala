@@ -3,23 +3,23 @@ package drt.shared
 import drt.shared.Terminals._
 import drt.shared.api.{TerminalWalkTimes, WalkTime, WalkTimes}
 import org.specs2.mutable.Specification
-
+import TimeUtil._
 class WalkTimesSpec extends Specification {
 
   "When formatting a walk time as minutes and seconds" >> {
 
     "Given a round minute I should get back the minute with nos mentioned" >> {
       val millis = 60000L
-      val result: String = WalkTime.millisToMinutes(millis)
+      val result: String = MinuteAsNoun(millisToMinutes(millis)).display
 
-      result === "1 minutes"
+      result === "1 minute"
     }
 
     "Given 90s I should get back 1 minute" >> {
       val millis = 90000L
-      val result: String = WalkTime.millisToMinutes(millis)
+      val result: String =  MinuteAsNoun(millisToMinutes(millis)).display
 
-      result === "1 minutes"
+      result === "1 minute"
     }
   }
 
@@ -74,79 +74,79 @@ class WalkTimesSpec extends Specification {
     result === expected
   }
 
-    "When getting a walk time for an arrival" >> {
+  "When getting a walk time for an arrival" >> {
 
-      val gateWalkTimes = Seq(
-        gate1T1,
-        gate2T1,
-        gate1T2,
-      )
+    val gateWalkTimes = Seq(
+      gate1T1,
+      gate2T1,
+      gate1T2,
+    )
 
-      val standWalkTimes = Seq(
+    val standWalkTimes = Seq(
       stand1T1,
       stand2T1,
       stand1T2,
-      )
+    )
 
-      val wt = WalkTimes(gateWalkTimes, standWalkTimes)
+    val wt = WalkTimes(gateWalkTimes, standWalkTimes)
 
-      val walkTimeProvider: (Option[String], Option[String], Terminal) => String = wt.walkTimeForArrival(300000L)
+    val walkTimeProvider: (Option[String], Option[String], Terminal) => String = wt.walkTimeForArrival(300000L)
 
-      "Given a gate and no stand I should get back the gate walk time" >> {
+    "Given a gate and no stand I should get back the gate walk time" >> {
 
-        val result = walkTimeProvider(Option("gate1"), None, T1)
+      val result = walkTimeProvider(Option("gate1"), None, T1)
 
-        result === gate1T1.inMinutes + " walk time"
-      }
-
-      "Given a stand and no gate I should get back the stand walk time" >> {
-
-        val result = walkTimeProvider(None, Option("stand1"), T1)
-
-        result === stand1T1.inMinutes + " walk time"
-      }
-
-      "Given a gate and a stand I should get back the gate walk time" >> {
-
-        val result = walkTimeProvider(Option("gate1"), Option("stand1"), T1)
-
-        result === gate1T1.inMinutes + " walk time"
-      }
-
-      "Given no gate or stand I should get back the default walk time" >> {
-
-        val result = walkTimeProvider(None, None, T1)
-
-        result === "5 minutes (default walk time for terminal)"
-      }
-
-      "Given a non existent gate I should get back the default walk time" >> {
-
-        val result = walkTimeProvider(Option("notValid"), None, T1)
-
-        result === "5 minutes (default walk time for terminal)"
-      }
-
-      "Given a non existent stand I should get back the default walk time" >> {
-
-        val result = walkTimeProvider(None, Option("notValid"), T1)
-
-        result === "5 minutes (default walk time for terminal)"
-      }
-
-      "Given a non existent gate and a valid stand I should get back the stand time" >> {
-
-        val result = walkTimeProvider(Option("notValid"), Option("stand1"), T1)
-
-        result === stand1T1.inMinutes + " walk time"
-      }
-
-      "Given a non existent stand and a valid gate I should get back the gate time" >> {
-
-        val result = walkTimeProvider(Option("gate1"), Option("notValid"), T1)
-
-        result === gate1T1.inMinutes + " walk time"
-      }
+      result === s"${gate1T1.inMinutes} minute walk time"
     }
+
+    "Given a stand and no gate I should get back the stand walk time" >> {
+
+      val result = walkTimeProvider(None, Option("stand1"), T1)
+
+      result === s"${stand1T1.inMinutes} minute walk time"
+    }
+
+    "Given a gate and a stand I should get back the gate walk time" >> {
+
+      val result = walkTimeProvider(Option("gate1"), Option("stand1"), T1)
+
+      result === s"${gate1T1.inMinutes} minute walk time"
+    }
+
+    "Given no gate or stand I should get back the default walk time" >> {
+
+      val result = walkTimeProvider(None, None, T1)
+
+      result === "5 minutes (default walk time for terminal)"
+    }
+
+    "Given a non existent gate I should get back the default walk time" >> {
+
+      val result = walkTimeProvider(Option("notValid"), None, T1)
+
+      result === "5 minutes (default walk time for terminal)"
+    }
+
+    "Given a non existent stand I should get back the default walk time" >> {
+
+      val result = walkTimeProvider(None, Option("notValid"), T1)
+
+      result === "5 minutes (default walk time for terminal)"
+    }
+
+    "Given a non existent gate and a valid stand I should get back the stand time" >> {
+
+      val result = walkTimeProvider(Option("notValid"), Option("stand1"), T1)
+
+      result === s"${stand1T1.inMinutes} minute walk time"
+    }
+
+    "Given a non existent stand and a valid gate I should get back the gate time" >> {
+
+      val result = walkTimeProvider(Option("gate1"), Option("notValid"), T1)
+
+      result === s"${gate1T1.inMinutes} minute walk time"
+    }
+  }
 
 }

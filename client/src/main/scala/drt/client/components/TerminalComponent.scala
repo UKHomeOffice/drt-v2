@@ -3,15 +3,14 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
-import drt.client.components.TooltipComponent._
+import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
-import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.{PassengerInfoSummary, WalkTime, WalkTimes}
+import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl

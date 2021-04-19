@@ -36,6 +36,9 @@ object Terminals {
       case "a2" => A2
       case "1i" => T1
       case "2i" => T2
+      case "1d" => T1
+      case "2d" => T2
+      case "5d" => T5
       case "3i" => T3
       case "4i" => T4
       case "5i" => T5
@@ -43,13 +46,8 @@ object Terminals {
       case "n" => N
       case "s" => S
       case "mt" => T1
-      case "domestic" | "domestic arrivals" | "domestic arrs" => DomesticArrivals
-      case "terminal 2 (domestic)" | "t2-dom" => T2Domestic
-      case "cargo" => Cargo
       case "cta" => CTA
       case "mainapron" => MainApron
-      case "south domestic" => SouthDomestic
-      case "north domestic" => NorthDomestic
       case _ => InvalidTerminal
     }
   }
@@ -72,31 +70,15 @@ object Terminals {
 
   case object A2 extends Terminal
 
-  case object ACL1I extends Terminal
-
-  case object ACL2I extends Terminal
-
-  case object ACL1D extends Terminal
-
   case object ACLTER extends Terminal
 
   case object N extends Terminal
 
   case object S extends Terminal
 
-  case object DomesticArrivals extends Terminal
-
-  case object SouthDomestic extends Terminal
-
-  case object NorthDomestic extends Terminal
-
-  case object T2Domestic extends Terminal
-
   case object MainApron extends Terminal
 
   case object CTA extends Terminal
-
-  case object Cargo extends Terminal
 
 }
 

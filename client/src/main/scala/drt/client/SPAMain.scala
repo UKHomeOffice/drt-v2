@@ -4,7 +4,7 @@ import java.util.UUID
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.styles.{DefaultScenarioSimulationStyle, DefaultFormFieldsStyle, ScenarioSimulationStyle}
+import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle, ScenarioSimulationStyle}
 import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, FaqsPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
@@ -374,6 +374,8 @@ object SPAMain {
 
     GlobalStyles.addToDocument()
     DefaultFormFieldsStyle.addToDocument()
+    DefaultToolTipsStyle.addToDocument()
+    ArrivalsPageStylesDefault.addToDocument()
     DefaultScenarioSimulationStyle.addToDocument()
 
     requestInitialActions()
