@@ -5,7 +5,7 @@ import org.specs2.specification.core.Fragment
 
 class ProcessorsSpec extends Specification {
   "Given a single unit size of 1" >> {
-    val processor = EGateProcessors(Iterable(1))
+    val processor = EGateWorkloadProcessors(Iterable(1))
     "The cumulative capacity should be (0, 1)" >> {
       processor.cumulativeCapacity === Iterable(0, 1)
     }
@@ -13,13 +13,13 @@ class ProcessorsSpec extends Specification {
     expectCapacityForUnits(processor, 1, 1)
   }
 
-  private def expectCapacityForUnits(processor: EGateProcessors, units: Int, expected: Int): Fragment =
+  private def expectCapacityForUnits(processor: EGateWorkloadProcessors, units: Int, expected: Int): Fragment =
     s"The capacity for $units unit should be $expected" >> {
       processor.capacityForServers(units) === expected
     }
 
   "Given two units of sizes 1, 2" >> {
-    val processor = EGateProcessors(Iterable(1, 2))
+    val processor = EGateWorkloadProcessors(Iterable(1, 2))
     "The cumulative capacity should be (0, 1, 3)" >> {
       processor.cumulativeCapacity === Iterable(0, 1, 3)
     }
@@ -29,7 +29,7 @@ class ProcessorsSpec extends Specification {
   }
 
   "Given three units of sizes 1, 2, 3" >> {
-    val processor = EGateProcessors(Iterable(1, 2, 3))
+    val processor = EGateWorkloadProcessors(Iterable(1, 2, 3))
     "The cumulative capacity should be (0, 1, 3, 6)" >> {
       processor.cumulativeCapacity === Iterable(0, 1, 3, 6)
     }

@@ -1,12 +1,12 @@
 package services
 
-trait ProcessorsLike {
+trait WorkloadProcessorsLike {
   def capacityForServers(servers: Int): Int
 
   val forWorkload: PartialFunction[Double, Int]
 }
 
-case object DeskProcessors extends ProcessorsLike {
+case object DeskWorkloadProcessors$ extends WorkloadProcessorsLike {
   override def capacityForServers(servers: Int): Int = servers
 
   override val forWorkload: PartialFunction[Double, Int] = {
@@ -14,7 +14,7 @@ case object DeskProcessors extends ProcessorsLike {
   }
 }
 
-case class EGateProcessors(processors: Iterable[Int]) extends ProcessorsLike {
+case class EGateWorkloadProcessors(processors: Iterable[Int]) extends WorkloadProcessorsLike {
   val processorsIncludingZero: Iterable[Int] = processors.headOption match {
     case None => Iterable(0)
     case Some(zero) if zero == 0 => processors
