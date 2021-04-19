@@ -121,7 +121,7 @@ object TerminalDashboardComponent {
               <.div(^.className := s"queue-box col ${q.toString.toLowerCase} ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, p.airportConfig.slaByQueue(q))}",
                 <.div(^.className := "queue-name", s"${Queues.queueDisplayNames.getOrElse(q, q)}"),
                 <.div(^.className := "queue-box-text", Icon.users, s"$qPax pax joining"),
-                <.div(^.className := "queue-box-text", Icon.clockO, s"$qWait minutes wait time"),
+                <.div(^.className := "queue-box-text", Icon.clockO, s"${MinuteAsAdjective(qWait).display} wait time"),
                 <.div(^.className := "queue-box-text", waitIcon, s"queue time"),
               )
             }).toTagMod
