@@ -6,6 +6,7 @@ import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointI
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.ToolTips._
+import drt.client.components.styles.{ArrivalsPageStyles, ArrivalsPageStylesDefault}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -22,6 +23,7 @@ import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, Span, TableSection}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, RedListFeature}
+import scalacss.{ScalaCssReact, ScalaCssReactFns, ScalaCssReactImplicits}
 
 import scala.collection.immutable.Map
 
@@ -290,7 +292,18 @@ object FlightTableRow {
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(
             proxy().renderEmpty(<.span()),
-            proxy().render(ai => <.span(ai.country))
+            proxy().render(ai => {
+              val style = if (NationalityFinderComponent.redList.keys.exists(_.toLowerCase == ai.country.toLowerCase)) {
+                ScalaCssReact.scalacssStyleaToTagMod(
+                ArrivalsPageStylesDefault.redListCountryField)
+              } else
+                EmptyVdom
+
+              <.span(
+                style,
+                ai.country
+              )
+            })
           )
         }),
         if (props.loggedInUser.hasRole(RedListFeature))
