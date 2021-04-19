@@ -1,6 +1,6 @@
 package services
 
-trait WorkloadProcessorsLike {
+sealed trait WorkloadProcessorsLike {
   val averageServerSize: Int
 
   def capacityForServers(servers: Int): Int
