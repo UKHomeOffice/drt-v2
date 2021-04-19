@@ -7,7 +7,7 @@ import scala.util.{Failure, Success, Try}
 
 case class OptimiserConfig(sla: Int, processors: WorkloadProcessorsLike)
 
-object OptimiserPlus {
+object OptimiserWithFlexibleProcessors {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val weightSla = 10

@@ -17,7 +17,7 @@ import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs.{DynamicRunnableDeskRecs, PortDesksAndWaitsProvider, RunnableOptimisation}
-import services.{OptimiserPlus, SDate}
+import services.{OptimiserWithFlexibleProcessors, SDate}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -37,7 +37,7 @@ object Scenarios {
 
     implicit val ec: ExecutionContextExecutor = system.dispatcher
     implicit val mat = ActorMaterializer.create(system)
-    val portDesksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(simulationAirportConfig, OptimiserPlus.crunch)
+    val portDesksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(simulationAirportConfig, OptimiserWithFlexibleProcessors.crunch)
     val terminalDeskLimits = PortDeskLimits.fixed(simulationAirportConfig)
 
 

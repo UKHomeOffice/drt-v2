@@ -7,7 +7,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.{Optimiser, OptimiserPlus, SDate}
+import services.{Optimiser, OptimiserWithFlexibleProcessors, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -50,7 +50,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
           slaByQueue = Map(Queues.EeaDesk -> 25, Queues.EGate -> 25),
           minutesToCrunch = 30
           ),
-        cruncher = OptimiserPlus.crunch
+        cruncher = OptimiserWithFlexibleProcessors.crunch
       ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))

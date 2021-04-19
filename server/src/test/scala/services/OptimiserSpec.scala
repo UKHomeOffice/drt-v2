@@ -34,7 +34,7 @@ class OptimiserSpec extends Specification {
     engine.eval("results <- leftward.desks(workload, xmin=minDesks, xmax=maxDesks, block.size=5, backlog=0)$desks")
     val rResult = engine.eval("results").asInstanceOf[DoubleVector].toDoubleArray.map(_.toInt).toList
 
-    val newResult = OptimiserPlus.leftwardDesks(workloads, minDesks.toIndexedSeq, maxDesks.toIndexedSeq, 5, 0, EGateWorkloadProcessors(Iterable.fill(10)(1)))
+    val newResult = OptimiserWithFlexibleProcessors.leftwardDesks(workloads, minDesks.toIndexedSeq, maxDesks.toIndexedSeq, 5, 0, EGateWorkloadProcessors(Iterable.fill(10)(1)))
 
     rResult === newResult
   }
@@ -50,7 +50,7 @@ class OptimiserSpec extends Specification {
     engine.eval("results <- process.work(work, desks, 18, 0)$wait")
     val rResult = engine.eval("results").asInstanceOf[IntVector].toIntArray.toList
 
-    val newResult = OptimiserPlus.tryProcessWork(work, desks.toIndexedSeq, 18, IndexedSeq(0), DeskWorkloadProcessors).map(_.waits).get
+    val newResult = OptimiserWithFlexibleProcessors.tryProcessWork(work, desks.toIndexedSeq, 18, IndexedSeq(0), DeskWorkloadProcessors).map(_.waits).get
 
     rResult === newResult
   }
@@ -65,7 +65,7 @@ class OptimiserSpec extends Specification {
       val blockSize = 5
 
       val rDesks = OptimiserRInterface.leftwardDesksR(winWork, winXmin, winXmax, blockSize, backlog = 0d)
-      val sDesks = OptimiserPlus.leftwardDesks(winWork, winXmin, winXmax, blockSize, backlog = 0d, DeskWorkloadProcessors)
+      val sDesks = OptimiserWithFlexibleProcessors.leftwardDesks(winWork, winXmin, winXmax, blockSize, backlog = 0d, DeskWorkloadProcessors)
 
       rDesks === sDesks
     }
@@ -92,7 +92,7 @@ class OptimiserSpec extends Specification {
       engine.eval("result <- rolling.fair.xmax(work, xmin=xmin, block.size=5, sla=sla, target.width=60, rolling.buffer=120)")
       val fairXmax = engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.map(_.toInt).toList
 
-      val newResult = OptimiserPlus.rollingFairXmax(workloads, minDesks, 5, sla, 60, 120, DeskWorkloadProcessors)
+      val newResult = OptimiserWithFlexibleProcessors.rollingFairXmax(workloads, minDesks, 5, sla, 60, 120, DeskWorkloadProcessors)
 
       newResult == fairXmax.toIndexedSeq === true
     }
@@ -154,7 +154,7 @@ class OptimiserSpec extends Specification {
     engine.eval("result <- optimise.win(work=work, xmin=xmin, xmax=xmax, sla=sla, weight.churn=w_churn, weight.pax=w_pax, weight.staff=w_staff, weight.sla=w_sla)")
     val rResult = engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.map(_.toInt).toSeq
 
-    val newResult = OptimiserPlus.tryOptimiseWin(workloads, minDesks, maxDesks, adjustedSla, weightChurn, weightPax, weightStaff, weightSla, DeskWorkloadProcessors)
+    val newResult = OptimiserWithFlexibleProcessors.tryOptimiseWin(workloads, minDesks, maxDesks, adjustedSla, weightChurn, weightPax, weightStaff, weightSla, DeskWorkloadProcessors)
 
     newResult === rResult
   }
@@ -189,7 +189,7 @@ class OptimiserSpec extends Specification {
     rTimer.report("renjin crunch")
 
     val sTimer = new Timer
-    val sResult = OptimiserPlus.crunch(workloads, minDesks.toList, maxDesks.toList, OptimiserConfig(sla, DeskWorkloadProcessors)).get.recommendedDesks
+    val sResult = OptimiserWithFlexibleProcessors.crunch(workloads, minDesks.toList, maxDesks.toList, OptimiserConfig(sla, DeskWorkloadProcessors)).get.recommendedDesks
     sTimer.report("scala crunch")
 
     val diffs = sResult.zip(rResult).zipWithIndex.grouped(15).map(_.head).collect {
@@ -206,7 +206,7 @@ class OptimiserSpec extends Specification {
       "I should get a failed result" >> {
         val work = List.fill(10)(1d)
         val capacity = List.fill(15)(10)
-        val result = OptimiserPlus.crunch(work, capacity, capacity, OptimiserConfig(25, DeskWorkloadProcessors))
+        val result = OptimiserWithFlexibleProcessors.crunch(work, capacity, capacity, OptimiserConfig(25, DeskWorkloadProcessors))
 
         result must haveClass[Failure[Exception]]
       }
@@ -218,7 +218,7 @@ class OptimiserSpec extends Specification {
       "I should get a failed result" >> {
         val work = List.fill(10)(1d)
         val desks = List.fill(15)(10)
-        val result = OptimiserPlus.runSimulationOfWork(work, desks, OptimiserConfig(25, DeskWorkloadProcessors))
+        val result = OptimiserWithFlexibleProcessors.runSimulationOfWork(work, desks, OptimiserConfig(25, DeskWorkloadProcessors))
 
         result must haveClass[Failure[Exception]]
       }

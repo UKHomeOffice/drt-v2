@@ -118,7 +118,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
 
-  val optimiser: TryCrunch = if (config.get[Boolean]("feature-flags.use-legacy-optimiser")) Optimiser.crunch else OptimiserPlus.crunch
+  val optimiser: TryCrunch = if (config.get[Boolean]("feature-flags.use-legacy-optimiser")) Optimiser.crunch else OptimiserWithFlexibleProcessors.crunch
 
   val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser)
 
@@ -160,7 +160,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       params.maybeEdiTerminalMapCsvUrl
     )
 
-    val simulator: TrySimulator = if (config.get[Boolean]("feature-flags.use-legacy-optimiser")) Optimiser.runSimulationOfWork else OptimiserPlus.runSimulationOfWork
+    val simulator: TrySimulator = if (config.get[Boolean]("feature-flags.use-legacy-optimiser")) Optimiser.runSimulationOfWork else OptimiserWithFlexibleProcessors.runSimulationOfWork
 
     val crunchInputs = CrunchSystem(CrunchProps(
       airportConfig = airportConfig,

@@ -21,7 +21,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.exports.StreamingFlightsExport
 import services.imports.{ArrivalCrunchSimulationActor, ArrivalImporter}
-import services.{OptimiserPlus, SDate}
+import services.{OptimiserWithFlexibleProcessors, SDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -122,7 +122,7 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
     val fws = FlightsWithSplits(flightsWithSplits.map(f => f.unique -> f).toMap)
 
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(fws)))
-    val dawp = PortDesksAndWaitsProvider(lhrHalved, OptimiserPlus.crunch)
+    val dawp = PortDesksAndWaitsProvider(lhrHalved, OptimiserWithFlexibleProcessors.crunch)
 
     val terminalDeskLimits = PortDeskLimits.fixed(lhrHalved)
 

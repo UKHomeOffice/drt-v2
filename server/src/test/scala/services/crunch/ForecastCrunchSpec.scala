@@ -10,7 +10,7 @@ import drt.shared._
 import drt.shared.api.Arrival
 import server.feeds.ArrivalsFeedSuccess
 import services.graphstages.CrunchMocks
-import services.{OptimiserPlus, SDate}
+import services.{OptimiserWithFlexibleProcessors, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -89,7 +89,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
         ),
       now = () => SDate(scheduled),
       initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
-      cruncher = OptimiserPlus.crunch,
+      cruncher = OptimiserWithFlexibleProcessors.crunch,
       maxDaysToCrunch = 4
       ))
 
