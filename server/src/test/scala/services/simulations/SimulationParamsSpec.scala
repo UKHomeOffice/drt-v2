@@ -20,7 +20,7 @@ class SimulationParamsSpec extends Specification {
     processingTimes = testConfig.terminalProcessingTimes(terminal).mapValues(_ => 60),
     minDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
     maxDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 10).toMap,
-    eGateBanksSizes = Iterable(5, 5, 5),
+    eGateBanksSizes = IndexedSeq(5, 5, 5),
     slaByQueue = testConfig.slaByQueue,
     crunchOffsetMinutes = 0,
     eGateOpenHours = Seq()
@@ -96,9 +96,9 @@ class SimulationParamsSpec extends Specification {
 
     "Simulation eGate bank size should be used" >> {
 
-      val simulationWithMinDesks = simulation.copy(eGateBanksSizes = Iterable(7, 7, 7))
+      val simulationWithMinDesks = simulation.copy(eGateBanksSizes = IndexedSeq(7, 7, 7))
 
-      val expected = Map(T1 -> Iterable(7, 7, 7))
+      val expected = Map(T1 -> IndexedSeq(7, 7, 7))
 
       val result = simulationWithMinDesks
         .applyToAirportConfig(testConfig)

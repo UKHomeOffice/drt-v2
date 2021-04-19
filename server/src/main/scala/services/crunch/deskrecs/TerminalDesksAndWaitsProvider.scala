@@ -53,8 +53,8 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int],
               queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0))))
             case someWork =>
               val start = System.currentTimeMillis()
-              val processors = if (queue == EGate) EGateWorkloadProcessors(bankSizes) else DeskWorkloadProcessors$
-              val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks.toSeq, OptimiserPlusConfig(slas(queue), processors)) match {
+              val processors = if (queue == EGate) EGateWorkloadProcessors(bankSizes) else DeskWorkloadProcessors
+              val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks.toSeq, OptimiserConfig(slas(queue), processors)) match {
                 case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queue -> ((desks.toList, waits.toList)))
                 case Failure(t) =>
                   log.error(s"Crunch failed for $queue", t)

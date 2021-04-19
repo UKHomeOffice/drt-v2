@@ -19,7 +19,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(),
       Map(),
       Map(),
-      Iterable.fill(5)(5),
+      IndexedSeq.fill(5)(5),
       Map(),
       0,
       Seq(1)
@@ -99,7 +99,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60, PaxTypesAndQueues.eeaMachineReadableToEGate -> 30),
       Map(Queues.EGate -> 1, Queues.NonEeaDesk -> 1),
       Map(Queues.EGate -> 3, Queues.NonEeaDesk -> 3),
-      Iterable.fill(5)(5),
+      IndexedSeq.fill(5)(5),
       Map(Queues.EGate -> 10, Queues.EeaDesk -> 15),
       0,
       Seq(1, 2)
@@ -156,7 +156,7 @@ println(s"qsValues: $qsValues")
         Map(),
         Map(),
         Map(),
-        Iterable.fill(5)(5),
+        IndexedSeq.fill(5)(5),
         Map(),
         0,
         Seq(1, 2)
@@ -186,7 +186,7 @@ println(s"qsValues: $qsValues")
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60, PaxTypesAndQueues.eeaMachineReadableToEGate -> 30),
       Map(Queues.EGate -> 1, Queues.NonEeaDesk -> 1),
       Map(Queues.EGate -> 3, Queues.NonEeaDesk -> 3),
-      Iterable.fill(5)(5),
+      IndexedSeq.fill(5)(5),
       Map(Queues.EGate -> 10, Queues.EeaDesk -> 15),
       0,
       Seq(1, 2)
@@ -215,7 +215,7 @@ println(s"qsValues: $qsValues")
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60),
       Map(Queues.EGate -> 1),
       Map(Queues.EGate -> 3),
-      Iterable.fill(5)(5),
+      IndexedSeq.fill(5)(5),
       Map(Queues.EGate -> 10),
       0,
       Seq(1,2)
@@ -244,7 +244,7 @@ println(s"qsValues: $qsValues")
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60),
       Map(Queues.EGate -> 1),
       Map(Queues.EGate -> 3),
-      Iterable.fill(5)(5),
+      IndexedSeq.fill(5)(5),
       Map(Queues.EGate -> 10),
       0,
       Seq()

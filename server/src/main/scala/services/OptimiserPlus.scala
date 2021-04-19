@@ -5,7 +5,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
-case class OptimiserPlusConfig(sla: Int, processors: WorkloadProcessorsLike)
+case class OptimiserConfig(sla: Int, processors: WorkloadProcessorsLike)
 
 object OptimiserPlus {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -21,7 +21,7 @@ object OptimiserPlus {
   def crunch(workloads: Iterable[Double],
              minDesks: Iterable[Int],
              maxDesks: Iterable[Int],
-             config: OptimiserPlusConfig): Try[OptimizerCrunchResult] = {
+             config: OptimiserConfig): Try[OptimizerCrunchResult] = {
     val indexedWork = workloads.toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
@@ -38,7 +38,7 @@ object OptimiserPlus {
     } yield OptimizerCrunchResult(desks.toIndexedSeq, processedWork.waits)
   }
 
-  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserPlusConfig): Try[Seq[Int]] =
+  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserConfig): Try[Seq[Int]] =
     OptimiserPlus.tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq(), config.processors).map(_.waits)
 
   def approx(x: IndexedSeq[Int], y: IndexedSeq[Int], i: Seq[Double]): List[Double] = {

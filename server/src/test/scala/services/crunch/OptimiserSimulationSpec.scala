@@ -1,7 +1,7 @@
 package services.crunch
 
 import org.specs2.mutable.Specification
-import services.{DeskWorkloadProcessors$, OptimiserPlus, OptimiserPlusConfig}
+import services.{DeskWorkloadProcessors, OptimiserPlus, OptimiserConfig}
 
 import scala.util.Try
 
@@ -15,8 +15,8 @@ object Memory {
 }
 
 class OptimiserSimulationSpec extends Specification {
-  val simService: (Seq[Double], Seq[Int], OptimiserPlusConfig) => Try[Seq[Int]] = OptimiserPlus.runSimulationOfWork
-  val optimizerConfig: OptimiserPlusConfig = OptimiserPlusConfig(25, DeskWorkloadProcessors$)
+  val simService: (Seq[Double], Seq[Int], OptimiserConfig) => Try[Seq[Int]] = OptimiserPlus.runSimulationOfWork
+  val optimizerConfig: OptimiserConfig = OptimiserConfig(25, DeskWorkloadProcessors)
 
   def randomWorkload: Seq[Double] = 1 to 1440 map (_ => Math.random() * 25)
   def randomDesks: Seq[Int] = 1 to 1440 map (_ => (Math.random() * 30).toInt)

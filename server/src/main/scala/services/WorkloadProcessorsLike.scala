@@ -6,7 +6,7 @@ trait WorkloadProcessorsLike {
   val forWorkload: PartialFunction[Double, Int]
 }
 
-case object DeskWorkloadProcessors$ extends WorkloadProcessorsLike {
+case object DeskWorkloadProcessors extends WorkloadProcessorsLike {
   override def capacityForServers(servers: Int): Int = servers
 
   override val forWorkload: PartialFunction[Double, Int] = {

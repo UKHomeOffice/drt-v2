@@ -1,6 +1,6 @@
 import scala.util.Try
 
 package object services {
-  type TryCrunch = (Seq[Double], Seq[Int], Seq[Int], OptimiserPlusConfig) => Try[OptimizerCrunchResult]
-  type Simulator = (Seq[Double], Seq[Int], OptimiserPlusConfig) => Try[Seq[Int]]
+  type TryCrunch = (Seq[Double], Seq[Int], Seq[Int], OptimiserConfig) => Try[OptimizerCrunchResult]
+  type Simulator = (Seq[Double], Seq[Int], OptimiserConfig) => Try[Seq[Int]]
 }

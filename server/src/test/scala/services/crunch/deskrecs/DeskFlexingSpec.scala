@@ -6,7 +6,7 @@ import drt.shared.Queues._
 import drt.shared.Terminals.T1
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimits
 import services.crunch.{CrunchTestLike, deskrecs}
-import services.{OptimiserPlusConfig, OptimizerConfig, OptimizerCrunchResult, SDate}
+import services.{OptimiserConfig, OptimizerCrunchResult, SDate}
 
 import scala.collection.immutable.NumericRange
 import scala.util.{Success, Try}
@@ -44,8 +44,8 @@ class DeskFlexingSpec extends CrunchTestLike {
   class MockWithObserver {
     var observedMaxDesks: List[List[Int]] = List()
 
-    val mockDeskRecs: (Seq[Double], Seq[Int], Seq[Int], OptimiserPlusConfig) => Try[OptimizerCrunchResult] =
-      (_: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], _: OptimiserPlusConfig) => {
+    val mockDeskRecs: (Seq[Double], Seq[Int], Seq[Int], OptimiserConfig) => Try[OptimizerCrunchResult] =
+      (_: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], _: OptimiserConfig) => {
         observedMaxDesks = observedMaxDesks ++ List(maxDesks.toList)
         Success(OptimizerCrunchResult(minDesks.toIndexedSeq, minDesks))
       }

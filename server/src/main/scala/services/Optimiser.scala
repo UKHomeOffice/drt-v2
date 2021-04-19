@@ -28,7 +28,7 @@ object Optimiser {
   def crunch(workloads: Iterable[Double],
              minDesks: Iterable[Int],
              maxDesks: Iterable[Int],
-             config: OptimizerConfig): Try[OptimizerCrunchResult] = {
+             config: OptimiserConfig): Try[OptimizerCrunchResult] = {
     val indexedWork = workloads.toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
@@ -45,7 +45,7 @@ object Optimiser {
     } yield OptimizerCrunchResult(desks.toIndexedSeq, processedWork.waits)
   }
 
-  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimizerConfig): Try[Seq[Int]] =
+  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserConfig): Try[Seq[Int]] =
     Optimiser.tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq()).map(_.waits)
 
   def approx(x: IndexedSeq[Int], y: IndexedSeq[Int], i: Seq[Double]): List[Double] = {

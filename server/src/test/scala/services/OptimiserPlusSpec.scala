@@ -8,7 +8,7 @@ import scala.util.Try
 class OptimiserPlusSpec extends Specification {
   "Given 1 minutes incoming workload per minute, and desks fixed at 1 per minute" >> {
     "I should see all the workload completed each minute, leaving zero wait times" >> {
-      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(Seq.fill(30)(1), Seq.fill(30)(1), Seq.fill(30)(1), OptimiserPlusConfig(20, EGateWorkloadProcessors(Iterable(1))))
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(Seq.fill(30)(1), Seq.fill(30)(1), Seq.fill(30)(1), OptimiserConfig(20, EGateWorkloadProcessors(Iterable(1))))
 
       val expected = Seq.fill(30)(0)
 
@@ -18,7 +18,7 @@ class OptimiserPlusSpec extends Specification {
 
   "Given 2 minutes incoming workload per minute, and desks fixed at 1 per minute" >> {
     "I should see workload spilling over each minute, leaving increasing wait times" >> {
-      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(Seq.fill(30)(2), Seq.fill(30)(1), Seq.fill(30)(1), OptimiserPlusConfig(20, EGateWorkloadProcessors(Iterable(1))))
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(Seq.fill(30)(2), Seq.fill(30)(1), Seq.fill(30)(1), OptimiserConfig(20, EGateWorkloadProcessors(Iterable(1))))
 
       val expected = Seq(1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15)
 
@@ -28,7 +28,7 @@ class OptimiserPlusSpec extends Specification {
 
   "Given 10 minutes incoming workload per minute, and egate banks of size 10 gates fixed at 1 bank per minute" >> {
     "I should see all the workload completed each minute, leaving zero wait times" >> {
-      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(30)(1), Seq.fill(30)(1), OptimiserPlusConfig(20, EGateWorkloadProcessors(Iterable(10))))
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(30)(1), Seq.fill(30)(1), OptimiserConfig(20, EGateWorkloadProcessors(Iterable(10))))
 
       val expected = Seq.fill(30)(0)
 
@@ -38,7 +38,7 @@ class OptimiserPlusSpec extends Specification {
 
   "Given 10 minutes incoming workload per minute, and egate banks of size 5 gates fixed at 1 bank per minute" >> {
     "I should see wait times creeping up by a minute every 2 minutes" >> {
-      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(30)(1), Seq.fill(30)(1), OptimiserPlusConfig(20, EGateWorkloadProcessors(Iterable(5))))
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(30)(1), Seq.fill(30)(1), OptimiserConfig(20, EGateWorkloadProcessors(Iterable(5))))
 
       val expected = Seq(
         1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
@@ -52,7 +52,7 @@ class OptimiserPlusSpec extends Specification {
 
   "Given 20 minutes incoming workload per minute, and egate banks of size 15 gates fixed at 1 bank per minute" >> {
     "I should see wait times creeping up by a minute every 4 minutes" >> {
-      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(20), Seq.fill(30)(1), Seq.fill(30)(1), OptimiserPlusConfig(20, EGateWorkloadProcessors(Iterable(15))))
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(20), Seq.fill(30)(1), Seq.fill(30)(1), OptimiserConfig(20, EGateWorkloadProcessors(Iterable(15))))
 
       val expected = Seq(
         1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3,
@@ -67,7 +67,7 @@ class OptimiserPlusSpec extends Specification {
   "Given 10 minutes incoming workload per minute, and egate banks of sizes 5 & 5 gates fixed at 1 bank for 15 mins followed by 2 banks for 15 mins" >> {
     "I should see wait times creeping up by a minute every 2 minutes for the first 15 minutes and then holding steady for the remaining time" >> {
       val bankSizes = Iterable(5, 5)
-      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(15)(1) ++ Seq.fill(15)(2), Seq.fill(15)(1) ++ Seq.fill(15)(2), OptimiserPlusConfig(20, EGateWorkloadProcessors(bankSizes)))
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(15)(1) ++ Seq.fill(15)(2), Seq.fill(15)(1) ++ Seq.fill(15)(2), OptimiserConfig(20, EGateWorkloadProcessors(bankSizes)))
 
       val expected = Seq(
         1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8,
@@ -85,7 +85,7 @@ class OptimiserPlusSpec extends Specification {
         List.fill(30)(10),
         Seq.fill(15)(1) ++ Seq.fill(15)(2),
         Seq.fill(15)(1) ++ Seq.fill(15)(2),
-        OptimiserPlusConfig(20, EGateWorkloadProcessors(bankSizes)))
+        OptimiserConfig(20, EGateWorkloadProcessors(bankSizes)))
 
       val expected = Seq(
         1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0
@@ -98,7 +98,7 @@ class OptimiserPlusSpec extends Specification {
   "Given 10 minutes incoming workload per minute, and egate banks of sizes 5 & 10 gates with min 1 and max 3, and small SLA of 5 minutes" >> {
     "The optimiser should decide on 2 banks (9 gates) for 15 minutes followed by 3 banks (11 gates), with wait times slowly climbing and then slowly falling" >> {
       val bankSizes = Iterable(6, 3, 2)
-      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(30)(1), Seq.fill(30)(3), OptimiserPlusConfig(5, EGateWorkloadProcessors(bankSizes)))
+      val result: Try[OptimizerCrunchResult] = OptimiserPlus.crunch(List.fill(30)(10), Seq.fill(30)(1), Seq.fill(30)(3), OptimiserConfig(5, EGateWorkloadProcessors(bankSizes)))
 
       val expected = OptimizerCrunchResult(
         Vector(
