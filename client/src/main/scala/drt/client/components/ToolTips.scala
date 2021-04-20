@@ -17,6 +17,8 @@ object ToolTips {
 
   val availableStaffDeploymentsTooltip = Tippy.infoHover("In the Available staff deployment view, DRT allocates the minimum number of staff needed to help you avoid breaching SLAs within the constraints of staff available.")
 
+  val countryTooltip = Tippy.info(<.span("Countries on COVID-19 red list are now underlined in red. This is an interim change to quickly highlight this information. We welcome your feedback."))
+
   val currentTooltip = Tippy.infoHover("The Current view uses the latest data available to provide information about the day being viewed.")
 
   val defaultProcessingTimesTooltip = Tippy.info("Processing times are unique to each port. If they don't look right contact us and we'll get them changed for you.")
