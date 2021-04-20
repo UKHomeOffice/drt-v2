@@ -1,7 +1,7 @@
 package drt.client.actions
 
 import diode.Action
-import drt.client.components.scenarios.SimulationParamsForm
+import drt.client.components.scenarios.SimulationFormFields
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
@@ -176,7 +176,7 @@ object Actions {
 
   case class ResetFileUpload() extends Action
 
-  case class GetSimulation(simulation: SimulationParamsForm) extends Action
+  case class GetSimulation(simulation: SimulationFormFields) extends Action
 
   case class SetSimulation(simulationResult: SimulationResult) extends Action
 

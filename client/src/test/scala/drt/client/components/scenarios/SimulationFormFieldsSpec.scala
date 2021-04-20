@@ -5,10 +5,10 @@ import drt.shared.dates.LocalDate
 import drt.shared.{PaxTypesAndQueues, Queues}
 import utest.{TestSuite, _}
 
-class SimulationParamsFormSpec extends TestSuite {
+class SimulationFormFieldsSpec extends TestSuite {
   val tests: Tests = Tests {
     "Given I am converting simulation params into a query string with a minimal data set" - {
-      val simulationParams = SimulationParamsForm(
+      val simulationParams = SimulationFormFields(
         Terminal("T1"),
         LocalDate(2020, 2, 2),
         Option(1.0),
@@ -85,7 +85,7 @@ class SimulationParamsFormSpec extends TestSuite {
     }
 
     "Given I am converting simulation params into a query string with queue data" - {
-      val simulationParams = SimulationParamsForm(
+      val simulationParams = SimulationFormFields(
         Terminal("T1"),
         LocalDate(2020, 2, 2),
         Option(1.0),

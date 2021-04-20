@@ -12,8 +12,8 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import scalacss.ScalaCssReactImplicits
 
-object SimulationParamsForm {
-  def apply(terminal: Terminal, date: LocalDate, airportConfig: AirportConfig): SimulationParamsForm = {
+object SimulationFormFields {
+  def apply(terminal: Terminal, date: LocalDate, airportConfig: AirportConfig): SimulationFormFields = {
     val processingTimes: Map[PaxTypeAndQueue, Option[Int]] = airportConfig.terminalProcessingTimes(terminal)
       .filterNot {
         case (paxTypeAndQueue: PaxTypeAndQueue, _) =>
@@ -30,7 +30,7 @@ object SimulationParamsForm {
     val slas: Map[Queue, Option[Int]] = airportConfig.slaByQueue.mapValues(Option(_))
     val egateOpeningHours: Seq[Int] = fullDay
 
-    SimulationParamsForm(
+    SimulationFormFields(
       terminal,
       date,
       Option(1.0),
@@ -46,7 +46,7 @@ object SimulationParamsForm {
 
 }
 
-case class SimulationParamsForm(terminal: Terminal,
+case class SimulationFormFields(terminal: Terminal,
                                 date: LocalDate,
                                 passengerWeighting: Option[Double],
                                 processingTimes: Map[PaxTypeAndQueue, Option[Int]],
@@ -68,14 +68,14 @@ case class SimulationParamsForm(terminal: Terminal,
 
   def eGateOpenAt(hour: Int): Boolean = eGateOpenHours.contains(hour)
 
-  def toggleEgateHour(hour: Int): SimulationParamsForm = if (eGateOpenAt(hour))
+  def toggleEgateHour(hour: Int): SimulationFormFields = if (eGateOpenAt(hour))
     copy(eGateOpenHours = eGateOpenHours.filter(_ != hour))
   else
     copy(eGateOpenHours = eGateOpenHours :+ hour)
 
-  def closeEgatesAllDay: SimulationParamsForm = copy(eGateOpenHours = Seq())
+  def closeEgatesAllDay: SimulationFormFields = copy(eGateOpenHours = Seq())
 
-  def openEgatesAllDay: SimulationParamsForm = copy(eGateOpenHours = SimulationParams.fullDay)
+  def openEgatesAllDay: SimulationFormFields = copy(eGateOpenHours = SimulationParams.fullDay)
 
   def toQueryStringParams: String = {
     List(
@@ -110,7 +110,7 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
   val steps = List("Passenger numbers", "Processing Times", "Queue SLAs", "Configure Desk Availability")
 
 
-  case class State(simulationParams: SimulationParamsForm, panelStatus: Map[String, Boolean]) {
+  case class State(simulationParams: SimulationFormFields, panelStatus: Map[String, Boolean]) {
     def isOpen(panel: String): Boolean = panelStatus.getOrElse(panel, false)
 
     def toggle(panel: String): State = copy(
@@ -122,7 +122,7 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
 
   private val component = ScalaComponent.builder[Props]("SimulationComponent")
     .initialStateFromProps(p =>
-      State(SimulationParamsForm(p.terminal, p.date, p.airportConfig), Map())
+      State(SimulationFormFields(p.terminal, p.date, p.airportConfig), Map())
     )
     .render_PS {
 

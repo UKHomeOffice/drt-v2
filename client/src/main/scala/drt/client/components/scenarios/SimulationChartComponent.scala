@@ -21,7 +21,7 @@ import scala.scalajs.js.JSConverters.JSRichGenTraversableOnce
 object SimulationChartComponent extends ScalaCssReactImplicits {
 
   case class Props(
-                    simulationParams: SimulationParamsForm,
+                    simulationParams: SimulationFormFields,
                     airportConfig: AirportConfig,
                     terminal: Terminal
                   ) {
@@ -172,7 +172,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
   }
 
   def apply(
-             simulationParams: SimulationParamsForm,
+             simulationParams: SimulationFormFields,
              airportConfig: AirportConfig,
              terminal: Terminal
            ): VdomElement = component(Props(simulationParams, airportConfig, terminal))

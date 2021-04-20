@@ -28,7 +28,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
   val steps = List("Passenger numbers", "Processing Times", "Queue SLAs", "Configure Desk Availability")
 
-  case class State(simulationFormFields: SimulationParamsForm, panelStatus: Map[String, Boolean]) {
+  case class State(simulationFormFields: SimulationFormFields, panelStatus: Map[String, Boolean]) {
     def isOpen(panel: String): Boolean = panelStatus.getOrElse(panel, false)
 
     def toggle(panel: String): State = copy(
@@ -46,7 +46,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SimulationFormComponent")
     .initialStateFromProps(p =>
-      State(SimulationParamsForm(p.terminal, p.date, p.airportConfig), Map())
+      State(SimulationFormFields(p.terminal, p.date, p.airportConfig), Map())
     )
     .renderS {
 
@@ -321,7 +321,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
     })
     .build
 
-  private def submitButton(showCharts: Callback, form: SimulationParamsForm): WithPropsAndTagsMods = {
+  private def submitButton(showCharts: Callback, form: SimulationFormFields): WithPropsAndTagsMods = {
     val (colour, callback) = if (form.isValid)
       (MuiButton.Color.primary, showCharts)
     else
