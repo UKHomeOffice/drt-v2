@@ -149,6 +149,7 @@ object FlightsWithSplitsTable {
         case (label, None) => <.th(label)
         case (label, Some(className)) if className == "status" => <.th(label, " ", arrivalStatusTooltip, ^.className := className)
         case (label, Some(className)) if className == "gate-stand" => <.th(label, " ", gateOrStandTh, ^.className := className)
+        case (label, Some(className)) if className == "country" => <.th(label, " ", countryTooltip, ^.className := className)
         case (label, Some(className)) => <.th(label, ^.className := className)
       }
       .toTagMod
