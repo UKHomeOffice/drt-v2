@@ -56,7 +56,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
 
   "Given some arrivals and simlution config I should get back DeskRecMinutes containing all the passengers from the arrivals" >> {
 
-    val simulationParams = SimulationParams(Terminals.T1, crunchDate, defaultAirportConfig)
+    val simulationParams = defaultSimulationParams(Terminals.T1, crunchDate, defaultAirportConfig)
 
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(
       simulationParams.applyPassengerWeighting(FlightsWithSplits(arrivals.map(a => ApiFlightWithSplits(a, Set())))
@@ -76,6 +76,31 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     val result = Await.result(futureResult, 1 second)
 
     result.minutes.map(_.paxLoad).sum === 100
+  }
+
+  def defaultSimulationParams(terminal: Terminal, date: LocalDate, airportConfig: AirportConfig): SimulationParams = {
+    SimulationParams(
+      terminal,
+      date,
+      1.0,
+      airportConfig.terminalProcessingTimes(terminal)
+        .filterNot {
+          case (paxTypeAndQueue: PaxTypeAndQueue, _) =>
+            paxTypeAndQueue.queueType == Queues.Transfer
+
+        }
+        .mapValues(m => (m * 60).toInt),
+      airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
+        case (q, (min, _)) => q -> min.max
+      },
+      airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
+        case (q, (_, max)) => q -> max.max
+      },
+      eGateBanksSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq,
+      slaByQueue = airportConfig.slaByQueue,
+      crunchOffsetMinutes = 0,
+      eGateOpenHours = SimulationParams.fullDay
+    )
   }
 
 }

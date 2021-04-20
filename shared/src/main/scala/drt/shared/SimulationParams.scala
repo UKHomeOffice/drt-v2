@@ -20,16 +20,6 @@ case class SimulationParams(
                              crunchOffsetMinutes: Int,
                              eGateOpenHours: Seq[Int],
                            ) {
-  def eGateOpenAt(hour: Int): Boolean = eGateOpenHours.contains(hour)
-
-  def toggleEgateHour(hour: Int): SimulationParams = if (eGateOpenAt(hour))
-    copy(eGateOpenHours = eGateOpenHours.filter(_ != hour))
-  else
-    copy(eGateOpenHours = eGateOpenHours :+ hour)
-
-  def closeEgatesAllDay: SimulationParams = copy(eGateOpenHours = Seq())
-
-  def openEgatesAllDay: SimulationParams = copy(eGateOpenHours = SimulationParams.fullDay)
 
   def applyToAirportConfig(airportConfig: AirportConfig): AirportConfig = {
     val openDesks: Map[Queues.Queue, (List[Int], List[Int])] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
@@ -67,30 +57,6 @@ case class SimulationParams(
           TranPax = fws.apiFlight.TranPax.map(n => (n * passengerWeighting).toInt)
         ))
     })
-
-  def toQueryStringParams: String = {
-    List(
-      s"terminal=$terminal",
-      s"date=$date",
-      s"passengerWeighting=$passengerWeighting",
-      s"eGateBankSizes=${eGateBanksSizes.mkString(",")}",
-      s"crunchOffsetMinutes=$crunchOffsetMinutes",
-      s"eGateOpenHours=${eGateOpenHours.mkString(",")}"
-    ) ::
-      processingTimes.map {
-        case (ptq, value) => s"${ptq.key}=$value"
-      } ::
-      minDesks.map {
-        case (q, value) => s"${q}_min=$value"
-      } ::
-      maxDesks.map {
-        case (q, value) => s"${q}_max=$value"
-      } ::
-      slaByQueue.map {
-        case (q, value) => s"${q}_sla=$value"
-      } :: Nil
-  }.flatten.mkString("&")
-
 }
 
 case class SimulationResult(params: SimulationParams, queueToCrunchMinutes: Map[Queues.Queue, List[CrunchApi.CrunchMinute]])
@@ -105,31 +71,6 @@ object SimulationParams {
 
   val fullDay = Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
 
-  def apply(terminal: Terminal, date: LocalDate, airportConfig: AirportConfig): SimulationParams = {
-    SimulationParams(
-      terminal,
-      date,
-      1.0,
-      airportConfig.terminalProcessingTimes(terminal)
-        .filterNot {
-          case (paxTypeAndQueue: PaxTypeAndQueue, _) =>
-            paxTypeAndQueue.queueType == Queues.Transfer
-
-        }
-        .mapValues(m => (m * 60).toInt),
-      airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
-        case (q, (min, _)) => q -> min.max
-      },
-      airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
-        case (q, (_, max)) => q -> max.max
-      },
-      eGateBanksSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq,
-      slaByQueue = airportConfig.slaByQueue,
-      crunchOffsetMinutes = 0,
-      eGateOpenHours = fullDay
-    )
-  }
-
   val requiredFields = List(
     "terminal",
     "date",
@@ -140,7 +81,6 @@ object SimulationParams {
   )
 
   def fromQueryStringParams(qsMap: Map[String, Seq[String]]): Try[SimulationParams] = Try {
-
     val maybeSimulationFieldsStrings: Map[String, Option[String]] = requiredFields
       .map(f => f -> qsMap.get(f).flatMap(_.headOption)).toMap
 

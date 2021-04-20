@@ -10,6 +10,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import scalacss.ScalaCssReactImplicits
 
+
 object ScenarioSimulationComponent extends ScalaCssReactImplicits {
 
   implicit val stateReuse: Reusability[State] = Reusability.by_==[State]
@@ -18,29 +19,19 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
   val steps = List("Passenger numbers", "Processing Times", "Queue SLAs", "Configure Desk Availability")
 
 
-  case class State(
-                    simulationParams: SimulationParams,
-                    panelStatus: Map[String, Boolean]
-                  ) {
+  case class State(simulationParams: SimulationFormFields, panelStatus: Map[String, Boolean]) {
+    def isOpen(panel: String): Boolean = panelStatus.getOrElse(panel, false)
 
-    def isOpen(panel: String) = panelStatus.getOrElse(panel, false)
-
-    def toggle(panel: String) = copy(
+    def toggle(panel: String): State = copy(
       panelStatus = panelStatus + (panel -> !isOpen(panel))
     )
-
   }
 
-  case class Props(
-                    date: LocalDate,
-                    terminal: Terminal,
-                    airportConfig: AirportConfig,
-                  )
+  case class Props(date: LocalDate, terminal: Terminal, airportConfig: AirportConfig)
 
-
-  val component = ScalaComponent.builder[Props]("SimulationComponent")
+  private val component = ScalaComponent.builder[Props]("SimulationComponent")
     .initialStateFromProps(p =>
-      State(SimulationParams(p.terminal, p.date, p.airportConfig), Map())
+      State(SimulationFormFields(p.terminal, p.date, p.airportConfig), Map())
     )
     .render_PS {
 
@@ -48,7 +39,6 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
 
         <.div(
           <.h2("Arrival Scenario Simulation"),
-
           MuiPaper()(
             DefaultFormFieldsStyle.simulation,
             MuiGrid(direction = MuiGrid.Direction.row, container = true, spacing = 16)(
@@ -67,8 +57,8 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
       GoogleEventTracker.sendPageView(s"Arrival Simulations Page")
     }).build
 
-  def apply(date: LocalDate, terminal: Terminal, airportConfg: AirportConfig, portState: PortState): VdomElement =
-    component(Props(date, terminal, airportConfg))
+  def apply(date: LocalDate, terminal: Terminal, airportConfig: AirportConfig, portState: PortState): VdomElement =
+    component(Props(date, terminal, airportConfig))
 }
 
 

@@ -1,8 +1,8 @@
 package drt.client.components.scenarios
 
 import drt.client.components.ChartJSComponent._
-import drt.client.components.styles.ScalaCssImplicits.StringExtended
 import drt.client.components.styles.DefaultFormFieldsStyle
+import drt.client.components.styles.ScalaCssImplicits.StringExtended
 import drt.client.components.{ChartJSComponent, potReactForwarder}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
@@ -21,7 +21,7 @@ import scala.scalajs.js.JSConverters.JSRichGenTraversableOnce
 object SimulationChartComponent extends ScalaCssReactImplicits {
 
   case class Props(
-                    simulationParams: SimulationParams,
+                    simulationParams: SimulationFormFields,
                     airportConfig: AirportConfig,
                     terminal: Terminal
                   ) {
@@ -29,12 +29,12 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
   }
 
   case class State(activeTab: String) {
-    def handleChange(tab: String) = copy(activeTab = tab)
+    def handleChange(tab: String): State = copy(activeTab = tab)
 
-    def isSelected(tab: String) = tab == activeTab
+    def isSelected(tab: String): Boolean = tab == activeTab
   }
 
-  val component = ScalaComponent.builder[Props]("SimulationChartComponent")
+  private val component = ScalaComponent.builder[Props]("SimulationChartComponent")
     .initialStateFromProps(p =>
       State(p.airportConfig.desksExportQueueOrder.head.toString)
     )
@@ -132,7 +132,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
         )
     }
 
-  def minutesToQueueDataSets(cms: List[CrunchApi.CrunchMinute]) = {
+  def minutesToQueueDataSets(cms: List[CrunchApi.CrunchMinute]): Seq[ChartJsDataSet] = {
     val paxPerSlot = cms.map(m => Math.round(m.paxLoad).toDouble)
     val paxDataSet = ChartJsDataSet(
       data = paxPerSlot.toJSArray,
@@ -172,7 +172,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
   }
 
   def apply(
-             simulationParams: SimulationParams,
+             simulationParams: SimulationFormFields,
              airportConfig: AirportConfig,
              terminal: Terminal
            ): VdomElement = component(Props(simulationParams, airportConfig, terminal))
