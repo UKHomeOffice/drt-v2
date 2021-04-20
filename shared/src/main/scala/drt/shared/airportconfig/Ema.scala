@@ -49,6 +49,7 @@ object Ema extends AirportConfigLike {
         Queues.QueueDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
       )
     ),
+    eGateBankSizes = Map(T1 -> Iterable(5)),
     role = EMA,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(

@@ -10,8 +10,7 @@ import akka.stream.{ActorMaterializer, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
 import drt.shared.PaxTypes._
-import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk, nonVisaNationalToDesk, visaNationalToDesk}
-import drt.shared.PortState.empty.crunchMinutes
+import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.{T1, T2, Terminal}
@@ -63,11 +62,15 @@ object TestDefaults {
       T1 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))),
+        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(2)))),
       T2 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))))),
+        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(2))))),
+    eGateBankSizes = Map(
+      T1 -> Iterable(10, 10),
+      T2 -> Iterable(10, 10),
+    ),
     timeToChoxMillis = 120000L,
     role = STN,
     terminalPaxTypeQueueAllocation = Map(
@@ -117,9 +120,10 @@ object TestDefaults {
       T1 -> Map(
         Queues.EeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
         Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(20))),
-        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(20)))
+        Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(2)))
       )
     ),
+    eGateBankSizes = Map(T1 -> Iterable(10, 5)),
     timeToChoxMillis = 120000L,
     role = STN,
     terminalPaxTypeQueueAllocation = Map(
@@ -167,6 +171,7 @@ object TestDefaults {
       terminalPaxSplits = Map(T1 -> SplitRatios(ratios, SplitSources.TerminalAverage)),
       terminalProcessingTimes = Map(T1 -> procTimes.filterKeys { case PaxTypeAndQueue(_, q) => queues.contains(q) }),
       minMaxDesksByTerminalQueue24Hrs = Map(T1 -> queues.map(q => (q, minMax)).toMap),
+      eGateBankSizes = Map(T1 -> Iterable(10, 5)),
       timeToChoxMillis = 120000L,
       role = STN,
       terminalPaxTypeQueueAllocation = Map(T1 -> paxTypeQueues),

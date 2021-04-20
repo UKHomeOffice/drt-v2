@@ -2,12 +2,11 @@ package services.crunch
 
 import actors.DrtStaticParameters
 import akka.actor.{ActorRef, Props}
+import drt.shared._
 import drt.shared.api.Arrival
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
-import services.{Simulator, SplitsProvider, TryCrunch}
-import drt.shared._
 import services.graphstages.CrunchMocks
-import services.{Simulator, SplitsProvider, TryCrunch}
+import services.{TrySimulator, SplitsProvider, TryCrunch}
 
 import scala.collection.immutable.SortedMap
 
@@ -26,7 +25,7 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       initialStaffMovements: Seq[StaffMovement] = Seq(),
                       logLabel: String = "",
                       cruncher: TryCrunch = CrunchMocks.mockCrunch,
-                      simulator: Simulator = CrunchMocks.mockSimulator,
+                      simulator: TrySimulator = CrunchMocks.mockSimulator,
                       maybeAggregatedArrivalsActor: Option[ActorRef] = None,
                       useLegacyManifests: Boolean = false,
                       maxDaysToCrunch: Int = 2,

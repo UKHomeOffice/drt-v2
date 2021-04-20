@@ -44,6 +44,7 @@ object Test extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8))
       )
     ),
+    eGateBankSizes = Map(T1 -> Iterable(10, 10, 10)),
     role = TEST,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (EeaMachineReadable -> List(

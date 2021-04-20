@@ -15,12 +15,12 @@ case class SimulationParams(
                              processingTimes: Map[PaxTypeAndQueue, Int],
                              minDesks: Map[Queue, Int],
                              maxDesks: Map[Queue, Int],
-                             eGateBanksSize: Int,
+                             eGateBanksSizes: IndexedSeq[Int],
                              slaByQueue: Map[Queue, Int],
                              crunchOffsetMinutes: Int,
                              eGateOpenHours: Seq[Int],
                            ) {
-  def eGateOpenAt(hour: Int) = eGateOpenHours.contains(hour)
+  def eGateOpenAt(hour: Int): Boolean = eGateOpenHours.contains(hour)
 
   def toggleEgateHour(hour: Int): SimulationParams = if (eGateOpenAt(hour))
     copy(eGateOpenHours = eGateOpenHours.filter(_ != hour))
@@ -31,7 +31,7 @@ case class SimulationParams(
 
   def openEgatesAllDay: SimulationParams = copy(eGateOpenHours = SimulationParams.fullDay)
 
-  def applyToAirportConfig(airportConfig: AirportConfig) = {
+  def applyToAirportConfig(airportConfig: AirportConfig): AirportConfig = {
     val openDesks: Map[Queues.Queue, (List[Int], List[Int])] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
       case (q, (origMinDesks, origMaxDesks)) =>
 
@@ -42,7 +42,7 @@ case class SimulationParams(
 
     airportConfig.copy(
       minMaxDesksByTerminalQueue24Hrs = airportConfig.minMaxDesksByTerminalQueue24Hrs + (terminal -> openDesks),
-      eGateBankSize = eGateBanksSize,
+      eGateBankSizes = Map(terminal -> eGateBanksSizes),
       slaByQueue = airportConfig.slaByQueue.map {
         case (q, v) => q -> slaByQueue.getOrElse(q, v)
       },
@@ -58,7 +58,7 @@ case class SimulationParams(
 
   }
 
-  def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits) =
+  def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits): FlightsWithSplits =
     FlightsWithSplits(flightsWithSplits.flights.map {
       case (ua, fws) => ua -> fws.copy(
         apiFlight = fws
@@ -73,7 +73,7 @@ case class SimulationParams(
       s"terminal=$terminal",
       s"date=$date",
       s"passengerWeighting=$passengerWeighting",
-      s"eGateBankSize=$eGateBanksSize",
+      s"eGateBankSizes=${eGateBanksSizes.mkString(",")}",
       s"crunchOffsetMinutes=$crunchOffsetMinutes",
       s"eGateOpenHours=${eGateOpenHours.mkString(",")}"
     ) ::
@@ -110,11 +110,12 @@ object SimulationParams {
       terminal,
       date,
       1.0,
-      airportConfig.terminalProcessingTimes(terminal).filterNot {
-        case (paxTypeAndQueue: PaxTypeAndQueue, _) =>
-          paxTypeAndQueue.queueType == Queues.Transfer
+      airportConfig.terminalProcessingTimes(terminal)
+        .filterNot {
+          case (paxTypeAndQueue: PaxTypeAndQueue, _) =>
+            paxTypeAndQueue.queueType == Queues.Transfer
 
-      }
+        }
         .mapValues(m => (m * 60).toInt),
       airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
         case (q, (min, _)) => q -> min.max
@@ -122,7 +123,7 @@ object SimulationParams {
       airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
         case (q, (_, max)) => q -> max.max
       },
-      eGateBanksSize = airportConfig.eGateBankSize,
+      eGateBanksSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq,
       slaByQueue = airportConfig.slaByQueue,
       crunchOffsetMinutes = 0,
       eGateOpenHours = fullDay
@@ -133,7 +134,7 @@ object SimulationParams {
     "terminal",
     "date",
     "passengerWeighting",
-    "eGateBankSize",
+    "eGateBankSizes",
     "crunchOffsetMinutes",
     "eGateOpenHours"
   )
@@ -154,28 +155,30 @@ object SimulationParams {
     }.toMap
 
     val maybeParams = for {
-      terminal: String <- maybeSimulationFieldsStrings("terminal")
+      terminalName: String <- maybeSimulationFieldsStrings("terminal")
       dateString: String <- maybeSimulationFieldsStrings("date")
       localDate <- LocalDate.parse(dateString)
       passengerWeightingString: String <- maybeSimulationFieldsStrings("passengerWeighting")
-
-      eGateBankSizeString: String <- maybeSimulationFieldsStrings("eGateBankSize")
+      eGateBankSizeString: String <- maybeSimulationFieldsStrings("eGateBankSizes")
       crunchOffsetMinutes: String <- maybeSimulationFieldsStrings("crunchOffsetMinutes")
       eGateOpenHours: String <- maybeSimulationFieldsStrings("eGateOpenHours")
-    } yield SimulationParams(
-      Terminal(terminal),
-      localDate,
-      passengerWeightingString.toDouble,
-      procTimes,
-      qMinDesks,
-      qMaxDesks,
-      eGateBankSizeString.toInt,
-      qSlas,
-      crunchOffsetMinutes.toInt,
-      eGateOpenHours.split(",").map(s => Try(s.toInt)).collect{
-        case Success(i) => i
-      }
-    )
+    } yield {
+      val terminal = Terminal(terminalName)
+      SimulationParams(
+        terminal,
+        localDate,
+        passengerWeightingString.toDouble,
+        procTimes,
+        qMinDesks,
+        qMaxDesks,
+        eGateBankSizeString.split(",").map(_.toInt),
+        qSlas,
+        crunchOffsetMinutes.toInt,
+        eGateOpenHours.split(",").map(s => Try(s.toInt)).collect {
+          case Success(i) => i
+        }
+      )
+    }
 
     maybeParams match {
       case Some(simulationParams) => simulationParams

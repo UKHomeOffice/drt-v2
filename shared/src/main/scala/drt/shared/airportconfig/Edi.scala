@@ -49,6 +49,7 @@ object Edi extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3))
       )
     ),
+    eGateBankSizes = Map(A1 -> Iterable(5), A2 -> Iterable(10)),
     role = EDI,
     terminalPaxTypeQueueAllocation = Map(
       A1 -> (defaultQueueRatios + (EeaMachineReadable -> List(

@@ -2,15 +2,15 @@ package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.{Closed, Open, Queue, QueueFallbacks, Transfer}
+import drt.shared.Queues.{Queue, QueueFallbacks, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import services.TryCrunch
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
-import services.graphstages.Crunch.{LoadMinute, europeLondonTimeZone}
+import services.graphstages.Crunch.LoadMinute
 import services.graphstages.{DynamicWorkloadCalculator, WorkloadCalculatorLike}
-import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 
@@ -22,7 +22,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                                      minutesToCrunch: Int,
                                      crunchOffsetMinutes: Int,
-                                     eGateBankSize: Int,
+                                     eGateBankSizes: Map[Terminal, Iterable[Int]],
                                      tryCrunch: TryCrunch,
                                      workloadCalculator: WorkloadCalculatorLike
                                     ) extends PortDesksAndWaitsProviderLike {
@@ -41,7 +41,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }.toMap
 
   def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
-    deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSize)
+    deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSizes.getOrElse(terminal, Iterable()))
 
   override def flightsToLoads(flights: FlightsWithSplits): Map[TQM, LoadMinute] = workloadCalculator
     .flightLoadMinutes(flights).minutes
@@ -107,7 +107,7 @@ object PortDesksAndWaitsProvider {
       terminalProcessingTimes = airportConfig.terminalProcessingTimes,
       minutesToCrunch = airportConfig.minutesToCrunch,
       crunchOffsetMinutes = airportConfig.crunchOffsetMinutes,
-      eGateBankSize = airportConfig.eGateBankSize,
+      eGateBankSizes = airportConfig.eGateBankSizes,
       tryCrunch = tryCrunch,
       workloadCalculator = calculator
     )

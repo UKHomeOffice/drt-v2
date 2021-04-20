@@ -44,6 +44,7 @@ object Lpl extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2))
       )
     ),
+    eGateBankSizes = Map(),
     role = LPL,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (

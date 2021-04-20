@@ -6,14 +6,16 @@ import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.components.styles.ScalaCssImplicits._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
+import drt.shared.Queues.EGate
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.LocalDate
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.icons.{MuiIcons, MuiIconsModule}
-import japgolly.scalajs.react._
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.all.{`type`, id, onChange, onClick, value}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
+import japgolly.scalajs.react.{CtorType, _}
 import scalacss.ScalaCssReactImplicits
 
 import scala.util.{Success, Try}
@@ -28,17 +30,17 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
   case class State(simulationParams: SimulationParams, panelStatus: Map[String, Boolean]) {
 
-    def isOpen(panel: String) = panelStatus.getOrElse(panel, false)
+    def isOpen(panel: String): Boolean = panelStatus.getOrElse(panel, false)
 
-    def toggle(panel: String) = copy(
+    def toggle(panel: String): State = copy(
       panelStatus = panelStatus + (panel -> !isOpen(panel))
     )
 
-    def toggleEGateHour(hour: Int) = copy(simulationParams = simulationParams.toggleEgateHour(hour))
+    def toggleEGateHour(hour: Int): State = copy(simulationParams = simulationParams.toggleEgateHour(hour))
 
-    def openEgatesAllDay = copy(simulationParams = simulationParams.openEgatesAllDay)
+    def openEgatesAllDay: State = copy(simulationParams = simulationParams.openEgatesAllDay)
 
-    def closeEgatesAllDay = copy(simulationParams = simulationParams.closeEgatesAllDay)
+    def closeEgatesAllDay: State = copy(simulationParams = simulationParams.closeEgatesAllDay)
 
   }
 
@@ -48,7 +50,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
                     airportConfig: AirportConfig,
                   )
 
-  val component = ScalaComponent.builder[Props]("SimulationFormComponent")
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SimulationFormComponent")
     .initialStateFromProps(p =>
       State(SimulationParams(p.terminal, p.date, p.airportConfig), Map())
     )
@@ -63,9 +65,13 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             Callback.empty
         }
 
-        def changeBankSize(e: ReactEventFromInput): Callback = Try(e.target.value.toInt) match {
-          case Success(bs) =>
-            scope.setState(state.copy(simulationParams = state.simulationParams.copy(eGateBanksSize = bs)))
+        def changeBankSize(bankIndex: Int)(e: ReactEventFromInput): Callback = Try(e.target.value.toInt) match {
+          case Success(newBankSize) =>
+            val maxEgates = state.simulationParams.maxDesks.getOrElse(EGate, 0)
+            val updatedBanks = state.simulationParams.eGateBanksSizes.indices.zip(state.simulationParams.eGateBanksSizes).map {
+              case (idx, existingBankSize) => if (idx == bankIndex) newBankSize else existingBankSize
+            }
+            scope.setState(state.copy(simulationParams = state.simulationParams.copy(eGateBanksSizes = updatedBanks)))
           case _ =>
             Callback.empty
         }
@@ -145,7 +151,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
         def processingTimesFields = {
           <.div(^.className := "",
-            state.simulationParams.processingTimes.toList.sortBy{
+            state.simulationParams.processingTimes.toList.sortBy {
               case (paxTypeAndQueue: PaxTypeAndQueue, _) => paxTypeAndQueue.passengerType.name
             }.map {
               case (ptq, _) =>
@@ -191,47 +197,50 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
         def minMaxDesksFields = {
           <.div(
-            state.simulationParams.minDesks.keys.map {
-              case q =>
-                <.div(
-                  ^.className := "form-check",
-                  MuiFormLabel()(
-                    DefaultFormFieldsStyle.labelWide,
-                    s"${Queues.queueDisplayNames(q)}"
-                  ),
-                  MuiTextField(
-                    label = s"Min".toVdom,
-                    margin = MuiTextField.Margin.normal
-                  )(
-                    DefaultFormFieldsStyle.textFieldSmall,
-                    `type` := "number",
-                    id := s"${q}_min",
-                    value := state.simulationParams.minDesks(q),
-                    onChange ==> changeMinDesks(q)
-                  ),
-                  MuiTextField(
-                    label = s"Max".toVdom,
-                    margin = MuiTextField.Margin.normal
-                  )(
-                    DefaultFormFieldsStyle.textFieldSmall,
-                    `type` := "number",
-                    id := s"${q}_max",
-                    value := state.simulationParams.maxDesks(q),
-                    onChange ==> changeMaxDesks(q)
-                  ),
-                )
+            state.simulationParams.minDesks.keys.map { q =>
+              <.div(
+                ^.className := "form-check",
+                MuiFormLabel()(
+                  DefaultFormFieldsStyle.labelWide,
+                  s"${Queues.queueDisplayNames(q)}"
+                ),
+                MuiTextField(
+                  label = s"Min".toVdom,
+                  margin = MuiTextField.Margin.normal
+                )(
+                  DefaultFormFieldsStyle.textFieldSmall,
+                  `type` := "number",
+                  id := s"${q}_min",
+                  value := state.simulationParams.minDesks(q),
+                  onChange ==> changeMinDesks(q)
+                ),
+                MuiTextField(
+                  label = s"Max".toVdom,
+                  margin = MuiTextField.Margin.normal
+                )(
+                  DefaultFormFieldsStyle.textFieldSmall,
+                  `type` := "number",
+                  id := s"${q}_max",
+                  value := state.simulationParams.maxDesks(q),
+                  onChange ==> changeMaxDesks(q)
+                ),
+              )
             }.toTagMod,
             <.div(
-              MuiTextField(
-                label = "E-Gate bank size".toVdom,
-                margin = MuiTextField.Margin.normal
-              )(
-                DefaultFormFieldsStyle.textField,
-                `type` := "number",
-                id := "egate-bank-size",
-                value := state.simulationParams.eGateBanksSize,
-                onChange ==> changeBankSize
-              )
+              state.simulationParams.eGateBanksSizes.zipWithIndex.map { case (bankSize, idx) =>
+                <.div(
+                  MuiTextField(
+                    label = s"e-Gates in bank ${idx + 1}".toVdom,
+                    margin = MuiTextField.Margin.normal
+                  )(
+                    DefaultFormFieldsStyle.textField,
+                    `type` := "number",
+                    id := s"egate-bank-size-$idx",
+                    value := bankSize,
+                    onChange ==> changeBankSize(idx)
+                  )
+                )
+              }.toTagMod
             ),
           )
         }

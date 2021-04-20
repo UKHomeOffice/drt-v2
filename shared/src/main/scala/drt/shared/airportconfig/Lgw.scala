@@ -61,6 +61,10 @@ object Lgw extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(10, 10, 10, 10, 10, 10, 12, 15, 15, 15, 15, 15, 15, 15, 15, 13, 13, 13, 13, 13, 13, 13, 13, 13))
       )
     ),
+    eGateBankSizes = Map(
+      N -> Iterable(10, 10, 5),
+      S -> Iterable(10, 10, 5)
+    ),
     role = LGW,
     terminalPaxTypeQueueAllocation = Map(
       N -> (defaultQueueRatios + (EeaMachineReadable -> List(

@@ -90,6 +90,12 @@ object Lhr extends AirportConfigLike {
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20))
       )
     ),
+    eGateBankSizes = Map(
+      T2 -> Iterable(10, 5),
+      T3 -> Iterable(10, 5),
+      T4 -> Iterable(10),
+      T5 -> Iterable(10, 9, 5),
+    ),
     hasActualDeskStats = true,
     forecastExportQueueOrder = Queues.forecastExportQueueOrderWithFastTrack,
     desksExportQueueOrder = Queues.deskExportQueueOrderWithFastTrack,

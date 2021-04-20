@@ -1,9 +1,9 @@
 package services.crunch.deskrecs
 
 import drt.shared.Queues._
+import services.{OptimiserConfig, OptimizerCrunchResult}
 import services.crunch.CrunchTestLike
 import services.graphstages.Crunch
-import services.{OptimizerConfig, OptimizerCrunchResult}
 
 import scala.util.{Success, Try}
 
@@ -39,8 +39,8 @@ class DeploymentFlexingSpec extends CrunchTestLike {
   class MockWithObserver {
     var observedMaxDesks: List[List[Int]] = List()
 
-    val mockDeskRecs: (Seq[Double], Seq[Int], Seq[Int], OptimizerConfig) => Try[OptimizerCrunchResult] =
-      (_: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], _: OptimizerConfig) => {
+    val mockDeskRecs: (Seq[Double], Seq[Int], Seq[Int], OptimiserConfig) => Try[OptimizerCrunchResult] =
+      (_: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], _: OptimiserConfig) => {
         observedMaxDesks = observedMaxDesks ++ List(maxDesks.toList)
         Success(OptimizerCrunchResult(minDesks.toIndexedSeq, minDesks))
       }

@@ -19,7 +19,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(),
       Map(),
       Map(),
-      5,
+      IndexedSeq.fill(5)(5),
       Map(),
       0,
       Seq(1)
@@ -45,8 +45,8 @@ class SimulationQueryStringSpec extends Specification {
       result must contain(expected)
     }
 
-    "Then I should see the correct passenger weighting in the query string" >> {
-      val expected = "eGateBankSize=5"
+    "Then I should see the correct egate bank sizes in the query string" >> {
+      val expected = "eGateBankSizes=5,5,5,5,5"
 
       result must contain(expected)
     }
@@ -60,30 +60,30 @@ class SimulationQueryStringSpec extends Specification {
     "Then I should not see an entry for minDesks" >> {
       val expectedNot = "minDesks"
 
-      result must not contain (expectedNot)
+      result must not contain expectedNot
     }
 
     "Then I should not see an entry for maxDesks" >> {
       val expectedNot = "maxDesks"
 
-      result must not contain (expectedNot)
+      result must not contain expectedNot
     }
 
     "Then I should not see an entry for processingTimes" >> {
       val expectedNot = "processingTimes"
 
-      result must not contain (expectedNot)
+      result must not contain expectedNot
     }
 
     "Then I should not see an entry for slaByQueue" >> {
       val expectedNot = "slaByQueue"
 
-      result must not contain (expectedNot)
+      result must not contain expectedNot
     }
 
     "Then I should get a valid query string back" >> {
 
-      val expected = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&eGateOpenHours=1"
+      val expected = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&eGateOpenHours=1"
 
       result === expected
     }
@@ -99,7 +99,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60, PaxTypesAndQueues.eeaMachineReadableToEGate -> 30),
       Map(Queues.EGate -> 1, Queues.NonEeaDesk -> 1),
       Map(Queues.EGate -> 3, Queues.NonEeaDesk -> 3),
-      5,
+      IndexedSeq.fill(5)(5),
       Map(Queues.EGate -> 10, Queues.EeaDesk -> 15),
       0,
       Seq(1, 2)
@@ -133,7 +133,7 @@ class SimulationQueryStringSpec extends Specification {
 
     "The I should get a valid query string back" >> {
 
-      result === "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&" +
+      result === "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&" +
         "eGateOpenHours=1,2&" +
         "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=30&" +
         "EGate_min=1&NonEeaDesk_min=1&" +
@@ -145,10 +145,10 @@ class SimulationQueryStringSpec extends Specification {
 
   "When parsing a query string back into a simulations params object" >> {
     "Given a query string map containing all require fields then I should get back a successful SimulationParams" >> {
-      val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&eGateOpenHours=1,2"
+      val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&eGateOpenHours=1,2"
       val fakeRequest = FakeRequest("GET", s"/endpoint?$qs")
       val qsValues: Map[String, Seq[String]] = fakeRequest.queryString
-
+println(s"qsValues: $qsValues")
       val expected = Success(SimulationParams(
         Terminal("T1"),
         LocalDate(2020, 2, 2),
@@ -156,7 +156,7 @@ class SimulationQueryStringSpec extends Specification {
         Map(),
         Map(),
         Map(),
-        5,
+        IndexedSeq.fill(5)(5),
         Map(),
         0,
         Seq(1, 2)
@@ -169,7 +169,7 @@ class SimulationQueryStringSpec extends Specification {
   }
 
   "Given a query string map containing all require fields then I should get back a successful SimulationParams" >> {
-    val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&" +
+    val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&" +
       "eGateOpenHours=1,2&" +
       "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=30&" +
       "EGate_min=1&NonEeaDesk_min=1&" +
@@ -186,7 +186,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60, PaxTypesAndQueues.eeaMachineReadableToEGate -> 30),
       Map(Queues.EGate -> 1, Queues.NonEeaDesk -> 1),
       Map(Queues.EGate -> 3, Queues.NonEeaDesk -> 3),
-      5,
+      IndexedSeq.fill(5)(5),
       Map(Queues.EGate -> 10, Queues.EeaDesk -> 15),
       0,
       Seq(1, 2)
@@ -198,7 +198,7 @@ class SimulationQueryStringSpec extends Specification {
   }
 
   "Given a query string map containing all invalid types then they should be ignored if they are not required" >> {
-    val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&" +
+    val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&" +
       "eGateOpenHours=1,2&" +
       "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=x&" +
       "EGate_min=1&NonEeaDesk_min=x&" +
@@ -215,7 +215,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60),
       Map(Queues.EGate -> 1),
       Map(Queues.EGate -> 3),
-      5,
+      IndexedSeq.fill(5)(5),
       Map(Queues.EGate -> 10),
       0,
       Seq(1,2)
@@ -227,7 +227,7 @@ class SimulationQueryStringSpec extends Specification {
   }
 
   "Given a query string containing no open egate hours I should get back a valid SimulationParams with an empty Seq for eGate open hours" >> {
-    val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&" +
+    val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&" +
       "eGateOpenHours=&" +
       "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=x&" +
       "EGate_min=1&NonEeaDesk_min=x&" +
@@ -244,7 +244,7 @@ class SimulationQueryStringSpec extends Specification {
       Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60),
       Map(Queues.EGate -> 1),
       Map(Queues.EGate -> 3),
-      5,
+      IndexedSeq.fill(5)(5),
       Map(Queues.EGate -> 10),
       0,
       Seq()
@@ -256,7 +256,7 @@ class SimulationQueryStringSpec extends Specification {
   }
 
   "Missing required fields then I should get back a failure" >> {
-    val qs = "date=2020-02-02&passengerWeighting=1.0&eGateBankSize=5&crunchOffsetMinutes=0&" +
+    val qs = "date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&" +
       "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=x&" +
       "EGate_min=1&NonEeaDesk_min=x&" +
       "EGate_max=3&NonEeaDesk_max=x&" +

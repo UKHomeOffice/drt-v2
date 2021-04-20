@@ -3,7 +3,7 @@ package services.simulations
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Terminals.Terminal
+import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.dates.LocalDate
 import org.specs2.mutable.Specification
@@ -14,16 +14,16 @@ class SimulationParamsSpec extends Specification {
 
   private val terminal: Terminal = Terminal("T1")
   val simulation: SimulationParams = SimulationParams(
-    terminal,
-    LocalDate(2020, 3, 27),
-    1.0,
-    testConfig.terminalProcessingTimes(terminal).mapValues(_ => 60),
-    testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
-    testConfig.queuesByTerminal(terminal).map(q => q -> 10).toMap,
-    5,
-    testConfig.slaByQueue,
-    0,
-    Seq()
+    terminal = terminal,
+    date = LocalDate(2020, 3, 27),
+    passengerWeighting = 1.0,
+    processingTimes = testConfig.terminalProcessingTimes(terminal).mapValues(_ => 60),
+    minDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
+    maxDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 10).toMap,
+    eGateBanksSizes = IndexedSeq(5, 5, 5),
+    slaByQueue = testConfig.slaByQueue,
+    crunchOffsetMinutes = 0,
+    eGateOpenHours = Seq()
   )
 
   "Given I am applying a simulation to an airport config" >> {
@@ -96,13 +96,13 @@ class SimulationParamsSpec extends Specification {
 
     "Simulation eGate bank size should be used" >> {
 
-      val simulationWithMinDesks = simulation.copy(eGateBanksSize = 7)
+      val simulationWithMinDesks = simulation.copy(eGateBanksSizes = IndexedSeq(7, 7, 7))
 
-      val expected = 7
+      val expected = Map(T1 -> IndexedSeq(7, 7, 7))
 
       val result = simulationWithMinDesks
         .applyToAirportConfig(testConfig)
-        .eGateBankSize
+        .eGateBankSizes
 
       result === expected
     }

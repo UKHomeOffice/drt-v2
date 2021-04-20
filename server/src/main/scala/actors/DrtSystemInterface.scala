@@ -118,7 +118,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
 
-  val optimiser: TryCrunch = if (config.get[Boolean]("crunch.use-legacy-optimiser")) TryRenjin.crunch else Optimiser.crunch
+  val optimiser: TryCrunch = if (config.get[Boolean]("feature-flags.use-legacy-optimiser")) Optimiser.crunch else OptimiserWithFlexibleProcessors.crunch
 
   val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser)
 
@@ -160,6 +160,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       params.maybeEdiTerminalMapCsvUrl
     )
 
+    val simulator: TrySimulator = if (config.get[Boolean]("feature-flags.use-legacy-optimiser")) Optimiser.runSimulationOfWork else OptimiserWithFlexibleProcessors.runSimulationOfWork
+
     val crunchInputs = CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTimeCalculator,
@@ -179,10 +181,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         "deployment-request" -> deploymentQueueActor
       ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
-      useLegacyManifests = params.useLegacyManifests,
       manifestsLiveSource = voyageManifestsLiveSource,
       voyageManifestsActor = manifestsRouterActor,
-      simulator = Optimiser.runSimulationOfWork,
+      simulator = simulator,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(SortedMap()),
       initialForecastArrivals = initialForecastArrivals.getOrElse(SortedMap()),

@@ -1,7 +1,7 @@
 package services.crunch
 
 import org.specs2.mutable.Specification
-import services.{Optimiser, OptimizerConfig}
+import services.{DeskWorkloadProcessors, OptimiserWithFlexibleProcessors, OptimiserConfig}
 
 import scala.util.Try
 
@@ -14,9 +14,9 @@ object Memory {
   def printUsedSince(lastUsed: Long): Unit = println(s"${(used - lastUsed) / mb}MB")
 }
 
-class SimulationParamsSpec extends Specification {
-  val simService: (Seq[Double], Seq[Int], OptimizerConfig) => Try[Seq[Int]] = Optimiser.runSimulationOfWork
-  val optimizerConfig: OptimizerConfig = OptimizerConfig(25)
+class OptimiserSimulationSpec extends Specification {
+  val simService: (Seq[Double], Seq[Int], OptimiserConfig) => Try[Seq[Int]] = OptimiserWithFlexibleProcessors.runSimulationOfWork
+  val optimizerConfig: OptimiserConfig = OptimiserConfig(25, DeskWorkloadProcessors)
 
   def randomWorkload: Seq[Double] = 1 to 1440 map (_ => Math.random() * 25)
   def randomDesks: Seq[Int] = 1 to 1440 map (_ => (Math.random() * 30).toInt)
