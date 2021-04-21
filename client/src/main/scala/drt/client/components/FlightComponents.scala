@@ -22,7 +22,7 @@ object FlightComponents {
     if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
       "pax-no-splits"
     else flightWithSplits.bestSplits match {
-      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) if flightWithSplits.hasValidApi => "pax-api"
+      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) if flightWithSplits.hasApi => "pax-api"
       case Some(Splits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
       case Some(Splits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
       case _ => "pax-unknown"
