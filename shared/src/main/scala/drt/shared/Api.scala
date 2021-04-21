@@ -235,8 +235,10 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     }.flatten
   }
 
+  val hasApi: Boolean = splits.exists(_.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
+
   def hasValidApi: Boolean = {
-    val maybeApiSplits = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
+    val maybeApiSplits = splits.find(_.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
     val hasLiveSource = apiFlight.FeedSources.contains(LiveFeedSource)
     (maybeApiSplits, hasLiveSource) match {
       case (Some(_), false) => true
