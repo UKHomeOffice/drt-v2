@@ -235,6 +235,10 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     }.flatten
   }
 
+  val maybeApiPaxCount: Option[Int] = bestSplits
+    .find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages)
+    .map(_.totalExcludingTransferPax.round.toInt)
+
   val hasApi: Boolean = splits.exists(_.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
 
   def hasValidApi: Boolean = {
