@@ -84,6 +84,21 @@ class ApiFlightWithSplitsSpecs extends Specification {
         flightWithSplits.hasValidApi mustEqual true
       }
     }
+
+    "give a pax count from splits when it has API splits" in {
+      val flightWithSplits = flightWithPaxAndApiSplits(40, 0, 45, 0, Set())
+      flightWithSplits.maybeApiPaxCount mustEqual Option(45)
+    }
+
+    "give a pax count from splits when it has API splits which does not include transfer pax" in {
+      val flightWithSplits = flightWithPaxAndApiSplits(40, 0, 45, 20, Set())
+      flightWithSplits.maybeApiPaxCount mustEqual Option(45)
+    }
+
+    "give no pax count from splits it has no API splits" in {
+      val flightWithSplits = flightWithPaxAndHistoricSplits(40, 0, 45, 20, Set())
+      flightWithSplits.maybeApiPaxCount must beNone
+    }
   }
 
   private def flightWithPaxAndApiSplits(actPax: Int, transferPax: Int, splitsDirect: Int, splitsTransfer: Int, sources: Set[FeedSource]): ApiFlightWithSplits = {
