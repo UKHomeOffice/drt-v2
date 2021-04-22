@@ -8,7 +8,7 @@ import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 
 class ApiFlightWithSplitsSpecs extends Specification {
-  "flight Arrival" should {
+  "A flight with splits" should {
     "have valid Api when api splits pax count is within the 5% Threshold of LiveSourceFeed pax count" in {
       "and there are no transfer pax" in {
         val flightWithSplits = flightWithPaxAndApiSplits(40, 0, 41, 0, Set(LiveFeedSource))
