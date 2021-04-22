@@ -54,6 +54,7 @@ object NationalityFinderComponent {
     "Ethiopia" -> "ETH",
     "French Guiana" -> "GUF",
     "Guyana" -> "GUY",
+    "India" -> "IND",
     "Kenya" -> "KEN",
     "Lesotho" -> "LSO",
     "Malawi" -> "MWI",
