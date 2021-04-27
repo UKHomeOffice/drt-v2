@@ -229,10 +229,17 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
-    List(apiSplitsDc, apiSplitsCi, apiSplitsAny, predictedSplits, historicalSplits, terminalSplits).find {
+    val apiSplits: List[Option[Splits]] = if (hasValidApi)
+      List(apiSplitsDc, apiSplitsCi, apiSplitsAny)
+    else List()
+
+    val splitsForConsideration: List[Option[Splits]] = apiSplits ::: List(predictedSplits, historicalSplits, terminalSplits)
+
+    val bestSplits: Option[Splits] = splitsForConsideration.find {
       case Some(_) => true
       case _ => false
     }.flatten
+    bestSplits
   }
 
   val maybeApiPaxCount: Option[Int] = bestSplits

@@ -45,7 +45,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
       )))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
     offerAndWait(crunch.manifestsLiveInput, manifests)
 
     val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
@@ -69,7 +69,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
       )))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
     offerAndWait(crunch.manifestsLiveInput, manifests)
 
     val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))

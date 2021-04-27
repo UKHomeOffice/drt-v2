@@ -216,7 +216,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival))))
 
             val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
-              VoyageManifest(EventTypes.CI, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
+              VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
                 manifestPax(10, euPassport)
               )
             )))
@@ -228,7 +228,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               Queues.EGate -> Seq(8.0, 0.0, 0.0, 0.0, 0.0)
             ))
 
-            crunch.portStateTestProbe.fishForMessage(5 seconds) {
+            crunch.portStateTestProbe.fishForMessage(5 hours) {
               case ps: PortState =>
                 paxLoadsFromPortState(ps, 5) == expected
             }

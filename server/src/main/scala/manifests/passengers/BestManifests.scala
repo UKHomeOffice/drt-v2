@@ -70,6 +70,21 @@ object BestAvailableManifest {
     )
   }
 
+  def historic(manifest: VoyageManifest): BestAvailableManifest = {
+
+    val uniquePax: List[PassengerInfoJson] = removeDuplicatePax(manifest)
+
+    BestAvailableManifest(
+      SplitSources.Historical,
+      manifest.ArrivalPortCode,
+      manifest.DeparturePortCode,
+      manifest.VoyageNumber,
+      manifest.CarrierCode,
+      manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
+      uniquePax.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode))
+    )
+  }
+
   def removeDuplicatePax(manifest: VoyageManifest): List[PassengerInfoJson] = {
     if (manifest.PassengerList.exists(_.PassengerIdentifier.exists(_ != "")))
       manifest.PassengerList.collect {

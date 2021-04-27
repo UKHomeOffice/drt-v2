@@ -23,16 +23,13 @@ class PCPPaxNosSpec extends CrunchTestLike {
   val scheduled = "2019-11-20T00:00Z"
 
   val flights: Flights = Flights(List(
-    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(1), origin = PortCode("JFK"))
+    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(101), origin = PortCode("JFK"))
   ))
 
   val manifests: ManifestsFeedResponse =
     ManifestsFeedSuccess(DqManifests("", Set(
       VoyageManifest(EventTypes.DC, defaultAirportConfig.portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2019-11-20"), ManifestTimeOfArrival("00:00"),
-        List(
-          PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(11)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None),
-          PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(11)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
-        ))
+        VoyageManifestGenerator.xOfPaxType(100, VoyageManifestGenerator.euPassport))
     )))
 
   "Given flights with API and live feed passenger numbers then we should use the live feed passenger numbers" >> {
@@ -48,11 +45,12 @@ class PCPPaxNosSpec extends CrunchTestLike {
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
     offerAndWait(crunch.manifestsLiveInput, manifests)
 
-    val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+    val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 20, 20, 20, 20, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2 hours) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 15)
+
         resultSummary == expected
     }
 

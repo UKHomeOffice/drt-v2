@@ -20,7 +20,7 @@ import manifests.queues.SplitsCalculator.SplitsForArrival
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
-import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa}
+import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsProvider, addManifests}
 import services.crunch.deskrecs.OptimiserMocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
@@ -80,7 +80,7 @@ object OptimiserMocks {
       PortCode("STN"),
       MockManifestLookupService(arrivalsWithMaybePax.map { case (arrival, maybePax) =>
         val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-        val maybeManifest = maybePax.map(pax => BestAvailableManifest(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
+        val maybeManifest = maybePax.map(pax => BestAvailableManifest.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
         (key, maybeManifest)
       })
     )
@@ -212,7 +212,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
       setupGraphAndCheckQueuePax(
         arrival = arrival,
-        livePax = Option(List(euIdCard)),
+        livePax = Option(xOfPaxType(100, euIdCard)),
         historicPax = None,
         expectedQueuePax = expected)
 
@@ -223,7 +223,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
       setupGraphAndCheckQueuePax(
         arrival = arrival,
-        livePax = Option(List(euIdCard)),
+        livePax = Option(xOfPaxType(100, euIdCard)),
         historicPax = Option(List(visa)),
         expectedQueuePax = expected)
 
@@ -234,7 +234,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, NonEeaDesk) -> 100)
       setupGraphAndCheckQueuePax(
         arrival = arrival,
-        livePax = Option(List(visa)),
+        livePax = Option(xOfPaxType(100, visa)),
         historicPax = Option(List(euIdCard)),
         expectedQueuePax = expected)
 
