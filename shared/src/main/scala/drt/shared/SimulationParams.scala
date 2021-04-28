@@ -2,6 +2,8 @@ package drt.shared
 
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
+import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.SplitRatiosNs.SplitSources.ScenarioSimulationSplits
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
 import upickle.default.{ReadWriter, macroRW}
@@ -54,7 +56,8 @@ case class SimulationParams(
         apiFlight = fws
           .apiFlight.copy(
           ActPax = fws.apiFlight.ActPax.map(n => (n * passengerWeighting).toInt),
-          TranPax = fws.apiFlight.TranPax.map(n => (n * passengerWeighting).toInt)
+          TranPax = fws.apiFlight.TranPax.map(n => (n * passengerWeighting).toInt),
+          FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource
         ))
     })
 }

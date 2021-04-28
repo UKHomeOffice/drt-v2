@@ -1,6 +1,6 @@
 package drt.shared
 
-import drt.shared.SplitRatiosNs.SplitSources.{AdvPaxInfo, ApiSplitsWithHistoricalEGateAndFTPercentages, ApiSplitsWithHistoricalEGateAndFTPercentages_Old, Historical, InvalidSource, PredictedSplitsWithHistoricalEGateAndFTPercentages, TerminalAverage}
+import drt.shared.SplitRatiosNs.SplitSources._
 import upickle.default.{ReadWriter, macroRW}
 
 object SplitRatiosNs {
@@ -17,6 +17,7 @@ object SplitRatiosNs {
       case "ApiSplitsWithHistoricalEGatePercentage" => ApiSplitsWithHistoricalEGateAndFTPercentages_Old
       case "ApiSplitsWithHistoricalEGateAndFTPercentages" => ApiSplitsWithHistoricalEGateAndFTPercentages
       case "PredictedSplitsWithHistoricalEGateAndFTPercentages" => PredictedSplitsWithHistoricalEGateAndFTPercentages
+      case "ScenarioSimulationSplits" => ScenarioSimulationSplits
       case "Historical" => Historical
       case "TerminalAverage" => TerminalAverage
       case _ => InvalidSource
@@ -32,6 +33,8 @@ object SplitRatiosNs {
     object ApiSplitsWithHistoricalEGateAndFTPercentages extends SplitSource
 
     object PredictedSplitsWithHistoricalEGateAndFTPercentages extends SplitSource
+
+    object ScenarioSimulationSplits extends SplitSource
 
     object Historical extends SplitSource
 

@@ -226,12 +226,14 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.CI))
     val apiSplitsAny = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
     val predictedSplits = splits.find(s => s.source == SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages)
+    val scenarioSplits = splits.find(s => s.source == SplitSources.ScenarioSimulationSplits)
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
     val apiSplits: List[Option[Splits]] = if (hasValidApi)
       List(apiSplitsDc, apiSplitsCi, apiSplitsAny)
-    else List()
+    else
+      List(scenarioSplits)
 
     val splitsForConsideration: List[Option[Splits]] = apiSplits ::: List(predictedSplits, historicalSplits, terminalSplits)
 
@@ -251,9 +253,11 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   def hasValidApi: Boolean = {
     val maybeApiSplits = splits.find(_.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
     val hasLiveSource = apiFlight.FeedSources.contains(LiveFeedSource)
-    (maybeApiSplits, hasLiveSource) match {
-      case (Some(_), false) => true
-      case (Some(api), true) if isWithinThreshold(api) => true
+    val hasSimulationSource = apiFlight.FeedSources.contains(ScenarioSimulationSource)
+    (maybeApiSplits, hasLiveSource, hasSimulationSource) match {
+      case (Some(_), _, true) => true
+      case (Some(_), false, _) => true
+      case (Some(api), true, _) if isWithinThreshold(api) => true
       case _ => false
     }
   }
@@ -493,6 +497,14 @@ case object LiveFeedSource extends FeedSource {
   val maybeLastUpdateThreshold: Option[FiniteDuration] = Option(12 hours)
 
   val description: Boolean => String = _ => "Up-to-date passenger numbers, estimated and actual arrival times, gates and stands."
+}
+
+case object ScenarioSimulationSource extends FeedSource {
+  val name: String = "Scenario Simulation"
+
+  val maybeLastUpdateThreshold: Option[FiniteDuration] = Option(12 hours)
+
+  val description: Boolean => String = _ => "An altered arrival to explore a simulated scenario."
 }
 
 case object LiveBaseFeedSource extends FeedSource {

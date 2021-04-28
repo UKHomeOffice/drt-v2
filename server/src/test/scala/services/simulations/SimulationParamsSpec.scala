@@ -125,13 +125,25 @@ class SimulationParamsSpec extends Specification {
   "Given I am applying a passenger weighting of 1 to some flights then the passenger numbers should be the same" >> {
     val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
 
-    val fws = FlightsWithSplits(List(
-      ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50)), Set())
+    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50)), Set())
+    val flights = FlightsWithSplits(List(
+      flightWithSplits
     ).map(a => a.apiFlight.unique -> a).toMap)
 
-    val result = weightingOfOne.applyPassengerWeighting(fws)
+    val result = weightingOfOne.applyPassengerWeighting(flights)
 
-    result === fws
+    result.flights.values.head.apiFlight.bestPaxEstimate === flightWithSplits.apiFlight.bestPaxEstimate
+  }
+
+  "Given I am applying a passenger weighting to a flight, it should have the ScenarioSimulationSource added to it" >> {
+    val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
+
+    val flights = FlightsWithSplits(
+      List(ApiFlightWithSplits(ArrivalGenerator.arrival(), Set())).map(a => a.apiFlight.unique -> a).toMap)
+
+    val result = weightingOfOne.applyPassengerWeighting(flights)
+
+    result.flights.values.head.apiFlight.FeedSources === Set(ScenarioSimulationSource)
   }
 
   "Given I am applying a passenger weighting of 2 to some flights then passenger numbers and trans numbers shoudl be doubled" >> {
@@ -141,13 +153,14 @@ class SimulationParamsSpec extends Specification {
       ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50)), Set())
     ).map(a => a.apiFlight.unique -> a).toMap)
 
+    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(200), tranPax = Option(100)), Set())
     val expected = FlightsWithSplits(List(
-    ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(200), tranPax = Option(100)), Set())
+      flightWithSplits
     ).map(a => a.apiFlight.unique -> a).toMap)
 
     val result = weightingOfTwo.applyPassengerWeighting(fws)
 
-    result === expected
+    result.flights.values.head.apiFlight.bestPaxEstimate === flightWithSplits.apiFlight.bestPaxEstimate
   }
 
 }
