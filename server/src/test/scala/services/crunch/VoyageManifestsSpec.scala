@@ -124,7 +124,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
   "Given a VoyageManifest with 2 transfers and one Eea Passport " >> {
     "When I crunch the flight with 10 pax minus 5 transit " >> {
-      "Then I should see the 5 non-transit pax go to the egates" >> {
+      "Then I should see the split applied to the non transit passengers only" >> {
 
         val scheduled = "2017-01-01T00:00Z"
         val portCode = PortCode("LHR")
@@ -173,7 +173,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     }
   }
 
-  "Given a voyage manifest then I should get a BestAvailableManifest that matches it" >> {
+  "When converting a VoyageManifest to a BestAvailableManifest I should get passenger profiles that match the manifest" >> {
     val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
       inTransitFlag,
       inTransitCountry,
@@ -217,7 +217,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     result === expected
   }
 
-  "Given a voyage manifest with a UK National and no doctype, Passport should be assumed" >> {
+  "Given a voyage manifest with a UK National and no doctype, Passport should be the implied doctype" >> {
     val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
       PassengerInfoJson(None, Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
     ))
@@ -293,8 +293,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
     }
   }
 
-  "Given a VoyageManifest with multiple records for each passenger " +
-    "I should get a BestAvailableManifests with records for each unique passenger identifier only" >> {
+  "Given a VoyageManifest with multiple records for each passenger with unique passenger identifiers " +
+    "When using API data for passenger numbers " +
+    "I should get the sum of the unique identifiers, not the total number of passenger info records" >> {
 
     val scheduled = "2017-01-01T00:00Z"
     val portCode = PortCode("LHR")
@@ -341,8 +342,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
     success
   }
 
-  "Given a VoyageManifest with multiple records for each passenger and no Passenger Identifier" +
-    "I should get a BestAvailableManifests with records for each entry in the passenger list" >> {
+  "Given a VoyageManifest with multiple passenger records and no Passenger Identifiers " +
+    "When using API to calculate passenger numbers each passenger info record should be counted" >> {
 
     val scheduled = "2017-01-01T00:00Z"
     val portCode = PortCode("LHR")
