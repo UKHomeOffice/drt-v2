@@ -228,7 +228,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               Queues.EGate -> Seq(8.0, 0.0, 0.0, 0.0, 0.0)
             ))
 
-            crunch.portStateTestProbe.fishForMessage(5 hours) {
+            crunch.portStateTestProbe.fishForMessage(5 seconds) {
               case ps: PortState =>
                 paxLoadsFromPortState(ps, 5) == expected
             }

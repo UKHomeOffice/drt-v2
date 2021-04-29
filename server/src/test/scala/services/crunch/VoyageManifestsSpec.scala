@@ -72,7 +72,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     success
   }
 
-  "Given a VoyageManifest and its arrival where the arrival has a different number of passengers to the manifest but is within 5%" >> {
+  "Given a VoyageManifest and its arrival where the arrival has a different number of passengers to the manifest" >> {
     "When I crunch the flight " >> {
       "Then I should see the passenger loads corresponding to the manifest splits applied to the arrival's passengers" >> {
 

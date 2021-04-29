@@ -47,7 +47,7 @@ class PCPPaxNosSpec extends CrunchTestLike {
 
     val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 20, 20, 20, 20, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
-    crunch.portStateTestProbe.fishForMessage(2 hours) {
+    crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 15)
 
