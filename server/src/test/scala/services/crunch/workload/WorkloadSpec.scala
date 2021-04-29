@@ -323,7 +323,7 @@ class WorkloadSpec extends Specification {
     workloads === List(1.5 * 6)
   }
 
-  "Given an arrival with 1 pax on the arrival and 1 split containing 6 pax with no nationality data " +
+  "Given an arrival with 1 pax on the arrival and 1 historic split containing 6 pax with no nationality data " +
     "When I ask for the workload for this arrival " +
     "Then I see the 1x the proc time provided" >> {
 
@@ -331,8 +331,8 @@ class WorkloadSpec extends Specification {
     val splits = Set(
       Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 6, None, None)),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
+        SplitSources.Historical,
+        None,
         PaxNumbers))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
     val emptyNatProcTimes: Map[Nationality, Double] = Map()

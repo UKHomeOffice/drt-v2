@@ -16,7 +16,6 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
                       initialPortState: Option[PortState] = None,
                       airportConfig: AirportConfig = TestDefaults.airportConfig,
-                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                       pcpArrivalTime: Arrival => MilliDate = TestDefaults.pcpForFlightFromSch,
                       expireAfterMillis: Int = DrtStaticParameters.expireAfterMillis,
                       now: () => SDateLike,

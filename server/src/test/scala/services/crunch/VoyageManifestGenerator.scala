@@ -92,6 +92,9 @@ object VoyageManifestGenerator {
     None
   )
 
+  def xOfPaxType(num: Int, passengerInfoJson: PassengerInfoJson): List[PassengerInfoJson] =
+    List.fill(num)(passengerInfoJson)
+
   def manifestPax(qty: Int, passport: PassengerInfoJson): List[PassengerInfoJson] = {
     List.fill(qty)(passport)
   }

@@ -37,6 +37,13 @@ class ApiFlightWithSplitsSpecs extends Specification {
         flightWithSplits.isWithinThreshold(apiSplits) mustEqual true
         flightWithSplits.hasValidApi mustEqual true
       }
+
+      "or there is a ScenarioSimulationSource" in {
+        val flightWithSplits = flightWithPaxAndApiSplits(20, 0, 41, 0, Set(LiveFeedSource, ScenarioSimulationSource))
+        val apiSplits = flightWithSplits.splits.find(_.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages).get
+        
+        flightWithSplits.hasValidApi mustEqual true
+      }
     }
 
     "not have valid Api when api splits pax count outside the 5% Threshold of LiveSourceFeed pax count" in {

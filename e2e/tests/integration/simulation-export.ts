@@ -42,7 +42,7 @@ describe('Simulation export', () => {
             }, 0);
     }
 
-    it('Allows you to view API splits in the flights export for users with api:view permission', () => {
+    it('Allows you to adjust the simulation values and export the results as a CSV', () => {
         cy
             .addFlight(
                 {

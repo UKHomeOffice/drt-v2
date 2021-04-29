@@ -7,8 +7,6 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import services.SDate
 
-import scala.collection.immutable
-
 trait ManifestLike {
   val source: SplitSource
   val arrivalPortCode: PortCode
@@ -55,12 +53,17 @@ case class BestAvailableManifest(source: SplitSource,
                                  passengers: List[ManifestPassengerProfile]) extends ManifestLike
 
 object BestAvailableManifest {
-  def apply(manifest: VoyageManifest): BestAvailableManifest = {
+  def apply(manifest: VoyageManifest): BestAvailableManifest =
+    fromManifest(manifest, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
 
+  def historic(manifest: VoyageManifest): BestAvailableManifest =
+    fromManifest(manifest, SplitSources.Historical)
+
+  def fromManifest(manifest: VoyageManifest, source: SplitSource) = {
     val uniquePax: List[PassengerInfoJson] = removeDuplicatePax(manifest)
 
     BestAvailableManifest(
-      SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
+      source,
       manifest.ArrivalPortCode,
       manifest.DeparturePortCode,
       manifest.VoyageNumber,
