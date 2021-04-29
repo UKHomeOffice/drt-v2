@@ -11,10 +11,12 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.html.Div
+import scalacss.ScalaCssReactImplicits
 
 import scala.scalajs.js.Date
 
-object DatePickerComponent {
+object DatePickerComponent extends ScalaCssReactImplicits {
+
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props(router: RouterCtl[Loc],
@@ -23,7 +25,7 @@ object DatePickerComponent {
                    minuteTicker: Int
                   )
 
-  case class State(showDatePicker: Boolean, day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
+  case class State(day: Int, month: Int, year: Int, hours: Int, minutes: Int) {
     def selectedDateTime = SDate(year, month, day, hours, minutes)
   }
 
@@ -46,7 +48,7 @@ object DatePickerComponent {
         log.info(s"Setting state from $p")
         val viewMode = p.terminalPageTab.viewMode
         val time = viewMode.time
-        State(showDatePicker = false, day = time.getDate(), month = time.getMonth(), year = time.getFullYear(), hours = time.getHours(), minutes = time.getMinutes())
+        State(day = time.getDate(), month = time.getMonth(), year = time.getFullYear(), hours = time.getHours(), minutes = time.getMinutes())
       }
     )
     .renderPS(r = (scope, props, state) => {

@@ -1,15 +1,18 @@
 package drt.client.components
 
 import drt.client.SPAMain
+import drt.client.components.mui.MuiInputLabelProps
+import drt.client.components.styles.ScalaCssImplicits.StringExtended
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
+import drt.shared.dates.LocalDate
+import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiTextField}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
 
@@ -17,39 +20,42 @@ object MultiDayExportComponent {
   val today: SDateLike = SDate.now()
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(terminal: Terminal,
-                   selectedDate: SDateLike,
-                   loggedInUser: LoggedInUser)
+  case class Props(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser)
 
-  case class State(startDay: Int,
-                   startMonth: Int,
-                   startYear: Int,
-                   endDay: Int,
-                   endMonth: Int,
-                   endYear: Int,
-                   showDialogue: Boolean = false
-                  ) {
-    def startMillis: MillisSinceEpoch = SDate(startYear, startMonth, startDay).millisSinceEpoch
+  case class State(startDate: LocalDate, endDate: LocalDate, showDialogue: Boolean = false) {
 
-    def endMillis: MillisSinceEpoch = SDate(endYear, endMonth, endDay).millisSinceEpoch
+    def setStart(dateString: String): State = copy(startDate = LocalDate.parse(dateString).getOrElse(startDate))
+
+    def setEnd(dateString: String): State = copy(endDate = LocalDate.parse(dateString).getOrElse(endDate))
+
+    def startMillis = SDate(startDate).millisSinceEpoch
+
+    def endMillis = SDate(endDate).millisSinceEpoch
   }
 
+  implicit val localDateReuse: Reusability[LocalDate] = Reusability.derive[LocalDate]
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
   implicit val terminalReuse: Reusability[Terminal] = Reusability.derive[Terminal]
   implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.terminal, p.selectedDate.millisSinceEpoch))
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
     .initialStateFromProps(p => State(
-      startDay = p.selectedDate.getDate(),
-      startMonth = p.selectedDate.getMonth(),
-      startYear = p.selectedDate.getFullYear(),
-      endDay = p.selectedDate.getDate(),
-      endMonth = p.selectedDate.getMonth(),
-      endYear = p.selectedDate.getFullYear()
+      startDate = p.selectedDate.toLocalDate,
+      endDate = p.selectedDate.toLocalDate
     ))
     .renderPS((scope, props, state) => {
 
       val showClass = if (state.showDialogue) "show" else "fade"
+
+      def setStartDate(e: ReactEventFromInput): CallbackTo[Unit] = {
+        e.persist()
+        scope.modState(_.setStart(e.target.value))
+      }
+
+      def setEndDate(e: ReactEventFromInput): CallbackTo[Unit] = {
+        e.persist()
+        scope.modState(_.setEnd(e.target.value))
+      }
 
       <.div(
         <.a(
@@ -73,65 +79,73 @@ object MultiDayExportComponent {
               <.div(
                 ^.className := "modal-body",
                 ^.id := "multi-day-export-modal-body",
-                DateSelector("From", today, d => {
-                  scope.modState(_.copy(startDay = d.getDate(), startMonth = d.getMonth(), startYear = d.getFullYear()))
-                }),
-                DateSelector("To", today, d => {
-                  scope.modState(_.copy(endDay = d.getDate(), endMonth = d.getMonth(), endYear = d.getFullYear()))
-                }),
-                if (state.startMillis > state.endMillis)
-                  <.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date.")
-                else
-                  EmptyVdom,
+                MuiGrid(container = true)(
+                  MuiTextField(label = "From".toVdom, InputLabelProps = MuiInputLabelProps(shrink = true))(
+                    ^.id := "date",
+                    ^.`type` := "date",
+                    ^.defaultValue := today.toISODateOnly,
+                    ^.onChange ==> setStartDate
+                  ),
+                  MuiTextField(label = "To".toVdom, InputLabelProps = MuiInputLabelProps(shrink = true))(
+                    ^.id := "date",
+                    ^.`type` := "date",
+                    ^.defaultValue := today.toISODateOnly,
+                    ^.onChange ==> setEndDate
+                  ),
+                  if (state.startDate > state.endDate)
+                    <.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date.")
+                  else
+                    EmptyVdom,
 
-                <.div(
-                  <.div(^.className := "multi-day-export-links",
+                  <.div(
+                    <.div(^.className := "multi-day-export-links",
 
-                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
-                      <.a(Icon.download, " Arrivals",
-                        ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
-                          s"${SDate(state.startMillis).toLocalDate.toISOString}/" +
-                          s"${SDate(state.endMillis).toLocalDate.toISOString}/${props.terminal}"),
-                        ^.target := "_blank",
-                        ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
-                        }
-                      ) else EmptyVdom,
-                    if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                      List(<.a(Icon.download, s" Recommendations",
-                        ^.className := "btn btn-default",
-                        ^.key := "recs",
-                        ^.href := SPAMain.absoluteUrl(s"export/desk-recs/${SDate(state.startMillis).toLocalDate.toISOString}/${SDate(state.endMillis).toLocalDate.toISOString}/${props.terminal}"),
-                        ^.target := "_blank",
-                        ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", s"Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
-                        }
-                      ),
-                        <.a(Icon.download, s" Deployments",
-                          ^.key := "deps",
+                      if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
+                        <.a(Icon.download, " Arrivals",
                           ^.className := "btn btn-default",
-                          ^.href := SPAMain.absoluteUrl(s"export/desk-deps/${SDate(state.startMillis).toLocalDate.toISOString}/${SDate(state.endMillis).toLocalDate.toISOString}/${props.terminal}"),
+                          ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
+                            s"${state.startDate.toISOString}/" +
+                            s"${state.endDate.toISOString}/${props.terminal}"),
                           ^.target := "_blank",
                           ^.onClick --> {
-                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Deployments", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
+                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
                           }
-                        )
-                      ).toVdomArray
-                    else EmptyVdom,
-                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endMillis <= SDate.now().millisSinceEpoch))
-                      <.a(Icon.file, " Live Feed",
-                        ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
-                        ^.target := "_blank",
-                        ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Live Feed", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
-                        }
-                      ) else EmptyVdom
+                        ) else EmptyVdom,
+                      if (props.loggedInUser.hasRole(DesksAndQueuesView))
+                        List(<.a(Icon.download, s" Recommendations",
+                          ^.className := "btn btn-default",
+                          ^.key := "recs",
+                          ^.href := SPAMain.absoluteUrl(s"export/desk-recs/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
+                          ^.target := "_blank",
+                          ^.onClick --> {
+                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", s"Export Desks", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                          }
+                        ),
+                          <.a(Icon.download, s" Deployments",
+                            ^.key := "deps",
+                            ^.className := "btn btn-default",
+                            ^.href := SPAMain.absoluteUrl(s"export/desk-deps/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
+                            ^.target := "_blank",
+                            ^.onClick --> {
+                              Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Deployments", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                            }
+                          )
+                        ).toVdomArray
+                      else EmptyVdom,
+                      if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate <= SDate.now().toLocalDate))
+                        <.a(Icon.file, " Live Feed",
+                          ^.className := "btn btn-default",
+                          ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
+                          ^.target := "_blank",
+                          ^.onClick --> {
+                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Live Feed", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                          }
+                        ) else EmptyVdom
 
+                    )
                   )
-                )
-              ),
+                )),
+
               <.div(
                 ^.className := "modal-footer",
                 ^.id := "multi-day-export-modal-footer",
