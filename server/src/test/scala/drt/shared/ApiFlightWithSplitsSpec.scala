@@ -7,7 +7,7 @@ import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 
-class ApiFlightWithSplitsSpecs extends Specification {
+class ApiFlightWithSplitsSpec extends Specification {
   "A flight with splits" should {
     "have valid Api when api splits pax count is within the 5% Threshold of LiveSourceFeed pax count" in {
       "and there are no transfer pax" in {
@@ -100,6 +100,11 @@ class ApiFlightWithSplitsSpecs extends Specification {
     "give a pax count from splits when it has API splits which does not include transfer pax" in {
       val flightWithSplits = flightWithPaxAndApiSplits(40, 0, 45, 20, Set())
       flightWithSplits.maybeApiPaxCount mustEqual Option(45)
+    }
+
+    "give a pax count from splits when it has API splits even when it is outside the trusted threshold" in {
+      val flightWithSplits = flightWithPaxAndApiSplits(40, 0, 150, 0, Set(LiveFeedSource))
+      flightWithSplits.maybeApiPaxCount mustEqual Option(150)
     }
 
     "give no pax count from splits it has no API splits" in {

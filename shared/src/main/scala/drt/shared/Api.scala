@@ -243,7 +243,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     }.flatten
   }
 
-  val maybeApiPaxCount: Option[Int] = bestSplits
+  val maybeApiPaxCount: Option[Int] = splits
     .find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages)
     .map(_.totalExcludingTransferPax.round.toInt)
 
