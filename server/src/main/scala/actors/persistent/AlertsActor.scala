@@ -1,8 +1,9 @@
-package actors
+package actors.persistent
 
 import actors.Sizes.oneMegaByte
 import actors.acking.AckingReceiver.StreamCompleted
 import actors.serializers.AlertMessageConversion
+import actors.{GetState, PersistentDrtActor, RecoveryActorLike}
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{Alert, SDateLike}

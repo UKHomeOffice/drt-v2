@@ -1,6 +1,7 @@
 package controllers.application
 
-import actors.{DeleteAlerts, GetState}
+import actors.GetState
+import actors.persistent.DeleteAlerts
 import akka.pattern._
 import akka.util.Timeout
 import controllers.Application
