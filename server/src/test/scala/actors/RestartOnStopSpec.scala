@@ -1,9 +1,8 @@
 package actors
 
-import actors.ExceptionThrowingActor.{Ack, StopYourself}
-import actors.supervised.RestartOnStopActor
+import actors.StoppableActor.{Ack, StopYourself}
+import actors.supervised.RestartOnStop
 import akka.actor.{Actor, ActorSystem, Props}
-import akka.pattern.BackoffOpts
 import akka.testkit.{ImplicitSender, TestKit}
 import org.slf4j.LoggerFactory
 import org.specs2.mutable.SpecificationLike
@@ -13,13 +12,13 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
 
 
-object ExceptionThrowingActor {
+object StoppableActor {
   case object StopYourself
 
   case object Ack
 }
 
-class ExceptionThrowingActor extends Actor {
+class StoppableActor extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
@@ -34,7 +33,7 @@ class ExceptionThrowingActor extends Actor {
   }
 }
 
-class ArrivalsActorDeathSpec()
+class RestartOnStopSpec()
   extends TestKit(ActorSystem())
     with ImplicitSender
     with SpecificationLike
@@ -47,16 +46,10 @@ class ArrivalsActorDeathSpec()
   override def beforeAll(): Unit = {}
 
   "A supervisor" >> {
+    val maxBackoff = 1.millis
+    val restartOnStop = RestartOnStop(1.millis, maxBackoff)
     "I should see the exception get caught" in {
-      val maxBackoff = 1.millis
-      val backoffOpts = BackoffOpts.onStop(
-        childProps = Props[ExceptionThrowingActor],
-        childName = "my-lovely-actor",
-        minBackoff = 1.millis,
-        maxBackoff = maxBackoff,
-        randomFactor = 0
-      )
-      val actor = system.actorOf(Props(classOf[RestartOnStopActor], backoffOpts))
+      val actor = restartOnStop.actorOf(Props[StoppableActor], "my-actor")
 
       watch(actor)
 

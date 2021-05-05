@@ -6,6 +6,7 @@ import actors.daily.PassengersActor
 import actors.persistent.AlertsActor
 import actors.queues.FlightsRouterActor
 import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.supervised.{RestartOnStop, RestartOnStopActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
@@ -64,6 +65,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
+  val restartOnStop: RestartOnStop = RestartOnStop(1.second, 10 seconds)
+
   val manifestLookupService: ManifestLookupLike
 
   val config: Configuration
@@ -74,8 +77,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(params.gateWalkTimesFilePath)
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(params.standWalkTimesFilePath)
 
-  val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)), name = "alerts-actor")
-  val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
+  val alertsActor: ActorRef = restartOnStop.actorOf(Props(new AlertsActor(now)), "alerts-actor")
+  val liveBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val crunchQueueActor: ActorRef
   val deploymentQueueActor: ActorRef
