@@ -145,7 +145,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithSimulations
     with WithPassengerInfo
     with WithWalkTimes
-    with WithDebug {
+    with WithDebug
+    with WithEmailFeedback {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
   implicit val mat: Materializer = DrtActorSystem.mat
@@ -160,6 +161,12 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   ctrl.run()
 
   val now: () => SDateLike = () => SDate.now()
+
+  lazy val govNotifyApiKey = config.get[String]("notifications.gov-notify-api-key")
+
+  lazy val negativeFeedbackTemplateId = config.get[String]("notifications.negative-feedback-templateId")
+
+  lazy val positiveFeedbackTemplateId = config.get[String]("notifications.positive-feedback-templateId")
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
 

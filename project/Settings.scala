@@ -97,9 +97,9 @@ object Settings {
     "@tippyjs/react" -> "4.1.0",
     "react-chartjs-2" -> "2.10.0",
     "react-markdown" -> "4.0.6",
-    "@material-ui/core"  -> "3.9.0",
+    "@material-ui/core" -> "3.9.0",
     "@material-ui/icons" -> "3.0.2",
-    "@material-ui/lab"   -> "3.0.0-alpha.30"
+    "@material-ui/lab" -> "3.0.0-alpha.30"
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
@@ -217,7 +217,10 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
-    "uk.gov.homeoffice" %% "bluebus" % bluebus
+    "uk.gov.homeoffice" %% "bluebus" % bluebus,
+
+    "uk.gov.service.notify" % "notifications-java-client" % "3.17.0-RELEASE"
+
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order

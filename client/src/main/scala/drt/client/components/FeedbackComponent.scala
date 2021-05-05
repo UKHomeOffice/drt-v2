@@ -1,8 +1,7 @@
 package drt.client.components
 
-import drt.client.SPAMain
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.modules.GoogleEventTracker
+import drt.client.services.DrtApi
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.SDateLike
 import japgolly.scalajs.react.component.Scala.Component
@@ -10,6 +9,7 @@ import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import upickle.default.{write, macroRW, ReadWriter => RW}
 
 sealed trait Feedback
 
@@ -27,6 +27,7 @@ object FeedbackComponent {
                    isPositive: Feedback)
 
   case class State(url: String,
+                   feedbackUserEmail: String,
                    whatUserDoing: String,
                    whatWentWrong: String,
                    whatToImprove: String,
@@ -37,10 +38,12 @@ object FeedbackComponent {
 
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
   implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.url, p.selectedDate.millisSinceEpoch))
+  implicit val rw: RW[State] = macroRW
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FeedbackComponent")
     .initialStateFromProps(p => State(
       url = p.url,
+      feedbackUserEmail = p.loggedInUser.email,
       whatUserDoing = "",
       whatWentWrong = "",
       whatToImprove = "",
@@ -105,11 +108,9 @@ object FeedbackComponent {
               <.div(^.className := "modal-footer",
                 <.div(
                   <.div(^.className := "feedback-links",
-                    <.a("Submit", ^.className := "btn btn-default",
-                      ^.href := SPAMain.absoluteUrl(s"email/feedback?negative"),
-                      ^.target := "_blank",
+                    <.button("Submit", ^.className := "btn btn-default",
                       ^.onClick --> {
-                        Callback(GoogleEventTracker.sendEvent(props.url, "click", "Feedback", f""))
+                        scope.modState(_.copy(showDialogue = false),Callback(DrtApi.post("email/feedback/negative",write(state))))
                       }
                     ),
                     <.button(^.className := "btn btn-link",
@@ -132,12 +133,11 @@ object FeedbackComponent {
               <.div(^.className := "modal-footer",
                 <.div(
                   <.div(^.className := "feedback-links",
-                    <.a("Submit",
+                    <.button("Submit",
                       ^.className := "btn btn-default",
-                      ^.href := SPAMain.absoluteUrl(s"email/feedback?positive"),
                       ^.target := "_blank",
                       ^.onClick --> {
-                        Callback(GoogleEventTracker.sendEvent(props.url, "click", "Feedback", f""))
+                        scope.modState(_.copy(showDialogue = false),Callback(DrtApi.post("email/feedback/positive",write(state))))
                       }
                     ),
                     <.button(

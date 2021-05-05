@@ -66,6 +66,7 @@ GET           /data/user/has-port-access                           controllers.A
 GET           /data/actor-tree                                     controllers.Application.getActorTree()
 GET           /debug/flights/:persistenceId/:dateString/:messages  controllers.Application.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 
+POST          /email/feedback/:feedback                             controllers.Application.feedBack(feedback:String)
 
 # Logging
 POST          /logging                                             controllers.Application.logging
