@@ -6,7 +6,7 @@ import drt.shared._
 import drt.shared.api.Arrival
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
-import services.{TrySimulator, SplitsProvider, TryCrunch}
+import services.{TrySimulator, TryCrunch}
 
 import scala.collection.immutable.SortedMap
 
@@ -16,7 +16,6 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
                       initialPortState: Option[PortState] = None,
                       airportConfig: AirportConfig = TestDefaults.airportConfig,
-                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
                       pcpArrivalTime: Arrival => MilliDate = TestDefaults.pcpForFlightFromSch,
                       expireAfterMillis: Int = DrtStaticParameters.expireAfterMillis,
                       now: () => SDateLike,

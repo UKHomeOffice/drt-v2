@@ -2,13 +2,11 @@ package controllers
 
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince}
 import akka.pattern.ask
-import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import drt.shared.CrunchApi._
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalsDiff, PortState}
-import play.api.Configuration
 import services.crunch.CrunchTestLike
 import test.TestActors.ResetData
 import test.TestDrtSystem
@@ -20,11 +18,8 @@ class TestDrtSystemSpec extends CrunchTestLike {
   sequential
   isolated
 
-  val config: Config = ConfigFactory.load.withValue("feature-flags.use-partitioned-state", ConfigValueFactory.fromAnyRef(true))
-  val configuration: Configuration = Configuration(config)
-
   "Given a test drt system" >> {
-    val drtSystem = TestDrtSystem(configuration, defaultAirportConfig)
+    val drtSystem = TestDrtSystem(defaultAirportConfig)
 
     "When I send its port state actor an arrival" >> {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly)

@@ -34,7 +34,7 @@ case class MockManifestLookupService(implicit ec: ExecutionContext) extends Mani
     Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
 }
 
-case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
+case class TestDrtSystem(airportConfig: AirportConfig)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem) extends DrtSystemInterface {
