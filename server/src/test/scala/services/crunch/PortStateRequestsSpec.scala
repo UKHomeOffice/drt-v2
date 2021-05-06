@@ -3,7 +3,7 @@ package services.crunch
 import actors.PartitionedPortStateActor._
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
-import actors.queues.FlightsRouterActor
+import actors.routing.FlightsRouterActor
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask

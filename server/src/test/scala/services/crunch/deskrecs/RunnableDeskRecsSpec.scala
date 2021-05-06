@@ -2,7 +2,7 @@ package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetFlights
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe

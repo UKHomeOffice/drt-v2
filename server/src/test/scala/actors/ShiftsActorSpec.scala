@@ -1,6 +1,6 @@
 package actors
 
-import actors.pointInTime.ShiftsReadActor
+import actors.persistent.staffing.{GetState, ShiftsActor, ShiftsReadActor, UpdateShifts, UpdateShiftsAck}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.testkit.ImplicitSender
 import drt.shared.Terminals.{T1, Terminal}

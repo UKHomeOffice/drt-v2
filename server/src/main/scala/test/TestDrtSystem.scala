@@ -34,7 +34,7 @@ case class MockManifestLookupService(implicit ec: ExecutionContext) extends Mani
     Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
 }
 
-case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
+case class TestDrtSystem(airportConfig: AirportConfig)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem) extends DrtSystemInterface {
@@ -43,19 +43,19 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   log.warn("Using test System")
 
-  override val baseArrivalsActor: ActorRef = system.actorOf(Props(new TestForecastBaseArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
-  override val forecastArrivalsActor: ActorRef = system.actorOf(Props(new TestForecastPortArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override val liveArrivalsActor: ActorRef = system.actorOf(Props(new TestLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
+  override val baseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
+  override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestPortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
+  override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestPortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
-  override val shiftsActor: ActorRef = system.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))))
-  override val fixedPointsActor: ActorRef = system.actorOf(Props(new TestFixedPointsActor(now)))
-  override val staffMovementsActor: ActorRef = system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
+  override val shiftsActor: ActorRef = restartOnStop.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
+  override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new TestFixedPointsActor(now)), "staff-fixed-points")
+  override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()))
-  override val crunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "crunch-queue-actor")
-  override val deploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "staff-queue-actor")
-  override val manifestsRouterActor: ActorRef = system.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)), name = "voyage-manifests-router-actor")
+  override val crunchQueueActor: ActorRef = restartOnStop.actorOf(Props(new TestCrunchQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "crunch-queue-actor")
+  override val deploymentQueueActor: ActorRef = restartOnStop.actorOf(Props(new TestDeploymentQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "staff-queue-actor")
+  override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)), name = "voyage-manifests-router-actor")
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, deploymentQueueActor)

@@ -1,7 +1,7 @@
 package services
 
-import actors.GetFeedStatuses
 import actors.PartitionedPortStateActor.GetStateForDateRange
+import actors.persistent.staffing.GetFeedStatuses
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream.Materializer

@@ -2,7 +2,9 @@ package actors
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
-import actors.queues.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
+import actors.persistent.arrivals.{ArrivalsState, AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
+import actors.persistent.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
@@ -35,7 +37,7 @@ object PostgresTables extends {
 
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
-case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
+case class ProdDrtSystem(airportConfig: AirportConfig)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem) extends DrtSystemInterface {
@@ -50,18 +52,17 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
-  override val baseArrivalsActor: ActorRef = system.actorOf(Props(new ForecastBaseArrivalsActor(params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis)), name = "base-arrivals-actor")
-
-  override val forecastArrivalsActor: ActorRef = system.actorOf(Props(new ForecastPortArrivalsActor(params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override val liveArrivalsActor: ActorRef = system.actorOf(Props(new LiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-arrivals-actor")
+  override val baseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AclForecastArrivalsActor(params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis)), name = "base-arrivals-actor")
+  override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortForecastArrivalsActor(params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis)), name = "forecast-arrivals-actor")
+  override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortLiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-arrivals-actor")
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
 
-  override val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "crunch-queue-actor")
-  override val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "staff-queue-actor")
-  override val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)), name = "voyage-manifests-router-actor")
+  override val crunchQueueActor: ActorRef = restartOnStop.actorOf(Props(new CrunchQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "crunch-queue-actor")
+  override val deploymentQueueActor: ActorRef = restartOnStop.actorOf(Props(new DeploymentQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "staff-queue-actor")
+  override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)), name = "voyage-manifests-router-actor")
 
   override val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
@@ -96,11 +97,9 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 
-  override val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(now, timeBeforeThisMonth(now))))
-  override val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(now)))
-  override val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now))))
-
-  override val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)))
+  override val shiftsActor: ActorRef = restartOnStop.actorOf(Props(new ShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
+  override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new FixedPointsActor(now)), "staff-fixed-points")
+  override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now))), "staff-movements")
 
   val s3ApiProvider: S3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
   val initialManifestsState: Option[ApiFeedState] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor)

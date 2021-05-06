@@ -3,7 +3,7 @@ package actors
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.acking.Acking.AckingAsker
 import actors.acking.AckingReceiver.{Ack, StreamFailure}
-import actors.queues.FlightsRouterActor
+import actors.routing.FlightsRouterActor
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask

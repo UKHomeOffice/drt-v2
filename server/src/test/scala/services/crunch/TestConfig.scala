@@ -6,7 +6,7 @@ import drt.shared._
 import drt.shared.api.Arrival
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
-import services.{TrySimulator, SplitsProvider, TryCrunch}
+import services.{TrySimulator, TryCrunch}
 
 import scala.collection.immutable.SortedMap
 

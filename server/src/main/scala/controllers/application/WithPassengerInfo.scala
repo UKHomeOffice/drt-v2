@@ -1,7 +1,7 @@
 package controllers.application
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
-import actors.queues.ManifestRouterActor
+import actors.persistent.ManifestRouterActor
 import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source

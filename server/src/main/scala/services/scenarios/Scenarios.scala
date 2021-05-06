@@ -1,6 +1,6 @@
 package services.scenarios
 
-import actors.GetState
+import actors.persistent.staffing.GetState
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.ask

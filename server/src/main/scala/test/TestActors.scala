@@ -1,12 +1,15 @@
 package test
 
-import actors.Sizes.oneMegaByte
+import actors.persistent.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily._
-import actors.minutes.MinutesActorLike._
-import actors.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
-import actors.queues.{CrunchQueueActor, DeploymentQueueActor, FlightsRouterActor, ManifestRouterActor}
+import actors.routing.minutes.MinutesActorLike._
+import actors.routing.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
+import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
+import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
+import actors.routing.FlightsRouterActor
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
@@ -63,15 +66,15 @@ object TestActors {
     }
   }
 
-  class TestForecastBaseArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
+  class TestAclForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
+    extends AclForecastArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
     override def resetState(): Unit = state = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestForecastPortArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends ForecastPortArrivalsActor(oneMegaByte, now, expireAfterMillis) {
+  class TestPortForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
+    extends PortForecastArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def resetBehaviour: Receive = {
       case ResetData =>
@@ -86,8 +89,8 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends LiveArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
+  class TestPortLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
+    extends PortLiveArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

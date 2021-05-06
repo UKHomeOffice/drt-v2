@@ -1,6 +1,6 @@
 package actors
 
-import actors.pointInTime.FixedPointsReadActor
+import actors.persistent.staffing.{FixedPointsActor, FixedPointsReadActor, GetState, SetFixedPoints, SetFixedPointsAck}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.testkit.ImplicitSender
 import drt.shared.Terminals.T1

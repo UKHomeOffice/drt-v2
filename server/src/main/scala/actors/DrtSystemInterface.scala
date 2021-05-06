@@ -3,14 +3,19 @@ package actors
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.GetFlights
 import actors.daily.PassengersActor
-import actors.queues.FlightsRouterActor
-import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.persistent.AlertsActor
+import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.arrivals.CirriumLiveArrivalsActor
+import actors.persistent.staffing.{AddFixedPointSubscribers, AddShiftSubscribers, AddStaffMovementsSubscribers, GetFeedStatuses, GetState}
+import actors.routing.FlightsRouterActor
+import actors.supervised.{RestartOnStop, RestartOnStopActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props, Scheduler}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
+import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
@@ -63,9 +68,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
 
+
   val manifestLookupService: ManifestLookupLike
 
-  val config: Configuration
+  val config: Configuration = new Configuration(ConfigFactory.load)
   val airportConfig: AirportConfig
   val params: DrtConfigParameters = DrtConfigParameters(config)
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
@@ -73,8 +79,12 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(params.gateWalkTimesFilePath)
   val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(params.standWalkTimesFilePath)
 
-  val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)), name = "alerts-actor")
-  val liveBaseArrivalsActor: ActorRef = system.actorOf(Props(new LiveBaseArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
+  private val minBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.minimum-seconds")
+  private val maxBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.maximum-seconds")
+  val restartOnStop: RestartOnStop = RestartOnStop(minBackoffSeconds seconds, maxBackoffSeconds seconds)
+
+  val alertsActor: ActorRef = restartOnStop.actorOf(Props(new AlertsActor(now)), "alerts-actor")
+  val liveBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new CirriumLiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val crunchQueueActor: ActorRef
   val deploymentQueueActor: ActorRef

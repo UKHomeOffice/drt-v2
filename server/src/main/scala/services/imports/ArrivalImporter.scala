@@ -1,8 +1,8 @@
 package services.imports
 
-import actors.GetState
 import actors.PartitionedPortStateActor.GetFlights
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
+import actors.persistent.staffing.GetState
 import akka.actor.{Actor, ActorLogging, PoisonPill}
 import akka.pattern.pipe
 import akka.stream.scaladsl.Source

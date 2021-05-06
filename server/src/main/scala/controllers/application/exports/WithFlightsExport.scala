@@ -1,6 +1,7 @@
 package controllers.application.exports
 
 import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, PointInTimeQuery}
+import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
@@ -99,10 +100,10 @@ trait WithFlightsExport {
                              feedSourceString: String): Action[AnyContent] = authByRole(ArrivalSource) {
 
     val feedSourceToPersistenceId: Map[FeedSource, String] = Map(
-      LiveBaseFeedSource -> "actors.LiveBaseArrivalsActor-live-base",
-      LiveFeedSource -> "actors.LiveArrivalsActor-live",
-      AclFeedSource -> "actors.ForecastBaseArrivalsActor-forecast-base",
-      ForecastFeedSource -> "actors.ForecastPortArrivalsActor-forecast-port"
+      LiveBaseFeedSource -> CirriumLiveArrivalsActor.persistenceId,
+      LiveFeedSource -> PortLiveArrivalsActor.persistenceId,
+      AclFeedSource -> AclForecastArrivalsActor.persistenceId,
+      ForecastFeedSource -> PortForecastArrivalsActor.persistenceId
     )
     val terminal = Terminal(terminalString)
 

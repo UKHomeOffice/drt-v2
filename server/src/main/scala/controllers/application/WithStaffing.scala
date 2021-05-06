@@ -1,9 +1,8 @@
 package controllers.application
 
 import java.util.UUID
-
 import actors._
-import actors.pointInTime.{FixedPointsReadActor, StaffMovementsReadActor}
+import actors.persistent.staffing.{AddStaffMovements, FixedPointsReadActor, GetState, RemoveStaffMovements, SetFixedPoints, SetShifts, StaffMovementsReadActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern._

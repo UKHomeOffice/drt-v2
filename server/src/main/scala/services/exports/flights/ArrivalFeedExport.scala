@@ -1,8 +1,8 @@
 package services.exports.flights
 
 import java.util.UUID
-import actors.pointInTime.ArrivalsReadActor
-import actors.{ArrivalsState, GetState}
+import actors.persistent.arrivals.{ArrivalsReadActor, ArrivalsState}
+import actors.persistent.staffing.GetState
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask

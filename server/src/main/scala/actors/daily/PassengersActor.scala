@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.RecoveryActorLike
+import actors.persistent.RecoveryActorLike
 import akka.actor.ActorRef
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch

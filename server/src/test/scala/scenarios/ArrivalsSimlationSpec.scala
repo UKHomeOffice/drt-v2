@@ -1,6 +1,6 @@
 package scenarios
 
-import actors.GetState
+import actors.persistent.staffing.GetState
 import akka.actor.Props
 import akka.pattern.ask
 import controllers.ArrivalGenerator

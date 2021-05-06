@@ -1,6 +1,6 @@
 package services.`export`
 
-import actors.minutes.MockMinutesLookup
+import actors.routing.minutes.MockMinutesLookup
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}

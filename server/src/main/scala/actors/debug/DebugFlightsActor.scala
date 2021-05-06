@@ -1,6 +1,7 @@
 package actors.debug
 
-import actors.{GetState, RecoveryActorLike}
+import actors.persistent.RecoveryActorLike
+import actors.persistent.staffing.GetState
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike

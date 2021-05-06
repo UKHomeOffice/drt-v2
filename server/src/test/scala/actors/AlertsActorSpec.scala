@@ -1,5 +1,7 @@
 package actors
 
+import actors.persistent.staffing.GetState
+import actors.persistent.{AlertsActor, DeleteAlerts}
 import akka.actor.{ActorRef, Props}
 import akka.pattern._
 import akka.testkit.TestKit

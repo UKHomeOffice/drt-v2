@@ -1,7 +1,8 @@
 package actors.queues
 
 import actors.SetCrunchRequestQueue
-import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.persistent.DeploymentQueueActor
+import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.{ActorRef, PoisonPill, Props, Terminated}
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Keep, Sink, Source, SourceQueueWithComplete}

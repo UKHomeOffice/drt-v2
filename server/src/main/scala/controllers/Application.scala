@@ -2,6 +2,7 @@ package controllers
 
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors._
+import actors.persistent.staffing.{GetState, UpdateShifts}
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern._
@@ -15,7 +16,6 @@ import controllers.application._
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import drt.shared.SplitRatiosNs.SplitRatios
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{AirportConfig, _}
@@ -25,13 +25,10 @@ import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Action, _}
 import play.api.{Configuration, Environment}
 import services.PcpArrival.{pcpFrom, _}
-import services.SplitsProvider.SplitProvider
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
 import services.staffing.StaffTimeSlots
-import services.workloadcalculator.PaxLoadCalculator
-import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
 import test.TestDrtSystem
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, ManageUsers, Role, StaffEdit}
 import uk.gov.homeoffice.drt.auth._
@@ -115,15 +112,15 @@ object DrtActorSystem extends AirportConfProvider {
   implicit val mat: Materializer = ActorMaterializer.create(actorSystem)
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   val config: Configuration = new Configuration(ConfigFactory.load)
+  val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
 
   val drtSystem: DrtSystemInterface =
     if (isTestEnvironment) drtTestSystem
     else drtProdSystem
 
-  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(config, getPortConfFromEnvVar)
-  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(config, getPortConfFromEnvVar)
+  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(getPortConfFromEnvVar)
+  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(getPortConfFromEnvVar)
 
-  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
 }
 
 @Singleton

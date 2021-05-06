@@ -1,6 +1,6 @@
 package services
 
-import actors.GetState
+import actors.persistent.staffing.GetState
 import akka.actor.Actor
 import akka.pattern.after
 import controllers.ArrivalGenerator

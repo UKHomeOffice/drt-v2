@@ -1,7 +1,7 @@
 package services.crunch
 
 import actors.acking.AckingReceiver._
-import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}

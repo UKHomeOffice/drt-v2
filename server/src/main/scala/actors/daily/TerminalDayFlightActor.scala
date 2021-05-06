@@ -1,9 +1,10 @@
 package actors.daily
 
-import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.staffing.GetState
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{flightWithSplitsFromMessage, uniqueArrivalsFromMessages}
-import actors.{GetState, RecoveryActorLike, Sizes}
+import actors.persistent.{RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
