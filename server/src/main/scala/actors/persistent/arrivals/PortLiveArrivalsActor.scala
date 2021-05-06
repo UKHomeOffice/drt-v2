@@ -4,10 +4,15 @@ import drt.shared.{LiveFeedSource, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.FlightsDiffMessage
 
-class LiveArrivalsActor(initialSnapshotBytesThreshold: Int,
-                        val now: () => SDateLike,
-                        expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, LiveFeedSource) {
-  override def persistenceId: String = s"${getClass.getName}-live"
+
+object PortLiveArrivalsActor {
+  val persistenceId = "actors.LiveArrivalsActor-live"
+}
+
+class PortLiveArrivalsActor(initialSnapshotBytesThreshold: Int,
+                            val now: () => SDateLike,
+                            expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, LiveFeedSource) {
+  override def persistenceId: String = PortLiveArrivalsActor.persistenceId
 
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
   override val maybeSnapshotInterval: Option[Int] = Option(500)

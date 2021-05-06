@@ -8,10 +8,15 @@ import services.graphstages.Crunch
 
 import scala.collection.immutable.SortedMap
 
-class ForecastBaseArrivalsActor(initialSnapshotBytesThreshold: Int,
-                                val now: () => SDateLike,
-                                expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, AclFeedSource) {
-  override def persistenceId: String = s"${getClass.getName}-forecast-base"
+
+object AclForecastArrivalsActor {
+  val persistenceId = "actors.ForecastBaseArrivalsActor-forecast-base"
+}
+
+class AclForecastArrivalsActor(initialSnapshotBytesThreshold: Int,
+                               val now: () => SDateLike,
+                               expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, AclFeedSource) {
+  override def persistenceId: String = AclForecastArrivalsActor.persistenceId
 
   override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
   override val maybeSnapshotInterval: Option[Int] = Option(100)

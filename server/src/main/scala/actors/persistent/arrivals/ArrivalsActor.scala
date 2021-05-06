@@ -1,10 +1,9 @@
 package actors.persistent.arrivals
 
 import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.{PersistentDrtActor, RecoveryActorLike, arrivals}
 import actors.persistent.staffing.{GetFeedStatuses, GetState}
+import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import actors.serializers.FlightMessageConversion._
-import actors.{persistent, _}
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
@@ -27,7 +26,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
-  override def initialState: ArrivalsState = arrivals.ArrivalsState(SortedMap(), feedSource, None)
+  override def initialState: ArrivalsState = ArrivalsState(SortedMap(), feedSource, None)
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case stateMessage: FlightStateSnapshotMessage =>
@@ -51,7 +50,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     val arrivals = SortedMap[UniqueArrival, Arrival]() ++ restorer.arrivals
     restorer.finish()
 
-    state = state.copy(arrivals = Crunch.purgeExpired(arrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt))
+    state = state.copy(arrivals = Crunch.purgeExpired(arrivals, UniqueArrival.atTime, now, expireAfterMillis))
 
     log.info(s"Recovered ${state.arrivals.size} arrivals for ${state.feedSource}")
     super.postRecoveryComplete()
