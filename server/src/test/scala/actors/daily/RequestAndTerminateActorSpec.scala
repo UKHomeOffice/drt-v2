@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.Props
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}

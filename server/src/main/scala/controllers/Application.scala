@@ -2,6 +2,7 @@ package controllers
 
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors._
+import actors.persistent.staffing.{GetState, UpdateShifts}
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern._

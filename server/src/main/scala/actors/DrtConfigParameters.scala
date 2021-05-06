@@ -1,6 +1,6 @@
 package actors
 
-import actors.Sizes.oneMegaByte
+import actors.persistent.Sizes.oneMegaByte
 import com.amazonaws.auth.AWSCredentials
 import com.typesafe.config.ConfigFactory
 import drt.shared.CrunchApi.MillisSinceEpoch

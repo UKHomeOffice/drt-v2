@@ -1,6 +1,6 @@
 package services.persistence
 
-import actors.RecoveryActorLike
+import actors.persistent.RecoveryActorLike
 import akka.actor.{ActorRef, Props}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.MillisSinceEpoch

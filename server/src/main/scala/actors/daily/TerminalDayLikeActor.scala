@@ -1,7 +1,8 @@
 package actors.daily
 
-import actors.queues.QueueLikeActor.UpdatedMillis
-import actors.{GetState, RecoveryActorLike, Sizes}
+import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.staffing.GetState
+import actors.persistent.{RecoveryActorLike, Sizes}
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.Terminals.Terminal

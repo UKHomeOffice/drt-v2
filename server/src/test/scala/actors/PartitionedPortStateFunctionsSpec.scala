@@ -1,7 +1,7 @@
 package actors
 
 import actors.PartitionedPortStateActor._
-import actors.queues.FlightsRouterActor
+import actors.routing.FlightsRouterActor
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.scaladsl.Source
 import akka.testkit.{ImplicitSender, TestProbe}

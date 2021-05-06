@@ -1,7 +1,7 @@
 package actors.daily
 
-import actors.GetState
-import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.staffing.GetState
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}

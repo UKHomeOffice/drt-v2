@@ -1,12 +1,15 @@
 package test
 
-import actors.Sizes.oneMegaByte
+import actors.persistent.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily._
-import actors.minutes.MinutesActorLike._
-import actors.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
-import actors.queues.{CrunchQueueActor, DeploymentQueueActor, FlightsRouterActor, ManifestRouterActor}
+import actors.routing.minutes.MinutesActorLike._
+import actors.routing.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
+import actors.persistent.arrivals.{ForecastBaseArrivalsActor, ForecastPortArrivalsActor, LiveArrivalsActor}
+import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
+import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
+import actors.routing.FlightsRouterActor
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}

@@ -1,8 +1,8 @@
 package controllers.application
 
-import java.util.UUID
+import actors.persistent.arrivals.ArrivalsReadActor
 
-import actors.pointInTime.ArrivalsReadActor
+import java.util.UUID
 import akka.actor.{ActorRef, PoisonPill}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source}
@@ -64,10 +64,10 @@ trait WithFeeds {
                                origin: String
                              ): Action[AnyContent] = authByRole(ArrivalSource) {
     val arrivalActorPersistenceIds = Seq(
-      ("actors.LiveBaseArrivalsActor-live-base", LiveBaseFeedSource),
-      ("actors.LiveArrivalsActor-live", LiveFeedSource),
-      ("actors.ForecastBaseArrivalsActor-forecast-base", AclFeedSource),
-      ("actors.ForecastPortArrivalsActor-forecast-port", ForecastFeedSource)
+      ("actors.persistent.arrivals.LiveBaseArrivalsActor-live-base", LiveBaseFeedSource),
+      ("actors.persistent.arrivals.LiveArrivalsActor-live", LiveFeedSource),
+      ("actors.persistent.arrivals.ForecastBaseArrivalsActor-forecast-base", AclFeedSource),
+      ("actors.persistent.arrivals.ForecastPortArrivalsActor-forecast-port", ForecastFeedSource)
     )
 
     val pointInTimeActorSources: Seq[ActorRef] = arrivalActorPersistenceIds.map {

@@ -1,8 +1,8 @@
 package actors.routing
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.minutes.MinutesActorLike.ProcessNextUpdateRequest
-import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.routing.minutes.MinutesActorLike.ProcessNextUpdateRequest
+import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.stream.ActorMaterializer

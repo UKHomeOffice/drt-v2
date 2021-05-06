@@ -99,10 +99,10 @@ trait WithFlightsExport {
                              feedSourceString: String): Action[AnyContent] = authByRole(ArrivalSource) {
 
     val feedSourceToPersistenceId: Map[FeedSource, String] = Map(
-      LiveBaseFeedSource -> "actors.LiveBaseArrivalsActor-live-base",
-      LiveFeedSource -> "actors.LiveArrivalsActor-live",
-      AclFeedSource -> "actors.ForecastBaseArrivalsActor-forecast-base",
-      ForecastFeedSource -> "actors.ForecastPortArrivalsActor-forecast-port"
+      LiveBaseFeedSource -> "actors.persistent.arrivals.LiveBaseArrivalsActor-live-base",
+      LiveFeedSource -> "actors.persistent.arrivals.LiveArrivalsActor-live",
+      AclFeedSource -> "actors.persistent.arrivals.ForecastBaseArrivalsActor-forecast-base",
+      ForecastFeedSource -> "actors.persistent.arrivals.ForecastPortArrivalsActor-forecast-port"
     )
     val terminal = Terminal(terminalString)
 

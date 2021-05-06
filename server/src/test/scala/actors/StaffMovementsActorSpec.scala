@@ -1,9 +1,9 @@
 package actors
 
 
-import java.util.UUID
+import actors.persistent.staffing.{AddStaffMovements, AddStaffMovementsAck, GetState, RemoveStaffMovements, RemoveStaffMovementsAck, StaffMovementsActorBase, StaffMovementsReadActor}
 
-import actors.pointInTime.StaffMovementsReadActor
+import java.util.UUID
 import akka.actor.{PoisonPill, Props}
 import akka.testkit.ImplicitSender
 import drt.shared.Terminals.T1

@@ -1,8 +1,9 @@
 package actors
 
 import actors.daily.{DayManifestActor, RequestAndTerminate, RequestAndTerminateActor}
-import actors.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
-import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
+import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.staffing.GetState
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout

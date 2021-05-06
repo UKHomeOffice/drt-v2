@@ -1,6 +1,7 @@
 package actors.queues
 
-import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.persistent.CrunchQueueActor
+import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.{InMemoryStreamingJournal, SetCrunchRequestQueue}
 import akka.actor.{ActorRef, PoisonPill, Props, Terminated}
 import akka.stream.OverflowStrategy

@@ -3,8 +3,8 @@ package services.crunch.deskrecs
 import actors.MinuteLookupsLike
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.RequestAndTerminateActor
-import actors.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
-import actors.minutes.{QueueMinutesActor, StaffMinutesActor}
+import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
+import actors.routing.minutes.{QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.CrunchMinute

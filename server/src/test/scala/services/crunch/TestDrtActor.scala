@@ -3,8 +3,9 @@ package services.crunch
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, PassengersActor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
-import actors.queues.QueueLikeActor.UpdatedMillis
-import actors.queues.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
+import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
+import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}

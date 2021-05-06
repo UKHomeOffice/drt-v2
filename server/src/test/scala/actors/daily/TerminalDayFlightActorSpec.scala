@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.GetState
+import actors.persistent.staffing.GetState
 import akka.actor.ActorRef
 import akka.pattern.ask
 import controllers.ArrivalGenerator.arrivalForDayAndTerminal

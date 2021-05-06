@@ -26,10 +26,10 @@ trait WithDebug {
     Action.async { _ =>
       val pit = SDate(dateString)
       val persistenceIds = SortedMap(
-        "ACL" -> "actors.ForecastBaseArrivalsActor-forecast-base",
-        "Port Forecast" -> "actors.ForecastPortArrivalsActor-forecast-port",
-        "Cirium Live" -> "actors.LiveBaseArrivalsActor-live-base",
-        "Port Live" -> "actors.LiveArrivalsActor-live",
+        "ACL" -> "actors.persistent.arrivals.ForecastBaseArrivalsActor-forecast-base",
+        "Port Forecast" -> "actors.persistent.arrivals.ForecastPortArrivalsActor-forecast-port",
+        "Cirium Live" -> "actors.persistent.arrivals.LiveBaseArrivalsActor-live-base",
+        "Port Live" -> "actors.persistent.arrivals.LiveArrivalsActor-live",
         "Crunch State" -> "crunch-state",
         "Flight State" -> "flight-state",
       ) ++ airportConfig.terminals.map(t => {

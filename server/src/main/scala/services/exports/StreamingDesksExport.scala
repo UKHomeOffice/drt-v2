@@ -1,7 +1,7 @@
 package services.exports
 
-import actors.minutes.MinutesActorLike.MinutesLookup
-import actors.queues.DateRange
+import actors.DateRange
+import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}

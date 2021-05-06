@@ -1,9 +1,10 @@
 package actors
 
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayFlightActor}
-import actors.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
-import actors.queues.FlightsRouterActor
-import actors.queues.QueueLikeActor.UpdatedMillis
+import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
+import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.staffing.GetState
+import actors.routing.FlightsRouterActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout

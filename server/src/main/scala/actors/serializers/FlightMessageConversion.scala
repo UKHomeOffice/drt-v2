@@ -1,6 +1,6 @@
 package actors.serializers
 
-import actors.ArrivalsState
+import actors.persistent.arrivals.ArrivalsState
 import actors.serializers.PortStateMessageConversion.splitMessageToApiSplits
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.Terminals.Terminal
