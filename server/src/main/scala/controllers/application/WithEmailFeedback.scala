@@ -9,7 +9,8 @@ case class FeedbackData(feedbackUserEmail: String,
                         whatUserDoing: String,
                         whatWentWrong: String,
                         whatToImprove: String,
-                        contactMe: Boolean)
+                        contactMe: Boolean,
+                        url :String)
 
 trait WithEmailFeedback {
   self: Application =>
@@ -23,7 +24,7 @@ trait WithEmailFeedback {
         case "positive" =>
           request.body.asText match {
             case Some(json) =>
-              val personalisation = emailNotification.positivePersonalisationData(read(json).feedbackUserEmail)
+              val personalisation = emailNotification.positivePersonalisationData(read(json).url)
               emailNotification.sendRequest(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), negativeFeedbackTemplateId, personalisation)
               Accepted
             case None =>

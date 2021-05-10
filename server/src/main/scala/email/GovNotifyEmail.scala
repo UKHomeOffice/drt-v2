@@ -16,20 +16,21 @@ class GovNotifyEmail(apiKey: String) {
 
   val client = new NotificationClient(apiKey)
 
-  def positivePersonalisationData(feedbackUserEmail: String): util.Map[String, String] = {
+  def positivePersonalisationData(url:String): util.Map[String, String] = {
     Map(
-      "feedbackUserEmail" -> feedbackUserEmail
+      "url" -> url
     ).asJava
   }
 
   def negativePersonalisationData(feedbackData: FeedbackData): util.Map[String, String] = {
-    val contactMe = if (feedbackData.contactMe) "User is happy to be contacted" else "User is not happy to be contacted"
+    val contactMe = if (feedbackData.contactMe) s"The user ${feedbackData.feedbackUserEmail} is happy to be contacted." else s"The user ${feedbackData.feedbackUserEmail} is not happy to be contacted."
     Map(
-      "feedbackUserEmail" -> feedbackData.feedbackUserEmail,
-      "whatUserDoing" -> feedbackData.whatToImprove,
-      "whatWentWrong" -> feedbackData.whatWentWrong,
-      "whatToImprove" -> feedbackData.whatUserDoing,
-      "contactMe" -> contactMe
+    "url" -> feedbackData.url,
+    "feedbackUserEmail" -> feedbackData.feedbackUserEmail,
+    "whatUserDoing" -> feedbackData.whatToImprove,
+    "whatWentWrong" -> feedbackData.whatWentWrong,
+    "whatToImprove" -> feedbackData.whatUserDoing,
+    "contactMe" -> contactMe
     ).asJava
   }
 

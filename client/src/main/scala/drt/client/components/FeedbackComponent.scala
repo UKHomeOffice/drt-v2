@@ -1,14 +1,15 @@
 package drt.client.components
 
-import drt.client.actions.Actions.{SaveAlert, SetAlerts}
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.services.{DrtApi, SPACircuit}
+import drt.client.services.DrtApi
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{Alert, SDateLike}
+import drt.shared.SDateLike
+import io.kinoplan.scalajs.react.material.ui.core._
+import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomTagOf, ^, _}
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
-import org.scalajs.dom.html.{Anchor, Div, Span}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEvent, ReactEventFromInput, Reusability, ScalaComponent}
+import org.scalajs.dom.html.{Anchor, Div}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import upickle.default.{macroRW, write, ReadWriter => RW}
 
@@ -35,8 +36,14 @@ object FeedbackComponent {
                    whatToImprove: String,
                    contactMe: Boolean,
                    isPositive: Boolean,
-                   showDialogue: Boolean = false
-                  )
+                   showDialogue: Boolean = false,
+                   open: Boolean = false) {
+
+    def handleClose = copy(open = false)
+
+    def handleClick = copy(open = true)
+
+  }
 
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
   implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.url, p.selectedDate.millisSinceEpoch))
@@ -72,6 +79,12 @@ object FeedbackComponent {
         state.copy(contactMe = contactMe)
       })
 
+      def handleCloseClick: Callback = scope.modState(_.handleClose)
+
+      def handleClose: (ReactEvent, String) => Callback = (_, reason) => {
+        handleCloseClick.when_(reason != "clickaway")
+      }
+
       def showNegativeFeedbackDialog: VdomTagOf[Div] = {
         <.div(^.className := "modal " + showClass, ^.id := "#negativeFeedback", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
@@ -101,10 +114,10 @@ object FeedbackComponent {
                 <.br(),
                 <.div(^.`class` := "row",
                   <.div(^.`class` := "col-md-7 ml-auto",
-                    <.ul( ^.className := "nav navbar-nav navbar-left",
-                    <.li(<.input.checkbox(^.checked := state.contactMe, ^.onChange ==> ((e: ReactEventFromInput) => setContactMe(e.target.checked)), ^.id := "check-contactMe")),
-                    <.li(),
-                    <.li(<.label(^.`for` := "check-contactMe", " are you happy for us to contact you?"))
+                    <.ul(^.className := "nav navbar-nav navbar-left",
+                      <.li(<.input.checkbox(^.checked := state.contactMe, ^.onChange ==> ((e: ReactEventFromInput) => setContactMe(e.target.checked)), ^.id := "check-contactMe")),
+                      <.li(),
+                      <.li(<.label(^.`for` := "check-contactMe", " are you happy for us to contact you?"))
                     )
                   )
                 ),
@@ -141,16 +154,15 @@ object FeedbackComponent {
       }
 
       if (props.isPositive == Positive) {
-        if (scope.state.showDialogue)
-         SPACircuit.dispatch(SetAlerts(List(
-           Alert("","Thanks for your feedback. This helps us improve the service.",
-             "notice",
-             expires = System.currentTimeMillis() + 5000)),
-           System.currentTimeMillis()))
         <.div(
+          <.div(MuiSnackbar(anchorOrigin = Origin(vertical = "top", horizontal = "right"),
+            autoHideDuration = 5000,
+            message = <.div(^.className := "muiSnackBar" ,"Thanks for your feedback. This helps us improve the service."),
+            open = scope.state.open ,
+            onClose = handleClose)()),
           <.button(Icon.thumbsOUp,
             ^.className := "btn btn-default btn-success",
-            ^.onClick --> scope.modState(_.copy(showDialogue = true), Callback(DrtApi.post("email/feedback/positive", write(state))))
+            ^.onClick --> scope.modState(_.copy(open = true), Callback(DrtApi.post("email/feedback/positive", write(state))))
           )
         )
 
