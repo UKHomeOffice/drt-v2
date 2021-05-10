@@ -1,15 +1,17 @@
 package drt.client.components
 
+import drt.client.actions.Actions.{SaveAlert, SetAlerts}
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.services.DrtApi
+import drt.client.services.{DrtApi, SPACircuit}
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.SDateLike
+import drt.shared.{Alert, SDateLike}
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
+import japgolly.scalajs.react.vdom.html_<^.{<, VdomTagOf, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
-import org.scalajs.dom.html.{Anchor, Div}
+import org.scalajs.dom.html.{Anchor, Div, Span}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import upickle.default.{write, macroRW, ReadWriter => RW}
+import upickle.default.{macroRW, write, ReadWriter => RW}
+
 
 sealed trait Feedback
 
@@ -98,10 +100,13 @@ object FeedbackComponent {
                 ),
                 <.br(),
                 <.div(^.`class` := "row",
-                  <.div( ^.`class` := "col-md-7 ml-auto",
-                    <.input.checkbox(^.checked := state.contactMe, ^.onChange ==> ((e: ReactEventFromInput) => setContactMe(e.target.checked)),^.id := "check-contactMe") ,
-                    <.label(^.`for` := "check-contactMe","are you happy for us to contact you ?"),
-                 )
+                  <.div(^.`class` := "col-md-7 ml-auto",
+                    <.ul( ^.className := "nav navbar-nav navbar-left",
+                    <.li(<.input.checkbox(^.checked := state.contactMe, ^.onChange ==> ((e: ReactEventFromInput) => setContactMe(e.target.checked)), ^.id := "check-contactMe")),
+                    <.li(),
+                    <.li(<.label(^.`for` := "check-contactMe", " are you happy for us to contact you?"))
+                    )
+                  )
                 ),
                 <.br()
               ),
@@ -110,7 +115,7 @@ object FeedbackComponent {
                   <.div(^.className := "feedback-links",
                     <.button("Submit", ^.className := "btn btn-default",
                       ^.onClick --> {
-                        scope.modState(_.copy(showDialogue = false),Callback(DrtApi.post("email/feedback/negative",write(state))))
+                        scope.modState(_.copy(showDialogue = false), Callback(DrtApi.post("email/feedback/negative", write(state))))
                       }
                     ),
                     <.button(^.className := "btn btn-link",
@@ -125,34 +130,7 @@ object FeedbackComponent {
         )
       }
 
-      def showPositiveFeedbackDialog: VdomTagOf[Div] = {
-        <.div(^.className := "modal " + showClass, ^.id := "#positiveFeedback", ^.tabIndex := -1, ^.role := "dialog",
-          <.div(^.className := "modal-dialog modal-sm modal-dialog-centered", ^.role := "document",
-            <.div(^.className := "modal-content",
-              <.div(^.className := "modal-body", <.span("Thank you for feedback !")),
-              <.div(^.className := "modal-footer",
-                <.div(
-                  <.div(^.className := "feedback-links",
-                    <.button("Submit",
-                      ^.className := "btn btn-default",
-                      ^.target := "_blank",
-                      ^.onClick --> {
-                        scope.modState(_.copy(showDialogue = false),Callback(DrtApi.post("email/feedback/positive",write(state))))
-                      }
-                    ),
-                    <.button(
-                      ^.className := "btn btn-link",
-                      VdomAttr("data-dismiss") := "modal", "Close",
-                      ^.onClick --> scope.modState(_.copy(showDialogue = false))
-                    )
-                  )
-                )
-              )
-            )
-          ))
-      }
-
-      def feedBackButton(icon: Icon.Icon, target: String,btnColor:String): VdomTagOf[Anchor] = {
+      def feedBackButton(icon: Icon.Icon, target: String, btnColor: String): VdomTagOf[Anchor] = {
         <.a(
           icon,
           ^.className := s"btn btn-default $btnColor",
@@ -163,10 +141,21 @@ object FeedbackComponent {
       }
 
       if (props.isPositive == Positive) {
-        <.div(feedBackButton(Icon.thumbsOUp, "positiveFeedback","btn-success"),
-          showPositiveFeedbackDialog())
+        if (scope.state.showDialogue)
+         SPACircuit.dispatch(SetAlerts(List(
+           Alert("","Thanks for your feedback. This helps us improve the service.",
+             "notice",
+             expires = System.currentTimeMillis() + 5000)),
+           System.currentTimeMillis()))
+        <.div(
+          <.button(Icon.thumbsOUp,
+            ^.className := "btn btn-default btn-success",
+            ^.onClick --> scope.modState(_.copy(showDialogue = true), Callback(DrtApi.post("email/feedback/positive", write(state))))
+          )
+        )
+
       } else {
-        <.div(feedBackButton(Icon.thumbsODown, "negativeFeedback","btn-danger"),
+        <.div(feedBackButton(Icon.thumbsODown, "negativeFeedback", "btn-danger"),
           showNegativeFeedbackDialog())
       }
 
