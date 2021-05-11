@@ -138,14 +138,6 @@ object SPAMain {
 
   case object DeskAndQueuesLoc extends Loc
 
-  case object ArrivalsFaqsLoc extends Loc
-
-  case object PortConfigurationFaqsLoc extends Loc
-
-  case object StaffMovementsFaqsLoc extends Loc
-
-  case object MonthlyStaffingFaqsLoc extends Loc
-
   case class KeyCloakUserEditLoc(userId: UUID) extends Loc
 
   case object AlertLoc extends Loc
@@ -183,10 +175,6 @@ object SPAMain {
         alertRoute(dsl) |
         faqsRoute(dsl) |
         deskAndQueuesFaqsRoute(dsl) |
-        arrivalsFaqsRoute(dsl) |
-        portConfigurationFaqsRoute(dsl) |
-        staffMovementsFaqsRoute(dsl) |
-        monthlyStaffingFaqsRoute(dsl) |
         contactRoute(dsl) |
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
@@ -257,7 +245,6 @@ object SPAMain {
     staticRoute("#contact", ContactUsLoc) ~> renderR(_ => ContactPage())
   }
 
-
   def faqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
@@ -268,30 +255,6 @@ object SPAMain {
     import dsl._
 
     staticRoute("#faqs/deskAndQueues", DeskAndQueuesLoc) ~> renderR(_ => FaqsPage("deskAndQueues"))
-  }
-
-  def arrivalsFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/arrivals", ArrivalsFaqsLoc) ~> renderR(_ => FaqsPage("arrivals"))
-  }
-
-  def portConfigurationFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/portConfiguration", PortConfigurationFaqsLoc) ~> renderR(_ => FaqsPage("portConfiguration"))
-  }
-
-  def staffMovementsFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/staff-movements", StaffMovementsFaqsLoc) ~> renderR(_ => FaqsPage("staff-movements"))
-  }
-
-  def monthlyStaffingFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/monthly-staffing", MonthlyStaffingFaqsLoc) ~> renderR(_ => FaqsPage("monthly-staffing"))
   }
 
   def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
