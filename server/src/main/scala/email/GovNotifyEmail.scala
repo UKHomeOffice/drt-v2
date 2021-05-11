@@ -23,7 +23,7 @@ class GovNotifyEmail(apiKey: String) {
   }
 
   def negativePersonalisationData(feedbackData: NegativeFeedbackData): util.Map[String, String] = {
-    val contactMe = if (feedbackData.contactMe) s"The user ${feedbackData.feedbackUserEmail} is happy to be contacted." else s"The user ${feedbackData.feedbackUserEmail} is not happy to be contacted."
+    val contactMe = if (feedbackData.contactMe) s"The user ${feedbackData.feedbackUserEmail} is happy to be contacted." else s"The user ${feedbackData.feedbackUserEmail} would not like to be contacted."
     Map(
     "url" -> feedbackData.url,
     "feedbackUserEmail" -> feedbackData.feedbackUserEmail,

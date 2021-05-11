@@ -41,21 +41,13 @@ object NegativeFeedbackComponent {
 
       val showClass = if (state.showDialogue) "show" else "fade"
 
-      def setWhatUserDoing(whatUserDoing: String) = scope.modState(state => {
-        state.copy(whatUserDoing = whatUserDoing)
-      })
+      def setWhatUserDoing(whatUserDoing: String) =  scope.modState(_.copy(whatUserDoing = whatUserDoing))
 
-      def setWhatWentWrong(whatWentWrong: String) = scope.modState(state => {
-        state.copy(whatWentWrong = whatWentWrong)
-      })
+      def setWhatWentWrong(whatWentWrong: String) =  scope.modState(_.copy(whatWentWrong = whatWentWrong))
 
-      def setWhatToImprove(whatToImprove: String) = scope.modState(state => {
-        state.copy(whatToImprove = whatToImprove)
-      })
+      def setWhatToImprove(whatToImprove: String) = scope.modState(_.copy(whatToImprove = whatToImprove))
 
-      def setContactMe(contactMe: Boolean) = scope.modState(state => {
-        state.copy(contactMe = contactMe)
-      })
+      def setContactMe(contactMe: Boolean) = scope.modState(_.copy(contactMe = contactMe))
 
       def showNegativeFeedbackDialog: VdomTagOf[Div] = {
         <.div(^.className := "modal " + showClass, ^.id := "#negativeFeedback", ^.tabIndex := -1, ^.role := "dialog",
