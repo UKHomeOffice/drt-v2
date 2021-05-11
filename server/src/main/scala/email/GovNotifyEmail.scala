@@ -27,9 +27,9 @@ class GovNotifyEmail(apiKey: String) {
     Map(
     "url" -> feedbackData.url,
     "feedbackUserEmail" -> feedbackData.feedbackUserEmail,
-    "whatUserDoing" -> feedbackData.whatToImprove,
+    "whatUserDoing" -> feedbackData.whatUserDoing,
     "whatWentWrong" -> feedbackData.whatWentWrong,
-    "whatToImprove" -> feedbackData.whatUserDoing,
+    "whatToImprove" -> feedbackData.whatToImprove,
     "contactMe" -> contactMe
     ).asJava
   }
