@@ -173,8 +173,6 @@ object SPAMain {
         keyCloakUsersRoute(dsl) |
         keyCloakUserEditRoute(dsl) |
         alertRoute(dsl) |
-        faqsRoute(dsl) |
-        deskAndQueuesFaqsRoute(dsl) |
         contactRoute(dsl) |
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
@@ -243,18 +241,6 @@ object SPAMain {
     import dsl._
 
     staticRoute("#contact", ContactUsLoc) ~> renderR(_ => ContactPage())
-  }
-
-  def faqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs", FaqsLoc) ~> renderR(_ => FaqsPage(""))
-  }
-
-  def deskAndQueuesFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/deskAndQueues", DeskAndQueuesLoc) ~> renderR(_ => FaqsPage("deskAndQueues"))
   }
 
   def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
