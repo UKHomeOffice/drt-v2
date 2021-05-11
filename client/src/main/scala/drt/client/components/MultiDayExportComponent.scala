@@ -1,22 +1,22 @@
 package drt.client.components
 
 import drt.client.SPAMain
-import drt.client.components.mui.MuiInputLabelProps
-import drt.client.components.styles.ScalaCssImplicits.StringExtended
+import drt.client.components.styles.{DefaultFormFieldsStyle, WithScalaCssImplicits}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
-import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiTextField}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiFormLabel, MuiGrid, MuiTextField}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
 
-object MultiDayExportComponent {
+object MultiDayExportComponent extends WithScalaCssImplicits {
   val today: SDateLike = SDate.now()
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -28,9 +28,9 @@ object MultiDayExportComponent {
 
     def setEnd(dateString: String): State = copy(endDate = LocalDate.parse(dateString).getOrElse(endDate))
 
-    def startMillis = SDate(startDate).millisSinceEpoch
+    def startMillis: MillisSinceEpoch = SDate(startDate).millisSinceEpoch
 
-    def endMillis = SDate(endDate).millisSinceEpoch
+    def endMillis: MillisSinceEpoch = SDate(endDate).millisSinceEpoch
   }
 
   implicit val localDateReuse: Reusability[LocalDate] = Reusability.derive[LocalDate]
@@ -85,34 +85,57 @@ object MultiDayExportComponent {
                     ^.`type` := "date",
                     ^.defaultValue := today.toISODateOnly,
                     ^.onChange ==> setStartDate
+                MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
+                  MuiGrid(item = true, xs = 1)(
+                    DefaultFormFieldsStyle.datePickerLabel,
+                    MuiFormLabel()(
+                      "From"
+                    ),
                   ),
-                  MuiTextField(label = "To".toVdom, InputLabelProps = MuiInputLabelProps(shrink = true))(
-                    ^.id := "date",
-                    ^.`type` := "date",
-                    ^.defaultValue := today.toISODateOnly,
-                    ^.onChange ==> setEndDate
+                  MuiGrid(item = true, xs = 11)(
+                    MuiTextField()(
+                      DefaultFormFieldsStyle.datePicker,
+                      ^.`type` := "date",
+                      ^.defaultValue := today.toISODateOnly,
+                      ^.onChange ==> setStartDate
+                    )
+                  ),
+                  MuiGrid(item = true, xs = 1)(
+                    DefaultFormFieldsStyle.datePickerLabel,
+                    MuiFormLabel()(
+                      "To"
+                    ),
+                  ),
+                  MuiGrid(item = true, xs = 11)(
+                    MuiTextField()(
+                      DefaultFormFieldsStyle.datePicker,
+                      ^.`type` := "date",
+                      ^.defaultValue := today.toISODateOnly,
+                      ^.onChange ==> setEndDate
+                    )
                   ),
                   if (state.startDate > state.endDate)
-                    <.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date.")
+                    MuiGrid(item = true, xs = 12)(<.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date."))
                   else
                     EmptyVdom,
 
-                  <.div(
-                    <.div(^.className := "multi-day-export-links",
-
-                      if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
-                        <.a(Icon.download, " Arrivals",
-                          ^.className := "btn btn-default",
-                          ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
-                            s"${state.startDate.toISOString}/" +
-                            s"${state.endDate.toISOString}/${props.terminal}"),
-                          ^.target := "_blank",
-                          ^.onClick --> {
-                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                          }
-                        ) else EmptyVdom,
-                      if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                        List(<.a(Icon.download, s" Recommendations",
+                  if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
+                    MuiGrid(item = true, xs = 3)(<.a(Icon.download, " Arrivals",
+                      ^.className := "btn btn-default",
+                      ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
+                        s"${state.startDate.toISOString}/" +
+                        s"${state.endDate.toISOString}/${props.terminal}"),
+                      ^.target := "_blank",
+                      ^.onClick --> {
+                        Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                      }
+                    ))
+                  else
+                    EmptyVdom,
+                  if (props.loggedInUser.hasRole(DesksAndQueuesView))
+                    List(
+                      MuiGrid(item = true, xs = 3)(
+                        <.a(Icon.download, s" Recommendations",
                           ^.className := "btn btn-default",
                           ^.key := "recs",
                           ^.href := SPAMain.absoluteUrl(s"export/desk-recs/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
@@ -120,30 +143,33 @@ object MultiDayExportComponent {
                           ^.onClick --> {
                             Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", s"Export Desks", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
                           }
-                        ),
-                          <.a(Icon.download, s" Deployments",
-                            ^.key := "deps",
-                            ^.className := "btn btn-default",
-                            ^.href := SPAMain.absoluteUrl(s"export/desk-deps/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
-                            ^.target := "_blank",
-                            ^.onClick --> {
-                              Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Deployments", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                            }
-                          )
-                        ).toVdomArray
-                      else EmptyVdom,
-                      if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate <= SDate.now().toLocalDate))
-                        <.a(Icon.file, " Live Feed",
+                        ))
+                      ,
+                      MuiGrid(item = true, xs = 3)(
+                        <.a(Icon.download, s" Deployments",
+                          ^.key := "deps",
                           ^.className := "btn btn-default",
-                          ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
+                          ^.href := SPAMain.absoluteUrl(s"export/desk-deps/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
                           ^.target := "_blank",
                           ^.onClick --> {
-                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Live Feed", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Deployments", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
                           }
-                        ) else EmptyVdom
-
-                    )
-                  )
+                        )
+                      )).toVdomArray
+                  else
+                    EmptyVdom,
+                  if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate <= SDate.now().toLocalDate))
+                    MuiGrid(item = true, xs = 3)(
+                      <.a(Icon.file, " Live Feed",
+                        ^.className := "btn btn-default",
+                        ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
+                        ^.target := "_blank",
+                        ^.onClick --> {
+                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Live Feed", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                        }
+                      ))
+                  else
+                    EmptyVdom
                 )),
 
               <.div(
