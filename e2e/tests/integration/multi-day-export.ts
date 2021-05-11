@@ -67,7 +67,7 @@ describe('Multi day export', () => {
               .click()
               .then(() => {
                 cy
-                  .get('#multiDayExport-modal-body')
+                  .get('#multi-day-export-modal-body')
                   .contains("Recommendations")
                   .should('have.attr', 'href')
                   .then((href) => {
