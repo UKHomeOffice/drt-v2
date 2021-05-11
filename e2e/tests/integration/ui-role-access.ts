@@ -51,8 +51,7 @@ describe('Restrict access by Role', () => {
         .asAPortOperator()
         .navigateHome()
         .get('[data-toggle="modal"]')
-        .click({ force: true })
-        .get(".modal-dialog")
+        .get('#multi-day-export-modal-dialog')
         .should((modal) => {
           expect(modal).to.contain("Arrivals");
           expect(modal).not.to.contain("Deployments");

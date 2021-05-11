@@ -62,6 +62,7 @@ object MultiDayExportComponent {
         <.div(^.className := "multi-day-export modal " + showClass, ^.id := "#multi-day-export", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
             ^.className := "modal-dialog modal-dialog-centered",
+            ^.id := "multi-day-export-modal-dialog",
             ^.role := "document",
             <.div(
               ^.className := "modal-content",
@@ -71,6 +72,7 @@ object MultiDayExportComponent {
               ),
               <.div(
                 ^.className := "modal-body",
+                ^.id := "multi-day-export-modal-body",
                 DateSelector("From", today, d => {
                   scope.modState(_.copy(startDay = d.getDate(), startMonth = d.getMonth(), startYear = d.getFullYear()))
                 }),
@@ -132,6 +134,7 @@ object MultiDayExportComponent {
               ),
               <.div(
                 ^.className := "modal-footer",
+                ^.id := "multi-day-export-modal-footer",
                 <.button(
                   ^.className := "btn btn-link",
                   VdomAttr("data-dismiss") := "modal", "Close",

@@ -5,7 +5,7 @@ import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
 import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle, ScenarioSimulationStyle}
-import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, FaqsPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
+import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -138,14 +138,6 @@ object SPAMain {
 
   case object DeskAndQueuesLoc extends Loc
 
-  case object ArrivalsFaqsLoc extends Loc
-
-  case object PortConfigurationFaqsLoc extends Loc
-
-  case object StaffMovementsFaqsLoc extends Loc
-
-  case object MonthlyStaffingFaqsLoc extends Loc
-
   case class KeyCloakUserEditLoc(userId: UUID) extends Loc
 
   case object AlertLoc extends Loc
@@ -181,12 +173,6 @@ object SPAMain {
         keyCloakUsersRoute(dsl) |
         keyCloakUserEditRoute(dsl) |
         alertRoute(dsl) |
-        faqsRoute(dsl) |
-        deskAndQueuesFaqsRoute(dsl) |
-        arrivalsFaqsRoute(dsl) |
-        portConfigurationFaqsRoute(dsl) |
-        staffMovementsFaqsRoute(dsl) |
-        monthlyStaffingFaqsRoute(dsl) |
         contactRoute(dsl) |
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
@@ -255,43 +241,6 @@ object SPAMain {
     import dsl._
 
     staticRoute("#contact", ContactUsLoc) ~> renderR(_ => ContactPage())
-  }
-
-
-  def faqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs", FaqsLoc) ~> renderR(_ => FaqsPage(""))
-  }
-
-  def deskAndQueuesFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/deskAndQueues", DeskAndQueuesLoc) ~> renderR(_ => FaqsPage("deskAndQueues"))
-  }
-
-  def arrivalsFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/arrivals", ArrivalsFaqsLoc) ~> renderR(_ => FaqsPage("arrivals"))
-  }
-
-  def portConfigurationFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/portConfiguration", PortConfigurationFaqsLoc) ~> renderR(_ => FaqsPage("portConfiguration"))
-  }
-
-  def staffMovementsFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/staff-movements", StaffMovementsFaqsLoc) ~> renderR(_ => FaqsPage("staff-movements"))
-  }
-
-  def monthlyStaffingFaqsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/monthly-staffing", MonthlyStaffingFaqsLoc) ~> renderR(_ => FaqsPage("monthly-staffing"))
   }
 
   def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
