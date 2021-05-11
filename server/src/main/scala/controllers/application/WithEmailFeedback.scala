@@ -10,10 +10,11 @@ case class NegativeFeedbackData(feedbackUserEmail: String,
                                 whatWentWrong: String,
                                 whatToImprove: String,
                                 contactMe: Boolean,
-                                url :String)
+                                url: String)
 
 case class PositiveFeedbackData(feedbackUserEmail: String,
-                                url :String)
+                                url: String)
+
 trait WithEmailFeedback {
   self: Application =>
   implicit val rwN: RW[NegativeFeedbackData] = macroRW
@@ -28,7 +29,7 @@ trait WithEmailFeedback {
           request.body.asText match {
             case Some(json) =>
               val personalisation = emailNotification.positivePersonalisationData(read(json)(rwP).url)
-              emailNotification.sendRequest(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), negativeFeedbackTemplateId, personalisation)
+              emailNotification.sendRequest(govNotifyReference, contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), negativeFeedbackTemplateId, personalisation)
               Accepted
             case None =>
               BadRequest
@@ -36,7 +37,7 @@ trait WithEmailFeedback {
         case "negative" => request.body.asText match {
           case Some(json) =>
             val personalisation = emailNotification.negativePersonalisationData(read(json)(rwN))
-            emailNotification.sendRequest(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), positiveFeedbackTemplateId, personalisation)
+            emailNotification.sendRequest(govNotifyReference, contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), positiveFeedbackTemplateId, personalisation)
             Accepted
           case None =>
             BadRequest

@@ -168,6 +168,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   lazy val positiveFeedbackTemplateId = config.get[String]("notifications.positive-feedback-templateId")
 
+  lazy val govNotifyReference = config.get[String]("notifications.reference")
+
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
 
   val virusScanner: VirusScanner = VirusScanner(VirusScanService(virusScannerUrl))

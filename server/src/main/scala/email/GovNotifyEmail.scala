@@ -34,12 +34,12 @@ class GovNotifyEmail(apiKey: String) {
     ).asJava
   }
 
-  def sendRequest(emailAddress: String, templateId: String, personalisation: util.Map[String, String]) = {
+  def sendRequest(reference:String,emailAddress: String, templateId: String, personalisation: util.Map[String, String]) = {
     Try(
       client.sendEmail(templateId,
         emailAddress,
         personalisation,
-        "DRT-test")
+        reference)
     ).recover {
       case e => log.error(s"Unable to sendEmail", e)
     }
