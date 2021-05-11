@@ -2,32 +2,19 @@ package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.DrtApi
-import drt.client.services.JSDateConversions.SDate
-import drt.shared.SDateLike
-import io.kinoplan.scalajs.react.material.ui.core._
-import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomTagOf, ^, _}
-import japgolly.scalajs.react.{Callback, CtorType, ReactEvent, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import upickle.default.{macroRW, write, ReadWriter => RW}
 
 
-sealed trait Feedback
-
-case object Positive extends Feedback
-
-case object Negative extends Feedback
-
-object FeedbackComponent {
-  val today: SDateLike = SDate.now()
+object NegativeFeedbackComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props(url: String,
-                   selectedDate: SDateLike,
-                   loggedInUser: LoggedInUser,
-                   isPositive: Feedback)
+                   loggedInUser: LoggedInUser)
 
   case class State(url: String,
                    feedbackUserEmail: String,
@@ -35,18 +22,10 @@ object FeedbackComponent {
                    whatWentWrong: String,
                    whatToImprove: String,
                    contactMe: Boolean,
-                   isPositive: Boolean,
-                   showDialogue: Boolean = false,
-                   open: Boolean = false) {
-
-    def handleClose = copy(open = false)
-
-    def handleClick = copy(open = true)
-
-  }
+                   showDialogue: Boolean = false)
 
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.url, p.selectedDate.millisSinceEpoch))
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.url))
   implicit val rw: RW[State] = macroRW
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FeedbackComponent")
@@ -56,8 +35,7 @@ object FeedbackComponent {
       whatUserDoing = "",
       whatWentWrong = "",
       whatToImprove = "",
-      contactMe = false,
-      isPositive = p.isPositive == Positive
+      contactMe = false
     ))
     .renderPS((scope, props, state) => {
 
@@ -79,12 +57,6 @@ object FeedbackComponent {
         state.copy(contactMe = contactMe)
       })
 
-      def handleCloseClick: Callback = scope.modState(_.handleClose)
-
-      def handleClose: (ReactEvent, String) => Callback = (_, reason) => {
-        handleCloseClick.when_(reason != "clickaway")
-      }
-
       def showNegativeFeedbackDialog: VdomTagOf[Div] = {
         <.div(^.className := "modal " + showClass, ^.id := "#negativeFeedback", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
@@ -93,7 +65,7 @@ object FeedbackComponent {
             <.div(
               ^.className := "modal-content",
               <.div(^.className := "modal-header",
-                <.h5(^.className := "modal-title", "Thank you for feedback !")
+                <.h5(^.className := "modal-title", "Thanks for your feedback. This helps us improve the service.")
               ),
               <.br(),
               <.div(^.className := "modal-body",
@@ -153,28 +125,13 @@ object FeedbackComponent {
         )
       }
 
-      if (props.isPositive == Positive) {
-        <.div(
-          <.div(MuiSnackbar(anchorOrigin = Origin(vertical = "top", horizontal = "right"),
-            autoHideDuration = 5000,
-            message = <.div(^.className := "muiSnackBar" ,"Thanks for your feedback. This helps us improve the service."),
-            open = scope.state.open ,
-            onClose = handleClose)()),
-          <.button(Icon.thumbsOUp,
-            ^.className := "btn btn-default btn-success",
-            ^.onClick --> scope.modState(_.copy(open = true), Callback(DrtApi.post("email/feedback/positive", write(state))))
-          )
-        )
-
-      } else {
-        <.div(feedBackButton(Icon.thumbsODown, "negativeFeedback", "btn-danger"),
-          showNegativeFeedbackDialog())
-      }
+      <.div(feedBackButton(Icon.thumbsODown, "negativeFeedback", "btn-danger"),
+        showNegativeFeedbackDialog())
 
     })
     .configure(Reusability.shouldComponentUpdate)
     .build
 
 
-  def apply(url: String, selectedDate: SDateLike, loggedInUser: LoggedInUser, isPositive: Feedback): VdomElement = component(Props(url, selectedDate, loggedInUser: LoggedInUser, isPositive))
+  def apply(url: String, loggedInUser: LoggedInUser): VdomElement = component(Props(url, loggedInUser: LoggedInUser))
 }

@@ -1,7 +1,7 @@
 package email
 
 
-import controllers.application.FeedbackData
+import controllers.application.NegativeFeedbackData
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.util
@@ -22,7 +22,7 @@ class GovNotifyEmail(apiKey: String) {
     ).asJava
   }
 
-  def negativePersonalisationData(feedbackData: FeedbackData): util.Map[String, String] = {
+  def negativePersonalisationData(feedbackData: NegativeFeedbackData): util.Map[String, String] = {
     val contactMe = if (feedbackData.contactMe) s"The user ${feedbackData.feedbackUserEmail} is happy to be contacted." else s"The user ${feedbackData.feedbackUserEmail} is not happy to be contacted."
     Map(
     "url" -> feedbackData.url,

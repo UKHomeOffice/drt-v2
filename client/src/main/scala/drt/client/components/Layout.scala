@@ -3,7 +3,6 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain._
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.AirportConfig
 import japgolly.scalajs.react.component.Scala.Component
@@ -61,9 +60,9 @@ object Layout {
 
   def buildFeedBackNavBar(user: LoggedInUser): VdomTagOf[UList] = {
     <.ul(^.className := "nav navbar-nav navbar-right",
-      <.li(<.div(<.span(^.className := "btn", "is this page useful ?" ,^.disabled :=true))),
-      <.li(FeedbackComponent(dom.window.location.toString, SDate.now(), user, Positive)),
-      <.li(FeedbackComponent(dom.window.location.toString, SDate.now(), user, Negative))
+      <.li(<.div(<.span(^.className := "btn", "is this page useful ?", ^.disabled := true))),
+      <.li(PositiveFeedbackComponent(dom.window.location.toString, user)),
+      <.li(NegativeFeedbackComponent(dom.window.location.toString, user))
     )
   }
 
