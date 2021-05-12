@@ -43,7 +43,7 @@ object Layout {
                 <.div(
                   <.div(
                     Navbar(props.ctl, props.currentLoc.page, user, airportConfig),
-                    <.div(buildFeedBackNavBar(user)),
+                    <.div(^.className := "container",buildFeedBackNavBar(user)),
                     <.div(^.className := "container",
                       <.div(<.div(props.currentLoc.render()))
                     ),

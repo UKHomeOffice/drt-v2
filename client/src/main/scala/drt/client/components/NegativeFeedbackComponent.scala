@@ -81,7 +81,7 @@ object NegativeFeedbackComponent {
                     <.ul(^.className := "nav navbar-nav navbar-left",
                       <.li(<.input.checkbox(^.checked := state.contactMe, ^.onChange ==> ((e: ReactEventFromInput) => setContactMe(e.target.checked)), ^.id := "check-contactMe")),
                       <.li(),
-                      <.li(<.label(^.`for` := "check-contactMe", " are you happy for us to contact you?"))
+                      <.li(<.label(^.`for` := "check-contactMe", " Are you happy for us to contact you regarding your feedback?"))
                     )
                   )
                 ),
