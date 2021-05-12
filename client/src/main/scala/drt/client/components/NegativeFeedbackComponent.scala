@@ -9,6 +9,7 @@ import org.scalajs.dom.html.{Anchor, Div}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import upickle.default.{macroRW, write, ReadWriter => RW}
 
+import scala.scalajs.js
 
 object NegativeFeedbackComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -41,9 +42,9 @@ object NegativeFeedbackComponent {
 
       val showClass = if (state.showDialogue) "show" else "fade"
 
-      def setWhatUserDoing(whatUserDoing: String) =  scope.modState(_.copy(whatUserDoing = whatUserDoing))
+      def setWhatUserDoing(whatUserDoing: String) = scope.modState(_.copy(whatUserDoing = whatUserDoing))
 
-      def setWhatWentWrong(whatWentWrong: String) =  scope.modState(_.copy(whatWentWrong = whatWentWrong))
+      def setWhatWentWrong(whatWentWrong: String) = scope.modState(_.copy(whatWentWrong = whatWentWrong))
 
       def setWhatToImprove(whatToImprove: String) = scope.modState(_.copy(whatToImprove = whatToImprove))
 
@@ -77,16 +78,14 @@ object NegativeFeedbackComponent {
                 ),
                 <.br(),
                 <.div(^.`class` := "row",
-                  <.div(^.`class` := "col-md-7 ml-auto",
+                  <.div(^.`class` := "col-md-10 ml-auto",
                     <.ul(^.className := "nav navbar-nav navbar-left",
                       <.li(<.input.checkbox(^.checked := state.contactMe, ^.onChange ==> ((e: ReactEventFromInput) => setContactMe(e.target.checked)), ^.id := "check-contactMe")),
-                      <.li(),
-                      <.li(<.label(^.`for` := "check-contactMe", " are you happy for us to contact you?"))
-                    )
-                  )
-                ),
-                <.br()
+                      <.li(<.label(^.style := js.Dictionary("margin-left" -> "5px"), ^.`for` := "check-contactMe", "Are you happy for us to contact you regarding your feedback?"))
+                    ))
+                )
               ),
+              <.br(),
               <.div(^.className := "modal-footer",
                 <.div(
                   <.div(^.className := "feedback-links",
