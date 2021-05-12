@@ -80,110 +80,106 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                 ^.className := "modal-body",
                 ^.id := "multi-day-export-modal-body",
                 MuiGrid(container = true)(
-                  MuiTextField(label = "From".toVdom, InputLabelProps = MuiInputLabelProps(shrink = true))(
-                    ^.id := "date",
-                    ^.`type` := "date",
-                    ^.defaultValue := today.toISODateOnly,
-                    ^.onChange ==> setStartDate
-                MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
-                  MuiGrid(item = true, xs = 1)(
-                    DefaultFormFieldsStyle.datePickerLabel,
-                    MuiFormLabel()(
-                      "From"
-                    ),
-                  ),
-                  MuiGrid(item = true, xs = 11)(
-                    MuiTextField()(
-                      DefaultFormFieldsStyle.datePicker,
-                      ^.`type` := "date",
-                      ^.defaultValue := today.toISODateOnly,
-                      ^.onChange ==> setStartDate
-                    )
-                  ),
-                  MuiGrid(item = true, xs = 1)(
-                    DefaultFormFieldsStyle.datePickerLabel,
-                    MuiFormLabel()(
-                      "To"
-                    ),
-                  ),
-                  MuiGrid(item = true, xs = 11)(
-                    MuiTextField()(
-                      DefaultFormFieldsStyle.datePicker,
-                      ^.`type` := "date",
-                      ^.defaultValue := today.toISODateOnly,
-                      ^.onChange ==> setEndDate
-                    )
-                  ),
-                  if (state.startDate > state.endDate)
-                    MuiGrid(item = true, xs = 12)(<.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date."))
-                  else
-                    EmptyVdom,
 
-                  if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
-                    MuiGrid(item = true, xs = 3)(<.a(Icon.download, " Arrivals",
-                      ^.className := "btn btn-default",
-                      ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
-                        s"${state.startDate.toISOString}/" +
-                        s"${state.endDate.toISOString}/${props.terminal}"),
-                      ^.target := "_blank",
-                      ^.onClick --> {
-                        Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                      }
-                    ))
-                  else
-                    EmptyVdom,
-                  if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                    List(
-                      MuiGrid(item = true, xs = 3)(
-                        <.a(Icon.download, s" Recommendations",
-                          ^.className := "btn btn-default",
-                          ^.key := "recs",
-                          ^.href := SPAMain.absoluteUrl(s"export/desk-recs/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
-                          ^.target := "_blank",
-                          ^.onClick --> {
-                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", s"Export Desks", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                          }
-                        ))
-                      ,
-                      MuiGrid(item = true, xs = 3)(
-                        <.a(Icon.download, s" Deployments",
-                          ^.key := "deps",
-                          ^.className := "btn btn-default",
-                          ^.href := SPAMain.absoluteUrl(s"export/desk-deps/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
-                          ^.target := "_blank",
-                          ^.onClick --> {
-                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Deployments", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                          }
-                        )
-                      )).toVdomArray
-                  else
-                    EmptyVdom,
-                  if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate <= SDate.now().toLocalDate))
-                    MuiGrid(item = true, xs = 3)(
-                      <.a(Icon.file, " Live Feed",
+                  MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
+                    MuiGrid(item = true, xs = 1)(
+                      DefaultFormFieldsStyle.datePickerLabel,
+                      MuiFormLabel()(
+                        "From"
+                      ),
+                    ),
+                    MuiGrid(item = true, xs = 11)(
+                      MuiTextField()(
+                        DefaultFormFieldsStyle.datePicker,
+                        ^.`type` := "date",
+                        ^.defaultValue := today.toISODateOnly,
+                        ^.onChange ==> setStartDate
+                      )
+                    ),
+                    MuiGrid(item = true, xs = 1)(
+                      DefaultFormFieldsStyle.datePickerLabel,
+                      MuiFormLabel()(
+                        "To"
+                      ),
+                    ),
+                    MuiGrid(item = true, xs = 11)(
+                      MuiTextField()(
+                        DefaultFormFieldsStyle.datePicker,
+                        ^.`type` := "date",
+                        ^.defaultValue := today.toISODateOnly,
+                        ^.onChange ==> setEndDate
+                      )
+                    ),
+                    if (state.startDate > state.endDate)
+                      MuiGrid(item = true, xs = 12)(<.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date."))
+                    else
+                      EmptyVdom,
+
+                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
+                      MuiGrid(item = true, xs = 3)(<.a(Icon.download, " Arrivals",
                         ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
+                        ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
+                          s"${state.startDate.toISOString}/" +
+                          s"${state.endDate.toISOString}/${props.terminal}"),
                         ^.target := "_blank",
                         ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Live Feed", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
                         }
                       ))
-                  else
-                    EmptyVdom
-                )),
+                    else
+                      EmptyVdom,
+                    if (props.loggedInUser.hasRole(DesksAndQueuesView))
+                      List(
+                        MuiGrid(item = true, xs = 3)(
+                          <.a(Icon.download, s" Recommendations",
+                            ^.className := "btn btn-default",
+                            ^.key := "recs",
+                            ^.href := SPAMain.absoluteUrl(s"export/desk-recs/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
+                            ^.target := "_blank",
+                            ^.onClick --> {
+                              Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", s"Export Desks", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                            }
+                          ))
+                        ,
+                        MuiGrid(item = true, xs = 3)(
+                          <.a(Icon.download, s" Deployments",
+                            ^.key := "deps",
+                            ^.className := "btn btn-default",
+                            ^.href := SPAMain.absoluteUrl(s"export/desk-deps/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
+                            ^.target := "_blank",
+                            ^.onClick --> {
+                              Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Deployments", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                            }
+                          )
+                        )).toVdomArray
+                    else
+                      EmptyVdom,
+                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate <= SDate.now().toLocalDate))
+                      MuiGrid(item = true, xs = 3)(
+                        <.a(Icon.file, " Live Feed",
+                          ^.className := "btn btn-default",
+                          ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
+                          ^.target := "_blank",
+                          ^.onClick --> {
+                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Live Feed", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                          }
+                        ))
+                    else
+                      EmptyVdom
+                  )),
 
-              <.div(
-                ^.className := "modal-footer",
-                ^.id := "multi-day-export-modal-footer",
-                <.button(
-                  ^.className := "btn btn-link",
-                  VdomAttr("data-dismiss") := "modal", "Close",
-                  ^.onClick --> scope.modState(_.copy(showDialogue = false))
+                <.div(
+                  ^.className := "modal-footer",
+                  ^.id := "multi-day-export-modal-footer",
+                  <.button(
+                    ^.className := "btn btn-link",
+                    VdomAttr("data-dismiss") := "modal", "Close",
+                    ^.onClick --> scope.modState(_.copy(showDialogue = false))
+                  )
                 )
               )
             )
-          )
-        ))
+          )))
     })
     .configure(Reusability.shouldComponentUpdate)
     .build

@@ -1,28 +1,43 @@
+import {todayAtUtc} from "../support/time-helpers";
 
 describe('Alerts system', () => {
 
-  Cypress.Commands.add('deleteAlerts', () => {
-    cy.request('DELETE', '/alerts')
-  })
-  Cypress.Commands.add('shouldHaveAlerts', (num) => {
-    cy.get('#alerts .has-alerts .alert').should('have.length', num)
-  })
+    const today = todayAtUtc(0, 0);
+    const createdMillis = today.unix() * 1000;
+    const expiresMillis = today.add(3, "day").unix() * 1000;
 
-  describe('An alert exists in the app', () => {
+    Cypress.Commands.add('deleteAlerts', () => {
+        cy.request('DELETE', '/alerts')
+    })
+    Cypress.Commands.add('shouldHaveAlerts', (num) => {
+        cy.get('#alerts .has-alerts .alert').should('have.length', num)
+    })
 
-    it("Should be possible to add an alert, view it and the delete it.", () => {
-      cy
-        .deleteData()
-        .asADrtSuperUser()
-        .navigateHome()
-        .get('.alerts-link > a')
-        .click({ force: true })
-        .get('#alert-title').type("This is an alert")
-        .get('#alert-message').type("This is the message of the alert")
-        .get(':nth-child(11) > .btn').click()
-        .shouldHaveAlerts(1)
-        .deleteAlerts()
-        .shouldHaveAlerts(0);
+    describe('The alert endpoint', () => {
+
+        it("Should be possible to add an alert via the API, view it and the delete it.", () => {
+            cy
+                .deleteData()
+                .asADrtSuperUser()
+                .request({
+                        method: "POST",
+                        url: "/alerts",
+                        body: {
+                            "title": "This is an alert",
+                            "message": "This is the message of the alert",
+                            "alertClass": "notice",
+                            "expires": expiresMillis,
+                            "createdAt": createdMillis
+                        },
+                        headers: {
+                            "content-type": "text/plain;charset=UTF-8"
+                        }
+                    }
+                )
+                .navigateHome()
+                .shouldHaveAlerts(1)
+                .deleteAlerts()
+                .shouldHaveAlerts(0);
+        });
     });
-  });
 });

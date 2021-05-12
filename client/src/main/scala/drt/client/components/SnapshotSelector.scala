@@ -69,7 +69,6 @@ object SnapshotSelector extends WithScalaCssImplicits {
         e.persist()
         SDate.parse(e.target.value) match {
           case Some(d) =>
-            println(s"value: ${d.toISOString()}")
             scope.modState(_.update(d))
           case _ => Callback.empty
         }

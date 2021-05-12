@@ -5,7 +5,7 @@ import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
 import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle, ScenarioSimulationStyle}
-import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
+import drt.client.components.{ContactPage, EditKeyCloakUserPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -98,20 +98,13 @@ object SPAMain {
       copy(queryParams = updatedParams)
     }
 
-    def parseDateString(s: String): SDateLike = {
-
-      SDate(s.replace("%20", " ").split(" ").mkString("T"))
-    }
+    def parseDateString(s: String): SDateLike = SDate(s.replace("%20", " ").split(" ").mkString("T"))
 
     def timeRangeStart: Option[Int] = timeRangeStartString.map(_.toInt)
 
     def timeRangeEnd: Option[Int] = timeRangeEndString.map(_.toInt)
 
-    def dateFromUrlOrNow: SDateLike = {
-      val dt = date.flatMap(SDate.parse).getOrElse(SDate.now())
-      println(s"Parsed date = $dt")
-      dt
-    }
+    def dateFromUrlOrNow: SDateLike = date.flatMap(SDate.parse).getOrElse(SDate.now())
 
     def updateRequired(p: TerminalPageTabLoc): Boolean = (terminal != p.terminal) || (date != p.date) || (mode != p.mode)
 
@@ -179,7 +172,6 @@ object SPAMain {
         statusRoute(dsl) |
         keyCloakUsersRoute(dsl) |
         keyCloakUserEditRoute(dsl) |
-        alertRoute(dsl) |
         contactRoute(dsl) |
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
@@ -236,12 +228,6 @@ object SPAMain {
       dynRenderR((page: KeyCloakUserEditLoc, _) => {
         EditKeyCloakUserPage(page.userId)
       })
-  }
-
-  def alertRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#alerts", AlertLoc) ~> renderR((_: RouterCtl[Loc]) => AlertsPage())
   }
 
   def contactRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
