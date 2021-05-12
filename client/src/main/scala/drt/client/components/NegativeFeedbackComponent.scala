@@ -8,6 +8,7 @@ import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusabil
 import org.scalajs.dom.html.{Anchor, Div}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import upickle.default.{macroRW, write, ReadWriter => RW}
+
 import scala.scalajs.js
 
 object NegativeFeedbackComponent {
