@@ -81,7 +81,7 @@ object SDateTests extends TestSuite {
         "Given a valid date string then you should get back an option of an SDate of that Date" - {
           val dateString = "2017-11-17T13:00"
 
-          val result = SDate.stringToSDateLikeOption(dateString)
+          val result = SDate.parse(dateString)
 
           val expected = SDate(dateString)
 
@@ -94,7 +94,7 @@ object SDateTests extends TestSuite {
           }
         }
         "Given an invalid date string then you should get back None" - {
-          val result = SDate.stringToSDateLikeOption("sdf")
+          val result = SDate.parse("sdf")
 
           val expected = None
 

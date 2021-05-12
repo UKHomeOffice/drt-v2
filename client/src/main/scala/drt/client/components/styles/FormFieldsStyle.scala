@@ -29,6 +29,21 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
       fontSize(1.5.rem)
     )
   )
+  val dateTimePicker = style(
+    marginBottom(1.2.rem),
+    width(180.px),
+    unsafeChild("input")(
+      fontSize(1.5.rem)
+    )
+  )
+  val snapshotSelector = style(
+    maxWidth(850.px),
+  )
+
+  val goButton = style(
+    paddingTop(2.px)
+  )
+
   val datePickerLabel = style(
     unsafeChild("label")(
       marginTop(1.rem),

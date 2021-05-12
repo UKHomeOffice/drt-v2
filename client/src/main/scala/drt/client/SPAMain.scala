@@ -98,13 +98,20 @@ object SPAMain {
       copy(queryParams = updatedParams)
     }
 
-    def parseDateString(s: String): SDateLike = SDate(s.replace("%20", " ").split(" ").mkString("T"))
+    def parseDateString(s: String): SDateLike = {
+
+      SDate(s.replace("%20", " ").split(" ").mkString("T"))
+    }
 
     def timeRangeStart: Option[Int] = timeRangeStartString.map(_.toInt)
 
     def timeRangeEnd: Option[Int] = timeRangeEndString.map(_.toInt)
 
-    def dateFromUrlOrNow: SDateLike = date.map(parseDateString).getOrElse(SDate.now())
+    def dateFromUrlOrNow: SDateLike = {
+      val dt = date.flatMap(SDate.parse).getOrElse(SDate.now())
+      println(s"Parsed date = $dt")
+      dt
+    }
 
     def updateRequired(p: TerminalPageTabLoc): Boolean = (terminal != p.terminal) || (date != p.date) || (mode != p.mode)
 
