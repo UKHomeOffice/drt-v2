@@ -110,7 +110,7 @@ object JSDateConversions {
      */
     def apply(dateString: String): SDateLike = Moment.tz(dateString, europeLondon)
 
-    def stringToSDateLikeOption(dateString: String): Option[SDateLike] = {
+    def parse(dateString: String): Option[SDateLike] = {
       val moment = Moment.tz(dateString, europeLondon)
       if (moment.isValid()) Option(JSSDate(moment))
       else None

@@ -49,7 +49,7 @@ object TerminalDashboardComponent {
       def timeSlotStart: SDateLike => SDateLike = timeSlotForTime(slotSize)
 
       val startPoint = p.terminalPageTabLoc.queryParams.get("start")
-        .flatMap(s => SDate.stringToSDateLikeOption(s))
+        .flatMap(s => SDate.parse(s))
         .getOrElse(SDate.now())
       val start = timeSlotStart(startPoint)
       val end = start.addMinutes(slotSize)

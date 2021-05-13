@@ -196,7 +196,7 @@ object TerminalComponent {
                       }),
                       <.div(^.className := "content-head",
                         PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
-                        DatePickerComponent(DatePickerComponent.Props(props.router,
+                        DaySelectorComponent(DaySelectorComponent.Props(props.router,
                           props.terminalPageTab,
                           model.loadingState,
                           model.minuteTicker

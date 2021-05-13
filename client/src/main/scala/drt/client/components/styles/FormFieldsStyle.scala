@@ -22,6 +22,38 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
     )
   )
 
+  val datePicker = style(
+    marginBottom(1.2.rem),
+    width(150.px),
+    unsafeChild("input")(
+      fontSize(1.5.rem)
+    )
+  )
+  val dateTimePicker = style(
+    marginBottom(1.2.rem),
+    width(180.px),
+    unsafeChild("input")(
+      fontSize(1.5.rem)
+    )
+  )
+  val snapshotSelector = style(
+    maxWidth(850.px),
+  )
+  val daySelector = style(
+    maxWidth(520.px),
+  )
+
+  val goButton = style(
+    paddingTop(2.px)
+  )
+
+  val datePickerLabel = style(
+    unsafeChild("label")(
+      marginTop(1.rem),
+      fontSize(1.2.rem)
+    ),
+  )
+
   val textFieldSmall = style(
     marginLeft(theme.spacing.unit.px),
     marginRight(theme.spacing.unit.px),
@@ -43,7 +75,8 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
 
   val formHelperText = style(
     unsafeChild("span")(
-      fontSize(1.rem)
+      fontSize(1.rem),
+      padding(1.rem),
     )
   )
 

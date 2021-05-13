@@ -129,7 +129,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
         }
 
         def processingTimesFields = {
-          <.div(^.className := "",
+          <.div(
             state.simulationFormFields.processingTimes.toList.sortBy {
               case (paxTypeAndQueue: PaxTypeAndQueue, _) => paxTypeAndQueue.passengerType.name
             }.map {

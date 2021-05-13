@@ -5,12 +5,14 @@ import scalacss.defaults.Exports
 import scalacss.internal.StyleA
 import scalacss.internal.mutable.Settings
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
+import scalacss.ScalaCssReactImplicits
+
 import scala.scalajs.js
 import scala.scalajs.js.Dictionary
 import scala.scalajs.js.JSConverters.JSRichOption
 import scala.scalajs.js.JSNumberOps.enableJSNumberOps
 
-object ScalaCssImplicits {
+trait WithScalaCssImplicits extends ScalaCssReactImplicits{
 
   val CssSettings: Exports with Settings = scalacss.devOrProdDefaults
 
@@ -55,5 +57,6 @@ object ScalaCssImplicits {
   implicit def stylesToUndefOrClassName(styleAs: Seq[StyleA]): js.UndefOr[String] =
     stylesToClassName(styleAs)
 
-
 }
+
+object ScalaCssImplicits extends WithScalaCssImplicits
