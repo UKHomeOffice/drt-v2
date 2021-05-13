@@ -16,8 +16,6 @@ import org.scalajs.dom.html.Div
 
 object SnapshotSelector extends WithScalaCssImplicits {
 
-  val earliestAvailable = SDate(2017, 11, 2)
-
   val log: Logger = LoggerFactory.getLogger("SnapshotSelector")
 
   val months = Seq("January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December").zip(1 to 12)
@@ -39,10 +37,6 @@ object SnapshotSelector extends WithScalaCssImplicits {
     <.div(^.className := "form-group row",
       <.label(label, ^.className := "col-sm-1 col-form-label"),
       <.div(^.className := "col-sm-8", xs.toTagMod))
-  }
-
-  def isLaterThanEarliest(dateTime: SDateLike): Boolean = {
-    dateTime.millisSinceEpoch > earliestAvailable.millisSinceEpoch
   }
 
   implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())

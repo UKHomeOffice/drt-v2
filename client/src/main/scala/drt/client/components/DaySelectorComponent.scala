@@ -89,7 +89,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         updateUrlWithDateCallback(None)
       }
 
-      def isDataAvailableForDate = SnapshotSelector.isLaterThanEarliest(state.selectedDate)
 
       def goButton(loading: Boolean, isCurrentSelection: Boolean): TagMod = (loading, isCurrentSelection) match {
         case (true, true) =>
@@ -97,7 +96,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         case (false, true) =>
           <.div(^.id := "snapshot-done", Icon.checkCircleO)
         case _ =>
-          <.div(^.id := "snapshot-done", <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime, ^.disabled := !isDataAvailableForDate))
+          <.div(^.id := "snapshot-done", <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime))
       }
 
       val yesterdayActive = if (state.selectedDate.ddMMyyString == SDate.now().addDays(-1).ddMMyyString) "active" else ""
@@ -108,9 +107,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
       val tomorrowActive = if (state.selectedDate.ddMMyyString == SDate.now().addDays(1).ddMMyyString) "active" else ""
 
-      val errorMessage = if (!SnapshotSelector.isLaterThanEarliest(state.selectedDate))
-        <.div(^.className := "error-message", s"Earliest available is ${SnapshotSelector.earliestAvailable.ddMMyyString}")
-      else <.div()
 
       def defaultTimeRangeWindow = if (isTodayActive)
         CurrentWindow()
@@ -119,14 +115,14 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
 
       MuiGrid(container = true, spacing = MuiGrid.Spacing.`0`)(^.className := "date-selector",
-        DefaultFormFieldsStyle.snapshotSelector,
-        MuiGrid(item = true, xs = 4)(
+        DefaultFormFieldsStyle.daySelector,
+        MuiGrid(item = true, xs = 6)(
           <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
             <.div(^.id := "yesterday", ^.className := s"btn btn-primary $yesterdayActive", "Yesterday", ^.onClick ==> selectYesterday),
             <.div(^.id := "today", ^.className := s"btn btn-primary $todayActive", "Today", ^.onClick ==> selectToday),
             <.div(^.id := "tomorrow", ^.className := s"btn btn-primary $tomorrowActive end-spacer", "Tomorrow", ^.onClick ==> selectTomorrow)),
         ),
-        MuiGrid(item = true, xs = 4)(
+        MuiGrid(item = true, xs = 6)(
           MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
             MuiGrid(item = true, xs = 7)(
               MuiTextField()(
@@ -141,9 +137,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
               goButton(props.loadingState.isLoading, isCurrentSelection),
             )
           )
-        )
-        ,
-        MuiGrid(item = true, xs = 4)(errorMessage),
+        ),
         MuiGrid(item = true, xs = 12)(
           TimeRangeFilter(
             TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isTodayActive, props.minuteTicker)

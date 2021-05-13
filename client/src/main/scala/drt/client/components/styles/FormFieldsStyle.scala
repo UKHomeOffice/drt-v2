@@ -39,6 +39,9 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
   val snapshotSelector = style(
     maxWidth(850.px),
   )
+  val daySelector = style(
+    maxWidth(520.px),
+  )
 
   val goButton = style(
     paddingTop(2.px)
