@@ -159,7 +159,6 @@ object Optimiser {
       val guessMax: Int = runAv.max.ceil.toInt
 
       val lowerLimit = List(winXmin.max, (winWork.sum / winWork.size).ceil.toInt).max
-
       var winXmax = guessMax
       var hasExcessWait = false
       var lowerLimitReached = false
@@ -193,11 +192,11 @@ object Optimiser {
   }
 
   def runningAverage(values: Iterable[Double], windowLength: Int): Iterable[Double] = {
-    val averages = values
+    val slidingAverages = values
       .sliding(windowLength)
       .map(_.sum / windowLength).toList
 
-    List.fill(windowLength - 1)(averages.head) ::: averages
+    List.fill(windowLength - 1)(slidingAverages.head) ::: slidingAverages
   }
 
   def cumulativeSum(values: Iterable[Double]): Iterable[Double] = values
@@ -211,17 +210,21 @@ object Optimiser {
     .flatMap(nos => List.fill(blockWidth)(nos.sum / blockWidth))
     .toIterable
 
-  def blockMax(values: Iterable[Double], blockWidth: Int): Iterable[Double] = values
-    .grouped(blockWidth)
-    .flatMap(nos => List.fill(blockWidth)(nos.max))
-    .toIterable
-
   def seqR(from: Int, by: Int, length: Int): IndexedSeq[Int] = 0 to length map (i => (i + from) * by)
 
   def churn(churnStart: Int, capacity: IndexedSeq[Int]): Int = capacity.zip(churnStart +: capacity)
     .collect { case (x, xLag) => x - xLag }
     .filter(_ > 0)
     .sum
+
+  def churnOpt(churnStart: Int, desks: IndexedSeq[Int]): Int = {
+    val d = churnStart +: desks
+    (1 until d.length)
+      .collect {
+        case idx if d(idx - 1) < d(idx) => d(idx) - d(idx - 1)
+      }
+      .sum
+  }
 
   def cost(work: IndexedSeq[Double],
            sla: Int,
@@ -230,7 +233,8 @@ object Optimiser {
            weightStaff: Double,
            weightSla: Double,
            qStart: IndexedSeq[Double],
-           churnStart: Int)(capacity: IndexedSeq[Int]): Cost = {
+           churnStart: Int)
+          (capacity: IndexedSeq[Int]): Cost = {
     var simRes = tryProcessWork(work, capacity, sla, qStart) match {
       case Success(pw) => pw
       case Failure(t) => throw t

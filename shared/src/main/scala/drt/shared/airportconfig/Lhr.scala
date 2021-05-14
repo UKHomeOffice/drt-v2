@@ -20,7 +20,7 @@ object Lhr extends AirportConfigLike {
     nonVisaNationalToFastTrack -> 78d,
     visaNationalToFastTrack -> 78d,
     transitToTransfer -> 0d
-  ).mapValues(_ * 10)
+  ).mapValues(_ * 2)
 
   val lhrDefaultTerminalProcessingTimes: Map[PaxTypeAndQueue, Double] = standardProcessingTimes.map {
     case (ptq, time) => (ptq, time / 60)
