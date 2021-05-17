@@ -13,7 +13,7 @@ class OptimiserEfficiencySpec extends Specification {
       val minDesks = Lhr.config.minDesksForTerminal24Hrs(T2)(NonEeaDesk).flatMap(List.fill(60)(_))
       val maxDesks = Lhr.config.maxDesksForTerminal24Hrs(T2)(NonEeaDesk).flatMap(List.fill(60)(_))
 
-      val finalLoad = loads.map(_ / 2.75)
+      val finalLoad = loads.map(_ * 5)
 
       println(s"${finalLoad.length} minutes of work, ${finalLoad.sum} total workload")
 
@@ -25,15 +25,15 @@ class OptimiserEfficiencySpec extends Specification {
 
       Thread.sleep(5000)
 
-      val start = System.currentTimeMillis()
-      val desks1 = Optimiser.crunch(
-        finalLoad,
-        minDesks,
-        maxDesks,
-        OptimiserConfig(45, DeskWorkloadProcessors))
-
-      val end = System.currentTimeMillis()
-      println(s"Renjin took ${end - start}ms")
+//      val start = System.currentTimeMillis()
+//      val desks1 = Optimiser.crunch(
+//        finalLoad,
+//        minDesks,
+//        maxDesks,
+//        OptimiserConfig(45, DeskWorkloadProcessors))
+//
+//      val end = System.currentTimeMillis()
+//      println(s"Renjin took ${end - start}ms")
 
       val start2 = System.currentTimeMillis()
       val desks2 = OptimiserWithFlexibleProcessors.crunch(
@@ -45,7 +45,7 @@ class OptimiserEfficiencySpec extends Specification {
       val end2 = System.currentTimeMillis()
       println(s"OptimiserWithFlexibleProcessors took ${end2 - start2}ms")
 
-      println(s"desks1: ${desks1.get.recommendedDesks}")
+//      println(s"desks1: ${desks1.get.recommendedDesks}")
       println(s"desks2: ${desks2.get.recommendedDesks}")
 
       success

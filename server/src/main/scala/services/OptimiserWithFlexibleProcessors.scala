@@ -217,10 +217,10 @@ object OptimiserWithFlexibleProcessors {
     .sum
 
   def churnOpt(churnStart: Int, desks: IndexedSeq[Int]): Int = {
-    val d = churnStart +: desks
-    (1 until d.length)
+    val desksPrefixed = churnStart +: desks
+    (1 until desksPrefixed.length)
       .foldLeft(0) {
-        case (acc, idx) if d(idx - 1) < d(idx) => acc + (d(idx) - d(idx - 1))
+        case (acc, idx) if desksPrefixed(idx - 1) < desksPrefixed(idx) => acc + (desksPrefixed(idx) - desksPrefixed(idx - 1))
         case (acc, _) => acc
       }
   }
@@ -247,7 +247,6 @@ object OptimiserWithFlexibleProcessors {
     if (backlog.nonEmpty) {
       finalCapacity = List(finalCapacity, 1).max
       val cumBacklog = cumulativeSum(backlog)
-      if (finalCapacity == 0) println(s"*** got a div by zero")
       val cumCapacity = seqR(0, finalCapacity, (totalBacklog / finalCapacity).ceil.toInt)
       val overrunSlots = cumCapacity.indices
       val backlogBoundaries = approx(cumCapacity, overrunSlots, cumBacklog.toList)
