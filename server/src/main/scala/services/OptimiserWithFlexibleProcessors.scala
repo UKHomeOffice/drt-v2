@@ -5,6 +5,14 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
+case class ProcessedWork(util: List[Double],
+                         waits: List[Int],
+                         residual: IndexedSeq[Double],
+                         totalWait: Double,
+                         excessWait: Double)
+
+case class Cost(paxPenalty: Double, slaPenalty: Double, staffPenalty: Double, churnPenalty: Int, totalPenalty: Double)
+
 case class OptimiserConfig(sla: Int, processors: WorkloadProcessorsLike)
 
 object OptimiserWithFlexibleProcessors {
@@ -208,12 +216,7 @@ object OptimiserWithFlexibleProcessors {
 
   def seqR(from: Int, by: Int, length: Int): IndexedSeq[Int] = 0 to length map (i => (i + from) * by)
 
-  def churn(churnStart: Int, capacity: IndexedSeq[Int]): Int = capacity.zip(churnStart +: capacity)
-    .collect { case (x, xLag) => x - xLag }
-    .filter(_ > 0)
-    .sum
-
-  def churnOpt(churnStart: Int, desks: IndexedSeq[Int]): Int = {
+  def totalDesksOpeningFromClosed(churnStart: Int, desks: IndexedSeq[Int]): Int = {
     val desksPrefixed = churnStart +: desks
     (1 until desksPrefixed.length)
       .foldLeft(0) {
@@ -229,7 +232,7 @@ object OptimiserWithFlexibleProcessors {
            weightStaff: Double,
            weightSla: Double,
            qStart: IndexedSeq[Double],
-           churnStart: Int,
+           previousDesksOpen: Int,
            processors: WorkloadProcessorsLike)
           (capacity: IndexedSeq[Int]): Cost = {
     var simRes = tryProcessWork(work, capacity, sla, qStart, processors) match {
@@ -271,7 +274,7 @@ object OptimiserWithFlexibleProcessors {
     val paxPenalty = simRes.totalWait
     val slaPenalty = simRes.excessWait
     val staffPenalty = simRes.util.zip(capacity).map { case (u, c) => (1 - u) * c.toDouble }.sum
-    val churnPenalty = churnOpt(churnStart, capacity :+ finalCapacity)
+    val churnPenalty = totalDesksOpeningFromClosed(previousDesksOpen, capacity :+ finalCapacity)
 
     val totalPenalty = (weightPax * paxPenalty) +
       (weightStaff * staffPenalty) +
@@ -351,7 +354,7 @@ object OptimiserWithFlexibleProcessors {
       var winStart = 0
       var winStop = winWidth
       var qStart = IndexedSeq(0d)
-      var churnStart = 0
+      var lastDesksOpen = 0
 
       val desks = blockMean(runningAverage(work, smoothingWidth, processors), blockWidth)
         .map(_.ceil.toInt)
@@ -364,9 +367,9 @@ object OptimiserWithFlexibleProcessors {
           case (d, min) => List(d, min).max
         }.to[mutable.IndexedSeq]
 
-      def myCost(costWork: IndexedSeq[Double], costQStart: IndexedSeq[Double], costChurnStart: Int)
+      def myCost(costWork: IndexedSeq[Double], costQStart: IndexedSeq[Double], previousDesksOpen: Int)
                 (capacity: IndexedSeq[Int]): Cost =
-        cost(costWork, sla, weightChurn, weightPax, weightStaff, weightSla, costQStart, costChurnStart, processors)(capacity.flatMap(c => IndexedSeq.fill(blockWidth)(c)))
+        cost(costWork, sla, weightChurn, weightPax, weightStaff, weightSla, costQStart, previousDesksOpen, processors)(capacity.flatMap(c => IndexedSeq.fill(blockWidth)(c)))
 
       var shouldStop = false
 
@@ -377,7 +380,7 @@ object OptimiserWithFlexibleProcessors {
         val xmaxCondensed = maxDesks.slice(winStart, winStop).grouped(blockWidth).map(_.head).toIndexedSeq
 
         val windowIndices = winStart until winStop
-        branchBound(blockGuess, myCost(currentWork, qStart, churnStart), xminCondensed, xmaxCondensed, concavityLimit)
+        branchBound(blockGuess, myCost(currentWork, qStart, lastDesksOpen), xminCondensed, xmaxCondensed, concavityLimit)
           .flatMap(o => List.fill(blockWidth)(o))
           .zip(windowIndices)
           .foreach {
@@ -394,7 +397,7 @@ object OptimiserWithFlexibleProcessors {
             case Success(pw) => pw.residual
             case Failure(t) => throw t
           }
-          churnStart = desks(stop)
+          lastDesksOpen = desks(stop)
           winStart = winStart + winStep
           winStop = List(winStop + winStep, work.length).min
         }

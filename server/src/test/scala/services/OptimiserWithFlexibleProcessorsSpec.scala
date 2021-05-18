@@ -148,11 +148,10 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           val workPerMinute = 3.5
           val workloadFor60Minutes = IndexedSeq.fill(60)(workPerMinute)
           val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, EGateWorkloadProcessors(bankSizes))
-          val resultOrig: IndexedSeq[Int] = Optimiser.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120)
 
           val threeBanksFor60Minutes = Seq.fill(60)(3)
 
-          result === resultOrig && result === threeBanksFor60Minutes
+          result === threeBanksFor60Minutes
         }
       }
     }
@@ -164,11 +163,10 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           val workPerMinute = 3.6
           val workloadFor60Minutes = IndexedSeq.fill(60)(workPerMinute)
           val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, EGateWorkloadProcessors(bankSizes))
-          val resultOrig: IndexedSeq[Int] = Optimiser.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120)
 
           val fourBanksFor60Minutes = Seq.fill(60)(4)
 
-          result === resultOrig && result === fourBanksFor60Minutes
+          result === fourBanksFor60Minutes
         }
       }
     }
@@ -208,11 +206,11 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
     "Given a fluctuating number of desks" >> {
       val churnStart = 1
       val desks = IndexedSeq(5, 10, 5, 15, 12, 14, 9, 5, 3, 7, 3, 9, 2, 10, 10, 14, 11, 16, 50, 25, 15, 10)
-      "When I compare the penalty using the original & optimised functions" >> {
-        val penaltyOrig = OptimiserWithFlexibleProcessors.churn(churnStart, desks)
-        val penaltyNew = OptimiserWithFlexibleProcessors.churnOpt(churnStart, desks)
-        "They should be the same" >> {
-          penaltyOrig === penaltyNew
+      "When I calculate the churn" >> {
+        val churn = OptimiserWithFlexibleProcessors.totalDesksOpeningFromClosed(churnStart, desks)
+        val expected = 82
+        "It should be the sum of the number of desks that had to open from closed across the period" >> {
+          churn === expected
         }
       }
     }
