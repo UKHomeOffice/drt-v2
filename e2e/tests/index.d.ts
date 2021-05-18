@@ -15,6 +15,7 @@ declare namespace Cypress {
         asANonTestPortUser(): Chainable<Element>;
         asAnLHRPortUser(): Chainable<Element>;
         asAPortOperator(): Chainable<Element>;
+        asACedatStaffMember(): Chainable<Element>;
         asATestPortUser(): Chainable<Element>;
         asATestSetupUser(): Chainable<Element>;
         assertAccessRestricted(): Chainable<Element>;

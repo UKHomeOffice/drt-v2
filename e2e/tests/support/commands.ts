@@ -57,6 +57,10 @@ const portOperatorRoles = ["port-operator-staff",
   "arrivals-and-splits:view",
   "api:view-port-arrivals"
 ]
+const cedatRoles = ["cedat-staff",
+  "arrivals-and-splits:view",
+  "api:view-port-arrivals"
+]
 
 Cypress.Commands.add('asABorderForceOfficer', () => {
   cy.request("POST", '/test/mock-roles', { "roles": portRole.concat(bfRoles) });
@@ -92,6 +96,10 @@ Cypress.Commands.add('asATestSetupUser', () => {
 });
 
 Cypress.Commands.add('asAPortOperator', () => {
+  cy.request("POST", '/test/mock-roles', { "roles": portOperatorRoles.concat(portRole) });
+});
+
+Cypress.Commands.add('asACedatStaffMember', () => {
   cy.request("POST", '/test/mock-roles', { "roles": portOperatorRoles.concat(portRole) });
 });
 

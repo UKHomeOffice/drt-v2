@@ -25,6 +25,18 @@ describe('Restrict access by Role', () => {
           expect(nav).to.contain("Feeds");
         });
     });
+
+    it("should display dashboard and feeds menu items for CedatStaff role", () => {
+      cy
+        .asACedatStaffMember()
+        .navigateHome()
+        .get(".nav")
+        .should((nav) => {
+          expect(nav).to.contain("Dashboard");
+          expect(nav).not.to.contain("T1");
+          expect(nav).to.contain("Feeds");
+        });
+    });
   });
 
   describe('Dashboard', () => {
@@ -35,9 +47,17 @@ describe('Restrict access by Role', () => {
         .navigateHome()
         .get(".terminal-summary-dashboard");
     });
+
     it("should display arrivals export page for  PortOperatorStaff role", () => {
       cy
         .asAPortOperator()
+        .navigateHome()
+        .get(".terminal-export-dashboard");
+    });
+
+    it("should display arrivals export page for  CedatStaff role", () => {
+      cy
+        .asACedatStaffMember()
         .navigateHome()
         .get(".terminal-export-dashboard");
     });
