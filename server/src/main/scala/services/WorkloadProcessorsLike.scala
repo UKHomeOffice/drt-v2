@@ -4,12 +4,18 @@ sealed trait WorkloadProcessorsLike {
   val averageServerSize: Int
 
   def capacityForServers(servers: Int): Int
+
+  val forWorkload: PartialFunction[Double, Int]
 }
 
 case object DeskWorkloadProcessors extends WorkloadProcessorsLike {
   override val averageServerSize: Int = 1
 
   override def capacityForServers(servers: Int): Int = servers
+
+  override val forWorkload: PartialFunction[Double, Int] = {
+    case workload => capacityForServers(workload.ceil.toInt)
+  }
 }
 
 case class EGateWorkloadProcessors(processors: Iterable[Int]) extends WorkloadProcessorsLike {
@@ -40,4 +46,9 @@ case class EGateWorkloadProcessors(processors: Iterable[Int]) extends WorkloadPr
   val maxServers: Int = capacityByWorkload.values.max
 
   override def capacityForServers(servers: Int): Int = cumulativeCapacity.indices.zip(cumulativeCapacity).toMap.getOrElse(servers, 0)
+
+  override val forWorkload: PartialFunction[Double, Int] = {
+    case noWorkload if noWorkload <= 0 => 0
+    case someWorkload => capacityByWorkload.getOrElse(someWorkload.ceil.toInt, maxServers)
+  }
 }

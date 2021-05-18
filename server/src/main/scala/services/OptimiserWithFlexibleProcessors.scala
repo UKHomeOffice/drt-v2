@@ -150,7 +150,7 @@ object OptimiserWithFlexibleProcessors {
 
       if (winStart == 0) backlog = 0
 
-      val runAv = runningAverage(winWork, List(blockSize, sla).min)
+      val runAv = runningAverage(winWork, List(blockSize, sla).min, processors)
       val guessMax: Int = runAv.max.ceil.toInt
 
       val capacity = capacityWithMinimumLimit(processors, 1)
@@ -187,12 +187,12 @@ object OptimiserWithFlexibleProcessors {
     result
   }
 
-  def runningAverage(work: Iterable[Double], windowLength: Int): Iterable[Double] = {
+  def runningAverage(work: Iterable[Double], windowLength: Int, processors: WorkloadProcessorsLike): Seq[Int] = {
     val slidingAverages = work
       .sliding(windowLength)
       .map(_.sum / windowLength).toList
 
-    List.fill(windowLength - 1)(slidingAverages.head) ::: slidingAverages
+    (List.fill(windowLength - 1)(slidingAverages.head) ::: slidingAverages).map(processors.forWorkload)
   }
 
   def cumulativeSum(values: Iterable[Double]): Iterable[Double] = values
@@ -201,7 +201,7 @@ object OptimiserWithFlexibleProcessors {
       case (head :: tail, element) => element + head :: head :: tail
     }.reverse
 
-  def blockMean(values: Iterable[Double], blockWidth: Int): Iterable[Double] = values
+  def blockMean(values: Iterable[Int], blockWidth: Int): Iterable[Int] = values
     .grouped(blockWidth)
     .flatMap(nos => List.fill(blockWidth)(nos.sum / blockWidth))
     .toIterable
@@ -353,7 +353,7 @@ object OptimiserWithFlexibleProcessors {
       var qStart = IndexedSeq(0d)
       var churnStart = 0
 
-      val desks = blockMean(runningAverage(work, smoothingWidth), blockWidth)
+      val desks = blockMean(runningAverage(work, smoothingWidth, processors), blockWidth)
         .map(_.ceil.toInt)
         .zip(maxDesks)
         .map {
