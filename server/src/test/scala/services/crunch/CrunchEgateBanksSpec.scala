@@ -7,7 +7,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.{Optimiser, OptimiserWithFlexibleProcessors, SDate}
+import services.{OptimiserWithFlexibleProcessors, SDate}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
