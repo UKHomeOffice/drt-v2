@@ -3,8 +3,9 @@ package scenarios
 import actors.persistent.staffing.GetState
 import akka.actor.Props
 import akka.pattern.ask
+import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
@@ -19,7 +20,8 @@ import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.OptimiserMocks.{mockHistoricManifestsProviderNoop, mockLiveManifestsProviderNoop}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
-import services.exports.StreamingFlightsExport
+import services.exports.{ActualApiFlightExportTemplate, StreamingFlightsExport}
+import services.graphstages.Crunch
 import services.imports.{ArrivalCrunchSimulationActor, ArrivalImporter}
 import services.{OptimiserWithFlexibleProcessors, SDate}
 
@@ -35,11 +37,11 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
 
   val terminal: Terminal = Terminal("T5")
 
-  def fwsToCsv(flights: Seq[ApiFlightWithSplits]): String =
-    StreamingFlightsExport(
-      (millis: MillisSinceEpoch) => SDate(millis).toISODateOnly,
-      (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes
-    ).toCsvWithActualApi(List(FlightsWithSplits(flights)))
+  def fwsToCsv(flights: Seq[ApiFlightWithSplits]): String = {
+    val resultStream = StreamingFlightsExport
+      .toCsvStreamFromTemplate(ActualApiFlightExportTemplate(Crunch.utcTimeZone))(Source(List(FlightsWithSplits(flights))))
+    Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+  }
 
 
   "Given a CSV with all the columns we need in it then we should get a flight with splits" >> {

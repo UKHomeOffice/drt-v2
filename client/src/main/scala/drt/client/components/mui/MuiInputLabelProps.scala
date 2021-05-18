@@ -22,4 +22,3 @@ object MuiInputLabelProps {
     o.toJSDictionary.asInstanceOf[js.Object].asInstanceOf[MuiInputLabelProps]
   }
 }
-

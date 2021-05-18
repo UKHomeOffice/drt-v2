@@ -16,11 +16,11 @@ import drt.shared.{SDateLike, _}
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
-import services.exports.StreamingFlightsExport
+import services.exports._
 import services.exports.flights.ArrivalFeedExport
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView}
+import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, CedatStaff}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -28,15 +28,13 @@ import scala.util.{Failure, Success, Try}
 trait WithFlightsExport {
   self: Application =>
 
-  def csvForUser(user: LoggedInUser): Source[FlightsWithSplits, NotUsed] => Source[String, NotUsed] = {
-    val export = StreamingFlightsExport(
-      SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone),
-      SDate.millisToLocalHoursAndMinutes(Crunch.europeLondonTimeZone)
-    )
-    if (user.hasRole(ApiView))
-      export.toCsvStreamWithActualApi
+  def csvTemplateForUser(user: LoggedInUser): FlightExportTemplate = {
+    if (user.hasRole(CedatStaff))
+      CedatFlightExportTemplate(Crunch.europeLondonTimeZone)
+    else if (user.hasRole(ApiView))
+      ActualApiFlightExportTemplate(Crunch.europeLondonTimeZone)
     else
-      export.toCsvStreamWithoutActualApi
+      DefaultFlightExportTemplate(Crunch.europeLondonTimeZone)
   }
 
   def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDayString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {
@@ -48,24 +46,23 @@ trait WithFlightsExport {
             val startDate = SDate(localDate)
             val endDate = startDate.addDays(1).addMinutes(-1)
             val terminal = Terminal(terminalName)
-            flightsRequestToCsv(pointInTime, startDate, endDate, terminal, csvForUser(user))
+            flightsRequestToCsv(pointInTime, startDate, endDate, terminal, csvTemplateForUser(user))
           case _ =>
             Future(BadRequest("Invalid date format for export day."))
         }
     }
   }
 
-
   private def flightsRequestToCsv(
                                    pointInTime: MillisSinceEpoch,
                                    startDate: SDateLike,
                                    endDate: SDateLike, terminal: Terminal,
-                                   flightsToCsvStream: Source[FlightsWithSplits, NotUsed] => Source[String, NotUsed]):
+                                   csvTemplate: FlightExportTemplate):
   Future[Result] = {
     val request = GetFlightsForTerminalDateRange(startDate.millisSinceEpoch, endDate.millisSinceEpoch, terminal)
     val pitRequest = PointInTimeQuery(pointInTime, request)
     ctrl.flightsActor.ask(pitRequest).mapTo[Source[FlightsWithSplits, NotUsed]].map { flightsStream =>
-      val csvStream = flightsToCsvStream(flightsStream)
+      val csvStream = StreamingFlightsExport.toCsvStreamFromTemplate(csvTemplate)(flightsStream)
       val fileName = makeFileName("flights", terminal, startDate, endDate, airportConfig.portCode)
       Try(sourceToCsvResponse(csvStream, fileName)) match {
         case Success(value) => value
@@ -87,7 +84,7 @@ trait WithFlightsExport {
             val startDate = SDate(start)
             val endDate = SDate(end).addDays(1).addMinutes(-1)
             val terminal = Terminal(terminalName)
-            flightsRequestToCsv(now().millisSinceEpoch, startDate, endDate, terminal, csvForUser(user))
+            flightsRequestToCsv(now().millisSinceEpoch, startDate, endDate, terminal, csvTemplateForUser(user))
           case _ =>
             Future(BadRequest("Invalid date format for start or end date"))
         }

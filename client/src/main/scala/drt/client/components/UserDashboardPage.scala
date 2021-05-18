@@ -1,6 +1,6 @@
 package drt.client.components
 
-import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, PortOperatorStaff}
+import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, CedatStaff, PortOperatorStaff}
 import drt.client.SPAMain.{Loc, PortDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
@@ -17,7 +17,7 @@ object UserDashboardPage {
       val loggedInUserRCP = SPACircuit.connect(_.loggedInUserPot)
       loggedInUserRCP(loggedInUserMP => {
         <.div(loggedInUserMP().renderReady(user => {
-          if (user.hasRole(PortOperatorStaff))
+          if (user.hasRole(PortOperatorStaff) || user.hasRole(CedatStaff))
             PortExportDashboardPage(user)
           else if (user.hasRole(BorderForceStaff))
             PortDashboardPage(p.router, PortDashboardLoc(None))
