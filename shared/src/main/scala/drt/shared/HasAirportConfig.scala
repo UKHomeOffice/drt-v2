@@ -346,7 +346,7 @@ case class AirportConfig(portCode: PortCode,
                          feedSourceMonitorExemptions: Seq[FeedSource] = Seq(),
                          desksByTerminal: Map[Terminal, Int],
                          queuePriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack, EGate),
-                         assumedAdultsPerChild: Double = 1.0
+                         assumedAdultsPerChild: Double = 1.0,
                         ) {
   def assertValid(): Unit = {
     queuesByTerminal.values.flatten.toSet
@@ -476,6 +476,7 @@ case class PortCode(iata: String) extends Ordered[PortCode] {
   lazy val isDomestic: Boolean = Ports.isDomestic(this)
   lazy val isCta: Boolean = Ports.isCta(this)
   lazy val isDomesticOrCta: Boolean = Ports.isDomesticOrCta(this)
+  lazy val isScottish: Boolean = Ports.isDomesticOrCta(this)
 }
 
 object PortCode {
