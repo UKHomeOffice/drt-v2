@@ -50,7 +50,7 @@ trait FlightExportTemplate {
     fws
       .splits
       .find(_.source == splitSource)
-      .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws.apiFlight))
+      .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws))
       .getOrElse(Map())
 
 }
@@ -65,12 +65,12 @@ case class DefaultFlightExportTemplate(override val timeZone: DateTimeZone) exte
 
   def rowValues(fws: ApiFlightWithSplits): Seq[String] = {
     val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
-    ArrivalToCsv.arrivalAsRawCsvValues(
-      fws.apiFlight,
+    ArrivalToCsv.flightWithSplitsAsRawCsvValues(
+      fws,
       millisToDateStringFn,
       millisToTimeStringFn
     ) ++
-      List(fws.apiFlight.bestPaxEstimate.toString) ++ splitsForSources
+      List(fws.pcpPaxEstimate.toString) ++ splitsForSources
   }
 
 }
@@ -94,12 +94,12 @@ case class ActualApiFlightExportTemplate(override val timeZone: DateTimeZone) ex
 
   def flightWithSplitsToCsvRow(queueNames: Seq[Queue], fws: ApiFlightWithSplits): List[String] = {
     val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
-    ArrivalToCsv.arrivalAsRawCsvValues(
-      fws.apiFlight,
+    ArrivalToCsv.flightWithSplitsAsRawCsvValues(
+      fws,
       millisToDateStringFn,
       millisToTimeStringFn
     ) ++
-      List(fws.apiFlight.bestPaxEstimate.toString) ++ splitsForSources
+      List(fws.pcpPaxEstimate.toString) ++ splitsForSources
   }
 
   def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =

@@ -42,7 +42,6 @@ case class WorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueu
                                  nationalityProcessingTimes: Map[Nationality, Double],
                                  useNationalityBasedProcTimes: Boolean
                                 ): Iterable[FlightSplitMinute] = {
-    val flight = flightWithSplits.apiFlight
     val splitsToUseOption = flightWithSplits.bestSplits
     splitsToUseOption.map(splitsToUse => {
       val paxTypeAndQueueCounts = paxTypeAndQueueCountsFromSplits(splitsToUse)
@@ -51,13 +50,13 @@ case class WorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueu
 
       val totalPaxWithNationality = paxTypesAndQueuesMinusTransit.toList.flatMap(_.nationalities.map(_.values.sum)).sum
 
-      flight.paxDeparturesByMinute(20)
+      flightWithSplits.apiFlight.paxDeparturesByMinute(20)
         .flatMap {
           case (minuteMillis, flightPaxInMinute) =>
             paxTypesAndQueuesMinusTransit
               .map(apiSplit => {
                 flightSplitMinute(
-                  flight,
+                  flightWithSplits,
                   procTimes,
                   minuteMillis,
                   flightPaxInMinute,
@@ -71,7 +70,7 @@ case class WorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueu
     }).getOrElse(Seq())
   }
 
-  def flightSplitMinute(arrival: Arrival,
+  def flightSplitMinute(fws: ApiFlightWithSplits,
                         procTimes: Map[PaxTypeAndQueue, Load],
                         minuteMillis: MillisSinceEpoch,
                         flightPaxInMinute: Int,
@@ -86,9 +85,9 @@ case class WorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueu
 
     val splitWorkLoadInMinute = (apiSplitRatio.nationalities, useNationalityBasedProcTimes) match {
       case (Some(nats), true) if nats.values.sum > 0 =>
-        val natsToPaxRatio = totalPaxWithNationality / arrival.bestPaxEstimate
-        val natFactor = (flightPaxInMinute.toDouble / arrival.bestPaxEstimate) / natsToPaxRatio
-        log.debug(s"totalNats: $totalPaxWithNationality / bestPax: ${arrival.bestPaxEstimate}, natFactor: $natFactor - ($flightPaxInMinute / ${arrival.bestPaxEstimate}) / $natsToPaxRatio")
+        val natsToPaxRatio = totalPaxWithNationality / fws.pcpPaxEstimate
+        val natFactor = (flightPaxInMinute.toDouble / fws.pcpPaxEstimate) / natsToPaxRatio
+        log.debug(s"totalNats: $totalPaxWithNationality / bestPax: ${fws.pcpPaxEstimate}, natFactor: $natFactor - ($flightPaxInMinute / ${fws.pcpPaxEstimate}) / $natsToPaxRatio")
         val natBasedWorkload = nats
           .map {
             case (nat, pax) => nationalityProcessingTimes.get(nat) match {
@@ -107,6 +106,6 @@ case class WorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueu
       case _ =>
         defaultWorkload
     }
-    FlightSplitMinute(CodeShareKeyOrderedBySchedule(arrival), apiSplitRatio.passengerType, arrival.Terminal, apiSplitRatio.queueType, splitPaxInMinute, splitWorkLoadInMinute, minuteMillis)
+    FlightSplitMinute(CodeShareKeyOrderedBySchedule(fws), apiSplitRatio.passengerType, fws.apiFlight.Terminal, apiSplitRatio.queueType, splitPaxInMinute, splitWorkLoadInMinute, minuteMillis)
   }
 }

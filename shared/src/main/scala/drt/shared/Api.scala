@@ -217,9 +217,20 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   extends WithUnique[UniqueArrival]
     with WithLastUpdated {
 
+  def pcpPaxEstimate = bestSplits match {
+    case Some(splits) if hasValidApi => Math.round(splits.totalExcludingTransferPax).toInt
+    case _ => apiFlight.bestPaxEstimate
+  }
+
+  def totalPax: Option[Int] = bestSplits match {
+    case Some(splits) if hasValidApi => Option(Math.round(splits.totalPax).toInt)
+    case _ => apiFlight.ActPax
+  }
+
   def equals(candidate: ApiFlightWithSplits): Boolean = {
     this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
   }
+
 
   def bestSplits: Option[Splits] = {
     val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))

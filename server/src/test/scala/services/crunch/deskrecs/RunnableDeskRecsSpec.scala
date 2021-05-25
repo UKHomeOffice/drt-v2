@@ -89,7 +89,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
   val nowFromSDate: () => SDateLike = () => SDate.now()
 
   val flexDesks = false
-  val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPaxEstimate
+  val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPcpPaxEstimate
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   private def getDeskRecsGraph(mockPortStateActor: ActorRef, historicManifests: HistoricManifestsProvider, airportConfig: AirportConfig = defaultAirportConfig) = {

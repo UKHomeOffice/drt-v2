@@ -91,7 +91,7 @@ case class Arrival(Operator: Option[Operator],
     (minutesToDisembark * oneMinuteInMillis).toLong
   }
 
-  val bestPaxEstimate: Int = PcpPax.bestPaxEstimate(this)
+  val bestPaxEstimate: Int = PcpPax.bestPcpPaxEstimate(this)
 
   def minutesOfPaxArrivals: Int = {
     val totalPax = bestPaxEstimate
