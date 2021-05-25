@@ -81,10 +81,8 @@ case class StaffAssignmentParser(rawStaffAssignments: String) {
   val parsedAssignments: Array[Try[StaffAssignment]] = rawStaffAssignments
     .split("\n")
     .map(_.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim))
-    .filter(parts => parts.length == 5 || parts.length == 6)
+    .filter(_.length == 6)
     .map {
-      case List(description, terminalName, startDay, startTime, endTime) =>
-        StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime, "1", None)
       case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
         StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime, staffNumberDelta, None)
     }

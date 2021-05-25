@@ -2,9 +2,11 @@ package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.DrtApi
+import io.kinoplan.scalajs.react.material.ui.core.MuiSnackbar
+import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomTagOf, ^, _}
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEvent, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import upickle.default.{macroRW, write, ReadWriter => RW}
@@ -23,10 +25,13 @@ object NegativeFeedbackComponent {
                    whatWentWrong: String,
                    whatToImprove: String,
                    contactMe: Boolean,
-                   showDialogue: Boolean = false)
+                   showDialogue: Boolean,
+                   showAcknowledgement: Boolean) {
+    def hideAcknowledgement: State = copy(showAcknowledgement = false)
+  }
 
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.url))
+  implicit val propsReuse: Reusability[Props] = Reusability.by(_.url)
   implicit val rw: RW[State] = macroRW
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FeedbackComponent")
@@ -36,9 +41,11 @@ object NegativeFeedbackComponent {
       whatUserDoing = "",
       whatWentWrong = "",
       whatToImprove = "",
-      contactMe = false
+      contactMe = false,
+      showDialogue = false,
+      showAcknowledgement = false
     ))
-    .renderPS((scope, props, state) => {
+    .renderS((scope, state) => {
 
       val showClass = if (state.showDialogue) "show" else "fade"
 
@@ -50,7 +57,7 @@ object NegativeFeedbackComponent {
 
       def setContactMe(contactMe: Boolean) = scope.modState(_.copy(contactMe = contactMe))
 
-      def showNegativeFeedbackDialog: VdomTagOf[Div] = {
+      def negativeFeedbackDialog: VdomTagOf[Div] = {
         <.div(^.className := "modal " + showClass, ^.id := "#negativeFeedback", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
             ^.className := "modal-dialog modal-dialog-centered",
@@ -91,7 +98,9 @@ object NegativeFeedbackComponent {
                   <.div(^.className := "feedback-links",
                     <.button("Submit", ^.className := "btn btn-default",
                       ^.onClick --> {
-                        scope.modState(_.copy(showDialogue = false), Callback(DrtApi.post("email/feedback/negative", write(state))))
+                        scope.modState(
+                          _.copy(showDialogue = false, showAcknowledgement = true),
+                          Callback(DrtApi.post("email/feedback/negative", write(state))))
                       }
                     ),
                     <.button(^.className := "btn btn-link",
@@ -116,8 +125,20 @@ object NegativeFeedbackComponent {
         )
       }
 
-      <.div(feedBackButton(Icon.thumbsODown, "negativeFeedback", "btn-danger"),
-        showNegativeFeedbackDialog())
+      def handleClose: (ReactEvent, String) => Callback = (_, reason) => {
+        scope.modState(_.hideAcknowledgement).when_(reason != "clickaway")
+      }
+
+      val acknowledgementMessage = MuiSnackbar(anchorOrigin = Origin(vertical = "top", horizontal = "right"),
+        autoHideDuration = 5000,
+        message = <.div(^.className := "muiSnackBar", "Thanks for your feedback. This helps us improve the service."),
+        open = scope.state.showAcknowledgement,
+        onClose = handleClose)()
+
+      <.div(
+        acknowledgementMessage,
+        feedBackButton(Icon.thumbsODown, "negativeFeedback", "btn-danger"),
+        negativeFeedbackDialog())
 
     })
     .configure(Reusability.shouldComponentUpdate)

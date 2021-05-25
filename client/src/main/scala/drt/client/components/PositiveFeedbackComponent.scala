@@ -2,8 +2,6 @@ package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.DrtApi
-import drt.client.services.JSDateConversions.SDate
-import drt.shared.SDateLike
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import japgolly.scalajs.react.component.Scala.Component
@@ -22,16 +20,12 @@ object PositiveFeedbackComponent {
 
   case class State(url: String,
                    feedbackUserEmail: String,
-                   open: Boolean = false) {
-
-    def handleClose = copy(open = false)
-
-    def handleClick = copy(open = true)
-
+                   showAcknowledgement: Boolean = false) {
+    def hideAcknowledgement: State = copy(showAcknowledgement = false)
   }
 
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.url))
+  implicit val propsReuse: Reusability[Props] = Reusability.by(_.url)
   implicit val rw: RW[State] = macroRW
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("NegativeFeedbackComponent")
@@ -39,29 +33,28 @@ object PositiveFeedbackComponent {
       url = p.url,
       feedbackUserEmail = p.loggedInUser.email
     ))
-    .renderPS((scope,props, state) => {
-
-      def handleCloseClick: Callback = scope.modState(_.handleClose)
+    .renderS((scope, state) => {
 
       def handleClose: (ReactEvent, String) => Callback = (_, reason) => {
-        handleCloseClick.when_(reason != "clickaway")
+        scope.modState(_.hideAcknowledgement).when_(reason != "clickaway")
       }
 
+      val acknowledgementMessage = MuiSnackbar(anchorOrigin = Origin(vertical = "top", horizontal = "right"),
+        autoHideDuration = 5000,
+        message = <.div(^.className := "muiSnackBar", "Thanks for your feedback. This helps us improve the service."),
+        open = scope.state.showAcknowledgement,
+        onClose = handleClose)()
+
       <.div(
-        <.div(MuiSnackbar(anchorOrigin = Origin(vertical = "top", horizontal = "right"),
-          autoHideDuration = 5000,
-          message = <.div(^.className := "muiSnackBar", "Thanks for your feedback. This helps us improve the service."),
-          open = scope.state.open,
-          onClose = handleClose)()),
+        <.div(acknowledgementMessage),
         <.button(Icon.thumbsOUp,
           ^.className := "btn btn-default btn-success",
-          ^.onClick --> scope.modState(_.copy(open = true), Callback(DrtApi.post("email/feedback/positive", write(state))))
+          ^.onClick --> scope.modState(_.copy(showAcknowledgement = true), Callback(DrtApi.post("email/feedback/positive", write(state))))
         )
       )
     })
     .configure(Reusability.shouldComponentUpdate)
     .build
-
 
   def apply(url: String, loggedInUser: LoggedInUser): VdomElement = component(Props(url, loggedInUser: LoggedInUser))
 }

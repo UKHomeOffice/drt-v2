@@ -25,17 +25,17 @@ class FixedPointsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW
       else
         updated(Ready(fixedPoints), scheduledRequest(viewMode))
 
-    case SaveFixedPoints(assignments, terminalName) =>
+    case SaveFixedPoints(assignments, terminal) =>
       log.info(s"Calling saveFixedPoints")
 
-      val otherTerminalFixedPoints = value.getOrElse(FixedPointAssignments.empty).notForTerminal(terminalName)
+      val otherTerminalFixedPoints = value.getOrElse(FixedPointAssignments.empty).notForTerminal(terminal)
       val newFixedPoints: FixedPointAssignments = assignments + otherTerminalFixedPoints
       val futureResponse = DrtApi.post("fixed-points", write(newFixedPoints))
-        .map(_ => NoAction)
+        .map(_ => SetFixedPoints(getCurrentViewMode(), newFixedPoints, Option(terminal.toString)))
         .recoverWith {
           case _ =>
             log.error(s"Failed to save FixedPoints. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(SaveFixedPoints(assignments, terminalName), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(SaveFixedPoints(assignments, terminal), PollDelay.recoveryDelay))
         }
       effectOnly(Effect(futureResponse))
 
