@@ -49,9 +49,7 @@ object TerminalStaffing {
     def render(props: Props): VdomTagOf[Div] = <.div(
       props.potShifts.render { shifts =>
         props.potFixedPoints.render { fixedPoints =>
-          log.info(s"rendering fixed points pot: $fixedPoints")
           props.potStaffMovements.render { movements =>
-            log.info(s"rendering movements pot: $fixedPoints")
             val movementsForTheDay = movements.forDay(props.viewMode.time)
             <.div(
               <.div(^.className := "container",
@@ -109,8 +107,11 @@ object TerminalStaffing {
     object FixedPointsEditor {
       val component: Component[FixedPointsProps, FixedPointsState, Unit, CtorType.Props] = ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
         .initialStateFromProps { props =>
-          log.info(s"setting state from props")
-          FixedPointsState(StaffAssignmentHelper.fixedPointsFormat(props.fixedPoints), props.fixedPoints, props.terminal, showAcknowledgement = false)
+          FixedPointsState(
+            StaffAssignmentHelper.fixedPointsFormat(props.fixedPoints),
+            props.fixedPoints,
+            props.terminal,
+            showAcknowledgement = false)
         }
         .renderPS((scope, props, state) => {
 
@@ -132,7 +133,6 @@ object TerminalStaffing {
                 <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
                 <.textarea(^.defaultValue := state.text, ^.className := "staffing-editor",
                   ^.onChange ==> ((e: ReactEventFromInput) => {
-                    log.info(s"fixed points changed")
                     val newRawFixedPoints = e.target.value
                     scope.modState(_.copy(text = newRawFixedPoints))
                   })),
