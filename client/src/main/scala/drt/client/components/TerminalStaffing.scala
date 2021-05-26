@@ -9,8 +9,7 @@ import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiSnackbar}
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^._
@@ -93,15 +92,13 @@ object TerminalStaffing {
                                 terminal: Terminal,
                                 loggedInUser: LoggedInUser)
 
-    case class FixedPointsState(text: String, originalValue: FixedPointAssignments, terminal: Terminal, showAcknowledgement: Boolean) {
+    case class FixedPointsState(text: String, originalValue: FixedPointAssignments, terminal: Terminal) {
       def isUpdated: Boolean = currentValue != originalValue
 
       def currentValue: FixedPointAssignments = {
         val withTerminalName = addTerminalNameAndDate(text, terminal)
         FixedPointAssignments(StaffAssignmentParser(withTerminalName).parsedAssignments.toList.collect { case Success(sa) => sa })
       }
-
-      def hideAcknowledgement: FixedPointsState = copy(showAcknowledgement = false)
     }
 
     object FixedPointsEditor {
@@ -110,14 +107,9 @@ object TerminalStaffing {
           FixedPointsState(
             StaffAssignmentHelper.fixedPointsFormat(props.fixedPoints),
             props.fixedPoints,
-            props.terminal,
-            showAcknowledgement = false)
+            props.terminal)
         }
         .renderPS((scope, props, state) => {
-
-          def handleClose: (ReactEvent, String) => Callback = (_, reason) =>
-            scope.modState(_.hideAcknowledgement).when_(reason != "clickaway")
-
           val defaultExamples = Seq("Roving Officer, 00:00, 23:59, 1")
           val examples = if (props.airportConfig.fixedPointExamples.nonEmpty)
             props.airportConfig.fixedPointExamples
@@ -136,15 +128,10 @@ object TerminalStaffing {
                     val newRawFixedPoints = e.target.value
                     scope.modState(_.copy(text = newRawFixedPoints))
                   })),
-                MuiSnackbar(anchorOrigin = Origin(vertical = "top", horizontal = "right"),
-                  autoHideDuration = 5000,
-                  message = <.div(^.className := "muiSnackBar", "Miscellaneous staff changes have been saved"),
-                  open = scope.state.showAcknowledgement,
-                  onClose = handleClose),
                 MuiButton(variant = MuiButton.Variant.contained, color = MuiButton.Color.primary)(all.disabled := !state.isUpdated, onClick --> {
                   GoogleEventTracker.sendEvent(props.terminal.toString, "Save Fixed Points", "")
                   scope.modState(
-                    _.copy(originalValue = state.currentValue, showAcknowledgement = true),
+                    _.copy(originalValue = state.currentValue),
                     Callback(SPACircuit.dispatch(SaveFixedPoints(state.currentValue, props.terminal))))
                 }, "Save changes")
               )

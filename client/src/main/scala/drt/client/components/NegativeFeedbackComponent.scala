@@ -1,14 +1,13 @@
 package drt.client.components
 
+import diode.data.Ready
+import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.services.DrtApi
-import io.kinoplan.scalajs.react.material.ui.core.MuiSnackbar
-import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
+import drt.client.services.{DrtApi, SPACircuit}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomTagOf, ^, _}
-import japgolly.scalajs.react.{Callback, CtorType, ReactEvent, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
-import uk.gov.homeoffice.drt.auth.LoggedInUser
 import upickle.default.{macroRW, write, ReadWriter => RW}
 
 import scala.scalajs.js
@@ -17,7 +16,7 @@ object NegativeFeedbackComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props(url: String,
-                   loggedInUser: LoggedInUser)
+                   userEmail: String)
 
   case class State(url: String,
                    feedbackUserEmail: String,
@@ -25,10 +24,7 @@ object NegativeFeedbackComponent {
                    whatWentWrong: String,
                    whatToImprove: String,
                    contactMe: Boolean,
-                   showDialogue: Boolean,
-                   showAcknowledgement: Boolean) {
-    def hideAcknowledgement: State = copy(showAcknowledgement = false)
-  }
+                   showDialogue: Boolean)
 
   implicit val stateReuse: Reusability[State] = Reusability.derive[State]
   implicit val propsReuse: Reusability[Props] = Reusability.by(_.url)
@@ -37,13 +33,12 @@ object NegativeFeedbackComponent {
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FeedbackComponent")
     .initialStateFromProps(p => State(
       url = p.url,
-      feedbackUserEmail = p.loggedInUser.email,
+      feedbackUserEmail = p.userEmail,
       whatUserDoing = "",
       whatWentWrong = "",
       whatToImprove = "",
       contactMe = false,
       showDialogue = false,
-      showAcknowledgement = false
     ))
     .renderS((scope, state) => {
 
@@ -99,8 +94,9 @@ object NegativeFeedbackComponent {
                     <.button("Submit", ^.className := "btn btn-default",
                       ^.onClick --> {
                         scope.modState(
-                          _.copy(showDialogue = false, showAcknowledgement = true),
-                          Callback(DrtApi.post("email/feedback/negative", write(state))))
+                          _.copy(showDialogue = false),
+                          Callback(DrtApi.post("email/feedback/negative", write(state))) >>
+                            Callback(SPACircuit.dispatch(SetSnackbarMessage(Ready("Thanks for your feedback. This helps us improve the service.")))))
                       }
                     ),
                     <.button(^.className := "btn btn-link",
@@ -125,18 +121,7 @@ object NegativeFeedbackComponent {
         )
       }
 
-      def handleClose: (ReactEvent, String) => Callback = (_, reason) => {
-        scope.modState(_.hideAcknowledgement).when_(reason != "clickaway")
-      }
-
-      val acknowledgementMessage = MuiSnackbar(anchorOrigin = Origin(vertical = "top", horizontal = "right"),
-        autoHideDuration = 5000,
-        message = <.div(^.className := "muiSnackBar", "Thanks for your feedback. This helps us improve the service."),
-        open = scope.state.showAcknowledgement,
-        onClose = handleClose)()
-
       <.div(
-        acknowledgementMessage,
         feedBackButton(Icon.thumbsODown, "negativeFeedback", "btn-danger"),
         negativeFeedbackDialog())
 
@@ -145,5 +130,5 @@ object NegativeFeedbackComponent {
     .build
 
 
-  def apply(url: String, loggedInUser: LoggedInUser): VdomElement = component(Props(url, loggedInUser: LoggedInUser))
+  def apply(url: String, userEmail: String): VdomElement = component(Props(url, userEmail))
 }
