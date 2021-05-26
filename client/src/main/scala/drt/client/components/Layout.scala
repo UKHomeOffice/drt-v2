@@ -61,8 +61,8 @@ object Layout {
   def buildFeedBackNavBar(user: LoggedInUser): VdomTagOf[UList] = {
     <.ul(^.className := "nav navbar-nav navbar-right",
       <.li(<.div(<.span(^.className := "btn", "Is this page useful?", ^.disabled := true))),
-      <.li(PositiveFeedbackComponent(dom.window.location.toString, user)),
-      <.li(NegativeFeedbackComponent(dom.window.location.toString, user))
+      <.li(PositiveFeedbackComponent(dom.window.location.toString, user.email)),
+      <.li(NegativeFeedbackComponent(dom.window.location.toString, user.email))
     )
   }
 

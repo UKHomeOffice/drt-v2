@@ -125,7 +125,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      featureFlags: Pot[FeatureFlags] = Empty,
                      fileUploadState: Pot[FileUploadState] = Empty,
                      simulationResult: Pot[SimulationResult] = Empty,
-                     passengerInfoSummariesByDayPot: Pot[Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]]] = Ready(Map())
+                     passengerInfoSummariesByDayPot: Pot[Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]]] = Ready(Map()),
+                     snackbarMessage: Pot[String] = Empty,
                     )
 
 object PollDelay {
@@ -187,6 +188,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ForecastFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v))),
       new WalkTimeHandler(zoomRW(_.walkTimes)((m, v) => m.copy(walkTimes = v))),
       new SimulationHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
+      new SnackbarHandler(zoomRW(_.snackbarMessage)((m, v) => m.copy(snackbarMessage = v)))
     )
 
     composedHandlers

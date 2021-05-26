@@ -165,7 +165,7 @@ object ShiftsServiceTests extends TestSuite {
             "escaped commas are allowed in shift name" - {
               val shiftsRawCsv =
                 """
-                  |Alpha\, 1 ODM,T1,01/12/16,06:30,15:18
+                  |Alpha\, 1 ODM,T1,01/12/16,06:30,15:18,1
                 """.stripMargin
               val parsedShift: Try[StaffAssignment] = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.head
 

@@ -9,9 +9,11 @@ import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.vdom.{TagOf, html_<^}
+import japgolly.scalajs.react.vdom.{TagOf, all, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Anchor, Div, Table}
 import org.scalajs.dom.raw.HTMLElement
@@ -29,7 +31,7 @@ object TerminalStaffing {
   val oneMinute = 60000L
 
   case class Props(
-                    terminalName: Terminal,
+                    terminal: Terminal,
                     potShifts: Pot[ShiftAssignments],
                     potFixedPoints: Pot[FixedPointAssignments],
                     potStaffMovements: Pot[StaffMovements],
@@ -44,21 +46,21 @@ object TerminalStaffing {
 
   class Backend() {
     def render(props: Props): VdomTagOf[Div] = <.div(
-      props.potShifts.render(shifts => {
-        props.potFixedPoints.render(fixedPoints => {
-          props.potStaffMovements.render((movements: StaffMovements) => {
+      props.potShifts.render { shifts =>
+        props.potFixedPoints.render { fixedPoints =>
+          props.potStaffMovements.render { movements =>
             val movementsForTheDay = movements.forDay(props.viewMode.time)
             <.div(
               <.div(^.className := "container",
-                <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminalName)), props.airportConfig, props.terminalName, props.loggedInUser))),
-                <.div(^.className := "col-md-4", movementsEditor(movementsForTheDay, props.terminalName))
+                <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminal)), props.airportConfig, props.terminal, props.loggedInUser))),
+                <.div(^.className := "col-md-4", movementsEditor(movementsForTheDay, props.terminal))
               ),
               <.div(^.className := "container",
-                <.div(^.className := "col-md-10", staffOverTheDay(movementsForTheDay, shifts, props.terminalName)))
+                <.div(^.className := "col-md-10", staffOverTheDay(movementsForTheDay, shifts, props.terminal)))
             )
-          })
-        })
-      })
+          }
+        }
+      }
     )
 
     def filterByTerminal(fixedPoints: String, terminalName: String): String = fixedPoints
@@ -87,41 +89,55 @@ object TerminalStaffing {
 
     case class FixedPointsProps(fixedPoints: FixedPointAssignments,
                                 airportConfig: AirportConfig,
-                                terminalName: Terminal,
+                                terminal: Terminal,
                                 loggedInUser: LoggedInUser)
 
-    case class FixedPointsState(rawFixedPoints: String)
+    case class FixedPointsState(text: String, originalValue: FixedPointAssignments, terminal: Terminal) {
+      def isUpdated: Boolean = currentValue != originalValue
+
+      def currentValue: FixedPointAssignments = {
+        val withTerminalName = addTerminalNameAndDate(text, terminal)
+        FixedPointAssignments(StaffAssignmentParser(withTerminalName).parsedAssignments.toList.collect { case Success(sa) => sa })
+      }
+    }
 
     object FixedPointsEditor {
       val component: Component[FixedPointsProps, FixedPointsState, Unit, CtorType.Props] = ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
-        .initialStateFromProps(props => FixedPointsState(StaffAssignmentHelper.fixedPointsFormat(props.fixedPoints)))
+        .initialStateFromProps { props =>
+          FixedPointsState(
+            StaffAssignmentHelper.fixedPointsFormat(props.fixedPoints),
+            props.fixedPoints,
+            props.terminal)
+        }
         .renderPS((scope, props, state) => {
-
           val defaultExamples = Seq("Roving Officer, 00:00, 23:59, 1")
           val examples = if (props.airportConfig.fixedPointExamples.nonEmpty)
             props.airportConfig.fixedPointExamples
           else
             defaultExamples
 
+          log.info(s"Rendering fixed points form")
           <.div(
             <.h2("Miscellaneous Staff"),
-              if (props.loggedInUser.roles.contains(StaffEdit)) <.div(
+            if (props.loggedInUser.roles.contains(StaffEdit)) {
+              <.div(
                 <.p("One entry per line with values separated by commas, e.g.:"),
                 <.pre(<.div(examples.map(line => <.div(line)).toTagMod)),
-                <.textarea(^.value := state.rawFixedPoints, ^.className := "staffing-editor"),
-                ^.onChange ==> ((e: ReactEventFromInput) => {
-                  log.info(s"fixed points changed")
-                  val newRawFixedPoints = e.target.value
-                  scope.modState(_.copy(rawFixedPoints = newRawFixedPoints))
-                }),
-                <.button("Save", ^.onClick ==> ((_: ReactEventFromInput) => {
-                  val withTerminalName = addTerminalNameAndDate(state.rawFixedPoints, props.terminalName)
-                  val newAssignments = FixedPointAssignments(StaffAssignmentParser(withTerminalName).parsedAssignments.toList.collect { case Success(sa) => sa })
-                  GoogleEventTracker.sendEvent(withTerminalName, "Save Fixed Points", FixedPointAssignments(newAssignments.assignments.map(_.copy(createdBy = None))).toString)
-                  Callback(SPACircuit.dispatch(SaveFixedPoints(newAssignments, props.terminalName)))
-                }))
-              ) else <.pre(state.rawFixedPoints, ^.className := "staffing-editor")
-            )
+                <.textarea(^.defaultValue := state.text, ^.className := "staffing-editor",
+                  ^.onChange ==> ((e: ReactEventFromInput) => {
+                    val newRawFixedPoints = e.target.value
+                    scope.modState(_.copy(text = newRawFixedPoints))
+                  })),
+                MuiButton(variant = MuiButton.Variant.contained, color = MuiButton.Color.primary)(all.disabled := !state.isUpdated, onClick --> {
+                  GoogleEventTracker.sendEvent(props.terminal.toString, "Save Fixed Points", "")
+                  scope.modState(
+                    _.copy(originalValue = state.currentValue),
+                    Callback(SPACircuit.dispatch(SaveFixedPoints(state.currentValue, props.terminal))))
+                }, "Save changes")
+              )
+            }
+            else <.pre(state.text, ^.className := "staffing-editor")
+          )
         }).build
 
       def apply(props: FixedPointsProps): Unmounted[FixedPointsProps, FixedPointsState, Unit] = component(props)
@@ -144,7 +160,7 @@ object TerminalStaffing {
                 <.tr(^.key := s"hr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}", {
                   hoursWorthOf15Minutes.map((t: Long) => {
                     val d = SDate(t)
-                    val display = f"${d.getHours}%02d:${d.getMinutes}%02d"
+                    val display = f"${d.getHours()}%02d:${d.getMinutes()}%02d"
                     <.th(^.key := t, display)
                   }).toTagMod
                 }),

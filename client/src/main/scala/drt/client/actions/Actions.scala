@@ -1,6 +1,7 @@
 package drt.client.actions
 
 import diode.Action
+import diode.data.Pot
 import drt.client.components.scenarios.SimulationFormFields
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
@@ -77,6 +78,8 @@ object Actions {
   case class SetFixedPoints(viewMode: ViewMode, fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
 
   case class SaveFixedPoints(fixedPoints: FixedPointAssignments, terminal: Terminal) extends Action
+
+  case class SetSnackbarMessage(message: Pot[String]) extends Action
 
   case class GetFixedPoints(viewMode: ViewMode) extends Action
 

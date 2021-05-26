@@ -9,9 +9,10 @@ import drt.client.services.LoadingState
 import drt.shared.SDateLike
 import drt.shared.dates.LocalDate
 import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiTextField}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import scalacss.ScalaCssReactImplicits
 
 object DaySelectorComponent extends ScalaCssReactImplicits {
@@ -25,9 +26,9 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                   )
 
   case class State(date: LocalDate) {
-    def selectedDate = SDate(date)
+    def selectedDate: SDateLike = SDate(date)
 
-    def update(d: LocalDate) = copy(date = d)
+    def update(d: LocalDate): State = copy(date = d)
   }
 
   val today: SDateLike = SDate.now()
@@ -38,15 +39,12 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
   implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())
 
-  val component = ScalaComponent.builder[Props]("DatePicker")
-    .initialStateFromProps(
-      p => {
-        log.info(s"Setting state from $p")
-        val viewMode = p.terminalPageTab.viewMode
-        val time = viewMode.time
-        State(time.toLocalDate)
-      }
-    )
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("DatePicker")
+    .initialStateFromProps { p =>
+      val viewMode = p.terminalPageTab.viewMode
+      val time = viewMode.time
+      State(time.toLocalDate)
+    }
     .renderPS(r = (scope, props, state) => {
 
       def isCurrentSelection = state.selectedDate.ddMMyyString == props.terminalPageTab.dateFromUrlOrNow.ddMMyyString
