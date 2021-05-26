@@ -4,7 +4,6 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.T1
 import drt.shared._
-import services.SDate
 import services.crunch.CrunchTestLike
 import services.exports.{ActualApiFlightExportTemplate, StreamingFlightsExport}
 import services.graphstages.Crunch

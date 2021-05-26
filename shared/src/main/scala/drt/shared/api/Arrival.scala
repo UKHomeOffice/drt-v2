@@ -91,10 +91,10 @@ case class Arrival(Operator: Option[Operator],
     (minutesToDisembark * oneMinuteInMillis).toLong
   }
 
-  val bestPaxEstimate: Int = PcpPax.bestPaxEstimate(this)
+  val bestPcpPaxEstimate: Int = PcpPax.bestPcpPaxEstimate(this)
 
   def minutesOfPaxArrivals: Int = {
-    val totalPax = bestPaxEstimate
+    val totalPax = bestPcpPaxEstimate
     if (totalPax <= 0) 0
     else (totalPax.toDouble / paxOffPerMinute).ceil.toInt - 1
   }
@@ -106,7 +106,7 @@ case class Arrival(Operator: Option[Operator],
   }
 
   def paxDeparturesByMinute(departRate: Int): Iterable[(MillisSinceEpoch, Int)] = {
-    val totalPax = bestPaxEstimate
+    val totalPax = bestPcpPaxEstimate
     val maybeRemainingPax = totalPax % departRate match {
       case 0 => None
       case someLeftovers => Option(someLeftovers)

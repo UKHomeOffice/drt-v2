@@ -132,7 +132,7 @@ class SimulationParamsSpec extends Specification {
 
     val result = weightingOfOne.applyPassengerWeighting(flights)
 
-    result.flights.values.head.apiFlight.bestPaxEstimate === flightWithSplits.apiFlight.bestPaxEstimate
+    result.flights.values.head.apiFlight.bestPcpPaxEstimate === flightWithSplits.apiFlight.bestPcpPaxEstimate
   }
 
   "Given I am applying a passenger weighting to a flight, it should have the ScenarioSimulationSource added to it" >> {
@@ -160,7 +160,7 @@ class SimulationParamsSpec extends Specification {
 
     val result = weightingOfTwo.applyPassengerWeighting(fws)
 
-    result.flights.values.head.apiFlight.bestPaxEstimate === flightWithSplits.apiFlight.bestPaxEstimate
+    result.flights.values.head.apiFlight.bestPcpPaxEstimate === flightWithSplits.apiFlight.bestPcpPaxEstimate
   }
 
 }

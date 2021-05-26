@@ -5,7 +5,7 @@ import drt.shared.api.Arrival
 object PcpPax {
   val defaultPax = 0
 
-  def bestPaxEstimate(flight: Arrival): Int =
+  def bestPcpPaxEstimate(flight: Arrival): Int =
     (flight.ApiPax, flight.ActPax, flight.TranPax, flight.MaxPax) match {
       case (Some(apiPax), _, _, _) if !flight.FeedSources.contains(LiveFeedSource) => apiPax
       case (_, Some(actPax), Some(tranPax), _) if (actPax - tranPax) >= 0 => actPax - tranPax

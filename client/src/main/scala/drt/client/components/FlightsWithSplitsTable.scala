@@ -29,7 +29,6 @@ import scala.collection.immutable.Map
 
 object FlightsWithSplitsTable {
 
-  type BestPaxForArrivalF = Arrival => Int
 
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],
                    passengerInfoSummaryByDay: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
@@ -195,7 +194,6 @@ object FlightTableRow {
   import FlightTableComponents._
 
   type OriginMapperF = PortCode => VdomNode
-  type BestPaxForArrivalF = Arrival => Int
 
   type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
 
@@ -321,7 +319,7 @@ object FlightTableRow {
       val estCell = List(<.td(localDateTimeWithPopup(flight.EstimatedChox)))
       val lastCells = List[TagMod](
         <.td(localDateTimeWithPopup(flight.ActualChox)),
-        <.td(pcpTimeRange(flight)),
+        <.td(pcpTimeRange(flightWithSplits)),
         <.td(FlightComponents.paxComp(flightWithSplits))
       )
       val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells

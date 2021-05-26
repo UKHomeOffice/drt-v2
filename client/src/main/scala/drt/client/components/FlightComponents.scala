@@ -14,7 +14,7 @@ object FlightComponents {
     val isNotApiData = if (flightWithSplits.hasValidApi) "right" else "right notApiData"
     <.div(
       ^.className := s"$isNotApiData",
-      Tippy.describe(paxNumberSources(flightWithSplits), flightWithSplits.apiFlight.bestPaxEstimate)
+      Tippy.describe(paxNumberSources(flightWithSplits), flightWithSplits.pcpPaxEstimate)
     )
   }
 

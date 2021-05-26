@@ -20,13 +20,6 @@ object BigSummaryBoxes {
     start.millisSinceEpoch <= bt && bt <= end.millisSinceEpoch
   }
 
-  def bestFlightSplitPax: PartialFunction[ApiFlightWithSplits, Double] = {
-    case ApiFlightWithSplits(flight, splits, _) =>
-      splits.find { case Splits(_, _, _, t) => t == PaxNumbers } match {
-        case None => flight.bestPaxEstimate
-        case Some(apiSplits) => apiSplits.totalExcludingTransferPax
-      }
-  }
 
   def bestTime(f: ApiFlightWithSplits): MillisSinceEpoch = {
     val bestTime = {
@@ -52,7 +45,7 @@ object BigSummaryBoxes {
 
   val bestFlightSplits: ApiFlightWithSplits => Set[(PaxTypeAndQueue, Double)] = {
     case ApiFlightWithSplits(_, s, _) if s.isEmpty => Set()
-    case ApiFlightWithSplits(flight, splits, _) =>
+    case fws@ApiFlightWithSplits(flight, splits, _) =>
       if (splits.exists { case Splits(_, _, _, t) => t == PaxNumbers }) {
         splits.find { case Splits(_, _, _, t) => t == PaxNumbers } match {
           case None => Set()
@@ -64,7 +57,7 @@ object BigSummaryBoxes {
         splits.find { case Splits(_, _, _, t) => t == Percentage } match {
           case None => Set()
           case Some(apiSplits) => apiSplits.splits.map {
-            s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * flight.bestPaxEstimate)
+            s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * fws.pcpPaxEstimate)
           }
         }
       }

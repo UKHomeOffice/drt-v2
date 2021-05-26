@@ -20,11 +20,11 @@ object ApiSplitsToSplitRatio {
 
   def paxPerQueueUsingBestSplitsAsRatio(flightWithSplits: ApiFlightWithSplits): Option[Map[Queue, Int]] =
     flightWithSplits.bestSplits.map(s =>
-      flightPaxPerQueueUsingSplitsAsRatio(s, flightWithSplits.apiFlight)
+      flightPaxPerQueueUsingSplitsAsRatio(s, flightWithSplits)
     )
 
-  def flightPaxPerQueueUsingSplitsAsRatio(splits: Splits, flight: Arrival): Map[Queue, Int] = queueTotals(
-    applyPaxSplitsToFlightPax(splits, flight.bestPaxEstimate)
+  def flightPaxPerQueueUsingSplitsAsRatio(splits: Splits, fws: ApiFlightWithSplits): Map[Queue, Int] = queueTotals(
+    applyPaxSplitsToFlightPax(splits, fws.pcpPaxEstimate)
       .splits
       .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
       .toMap
