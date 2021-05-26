@@ -219,7 +219,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
 
   def pcpPaxEstimate = bestSplits match {
     case Some(splits) if hasValidApi => Math.round(splits.totalExcludingTransferPax).toInt
-    case _ => apiFlight.bestPaxEstimate
+    case _ => apiFlight.bestPcpPaxEstimate
   }
 
   def totalPax: Option[Int] = bestSplits match {

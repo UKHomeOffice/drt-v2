@@ -136,7 +136,7 @@ case class CedatFlightExportTemplate(override val timeZone: DateTimeZone) extend
       millisToDateStringFn,
       millisToTimeStringFn
     ) ++
-      List(fws.apiFlight.bestPaxEstimate.toString) ++ splitsForSources
+      List(fws.apiFlight.bestPcpPaxEstimate.toString) ++ splitsForSources
   }
 
   def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =

@@ -86,7 +86,7 @@ class PassengerNumberEstSpec extends Specification {
 
   "When calculating total pax" >> {
     "Given an arrival with 100 total pax, no transfer and no API data" >> {
-      "Then the total pax be 100" >> {
+      "Then the total pax should be 100" >> {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100)
 
