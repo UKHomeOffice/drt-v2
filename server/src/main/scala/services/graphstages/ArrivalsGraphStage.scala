@@ -328,6 +328,7 @@ class ArrivalsGraphStage(name: String = "",
     def bestPaxNos(key: UniqueArrival): (Option[Int], Option[Int]) =
       (liveArrivals.get(key), forecastArrivals.get(key), aclArrivals.get(key)) match {
         case (Some(live), _, _) if paxDefined(live) => (live.ActPax, live.TranPax)
+        case (_, _, Some(base)) if base.ActPax.contains(0) => (Option(0), Option(0))
         case (_, Some(fcst), _) if paxDefined(fcst) => (fcst.ActPax, fcst.TranPax)
         case (_, _, Some(base)) if paxDefined(base) => (base.ActPax, base.TranPax)
         case _ => (None, None)
