@@ -64,6 +64,15 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
       }
     }
 
+    "When I send an ACL arrival with 100 pax and a forecast arrival with 50 pax then an ACL arrival with 0 pax" >> {
+      offerArrivalAndWait(crunch.aclArrivalsInput, scheduled = nowString, actPax = Option(100), tranPax = None, maxPax = Option(150))
+      offerArrivalAndWait(crunch.forecastArrivalsInput, scheduled = nowString, actPax = Option(50), tranPax = None, maxPax = None)
+      offerArrivalAndWait(crunch.aclArrivalsInput, scheduled = nowString, actPax = Option(0), tranPax = None, maxPax = Option(150))
+      "I should see it with 0 ActPax in the port state" >> {
+        fishForArrivalWithActPax(Option(0))
+      }
+    }
+
     "When I send a live arrival with 100 pax, undefined trans pax and no other source" >> {
       offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = nowString, actPax = Option(100), tranPax = None, maxPax = Option(150))
       "I should see it with 100 ActPax in the port state" >> {
