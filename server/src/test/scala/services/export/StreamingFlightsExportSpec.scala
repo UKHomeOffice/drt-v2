@@ -5,6 +5,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.T1
 import drt.shared._
 import services.crunch.CrunchTestLike
+import services.exports.flights.FlightWithSplitsToCsv
 import services.exports.{ActualApiFlightExportTemplate, StreamingFlightsExport}
 import services.graphstages.Crunch
 
@@ -277,7 +278,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       val exporter = ActualApiFlightExportTemplate(Crunch.europeLondonTimeZone)
 
       val result = flights.map { flight =>
-        exporter.actualAPISplitsForFlightInHeadingOrder(flight, exporter.actualApiHeadingsForFlights)
+        exporter.actualAPISplitsForFlightInHeadingOrder(flight, FlightWithSplitsToCsv.actualApiHeadings)
       }
 
       val expected = List(

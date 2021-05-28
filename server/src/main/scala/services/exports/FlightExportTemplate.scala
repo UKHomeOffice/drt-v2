@@ -5,10 +5,10 @@ import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
 import drt.shared.splits.ApiSplitsToSplitRatio
-import drt.shared.{ApiFlightWithSplits, PaxTypesAndQueues, Queues}
+import drt.shared.{ApiFlightWithSplits, PaxTypesAndQueues}
 import org.joda.time.DateTimeZone
 import services.SDate
-import services.exports.flights.ArrivalToCsv
+import services.exports.flights.{CedatArrivalToCsv, FlightWithSplitsToCsv}
 
 trait FlightExportTemplate {
 
@@ -26,19 +26,6 @@ trait FlightExportTemplate {
 
   def millisToTimeStringFn: MillisSinceEpoch => String = SDate.millisToLocalHoursAndMinutes(timeZone)
 
-  def headingsForSplitSource(queueNames: Seq[Queue], source: String): String = queueNames
-    .map(q => {
-      val queueName = Queues.queueDisplayNames(q)
-      s"$source $queueName"
-    })
-    .mkString(",")
-
-  val csvHeader: String =
-    ArrivalToCsv.rawArrivalHeadings + ",PCP Pax," +
-      headingsForSplitSource(queueNames, "API") + "," +
-      headingsForSplitSource(queueNames, "Historical") + "," +
-      headingsForSplitSource(queueNames, "Terminal Average")
-
   val splitSources = List(ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage)
 
   def queueSplits(queueNames: Seq[Queue],
@@ -53,19 +40,9 @@ trait FlightExportTemplate {
       .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws))
       .getOrElse(Map())
 
-}
-
-case class DefaultFlightExportTemplate(override val timeZone: DateTimeZone) extends FlightExportTemplate {
-
-  def headings: String =
-    ArrivalToCsv.rawArrivalHeadings + ",PCP Pax," +
-      headingsForSplitSource(queueNames, "API") + "," +
-      headingsForSplitSource(queueNames, "Historical") + "," +
-      headingsForSplitSource(queueNames, "Terminal Average")
-
-  def rowValues(fws: ApiFlightWithSplits): Seq[String] = {
+  def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
     val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
-    ArrivalToCsv.flightWithSplitsAsRawCsvValues(
+    FlightWithSplitsToCsv.flightWithSplitsToCsvFields(
       fws,
       millisToDateStringFn,
       millisToTimeStringFn
@@ -73,77 +50,38 @@ case class DefaultFlightExportTemplate(override val timeZone: DateTimeZone) exte
       List(fws.pcpPaxEstimate.toString) ++ splitsForSources
   }
 
+  def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
+    headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
+      .map(n => Math.round(n).toDouble)
+
+}
+
+case class DefaultFlightExportTemplate(override val timeZone: DateTimeZone) extends FlightExportTemplate {
+  val headings: String = FlightWithSplitsToCsv.arrivalWithSplitsHeadings(queueNames)
+
+  def rowValues(fws: ApiFlightWithSplits): Seq[String] = flightWithSplitsToCsvRow(fws)
 }
 
 case class ActualApiFlightExportTemplate(override val timeZone: DateTimeZone) extends FlightExportTemplate {
 
-  val actualApiHeadingsForFlights: Seq[String] = Seq(
-    "API Actual - B5JSSK to Desk",
-    "API Actual - B5JSSK to eGates",
-    "API Actual - EEA (Machine Readable)",
-    "API Actual - EEA (Non Machine Readable)",
-    "API Actual - Fast Track (Non Visa)",
-    "API Actual - Fast Track (Visa)",
-    "API Actual - Non EEA (Non Visa)",
-    "API Actual - Non EEA (Visa)",
-    "API Actual - Transfer",
-    "API Actual - eGates"
-  )
+  override val headings: String = FlightWithSplitsToCsv.flightWithSplitsHeadingsPlusActualApi(queueNames)
 
-  val headings: String = csvHeader + "," + actualApiHeadingsForFlights.mkString(",")
-
-  def flightWithSplitsToCsvRow(queueNames: Seq[Queue], fws: ApiFlightWithSplits): List[String] = {
-    val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
-    ArrivalToCsv.flightWithSplitsAsRawCsvValues(
-      fws,
-      millisToDateStringFn,
-      millisToTimeStringFn
-    ) ++
-      List(fws.pcpPaxEstimate.toString) ++ splitsForSources
-  }
-
-  def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
-    headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
-      .map(n => Math.round(n).toDouble)
-
-  def rowValues(fws: ApiFlightWithSplits): Seq[String] = (flightWithSplitsToCsvRow(queueNames, fws) :::
-    actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadingsForFlights).toList).map(s => s"$s")
-
-
+  override def rowValues(fws: ApiFlightWithSplits): Seq[String] = (flightWithSplitsToCsvRow(fws) :::
+    actualAPISplitsForFlightInHeadingOrder(fws, FlightWithSplitsToCsv.actualApiHeadings).toList).map(s => s"$s")
 }
 
 case class CedatFlightExportTemplate(override val timeZone: DateTimeZone) extends FlightExportTemplate {
+  override val headings: String = CedatArrivalToCsv.allHeadings(queueNames)
 
-  val actualApiHeadingsForFlights: Seq[String] = Seq(
-    "API Actual - B5JSSK to Desk",
-    "API Actual - B5JSSK to eGates",
-    "API Actual - EEA (Machine Readable)",
-    "API Actual - EEA (Non Machine Readable)",
-    "API Actual - Fast Track (Non Visa)",
-    "API Actual - Fast Track (Visa)",
-    "API Actual - Non EEA (Non Visa)",
-    "API Actual - Non EEA (Visa)",
-    "API Actual - Transfer",
-    "API Actual - eGates"
-  )
-
-  val headings: String = csvHeader + "," + actualApiHeadingsForFlights.mkString(",")
-
-  def flightWithSplitsToCsvRow(queueNames: Seq[Queue], fws: ApiFlightWithSplits): List[String] = {
+  override def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
     val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
-    ArrivalToCsv.arrivalAsRawCsvValues(
+    CedatArrivalToCsv.arrivalAsRawCsvValues(
       fws.apiFlight,
       millisToDateStringFn,
       millisToTimeStringFn
-    ) ++
-      List(fws.apiFlight.bestPcpPaxEstimate.toString) ++ splitsForSources
+    ) ++ List(fws.apiFlight.bestPcpPaxEstimate.toString) ++ splitsForSources
   }
 
-  def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
-    headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
-      .map(n => Math.round(n).toDouble)
-
-  def rowValues(fws: ApiFlightWithSplits): Seq[String] = (flightWithSplitsToCsvRow(queueNames, fws) :::
-    actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadingsForFlights).toList).map(s => s"$s")
-
+  override def rowValues(fws: ApiFlightWithSplits): Seq[String] = (flightWithSplitsToCsvRow(fws) :::
+    actualAPISplitsForFlightInHeadingOrder(fws, CedatArrivalToCsv.actualApiHeadings).toList).map(s => s"$s")
 }
