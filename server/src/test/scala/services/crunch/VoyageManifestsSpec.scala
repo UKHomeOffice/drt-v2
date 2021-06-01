@@ -1,6 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
+import drt.shared.EventTypes.CI
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
@@ -194,7 +195,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ManifestPassengerProfile(Nationality("ITA"), Option(DocumentType("I")), Option(PaxAge(22)), Option(false), None),
         ManifestPassengerProfile(Nationality("AFG"), Option(DocumentType("P")), Option(PaxAge(22)), Option(false), None),
         ManifestPassengerProfile(Nationality("AFG"), Option(DocumentType("P")), Option(PaxAge(22)), Option(false), None)
-      )
+      ),
+      Option(CI)
     )
 
     result === expected
@@ -211,7 +213,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), SDate("2017-01-01"),
       List(
         ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false), None)
-      )
+      ),
+      Option(CI)
     )
 
     result === expected
@@ -228,7 +231,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
       ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), SDate("2017-01-01"),
       List(
         ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false), None)
-      )
+      ),
+      Option(CI)
     )
 
     result === expected

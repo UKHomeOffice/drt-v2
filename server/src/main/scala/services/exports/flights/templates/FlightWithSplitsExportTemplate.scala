@@ -4,14 +4,10 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.{ApiFlightWithSplits, Queues}
-import org.joda.time.DateTimeZone
-import services.exports.FlightExportTemplate
 
-case class FlightWithSplitsWithoutActualApiExportTemplate(override val timeZone: DateTimeZone) extends FlightWithSplitsExportTemplate
 
 trait FlightWithSplitsExportTemplate extends FlightExportTemplate {
   val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
-  val arrivalHeadingsWithTransfer: String = arrivalHeadings + ",Transfer Pax"
 
   val actualApiHeadings: Seq[String] = Seq(
     "API Actual - B5JSSK to Desk",
@@ -31,7 +27,7 @@ trait FlightWithSplitsExportTemplate extends FlightExportTemplate {
     .mkString(",")
 
   def arrivalWithSplitsHeadings(queueNames: Seq[Queue]): String =
-    arrivalHeadings + ",PCP Pax," +
+    arrivalHeadings + ",PCP Pax,Invalid API," +
       headingsForSplitSource(queueNames, "API") + "," +
       headingsForSplitSource(queueNames, "Historical") + "," +
       headingsForSplitSource(queueNames, "Terminal Average")
@@ -51,12 +47,15 @@ trait FlightWithSplitsExportTemplate extends FlightExportTemplate {
       fws.apiFlight.EstimatedChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       fws.apiFlight.ActualChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       fws.apiFlight.PcpTime.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      fws.totalPax.getOrElse("").toString)
+      fws.totalPax.getOrElse("").toString,
+
+    )
 
   protected def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
+    val apiIsInvalid = fws.hasApi && !fws.hasValidApi
     val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
     flightWithSplitsToCsvFields(fws, millisToDateStringFn, millisToTimeStringFn) ++
-      List(fws.pcpPaxEstimate.toString) ++ splitsForSources
+      List(fws.pcpPaxEstimate.toString, if (apiIsInvalid) "Y" else "") ++ splitsForSources
   }
 
   override val headings: String = arrivalWithSplitsHeadings(queueNames)

@@ -18,7 +18,7 @@ import play.api.mvc._
 import services.SDate
 import services.exports._
 import services.exports.flights.ArrivalFeedExport
-import services.exports.flights.templates.{FlightWithSplitsWithActualApiExportTemplate, CedatFlightExportTemplate, FlightWithSplitsWithoutActualApiExportTemplate}
+import services.exports.flights.templates.{CedatFlightExportTemplate, FlightExportTemplate, FlightWithSplitsWithActualApiExportTemplate, FlightWithSplitsWithoutActualApiExportTemplate}
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, CedatStaff}

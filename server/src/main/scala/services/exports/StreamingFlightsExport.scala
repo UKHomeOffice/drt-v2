@@ -5,7 +5,7 @@ import akka.stream.scaladsl.Source
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import drt.shared.api.Arrival
-import services.exports.flights.templates.{FlightWithSplitsWithActualApiExportTemplate, FlightWithSplitsWithoutActualApiExportTemplate}
+import services.exports.flights.templates.{FlightExportTemplate, FlightWithSplitsWithActualApiExportTemplate, FlightWithSplitsWithoutActualApiExportTemplate}
 import services.graphstages.Crunch
 
 object StreamingFlightsExport {

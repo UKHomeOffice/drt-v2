@@ -41,7 +41,7 @@ object VoyageManifestParser {
                                NationalityCountryCode: Option[Nationality] = None,
                                PassengerIdentifier: Option[String]
                               ) {
-    def isInTransit(portCode: PortCode) = InTransitFlag.isInTransit || DisembarkationPortCode.exists(_ != portCode)
+    def isInTransit(portCode: PortCode): Boolean = InTransitFlag.isInTransit || DisembarkationPortCode.exists(_ != portCode)
 
     def docTypeWithNationalityAssumption: Option[DocumentType] = NationalityCountryCode match {
       case Some(Nationality(code)) if code == CountryCodes.UK => Option(Passport)
@@ -92,6 +92,7 @@ object VoyageManifestParser {
     override val voyageNumber: VoyageNumberLike = VoyageNumber
     override val carrierCode: CarrierCode = CarrierCode
     override val passengers: List[ManifestPassengerProfile] = PassengerList.map(ManifestPassengerProfile(_, arrivalPortCode))
+    override val maybeEventType: Option[EventType] = Option(EventCode)
   }
 
   object FlightPassengerInfoProtocol extends DefaultJsonProtocol {

@@ -6,7 +6,6 @@ import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.api.Arrival
 import drt.shared.{ApiFlightWithSplits, Queues}
 import org.joda.time.DateTimeZone
-import services.exports.FlightExportTemplate
 
 case class CedatFlightExportTemplate(override val timeZone: DateTimeZone) extends FlightExportTemplate {
 

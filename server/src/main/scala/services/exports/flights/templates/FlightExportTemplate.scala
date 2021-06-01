@@ -1,4 +1,4 @@
-package services.exports
+package services.exports.flights.templates
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
@@ -8,6 +8,7 @@ import drt.shared.splits.ApiSplitsToSplitRatio
 import drt.shared.{ApiFlightWithSplits, PaxTypesAndQueues}
 import org.joda.time.DateTimeZone
 import services.SDate
+import services.exports.Exports
 
 trait FlightExportTemplate {
 
