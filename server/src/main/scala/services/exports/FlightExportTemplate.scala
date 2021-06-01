@@ -9,7 +9,7 @@ import drt.shared.{ApiFlightWithSplits, PaxTypesAndQueues}
 import org.joda.time.DateTimeZone
 import services.SDate
 
-trait FlightExportTemplateLike {
+trait FlightExportTemplate {
 
   val timeZone: DateTimeZone
 

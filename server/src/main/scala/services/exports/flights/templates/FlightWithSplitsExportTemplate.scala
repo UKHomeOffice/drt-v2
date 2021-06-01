@@ -5,11 +5,11 @@ import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.{ApiFlightWithSplits, Queues}
 import org.joda.time.DateTimeZone
-import services.exports.FlightExportTemplateLike
+import services.exports.FlightExportTemplate
 
-case class FlightWithSplitsExportTemplate(override val timeZone: DateTimeZone) extends FlightWithSplitsExportTemplateLike
+case class FlightWithSplitsWithoutActualApiExportTemplate(override val timeZone: DateTimeZone) extends FlightWithSplitsExportTemplate
 
-trait FlightWithSplitsExportTemplateLike extends FlightExportTemplateLike {
+trait FlightWithSplitsExportTemplate extends FlightExportTemplate {
   val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
   val arrivalHeadingsWithTransfer: String = arrivalHeadings + ",Transfer Pax"
 

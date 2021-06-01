@@ -6,7 +6,7 @@ import drt.shared.Terminals.T1
 import drt.shared._
 import services.crunch.CrunchTestLike
 import services.exports.StreamingFlightsExport
-import services.exports.flights.templates.ActualApiFlightWithSplitsExportTemplate
+import services.exports.flights.templates.FlightWithSplitsWithActualApiExportTemplate
 import services.graphstages.Crunch
 
 import scala.concurrent.Await
@@ -275,7 +275,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   "When asking for Actual API Split Data" >> {
 
     "Given a list of Flights With Splits then I should get Api Split data for each flight" >> {
-      val exporter = ActualApiFlightWithSplitsExportTemplate(Crunch.europeLondonTimeZone)
+      val exporter = FlightWithSplitsWithActualApiExportTemplate(Crunch.europeLondonTimeZone)
 
       val result = flights.map { flight =>
         exporter.actualAPISplitsForFlightInHeadingOrder(flight, exporter.actualApiHeadings)

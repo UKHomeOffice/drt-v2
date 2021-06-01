@@ -4,7 +4,7 @@ import drt.shared.ApiFlightWithSplits
 import drt.shared.Queues.Queue
 import org.joda.time.DateTimeZone
 
-case class ActualApiFlightWithSplitsExportTemplate(override val timeZone: DateTimeZone) extends FlightWithSplitsExportTemplateLike {
+case class FlightWithSplitsWithActualApiExportTemplate(override val timeZone: DateTimeZone) extends FlightWithSplitsExportTemplate {
   def flightWithSplitsHeadingsPlusActualApi(queueNames: Seq[Queue]): String = arrivalWithSplitsHeadings(queueNames) + "," + actualApiHeadings.mkString(",")
 
   override val headings: String = flightWithSplitsHeadingsPlusActualApi(queueNames)

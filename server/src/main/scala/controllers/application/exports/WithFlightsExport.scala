@@ -18,7 +18,7 @@ import play.api.mvc._
 import services.SDate
 import services.exports._
 import services.exports.flights.ArrivalFeedExport
-import services.exports.flights.templates.{ActualApiFlightWithSplitsExportTemplate, CedatFlightExportTemplate, FlightWithSplitsExportTemplate}
+import services.exports.flights.templates.{FlightWithSplitsWithActualApiExportTemplate, CedatFlightExportTemplate, FlightWithSplitsWithoutActualApiExportTemplate}
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, CedatStaff}
@@ -29,13 +29,13 @@ import scala.util.{Failure, Success, Try}
 trait WithFlightsExport {
   self: Application =>
 
-  def csvTemplateForUser(user: LoggedInUser): FlightExportTemplateLike = {
+  def csvTemplateForUser(user: LoggedInUser): FlightExportTemplate = {
     if (user.hasRole(CedatStaff))
       CedatFlightExportTemplate(Crunch.europeLondonTimeZone)
     else if (user.hasRole(ApiView))
-      ActualApiFlightWithSplitsExportTemplate(Crunch.europeLondonTimeZone)
+      FlightWithSplitsWithActualApiExportTemplate(Crunch.europeLondonTimeZone)
     else
-      FlightWithSplitsExportTemplate(Crunch.europeLondonTimeZone)
+      FlightWithSplitsWithoutActualApiExportTemplate(Crunch.europeLondonTimeZone)
   }
 
   def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDayString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {
@@ -58,7 +58,7 @@ trait WithFlightsExport {
                                    pointInTime: MillisSinceEpoch,
                                    startDate: SDateLike,
                                    endDate: SDateLike, terminal: Terminal,
-                                   csvTemplate: FlightExportTemplateLike):
+                                   csvTemplate: FlightExportTemplate):
   Future[Result] = {
     val request = GetFlightsForTerminalDateRange(startDate.millisSinceEpoch, endDate.millisSinceEpoch, terminal)
     val pitRequest = PointInTimeQuery(pointInTime, request)
