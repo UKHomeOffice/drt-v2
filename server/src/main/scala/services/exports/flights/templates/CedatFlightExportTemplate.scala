@@ -1,11 +1,14 @@
-package services.exports.flights
+package services.exports.flights.templates
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues
 import drt.shared.Queues.Queue
+import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.api.Arrival
+import drt.shared.{ApiFlightWithSplits, Queues}
+import org.joda.time.DateTimeZone
+import services.exports.FlightExportTemplateLike
 
-object CedatArrivalToCsv {
+case class CedatFlightExportTemplate(override val timeZone: DateTimeZone) extends FlightExportTemplateLike {
 
   val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
 
@@ -49,4 +52,18 @@ object CedatArrivalToCsv {
       arrival.ActualChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       arrival.PcpTime.map(millisToHoursAndMinutes(_)).getOrElse(""),
       arrival.ActPax.getOrElse("").toString)
+
+  override val headings: String = allHeadings(queueNames)
+
+  def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
+    val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
+    arrivalAsRawCsvValues(
+      fws.apiFlight,
+      millisToDateStringFn,
+      millisToTimeStringFn
+    ) ++ List(fws.apiFlight.bestPcpPaxEstimate.toString) ++ splitsForSources
+  }
+
+  override def rowValues(fws: ApiFlightWithSplits): Seq[String] = (flightWithSplitsToCsvRow(fws) :::
+    actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList).map(s => s"$s")
 }

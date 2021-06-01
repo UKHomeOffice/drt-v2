@@ -20,7 +20,8 @@ import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.OptimiserMocks.{mockHistoricManifestsProviderNoop, mockLiveManifestsProviderNoop}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
-import services.exports.{ActualApiFlightExportTemplate, StreamingFlightsExport}
+import services.exports.StreamingFlightsExport
+import services.exports.flights.templates.ActualApiFlightWithSplitsExportTemplate
 import services.graphstages.Crunch
 import services.imports.{ArrivalCrunchSimulationActor, ArrivalImporter}
 import services.{OptimiserWithFlexibleProcessors, SDate}
@@ -39,7 +40,7 @@ class ArrivalsSimlationSpec extends CrunchTestLike {
 
   def fwsToCsv(flights: Seq[ApiFlightWithSplits]): String = {
     val resultStream = StreamingFlightsExport
-      .toCsvStreamFromTemplate(ActualApiFlightExportTemplate(Crunch.utcTimeZone))(Source(List(FlightsWithSplits(flights))))
+      .toCsvStreamFromTemplate(ActualApiFlightWithSplitsExportTemplate(Crunch.utcTimeZone))(Source(List(FlightsWithSplits(flights))))
     Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
   }
 

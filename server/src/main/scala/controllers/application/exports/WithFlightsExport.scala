@@ -18,6 +18,7 @@ import play.api.mvc._
 import services.SDate
 import services.exports._
 import services.exports.flights.ArrivalFeedExport
+import services.exports.flights.templates.{ActualApiFlightWithSplitsExportTemplate, CedatFlightExportTemplate, FlightWithSplitsExportTemplate}
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, CedatStaff}
@@ -28,13 +29,13 @@ import scala.util.{Failure, Success, Try}
 trait WithFlightsExport {
   self: Application =>
 
-  def csvTemplateForUser(user: LoggedInUser): FlightExportTemplate = {
+  def csvTemplateForUser(user: LoggedInUser): FlightExportTemplateLike = {
     if (user.hasRole(CedatStaff))
       CedatFlightExportTemplate(Crunch.europeLondonTimeZone)
     else if (user.hasRole(ApiView))
-      ActualApiFlightExportTemplate(Crunch.europeLondonTimeZone)
+      ActualApiFlightWithSplitsExportTemplate(Crunch.europeLondonTimeZone)
     else
-      DefaultFlightExportTemplate(Crunch.europeLondonTimeZone)
+      FlightWithSplitsExportTemplate(Crunch.europeLondonTimeZone)
   }
 
   def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDayString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {
@@ -57,7 +58,7 @@ trait WithFlightsExport {
                                    pointInTime: MillisSinceEpoch,
                                    startDate: SDateLike,
                                    endDate: SDateLike, terminal: Terminal,
-                                   csvTemplate: FlightExportTemplate):
+                                   csvTemplate: FlightExportTemplateLike):
   Future[Result] = {
     val request = GetFlightsForTerminalDateRange(startDate.millisSinceEpoch, endDate.millisSinceEpoch, terminal)
     val pitRequest = PointInTimeQuery(pointInTime, request)

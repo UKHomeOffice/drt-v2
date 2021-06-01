@@ -1,11 +1,15 @@
-package services.exports.flights
+package services.exports.flights.templates
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
+import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.{ApiFlightWithSplits, Queues}
+import org.joda.time.DateTimeZone
+import services.exports.FlightExportTemplateLike
 
-object FlightWithSplitsToCsv {
+case class FlightWithSplitsExportTemplate(override val timeZone: DateTimeZone) extends FlightWithSplitsExportTemplateLike
 
+trait FlightWithSplitsExportTemplateLike extends FlightExportTemplateLike {
   val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
   val arrivalHeadingsWithTransfer: String = arrivalHeadings + ",Transfer Pax"
 
@@ -32,7 +36,6 @@ object FlightWithSplitsToCsv {
       headingsForSplitSource(queueNames, "Historical") + "," +
       headingsForSplitSource(queueNames, "Terminal Average")
 
-  def flightWithSplitsHeadingsPlusActualApi(queueNames: Seq[Queue]): String = arrivalWithSplitsHeadings(queueNames) + "," + actualApiHeadings.mkString(",")
 
   def flightWithSplitsToCsvFields(fws: ApiFlightWithSplits, millisToDateOnly: MillisSinceEpoch => String,
                                   millisToHoursAndMinutes: MillisSinceEpoch => String): List[String] =
@@ -49,4 +52,14 @@ object FlightWithSplitsToCsv {
       fws.apiFlight.ActualChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       fws.apiFlight.PcpTime.map(millisToHoursAndMinutes(_)).getOrElse(""),
       fws.totalPax.getOrElse("").toString)
+
+  protected def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
+    val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
+    flightWithSplitsToCsvFields(fws, millisToDateStringFn, millisToTimeStringFn) ++
+      List(fws.pcpPaxEstimate.toString) ++ splitsForSources
+  }
+
+  override val headings: String = arrivalWithSplitsHeadings(queueNames)
+
+  override def rowValues(fws: ApiFlightWithSplits): Seq[String] = flightWithSplitsToCsvRow(fws)
 }
