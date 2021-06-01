@@ -241,7 +241,7 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     val scenarioSplits = splits.find(s => s.source == SplitSources.ScenarioSimulationSplits)
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
-    
+
     val apiSplits: List[Option[Splits]] = if (hasValidApi)
       List(apiSplitsDc, apiSplitsCi)
     else
