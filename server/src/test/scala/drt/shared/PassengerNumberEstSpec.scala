@@ -170,10 +170,7 @@ class PassengerNumberEstSpec extends Specification {
       feedSources = sources
     )
 
-    val fws = ApiFlightWithSplits(flight, splits)
-    println(s"actPax: ${flight.ActPax}. totalPax: ${fws.totalPax}")
-
-    fws
+    ApiFlightWithSplits(flight, splits)
   }
 
   def liveApiSplits(directPax: Int = 0, transferPax: Int = 0): Set[Splits] = Set(Splits(

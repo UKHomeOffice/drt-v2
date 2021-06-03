@@ -1,8 +1,8 @@
 package controllers.application
 
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
-import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import actors.routing.FlightsRouterActor
+import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.NotUsed
 import akka.actor.Props
 import akka.pattern.ask

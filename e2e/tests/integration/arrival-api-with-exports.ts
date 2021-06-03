@@ -28,7 +28,7 @@ describe('Arrivals CSV Export', () => {
     const pcpTimeLocal = actChoxTime.add(13, "minutes").tz("Europe/London").format("HH:mm");
     const headersWithoutActApi = "IATA,ICAO,Origin,Gate/Stand,Status," +
         "Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP," +
-        "Total Pax,PCP Pax," +
+        "Total Pax,PCP Pax,Invalid API," +
         "API e-Gates,API EEA,API Non-EEA,API Fast Track," +
         "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
         "Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track";
@@ -43,10 +43,11 @@ describe('Arrivals CSV Export', () => {
     const eGatePax = "25";
     const eeaDesk = "9";
     const nonEEADesk = "17";
+    const invalidApi = "";
 
     const csvRow = (totalPax: string, apiEGates: string, terminalAverageEgates: string = "13") =>
         "TS0123,TS0123,AMS,46/44R,On Chocks," + schDateLocal + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
-        totalPax + "," + totalPax + "," +
+        totalPax + "," + totalPax + "," + invalidApi + "," +
         apiEGates + "," + eeaDesk + "," + nonEEADesk + ",," +
         ",,,," +
         terminalAverageEgates + ",37,1,";

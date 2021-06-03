@@ -1,6 +1,7 @@
 package services.`export`
 
 import akka.stream.scaladsl.{Sink, Source}
+import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.T1
 import drt.shared._
@@ -9,6 +10,7 @@ import services.exports.StreamingFlightsExport
 import services.exports.flights.templates.FlightWithSplitsWithActualApiExportTemplate
 import services.graphstages.Crunch
 
+import scala.collection.immutable
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -339,5 +341,33 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
           |""".stripMargin
 
     result === expected
+  }
+
+  "Given a flight with API pax count within the 5% threshold of the feed pax count, and no live feed, then the 'Invalid API' column should be blank" >> {
+    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(AclFeedSource)) === ""
+  }
+
+  "Given a flight with API pax count within the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be blank" >> {
+    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(LiveFeedSource, AclFeedSource)) === ""
+  }
+
+  "Given a flight with API pax count outside the 5% threshold of the feed pax count, but with no live feed, then the 'Invalid API' column should be blank" >> {
+    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(AclFeedSource)) === ""
+  }
+
+  "Given a flight with API pax count outside the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be 'Y'" >> {
+    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(LiveFeedSource, AclFeedSource)) === "Y"
+  }
+
+  private def invalidApiFieldValue(actPax: Int, apiPax: Int, feedSources: Set[FeedSource]): String = {
+    val arrival = ArrivalGenerator.arrival(actPax = Option(actPax), feedSources = feedSources)
+    val splits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, apiPax, None, None)),
+      SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
+    val fws = ApiFlightWithSplits(arrival, Set(splits))
+    val eventualResult = StreamingFlightsExport.toCsvStreamWithoutActualApi(Source(List(FlightsWithSplits(Iterable(fws))))).runWith(Sink.seq)
+    val result = Await.result(eventualResult, 1 second)
+    val columnIndexOfInvalidApi = result.head.split(",").indexOf("Invalid API")
+    val invalidApiFieldValue = result.drop(1).head.split(",")(columnIndexOfInvalidApi)
+    invalidApiFieldValue
   }
 }
