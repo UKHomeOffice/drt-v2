@@ -66,7 +66,7 @@ object PortConfigDetails {
   def minMaxDesksTable(minMaxDesksByTerminalQueue: Map[Queue, (List[Int], List[Int])]): TagMod = minMaxDesksByTerminalQueue.map {
     case (queue, (min, max)) =>
       <.div(^.className := "config-block float-left",
-        <.h4(Queues.queueDisplayNames(queue)),
+        <.h4(Queues.displayName(queue)),
         <.table(^.className := "table table-bordered table-hover", <.tbody(
           <.tr(
             <.th(^.className := "col", "Hour"),
@@ -100,7 +100,7 @@ object PortConfigDetails {
           .map {
             case (ptq, time) =>
               <.tr(
-                <.th(^.scope := "row", s"${PaxTypesAndQueues.displayName(ptq)}"),
+                <.th(^.scope := "row", s"${ptq.displayName}"),
                 <.td(^.className := "text-right", (time * 60).toInt)
               )
           }.toTagMod
@@ -143,7 +143,7 @@ object PortConfigDetails {
               case (qt, ratio) =>
                 <.tr(
                   <.td(^.scope := "row", PaxTypes.displayName(pt)),
-                  <.td(^.scope := "row", Queues.queueDisplayNames(qt)),
+                  <.td(^.scope := "row", Queues.displayName(qt)),
                   <.td(^.className := "text-right", s"${Math.round(ratio * 100)}%")
                 )
             }

@@ -27,7 +27,7 @@ object TerminalDesksAndQueues {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  def queueDisplayName(name: String): String = Queues.queueDisplayNames.getOrElse(Queue(name), name)
+  def queueDisplayName(name: String): String = Queues.displayName(Queue(name))
 
   def queueColour(queue: Queue): String = queue.toString.toLowerCase + "-user-desk-rec"
 

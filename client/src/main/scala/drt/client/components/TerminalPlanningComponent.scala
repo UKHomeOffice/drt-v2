@@ -88,7 +88,7 @@ object TerminalPlanningComponent {
             ), {
               val groupedByQ = props.forecastPeriod.headlines.queueDayHeadlines.groupBy(_.queue)
               Queues.queueOrder.flatMap(q => groupedByQ.get(q).map(qhls => <.tr(
-                <.th(^.className := "queue-heading", s"${Queues.queueDisplayNames.getOrElse(q, q)}"), qhls.toList.sortBy(_.day).map(qhl => <.td(qhl.paxNos)).toTagMod
+                <.th(^.className := "queue-heading", s"${Queues.displayName(q)}"), qhls.toList.sortBy(_.day).map(qhl => <.td(qhl.paxNos)).toTagMod
               ))).toTagMod
             }, {
               val byDay = props.forecastPeriod.headlines.queueDayHeadlines.groupBy(_.day).toList

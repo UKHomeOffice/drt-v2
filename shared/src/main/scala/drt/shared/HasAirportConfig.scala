@@ -147,14 +147,15 @@ object Queues {
 
   def inOrder(queuesToSort: Seq[Queue]): Seq[Queue] = queueOrder.filter(q => queuesToSort.contains(q))
 
-  val queueDisplayNames: Map[Queue, String] = Map(
-    EeaDesk -> "EEA",
-    NonEeaDesk -> "Non-EEA",
-    EGate -> "e-Gates",
-    FastTrack -> "Fast Track",
-    Transfer -> "Tx",
-    QueueDesk -> "Desk"
-  )
+  val displayName: Function[Queue, String] = {
+    case EeaDesk => "EEA"
+    case NonEeaDesk => "Non-EEA"
+    case EGate => "e-Gates"
+    case FastTrack => "Fast Track"
+    case Transfer => "Tx"
+    case QueueDesk => "Desk"
+    case _ => "Invalid"
+  }
 
   val forecastExportQueueOrderSansFastTrack = List(EeaDesk, NonEeaDesk, EGate)
   val forecastExportQueueOrderWithFastTrack = List(EeaDesk, NonEeaDesk, EGate, FastTrack)
@@ -229,7 +230,7 @@ object PaxTypes {
   }
 
   def displayNameShort(pt: PaxType): String = pt match {
-    case EeaMachineReadable => "EEA MRTD"
+    case EeaMachineReadable => "EEA MR"
     case EeaNonMachineReadable => "EEA NMR"
     case EeaBelowEGateAge => "EEA U12"
     case VisaNational => "VN"
@@ -242,7 +243,8 @@ object PaxTypes {
 }
 
 case class PaxTypeAndQueue(passengerType: PaxType, queueType: Queue) {
-  def key = s"${passengerType}_${queueType}"
+  def key = s"${passengerType}_$queueType"
+  def displayName = s"${PaxTypes.displayName(passengerType)} to ${Queues.displayName(queueType)}"
 }
 
 object PaxTypeAndQueue {
@@ -443,7 +445,7 @@ object PaxTypesAndQueues {
   val undefinedToEgate = PaxTypeAndQueue(PaxTypes.UndefinedPaxType, Queues.EGate)
   val undefinedToFastTrack = PaxTypeAndQueue(PaxTypes.UndefinedPaxType, Queues.FastTrack)
 
-  def displayName: Map[PaxTypeAndQueue, String] = Map(
+  def cedatDisplayName: Map[PaxTypeAndQueue, String] = Map(
     eeaMachineReadableToEGate -> "eGates",
     eeaMachineReadableToDesk -> "EEA (Machine Readable)",
     eeaChildToDesk -> "EEA child to Desk",

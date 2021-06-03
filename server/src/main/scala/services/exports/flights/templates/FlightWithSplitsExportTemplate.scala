@@ -1,30 +1,32 @@
 package services.exports.flights.templates
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues.Queue
+import drt.shared.PaxTypes._
+import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSource
-import drt.shared.{ApiFlightWithSplits, Queues}
+import drt.shared.{ApiFlightWithSplits, PaxTypeAndQueue, Queues}
 
 
 trait FlightWithSplitsExportTemplate extends FlightExportTemplate {
   val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
 
-  val actualApiHeadings: Seq[String] = Seq(
-    "API Actual - B5JSSK to Desk",
-    "API Actual - B5JSSK to eGates",
-    "API Actual - EEA (Machine Readable)",
-    "API Actual - EEA (Non Machine Readable)",
-    "API Actual - EEA child to Desk",
-    "API Actual - Fast Track (Non Visa)",
-    "API Actual - Fast Track (Visa)",
-    "API Actual - Non EEA (Non Visa)",
-    "API Actual - Non EEA (Visa)",
-    "API Actual - Transfer",
-    "API Actual - eGates"
-  )
+  val actualApiHeadings: Seq[String] = List(
+    PaxTypeAndQueue(B5JPlusNational, EeaDesk),
+    PaxTypeAndQueue(B5JPlusNational, EGate),
+    PaxTypeAndQueue(B5JPlusNationalBelowEGateAge, EeaDesk),
+    PaxTypeAndQueue(EeaMachineReadable, EeaDesk),
+    PaxTypeAndQueue(EeaMachineReadable, EGate),
+    PaxTypeAndQueue(EeaNonMachineReadable, EeaDesk),
+    PaxTypeAndQueue(EeaBelowEGateAge, EeaDesk),
+    PaxTypeAndQueue(NonVisaNational, FastTrack),
+    PaxTypeAndQueue(VisaNational, FastTrack),
+    PaxTypeAndQueue(NonVisaNational, NonEeaDesk),
+    PaxTypeAndQueue(VisaNational, NonEeaDesk),
+    PaxTypeAndQueue(Transit, Transfer),
+  ).map(pq => s"API Actual - ${pq.displayName}")
 
   private def headingsForSplitSource(queueNames: Seq[Queue], source: String): String = queueNames
-    .map(q => s"$source ${Queues.queueDisplayNames(q)}")
+    .map(q => s"$source ${Queues.displayName(q)}")
     .mkString(",")
 
   def arrivalWithSplitsHeadings(queueNames: Seq[Queue]): String =

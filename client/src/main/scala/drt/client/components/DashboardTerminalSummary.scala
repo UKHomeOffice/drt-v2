@@ -167,7 +167,7 @@ object DashboardTerminalSummary {
                 <.tr(^.className := "dashboard-summary__pax-summary-row",
                   <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", "Time Range"),
                   <.th("Total Pax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"), props.queues.map(q =>
-                    <.th(Queues.queueDisplayNames(q), ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod),
+                    <.th(Queues.displayName(q), ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod),
                 summary.map {
 
                   case DashboardSummary(start, numFlights, paxPerQueue) =>

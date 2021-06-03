@@ -33,10 +33,12 @@ describe('Arrivals CSV Export', () => {
         "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
         "Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track";
 
-    const actApiHeaders = "API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates" +
-        ",API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable)," +
-        "API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual " +
-        "- Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates";
+    const actApiHeaders = "API Actual - B5J+ National to EEA,API Actual - B5J+ National to e-Gates," +
+      "API Actual - B5J+ Child to EEA,API Actual - EEA Machine Readable to EEA," +
+      "API Actual - EEA Machine Readable to e-Gates,API Actual - EEA Non-Machine Readable to EEA," +
+      "API Actual - EEA Child to EEA,API Actual - Non-Visa National to Fast Track," +
+      "API Actual - Visa National to Fast Track,API Actual - Non-Visa National to Non-EEA," +
+      "API Actual - Visa National to Non-EEA,API Actual - Transit to Tx"
 
     const headersWithActApi = headersWithoutActApi + "," + actApiHeaders;
 
@@ -86,7 +88,7 @@ describe('Arrivals CSV Export', () => {
 
     it('Allows you to view API splits in the flights export for users with api:view permission', () => {
         const dataWithoutActApi = csvRow("51", eGatePax);
-        const actApiData = "4.0,6.0,5.0,0.0,0.0,0.0,7.0,10.0,0.0,19.0";
+        const actApiData = "4.0,6.0,0.0,5.0,19.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
@@ -119,7 +121,8 @@ describe('Arrivals CSV Export', () => {
 
     it('uses API splits for passenger numbers if they are within 5% of the port feed', () => {
         const dataWithoutActApi = csvRow("50", "24", "12");
-        const actApiData = "4.0,6.0,5.0,0.0,0.0,0.0,7.0,10.0,0.0,18.0";
+      // "TS0123,TS0123,AMS,46/44R,On Chocks,2021-06-03,01:55,02:05,02:07,02:11,02:12,02:25,50,50,,24,9,17,,,,,,12,37,1,,4.0,6.0,0.0,5.0,18.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0\n"
+      const actApiData = "4.0,6.0,0.0,5.0,18.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";

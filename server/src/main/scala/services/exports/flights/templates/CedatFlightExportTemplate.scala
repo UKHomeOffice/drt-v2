@@ -6,6 +6,7 @@ import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.api.Arrival
 import drt.shared.{ApiFlightWithSplits, Queues}
 import org.joda.time.DateTimeZone
+import services.exports.Exports
 
 case class CedatFlightExportTemplate(override val timeZone: DateTimeZone) extends FlightExportTemplate {
 
@@ -25,7 +26,7 @@ case class CedatFlightExportTemplate(override val timeZone: DateTimeZone) extend
   )
 
   def headingsForSplitSource(queueNames: Seq[Queue], source: String): String = queueNames
-    .map(q => s"$source ${Queues.queueDisplayNames(q)}")
+    .map(q => s"$source ${Queues.displayName(q)}")
     .mkString(",")
 
   def arrivalHeadings(queueNames: Seq[Queue]): String =
@@ -65,4 +66,8 @@ case class CedatFlightExportTemplate(override val timeZone: DateTimeZone) extend
 
   override def rowValues(fws: ApiFlightWithSplits): Seq[String] = (flightWithSplitsToCsvRow(fws) :::
     actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList).map(s => s"$s")
+
+  override def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
+    headings.map(h => Exports.cedatActualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
+      .map(n => Math.round(n).toDouble)
 }

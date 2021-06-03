@@ -68,7 +68,7 @@ object PcpPaxSummariesComponent {
       <.div(^.className := "queues",
         queues.map(qn => {
           <.div(^.className := "queue",
-            <.div(^.className := "queue-name", <.div(Queues.queueDisplayNames(qn))),
+            <.div(^.className := "queue-name", <.div(Queues.displayName(qn))),
             <.div(^.className := "queue-pax", <.div(s"${summary.queuesPax.getOrElse(qn, 0d).round}"))
           )
         }).toTagMod

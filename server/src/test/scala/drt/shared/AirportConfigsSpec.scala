@@ -28,7 +28,7 @@ class AirportConfigsSpec extends Specification {
         terminalName <- port.minMaxDesksByTerminalQueue24Hrs.keySet
         queueName <- port.minMaxDesksByTerminalQueue24Hrs(terminalName).keySet
       } yield {
-        Queues.queueDisplayNames.get(queueName).aka(s"$queueName not found in Queues") mustNotEqual None
+        Queues.displayName(queueName).aka(s"$queueName not found in Queues") mustNotEqual None
       }
     }
 
@@ -37,7 +37,7 @@ class AirportConfigsSpec extends Specification {
         port <- AirportConfigs.allPortConfigs
         queueName <- port.queuesByTerminal.values.flatten
       } yield {
-        Queues.queueDisplayNames.get(queueName).aka(s"$queueName not found in Queues") mustNotEqual None
+        Queues.displayName(queueName).aka(s"$queueName not found in Queues") mustNotEqual None
       }
     }
 
