@@ -125,7 +125,6 @@ object DynamicRunnableDeskRecs {
               flightWithNoSplits.copy(splits = Set(terminalDefault))
             case flightWithSplits => flightWithSplits
           }
-          allFlightsWithSplits.map(fws => fws.splits.map(s => println(s"${s.source} - ${s.maybeEventType}")))
           (crunchRequest, allFlightsWithSplits)
       }
 

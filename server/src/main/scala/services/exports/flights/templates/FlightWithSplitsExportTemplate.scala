@@ -14,6 +14,7 @@ trait FlightWithSplitsExportTemplate extends FlightExportTemplate {
     "API Actual - B5JSSK to eGates",
     "API Actual - EEA (Machine Readable)",
     "API Actual - EEA (Non Machine Readable)",
+    "API Actual - EEA child to Desk",
     "API Actual - Fast Track (Non Visa)",
     "API Actual - Fast Track (Visa)",
     "API Actual - Non EEA (Non Visa)",
