@@ -156,7 +156,7 @@ object FlightsWithSplitsTable {
       .toTagMod
 
     val queueDisplayNames = queues.map { q =>
-      val queueName: String = Queues.queueDisplayNames(q)
+      val queueName: String = Queues.displayName(q)
       <.th(queueName, " ", splitsTableTooltip)
     }.toTagMod
 

@@ -39,7 +39,8 @@ class QueueAllocationSpec extends Specification {
       SDate("2019-02-22T06:24:00Z"),
       List(
         ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false), None)
-      )
+      ),
+      None
     )
 
     val expected = Splits(Set(ApiPaxTypeAndQueueCount(
@@ -67,7 +68,8 @@ class QueueAllocationSpec extends Specification {
       List(
         ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false), None),
         ManifestPassengerProfile(Nationality("ZAF"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(false), None)
-      )
+      ),
+      None
     )
 
     val expected = Splits(
@@ -107,7 +109,8 @@ class QueueAllocationSpec extends Specification {
       VoyageNumber("234"),
       CarrierCode("SA"),
       SDate("2019-07-22T06:24:00Z"),
-      List(ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(true), None))
+      List(ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(21)), Option(true), None)),
+      None
     )
 
     val expected = Splits(
@@ -148,7 +151,8 @@ class QueueAllocationSpec extends Specification {
       SDate("2019-06-22T06:24:00Z"),
       List(
         ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false), None)
-      )
+      ),
+      None
     )
 
     val expected = Splits(
@@ -185,7 +189,8 @@ class QueueAllocationSpec extends Specification {
       SDate("2019-06-22T06:24:00Z"),
       List(
         ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false), None)
-      )
+      ),
+      None
     )
 
 
@@ -225,7 +230,8 @@ class QueueAllocationSpec extends Specification {
       List(
         ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(false), None),
         ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), Option(true), None)
-      )
+      ),
+      None
     )
 
     val expected = Splits(
@@ -272,7 +278,8 @@ class QueueAllocationSpec extends Specification {
       SDate("2019-01-22T06:24:00Z"),
       List(
         ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false), None)
-      )
+      ),
+      None
     )
 
     val expected = Splits(
@@ -317,7 +324,8 @@ class QueueAllocationSpec extends Specification {
       SDate("2019-01-22T06:24:00Z"),
       List(
         ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false), None)
-      )
+      ),
+      None
     )
 
     val expected = Splits(
@@ -355,7 +363,8 @@ class QueueAllocationSpec extends Specification {
       SDate("2019-01-22T06:24:00Z"),
       List(
         ManifestPassengerProfile(Nationality("ZWE"), Option(DocumentType.Passport), Option(PaxAge(22)), Option(false), None)
-      )
+      ),
+      None
     )
 
     val expected = Splits(

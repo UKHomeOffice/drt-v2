@@ -217,36 +217,37 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
   extends WithUnique[UniqueArrival]
     with WithLastUpdated {
 
-  def pcpPaxEstimate = bestSplits match {
-    case Some(splits) if hasValidApi => Math.round(splits.totalExcludingTransferPax).toInt
-    case _ => apiFlight.bestPcpPaxEstimate
-  }
+  def totalPaxFromApi: Option[Int] = bestSplits.map(splits => Math.round(splits.totalPax).toInt)
 
-  def totalPax: Option[Int] = bestSplits match {
-    case Some(splits) if hasValidApi => Option(Math.round(splits.totalPax).toInt)
-    case _ => apiFlight.ActPax
-  }
+  def totalPaxFromApiExcludingTransfer: Option[Int] =
+    bestSplits.map(splits => Math.round(splits.totalExcludingTransferPax).toInt)
 
-  def equals(candidate: ApiFlightWithSplits): Boolean = {
+  def pcpPaxEstimate: Int =
+    totalPaxFromApiExcludingTransfer match {
+      case Some(apiTotal) if hasValidApi => apiTotal
+      case _ => apiFlight.bestPcpPaxEstimate
+    }
+
+  def totalPax: Option[Int] =
+    if (hasValidApi) totalPaxFromApi
+    else apiFlight.ActPax
+
+  def equals(candidate: ApiFlightWithSplits): Boolean =
     this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
-  }
-
 
   def bestSplits: Option[Splits] = {
     val apiSplitsDc = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.DC))
     val apiSplitsCi = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages && s.maybeEventType == Option(EventTypes.CI))
-    val apiSplitsAny = splits.find(s => s.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
-    val predictedSplits = splits.find(s => s.source == SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages)
     val scenarioSplits = splits.find(s => s.source == SplitSources.ScenarioSimulationSplits)
     val historicalSplits = splits.find(_.source == SplitSources.Historical)
     val terminalSplits = splits.find(_.source == SplitSources.TerminalAverage)
 
     val apiSplits: List[Option[Splits]] = if (hasValidApi)
-      List(apiSplitsDc, apiSplitsCi, apiSplitsAny)
+      List(apiSplitsDc, apiSplitsCi)
     else
       List(scenarioSplits)
 
-    val splitsForConsideration: List[Option[Splits]] = apiSplits ::: List(predictedSplits, historicalSplits, terminalSplits)
+    val splitsForConsideration: List[Option[Splits]] = apiSplits ::: List(historicalSplits, terminalSplits)
 
     splitsForConsideration.find {
       case Some(_) => true

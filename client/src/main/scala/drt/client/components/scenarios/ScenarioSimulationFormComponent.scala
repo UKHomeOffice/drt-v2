@@ -134,7 +134,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
               case (paxTypeAndQueue: PaxTypeAndQueue, _) => paxTypeAndQueue.passengerType.name
             }.map {
               case (ptq, maybeProcTime) =>
-                val queueDisplayName = Queues.queueDisplayNames(ptq.queueType)
+                val queueDisplayName = Queues.displayName(ptq.queueType)
                 <.div(^.className := "form-check", ^.key := ptq.key,
                   DefaultFormFieldsStyle.formHelperText,
                   MuiTextField(
@@ -161,7 +161,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
               case (q, maybeSla) =>
                 <.div(^.className := "form-check", ^.key := q.toString,
                   MuiTextField(
-                    label = s"${Queues.queueDisplayNames(q)} (at least 3 minutes)".toVdom,
+                    label = s"${Queues.displayName(q)} (at least 3 minutes)".toVdom,
                     margin = MuiTextField.Margin.normal
                   )(
                     DefaultFormFieldsStyle.textField,
@@ -182,7 +182,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
                 ^.className := "form-check", ^.key := q.toString,
                 MuiFormLabel()(
                   DefaultFormFieldsStyle.labelWide,
-                  s"${Queues.queueDisplayNames(q)}"
+                  s"${Queues.displayName(q)}"
                 ),
                 MuiTextField(
                   label = s"Min".toVdom,

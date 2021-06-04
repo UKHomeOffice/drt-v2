@@ -5,14 +5,16 @@ import akka.stream.scaladsl.Source
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import drt.shared.api.Arrival
+import services.exports.flights.templates.{FlightExportTemplate, FlightWithSplitsWithActualApiExportTemplate, FlightWithSplitsWithoutActualApiExportTemplate}
 import services.graphstages.Crunch
 
 object StreamingFlightsExport {
 
   def toCsvStreamWithoutActualApi(flightsStream: Source[FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
-    toCsvStreamFromTemplate(DefaultFlightExportTemplate(timeZone = Crunch.europeLondonTimeZone))(flightsStream)
+    toCsvStreamFromTemplate(FlightWithSplitsWithoutActualApiExportTemplate(timeZone = Crunch.europeLondonTimeZone))(flightsStream)
 
-  def toCsvStreamFromTemplate(template: FlightExportTemplate)(flightsStream: Source[FlightsWithSplits, NotUsed]) =
+  def toCsvStreamFromTemplate(template: FlightExportTemplate)
+                             (flightsStream: Source[FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
     toCsvStream(flightsStream, template.row, template.headings)
 
 
@@ -36,7 +38,7 @@ object StreamingFlightsExport {
       .mkString
 
   def toCsvStreamWithActualApi(flightsStream: Source[FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
-    toCsvStreamFromTemplate(ActualApiFlightExportTemplate(timeZone = Crunch.europeLondonTimeZone))(flightsStream)
+    toCsvStreamFromTemplate(FlightWithSplitsWithActualApiExportTemplate(timeZone = Crunch.europeLondonTimeZone))(flightsStream)
 
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares
     .uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))

@@ -27,7 +27,8 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         voyageNumber = VoyageNumber("234"),
         carrierCode = CarrierCode("SA"),
         scheduled = SDate("2019-06-22T06:24:00Z"),
-        passengers = passengerProfiles
+        passengers = passengerProfiles,
+        maybeEventType = None,
       )
       bestManifest
     }
@@ -412,7 +413,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
               ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 1, Option(Map(Nationality(CountryCodes.UK) -> 2)), Option(Map(PaxAge(35) -> 2.0)))
             ),
             ApiSplitsWithHistoricalEGateAndFTPercentages,
-            None,
+            Option(DC),
             PaxNumbers
           )
           val result = splitsCalculator.splitsForArrival(manifest, testArrival)
@@ -431,7 +432,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
               ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNational, Queues.EGate, 1, Option(Map(Nationality(CountryCodes.USA) -> 2)), Option(Map(PaxAge(35) -> 2.0)))
             ),
             ApiSplitsWithHistoricalEGateAndFTPercentages,
-            None,
+            Option(DC),
             PaxNumbers
           )
           val result = splitsCalculator.splitsForArrival(manifest, testArrival)
@@ -450,7 +451,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
               ApiPaxTypeAndQueueCount(PaxTypes.EeaBelowEGateAge, Queues.EeaDesk, 3, Option(Map(Nationality(CountryCodes.UK) -> 3)), Option(Map(PaxAge(4) -> 3.0)))
             ),
             ApiSplitsWithHistoricalEGateAndFTPercentages,
-            None,
+            Option(DC),
             PaxNumbers
           )
           val result = splitsCalculator.splitsForArrival(manifest, testArrival)
@@ -470,7 +471,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
               ApiPaxTypeAndQueueCount(PaxTypes.B5JPlusNationalBelowEGateAge, Queues.EeaDesk, 3, Option(Map(Nationality(CountryCodes.USA) -> 3)), Option(Map(PaxAge(4) -> 3.0)))
             ),
             ApiSplitsWithHistoricalEGateAndFTPercentages,
-            None,
+            Option(DC),
             PaxNumbers
           )
           val result = splitsCalculator.splitsForArrival(manifest, testArrival)
@@ -502,7 +503,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
               ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 3, Option(Map(Nationality(CountryCodes.UK) -> 4)), Option(Map(PaxAge(35) -> 4.0)))
             ),
             ApiSplitsWithHistoricalEGateAndFTPercentages,
-            None,
+            Option(DC),
             PaxNumbers
           )
           val result = splitsCalculator.splitsForArrival(manifest, testArrival)
@@ -523,7 +524,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
               ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, 4, Option(Map(Nationality(CountryCodes.UK) -> 4)), Option(Map(PaxAge(35) -> 4.0)))
             ),
             ApiSplitsWithHistoricalEGateAndFTPercentages,
-            None,
+            Option(DC),
             PaxNumbers
           )
           val result = splitsCalculator.splitsForArrival(manifest, testArrival)

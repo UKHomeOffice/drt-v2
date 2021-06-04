@@ -1,11 +1,13 @@
 package services.`export`
 
 import akka.stream.scaladsl.{Sink, Source}
+import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.T1
 import drt.shared._
 import services.crunch.CrunchTestLike
-import services.exports.{ActualApiFlightExportTemplate, StreamingFlightsExport}
+import services.exports.StreamingFlightsExport
+import services.exports.flights.templates.{CedatFlightExportTemplate, FlightWithSplitsWithActualApiExportTemplate}
 import services.graphstages.Crunch
 
 import scala.concurrent.Await
@@ -191,6 +193,9 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     )
   )
 
+  private val flightHeadings = """IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax"""
+  private val apiHeadings = """Invalid API,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track"""
+
   "Given a list of arrivals with splits we should get back a CSV of arrival data using live feed numbers when available" >> {
 
     val resultStream = StreamingFlightsExport
@@ -199,11 +204,11 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
-      """|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
-         |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,98,98,7,15,32,44,11,23,29,35,,,,
-         |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
-         |SA0326,SA0326,JHD,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
-         |""".stripMargin
+      s"""|$flightHeadings,$apiHeadings
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,98,98,Y,7,15,32,44,11,23,29,35,,,,
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,Y,30,60,10,,,,,,,,,
+          |SA0326,SA0326,JHD,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,,30,60,10,,,,,,,,,
+          |""".stripMargin
 
     result === expected
   }
@@ -231,11 +236,11 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
-      """|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
-         |SA0326,SA0326,JHD,/,Scheduled,2017-01-01,20:00,,,,,20:00,,0,,,,,,,,,,,,
-         |SA0327,SA0327,JHD,/,Scheduled,2017-01-01,21:00,,,,,21:00,,0,,,,,,,,,,,,
-         |SA0328,SA0328,JHD,/,Scheduled,2017-01-01,22:00,,,,,22:00,,0,,,,,,,,,,,,
-         |""".stripMargin
+      s"""|$flightHeadings,$apiHeadings
+          |SA0326,SA0326,JHD,/,Scheduled,2017-01-01,20:00,,,,,20:00,,0,,,,,,,,,,,,,
+          |SA0327,SA0327,JHD,/,Scheduled,2017-01-01,21:00,,,,,21:00,,0,,,,,,,,,,,,,
+          |SA0328,SA0328,JHD,/,Scheduled,2017-01-01,22:00,,,,,22:00,,0,,,,,,,,,,,,,
+          |""".stripMargin
 
     result === expected
   }
@@ -248,10 +253,10 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
-      """|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
-         |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,
-         |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,
-         |""".stripMargin
+      s"""|$flightHeadings,$apiHeadings
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,Y,30,60,10,,,,,,,,,
+          |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,105,105,Y,32,62,11,,,,,,,,,
+          |""".stripMargin
 
     result === expected
   }
@@ -264,9 +269,9 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
-      """|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track
-         |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,98,98,7,15,32,44,11,23,29,35,,,,
-         |""".stripMargin
+      s"""|$flightHeadings,$apiHeadings
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,98,98,Y,7,15,32,44,11,23,29,35,,,,
+          |""".stripMargin
 
     result === expected
   }
@@ -274,21 +279,22 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   "When asking for Actual API Split Data" >> {
 
     "Given a list of Flights With Splits then I should get Api Split data for each flight" >> {
-      val exporter = ActualApiFlightExportTemplate(Crunch.europeLondonTimeZone)
+      val exporter = FlightWithSplitsWithActualApiExportTemplate(Crunch.europeLondonTimeZone)
 
       val result = flights.map { flight =>
-        exporter.actualAPISplitsForFlightInHeadingOrder(flight, exporter.actualApiHeadingsForFlights)
+        exporter.actualAPISplitsForFlightInHeadingOrder(flight, exporter.actualApiHeadings)
       }
 
       val expected = List(
-        List(0.0, 0.0, 1.0, 3.0, 6.0, 7.0, 4.0, 5.0, 0.0, 2.0),
-        List(0.0, 0.0, 3.0, 3.0, 0.0, 0.0, 1.0, 0.0, 0.0, 3.0),
-        List(0.0, 0.0, 30.0, 30.0, 0.0, 0.0, 10.0, 0.0, 0.0, 30.0)
-      )
+        List(0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 0.0, 6.0, 7.0, 4.0, 5.0, 0.0),
+        List(0.0, 0.0, 0.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+        List(0.0, 0.0, 0.0, 30.0, 30.0, 30.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0))
 
       result === expected
     }
   }
+
+  private val actualApiHeadings = """API Actual - B5J+ National to EEA,API Actual - B5J+ National to e-Gates,API Actual - B5J+ Child to EEA,API Actual - EEA Machine Readable to EEA,API Actual - EEA Machine Readable to e-Gates,API Actual - EEA Non-Machine Readable to EEA,API Actual - EEA Child to EEA,API Actual - Non-Visa National to Fast Track,API Actual - Visa National to Fast Track,API Actual - Non-Visa National to Non-EEA,API Actual - Visa National to Non-EEA,API Actual - Transit to Tx"""
 
   "Given a list of Flights With Splits then I should get all the data for with API numbers when live numbers are missing" >> {
     val resultStream = StreamingFlightsExport
@@ -297,10 +303,10 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
-      s"""|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track,API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable),API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates
-          |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,,100,7,15,32,46,12,23,30,35,,,,,0.0,0.0,1.0,3.0,6.0,7.0,4.0,5.0,0.0,2.0
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,0.0,0.0,3.0,3.0,0.0,0.0,1.0,0.0,0.0,3.0
-          |SA0326,SA0326,JHD,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,0.0,0.0,30.0,30.0,0.0,0.0,10.0,0.0,0.0,30.0
+      s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,,100,Y,7,15,32,46,12,23,30,35,,,,,0.0,0.0,0.0,1.0,2.0,3.0,0.0,6.0,7.0,4.0,5.0,0.0
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0
+          |SA0326,SA0326,JHD,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,,30,60,10,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0
           |""".stripMargin
 
     result === expected
@@ -313,9 +319,9 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
-      s"""|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track,API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable),API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,0.0,0.0,3.0,3.0,0.0,0.0,1.0,0.0,0.0,3.0
-          |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,,0.0,0.0,30.0,30.0,0.0,0.0,10.0,0.0,0.0,30.0
+      s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0
+          |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,105,105,Y,32,62,11,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0
           |""".stripMargin
 
     result === expected
@@ -332,11 +338,64 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
 
     val expected =
-      s"""|IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track,API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable),API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,0.0,0.0,3.0,3.0,0.0,0.0,1.0,0.0,0.0,3.0
-          |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,,0.0,0.0,30.0,30.0,0.0,0.0,10.0,0.0,0.0,30.0
+      s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0
+          |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,105,105,Y,32,62,11,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0
           |""".stripMargin
 
     result === expected
+  }
+
+  "Concerning CEDAT" >> {
+    val cedatFlightHeadings = """IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax"""
+    val cedatApiHeadings = """API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track"""
+    val cedatActualApiHeadings = """API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable),API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates"""
+
+    "Given a source of flights containing empty days and days with flights, then I should still get a CSV result" >> {
+      val resultStream = StreamingFlightsExport
+        .toCsvStreamFromTemplate(CedatFlightExportTemplate(Crunch.europeLondonTimeZone))(Source(List(
+          FlightsWithSplits.empty,
+          FlightsWithSplits.empty,
+          FlightsWithSplits(codeShareFlights))
+        ))
+
+      val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+
+      val expected =
+        s"""|$cedatFlightHeadings,$cedatApiHeadings,$cedatActualApiHeadings
+            |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,0.0,0.0,3.0,3.0,0.0,0.0,1.0,0.0,0.0,3.0
+            |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,,0.0,0.0,30.0,30.0,0.0,0.0,10.0,0.0,0.0,30.0
+            |""".stripMargin
+
+      result === expected
+    }
+  }
+
+  "Given a flight with API pax count within the 5% threshold of the feed pax count, and no live feed, then the 'Invalid API' column should be blank" >> {
+    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(AclFeedSource)) === ""
+  }
+
+  "Given a flight with API pax count within the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be blank" >> {
+    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(LiveFeedSource, AclFeedSource)) === ""
+  }
+
+  "Given a flight with API pax count outside the 5% threshold of the feed pax count, but with no live feed, then the 'Invalid API' column should be blank" >> {
+    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(AclFeedSource)) === ""
+  }
+
+  "Given a flight with API pax count outside the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be 'Y'" >> {
+    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(LiveFeedSource, AclFeedSource)) === "Y"
+  }
+
+  private def invalidApiFieldValue(actPax: Int, apiPax: Int, feedSources: Set[FeedSource]): String = {
+    val arrival = ArrivalGenerator.arrival(actPax = Option(actPax), feedSources = feedSources)
+    val splits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, apiPax, None, None)),
+      SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
+    val fws = ApiFlightWithSplits(arrival, Set(splits))
+    val eventualResult = StreamingFlightsExport.toCsvStreamWithoutActualApi(Source(List(FlightsWithSplits(Iterable(fws))))).runWith(Sink.seq)
+    val result = Await.result(eventualResult, 1 second)
+    val columnIndexOfInvalidApi = result.head.split(",").indexOf("Invalid API")
+    val invalidApiFieldValue = result.drop(1).head.split(",")(columnIndexOfInvalidApi)
+    invalidApiFieldValue
   }
 }

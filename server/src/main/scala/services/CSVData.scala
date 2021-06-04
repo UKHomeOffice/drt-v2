@@ -21,7 +21,7 @@ object CSVData {
     val queues: String = queueOrder.flatMap(
       q => {
         headlines.queueDayHeadlines.groupBy(_.queue).get(q).map(
-          qhls => (s"${Queues.queueDisplayNames.getOrElse(q, q)}" ::
+          qhls => (s"${Queues.displayName(q)}" ::
             qhls
               .toList
               .sortBy(_.day)

@@ -60,7 +60,7 @@ object FlightComponents {
   }
 
 
-  def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${PaxTypesAndQueues.displayName(ptqc)}"
+  def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.displayName}"
 
   object SplitsGraph {
 

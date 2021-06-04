@@ -35,7 +35,7 @@ object StreamingDesksExport {
     headingsLine1 + "\n" + headingsLine2 + "\n"
   }
 
-  def queueHeadings(queues: Seq[Queue]): String = queues.map(queue => Queues.queueDisplayNames.getOrElse(queue, queue.toString))
+  def queueHeadings(queues: Seq[Queue]): String = queues.map(queue => Queues.displayName(queue))
     .flatMap(qn => List.fill(colHeadings().length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(",")
 
   def deskRecsToCSVStreamWithHeaders(

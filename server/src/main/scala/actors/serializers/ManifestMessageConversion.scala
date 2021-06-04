@@ -23,7 +23,7 @@ object ManifestMessageConversion {
     PassengerIdentifier = m.passengerIdentifier
   )
 
-  def correctNationalityBug(nationality: String) =
+  def correctNationalityBug(nationality: String): String =
     nationality
       .replace("Nationality(", "").replace(")", "")
 

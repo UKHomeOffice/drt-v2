@@ -15,6 +15,7 @@ trait ManifestLike {
   val carrierCode: CarrierCode
   val scheduled: SDateLike
   val passengers: List[ManifestPassengerProfile]
+  val maybeEventType: Option[EventType]
 
   def uniquePassengers: Seq[ManifestPassengerProfile] = {
     if (passengers.exists(_.passengerIdentifier.exists(_ != "")))
@@ -50,7 +51,8 @@ case class BestAvailableManifest(source: SplitSource,
                                  voyageNumber: VoyageNumberLike,
                                  carrierCode: CarrierCode,
                                  scheduled: SDateLike,
-                                 passengers: List[ManifestPassengerProfile]) extends ManifestLike
+                                 passengers: List[ManifestPassengerProfile],
+                                 override val maybeEventType: Option[EventType]) extends ManifestLike
 
 object BestAvailableManifest {
   def apply(manifest: VoyageManifest): BestAvailableManifest =
@@ -59,17 +61,18 @@ object BestAvailableManifest {
   def historic(manifest: VoyageManifest): BestAvailableManifest =
     fromManifest(manifest, SplitSources.Historical)
 
-  def fromManifest(manifest: VoyageManifest, source: SplitSource) = {
+  def fromManifest(manifest: VoyageManifest, source: SplitSource): BestAvailableManifest = {
     val uniquePax: List[PassengerInfoJson] = removeDuplicatePax(manifest)
 
     BestAvailableManifest(
-      source,
-      manifest.ArrivalPortCode,
-      manifest.DeparturePortCode,
-      manifest.VoyageNumber,
-      manifest.CarrierCode,
-      manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
-      uniquePax.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode))
+      source = source,
+      arrivalPortCode = manifest.ArrivalPortCode,
+      departurePortCode = manifest.DeparturePortCode,
+      voyageNumber = manifest.VoyageNumber,
+      carrierCode = manifest.CarrierCode,
+      scheduled = manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
+      passengers = uniquePax.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode)),
+      maybeEventType = Option(manifest.EventCode)
     )
   }
 
@@ -91,13 +94,14 @@ object BestAvailableManifest {
   def apply(source: SplitSource,
             uniqueArrivalKey: UniqueArrivalKey,
             passengerList: List[ManifestPassengerProfile]): BestAvailableManifest = BestAvailableManifest(
-    source,
-    uniqueArrivalKey.arrivalPort,
-    uniqueArrivalKey.departurePort,
-    uniqueArrivalKey.voyageNumber,
-    CarrierCode(""),
-    uniqueArrivalKey.scheduled,
-    passengerList)
+    source = source,
+    arrivalPortCode = uniqueArrivalKey.arrivalPort,
+    departurePortCode = uniqueArrivalKey.departurePort,
+    voyageNumber = uniqueArrivalKey.voyageNumber,
+    carrierCode = CarrierCode(""),
+    scheduled = uniqueArrivalKey.scheduled,
+    passengers = passengerList,
+    maybeEventType = None)
 }
 
 case class ManifestPassengerProfile(nationality: Nationality,

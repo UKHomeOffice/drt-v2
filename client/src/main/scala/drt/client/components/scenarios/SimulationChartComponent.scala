@@ -6,7 +6,7 @@ import drt.client.components.styles.ScalaCssImplicits.StringExtended
 import drt.client.components.{ChartJSComponent, potReactForwarder}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.Queues.{Queue, queueDisplayNames}
+import drt.shared.Queues.{Queue, displayName}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiCard, MuiLinearProgress}
@@ -69,7 +69,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
                     <.a(
                       ^.onClick --> handleChange(q.toString),
                       ^.className := s"nav-item",
-                      queueDisplayNames(q).toVdom
+                      displayName(q).toVdom
                     )
                   )
                 }).toVdomArray
@@ -127,7 +127,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
             data = ChartJsData(dataSets, Option(labels)),
             300,
             150,
-            ChartJsOptions.withMultipleDataSets(s"${queueDisplayNames(q)} Simulation", 25)
+            ChartJsOptions.withMultipleDataSets(s"${displayName(q)} Simulation", 25)
           )
         )
     }

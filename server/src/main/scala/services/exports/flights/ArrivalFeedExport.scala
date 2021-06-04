@@ -72,7 +72,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
 
     val csvData = arrivalsForDay
       .map(a =>
-        ArrivalToCsv.arrivalAsRawCsvValuesWithTransfer(
+        ArrivalToCsv.arrivalWithTransferToCsvFields(
           a,
           Exports.millisToLocalIsoDateOnly,
           Exports.millisToLocalHoursAndMinutes
@@ -86,7 +86,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
 
 
   def headingsSource: Source[Option[String], NotUsed] = Source(
-    List(Option(ArrivalToCsv.rawArrivalHeadingsWithTransfer + lineEnding))
+    List(Option(ArrivalToCsv.arrivalHeadingsWithTransfer + lineEnding))
   )
 
   def flightsDataSource(

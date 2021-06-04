@@ -44,7 +44,7 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
         }
     }.values.toSet
 
-    Splits(splits, manifest.source, None, PaxNumbers)
+    Splits(splits, manifest.source, manifest.maybeEventType, PaxNumbers)
   }
 
   def incrementNationalityCount(mpp: ManifestPassengerProfile, paxCount: Double, apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount): Option[Map[Nationality, Double]] =

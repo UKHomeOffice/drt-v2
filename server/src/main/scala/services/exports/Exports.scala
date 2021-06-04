@@ -1,7 +1,6 @@
 package services.exports
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.PaxTypes.UndefinedPaxType
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
@@ -19,16 +18,23 @@ object Exports {
 
   def millisToUtcHoursAndMinutes: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes
 
-  def actualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
+  def cedatActualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
     .splits
     .collect {
       case s: Splits if s.source == SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages =>
         s.splits
-          .map(s =>
-            (PaxTypesAndQueues.displayName.get(s.paxTypeAndQueue), s.paxCount))
+          .map(s => (PaxTypesAndQueues.cedatDisplayName.get(s.paxTypeAndQueue), s.paxCount))
           .collect {
             case (Some(displayName), paxCount) => (s"API Actual - $displayName", paxCount)
           }
+    }
+    .flatten
+
+  def actualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
+    .splits
+    .collect {
+      case s: Splits if s.source == SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages =>
+        s.splits.map(s => (s"API Actual - ${s.paxTypeAndQueue.displayName}", s.paxCount))
     }
     .flatten
 
