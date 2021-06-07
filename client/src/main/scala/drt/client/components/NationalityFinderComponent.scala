@@ -40,8 +40,10 @@ object NationalityFinderComponent {
                   )
 
   val redList = Map(
+    "Afghanistan" -> "AFG",
     "Angola" -> "AGO",
     "Argentina" -> "ARG",
+    "Bahrain" -> "BHR",
     "Bangladesh" -> "BGD",
     "Bolivia" -> "BOL",
     "Botswana" -> "BWA",
@@ -50,8 +52,10 @@ object NationalityFinderComponent {
     "Cape Verde" -> "CPV",
     "Chile" -> "CHL",
     "Colombia" -> "COL",
+    "Costa Rica" -> "CRI",
     "Democratic Republic of the Congo" -> "COD",
     "Ecuador" -> "ECU",
+    "Egypt" -> "EGY",
     "Eswatini" -> "SWZ",
     "Ethiopia" -> "ETH",
     "French Guiana" -> "GUF",
@@ -73,8 +77,11 @@ object NationalityFinderComponent {
     "Seychelles" -> "SYC",
     "Somalia" -> "SOM",
     "South Africa" -> "ZAF",
+    "Sri Lanka" -> "LKA",
+    "Sudan" -> "SDN",
     "Suriname" -> "SUR",
     "Tanzania" -> "TZA",
+    "Trinidad and Tobago" -> "TTO",
     "United Arab Emirates" -> "ARE",
     "Uruguay" -> "URY",
     "Venezuela" -> "VEN",
