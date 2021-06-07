@@ -20,15 +20,16 @@ class FixedPointsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetFixedPoints(viewMode, fixedPoints, _) =>
-      val isUpdated = value.isEmpty || fixedPoints != value.getOrElse(FixedPointAssignments.empty)
+      val isFirstLoad = value.isEmpty
+      val isUpdated = fixedPoints != value.getOrElse(FixedPointAssignments.empty)
       if (viewMode.isHistoric(SDate.now()))
-        if (isUpdated) updated(Ready(fixedPoints), updateSnackbarEffect())
+        if (isFirstLoad) updated(Ready(fixedPoints))
+        else if (isUpdated) updated(Ready(fixedPoints), updateSnackbarEffect())
         else noChange
       else {
-        if (isUpdated)
-          updated(Ready(fixedPoints), scheduledRequest(viewMode) + updateSnackbarEffect)
-        else
-          effectOnly(scheduledRequest(viewMode))
+        if (isFirstLoad) updated(Ready(fixedPoints), scheduledRequest(viewMode))
+        else if (isUpdated) updated(Ready(fixedPoints), scheduledRequest(viewMode) + updateSnackbarEffect)
+        else effectOnly(scheduledRequest(viewMode))
       }
 
     case SaveFixedPoints(assignments, terminal) =>

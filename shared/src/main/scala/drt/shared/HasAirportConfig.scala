@@ -226,6 +226,7 @@ object PaxTypes {
     case B5JPlusNational => "B5J+ National"
     case B5JPlusNationalBelowEGateAge => "B5J+ Child"
     case Transit => "Transit"
+    case UndefinedPaxType => "Undefined"
     case other => other.name
   }
 
@@ -238,6 +239,7 @@ object PaxTypes {
     case B5JPlusNational => "B5J+"
     case B5JPlusNationalBelowEGateAge => "B5J+ U12"
     case Transit => "Transit"
+    case UndefinedPaxType => "Undefined"
     case other => other.name
   }
 }

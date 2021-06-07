@@ -18,7 +18,7 @@ class ExportsSpec extends Specification {
         val fws = ApiFlightWithSplits(arrival, Set(Splits(Set(undefined, eeaMr), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)))
         val result = actualAPISplitsAndHeadingsFromFlight(fws)
 
-        result === Set(("API Actual - EEA (Undefined)", 1.0), ("API Actual - EEA (Machine Readable)", 1.0))
+        result === Set(("API Actual - Undefined to EEA", 1.0), ("API Actual - EEA Machine Readable to EEA", 1.0))
       }
     }
   }

@@ -121,8 +121,7 @@ describe('Arrivals CSV Export', () => {
 
     it('uses API splits for passenger numbers if they are within 5% of the port feed', () => {
         const dataWithoutActApi = csvRow("50", "24", "12");
-      // "TS0123,TS0123,AMS,46/44R,On Chocks,2021-06-03,01:55,02:05,02:07,02:11,02:12,02:25,50,50,,24,9,17,,,,,,12,37,1,,4.0,6.0,0.0,5.0,18.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0\n"
-      const actApiData = "4.0,6.0,0.0,5.0,18.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0";
+        const actApiData = "4.0,6.0,0.0,5.0,18.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
