@@ -22,7 +22,7 @@ import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
-import services.graphstages.Crunch
+import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
 
@@ -97,7 +97,7 @@ class TestDrtActor extends Actor {
 
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
-      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher)
+      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig))
 
       val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
         PortDeskLimits.flexed(tc.airportConfig)

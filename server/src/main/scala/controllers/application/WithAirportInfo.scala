@@ -18,7 +18,7 @@ trait WithAirportInfo {
         .flatMap(_.headOption)
         .map(codes => codes
           .split(",")
-          .map(code => (PortCode(code), AirportToCountry.airportInfo.get(code)))
+          .map(code => (PortCode(code), AirportToCountry.airportInfoByIataPortCode.get(code)))
           .collect {
             case (code, Some(info)) => (code, info)
           }

@@ -26,7 +26,7 @@ import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvide
 import services.crunch.deskrecs.OptimiserMocks.{mockHistoricManifestsProvider, mockHistoricManifestsProviderNoop, mockLiveManifestsProviderNoop}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, TestConfig, TestDefaults}
-import services.graphstages.CrunchMocks
+import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.{Map, Seq, SortedMap}
@@ -98,7 +98,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
 
     val splitsCalc = SplitsCalculator(paxAllocation, airportConfig.terminalPaxSplits, AdjustmentsNoop)
-    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch)
+    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig))
 
     implicit val timeout: Timeout = new Timeout(50 milliseconds)
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(

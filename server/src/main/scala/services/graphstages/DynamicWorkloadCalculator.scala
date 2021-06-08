@@ -4,15 +4,43 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.QueueStatusProviders.QueueStatusProvider
 import drt.shared.Queues.{Closed, Open, Queue, QueueFallbacks}
-import drt.shared.Terminals.Terminal
+import drt.shared.Terminals.{T2, T5, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
 import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
 import services.workloadcalculator.PaxLoadCalculator.Load
+import services.{AirportToCountry, SDate}
 
 import scala.collection.immutable.Map
+
+
+case class FlightFilter(filters: List[ApiFlightWithSplits => Boolean]) {
+  def +(other: FlightFilter): FlightFilter = FlightFilter(filters ++ other.filters)
+  def apply(fws: ApiFlightWithSplits): Boolean = filters.forall(_(fws))
+}
+
+object FlightFilter {
+  def apply(filter: ApiFlightWithSplits => Boolean): FlightFilter = FlightFilter(List(filter))
+
+  def forPortConfig(config: AirportConfig): FlightFilter = config.portCode match {
+    case PortCode("LHR") => regular(config.terminals) + FlightFilter { fws =>
+      !(List(T2, T5).contains(fws.apiFlight.Terminal) && AirportToCountry.isRedListed(fws.apiFlight.Origin))
+    }
+    case _ => regular(config.terminals)
+  }
+
+  case object ValidTerminalFilter {
+    def apply(validTerminals: List[Terminal]): FlightFilter = FlightFilter(fws => validTerminals.contains(fws.apiFlight.Terminal))
+  }
+
+  val notCancelledFilter: FlightFilter = FlightFilter(fws => !fws.apiFlight.isCancelled)
+
+  val outsideCtaFilter: FlightFilter = FlightFilter(fws => !fws.apiFlight.Origin.isCta)
+
+  def regular(validTerminals: Iterable[Terminal]): FlightFilter =
+    ValidTerminalFilter(validTerminals.toList) + notCancelledFilter + outsideCtaFilter
+}
 
 trait WorkloadCalculatorLike {
   val queueStatusProvider: QueueStatusProvider
@@ -30,12 +58,10 @@ trait WorkloadCalculatorLike {
     uniqueFlights
   }
 
-  def flightsWithPcpWorkload(flights: Iterable[ApiFlightWithSplits]): Iterable[ApiFlightWithSplits] = flights
-    .filter { fws =>
-      !fws.apiFlight.isCancelled &&
-        defaultProcTimes.contains(fws.apiFlight.Terminal) &&
-        !fws.apiFlight.Origin.isCta
-    }
+  def flightsWithPcpWorkload(flights: Iterable[ApiFlightWithSplits]): Iterable[ApiFlightWithSplits] =
+    flights.filter(flightHasWorkload.apply)
+
+  val flightHasWorkload: FlightFilter
 
   def paxTypeAndQueueCountsFromSplits(splitsToUse: Splits): Set[ApiPaxTypeAndQueueCount] = {
     val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
@@ -56,7 +82,8 @@ trait WorkloadCalculatorLike {
 
 case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                                      queueStatusProvider: QueueStatusProvider,
-                                     fallbacksProvider: QueueFallbacks)
+                                     fallbacksProvider: QueueFallbacks,
+                                     flightHasWorkload: FlightFilter)
   extends WorkloadCalculatorLike {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
