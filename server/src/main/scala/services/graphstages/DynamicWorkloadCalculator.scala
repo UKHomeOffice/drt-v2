@@ -15,33 +15,6 @@ import services.{AirportToCountry, SDate}
 import scala.collection.immutable.Map
 
 
-case class FlightFilter(filters: List[ApiFlightWithSplits => Boolean]) {
-  def +(other: FlightFilter): FlightFilter = FlightFilter(filters ++ other.filters)
-  def apply(fws: ApiFlightWithSplits): Boolean = filters.forall(_(fws))
-}
-
-object FlightFilter {
-  def apply(filter: ApiFlightWithSplits => Boolean): FlightFilter = FlightFilter(List(filter))
-
-  def forPortConfig(config: AirportConfig): FlightFilter = config.portCode match {
-    case PortCode("LHR") => regular(config.terminals) + FlightFilter { fws =>
-      !(List(T2, T5).contains(fws.apiFlight.Terminal) && AirportToCountry.isRedListed(fws.apiFlight.Origin))
-    }
-    case _ => regular(config.terminals)
-  }
-
-  case object ValidTerminalFilter {
-    def apply(validTerminals: List[Terminal]): FlightFilter = FlightFilter(fws => validTerminals.contains(fws.apiFlight.Terminal))
-  }
-
-  val notCancelledFilter: FlightFilter = FlightFilter(fws => !fws.apiFlight.isCancelled)
-
-  val outsideCtaFilter: FlightFilter = FlightFilter(fws => !fws.apiFlight.Origin.isCta)
-
-  def regular(validTerminals: Iterable[Terminal]): FlightFilter =
-    ValidTerminalFilter(validTerminals.toList) + notCancelledFilter + outsideCtaFilter
-}
-
 trait WorkloadCalculatorLike {
   val queueStatusProvider: QueueStatusProvider
 
@@ -58,10 +31,10 @@ trait WorkloadCalculatorLike {
     uniqueFlights
   }
 
+  val flightHasWorkload: FlightFilter
+
   def flightsWithPcpWorkload(flights: Iterable[ApiFlightWithSplits]): Iterable[ApiFlightWithSplits] =
     flights.filter(flightHasWorkload.apply)
-
-  val flightHasWorkload: FlightFilter
 
   def paxTypeAndQueueCountsFromSplits(splitsToUse: Splits): Set[ApiPaxTypeAndQueueCount] = {
     val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
