@@ -6,15 +6,14 @@ import services.AirportToCountry
 
 case class FlightFilter(filters: List[ApiFlightWithSplits => Boolean]) {
   def +(other: FlightFilter): FlightFilter = FlightFilter(filters ++ other.filters)
-  def apply(fws: ApiFlightWithSplits): Boolean = filters.forall(_(fws))
+
+  def apply(fws: ApiFlightWithSplits): Boolean = filters.forall(_ (fws))
 }
 
 object FlightFilter {
   def apply(filter: ApiFlightWithSplits => Boolean): FlightFilter = FlightFilter(List(filter))
 
-  case object ValidTerminalFilter {
-    def apply(validTerminals: List[Terminal]): FlightFilter = FlightFilter(fws => validTerminals.contains(fws.apiFlight.Terminal))
-  }
+  def validTerminalFilter(validTerminals: List[Terminal]): FlightFilter = FlightFilter(fws => validTerminals.contains(fws.apiFlight.Terminal))
 
   val notCancelledFilter: FlightFilter = FlightFilter(fws => !fws.apiFlight.isCancelled)
 
@@ -24,12 +23,11 @@ object FlightFilter {
     val isGreenOnlyTerminal = List(T2, T5).contains(fws.apiFlight.Terminal)
     val isRedListOrigin = AirportToCountry.isRedListed(fws.apiFlight.Origin)
     val okToProcess = !isRedListOrigin || !isGreenOnlyTerminal
-    println(s"okToProcess: $okToProcess")
     okToProcess
   }
 
   def regular(validTerminals: Iterable[Terminal]): FlightFilter =
-    ValidTerminalFilter(validTerminals.toList) + notCancelledFilter + outsideCtaFilter
+    validTerminalFilter(validTerminals.toList) + notCancelledFilter + outsideCtaFilter
 
   def forPortConfig(config: AirportConfig): FlightFilter = config.portCode match {
     case PortCode("LHR") => regular(config.terminals) + lhrRedListFilter

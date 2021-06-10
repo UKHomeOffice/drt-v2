@@ -1,11 +1,10 @@
 package services.graphstages
 
 import actors.ArrivalGenerator
-import drt.shared.Terminals.{T1, T2, T3, T4, T5, Terminal}
+import drt.shared.Terminals._
 import drt.shared.airportconfig.Lhr
 import drt.shared.{ApiFlightWithSplits, PortCode}
 import org.specs2.mutable.Specification
-import services.graphstages.FlightFilter.ValidTerminalFilter
 
 class FlightFilterSpec extends Specification {
   "LHR red list filter" >> {
@@ -52,11 +51,11 @@ class FlightFilterSpec extends Specification {
   "Valid terminal filter" >> {
     "Given a flight to T1 when the port only has T1, the filter should return true to keep it" >> {
       val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(terminal = T1), Set())
-      ValidTerminalFilter(List(T1)).apply(fws) === true
+      FlightFilter.validTerminalFilter(List(T1)).apply(fws) === true
     }
     "Given a flight to T2 when the port only has T1, the filter should return true to keep it" >> {
       val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(terminal = T2), Set())
-      ValidTerminalFilter(List(T1)).apply(fws) === false
+      FlightFilter.validTerminalFilter(List(T1)).apply(fws) === false
     }
   }
 
