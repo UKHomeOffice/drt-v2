@@ -2,7 +2,6 @@ package drt.shared.splits
 
 import drt.shared.Queues.Queue
 import drt.shared._
-import drt.shared.api.Arrival
 
 object ApiSplitsToSplitRatio {
 
@@ -19,16 +18,15 @@ object ApiSplitsToSplitRatio {
     })
 
   def paxPerQueueUsingBestSplitsAsRatio(flightWithSplits: ApiFlightWithSplits): Option[Map[Queue, Int]] =
-    flightWithSplits.bestSplits.map(s =>
-      flightPaxPerQueueUsingSplitsAsRatio(s, flightWithSplits)
-    )
+    flightWithSplits.bestSplits.map(flightPaxPerQueueUsingSplitsAsRatio(_, flightWithSplits))
 
-  def flightPaxPerQueueUsingSplitsAsRatio(splits: Splits, fws: ApiFlightWithSplits): Map[Queue, Int] = queueTotals(
-    applyPaxSplitsToFlightPax(splits, fws.pcpPaxEstimate)
-      .splits
-      .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
-      .toMap
-  )
+  def flightPaxPerQueueUsingSplitsAsRatio(splits: Splits, fws: ApiFlightWithSplits): Map[Queue, Int] =
+    queueTotals(
+      applyPaxSplitsToFlightPax(splits, fws.pcpPaxEstimate)
+        .splits
+        .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
+        .toMap
+    )
 
   def applyPaxSplitsToFlightPax(apiSplits: Splits, totalPax: Int): Splits = {
     val splitsSansTransfer = apiSplits.splits.filter(_.queueType != Queues.Transfer)

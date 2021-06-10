@@ -18,15 +18,15 @@ object FlightComponents {
     )
   }
 
-  def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String =
+  def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = {
     if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
       "pax-no-splits"
-    else flightWithSplits.bestSplits match {
-      case Some(Splits(_, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, _, _)) if flightWithSplits.hasApi => "pax-api"
-      case Some(Splits(_, SplitSources.PredictedSplitsWithHistoricalEGateAndFTPercentages, _, _)) => "pax-predicted"
-      case Some(Splits(_, SplitSources.Historical, _, _)) => "pax-portfeed"
+    else flightWithSplits.bestSplits.map(_.source) match {
+      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if flightWithSplits.hasApi => "pax-api"
+      case Some(SplitSources.Historical) => "pax-portfeed"
       case _ => "pax-unknown"
     }
+  }
 
   def paxNumberSources(flight: ApiFlightWithSplits): VdomTagOf[Span] = {
     val max: String = flight.apiFlight.MaxPax.filter(_ > 0).map(_.toString).getOrElse("n/a")
@@ -35,7 +35,7 @@ object FlightComponents {
     val paxNos = List(
       <.p(s"Pax: $portDirectPax (${flight.apiFlight.ActPax.getOrElse(0)} - ${flight.apiFlight.TranPax.getOrElse(0)} transfer)"),
       <.p(s"Max: $max")
-    ) :+ flight.maybeApiPaxCount.map(p => <.span(s"API: $p")).getOrElse(EmptyVdom)
+    ) :+ flight.totalPaxFromApiExcludingTransfer.map(p => <.span(s"API: $p")).getOrElse(EmptyVdom)
     <.span(paxNos.toVdomArray)
   }
 
