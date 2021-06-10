@@ -40,8 +40,7 @@ class ApiFlightWithSplitsSpec extends Specification {
 
       "or there is a ScenarioSimulationSource" in {
         val flightWithSplits = flightWithPaxAndApiSplits(20, 0, 41, 0, Set(LiveFeedSource, ScenarioSimulationSource))
-        val apiSplits = flightWithSplits.splits.find(_.source == SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages).get
-        
+
         flightWithSplits.hasValidApi mustEqual true
       }
     }
@@ -94,22 +93,32 @@ class ApiFlightWithSplitsSpec extends Specification {
 
     "give a pax count from splits when it has API splits" in {
       val flightWithSplits = flightWithPaxAndApiSplits(40, 0, 45, 0, Set())
-      flightWithSplits.maybeApiPaxCount mustEqual Option(45)
+      flightWithSplits.totalPaxFromApiExcludingTransfer mustEqual Option(45)
     }
 
     "give a pax count from splits when it has API splits which does not include transfer pax" in {
       val flightWithSplits = flightWithPaxAndApiSplits(40, 0, 45, 20, Set())
-      flightWithSplits.maybeApiPaxCount mustEqual Option(45)
+      flightWithSplits.totalPaxFromApiExcludingTransfer mustEqual Option(45)
     }
 
     "give a pax count from splits when it has API splits even when it is outside the trusted threshold" in {
       val flightWithSplits = flightWithPaxAndApiSplits(40, 0, 150, 0, Set(LiveFeedSource))
-      flightWithSplits.maybeApiPaxCount mustEqual Option(150)
+      flightWithSplits.totalPaxFromApiExcludingTransfer mustEqual Option(150)
     }
 
     "give no pax count from splits it has no API splits" in {
       val flightWithSplits = flightWithPaxAndHistoricSplits(40, 0, 45, 20, Set())
-      flightWithSplits.maybeApiPaxCount must beNone
+      flightWithSplits.totalPaxFromApiExcludingTransfer must beNone
+    }
+
+    "give None for totalPaxFromApiExcludingTransfer when it doesn't have live API splits" in {
+      val fws = flightWithPaxAndHistoricSplits(100, 10, 100, 0, Set())
+      fws.totalPaxFromApiExcludingTransfer === None
+    }
+
+    "give None for totalPaxFromApi when it doesn't have live API splits" in {
+      val fws = flightWithPaxAndHistoricSplits(100, 10, 100, 0, Set())
+      fws.totalPaxFromApi === None
     }
   }
 

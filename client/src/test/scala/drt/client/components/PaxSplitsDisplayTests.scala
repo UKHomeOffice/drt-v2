@@ -213,7 +213,7 @@ object PaxSplitsDisplayTests extends TestSuite {
         assert(expected == result)
       }
 
-      "Given a flight with all splits when I ask for pax per queue I should see the total broken down per queue" - {
+      "Given a flight with percentage splits, when I ask for pax per queue I should see the total pax broken down per queue" - {
         val flight = ArrivalGenerator.apiFlight(actPax = Option(152))
         val splits = Splits(
           Set(
@@ -227,11 +227,28 @@ object PaxSplitsDisplayTests extends TestSuite {
 
         val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(ApiFlightWithSplits(flight, Set(splits)))
 
-        val expected = Option(Map(
+        val expected: Option[Map[Queues.Queue, Int]] = Option(Map(
           Queues.EeaDesk -> 69,
           Queues.EGate -> 56,
           Queues.NonEeaDesk -> 26,
           Queues.FastTrack -> 1
+        ))
+
+        assert(result == expected)
+      }
+
+      "Given a flight with PaxNumbers splits when I ask for pax per queue I should see the total broken down per queue" - {
+        val flight = ArrivalGenerator.apiFlight(actPax = Option(100))
+        val splits = Splits(Set(
+          ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 15, None, None),
+          ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 5, None, None)),
+          Historical, None, PaxNumbers)
+
+        val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(ApiFlightWithSplits(flight, Set(splits)))
+
+        val expected: Option[Map[Queues.Queue, Int]] = Option(Map(
+          Queues.NonEeaDesk -> 75,
+          Queues.FastTrack -> 25
         ))
 
         assert(result == expected)
