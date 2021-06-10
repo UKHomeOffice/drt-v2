@@ -73,7 +73,7 @@ class JsonSerializationSpec extends Specification {
     }
 
     "AirportInfo" >> {
-      val info: Map[String, AirportInfo] = AirportToCountry.airportInfo
+      val info: Map[String, AirportInfo] = AirportToCountry.airportInfoByIataPortCode
 
       val asJson: String = write(info)
 

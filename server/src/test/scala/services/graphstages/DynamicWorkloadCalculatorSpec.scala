@@ -12,7 +12,7 @@ import services.crunch.CrunchTestLike
 
 class DynamicWorkloadCalculatorSpec extends CrunchTestLike {
   def calcForConfig(config: AirportConfig): DynamicWorkloadCalculator = {
-    DynamicWorkloadCalculator(config.terminalProcessingTimes, config.queueStatusProvider, QueueFallbacks(config.queuesByTerminal))
+    DynamicWorkloadCalculator(config.terminalProcessingTimes, config.queueStatusProvider, QueueFallbacks(config.queuesByTerminal), FlightFilter.regular(config.terminals.toList))
   }
 
   "Given a dynamic workload calculator" >> {

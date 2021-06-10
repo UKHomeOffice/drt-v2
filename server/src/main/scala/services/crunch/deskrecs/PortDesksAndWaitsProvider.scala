@@ -10,7 +10,7 @@ import services.TryCrunch
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.Crunch.LoadMinute
-import services.graphstages.{DynamicWorkloadCalculator, WorkloadCalculatorLike}
+import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 
@@ -91,11 +91,12 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 }
 
 object PortDesksAndWaitsProvider {
-  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch): PortDesksAndWaitsProvider = {
+  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, flightFilter: FlightFilter): PortDesksAndWaitsProvider = {
     val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,
       airportConfig.queueStatusProvider,
-      QueueFallbacks(airportConfig.queuesByTerminal)
+      QueueFallbacks(airportConfig.queuesByTerminal),
+      flightFilter,
     )
 
     PortDesksAndWaitsProvider(

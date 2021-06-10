@@ -8,15 +8,15 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.DeskRecMinutes
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.api.Arrival
-import drt.shared.{AirportConfig, PcpPax, SimulationParams}
+import drt.shared.{AirportConfig, SimulationParams}
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
 import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs.{DynamicRunnableDeskRecs, PortDesksAndWaitsProvider, RunnableOptimisation}
+import services.graphstages.FlightFilter
 import services.{OptimiserWithFlexibleProcessors, SDate}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -36,10 +36,15 @@ object Scenarios {
 
 
     implicit val ec: ExecutionContextExecutor = system.dispatcher
-    implicit val mat = ActorMaterializer.create(system)
-    val portDesksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(simulationAirportConfig, OptimiserWithFlexibleProcessors.crunch)
-    val terminalDeskLimits = PortDeskLimits.fixed(simulationAirportConfig)
+    implicit val mat: ActorMaterializer = ActorMaterializer.create(system)
 
+    val portDesksAndWaitsProvider: PortDesksAndWaitsProvider =
+      PortDesksAndWaitsProvider(
+        simulationAirportConfig,
+        OptimiserWithFlexibleProcessors.crunch,
+        FlightFilter.forPortConfig(simulationAirportConfig))
+
+    val terminalDeskLimits = PortDeskLimits.fixed(simulationAirportConfig)
 
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
       flightsProvider,

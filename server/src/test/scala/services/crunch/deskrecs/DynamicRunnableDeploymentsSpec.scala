@@ -13,7 +13,7 @@ import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.OptimiserMocks.MockSinkActor
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, TestDefaults}
-import services.graphstages.CrunchMocks
+import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
 
 import scala.collection.immutable.Map
@@ -34,7 +34,7 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
   val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPcpPaxEstimate
 
   val staffToDeskLimits: StaffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig)
-  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch)
+  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig))
 
   def setupGraphAndCheckQueuePax(minutes: MinutesContainer[CrunchMinute, TQM],
                                  expectedQueuePax: PartialFunction[Any, Boolean]): Any = {

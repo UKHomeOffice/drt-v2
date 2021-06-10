@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.shared.Nationality
+import drt.shared.{Nationality, RedList}
 import drt.shared.api.PassengerInfoSummary
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import japgolly.scalajs.react.component.Scala.Component
@@ -39,55 +39,7 @@ object NationalityFinderComponent {
                     passengerInfo: PassengerInfoSummary
                   )
 
-  val redList = Map(
-    "Afghanistan" -> "AFG",
-    "Angola" -> "AGO",
-    "Argentina" -> "ARG",
-    "Bahrain" -> "BHR",
-    "Bangladesh" -> "BGD",
-    "Bolivia" -> "BOL",
-    "Botswana" -> "BWA",
-    "Brazil" -> "BRA",
-    "Burundi" -> "BDI",
-    "Cape Verde" -> "CPV",
-    "Chile" -> "CHL",
-    "Colombia" -> "COL",
-    "Costa Rica" -> "CRI",
-    "Democratic Republic of the Congo" -> "COD",
-    "Ecuador" -> "ECU",
-    "Egypt" -> "EGY",
-    "Eswatini" -> "SWZ",
-    "Ethiopia" -> "ETH",
-    "French Guiana" -> "GUF",
-    "Guyana" -> "GUY",
-    "India" -> "IND",
-    "Kenya" -> "KEN",
-    "Lesotho" -> "LSO",
-    "Malawi" -> "MWI",
-    "Mozambique" -> "MOZ",
-    "Namibia" -> "NAM",
-    "Oman" -> "OMN",
-    "Pakistan" -> "PAK",
-    "Panama" -> "PAN",
-    "Paraguay" -> "PRY",
-    "Peru" -> "PER",
-    "Philippines" -> "PHL",
-    "Qatar" -> "QAT",
-    "Rwanda" -> "RWA",
-    "Seychelles" -> "SYC",
-    "Somalia" -> "SOM",
-    "South Africa" -> "ZAF",
-    "Sri Lanka" -> "LKA",
-    "Sudan" -> "SDN",
-    "Suriname" -> "SUR",
-    "Tanzania" -> "TZA",
-    "Trinidad and Tobago" -> "TTO",
-    "United Arab Emirates" -> "ARE",
-    "Uruguay" -> "URY",
-    "Venezuela" -> "VEN",
-    "Zambia" -> "ZMB",
-    "Zimbabwe" -> "ZWE",
-  )
+  val redList: Map[String, String] = RedList.countryToCode
 
   val redListNats: Iterable[Nationality] = redList.values.map(Nationality(_))
 
