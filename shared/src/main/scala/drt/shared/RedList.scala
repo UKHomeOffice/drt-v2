@@ -43,6 +43,7 @@ object RedList {
     "Sudan" -> "SDN",
     "Suriname" -> "SUR",
     "Tanzania" -> "TZA",
+    "Turkey" -> "TUR",
     "Trinidad and Tobago" -> "TTO",
     "United Arab Emirates" -> "ARE",
     "Uruguay" -> "URY",
