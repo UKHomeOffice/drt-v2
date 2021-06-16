@@ -12,6 +12,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.Queues.Queue
+import drt.shared.Terminals.{T2, T5}
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
@@ -184,22 +185,24 @@ object TerminalContentComponent {
                   <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                     if (state.activeTab == "arrivals") {
                       val flightsForTerminal = filteredPortState.flights.values.toList
-                      props.featureFlags.render(features =>
+                      props.featureFlags.render(features => {
                         arrivalsTableComponent(
                           FlightsWithSplitsTable.Props(
-                            flightsForTerminal,
-                            passengerInfoByDay,
-                            queueOrder,
-                            props.airportConfig.hasEstChox,
-                            props.arrivalSources,
-                            props.loggedInUser,
-                            props.viewMode,
-                            walkTimes,
-                            props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
-                            props.airportConfig.hasTransfer,
-                            features.displayRedListInfo
+                            flightsWithSplits = flightsForTerminal,
+                            passengerInfoSummaryByDay = passengerInfoByDay,
+                            queueOrder = queueOrder,
+                            hasEstChox = props.airportConfig.hasEstChox,
+                            arrivalSources = props.arrivalSources,
+                            loggedInUser = props.loggedInUser,
+                            viewMode = props.viewMode,
+                            walkTimes = walkTimes,
+                            defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
+                            hasTransfer = props.airportConfig.hasTransfer,
+                            displayRedListInfo = features.displayRedListInfo,
+                            redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal)
                           )
                         )
+                      }
                       )
                     } else ""
                   }),

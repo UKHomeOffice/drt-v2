@@ -1,6 +1,11 @@
 package drt.shared
 
+import drt.shared.Terminals.{T2, T5, Terminal}
+
 object RedList {
+  def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =
+    portCode == PortCode("LHR") && List(T2, T5).contains(terminal)
+
   val countryToCode: Map[String, String] = Map(
     "Afghanistan" -> "AFG",
     "Angola" -> "AGO",

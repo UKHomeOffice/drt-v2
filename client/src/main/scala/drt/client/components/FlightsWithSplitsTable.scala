@@ -28,8 +28,6 @@ import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import scala.collection.immutable.Map
 
 object FlightsWithSplitsTable {
-
-
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],
                    passengerInfoSummaryByDay: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
                    queueOrder: Seq[Queue], hasEstChox: Boolean,
@@ -40,6 +38,7 @@ object FlightsWithSplitsTable {
                    defaultWalkTime: Long,
                    hasTransfer: Boolean,
                    displayRedListInfo: Boolean,
+                   redListOriginWorkloadExcluded: Boolean,
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
@@ -61,6 +60,11 @@ object FlightsWithSplitsTable {
       if (sortedFlights.nonEmpty) {
         val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
         val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
+        val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
+          "* Passengers from CTA & Red List origins do not contribute to PCP workload"
+        else
+          "* Passengers from CTA origins do not contribute to PCP workload"
+
         <.div(
           (props.loggedInUser.hasRole(ArrivalSource), props.arrivalSources) match {
             case (true, Some((_, sourcesPot))) =>
@@ -109,7 +113,7 @@ object FlightsWithSplitsTable {
                   ))
               }.toTagMod)
           ),
-          "* Passengers from CTA arrivals do not contribute to PCP workload"
+          excludedPaxNote
         )
       }
       else
@@ -253,9 +257,7 @@ object FlightTableRow {
       else
         "arrivals__table__flight-code"
 
-      val ctaMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
-      val flightCodes = s"${allCodes.mkString(" - ")}$ctaMarker"
-      val flightCodeElement = if (props.loggedInUser.hasRole(ArrivalSource))
+      def flightCodeElement(flightCodes: String) = if (props.loggedInUser.hasRole(ArrivalSource))
         <.span(
           ^.cls := "arrivals__table__flight-code-value",
           ^.onClick --> Callback(SPACircuit.dispatch {
@@ -276,18 +278,21 @@ object FlightTableRow {
         )
 
       val firstCells = List[TagMod](
-        <.td(
-          ^.className := flightCodeClass,
-          <.div(
-            ^.cls := "arrivals__table__flight-code-wrapper",
-            flightCodeElement,
-            if (flightWithSplits.hasValidApi)
-              props
-                .maybePassengerInfoSummary
-                .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
-            else EmptyVdom
-          )
-        ),
+        <.td(^.className := flightCodeClass,
+          TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
+            val isRedList = proxy().map(ai => NationalityFinderComponent.isRedListCountry(ai.country)).getOrElse(false)
+            val ctaMarker = if (flight.Origin.isDomesticOrCta || isRedList) "*" else ""
+            val flightCodes = s"${allCodes.mkString(" - ")}$ctaMarker"
+            <.div(
+              ^.cls := "arrivals__table__flight-code-wrapper",
+              flightCodeElement(flightCodes),
+              if (flightWithSplits.hasValidApi)
+                props
+                  .maybePassengerInfoSummary
+                  .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
+              else EmptyVdom
+            )
+          }),
         <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(
@@ -295,7 +300,7 @@ object FlightTableRow {
             proxy().render(ai => {
               val style = if (props.displayRedListInfo && NationalityFinderComponent.isRedListCountry(ai.country)) {
                 ScalaCssReact.scalacssStyleaToTagMod(
-                ArrivalsPageStylesDefault.redListCountryField)
+                  ArrivalsPageStylesDefault.redListCountryField)
               } else EmptyVdom
 
               <.span(

@@ -96,7 +96,8 @@ object TerminalDashboardComponent {
                       walkTimes,
                       p.airportConfig.defaultWalkTimeMillis(p.terminalPageTabLoc.terminal),
                       hasTransfer = p.airportConfig.hasTransfer,
-                      displayRedListInfo = featureFlags.displayRedListInfo
+                      displayRedListInfo = featureFlags.displayRedListInfo,
+                      redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(p.airportConfig.portCode, terminal)
                     )
                   )))),
               p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
