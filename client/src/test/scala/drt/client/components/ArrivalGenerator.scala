@@ -8,7 +8,6 @@ import drt.shared.{ApiFeedSource, ArrivalStatus, Operator, PortCode}
 
 
 object ArrivalGenerator {
-
   def apiFlight(
                  iata: String = "",
                  icao: String = "",
