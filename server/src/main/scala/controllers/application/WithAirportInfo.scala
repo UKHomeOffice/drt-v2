@@ -31,4 +31,15 @@ trait WithAirportInfo {
     }
   }
 
+  def getRedListPorts: Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+    Action { request =>
+      import upickle.default._
+
+      val redListPorts = AirportToCountry.airportInfoByIataPortCode.values.collect {
+        case AirportInfo(_, _, country, portCode) if RedList.countryToCode.contains(country) => PortCode(portCode)
+      }
+
+      Ok(write(redListPorts))
+    }
+  }
 }

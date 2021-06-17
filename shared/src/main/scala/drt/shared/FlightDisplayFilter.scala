@@ -7,7 +7,7 @@ sealed trait FlightDisplayFilter {
   def forTerminal(flights: Iterable[ApiFlightWithSplits], terminal: Terminal): Iterable[ApiFlightWithSplits]
 }
 
-case object DefaultFlightDisplayFilter {
+case object DefaultFlightDisplayFilter extends FlightDisplayFilter {
   def forTerminal(flights: Iterable[ApiFlightWithSplits], terminal: Terminal): Iterable[ApiFlightWithSplits] =
     flights.filter(_.apiFlight.Terminal == terminal)
 }
@@ -24,9 +24,9 @@ case class LhrFlightDisplayFilter(isRedListOrigin: PortCode => Boolean, t4Openin
     }
 
   private def isDivertedRedListPaxFlight(terminal: Terminal, fws: ApiFlightWithSplits) = {
-    val isRedListTerminal = terminal == lhrRedListTerminalForDate(fws.apiFlight.Scheduled)
-    val flightIsNonRedListTerminal = lhrNonRedListTerminals.contains(fws.apiFlight.Terminal)
-    val flightIsRedListOrigin = isRedListOrigin(fws.apiFlight.Origin)
+    def isRedListTerminal = terminal == lhrRedListTerminalForDate(fws.apiFlight.Scheduled)
+    def flightIsNonRedListTerminal: Boolean = lhrNonRedListTerminals.contains(fws.apiFlight.Terminal)
+    def flightIsRedListOrigin = isRedListOrigin(fws.apiFlight.Origin)
     isRedListTerminal && flightIsNonRedListTerminal && flightIsRedListOrigin
   }
 }

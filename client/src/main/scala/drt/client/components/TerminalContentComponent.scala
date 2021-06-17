@@ -12,7 +12,6 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.Queues.Queue
-import drt.shared.Terminals.{T2, T5}
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
@@ -25,7 +24,7 @@ import org.scalajs.dom.html.{Anchor, Div}
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
 import uk.gov.homeoffice.drt.auth._
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{HashSet, Map}
 
 object TerminalContentComponent {
 
@@ -44,7 +43,8 @@ object TerminalContentComponent {
                    minuteTicker: Int,
                    featureFlags: Pot[FeatureFlags],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                   potWalkTimes: Pot[WalkTimes]
+                   potWalkTimes: Pot[WalkTimes],
+                   redListPorts: Pot[HashSet[PortCode]],
                   )
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
@@ -184,26 +184,31 @@ object TerminalContentComponent {
                   ),
                   <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                     if (state.activeTab == "arrivals") {
-                      val flightsForTerminal = filteredPortState.flights.values.toList
-                      props.featureFlags.render(features => {
-                        arrivalsTableComponent(
-                          FlightsWithSplitsTable.Props(
-                            flightsWithSplits = flightsForTerminal,
-                            passengerInfoSummaryByDay = passengerInfoByDay,
-                            queueOrder = queueOrder,
-                            hasEstChox = props.airportConfig.hasEstChox,
-                            arrivalSources = props.arrivalSources,
-                            loggedInUser = props.loggedInUser,
-                            viewMode = props.viewMode,
-                            walkTimes = walkTimes,
-                            defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
-                            hasTransfer = props.airportConfig.hasTransfer,
-                            displayRedListInfo = features.displayRedListInfo,
-                            redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal)
+                      props.featureFlags.render { features =>
+                        props.redListPorts.render { redListPorts =>
+                          val flightDisplayFilter = props.airportConfig.portCode match {
+                            case PortCode("LHR") => LhrFlightDisplayFilter(redListPorts.contains, SDate("2021-06-29T00:00").millisSinceEpoch)
+                            case _ => DefaultFlightDisplayFilter
+                          }
+                          val flights = flightDisplayFilter.forTerminal(portState.flights.values, props.terminalPageTab.terminal)
+                          arrivalsTableComponent(
+                            FlightsWithSplitsTable.Props(
+                              flightsWithSplits = flights.toList,
+                              passengerInfoSummaryByDay = passengerInfoByDay,
+                              queueOrder = queueOrder,
+                              hasEstChox = props.airportConfig.hasEstChox,
+                              arrivalSources = props.arrivalSources,
+                              loggedInUser = props.loggedInUser,
+                              viewMode = props.viewMode,
+                              walkTimes = walkTimes,
+                              defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
+                              hasTransfer = props.airportConfig.hasTransfer,
+                              displayRedListInfo = features.displayRedListInfo,
+                              redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal)
+                            )
                           )
-                        )
+                        }
                       }
-                      )
                     } else ""
                   }),
                   displayForRole(
