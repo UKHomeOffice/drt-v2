@@ -14,15 +14,15 @@ object FlightComponents {
 
   def paxComp(flightWithSplits: ApiFlightWithSplits, redListInfo: RedListInfo, noPcpPax: Boolean): TagMod = {
     val isNotApiData = if (flightWithSplits.hasValidApi) "" else "notApiData"
-    val noPcpPaxClass = if (noPcpPax) "arrivals__table__flight__no-pcp-pax" else ""
+    val noPcpPaxClass = if (noPcpPax || redListInfo.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else ""
     val diversionClass =
       if (redListInfo.incomingDiversion) "arrivals__table__flight__pcp-pax__incoming"
       else if (redListInfo.outgoingDiversion) "arrivals__table__flight__pcp-pax__outgoing"
       else ""
     <.div(
-      ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData $noPcpPaxClass",
+      ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",
       <.div(^.className := "arrivals__table__flight__pcp-pax__container",
-        <.span(Tippy.describe(paxNumberSources(flightWithSplits), flightWithSplits.pcpPaxEstimate))
+        <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", flightWithSplits.pcpPaxEstimate)))
       ),
       if (redListInfo.paxDiversion) {
         val incomingTip =
