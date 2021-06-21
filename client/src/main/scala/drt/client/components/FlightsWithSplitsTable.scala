@@ -17,7 +17,7 @@ import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
 import drt.shared.splits.ApiSplitsToSplitRatio
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Shuffle, TrendingFlat}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.TrendingFlat
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
@@ -148,7 +148,7 @@ object FlightsWithSplitsTable {
       ("Est Chox", None),
       ("Act Chox", None),
       ("Est PCP", Option("arrivals__table__flight-est-pcp")),
-      ("Est PCP Pax", None))
+      ("Est PCP Pax", Option("arrivals__table__flight__pcp-pax__header")))
 
     val portColumnThs = columns
       .filter {
@@ -288,7 +288,6 @@ object FlightTableRow {
               }
             }),
             flightCodes,
-            if (incomingDiversion || outgoingDiversion) MuiIcons(TrendingFlat)() else EmptyVdom
           )
         } else
           <.span(
@@ -308,7 +307,10 @@ object FlightTableRow {
             if (flightWithSplits.hasValidApi)
               props
                 .maybePassengerInfoSummary
-                .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
+                .map { info =>
+                  <.div(^.className := "arrivals__table__flight-code__info",
+                    FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
+                }
             else EmptyVdom
           )),
         <.td(props.originMapper(flight.Origin)),
@@ -343,7 +345,7 @@ object FlightTableRow {
       val lastCells = List[TagMod](
         <.td(localDateTimeWithPopup(flight.ActualChox)),
         <.td(pcpTimeRange(flightWithSplits), ^.className := "arrivals__table__flight-est-pcp"),
-        <.td(FlightComponents.paxComp(flightWithSplits, props.redListInfo.outgoingDiversion || flight.Origin.isDomesticOrCta))
+        <.td(FlightComponents.paxComp(flightWithSplits, props.redListInfo, flight.Origin.isDomesticOrCta))
       )
       val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells
 

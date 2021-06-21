@@ -3,6 +3,8 @@ package drt.client.components
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import drt.shared.api.Arrival
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.TrendingFlat
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray}
 import org.scalajs.dom.html.{Div, Span}
@@ -10,12 +12,24 @@ import org.scalajs.dom.html.{Div, Span}
 
 object FlightComponents {
 
-  def paxComp(flightWithSplits: ApiFlightWithSplits, noPcpPax: Boolean): TagMod = {
-    val isNotApiData = if (flightWithSplits.hasValidApi) "right" else "right notApiData"
-    val noPcpPaxClass = if (noPcpPax) "arrivals__table__no-pcp-pax" else ""
+  def paxComp(flightWithSplits: ApiFlightWithSplits, redListInfo: RedListInfo, noPcpPax: Boolean): TagMod = {
+    val isNotApiData = if (flightWithSplits.hasValidApi) "" else "notApiData"
+    val noPcpPaxClass = if (noPcpPax) "arrivals__table__flight__no-pcp-pax" else ""
+    val diversionClass =
+      if (redListInfo.incomingDiversion) "arrivals__table__flight__pcp-pax__incoming"
+      else if (redListInfo.outgoingDiversion) "arrivals__table__flight__pcp-pax__outgoing"
+      else ""
     <.div(
-      ^.className := s"$isNotApiData $noPcpPaxClass",
-      Tippy.describe(paxNumberSources(flightWithSplits), flightWithSplits.pcpPaxEstimate)
+      ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData $noPcpPaxClass",
+      <.div(^.className := "arrivals__table__flight__pcp-pax__container",
+        <.span(Tippy.describe(paxNumberSources(flightWithSplits), flightWithSplits.pcpPaxEstimate))
+      ),
+      if (redListInfo.paxDiversion) {
+        val incomingTip =
+          if (redListInfo.incomingDiversion) s"Passengers diverted from ${flightWithSplits.apiFlight.Terminal}"
+          else "Passengers diverted to red list terminal"
+        Tippy.describe(<.span(incomingTip), MuiIcons(TrendingFlat)())
+      } else <.span(),
     )
   }
 
@@ -34,7 +48,11 @@ object FlightComponents {
     val portDirectPax: Int = flight.apiFlight.ActPax.getOrElse(0) - flight.apiFlight.TranPax.getOrElse(0)
 
     val paxNos = List(
-      <.p(s"Pax: $portDirectPax (${flight.apiFlight.ActPax.getOrElse(0)} - ${flight.apiFlight.TranPax.getOrElse(0)} transfer)"),
+      <.p(s"Pax: $portDirectPax (${
+        flight.apiFlight.ActPax.getOrElse(0)
+      } - ${
+        flight.apiFlight.TranPax.getOrElse(0)
+      } transfer)"),
       <.p(s"Max: $max")
     ) :+ flight.totalPaxFromApiExcludingTransfer.map(p => <.span(s"API: $p")).getOrElse(EmptyVdom)
     <.span(paxNos.toVdomArray)
@@ -49,19 +67,24 @@ object FlightComponents {
   }
 
   def maxCapacityLine(maxFlightPax: Int, flight: Arrival): TagMod = {
-    flight.MaxPax.filter(_ > 0).map { maxPaxMillis =>
-      <.div(^.className := "pax-capacity", ^.width := paxBarWidth(maxFlightPax, maxPaxMillis))
+    flight.MaxPax.filter(_ > 0).map {
+      maxPaxMillis =>
+        <.div(^.className := "pax-capacity", ^.width := paxBarWidth(maxFlightPax, maxPaxMillis))
     }.getOrElse {
       VdomArray.empty()
     }
   }
 
   def paxBarWidth(maxFlightPax: Int, apiPax: Int): String = {
-    s"${apiPax.toDouble / maxFlightPax * 100}%"
+    s"${
+      apiPax.toDouble / maxFlightPax * 100
+    }%"
   }
 
 
-  def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.displayName}"
+  def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${
+    ptqc.displayName
+  }"
 
   object SplitsGraph {
 

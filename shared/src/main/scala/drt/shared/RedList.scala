@@ -63,6 +63,7 @@ sealed trait RedListInfo {
   val terminalDiversion: Boolean
   val outgoingDiversion: Boolean
   val incomingDiversion: Boolean
+  val paxDiversion: Boolean = outgoingDiversion || incomingDiversion
 }
 
 case class LhrRedListInfo(isRedListOrigin: Boolean, terminalDiversion: Boolean, outgoingDiversion: Boolean, incomingDiversion: Boolean) extends RedListInfo

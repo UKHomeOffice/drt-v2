@@ -1552,7 +1552,7 @@ th h2 {
   width: 110px;
 }
 
-.arrivals__table__no-pcp-pax {
+.arrivals__table__flight__no-pcp-pax {
   text-decoration-line: line-through;
 }
 
@@ -1560,19 +1560,38 @@ th h2 {
   min-width: 53px;
 }
 
-.arrivals__table__flight-code-value svg {
+.arrivals__table__flight-code__info {
   font-size: inherit;
-  color: red;
   float: right;
-  margin-top: 3px;
   margin-right: 2px;
 }
 
-.arrivals__table__flight-code-incoming-diversion svg {
+.arrivals__table__flight__pcp-pax__header {
+  width: 85px;
+}
+
+.arrivals__table__flight__pcp-pax {
+  width: 85px;
+  text-align: left;
+}
+
+.arrivals__table__flight__pcp-pax__container {
+  width: 50px;
+  text-align: right;
+  display: inline-block;
+}
+
+.arrivals__table__flight__pcp-pax svg {
+  font-size: inherit;
+  color: red;
+  margin-left: 5px;
+}
+
+.arrivals__table__flight__pcp-pax__incoming svg {
   transform: rotate(40deg);
 }
 
-.arrivals__table__flight-code-outgoing-diversion svg {
+.arrivals__table__flight__pcp-pax__outgoing svg {
   transform: rotate(320deg);
 }
 
