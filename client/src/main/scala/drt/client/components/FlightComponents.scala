@@ -10,10 +10,11 @@ import org.scalajs.dom.html.{Div, Span}
 
 object FlightComponents {
 
-  def paxComp(flightWithSplits: ApiFlightWithSplits): TagMod = {
+  def paxComp(flightWithSplits: ApiFlightWithSplits, noPcpPax: Boolean): TagMod = {
     val isNotApiData = if (flightWithSplits.hasValidApi) "right" else "right notApiData"
+    val noPcpPaxClass = if (noPcpPax) "arrivals__table__no-pcp-pax" else ""
     <.div(
-      ^.className := s"$isNotApiData",
+      ^.className := s"$isNotApiData $noPcpPaxClass",
       Tippy.describe(paxNumberSources(flightWithSplits), flightWithSplits.pcpPaxEstimate)
     )
   }

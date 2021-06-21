@@ -204,7 +204,10 @@ object TerminalContentComponent {
                               defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
                               hasTransfer = props.airportConfig.hasTransfer,
                               displayRedListInfo = features.displayRedListInfo,
-                              redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal)
+                              redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                              terminal = terminal,
+                              portCode = props.airportConfig.portCode,
+                              redListPorts = redListPorts,
                             )
                           )
                         }

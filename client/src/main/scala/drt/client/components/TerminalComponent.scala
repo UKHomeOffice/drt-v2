@@ -177,14 +177,15 @@ object TerminalComponent {
                       terminalContentProps.portStatePot.renderReady(ps =>
                         terminalContentProps.passengerInfoByDayPot.renderReady(paxInfo => {
                           TerminalDashboardComponent(
-                            props.terminalPageTab,
-                            terminalContentProps.airportConfig,
-                            ps,
-                            paxInfo,
-                            props.router,
-                            model.featureFlags,
-                            model.potWalkTimes,
-                            loggedInUser
+                            terminalPageTabLoc = props.terminalPageTab,
+                            airportConfig = terminalContentProps.airportConfig,
+                            portState = ps,
+                            passengerInfoSummaryByDay = paxInfo,
+                            router = props.router,
+                            featureFlags = model.featureFlags,
+                            potWalktTimes = model.potWalkTimes,
+                            loggedInUser = loggedInUser,
+                            redListPorts = model.redListPorts,
                           )
                         }))
                     } else ""

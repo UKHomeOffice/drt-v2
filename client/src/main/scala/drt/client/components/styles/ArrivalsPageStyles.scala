@@ -10,7 +10,9 @@ case class ArrivalsPageStyles(common: CommonStyle = DefaultCommonStyle) extends 
   val redListCountryField: StyleA = style(
     borderBottom(solid, c"#ff9999", 3 px),
     paddingBottom(5 px),
-    display.block
+    display.block,
+    whiteSpace.nowrap,
+    overflow.hidden,
   )
 
 }

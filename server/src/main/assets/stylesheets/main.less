@@ -414,7 +414,7 @@ table.headlines tr:nth-child(odd) {
 }
 
 .muiSnackBar {
-    font-size: small;
+  font-size: small;
 }
 
 #staff-adjustment-dialogue {
@@ -1548,9 +1548,34 @@ th h2 {
   cursor: pointer;
 }
 
+.arrivals__table__flight-est-pcp {
+  width: 110px;
+}
+
+.arrivals__table__no-pcp-pax {
+  text-decoration-line: line-through;
+}
+
 .arrivals__table__flight-code-value {
   min-width: 53px;
-  display: inline-block;
+  //display: inline-flex;
+  //align-items: center;
+}
+
+.arrivals__table__flight-code-value svg {
+  font-size: inherit;
+  color: red;
+  float: right;
+  margin-top: 3px;
+  margin-right: 2px;
+}
+
+.arrivals__table__flight-code-incoming-diversion svg {
+  transform: rotate(40deg);
+}
+
+.arrivals__table__flight-code-outgoing-diversion svg {
+  transform: rotate(320deg);
 }
 
 .arrivals__table__flight-code-wrapper {
@@ -1559,7 +1584,8 @@ th h2 {
 }
 
 .arrivals__table__flight-code {
-  white-space: nowrap
+  white-space: nowrap;
+  width: 95px;
 }
 
 .arrivals__table__flight__chart-box {
