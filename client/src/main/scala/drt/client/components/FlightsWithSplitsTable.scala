@@ -101,7 +101,6 @@ object FlightsWithSplitsTable {
                   TerminalContentComponent.airportWrapper(flightWithSplits.apiFlight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
                     val isRedListOrigin = proxy().map(ai => NationalityFinderComponent.isRedListCountry(ai.country)).getOrElse(false)
                     val redListInfo = RedListInfo(props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
-                    println(s"${flightWithSplits.apiFlight.flightCode} $redListInfo")
                     FlightTableRow.component(FlightTableRow.Props(
                       flightWithSplits = flightWithSplits,
                       maybePassengerInfoSummary = maybePassengerInfo,
