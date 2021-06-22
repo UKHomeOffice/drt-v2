@@ -92,6 +92,7 @@ object ArrivalGenerator {
                runwayId: Option[String] = None,
                baggageReclaimId: Option[String] = None,
                airportId: PortCode = PortCode(""),
+               feedSources: Set[FeedSource] = Set(),
                pcpTime: Option[MillisSinceEpoch] = None
              ): Arrival =
     Arrival(
@@ -115,6 +116,6 @@ object ArrivalGenerator {
       Origin = origin,
       PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (sch != 0L) Some(sch) else None,
       Scheduled = sch,
-      FeedSources = Set(ApiFeedSource)
+      FeedSources = feedSources
     )
 }

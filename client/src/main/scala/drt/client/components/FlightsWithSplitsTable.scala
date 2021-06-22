@@ -16,8 +16,6 @@ import drt.shared._
 import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
 import drt.shared.splits.ApiSplitsToSplitRatio
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.TrendingFlat
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
@@ -98,28 +96,26 @@ object FlightsWithSplitsTable {
                     .passengerInfoSummaryByDay
                     .get(SDate(flightWithSplits.apiFlight.Scheduled).toUtcDate)
                     .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
-                  TerminalContentComponent.airportWrapper(flightWithSplits.apiFlight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
-                    val isRedListOrigin = proxy().map(ai => NationalityFinderComponent.isRedListCountry(ai.country)).getOrElse(false)
-                    val redListInfo = RedListInfo(props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
-                    FlightTableRow.component(FlightTableRow.Props(
-                      flightWithSplits = flightWithSplits,
-                      maybePassengerInfoSummary = maybePassengerInfo,
-                      codeShares = codeShares,
-                      idx = idx,
-                      timelineComponent = timelineComponent,
-                      originMapper = originMapper,
-                      splitsGraphComponent = splitsGraphComponent,
-                      splitsQueueOrder = props.queueOrder,
-                      hasEstChox = props.hasEstChox,
-                      loggedInUser = props.loggedInUser,
-                      viewMode = props.viewMode,
-                      walkTimes = props.walkTimes,
-                      defaultWalkTime = props.defaultWalkTime,
-                      hasTransfer = props.hasTransfer,
-                      displayRedListInfo = props.displayRedListInfo,
-                      redListInfo = redListInfo,
-                    ))
-                  }
+                  val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
+                  val redListInfo = RedListInfo(props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
+                  FlightTableRow.component(FlightTableRow.Props(
+                    flightWithSplits = flightWithSplits,
+                    maybePassengerInfoSummary = maybePassengerInfo,
+                    codeShares = codeShares,
+                    idx = idx,
+                    timelineComponent = timelineComponent,
+                    originMapper = originMapper,
+                    splitsGraphComponent = splitsGraphComponent,
+                    splitsQueueOrder = props.queueOrder,
+                    hasEstChox = props.hasEstChox,
+                    loggedInUser = props.loggedInUser,
+                    viewMode = props.viewMode,
+                    walkTimes = props.walkTimes,
+                    defaultWalkTime = props.defaultWalkTime,
+                    hasTransfer = props.hasTransfer,
+                    displayRedListInfo = props.displayRedListInfo,
+                    redListInfo = redListInfo,
+                  ))
               }.toTagMod)
           ),
           excludedPaxNote

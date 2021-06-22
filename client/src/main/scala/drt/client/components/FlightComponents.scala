@@ -48,11 +48,7 @@ object FlightComponents {
     val portDirectPax: Int = flight.apiFlight.ActPax.getOrElse(0) - flight.apiFlight.TranPax.getOrElse(0)
 
     val paxNos = List(
-      <.p(s"Pax: $portDirectPax (${
-        flight.apiFlight.ActPax.getOrElse(0)
-      } - ${
-        flight.apiFlight.TranPax.getOrElse(0)
-      } transfer)"),
+      <.p(s"Pax: $portDirectPax (${flight.apiFlight.ActPax.getOrElse(0)} - ${flight.apiFlight.TranPax.getOrElse(0)} transfer)"),
       <.p(s"Max: $max")
     ) :+ flight.totalPaxFromApiExcludingTransfer.map(p => <.span(s"API: $p")).getOrElse(EmptyVdom)
     <.span(paxNos.toVdomArray)
@@ -67,24 +63,15 @@ object FlightComponents {
   }
 
   def maxCapacityLine(maxFlightPax: Int, flight: Arrival): TagMod = {
-    flight.MaxPax.filter(_ > 0).map {
-      maxPaxMillis =>
-        <.div(^.className := "pax-capacity", ^.width := paxBarWidth(maxFlightPax, maxPaxMillis))
-    }.getOrElse {
-      VdomArray.empty()
-    }
+    flight.MaxPax.filter(_ > 0)
+      .map(maxPaxMillis => <.div(^.className := "pax-capacity", ^.width := paxBarWidth(maxFlightPax, maxPaxMillis)))
+      .getOrElse(VdomArray.empty())
   }
 
-  def paxBarWidth(maxFlightPax: Int, apiPax: Int): String = {
-    s"${
-      apiPax.toDouble / maxFlightPax * 100
-    }%"
-  }
+  def paxBarWidth(maxFlightPax: Int, apiPax: Int): String =
+    s"${apiPax.toDouble / maxFlightPax * 100}%"
 
-
-  def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${
-    ptqc.displayName
-  }"
+  def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.displayName}"
 
   object SplitsGraph {
 
