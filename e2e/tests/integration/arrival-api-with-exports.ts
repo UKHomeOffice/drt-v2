@@ -4,7 +4,7 @@ import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
 
 moment.locale("en-gb");
 
-describe('Arrivals CSV Export', () => {
+describe('Arrival API with exports', () => {
 
     const scheduledDateTime = todayAtUtc(0, 55);
 

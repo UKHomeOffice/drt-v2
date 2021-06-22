@@ -3,7 +3,7 @@ import {todayAtUtc, todayAtUtcString as todayAtString} from '../support/time-hel
 
 moment.locale("en-gb");
 
-describe('Viewing the terminal dashboard page', () => {
+describe('Terminal dashboard', () => {
 
     beforeEach(function () {
         cy.deleteData();

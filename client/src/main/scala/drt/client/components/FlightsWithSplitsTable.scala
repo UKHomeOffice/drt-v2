@@ -359,8 +359,9 @@ object FlightTableRow {
       val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass$cancelledClass$noPcpPax"
 
       val queueTagMod = props.splitsQueueOrder.map { q =>
-        val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0) else "-"
-        <.td(<.span(s"$pax"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")
+        val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
+        <.td(^.className := s"queue-split $paxClass right",
+          <.span(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax"))
       }.toTagMod
 
       if (props.hasTransfer) {

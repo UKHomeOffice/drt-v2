@@ -2,7 +2,7 @@
 import { todayAtUtc } from '../support/time-helpers'
 
 
-describe('Restrict access to endpoint by role', () => {
+describe('API role access', () => {
 
   const today = todayAtUtc(0, 0);
   const millis = today.unix() * 1000;

@@ -100,7 +100,6 @@ object TerminalContentComponent {
 
               val queues = props.airportConfig.queuesByTerminal.filterKeys(_ == terminal)
               val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
-              val filteredPortState = portState.windowWithTerminalFilter(viewStart, viewEnd, queues)
               val terminalName = terminal.toString
               <.div(^.className := s"view-mode-content $viewModeStr",
                 <.div(^.className := "tabs-with-export",
@@ -169,7 +168,7 @@ object TerminalContentComponent {
                         TerminalDesksAndQueues(
                           TerminalDesksAndQueues.Props(
                             props.router,
-                            filteredPortState,
+                            portState.windowWithTerminalFilter(viewStart, viewEnd, queues),
                             viewStart,
                             timeRangeHours.end - timeRangeHours.start,
                             props.airportConfig,
@@ -190,10 +189,11 @@ object TerminalContentComponent {
                             case PortCode("LHR") => LhrFlightDisplayFilter(redListPorts.contains, SDate("2021-06-29T00:00").millisSinceEpoch)
                             case _ => DefaultFlightDisplayFilter
                           }
-                          val flights = flightDisplayFilter.forTerminal(portState.flights.values, props.terminalPageTab.terminal)
+                          val flights = portState.window(viewStart, viewEnd).flights.values
+                          val flightsForTerminal = flightDisplayFilter.forTerminal(flights, props.terminalPageTab.terminal)
                           arrivalsTableComponent(
                             FlightsWithSplitsTable.Props(
-                              flightsWithSplits = flights.toList,
+                              flightsWithSplits = flightsForTerminal.toList,
                               passengerInfoSummaryByDay = passengerInfoByDay,
                               queueOrder = queueOrder,
                               hasEstChox = props.airportConfig.hasEstChox,
