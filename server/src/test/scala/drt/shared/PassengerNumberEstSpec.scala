@@ -1,6 +1,5 @@
 package drt.shared
 
-import controllers.ArrivalGenerator
 import drt.shared.PaxTypes.{Transit, VisaNational}
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.api.Arrival

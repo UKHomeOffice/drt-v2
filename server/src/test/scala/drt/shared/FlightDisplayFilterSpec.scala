@@ -1,7 +1,8 @@
 package drt.shared
 
+import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.{T2, T3, T4, T5, Terminal}
+import drt.shared.Terminals.{T1, T2, T3, T4, T5, Terminal}
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 
@@ -118,4 +119,11 @@ object ArrivalGenerator {
       Scheduled = sch,
       FeedSources = feedSources
     )
+
+  def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): ApiFlightWithSplits = ApiFlightWithSplits(
+    arrival(sch = date.millisSinceEpoch, terminal = terminal), Set(), Option(date.millisSinceEpoch)
+  )
+
+  def arrivalForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): Arrival =
+    arrival(sch = date.millisSinceEpoch, terminal = terminal)
 }
