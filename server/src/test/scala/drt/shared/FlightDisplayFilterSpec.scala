@@ -17,23 +17,23 @@ class FlightDisplayFilterSpec extends Specification {
   val redListPorts = HashSet(redListOriginInBolivia)
   val isRedListOrigin: PortCode => Boolean = pc => redListPorts.contains(pc)
 
-  val redListT2preT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = beforeT4Opening, origin = redListOriginInBolivia, terminal = T2), Set())
-  val nonRedListT2preT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = beforeT4Opening, origin = nonRedListOriginInFrance, terminal = T2), Set())
-  val redListT3preT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = beforeT4Opening, origin = redListOriginInBolivia, terminal = T3), Set())
-  val nonRedListT3preT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = beforeT4Opening, origin = nonRedListOriginInFrance, terminal = T3), Set())
-  val redListT4preT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = beforeT4Opening, origin = redListOriginInBolivia, terminal = T4), Set())
-  val nonRedListT4preT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = beforeT4Opening, origin = nonRedListOriginInFrance, terminal = T4), Set())
-  val redListT5preT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = beforeT4Opening, origin = redListOriginInBolivia, terminal = T5), Set())
-  val nonRedListT5preT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = beforeT4Opening, origin = nonRedListOriginInFrance, terminal = T5), Set())
+  val redListT2preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = redListOriginInBolivia, terminal = T2), Set())
+  val nonRedListT2preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = nonRedListOriginInFrance, terminal = T2), Set())
+  val redListT3preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = redListOriginInBolivia, terminal = T3), Set())
+  val nonRedListT3preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = nonRedListOriginInFrance, terminal = T3), Set())
+  val redListT4preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = redListOriginInBolivia, terminal = T4), Set())
+  val nonRedListT4preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = nonRedListOriginInFrance, terminal = T4), Set())
+  val redListT5preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = redListOriginInBolivia, terminal = T5), Set())
+  val nonRedListT5preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = nonRedListOriginInFrance, terminal = T5), Set())
 
-  val redListT2postT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = afterT4Opening, origin = redListOriginInBolivia, terminal = T2), Set())
-  val nonRedListT2postT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = afterT4Opening, origin = nonRedListOriginInFrance, terminal = T2), Set())
-  val redListT3postT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = afterT4Opening, origin = redListOriginInBolivia, terminal = T3), Set())
-  val nonRedListT3postT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = afterT4Opening, origin = nonRedListOriginInFrance, terminal = T3), Set())
-  val redListT4postT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = afterT4Opening, origin = redListOriginInBolivia, terminal = T4), Set())
-  val nonRedListT4postT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = afterT4Opening, origin = nonRedListOriginInFrance, terminal = T4), Set())
-  val redListT5postT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = afterT4Opening, origin = redListOriginInBolivia, terminal = T5), Set())
-  val nonRedListT5postT4 = ApiFlightWithSplits(ArrivalGenerator.apiFlight(sch = afterT4Opening, origin = nonRedListOriginInFrance, terminal = T5), Set())
+  val redListT2postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = redListOriginInBolivia, terminal = T2), Set())
+  val nonRedListT2postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = nonRedListOriginInFrance, terminal = T2), Set())
+  val redListT3postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = redListOriginInBolivia, terminal = T3), Set())
+  val nonRedListT3postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = nonRedListOriginInFrance, terminal = T3), Set())
+  val redListT4postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = redListOriginInBolivia, terminal = T4), Set())
+  val nonRedListT4postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = nonRedListOriginInFrance, terminal = T4), Set())
+  val redListT5postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = redListOriginInBolivia, terminal = T5), Set())
+  val nonRedListT5postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = nonRedListOriginInFrance, terminal = T5), Set())
 
 
   val filter = LhrFlightDisplayFilter(isRedListOrigin, t4OpeningMillis)
@@ -72,28 +72,28 @@ class FlightDisplayFilterSpec extends Specification {
 }
 
 object ArrivalGenerator {
-  def apiFlight(
-                 iata: String = "",
-                 icao: String = "",
-                 sch: MillisSinceEpoch = 0L,
-                 actPax: Option[Int] = None,
-                 maxPax: Option[Int] = None,
-                 terminal: Terminal = Terminal("T1"),
-                 origin: PortCode = PortCode(""),
-                 operator: Option[Operator] = None,
-                 status: ArrivalStatus = ArrivalStatus(""),
-                 est: MillisSinceEpoch = 0L,
-                 act: MillisSinceEpoch = 0L,
-                 estChox: MillisSinceEpoch = 0L,
-                 actChox: MillisSinceEpoch = 0L,
-                 gate: Option[String] = None,
-                 stand: Option[String] = None,
-                 tranPax: Option[Int] = None,
-                 runwayId: Option[String] = None,
-                 baggageReclaimId: Option[String] = None,
-                 airportId: PortCode = PortCode(""),
-                 pcpTime: Option[MillisSinceEpoch] = None
-               ): Arrival =
+  def arrival(
+               iata: String = "",
+               icao: String = "",
+               sch: MillisSinceEpoch = 0L,
+               actPax: Option[Int] = None,
+               maxPax: Option[Int] = None,
+               terminal: Terminal = Terminal("T1"),
+               origin: PortCode = PortCode(""),
+               operator: Option[Operator] = None,
+               status: ArrivalStatus = ArrivalStatus(""),
+               est: MillisSinceEpoch = 0L,
+               act: MillisSinceEpoch = 0L,
+               estChox: MillisSinceEpoch = 0L,
+               actChox: MillisSinceEpoch = 0L,
+               gate: Option[String] = None,
+               stand: Option[String] = None,
+               tranPax: Option[Int] = None,
+               runwayId: Option[String] = None,
+               baggageReclaimId: Option[String] = None,
+               airportId: PortCode = PortCode(""),
+               pcpTime: Option[MillisSinceEpoch] = None
+             ): Arrival =
     Arrival(
       Operator = operator,
       Status = status,

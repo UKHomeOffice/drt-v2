@@ -1,6 +1,5 @@
 package drt.shared
 
-import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
 import drt.shared.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable, VisaNational}
@@ -12,7 +11,7 @@ import org.specs2.mutable.Specification
 class SplitsForArrivalsSpec extends Specification {
 
   val now: MillisSinceEpoch = 10L
-  val uniqueArrival = UniqueArrival(1, T1, 0L, PortCode("JFK"))
+  val uniqueArrival: UniqueArrival = UniqueArrival(1, T1, 0L, PortCode("JFK"))
 
   "When I apply SplitsForArrivals to FlightsWithSplits" >> {
     "Given one new split and no arrivals" >> {
@@ -30,7 +29,7 @@ class SplitsForArrivalsSpec extends Specification {
       "Then I should get a FlightsWithSplits containing the matching arrival with the new split" >> {
         val newSplits = Splits(Set(), Historical, None, PaxNumbers)
         val splitsForArrivals = SplitsForArrivals(Map(uniqueArrival -> Set(newSplits)))
-        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1)
+        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"))
         val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set())))
 
         val updated = splitsForArrivals.diff(flights, now)
@@ -43,7 +42,7 @@ class SplitsForArrivalsSpec extends Specification {
       "Then I should get an empty FlightsWithSplits" >> {
         val existingSplits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1, None, None)), Historical, None, PaxNumbers)
         val splitsForArrivals = SplitsForArrivals(Map(uniqueArrival -> Set(existingSplits)))
-        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1)
+        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"))
         val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(existingSplits))))
 
         val updated = splitsForArrivals.diff(flights, now)
@@ -57,7 +56,7 @@ class SplitsForArrivalsSpec extends Specification {
         val existingSplits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1, None, None)), Historical, None, PaxNumbers)
         val newSplits = Splits(Set(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 1, None, None)), Historical, None, PaxNumbers)
         val splitsForArrivals = SplitsForArrivals(Map(uniqueArrival -> Set(newSplits)))
-        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1)
+        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"))
         val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(existingSplits))))
 
         val updated = splitsForArrivals.diff(flights, now)
@@ -71,7 +70,7 @@ class SplitsForArrivalsSpec extends Specification {
         val existingSplits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 1, None, None)), Historical, None, PaxNumbers)
         val newSplits = Splits(Set(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 1, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)
         val splitsForArrivals = SplitsForArrivals(Map(uniqueArrival -> Set(newSplits)))
-        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1)
+        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"))
         val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(existingSplits))))
 
         val updated = splitsForArrivals.diff(flights, now)
@@ -86,7 +85,7 @@ class SplitsForArrivalsSpec extends Specification {
         val existingSplits2 = Splits(Set(ApiPaxTypeAndQueueCount(VisaNational, EGate, 1, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)
         val newSplits = Splits(Set(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 1, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)
         val splitsForArrivals = SplitsForArrivals(Map(uniqueArrival -> Set(newSplits)))
-        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1)
+        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"))
         val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set(existingSplits1, existingSplits2))))
 
         val updated = splitsForArrivals.diff(flights, now)
@@ -103,8 +102,8 @@ class SplitsForArrivalsSpec extends Specification {
         val newSplits1 = Splits(Set(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 1, None, None)), Historical, None, PaxNumbers)
         val newSplits2 = Splits(Set(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 1, None, None)), Historical, None, PaxNumbers)
         val splitsForArrivals = SplitsForArrivals(Map(uniqueArrival -> Set(newSplits1), uniqueArrival2 -> Set(newSplits2)))
-        val arrival1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1)
-        val arrival2 = ArrivalGenerator.arrival(iata = "FR1234", terminal = T1)
+        val arrival1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"))
+        val arrival2 = ArrivalGenerator.arrival(iata = "FR1234", terminal = T1, origin = PortCode("JFK"))
         val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival1, Set(existingSplits1)), ApiFlightWithSplits(arrival2, Set(existingSplits2))))
 
         val updated = splitsForArrivals.diff(flights, now)
