@@ -1,6 +1,11 @@
 package drt.shared
 
+import drt.shared.Terminals.{T2, T5, Terminal}
+
 object RedList {
+  def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =
+    portCode == PortCode("LHR") && List(T2, T5).contains(terminal)
+
   val countryToCode: Map[String, String] = Map(
     "Afghanistan" -> "AFG",
     "Angola" -> "AGO",
@@ -51,4 +56,37 @@ object RedList {
     "Zambia" -> "ZMB",
     "Zimbabwe" -> "ZWE",
   )
+}
+
+sealed trait RedListInfo {
+  val isRedListOrigin: Boolean
+  val terminalDiversion: Boolean
+  val outgoingDiversion: Boolean
+  val incomingDiversion: Boolean
+  val paxDiversion: Boolean = outgoingDiversion || incomingDiversion
+}
+
+case class LhrRedListInfo(isRedListOrigin: Boolean, terminalDiversion: Boolean, outgoingDiversion: Boolean, incomingDiversion: Boolean) extends RedListInfo
+
+case class DefaultRedListInfo(isRedListOrigin: Boolean) extends RedListInfo {
+  override val terminalDiversion: Boolean = false
+  override val outgoingDiversion: Boolean = false
+  override val incomingDiversion: Boolean = false
+}
+
+object RedListInfo {
+  def apply(portCode: PortCode, displayTerminal: Terminal, flightTerminal: Terminal, isRedListOrigin: Boolean): RedListInfo = {
+    val greenTerminal = portCode == PortCode("LHR") && List(T2, T5).contains(displayTerminal)
+    val terminalDiversion = displayTerminal != flightTerminal
+
+    val outgoingDiversion =
+      portCode == PortCode("LHR") && isRedListOrigin && greenTerminal
+    val incomingDiversion =
+      portCode == PortCode("LHR") && isRedListOrigin && terminalDiversion && !greenTerminal
+
+    if (portCode == PortCode("LHR"))
+      LhrRedListInfo(isRedListOrigin, terminalDiversion, outgoingDiversion, incomingDiversion)
+    else
+      DefaultRedListInfo(isRedListOrigin)
+  }
 }

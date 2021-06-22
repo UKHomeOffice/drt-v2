@@ -3,7 +3,7 @@ import {todayAtUtcString} from '../support/time-helpers'
 
 moment.locale("en-gb");
 
-describe('Arrivals page', () => {
+describe('Arrival sources', () => {
 
     beforeEach(function () {
         cy.deleteData();

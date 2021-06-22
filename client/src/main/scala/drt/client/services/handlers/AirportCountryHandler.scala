@@ -12,7 +12,6 @@ import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class AirportCountryHandler[M](modelRW: ModelRW[M, Map[PortCode, Pot[AirportInfo]]]) extends LoggingActionHandler(modelRW) {
-
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAirportInfos(codes) =>
       effectOnly(Effect(DrtApi.get(s"airport-info?portCode=${codes.map(_.iata).mkString(",")}")

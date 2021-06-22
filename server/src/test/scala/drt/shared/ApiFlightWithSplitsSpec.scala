@@ -1,6 +1,5 @@
 package drt.shared
 
-import controllers.ArrivalGenerator
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}

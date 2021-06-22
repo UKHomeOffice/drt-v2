@@ -1,4 +1,4 @@
-describe('Restrict access by Role', () => {
+describe('UI role access', () => {
 
   describe('Navigation', () => {
 

@@ -2,7 +2,7 @@ import {todayAtUtc, todayAtUtcString} from "../support/time-helpers";
 import {manifestForDateTime, passengerList} from "../support/manifest-helpers";
 
 
-describe("Arrivals export for CEDAT staff", () => {
+describe("CEDAT arrival exports", () => {
 
     const scheduledDateTime = todayAtUtc(0, 55);
 

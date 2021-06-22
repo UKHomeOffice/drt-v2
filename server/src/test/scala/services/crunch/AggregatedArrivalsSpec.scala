@@ -168,16 +168,18 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(descheduledArrival))))
     testProbe.expectMsg(UpdateHandled)
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
-    testProbe.expectMsg(RemovalHandled)
-
-    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
+    val arrivalsResult1 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
       case ag: AggregatedArrivals => ag.arrivals.toSet
     }
 
-    val expected = Set()
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
+    testProbe.expectMsg(RemovalHandled)
 
-    arrivalsResult === expected
+    val arrivalsResult2 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
+      case ag: AggregatedArrivals => ag.arrivals.toSet
+    }
+
+    arrivalsResult1.size === 1 && arrivalsResult2 === Set()
   }
 }
 

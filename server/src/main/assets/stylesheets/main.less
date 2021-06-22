@@ -414,7 +414,7 @@ table.headlines tr:nth-child(odd) {
 }
 
 .muiSnackBar {
-    font-size: small;
+  font-size: small;
 }
 
 #staff-adjustment-dialogue {
@@ -845,7 +845,7 @@ rect.bordered {
 @fastTrackUserDeskColor: #e7cee6;
 @transferUserDeskColor: #705975;
 @nonPcpStaff: #eeeff0;
-@pcpStaff: #FFEBBD; //#FFDF94;
+@pcpStaff: #FFEBBD;
 @amberColor: #FFEEBB;
 @redColor: #FFCCCC;
 
@@ -1548,9 +1548,51 @@ th h2 {
   cursor: pointer;
 }
 
+.arrivals__table__flight-est-pcp {
+  width: 110px;
+}
+
+.arrivals__table__flight__no-pcp-pax {
+  text-decoration-line: line-through;
+}
+
 .arrivals__table__flight-code-value {
   min-width: 53px;
+}
+
+.arrivals__table__flight-code__info {
+  font-size: inherit;
+  float: right;
+  margin-right: 2px;
+}
+
+.arrivals__table__flight__pcp-pax__header {
+  width: 85px;
+}
+
+.arrivals__table__flight__pcp-pax {
+  width: 85px;
+  text-align: left;
+}
+
+.arrivals__table__flight__pcp-pax__container {
+  width: 50px;
+  text-align: right;
   display: inline-block;
+}
+
+.arrivals__table__flight__pcp-pax svg {
+  font-size: inherit;
+  color: red;
+  margin-left: 5px;
+}
+
+.arrivals__table__flight__pcp-pax__incoming svg {
+  transform: rotate(135deg);
+}
+
+.arrivals__table__flight__pcp-pax__outgoing svg {
+  transform: rotate(320deg);
 }
 
 .arrivals__table__flight-code-wrapper {
@@ -1559,7 +1601,8 @@ th h2 {
 }
 
 .arrivals__table__flight-code {
-  white-space: nowrap
+  white-space: nowrap;
+  width: 95px;
 }
 
 .arrivals__table__flight__chart-box {

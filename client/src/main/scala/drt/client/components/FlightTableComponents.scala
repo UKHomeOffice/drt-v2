@@ -40,7 +40,7 @@ object FlightTableComponents {
 
   def sdateLocalTimePopup(sdate: SDateLike): Unmounted[Tippy.Props, Unit, Unit] = {
     val hhmm = f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d"
-    Tippy.describe(<.span(sdate.toLocalDateTimeString()), hhmm)
+    Tippy.describe(<.span(sdate.toLocalDateTimeString(), ^.display := "inline"), hhmm)
   }
 
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))

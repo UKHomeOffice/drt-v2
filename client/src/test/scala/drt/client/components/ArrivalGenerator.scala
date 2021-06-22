@@ -4,11 +4,10 @@ import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
-import drt.shared.{ApiFeedSource, ArrivalStatus, Operator, PortCode}
+import drt.shared.{ApiFeedSource, ArrivalStatus, FeedSource, Operator, PortCode}
 
 
 object ArrivalGenerator {
-
   def apiFlight(
                  iata: String = "",
                  icao: String = "",
@@ -29,6 +28,7 @@ object ArrivalGenerator {
                  runwayId: Option[String] = None,
                  baggageReclaimId: Option[String] = None,
                  airportId: PortCode = PortCode(""),
+                 feedSources: Set[FeedSource] = Set(),
                  pcpTime: Option[MillisSinceEpoch] = None
                ): Arrival =
     Arrival(
@@ -52,6 +52,6 @@ object ArrivalGenerator {
       Origin = origin,
       PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (schDt != "") Some(SDate(schDt).millisSinceEpoch) else None,
       Scheduled = if (schDt != "") SDate(schDt).millisSinceEpoch else 0L,
-      FeedSources = Set(ApiFeedSource)
+      FeedSources = feedSources
     )
 }

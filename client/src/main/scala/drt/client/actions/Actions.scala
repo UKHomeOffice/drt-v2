@@ -15,6 +15,7 @@ import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 
 import java.util.UUID
+import scala.collection.immutable.HashSet
 import scala.concurrent.duration.FiniteDuration
 
 object Actions {
@@ -112,6 +113,10 @@ object Actions {
   case class HideLoader() extends Action
 
   case class GetAirportInfos(codes: Set[PortCode]) extends Action
+
+  case object GetRedListPorts extends Action
+
+  case class UpdateRedListPorts(codes: HashSet[PortCode]) extends Action
 
   case object GetWalktimes extends Action
 

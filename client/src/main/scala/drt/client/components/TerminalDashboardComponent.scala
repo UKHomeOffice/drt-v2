@@ -20,7 +20,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{HashSet, Map}
 import scala.scalajs.js.URIUtils
 import scala.util.Try
 
@@ -35,7 +35,8 @@ object TerminalDashboardComponent {
                     passengerInfoSummary: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
                     featureFlags: Pot[FeatureFlags],
                     walkTimes: Pot[WalkTimes],
-                    loggedInUser: LoggedInUser
+                    loggedInUser: LoggedInUser,
+                    redListPorts: Pot[HashSet[PortCode]]
                   )
 
   val defaultSlotSize = 120
@@ -79,26 +80,34 @@ object TerminalDashboardComponent {
             <.div(^.className := "dashboard-arrivals-popup",
               <.h2("Arrivals"),
               <.div(^.className := "terminal-dashboard__arrivals_popup_table",
-                p.featureFlags.renderReady(featureFlags =>
-                p.walkTimes.renderReady(walkTimes =>
-                  FlightsWithSplitsTable.ArrivalsTable(
-                    None,
-                    originMapper,
-                    splitsGraphComponentColoured)(
-                    FlightsWithSplitsTable.Props(
-                      ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
-                      p.passengerInfoSummary,
-                      p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
-                      p.airportConfig.hasEstChox,
-                      None,
-                      p.loggedInUser,
-                      ViewLive,
-                      walkTimes,
-                      p.airportConfig.defaultWalkTimeMillis(p.terminalPageTabLoc.terminal),
-                      hasTransfer = p.airportConfig.hasTransfer,
-                      displayRedListInfo = featureFlags.displayRedListInfo
-                    )
-                  )))),
+                p.featureFlags.renderReady { featureFlags =>
+                  p.walkTimes.renderReady { walkTimes =>
+                    p.redListPorts.renderReady { redListPorts =>
+                      FlightsWithSplitsTable.ArrivalsTable(
+                        None,
+                        originMapper,
+                        splitsGraphComponentColoured)(
+                        FlightsWithSplitsTable.Props(
+                          ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
+                          p.passengerInfoSummary,
+                          p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
+                          p.airportConfig.hasEstChox,
+                          None,
+                          p.loggedInUser,
+                          ViewLive,
+                          walkTimes,
+                          p.airportConfig.defaultWalkTimeMillis(p.terminalPageTabLoc.terminal),
+                          hasTransfer = p.airportConfig.hasTransfer,
+                          displayRedListInfo = featureFlags.displayRedListInfo,
+                          redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(p.airportConfig.portCode, terminal),
+                          terminal = terminal,
+                          portCode = p.airportConfig.portCode,
+                          redListPorts = redListPorts,
+                        )
+                      )
+                    }
+                  }
+                }),
               p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
             ))
 
@@ -180,6 +189,7 @@ object TerminalDashboardComponent {
             featureFlags: Pot[FeatureFlags],
             potWalktTimes: Pot[WalkTimes],
             loggedInUser: LoggedInUser,
+            redListPorts: Pot[HashSet[PortCode]]
            ): VdomElement =
     component(Props(
       terminalPageTabLoc,
@@ -189,7 +199,8 @@ object TerminalDashboardComponent {
       passengerInfoSummaryByDay,
       featureFlags,
       potWalktTimes,
-      loggedInUser
+      loggedInUser,
+      redListPorts
     ))
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {

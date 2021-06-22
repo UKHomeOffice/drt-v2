@@ -19,7 +19,7 @@ import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{HashSet, Map}
 
 object TerminalComponent {
 
@@ -44,7 +44,8 @@ object TerminalComponent {
                             maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState],
                             featureFlags: Pot[FeatureFlags],
                             arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                            potWalkTimes: Pot[WalkTimes]
+                            potWalkTimes: Pot[WalkTimes],
+                            redListPorts: Pot[HashSet[PortCode]],
                           ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Terminal")
@@ -66,7 +67,8 @@ object TerminalComponent {
         model.maybeStaffDeploymentAdjustmentPopoverState,
         model.featureFlags,
         model.arrivalSources,
-        model.walkTimes
+        model.walkTimes,
+        model.redListPorts,
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -102,22 +104,23 @@ object TerminalComponent {
             model.loggedInUserPot.render { loggedInUser =>
 
               val terminalContentProps = TerminalContentComponent.Props(
-                model.portStatePot,
-                model.passengerInfoByDayPot,
-                model.potShifts,
-                model.potFixedPoints,
-                model.potStaffMovements,
-                airportConfig,
-                props.terminalPageTab,
-                timeRangeHours,
-                props.router,
-                model.showActuals,
-                model.viewMode,
-                loggedInUser,
-                model.minuteTicker,
-                model.featureFlags,
-                model.arrivalSources,
-                model.potWalkTimes,
+                portStatePot = model.portStatePot,
+                passengerInfoByDayPot = model.passengerInfoByDayPot,
+                potShifts = model.potShifts,
+                potFixedPoints = model.potFixedPoints,
+                potStaffMovements = model.potStaffMovements,
+                airportConfig = airportConfig,
+                terminalPageTab = props.terminalPageTab,
+                defaultTimeRangeHours = timeRangeHours,
+                router = props.router,
+                showActuals = model.showActuals,
+                viewMode = model.viewMode,
+                loggedInUser = loggedInUser,
+                minuteTicker = model.minuteTicker,
+                featureFlags = model.featureFlags,
+                arrivalSources = model.arrivalSources,
+                potWalkTimes = model.potWalkTimes,
+                redListPorts = model.redListPorts,
               )
               <.div(
                 <.ul(^.className := "nav nav-tabs",
@@ -174,14 +177,15 @@ object TerminalComponent {
                       terminalContentProps.portStatePot.renderReady(ps =>
                         terminalContentProps.passengerInfoByDayPot.renderReady(paxInfo => {
                           TerminalDashboardComponent(
-                            props.terminalPageTab,
-                            terminalContentProps.airportConfig,
-                            ps,
-                            paxInfo,
-                            props.router,
-                            model.featureFlags,
-                            model.potWalkTimes,
-                            loggedInUser
+                            terminalPageTabLoc = props.terminalPageTab,
+                            airportConfig = terminalContentProps.airportConfig,
+                            portState = ps,
+                            passengerInfoSummaryByDay = paxInfo,
+                            router = props.router,
+                            featureFlags = model.featureFlags,
+                            potWalktTimes = model.potWalkTimes,
+                            loggedInUser = loggedInUser,
+                            redListPorts = model.redListPorts,
                           )
                         }))
                     } else ""

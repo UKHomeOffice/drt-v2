@@ -11,6 +11,8 @@ case class FlightFilter(filters: List[ApiFlightWithSplits => Boolean]) {
 }
 
 object FlightFilter {
+  val lhrNonRedListTerminals = List(T2, T5)
+
   def apply(filter: ApiFlightWithSplits => Boolean): FlightFilter = FlightFilter(List(filter))
 
   def validTerminalFilter(validTerminals: List[Terminal]): FlightFilter = FlightFilter(fws => validTerminals.contains(fws.apiFlight.Terminal))
@@ -20,7 +22,7 @@ object FlightFilter {
   val outsideCtaFilter: FlightFilter = FlightFilter(fws => !fws.apiFlight.Origin.isCta)
 
   val lhrRedListFilter: FlightFilter = FlightFilter { fws =>
-    val isGreenOnlyTerminal = List(T2, T5).contains(fws.apiFlight.Terminal)
+    val isGreenOnlyTerminal = lhrNonRedListTerminals.contains(fws.apiFlight.Terminal)
     val isRedListOrigin = AirportToCountry.isRedListed(fws.apiFlight.Origin)
     val okToProcess = !isRedListOrigin || !isGreenOnlyTerminal
     okToProcess

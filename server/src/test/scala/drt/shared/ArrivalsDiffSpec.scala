@@ -1,6 +1,5 @@
 package drt.shared
 
-import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.SplitRatiosNs.SplitSources.Historical

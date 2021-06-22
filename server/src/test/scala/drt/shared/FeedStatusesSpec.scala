@@ -1,6 +1,7 @@
 package drt.shared
 
 import org.specs2.mutable.Specification
+
 import scala.concurrent.duration._
 
 class FeedStatusesSpec extends Specification {

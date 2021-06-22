@@ -25,11 +25,9 @@ import scalacss.ScalaCssReact
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{HashSet, Map}
 
 object FlightsWithSplitsTable {
-
-
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],
                    passengerInfoSummaryByDay: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
                    queueOrder: Seq[Queue], hasEstChox: Boolean,
@@ -40,6 +38,10 @@ object FlightsWithSplitsTable {
                    defaultWalkTime: Long,
                    hasTransfer: Boolean,
                    displayRedListInfo: Boolean,
+                   redListOriginWorkloadExcluded: Boolean,
+                   terminal: Terminal,
+                   portCode: PortCode,
+                   redListPorts: HashSet[PortCode],
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
@@ -61,6 +63,11 @@ object FlightsWithSplitsTable {
       if (sortedFlights.nonEmpty) {
         val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
         val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
+        val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
+          "* Passengers from CTA & Red List origins do not contribute to PCP workload"
+        else
+          "* Passengers from CTA origins do not contribute to PCP workload"
+
         <.div(
           (props.loggedInUser.hasRole(ArrivalSource), props.arrivalSources) match {
             case (true, Some((_, sourcesPot))) =>
@@ -89,7 +96,8 @@ object FlightsWithSplitsTable {
                     .passengerInfoSummaryByDay
                     .get(SDate(flightWithSplits.apiFlight.Scheduled).toUtcDate)
                     .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
-
+                  val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
+                  val redListInfo = RedListInfo(props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits = flightWithSplits,
                     maybePassengerInfoSummary = maybePassengerInfo,
@@ -105,11 +113,12 @@ object FlightsWithSplitsTable {
                     walkTimes = props.walkTimes,
                     defaultWalkTime = props.defaultWalkTime,
                     hasTransfer = props.hasTransfer,
-                    displayRedListInfo = props.displayRedListInfo
+                    displayRedListInfo = props.displayRedListInfo,
+                    redListInfo = redListInfo,
                   ))
               }.toTagMod)
           ),
-          "* Passengers from CTA arrivals do not contribute to PCP workload"
+          excludedPaxNote
         )
       }
       else
@@ -122,7 +131,7 @@ object FlightsWithSplitsTable {
   def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue]): TagOf[TableSection] = {
     val redListPassportHeading = "Red List Passports"
     val columns = List(
-      ("Flight", None),
+      ("Flight", Option("arrivals__table__flight-code")),
       ("Origin", None),
       ("Country", Option("country")),
       (redListPassportHeading, None),
@@ -133,8 +142,8 @@ object FlightsWithSplitsTable {
       ("Act", None),
       ("Est Chox", None),
       ("Act Chox", None),
-      ("Est PCP", None),
-      ("Est PCP Pax", None))
+      ("Est PCP", Option("arrivals__table__flight-est-pcp")),
+      ("Est PCP Pax", Option("arrivals__table__flight__pcp-pax__header")))
 
     val portColumnThs = columns
       .filter {
@@ -212,11 +221,12 @@ object FlightTableRow {
                    defaultWalkTime: Long,
                    hasTransfer: Boolean,
                    displayRedListInfo: Boolean,
+                   redListInfo: RedListInfo,
                   )
 
   case class RowState(hasChanged: Boolean)
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.flightWithSplits.hashCode, p.idx, p.maybePassengerInfoSummary.hashCode))
+  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.flightWithSplits.hashCode, p.idx, p.maybePassengerInfoSummary.hashCode, p.redListInfo.hashCode()))
   implicit val stateReuse: Reusability[RowState] = Reusability.derive[RowState]
 
   def bestArrivalTime(f: Arrival): MillisSinceEpoch = {
@@ -253,41 +263,51 @@ object FlightTableRow {
       else
         "arrivals__table__flight-code"
 
-      val ctaMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
-      val flightCodes = s"${allCodes.mkString(" - ")}$ctaMarker"
-      val flightCodeElement = if (props.loggedInUser.hasRole(ArrivalSource))
-        <.span(
-          ^.cls := "arrivals__table__flight-code-value",
-          ^.onClick --> Callback(SPACircuit.dispatch {
-            props.viewMode match {
-              case vm: ViewDay if vm.isHistoric(SDate.now()) =>
-                GetArrivalSourcesForPointInTime(props.viewMode.time.addHours(28), props.flightWithSplits.unique)
-              case _: ViewPointInTime =>
-                GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)
-              case _ =>
-                GetArrivalSources(props.flightWithSplits.unique)
-            }
-          }),
-          flightCodes)
-      else
-        <.span(
-          ^.cls := "arrivals__table__flight-code-value",
-          flightCodes
-        )
+      def flightCodeElement(flightCodes: String, outgoingDiversion: Boolean, incomingDiversion: Boolean): VdomTagOf[Span] =
+        if (props.loggedInUser.hasRole(ArrivalSource)) {
+          val diversionClass = (outgoingDiversion, incomingDiversion) match {
+            case (_, true) => "arrivals__table__flight-code-incoming-diversion"
+            case (true, _) => "arrivals__table__flight-code-outgoing-diversion"
+            case _ => ""
+          }
+          <.span(
+            ^.cls := s"arrivals__table__flight-code-value $diversionClass",
+            ^.onClick --> Callback(SPACircuit.dispatch {
+              props.viewMode match {
+                case vm: ViewDay if vm.isHistoric(SDate.now()) =>
+                  GetArrivalSourcesForPointInTime(props.viewMode.time.addHours(28), props.flightWithSplits.unique)
+                case _: ViewPointInTime =>
+                  GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)
+                case _ =>
+                  GetArrivalSources(props.flightWithSplits.unique)
+              }
+            }),
+            flightCodes,
+          )
+        } else
+          <.span(
+            ^.cls := "arrivals__table__flight-code-value",
+            flightCodes
+          )
+
+      val outgoingDiversion = props.redListInfo.outgoingDiversion
+      val ctaOrRedListMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
+      val flightCodes = s"${allCodes.mkString(" - ")}$ctaOrRedListMarker"
 
       val firstCells = List[TagMod](
-        <.td(
-          ^.className := flightCodeClass,
+        <.td(^.className := flightCodeClass,
           <.div(
             ^.cls := "arrivals__table__flight-code-wrapper",
-            flightCodeElement,
+            flightCodeElement(flightCodes, props.redListInfo.outgoingDiversion, props.redListInfo.incomingDiversion),
             if (flightWithSplits.hasValidApi)
               props
                 .maybePassengerInfoSummary
-                .map(info => FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
+                .map { info =>
+                  <.div(^.className := "arrivals__table__flight-code__info",
+                    FlightChartComponent(FlightChartComponent.Props(flightWithSplits, info)))
+                }
             else EmptyVdom
-          )
-        ),
+          )),
         <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(
@@ -295,7 +315,7 @@ object FlightTableRow {
             proxy().render(ai => {
               val style = if (props.displayRedListInfo && NationalityFinderComponent.isRedListCountry(ai.country)) {
                 ScalaCssReact.scalacssStyleaToTagMod(
-                ArrivalsPageStylesDefault.redListCountryField)
+                  ArrivalsPageStylesDefault.redListCountryField)
               } else EmptyVdom
 
               <.span(
@@ -314,13 +334,13 @@ object FlightTableRow {
         <.td(flight.displayStatus.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
         <.td(localDateTimeWithPopup(flight.Estimated)),
-        <.td(localDateTimeWithPopup(flight.Actual))
+        <.td(localDateTimeWithPopup(flight.Actual)),
       )
       val estCell = List(<.td(localDateTimeWithPopup(flight.EstimatedChox)))
       val lastCells = List[TagMod](
         <.td(localDateTimeWithPopup(flight.ActualChox)),
-        <.td(pcpTimeRange(flightWithSplits)),
-        <.td(FlightComponents.paxComp(flightWithSplits))
+        <.td(pcpTimeRange(flightWithSplits), ^.className := "arrivals__table__flight-est-pcp"),
+        <.td(FlightComponents.paxComp(flightWithSplits, props.redListInfo, flight.Origin.isDomesticOrCta))
       )
       val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells
 
@@ -331,12 +351,13 @@ object FlightTableRow {
       val timeLineTagMod = props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
-      val ctaClass = if (flight.Origin.isCta) " arrival-cta" else ""
-      val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass$cancelledClass$ctaClass"
+      val noPcpPax = if (flight.Origin.isCta || outgoingDiversion) " arrival-cta" else ""
+      val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass$cancelledClass$noPcpPax"
 
       val queueTagMod = props.splitsQueueOrder.map { q =>
-        val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0) else "-"
-        <.td(<.span(s"$pax"), ^.className := s"queue-split $paxClass ${q.toString.toLowerCase()}-queue-pax right")
+        val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
+        <.td(^.className := s"queue-split $paxClass right",
+          <.span(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax"))
       }.toTagMod
 
       if (props.hasTransfer) {

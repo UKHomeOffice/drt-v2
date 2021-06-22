@@ -148,26 +148,6 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
       fixedPoints = 0,
       movements = 0)
   }
-
-  def applyFlightsWithSplitsDiff(flightRemovals: Seq[UniqueArrival], flightUpdates: Iterable[(UniqueArrival, ApiFlightWithSplits)], nowMillis: MillisSinceEpoch): PortState = {
-    copy(flights = (flights -- flightRemovals) ++ flightUpdates)
-  }
-
-  def applyCrunchDiff(crunchMinuteUpdates: SortedMap[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): PortState = {
-    copy(crunchMinutes = crunchMinutes ++ crunchMinuteUpdates)
-  }
-
-  def applyCrunchDiff(crunchMinuteUpdates: Seq[CrunchMinute], nowMillis: MillisSinceEpoch): PortState = {
-    copy(crunchMinutes = crunchMinutes ++ crunchMinuteUpdates.map(cm => (cm.key, cm.copy(lastUpdated = Option(nowMillis)))))
-  }
-
-  def applyStaffDiff(staffMinuteUpdates: SortedMap[TM, StaffMinute], nowMillis: MillisSinceEpoch): PortState = {
-    copy(staffMinutes = staffMinutes ++ staffMinuteUpdates)
-  }
-
-  def applyStaffDiff(staffMinuteUpdates: Seq[StaffMinute], nowMillis: MillisSinceEpoch): PortState = {
-    copy(staffMinutes = staffMinutes ++ staffMinuteUpdates.map(sm => (sm.key, sm.copy(lastUpdated = Option(nowMillis)))))
-  }
 }
 
 object PortState {

@@ -114,8 +114,8 @@ object Tippy extends ScalaCssReactImplicits {
   def interactive(content: VdomElement, trigger: VdomNode) =
     apply(content, interactive = true, <.div(trigger))
 
-  def describe(content: VdomElement, trigger: VdomNode) =
-    apply(content, interactive = false, <.div(trigger))
+  def describe(content: VdomElement, trigger: TagMod) =
+    apply(content, interactive = false, <.span(trigger))
 
   def interactiveInfo(content: VdomElement) =
     apply(content, interactive = true, Icon.infoCircle)

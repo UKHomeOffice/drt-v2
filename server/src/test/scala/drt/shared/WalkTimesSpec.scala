@@ -1,9 +1,9 @@
 package drt.shared
 
 import drt.shared.Terminals._
+import drt.shared.TimeUtil._
 import drt.shared.api.{TerminalWalkTimes, WalkTime, WalkTimes}
 import org.specs2.mutable.Specification
-import TimeUtil._
 class WalkTimesSpec extends Specification {
 
   "When formatting a walk time as minutes and seconds" >> {

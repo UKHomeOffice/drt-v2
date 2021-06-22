@@ -24,7 +24,7 @@ import org.scalajs.dom.html.{Anchor, Div}
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
 import uk.gov.homeoffice.drt.auth._
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{HashSet, Map}
 
 object TerminalContentComponent {
 
@@ -43,7 +43,8 @@ object TerminalContentComponent {
                    minuteTicker: Int,
                    featureFlags: Pot[FeatureFlags],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                   potWalkTimes: Pot[WalkTimes]
+                   potWalkTimes: Pot[WalkTimes],
+                   redListPorts: Pot[HashSet[PortCode]],
                   )
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
@@ -99,7 +100,6 @@ object TerminalContentComponent {
 
               val queues = props.airportConfig.queuesByTerminal.filterKeys(_ == terminal)
               val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
-              val filteredPortState = portState.windowWithTerminalFilter(viewStart, viewEnd, queues)
               val terminalName = terminal.toString
               <.div(^.className := s"view-mode-content $viewModeStr",
                 <.div(^.className := "tabs-with-export",
@@ -168,7 +168,7 @@ object TerminalContentComponent {
                         TerminalDesksAndQueues(
                           TerminalDesksAndQueues.Props(
                             props.router,
-                            filteredPortState,
+                            portState.windowWithTerminalFilter(viewStart, viewEnd, queues),
                             viewStart,
                             timeRangeHours.end - timeRangeHours.start,
                             props.airportConfig,
@@ -183,24 +183,35 @@ object TerminalContentComponent {
                   ),
                   <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                     if (state.activeTab == "arrivals") {
-                      val flightsForTerminal = filteredPortState.flights.values.toList
-                      props.featureFlags.render(features =>
-                        arrivalsTableComponent(
-                          FlightsWithSplitsTable.Props(
-                            flightsForTerminal,
-                            passengerInfoByDay,
-                            queueOrder,
-                            props.airportConfig.hasEstChox,
-                            props.arrivalSources,
-                            props.loggedInUser,
-                            props.viewMode,
-                            walkTimes,
-                            props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
-                            props.airportConfig.hasTransfer,
-                            features.displayRedListInfo
+                      props.featureFlags.render { features =>
+                        props.redListPorts.render { redListPorts =>
+                          val flightDisplayFilter = props.airportConfig.portCode match {
+                            case PortCode("LHR") => LhrFlightDisplayFilter(redListPorts.contains, SDate("2021-06-29T00:00").millisSinceEpoch)
+                            case _ => DefaultFlightDisplayFilter
+                          }
+                          val flights = portState.window(viewStart, viewEnd).flights.values
+                          val flightsForTerminal = flightDisplayFilter.forTerminal(flights, props.terminalPageTab.terminal)
+                          arrivalsTableComponent(
+                            FlightsWithSplitsTable.Props(
+                              flightsWithSplits = flightsForTerminal.toList,
+                              passengerInfoSummaryByDay = passengerInfoByDay,
+                              queueOrder = queueOrder,
+                              hasEstChox = props.airportConfig.hasEstChox,
+                              arrivalSources = props.arrivalSources,
+                              loggedInUser = props.loggedInUser,
+                              viewMode = props.viewMode,
+                              walkTimes = walkTimes,
+                              defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
+                              hasTransfer = props.airportConfig.hasTransfer,
+                              displayRedListInfo = features.displayRedListInfo,
+                              redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                              terminal = terminal,
+                              portCode = props.airportConfig.portCode,
+                              redListPorts = redListPorts,
+                            )
                           )
-                        )
-                      )
+                        }
+                      }
                     } else ""
                   }),
                   displayForRole(

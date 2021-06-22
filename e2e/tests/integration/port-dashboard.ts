@@ -3,7 +3,7 @@ moment.locale("en-gb");
 import { todayAtUtcString as todayAtString } from '../support/time-helpers'
 import { currentTimeString as currentTimeString } from '../support/time-helpers'
 
-describe('Viewing the port dashboard page', () => {
+describe('Port dashboard', () => {
 
   beforeEach(function () {
     cy.deleteData();
