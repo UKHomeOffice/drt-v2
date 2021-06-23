@@ -58,8 +58,9 @@ case class ResponseToArrivals(data: String) {
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None,
       ApiPax = None,
-      ScheduledDeparture = None
-      )
+      ScheduledDeparture = None,
+      RedListPax = None,
+    )
     log.debug(s"parsed arrival: $arrival")
     arrival
   }

@@ -1,6 +1,5 @@
 package services.exports.flights
 
-import java.util.UUID
 import actors.persistent.arrivals.{ArrivalsReadActor, ArrivalsState}
 import actors.persistent.staffing.GetState
 import akka.NotUsed
@@ -9,13 +8,13 @@ import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Ports.domestic
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
-import drt.shared.{FeedSource, Ports, SDateLike, UniqueArrival}
+import drt.shared.{FeedSource, SDateLike, UniqueArrival}
 import services.SDate
 import services.exports.Exports
 
+import java.util.UUID
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}

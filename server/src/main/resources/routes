@@ -81,6 +81,8 @@ DELETE        /staff-movements/:uuid                                            
 # Feed import
 POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
 
+POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
+
 # Test related
 POST          /test/arrival                                                           test.controllers.TestController.addArrival
 

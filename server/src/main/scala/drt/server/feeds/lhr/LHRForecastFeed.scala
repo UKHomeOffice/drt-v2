@@ -8,7 +8,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.language.postfixOps
 import scala.util.Try
 
 

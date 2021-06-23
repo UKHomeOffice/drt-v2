@@ -50,8 +50,7 @@ trait FlightWithSplitsExportTemplate extends FlightExportTemplate {
       fws.apiFlight.EstimatedChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       fws.apiFlight.ActualChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       fws.apiFlight.PcpTime.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      fws.totalPax.getOrElse("").toString,
-
+      fws.totalPax.map(_.toString).getOrElse(""),
     )
 
   protected def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {

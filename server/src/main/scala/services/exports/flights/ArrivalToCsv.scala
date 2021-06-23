@@ -22,7 +22,8 @@ object ArrivalToCsv {
       arrival.EstimatedChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       arrival.ActualChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       arrival.PcpTime.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      arrival.ActPax.getOrElse("").toString)
+      arrival.ActPax.map(_.toString).getOrElse(""),
+    )
 
   def arrivalWithTransferToCsvFields(arrival: Arrival, millisToDateOnly: MillisSinceEpoch => String,
                                      millisToHoursAndMinutes: MillisSinceEpoch => String): List[String] =

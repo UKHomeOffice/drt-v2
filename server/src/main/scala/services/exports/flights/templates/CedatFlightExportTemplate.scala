@@ -51,7 +51,8 @@ case class CedatFlightExportTemplate(override val timeZone: DateTimeZone) extend
       arrival.EstimatedChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       arrival.ActualChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       arrival.PcpTime.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      arrival.ActPax.getOrElse("").toString)
+      arrival.ActPax.map(_.toString).getOrElse(""),
+    )
 
   override val headings: String = allHeadings(queueNames)
 
