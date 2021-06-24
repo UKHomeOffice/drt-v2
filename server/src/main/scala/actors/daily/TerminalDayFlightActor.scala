@@ -7,6 +7,7 @@ import actors.serializers.FlightMessageConversion.{flightWithSplitsFromMessage, 
 import actors.persistent.{RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
+import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
 import drt.shared.Terminals.Terminal
@@ -78,6 +79,13 @@ class TerminalDayFlightActor(
   }
 
   override def receiveCommand: Receive = {
+    case redListCounts: RedListCounts =>
+      val stateDiff = redListCounts
+        .diffWith(state, now().millisSinceEpoch)
+        .forTerminal(terminal)
+        .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
+      updateAndPersistDiffAndAck(stateDiff)
+
     case diff: ArrivalsDiff =>
       val stateDiff = diff
         .diffWith(state, now().millisSinceEpoch)

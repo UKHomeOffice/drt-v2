@@ -573,6 +573,8 @@ object ArrivalKey {
 case class ArrivalUpdate(old: Arrival, updated: Arrival)
 
 object ArrivalsDiff {
+  val empty: ArrivalsDiff = ArrivalsDiff(Seq(), Seq())
+
   def apply(toUpdate: Iterable[Arrival], toRemove: Iterable[Arrival]): ArrivalsDiff = ArrivalsDiff(
     ISortedMap[UniqueArrival, Arrival]() ++ toUpdate.map(a => (a.unique, a)), toRemove
   )

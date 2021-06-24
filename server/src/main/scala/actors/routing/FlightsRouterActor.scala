@@ -11,6 +11,7 @@ import akka.pattern.{ask, pipe}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
+import controllers.model.{RedListCount, RedListCounts}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi._
@@ -130,6 +131,16 @@ class FlightsRouterActor(val updatesSubscriber: ActorRef,
     FlightsRouterActor.flightsByDaySource(flightsByDayLookup)
 
   override def partitionUpdates: PartialFunction[FlightUpdates, Map[(Terminal, UtcDate), FlightUpdates]] = {
+    case container: RedListCounts =>
+      container.counts
+        .groupBy {
+          case RedListCount(_, _, scheduled, _) => scheduled.toUtcDate
+        }
+        .flatMap {
+          case (sch, counts) =>
+            terminals.map(t => ((t, sch), RedListCounts(counts)))
+        }
+
     case container: SplitsForArrivals =>
       container.splits
         .groupBy {
@@ -156,7 +167,7 @@ class FlightsRouterActor(val updatesSubscriber: ActorRef,
         .toMap
   }
 
-  def millisAffectedByUpdate(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[UpdatedMillis] =
+  def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[UpdatedMillis] =
     updateFlights(partition, updates)
 
   override def shouldSendEffectsToSubscriber: FlightUpdates => Boolean = {

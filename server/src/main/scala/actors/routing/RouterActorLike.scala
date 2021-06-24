@@ -35,7 +35,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
 
   def partitionUpdates: PartialFunction[U, Map[P, U]]
 
-  def millisAffectedByUpdate(partition: P, updates: U): Future[UpdatedMillis]
+  def updatePartition(partition: P, updates: U): Future[UpdatedMillis]
 
   def receiveQueries: Receive
 
@@ -43,7 +43,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
 
   def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[UpdatedMillis] = {
     processingRequest = true
-    val eventualEffects = sendUpdates(updates)
+    val eventualEffects = updateAll(updates)
     eventualEffects
       .onComplete { _ =>
         processingRequest = false
@@ -53,10 +53,10 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
     eventualEffects
   }
 
-  def sendUpdates(updates: U): Future[UpdatedMillis] = {
+  def updateAll(updates: U): Future[UpdatedMillis] = {
     val eventualUpdatedMinutesDiff: Source[UpdatedMillis, NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
-        case (partition, updates) => millisAffectedByUpdate(partition, updates)
+        case (partition, updates) => updatePartition(partition, updates)
       }
     combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
   }
