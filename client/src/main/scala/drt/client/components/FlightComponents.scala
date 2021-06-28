@@ -12,7 +12,7 @@ import org.scalajs.dom.html.{Div, Span}
 
 object FlightComponents {
 
-  def paxComp(flightWithSplits: ApiFlightWithSplits, redListInfo: RedListInfo, noPcpPax: Boolean): TagMod = {
+  def paxComp(flightWithSplits: ApiFlightWithSplits, redListInfo: DirectRedListFlight, noPcpPax: Boolean): TagMod = {
     val isNotApiData = if (flightWithSplits.hasValidApi) "" else "notApiData"
     val noPcpPaxClass = if (noPcpPax || redListInfo.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else ""
     val diversionClass =

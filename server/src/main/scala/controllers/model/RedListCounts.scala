@@ -6,7 +6,9 @@ import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol.PortCodeJsonFormat
 import services.SDate
-import spray.json.{DefaultJsonProtocol, JsNumber, JsValue, RootJsonFormat}
+import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsValue, RootJsonFormat, enrichAny}
+
+import scala.util.{Success, Try}
 
 case class RedListCount(flightCode: String, portCode: PortCode, scheduled: SDateLike, paxCount: Int)
 
@@ -44,5 +46,14 @@ object RedListCountsJsonFormats {
 
   implicit val redListCountFormat: RootJsonFormat[RedListCount] = jsonFormat4(RedListCount.apply)
 
-  implicit val redListCountsFormat: RootJsonFormat[RedListCounts] = jsonFormat1(RedListCounts.apply)
+  implicit object redListCountsFormat extends RootJsonFormat[RedListCounts] {
+    override def write(obj: RedListCounts): JsValue = obj.counts.toJson
+
+    override def read(json: JsValue): RedListCounts = json match {
+      case JsArray(elements) =>
+        RedListCounts(elements
+          .map(count => Try(count.convertTo[RedListCount]))
+          .collect { case Success(rlc) => rlc })
+    }
+  }
 }

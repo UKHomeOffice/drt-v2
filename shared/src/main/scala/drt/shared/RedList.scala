@@ -58,7 +58,7 @@ object RedList {
   )
 }
 
-sealed trait RedListInfo {
+sealed trait DirectRedListFlight {
   val isRedListOrigin: Boolean
   val terminalDiversion: Boolean
   val outgoingDiversion: Boolean
@@ -66,16 +66,19 @@ sealed trait RedListInfo {
   val paxDiversion: Boolean = outgoingDiversion || incomingDiversion
 }
 
-case class LhrRedListInfo(isRedListOrigin: Boolean, terminalDiversion: Boolean, outgoingDiversion: Boolean, incomingDiversion: Boolean) extends RedListInfo
+case class LhrDirectRedListFlight(isRedListOrigin: Boolean,
+                                  terminalDiversion: Boolean,
+                                  outgoingDiversion: Boolean,
+                                  incomingDiversion: Boolean) extends DirectRedListFlight
 
-case class DefaultRedListInfo(isRedListOrigin: Boolean) extends RedListInfo {
+case class DefaultDirectRedListFlight(isRedListOrigin: Boolean) extends DirectRedListFlight {
   override val terminalDiversion: Boolean = false
   override val outgoingDiversion: Boolean = false
   override val incomingDiversion: Boolean = false
 }
 
-object RedListInfo {
-  def apply(portCode: PortCode, displayTerminal: Terminal, flightTerminal: Terminal, isRedListOrigin: Boolean): RedListInfo = {
+object DirectRedListFlight {
+  def apply(portCode: PortCode, displayTerminal: Terminal, flightTerminal: Terminal, isRedListOrigin: Boolean): DirectRedListFlight = {
     val greenTerminal = portCode == PortCode("LHR") && List(T2, T5).contains(displayTerminal)
     val terminalDiversion = displayTerminal != flightTerminal
 
@@ -85,8 +88,8 @@ object RedListInfo {
       portCode == PortCode("LHR") && isRedListOrigin && terminalDiversion && !greenTerminal
 
     if (portCode == PortCode("LHR"))
-      LhrRedListInfo(isRedListOrigin, terminalDiversion, outgoingDiversion, incomingDiversion)
+      LhrDirectRedListFlight(isRedListOrigin, terminalDiversion, outgoingDiversion, incomingDiversion)
     else
-      DefaultRedListInfo(isRedListOrigin)
+      DefaultDirectRedListFlight(isRedListOrigin)
   }
 }

@@ -12,7 +12,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PortCode
 import play.api.libs.Files
 import play.api.libs.json.Json._
-import play.api.mvc.{Action, AnyContent, Request}
+import play.api.mvc._
 import server.feeds.StoreFeedImportArrivals
 import spray.json._
 import uk.gov.homeoffice.drt.auth.Roles.PortFeedUpload
@@ -30,17 +30,15 @@ trait WithImports {
     Action.async {
       implicit request =>
         log.info(s"Received a request to import red list counts")
-        request.body.asText match {
-          case Some(text) =>
-            log.info(s"Got some text")
-            Try(text.parseJson.convertTo[RedListCounts]) match {
-              case Success(redListCounts) =>
-                log.info(s"Successfully parsed json to RedListCounts. Sending to flights router")
-                ctrl.flightsActor.ask(redListCounts).map { _ =>
-                  log.info("Got reply from flights router")
-                  Accepted(toJson(ApiResponseBody("Red list counts have been imported")))
-                }
-            }
+        request.body.asJson match {
+          case Some(content) =>
+            log.info(s"Received red list pax data")
+            Try(content.toString.parseJson.convertTo[RedListCounts])
+              .map(redListCounts => ctrl.flightsActor
+                .ask(redListCounts)
+                .map(_ => Accepted(toJson(ApiResponseBody(s"${redListCounts.counts.size} red list records imported"))))
+              ).getOrElse(Future(BadRequest("Failed to parse json")))
+          case None => Future(BadRequest("No content"))
         }
     }
   }
