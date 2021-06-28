@@ -130,7 +130,10 @@ object FlightsWithSplitsTable {
     .build
 
   def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue]): TagOf[TableSection] = {
-    val redListPassportHeading = "Red List Passports"
+    val redListPassportHeading = props.portCode match {
+      case PortCode("LHR") => "Red List Passengers"
+      case _ => "Red List Passports"
+    }
     val columns = List(
       ("Flight", Option("arrivals__table__flight-code")),
       ("Origin", None),
