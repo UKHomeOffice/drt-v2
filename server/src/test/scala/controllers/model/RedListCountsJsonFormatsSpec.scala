@@ -16,19 +16,17 @@ class RedListCountsJsonFormatsSpec extends Specification {
       import RedListCountsJsonFormats._
       val json = redListCounts.toJson
       json.prettyPrint ===
-        """{
-          |  "counts": [{
-          |    "flightCode": "BA0001",
-          |    "paxCount": 10,
-          |    "portCode": "LHR",
-          |    "scheduled": 1624449600000
-          |  }, {
-          |    "flightCode": "ZZ0072",
-          |    "paxCount": 20,
-          |    "portCode": "LHR",
-          |    "scheduled": 1624462200000
-          |  }]
-          |}""".stripMargin
+        """[{
+          |  "flightCode": "BA0001",
+          |  "paxCount": 10,
+          |  "portCode": "LHR",
+          |  "scheduled": 1624449600000
+          |}, {
+          |  "flightCode": "ZZ0072",
+          |  "paxCount": 20,
+          |  "portCode": "LHR",
+          |  "scheduled": 1624462200000
+          |}]""".stripMargin
     }
 
     "I should be able to convert it to json and back without any data loss" >> {
