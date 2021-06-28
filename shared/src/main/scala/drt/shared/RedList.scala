@@ -1,6 +1,9 @@
 package drt.shared
 
 import drt.shared.Terminals.{T2, T5, Terminal}
+import drt.shared.api.PassengerInfoSummary
+
+import scala.collection.immutable.Map
 
 object RedList {
   def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =
@@ -58,6 +61,7 @@ object RedList {
   )
 }
 
+
 sealed trait DirectRedListFlight {
   val isRedListOrigin: Boolean
   val terminalDiversion: Boolean
@@ -93,3 +97,38 @@ object DirectRedListFlight {
       DefaultDirectRedListFlight(isRedListOrigin)
   }
 }
+
+sealed trait IndirectRedListPax {
+  val isEnabled: Boolean
+}
+
+object IndirectRedListPax {
+  def apply(displayRedListInfo: Boolean, portCode: PortCode, flightWithSplits: ApiFlightWithSplits, maybePassengerInfo: Option[PassengerInfoSummary]): IndirectRedListPax =
+    (displayRedListInfo, portCode) match {
+      case (false, _) => NoIndirectRedListPax
+      case (true, PortCode("LHR")) =>
+        NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
+      case (true, _) =>
+        val maybeNats = maybePassengerInfo.map(_.nationalities.filter {
+          case (nat, _) => redListNats.toList.contains(nat)
+        })
+        ApiIndirectRedListPax(maybeNats)
+    }
+
+  val redListNats: Iterable[Nationality] = RedList.countryToCode.values.map(Nationality(_))
+}
+
+sealed trait EnabledIndirectRedListPax extends IndirectRedListPax {
+  override val isEnabled: Boolean = true
+  val maybeCount: Option[Int]
+}
+
+case object NoIndirectRedListPax extends IndirectRedListPax {
+  override val isEnabled: Boolean = false
+}
+
+case class ApiIndirectRedListPax(maybeNationalities: Option[Map[Nationality, Int]]) extends EnabledIndirectRedListPax {
+  override val maybeCount: Option[Int] = maybeNationalities.map(_.values.sum)
+}
+
+case class NeboIndirectRedListPax(maybeCount: Option[Int]) extends EnabledIndirectRedListPax

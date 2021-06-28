@@ -4,7 +4,7 @@ import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
 import drt.client.components.FlightComponents.SplitsGraph
-import drt.client.components.FlightTableRow.{ApiIndirectRedListPax, NeboIndirectRedListPax, NoIndirectRedListPax, SplitsGraphComponentFn}
+import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.ToolTips._
 import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
@@ -98,16 +98,7 @@ object FlightsWithSplitsTable {
                     .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
                   val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
                   val directRedListFlight = DirectRedListFlight(props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
-                  val redListPaxInfo = (props.displayRedListInfo, props.portCode) match {
-                    case (false, _) => NoIndirectRedListPax
-                    case (true, PortCode("LHR")) =>
-                      NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
-                    case (true, _) =>
-                      val maybeNats = maybePassengerInfo.map(_.nationalities.filter {
-                        case (nat, _) => NationalityFinderComponent.redListNats.toList.contains(nat)
-                      })
-                      ApiIndirectRedListPax(maybeNats)
-                  }
+                  val redListPaxInfo = IndirectRedListPax(props.displayRedListInfo, props.portCode, flightWithSplits, maybePassengerInfo)
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits = flightWithSplits,
                     maybePassengerInfoSummary = maybePassengerInfo,
@@ -137,7 +128,7 @@ object FlightsWithSplitsTable {
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
-
+  
   def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue]): TagOf[TableSection] = {
     val redListPassportHeading = "Red List Passports"
     val columns = List(
@@ -215,25 +206,6 @@ object FlightTableRow {
   type OriginMapperF = PortCode => VdomNode
 
   type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
-
-  sealed trait IndirectRedListPax {
-    val isEnabled: Boolean
-  }
-
-  sealed trait EnabledIndirectRedListPax extends IndirectRedListPax {
-    override val isEnabled: Boolean = true
-    val maybeCount: Option[Int]
-  }
-
-  case object NoIndirectRedListPax extends IndirectRedListPax {
-    override val isEnabled: Boolean = false
-  }
-
-  case class ApiIndirectRedListPax(maybeNationalities: Option[Map[Nationality, Int]]) extends EnabledIndirectRedListPax {
-    override val maybeCount: Option[Int] = maybeNationalities.map(_.values.sum)
-  }
-
-  case class NeboIndirectRedListPax(maybeCount: Option[Int]) extends EnabledIndirectRedListPax
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    maybePassengerInfoSummary: Option[PassengerInfoSummary],
