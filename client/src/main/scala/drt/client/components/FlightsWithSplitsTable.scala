@@ -128,7 +128,7 @@ object FlightsWithSplitsTable {
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
-  
+
   def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue]): TagOf[TableSection] = {
     val redListPassportHeading = "Red List Passports"
     val columns = List(
