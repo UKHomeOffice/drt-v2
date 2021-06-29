@@ -79,6 +79,8 @@ POST          /staff-movements                                                  
 DELETE        /staff-movements/:uuid                                                  controllers.Application.removeStaffMovements(uuid: java.util.UUID)
 
 # Feed import
+POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts()
+
 POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
 
 # Test related

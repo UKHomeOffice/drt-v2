@@ -4,13 +4,13 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.QueueStatusProviders.QueueStatusProvider
 import drt.shared.Queues.{Closed, Open, Queue, QueueFallbacks}
-import drt.shared.Terminals.{T2, T5, Terminal}
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import services.SDate
 import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
 import services.workloadcalculator.PaxLoadCalculator.Load
-import services.{AirportToCountry, SDate}
 
 import scala.collection.immutable.Map
 

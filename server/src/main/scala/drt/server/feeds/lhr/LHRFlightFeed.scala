@@ -6,7 +6,7 @@ import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.shared.FlightsApi.Flights
-import drt.shared.{FlightCode, LiveFeedSource}
+import drt.shared.LiveFeedSource
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
@@ -40,7 +40,7 @@ case class LHRLiveFlight(
   def flightId(): Int = {
     // flightcode,scheduled datetime and from port make the flight sufficiently unique for later parts of the pipeline
     // but we do not want to override the hashCode here because that would be surprising.
-    val s = flightCode.toString + scheduled.toString + from
+    val s = flightCode + scheduled.toString + from
     s.hashCode()
   }
 }

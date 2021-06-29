@@ -5,7 +5,7 @@ import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.model.headers.{BasicHttpCredentials, ModeledCustomHeader, ModeledCustomHeaderCompanion}
 import akka.http.scaladsl.model.{HttpRequest, _}
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.Materializer
 import drt.server.feeds.common.HttpClient
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}

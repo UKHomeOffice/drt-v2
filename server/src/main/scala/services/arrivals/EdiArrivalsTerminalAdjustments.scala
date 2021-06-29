@@ -6,8 +6,6 @@ import drt.shared.{ArrivalsDiff, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 
-import scala.collection.immutable
-
 case class EdiArrivalsTerminalAdjustments(historicFlightTerminalMap: Map[String, Map[String, Terminal]])
   extends ArrivalsAdjustmentsLike {
   val log: Logger = LoggerFactory.getLogger(getClass)

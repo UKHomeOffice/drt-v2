@@ -1,47 +1,31 @@
 package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.shared.{Nationality, RedList}
-import drt.shared.api.PassengerInfoSummary
-import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import drt.shared.{ApiIndirectRedListPax, RedList}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
 
 object NationalityFinderComponent {
-  def isRedListCountry(country: String): Boolean = redList.keys.exists(_.toLowerCase == country.toLowerCase)
+  def isRedListCountry(country: String): Boolean = RedList.countryToCode.keys.exists(_.toLowerCase == country.toLowerCase)
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
-  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FlightChart")
-    .render_P(p => {
-
-      val nats = p.ofInterest.map(n => p.passengerInfo.nationalities.getOrElse(n, 0)).sum
+  val component: Component[ApiIndirectRedListPax, Unit, Unit, CtorType.Props] = ScalaComponent.builder[ApiIndirectRedListPax]("FlightChart")
+    .render_P { props =>
       <.span(
-        if (nats > 0)
-          NationalityFinderChartComponent(
-            NationalityFinderChartComponent.Props(
-              p.passengerInfo.nationalities.filter {
-                case (nat, _) => p.ofInterest.toList.contains(nat)
-              },
-              <.span(^.className := "badge", nats)
+        props.maybeNationalities match {
+          case Some(nats) if nats.values.sum > 0 =>
+            NationalityFinderChartComponent(
+              NationalityFinderChartComponent.Props(nats, <.span(^.className := "badge", nats.values.sum))
             )
-          )
-        else
-          <.span(nats),
-
+          case Some(_) => 0
+          case None => EmptyVdom
+        }
       )
-    })
+    }
     .build
 
-  def apply(props: Props): VdomElement = component(props)
-
-  case class Props(
-                    ofInterest: Iterable[Nationality],
-                    passengerInfo: PassengerInfoSummary
-                  )
-
-  val redList: Map[String, String] = RedList.countryToCode
-
-  val redListNats: Iterable[Nationality] = redList.values.map(Nationality(_))
+  def apply(apiIndirectRedListPax: ApiIndirectRedListPax): VdomElement = component(apiIndirectRedListPax)
 
 }
 

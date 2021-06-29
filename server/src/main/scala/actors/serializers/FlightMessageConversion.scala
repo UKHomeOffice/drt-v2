@@ -11,8 +11,6 @@ import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage._
 import services.SDate
 
-import scala.util.{Success, Try}
-
 object FlightMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass.toString)
 
@@ -118,22 +116,6 @@ object FlightMessageConversion {
     )
   }
 
-  def splitNationalitiesToMessage(ptqc: ApiPaxTypeAndQueueCount): Seq[SplitNationalityCountMessage] = ptqc
-    .nationalities
-    .map(_.map {
-      case (nat, count) => SplitNationalityCountMessage(Option(nat.code), Option(count))
-    })
-    .getOrElse(Seq())
-    .toSeq
-
-  def splitAgesToMessage(ptqc: ApiPaxTypeAndQueueCount): Seq[SplitAgeCountMessage] = ptqc
-    .ages
-    .map(_.map {
-      case (age, count) => SplitAgeCountMessage(Option(age.years), Option(count))
-    })
-    .getOrElse(Seq())
-    .toSeq
-
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
     FlightMessage(
       operator = apiFlight.Operator.map(_.code),
@@ -150,27 +132,18 @@ object FlightMessageConversion {
       iCAO = Option(apiFlight.flightCodeString),
       iATA = Option(apiFlight.flightCodeString),
       origin = Option(apiFlight.Origin.toString),
-      pcpTime = apiFlight.PcpTime.filter(_ != 0),
+      pcpTime = apiFlight.PcpTime,
       feedSources = apiFlight.FeedSources.map(_.toString).toSeq,
-      scheduled = Option(apiFlight.Scheduled).filter(_ != 0),
-      estimated = apiFlight.Estimated.filter(_ != 0),
-      touchdown = apiFlight.Actual.filter(_ != 0),
-      estimatedChox = apiFlight.EstimatedChox.filter(_ != 0),
-      actualChox = apiFlight.ActualChox.filter(_ != 0),
+      scheduled = Option(apiFlight.Scheduled),
+      estimated = apiFlight.Estimated,
+      touchdown = apiFlight.Actual,
+      estimatedChox = apiFlight.EstimatedChox,
+      actualChox = apiFlight.ActualChox,
       carrierScheduled = apiFlight.CarrierScheduled,
-      apiPax = apiFlight.ApiPax
+      apiPax = apiFlight.ApiPax,
+      redListPax = apiFlight.RedListPax,
+      scheduledDeparture = apiFlight.ScheduledDeparture
     )
-  }
-
-  def millisOptionFromArrivalDateString(datetime: String): Option[Long] = datetime match {
-    case "" => None
-    case _ =>
-      Try {
-        SDate.parseString(datetime)
-      } match {
-        case Success(MilliDate(millis)) => Some(millis)
-        case _ => None
-      }
   }
 
   def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
@@ -197,13 +170,10 @@ object FlightMessageConversion {
       Scheduled = flightMessage.scheduled.getOrElse(0L),
       FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet,
       CarrierScheduled = flightMessage.carrierScheduled,
-      ApiPax = flightMessage.apiPax
+      ApiPax = flightMessage.apiPax,
+      RedListPax = flightMessage.redListPax,
+      ScheduledDeparture = flightMessage.scheduledDeparture,
     )
-  }
-
-  def apiFlightDateTime(millisOption: Option[Long]): String = millisOption match {
-    case Some(millis: Long) => SDate.jodaSDateToIsoString(SDate(millis))
-    case _ => ""
   }
 
   def flightsToMessage(flights: Iterable[ApiFlightWithSplits]): FlightsWithSplitsMessage =

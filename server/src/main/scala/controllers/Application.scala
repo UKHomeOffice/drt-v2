@@ -121,6 +121,8 @@ object DrtActorSystem extends AirportConfProvider {
 
 }
 
+trait WithDrtSystemInterface
+
 @Singleton
 class Application @Inject()(implicit val config: Configuration, env: Environment)
   extends InjectedController

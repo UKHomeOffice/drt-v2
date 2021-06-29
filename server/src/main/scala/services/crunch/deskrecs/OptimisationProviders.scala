@@ -44,7 +44,7 @@ object OptimisationProviders {
 
   def liveManifestsProvider(manifestsActor: ActorRef)
                            (crunchRequest: CrunchRequest)
-                           (implicit timeout: Timeout, ec: ExecutionContext): Future[Source[VoyageManifests, NotUsed]] =
+                           (implicit timeout: Timeout): Future[Source[VoyageManifests, NotUsed]] =
     manifestsActor
       .ask(GetStateForDateRange(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
       .mapTo[Source[VoyageManifests, NotUsed]]

@@ -12,7 +12,6 @@ import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone
 import services.metrics.{Metrics, StageTimer}
 
 import scala.collection.immutable.SortedMap
-import scala.language.postfixOps
 
 sealed trait ArrivalsSourceType
 

@@ -1,6 +1,6 @@
 package services.crunch
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
@@ -74,7 +74,7 @@ object CrunchSystem {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply[FR](props: CrunchProps[FR])
-               (implicit materializer: Materializer, system: ActorSystem, ec: ExecutionContext): CrunchSystem[FR] = {
+               (implicit materializer: Materializer, ec: ExecutionContext): CrunchSystem[FR] = {
 
     val shiftsSource: Source[ShiftAssignments, SourceQueueWithComplete[ShiftAssignments]] = Source.queue[ShiftAssignments](10, OverflowStrategy.backpressure)
     val fixedPointsSource: Source[FixedPointAssignments, SourceQueueWithComplete[FixedPointAssignments]] = Source.queue[FixedPointAssignments](10, OverflowStrategy.backpressure)
