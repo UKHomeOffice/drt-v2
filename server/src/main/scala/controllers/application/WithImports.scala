@@ -15,18 +15,18 @@ import play.api.libs.json.Json._
 import play.api.mvc._
 import server.feeds.StoreFeedImportArrivals
 import spray.json._
-import uk.gov.homeoffice.drt.auth.Roles.PortFeedUpload
+import uk.gov.homeoffice.drt.auth.Roles.{NeboUpload, PortFeedUpload}
 
 import java.nio.file.Paths
 import java.util.UUID
 import scala.concurrent.Future
-import scala.util.{Success, Try}
+import scala.util.Try
 
 
 trait WithImports {
   self: Application =>
 
-  def feedImportRedListCounts(): Action[AnyContent] = authByRole(PortFeedUpload) {
+  def feedImportRedListCounts(): Action[AnyContent] = authByRole(NeboUpload) {
     Action.async {
       implicit request =>
         log.info(s"Received a request to import red list counts")
