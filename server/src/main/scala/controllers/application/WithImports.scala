@@ -27,30 +27,28 @@ trait WithImports {
   self: Application =>
 
   def feedImportRedListCounts(): Action[AnyContent] = authByRole(NeboUpload) {
-    Action.async {
-      implicit request =>
-        log.info(s"Received a request to import red list counts")
-        request.body.asJson match {
-          case Some(content) =>
-            log.info(s"Received red list pax data")
-            Try(content.toString.parseJson.convertTo[RedListCounts])
-              .map(redListCounts => ctrl.flightsActor
-                .ask(redListCounts)
-                .map(_ => Accepted(toJson(ApiResponseBody(s"${redListCounts.counts.size} red list records imported"))))
-              ).getOrElse(Future(BadRequest("Failed to parse json")))
-          case None => Future(BadRequest("No content"))
-        }
+    Action.async { request =>
+      log.info(s"Received a request to import red list counts")
+      request.body.asJson match {
+        case Some(content) =>
+          log.info(s"Received red list pax data")
+          Try(content.toString.parseJson.convertTo[RedListCounts])
+            .map(redListCounts => ctrl.flightsActor
+              .ask(redListCounts)
+              .map(_ => Accepted(toJson(ApiResponseBody(s"${redListCounts.counts.size} red list records imported"))))
+            ).getOrElse(Future.successful(BadRequest("Failed to parse json")))
+        case None => Future.successful(BadRequest("No content"))
+      }
     }
   }
 
   def feedImport(feedType: String, portCodeString: String): Action[Files.TemporaryFile] = authByRole(PortFeedUpload) {
-    Action.async(parse.temporaryFile) { request: Request[Files.TemporaryFile] =>
+    Action.async(parse.temporaryFile) { request =>
       val portCode = PortCode(portCodeString)
 
       val response = if (!(portCode == airportConfig.portCode)) {
         BadRequest(toJson(ApiResponseBody("Wrong port code")))
       } else {
-
         if (feedType == "forecast") {
           val filePath = s"/tmp/${UUID.randomUUID().toString}"
           request.body.moveTo(Paths.get(filePath), replace = true)
