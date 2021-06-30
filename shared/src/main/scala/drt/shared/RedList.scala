@@ -24,18 +24,24 @@ object RedList {
     "Colombia" -> "COL",
     "Costa Rica" -> "CRI",
     "Democratic Republic of the Congo" -> "COD",
+    "Dominican Republic" -> "DOM",
     "Ecuador" -> "ECU",
     "Egypt" -> "EGY",
+    "Eritrea" -> "ERI",
     "Eswatini" -> "SWZ",
     "Ethiopia" -> "ETH",
     "French Guiana" -> "GUF",
     "Guyana" -> "GUY",
+    "Haiti" -> "HTI",
     "India" -> "IND",
     "Kenya" -> "KEN",
     "Lesotho" -> "LSO",
     "Malawi" -> "MWI",
+    "Maldives" -> "MDV",
+    "Mongolia" -> "MNG",
     "Mozambique" -> "MOZ",
     "Namibia" -> "NAM",
+    "Nepal" -> "NPL",
     "Oman" -> "OMN",
     "Pakistan" -> "PAK",
     "Panama" -> "PAN",
@@ -51,8 +57,10 @@ object RedList {
     "Sudan" -> "SDN",
     "Suriname" -> "SUR",
     "Tanzania" -> "TZA",
+    "Tunisia" -> "TUN",
     "Turkey" -> "TUR",
     "Trinidad and Tobago" -> "TTO",
+    "Uganda" -> "UGA",
     "United Arab Emirates" -> "ARE",
     "Uruguay" -> "URY",
     "Venezuela" -> "VEN",
@@ -106,8 +114,8 @@ object IndirectRedListPax {
   def apply(displayRedListInfo: Boolean, portCode: PortCode, flightWithSplits: ApiFlightWithSplits, maybePassengerInfo: Option[PassengerInfoSummary]): IndirectRedListPax =
     (displayRedListInfo, portCode) match {
       case (false, _) => NoIndirectRedListPax
-      case (true, PortCode("LHR")) =>
-        NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
+//      case (true, PortCode("LHR")) =>
+//        NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
       case (true, _) =>
         val maybeNats = maybePassengerInfo.map(_.nationalities.filter {
           case (nat, _) => redListNats.toList.contains(nat)
