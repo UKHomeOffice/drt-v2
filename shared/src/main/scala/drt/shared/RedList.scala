@@ -112,14 +112,16 @@ sealed trait IndirectRedListPax {
 }
 
 object IndirectRedListPax {
-  val log: Logger = LoggerFactory.getLogger(getClass)
   def apply(displayRedListInfo: Boolean, portCode: PortCode, flightWithSplits: ApiFlightWithSplits, maybePassengerInfo: Option[PassengerInfoSummary]): IndirectRedListPax =
     (displayRedListInfo, portCode) match {
-      case (false, _) => NoIndirectRedListPax
+      case (false, _) =>
+        println(s"Not checking red list stuff")
+        NoIndirectRedListPax
       case (true, PortCode("LHR")) =>
-        log.info(s"checking ${flightWithSplits.apiFlight.flightCode}: ${flightWithSplits.apiFlight.RedListPax}")
+        println(s"checking LHR ${flightWithSplits.apiFlight.flightCode}: ${flightWithSplits.apiFlight.RedListPax}")
         NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
       case (true, _) =>
+        println(s"checking non-LHR ${flightWithSplits.apiFlight.flightCode}")
         val maybeNats = maybePassengerInfo.map(_.nationalities.filter {
           case (nat, _) => redListNats.toList.contains(nat)
         })
