@@ -1,6 +1,5 @@
 package drt.shared
 
-import com.sun.org.slf4j.internal.{Logger, LoggerFactory}
 import drt.shared.Terminals.{T2, T5, Terminal}
 import drt.shared.api.PassengerInfoSummary
 
