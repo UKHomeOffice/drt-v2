@@ -33,10 +33,15 @@ trait WithImports {
         case Some(content) =>
           log.info(s"Received red list pax data")
           Try(content.toString.parseJson.convertTo[RedListCounts])
-            .map(redListCounts => ctrl.flightsActor
-              .ask(redListCounts)
-              .map(_ => Accepted(toJson(ApiResponseBody(s"${redListCounts.counts.size} red list records imported"))))
-            ).getOrElse(Future.successful(BadRequest("Failed to parse json")))
+            .map { redListCounts =>
+              log.info(s"Sending ${redListCounts.counts.size} red list counts to the flights actor. $redListCounts")
+              ctrl.flightsActor
+                .ask(redListCounts)
+                .map { _ =>
+                  log.info(s"Got ack from flights actor with red list stuff")
+                  Accepted(toJson(ApiResponseBody(s"${redListCounts.counts.size} red list records imported")))
+                }
+            }.getOrElse(Future.successful(BadRequest("Failed to parse json")))
         case None => Future.successful(BadRequest("No content"))
       }
     }

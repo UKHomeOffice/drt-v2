@@ -1,5 +1,6 @@
 package drt.shared
 
+import com.sun.org.slf4j.internal.{Logger, LoggerFactory}
 import drt.shared.Terminals.{T2, T5, Terminal}
 import drt.shared.api.PassengerInfoSummary
 
@@ -111,10 +112,12 @@ sealed trait IndirectRedListPax {
 }
 
 object IndirectRedListPax {
+  val log: Logger = LoggerFactory.getLogger(getClass)
   def apply(displayRedListInfo: Boolean, portCode: PortCode, flightWithSplits: ApiFlightWithSplits, maybePassengerInfo: Option[PassengerInfoSummary]): IndirectRedListPax =
     (displayRedListInfo, portCode) match {
       case (false, _) => NoIndirectRedListPax
       case (true, PortCode("LHR")) =>
+        log.info(s"checking ${flightWithSplits.apiFlight.flightCode}: ${flightWithSplits.apiFlight.RedListPax}")
         NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
       case (true, _) =>
         val maybeNats = maybePassengerInfo.map(_.nationalities.filter {
