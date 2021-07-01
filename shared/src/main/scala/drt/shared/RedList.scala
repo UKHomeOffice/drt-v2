@@ -114,8 +114,8 @@ object IndirectRedListPax {
   def apply(displayRedListInfo: Boolean, portCode: PortCode, flightWithSplits: ApiFlightWithSplits, maybePassengerInfo: Option[PassengerInfoSummary]): IndirectRedListPax =
     (displayRedListInfo, portCode) match {
       case (false, _) => NoIndirectRedListPax
-//      case (true, PortCode("LHR")) =>
-//        NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
+      case (true, PortCode("LHR")) =>
+        NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
       case (true, _) =>
         val maybeNats = maybePassengerInfo.map(_.nationalities.filter {
           case (nat, _) => redListNats.toList.contains(nat)
