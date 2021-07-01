@@ -593,7 +593,7 @@ case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: 
             case Some(fws) if fws.apiFlight == incomingArrival =>
               None
             case Some(fws) =>
-              Some(fws.copy(apiFlight = incomingArrival, lastUpdated = Option(nowMillis)))
+              Some(fws.copy(apiFlight = incomingArrival.copy(RedListPax = fws.apiFlight.RedListPax), lastUpdated = Option(nowMillis)))
             case None =>
               Some(ApiFlightWithSplits(incomingArrival, Set(), Option(nowMillis)))
           }
