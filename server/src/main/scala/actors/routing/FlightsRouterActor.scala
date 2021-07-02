@@ -3,8 +3,8 @@ package actors.routing
 import actors.DateRange
 import actors.PartitionedPortStateActor._
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
-import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.pattern.{ask, pipe}
