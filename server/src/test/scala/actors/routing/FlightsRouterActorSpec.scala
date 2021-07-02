@@ -13,7 +13,7 @@ import drt.shared.{ArrivalsDiff, PortCode}
 import services.SDate
 import services.crunch.CrunchTestLike
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
 
 class FlightsRouterActorSpec extends CrunchTestLike {
@@ -25,6 +25,16 @@ class FlightsRouterActorSpec extends CrunchTestLike {
     val scheduled = "2021-06-24T10:25"
     val redListPax = 10
     val redListPax2 = 15
+
+    def eventualFlights: Future[FlightsWithSplits] = {
+      val request = GetFlights(now.getLocalLastMidnight.millisSinceEpoch, now.getLocalNextMidnight.millisSinceEpoch)
+      (flightsRouter ? request)
+        .collect {
+          case source: Source[FlightsWithSplits, NotUsed] => source
+        }
+        .flatMap(_.runFold(FlightsWithSplits.empty)(_ ++ _))
+    }
+
     "Add red list pax to an existing arrival" in {
       val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
       Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrival), Seq()), 1.second)
@@ -47,12 +57,28 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         RedListCount("BA0001", PortCode("LHR"), SDate(scheduled), redListPax),
         RedListCount("EZT1234", PortCode("LHR"), SDate(scheduled2), redListPax2),
       )), 1.second)
-      val eventualFlights = (flightsRouter ? GetFlights(now.getLocalLastMidnight.millisSinceEpoch, now.getLocalNextMidnight.millisSinceEpoch)).flatMap {
-        case source: Source[FlightsWithSplits, NotUsed] => source.runFold(FlightsWithSplits.empty)(_ ++ _)
-      }
       val arrivals = Await.result(eventualFlights, 1.second).flights.values.map(_.apiFlight).toList
 
       arrivals.contains(arrivalT1.copy(RedListPax = Option(redListPax))) && arrivals.contains(arrivalT2.copy(RedListPax = Option(redListPax2)))
+    }
+
+    "Retain red list pax counts after updating an arrival" in {
+      val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
+      val redListPax = 10
+
+      Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrivalT1), Seq()), 1.second)
+      Await.ready(flightsRouter ? RedListCounts(Seq(
+        RedListCount("BA0001", PortCode("LHR"), SDate(scheduled), redListPax),
+      )), 1.second)
+
+      val updatedArrival = arrivalT1.copy(Estimated = Option(10L))
+      Await.ready(flightsRouter ? ArrivalsDiff(Iterable(updatedArrival), Seq()), 1.second)
+
+      val arrivals = Await.result(eventualFlights, 1.second).flights.values.map(_.apiFlight).toList
+
+      println(s"arrivals: $arrivals")
+
+      arrivals.contains(updatedArrival.copy(RedListPax = Option(redListPax)))
     }
   }
 }
