@@ -13,8 +13,8 @@ import drt.shared.{ArrivalsDiff, PortCode}
 import services.SDate
 import services.crunch.CrunchTestLike
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 class FlightsRouterActorSpec extends CrunchTestLike {
   val updatesProbe: TestProbe = TestProbe("updates")

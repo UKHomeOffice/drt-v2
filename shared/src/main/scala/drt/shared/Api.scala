@@ -593,8 +593,8 @@ case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: 
             case Some(existingFws) if existingFws.apiFlight == incomingArrival =>
               None
             case Some(existingFws) =>
-              val updatedArrival = incomingArrival.copy(RedListPax = existingFws.apiFlight.RedListPax)
-              Some(existingFws.copy(apiFlight = updatedArrival, lastUpdated = Option(nowMillis)))
+              val incomingWithRedListPaxRetained = incomingArrival.copy(RedListPax = existingFws.apiFlight.RedListPax)
+              Some(existingFws.copy(apiFlight = incomingWithRedListPaxRetained, lastUpdated = Option(nowMillis)))
             case None =>
               Some(ApiFlightWithSplits(incomingArrival, Set(), Option(nowMillis)))
           }
