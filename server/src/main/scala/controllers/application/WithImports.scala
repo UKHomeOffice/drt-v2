@@ -31,7 +31,7 @@ trait WithImports {
       log.info(s"Received a request to import red list counts")
       request.body.asJson match {
         case Some(content) =>
-          log.info(s"Received red list pax data")
+          log.info(s"Received red list pax data: $content")
           Try(content.toString.parseJson.convertTo[RedListCounts])
             .map { redListCounts =>
               log.info(s"Sending ${redListCounts.counts.size} red list counts to the flights actor. $redListCounts")
