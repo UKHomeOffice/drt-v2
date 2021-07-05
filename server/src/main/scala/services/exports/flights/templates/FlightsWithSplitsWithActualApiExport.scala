@@ -1,10 +1,15 @@
 package services.exports.flights.templates
 
-import drt.shared.ApiFlightWithSplits
+import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
 import drt.shared.Queues.Queue
-import org.joda.time.DateTimeZone
+import drt.shared.Terminals.Terminal
+import drt.shared.{ApiFlightWithSplits, SDateLike}
 
-case class FlightWithSplitsWithActualApiExport(override val timeZone: DateTimeZone) extends FlightWithSplitsExport {
+
+case class FlightsWithSplitsWithActualApiExport(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsExport {
+
+  val request: FlightsRequest = GetFlightsForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal)
+
   def flightWithSplitsHeadingsPlusActualApi(queueNames: Seq[Queue]): String = arrivalWithSplitsHeadings(queueNames) + "," + actualApiHeadings.mkString(",")
 
   override val headings: String = flightWithSplitsHeadingsPlusActualApi(queueNames)

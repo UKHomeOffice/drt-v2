@@ -5,9 +5,9 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.T1
 import drt.shared._
+import services.SDate
 import services.crunch.CrunchTestLike
-import services.exports.flights.templates.{CedatFlightExport, FlightWithSplitsWithActualApiExport, FlightWithSplitsWithoutActualApiExport}
-import services.graphstages.Crunch
+import services.exports.flights.templates.{CedatFlightsExport, FlightsWithSplitsWithActualApiExport, FlightsWithSplitsWithoutActualApiExport}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -195,9 +195,9 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   private val flightHeadings = """IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax"""
   private val apiHeadings = """Invalid API,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track"""
 
-  private val withoutActualApiExport: FlightWithSplitsWithoutActualApiExport = FlightWithSplitsWithoutActualApiExport(Crunch.europeLondonTimeZone)
-  private val withActualApiExport: FlightWithSplitsWithActualApiExport = FlightWithSplitsWithActualApiExport(Crunch.europeLondonTimeZone)
-  private val cedatFlightExport = CedatFlightExport(Crunch.europeLondonTimeZone)
+  private val withoutActualApiExport: FlightsWithSplitsWithoutActualApiExport = FlightsWithSplitsWithoutActualApiExport(SDate("2017-01-01"), SDate("2017-01-01"), T1)
+  private val withActualApiExport: FlightsWithSplitsWithActualApiExport = FlightsWithSplitsWithActualApiExport(SDate("2017-01-01"), SDate("2017-01-01"), T1)
+  private val cedatFlightExport = CedatFlightsExport(SDate("2017-01-01"), SDate("2017-01-01"), T1)
 
   "Given a list of arrivals with splits we should get back a CSV of arrival data using live feed numbers when available" >> {
 

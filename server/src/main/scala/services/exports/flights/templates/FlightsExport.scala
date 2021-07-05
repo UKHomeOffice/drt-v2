@@ -1,5 +1,6 @@
 package services.exports.flights.templates
 
+import actors.PartitionedPortStateActor.FlightsRequest
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -7,20 +8,30 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
+import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
-import drt.shared.{ApiFlightWithSplits, CodeShares, PaxTypesAndQueues}
+import drt.shared.{ApiFlightWithSplits, CodeShares, PaxTypesAndQueues, SDateLike}
 import org.joda.time.DateTimeZone
 import services.SDate
 import services.exports.Exports
+import services.graphstages.Crunch
 
-trait FlightExport {
+trait FlightsExport {
 
-  val timeZone: DateTimeZone
+  val timeZone: DateTimeZone = Crunch.europeLondonTimeZone
 
   def headings: String
 
   def rowValues(fws: ApiFlightWithSplits): Seq[String]
+
+  def start: SDateLike
+
+  def end: SDateLike
+
+  def terminal: Terminal
+
+  val request: FlightsRequest
 
   val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
 

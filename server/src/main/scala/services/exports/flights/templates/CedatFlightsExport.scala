@@ -1,14 +1,18 @@
 package services.exports.flights.templates
 
+import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSource
+import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
-import drt.shared.{ApiFlightWithSplits, Queues}
-import org.joda.time.DateTimeZone
+import drt.shared.{ApiFlightWithSplits, Queues, SDateLike}
 import services.exports.Exports
 
-case class CedatFlightExport(override val timeZone: DateTimeZone) extends FlightExport {
+
+case class CedatFlightsExport(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsExport {
+
+  val request: FlightsRequest = GetFlightsForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal)
 
   val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
 
