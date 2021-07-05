@@ -8,7 +8,7 @@ import drt.shared.{ApiFlightWithSplits, Queues}
 import org.joda.time.DateTimeZone
 import services.exports.Exports
 
-case class CedatFlightExportTemplate(override val timeZone: DateTimeZone) extends FlightExportTemplate {
+case class CedatFlightExport(override val timeZone: DateTimeZone) extends FlightExport {
 
   val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
 

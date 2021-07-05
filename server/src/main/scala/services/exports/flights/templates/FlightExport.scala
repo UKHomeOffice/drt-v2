@@ -1,26 +1,30 @@
 package services.exports.flights.templates
 
+import akka.NotUsed
+import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
+import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
-import drt.shared.{ApiFlightWithSplits, PaxTypesAndQueues}
+import drt.shared.{ApiFlightWithSplits, CodeShares, PaxTypesAndQueues}
 import org.joda.time.DateTimeZone
 import services.SDate
 import services.exports.Exports
 
-trait FlightExportTemplate {
+trait FlightExport {
 
   val timeZone: DateTimeZone
-
-  val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
 
   def headings: String
 
   def rowValues(fws: ApiFlightWithSplits): Seq[String]
 
-  def row(fws: ApiFlightWithSplits): String = rowValues(fws).mkString(",")
+  val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
+
+  def flightToCsvRow(fws: ApiFlightWithSplits): String = rowValues(fws).mkString(",")
 
   def millisToDateStringFn: MillisSinceEpoch => String = SDate.millisToLocalIsoDateOnly(timeZone)
 
@@ -43,5 +47,24 @@ trait FlightExportTemplate {
   def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
     headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
       .map(n => Math.round(n).toDouble)
+
+  def csvStream(flightsStream: Source[FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
+    flightsStream
+      .map(fws => fwsToCsv(fws, flightToCsvRow))
+      .prepend(Source(List(headings + "\n")))
+
+
+  def fwsToCsv(fws: FlightsWithSplits, csvRowFn: ApiFlightWithSplits => String): String =
+    uniqueArrivalsWithCodeShares(fws.flights.values.toSeq)
+      .sortBy {
+        case (fws, _) => (fws.apiFlight.PcpTime, fws.apiFlight.VoyageNumber.numeric, fws.apiFlight.Origin.iata)
+      }
+      .map {
+        case (fws, _) => csvRowFn(fws) + "\n"
+      }
+      .mkString
+
+  val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares
+    .uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))
 
 }

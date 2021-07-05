@@ -3,6 +3,7 @@ package controllers.application.exports
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared.{PortCode, SDateLike}
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
@@ -30,11 +31,11 @@ object CsvFileStreaming {
 
   def makeFileName(subject: String,
                    terminalName: Terminal,
-                   startPit: SDateLike,
-                   endPit: SDateLike,
+                   start: SDateLike,
+                   end: SDateLike,
                    portCode: PortCode): String = {
-    val startLocal = SDate(startPit, Crunch.europeLondonTimeZone)
-    val endLocal = SDate(endPit, Crunch.europeLondonTimeZone)
+    val startLocal = SDate(start, Crunch.europeLondonTimeZone)
+    val endLocal = SDate(end, Crunch.europeLondonTimeZone)
     val endDate = if (startLocal.daysBetweenInclusive(endLocal) > 1)
       f"-to-${endLocal.getFullYear()}-${endLocal.getMonth()}%02d-${endLocal.getDate()}%02d"
     else ""
