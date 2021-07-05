@@ -27,15 +27,6 @@ import scala.util.{Failure, Success, Try}
 trait WithFlightsExport {
   self: Application =>
 
-  def csvTemplateForUser(user: LoggedInUser): (SDateLike, SDateLike, Terminal) => FlightsExport =
-    (start, end, terminal) =>
-      if (user.hasRole(CedatStaff))
-        CedatFlightsExport(start, end, terminal)
-      else if (user.hasRole(ApiView))
-        FlightsWithSplitsWithActualApiExport(start, end, terminal)
-      else
-        FlightsWithSplitsWithoutActualApiExport(start, end, terminal)
-
   def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDateString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {
     Action.async {
       request =>
@@ -44,26 +35,10 @@ trait WithFlightsExport {
           case Some(localDate) =>
             val start = SDate(localDate)
             val end = start.addDays(1).addMinutes(-1)
-            val export = csvTemplateForUser(user)(start, end, Terminal(terminalName))
+            val export = exportForUser(user)(start, end, Terminal(terminalName))
             flightsRequestToCsv(pointInTime, export)
           case _ =>
             Future(BadRequest("Invalid date format for export day."))
-        }
-    }
-  }
-
-  private def flightsRequestToCsv(pointInTime: MillisSinceEpoch, export: FlightsExport):
-  Future[Result] = {
-    val pitRequest = PointInTimeQuery(pointInTime, export.request)
-    ctrl.flightsActor.ask(pitRequest).mapTo[Source[FlightsWithSplits, NotUsed]].map {
-      flightsStream =>
-        val csvStream = export.csvStream(flightsStream)
-        val fileName = makeFileName("flights", export.terminal, export.start, export.end, airportConfig.portCode)
-        Try(sourceToCsvResponse(csvStream, fileName)) match {
-          case Success(value) => value
-          case Failure(t) =>
-            log.error("Failed to get CSV export", t)
-            BadRequest("Failed to get CSV export")
         }
     }
   }
@@ -78,13 +53,37 @@ trait WithFlightsExport {
           case (Some(start), Some(end)) =>
             val startDate = SDate(start)
             val endDate = SDate(end).addDays(1).addMinutes(-1)
-            val export = csvTemplateForUser(user)(startDate, endDate, Terminal(terminalName))
+            val export = exportForUser(user)(startDate, endDate, Terminal(terminalName))
             flightsRequestToCsv(now().millisSinceEpoch, export)
           case _ =>
             Future(BadRequest("Invalid date format for start or end date"))
         }
     }
   }
+
+  private def flightsRequestToCsv(pointInTime: MillisSinceEpoch, export: FlightsExport): Future[Result] = {
+    val pitRequest = PointInTimeQuery(pointInTime, export.request)
+    ctrl.flightsActor.ask(pitRequest).mapTo[Source[FlightsWithSplits, NotUsed]].map {
+      flightsStream =>
+        val csvStream = export.csvStream(flightsStream)
+        val fileName = makeFileName("flights", export.terminal, export.start, export.end, airportConfig.portCode)
+        Try(sourceToCsvResponse(csvStream, fileName)) match {
+          case Success(value) => value
+          case Failure(t) =>
+            log.error("Failed to get CSV export", t)
+            BadRequest("Failed to get CSV export")
+        }
+    }
+  }
+
+  private def exportForUser(user: LoggedInUser): (SDateLike, SDateLike, Terminal) => FlightsExport =
+    (start, end, terminal) =>
+      if (user.hasRole(CedatStaff))
+        CedatFlightsExport(start, end, terminal)
+      else if (user.hasRole(ApiView))
+        FlightsWithSplitsWithActualApiExport(start, end, terminal)
+      else
+        FlightsWithSplitsWithoutActualApiExport(start, end, terminal)
 
   def exportArrivalsFromFeed(terminalString: String,
                              startPit: MillisSinceEpoch,
@@ -111,11 +110,7 @@ trait WithFlightsExport {
         implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
 
         val periodString = if (numberOfDays > 1)
-          s"${
-            startDate.getLocalLastMidnight.toISODateOnly
-          }-to-${
-            SDate(endPit).getLocalLastMidnight.toISODateOnly
-          }"
+          s"${startDate.getLocalLastMidnight.toISODateOnly}-to-${SDate(endPit).getLocalLastMidnight.toISODateOnly}"
         else
           startDate.getLocalLastMidnight.toISODateOnly
 
@@ -133,6 +128,4 @@ trait WithFlightsExport {
         NotFound(s"Unknown feed source $feedSourceString")
     })
   }
-
 }
-
