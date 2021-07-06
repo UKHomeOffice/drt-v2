@@ -6,8 +6,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared.{ApiFlightWithSplits, SDateLike}
 
 
-case class FlightsWithSplitsWithActualApiExport(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsExport {
-
+trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
   val request: FlightsRequest = GetFlightsForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal)
 
   def flightWithSplitsHeadingsPlusActualApi(queueNames: Seq[Queue]): String = arrivalWithSplitsHeadings(queueNames) + "," + actualApiHeadings.mkString(",")
@@ -17,3 +16,6 @@ case class FlightsWithSplitsWithActualApiExport(start: SDateLike, end: SDateLike
   override def rowValues(fws: ApiFlightWithSplits): Seq[String] = (flightWithSplitsToCsvRow(fws) :::
     actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList).map(s => s"$s")
 }
+
+case class FlightsWithSplitsWithActualApiExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithActualApiExport
+

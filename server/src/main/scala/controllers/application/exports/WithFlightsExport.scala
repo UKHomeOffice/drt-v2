@@ -17,7 +17,7 @@ import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
 import services.exports.flights.ArrivalFeedExport
-import services.exports.flights.templates.{CedatFlightsExport, FlightsExport, FlightsWithSplitsWithActualApiExport, FlightsWithSplitsWithoutActualApiExport}
+import services.exports.flights.templates.{CedatFlightsExport, FlightsExport, FlightsWithSplitsWithActualApiExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExport}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, CedatStaff}
 
@@ -35,7 +35,7 @@ trait WithFlightsExport {
           case Some(localDate) =>
             val start = SDate(localDate)
             val end = start.addDays(1).addMinutes(-1)
-            val export = exportForUser(user)(start, end, Terminal(terminalName))
+            val export = exportForUser(user, airportConfig.portCode)(start, end, Terminal(terminalName))
             flightsRequestToCsv(pointInTime, export)
           case _ =>
             Future(BadRequest("Invalid date format for export day."))
@@ -53,7 +53,7 @@ trait WithFlightsExport {
           case (Some(start), Some(end)) =>
             val startDate = SDate(start)
             val endDate = SDate(end).addDays(1).addMinutes(-1)
-            val export = exportForUser(user)(startDate, endDate, Terminal(terminalName))
+            val export = exportForUser(user, airportConfig.portCode)(startDate, endDate, Terminal(terminalName))
             flightsRequestToCsv(now().millisSinceEpoch, export)
           case _ =>
             Future(BadRequest("Invalid date format for start or end date"))
@@ -76,14 +76,15 @@ trait WithFlightsExport {
     }
   }
 
-  private def exportForUser(user: LoggedInUser): (SDateLike, SDateLike, Terminal) => FlightsExport =
+  private def exportForUser(user: LoggedInUser, portCode: PortCode): (SDateLike, SDateLike, Terminal) => FlightsExport =
     (start, end, terminal) =>
-      if (user.hasRole(CedatStaff))
-        CedatFlightsExport(start, end, terminal)
-      else if (user.hasRole(ApiView))
-        FlightsWithSplitsWithActualApiExport(start, end, terminal)
-      else
-        FlightsWithSplitsWithoutActualApiExport(start, end, terminal)
+      (user.hasRole(CedatStaff), user.hasRole(ApiView), portCode) match {
+        case (true, _, _) => CedatFlightsExport(start, end, terminal)
+        case (false, true, PortCode("LHR")) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
+        case (false, false, PortCode("LHR")) => FlightsWithSplitsWithoutActualApiExport(start, end, terminal)
+        case (false, true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
+        case (false, true, _) => FlightsWithSplitsWithoutActualApiExport(start, end, terminal)
+      }
 
   def exportArrivalsFromFeed(terminalString: String,
                              startPit: MillisSinceEpoch,

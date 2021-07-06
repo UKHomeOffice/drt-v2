@@ -60,20 +60,19 @@ trait FlightsExport {
       .map(n => Math.round(n).toDouble)
 
   def csvStream(flightsStream: Source[FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
-    flightsStream
-      .map(fws => fwsToCsv(fws, flightToCsvRow))
+    filterAndSort(flightsStream)
+      .map(fws => flightToCsvRow(fws))
       .prepend(Source(List(headings + "\n")))
 
-
-  def fwsToCsv(fws: FlightsWithSplits, csvRowFn: ApiFlightWithSplits => String): String =
-    uniqueArrivalsWithCodeShares(fws.flights.values.toSeq)
-      .sortBy {
-        case (fws, _) => (fws.apiFlight.PcpTime, fws.apiFlight.VoyageNumber.numeric, fws.apiFlight.Origin.iata)
-      }
-      .map {
-        case (fws, _) => csvRowFn(fws) + "\n"
-      }
-      .mkString
+  def filterAndSort(flightsStream: Source[FlightsWithSplits, NotUsed]): Source[ApiFlightWithSplits, NotUsed] =
+    flightsStream.mapConcat { flights =>
+      uniqueArrivalsWithCodeShares(flights.flights.values.toSeq)
+        .map(_._1)
+        .sortBy { fws =>
+          val arrival = fws.apiFlight
+          (arrival.PcpTime, arrival.VoyageNumber.numeric, arrival.Origin.iata)
+        }
+    }
 
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares
     .uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))
