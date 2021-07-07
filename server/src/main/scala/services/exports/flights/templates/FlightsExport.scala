@@ -61,7 +61,7 @@ trait FlightsExport {
 
   def csvStream(flightsStream: Source[FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
     filterAndSort(flightsStream)
-      .map(fws => flightToCsvRow(fws))
+      .map(fws => flightToCsvRow(fws) + "\n")
       .prepend(Source(List(headings + "\n")))
 
   def filterAndSort(flightsStream: Source[FlightsWithSplits, NotUsed]): Source[ApiFlightWithSplits, NotUsed] =

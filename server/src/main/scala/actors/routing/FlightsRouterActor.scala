@@ -3,8 +3,8 @@ package actors.routing
 import actors.DateRange
 import actors.PartitionedPortStateActor._
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
-import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.pattern.{ask, pipe}
@@ -19,7 +19,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.dates.UtcDate
-import services.SDate
+import services.{SDate, SourceUtils}
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.{ExecutionContext, Future}
@@ -59,11 +59,10 @@ object FlightsRouterActor {
 
     val queries = queryStream(dates)
 
+    val terminalDayLookup = flightsLookupByDay(maybePit)
+
     queries
-      .mapAsync(1) {
-        query =>
-          flightsLookupByDay(terminal, query.date, maybePit)
-      }
+      .mapAsync(1)(query => terminalDayLookup(query.date)(terminal))
       .map {
         case FlightsWithSplits(flights) =>
           FlightsWithSplits(flights.filter { case (_, fws) =>
@@ -73,6 +72,30 @@ object FlightsRouterActor {
           })
       }
   }
+
+  def multiTerminalFlightsByDaySource(flightsLookupByDayAndTerminal: FlightsLookup)
+                                     (start: SDateLike,
+                                      end: SDateLike,
+                                      terminals: Iterable[Terminal],
+                                      maybePit: Option[MillisSinceEpoch])
+                                     (implicit ec: ExecutionContext): Source[FlightsWithSplits, NotUsed] = {
+    val dates: Seq[UtcDate] = DateRange.utcDateRangeWithBuffer(2, 1)(start, end)
+
+    val terminalFlightsReducer = SourceUtils.reduceFutureIterables(terminals, reducer)
+    val flightsLookupByDay = flightsLookupByDayAndTerminal(maybePit)
+
+    Source(dates.toList)
+      .mapAsync(1)(d => terminalFlightsReducer(flightsLookupByDay(d)))
+  }
+
+  val reducer: Iterable[FlightsWithSplits] => FlightsWithSplits = (flights: Iterable[FlightsWithSplits]) =>
+    FlightsWithSplits(flights
+      .reduce(_ ++ _)
+      .flights.values.toList.sortBy { fws =>
+      val arrival = fws.apiFlight
+      (arrival.PcpTime, arrival.VoyageNumber.numeric, arrival.Origin.iata)
+    })
+
 
   def forwardRequestAndKillActor(killActor: ActorRef)
                                 (implicit ec: ExecutionContext, timeout: Timeout): (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] =

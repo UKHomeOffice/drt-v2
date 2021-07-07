@@ -34,15 +34,16 @@ trait FlightLookupsLike {
     requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[UpdatedMillis]
   }
 
-  def flightsByDayLookup(removalMessageCutOff: Option[FiniteDuration]): FlightsLookup = (terminal: Terminal, date: UtcDate, maybePit: Option[MillisSinceEpoch]) => {
-    val props = (removalMessageCutOff, maybePit) match {
-      case (None, None) => TerminalDayFlightActor.props(terminal, date, now)
-      case (Some(finiteDuration), None) => TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, now, finiteDuration)
-      case (_, Some(pointInTime)) => TerminalDayFlightActor.propsPointInTime(terminal, date, now, pointInTime)
+  def flightsByDayLookup(removalMessageCutOff: Option[FiniteDuration]): FlightsLookup =
+    (maybePit: Option[MillisSinceEpoch]) => (date: UtcDate) => (terminal: Terminal) => {
+      val props = (removalMessageCutOff, maybePit) match {
+        case (None, None) => TerminalDayFlightActor.props(terminal, date, now)
+        case (Some(finiteDuration), None) => TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, now, finiteDuration)
+        case (_, Some(pointInTime)) => TerminalDayFlightActor.propsPointInTime(terminal, date, now, pointInTime)
+      }
+      val actor = system.actorOf(props)
+      requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[FlightsWithSplits]
     }
-    val actor = system.actorOf(props)
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[FlightsWithSplits]
-  }
 
   def flightsActor: ActorRef
 

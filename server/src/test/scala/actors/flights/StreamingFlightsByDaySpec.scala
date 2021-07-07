@@ -72,7 +72,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     val flight0509Early = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T01:10Z", pcpDt = "2020-09-04T23:50Z", actPax = Option(100)), Set())
     val flight0609 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-06T12:00Z", pcpDt = "2020-09-06T12:00Z", actPax = Option(100)), Set())
 
-    val earlyOnTimeAndLateFlights = (_: Terminal, utcDate: UtcDate, _: Option[MillisSinceEpoch]) =>
+    val earlyOnTimeAndLateFlights = (_: Option[MillisSinceEpoch]) => (utcDate: UtcDate) => (_: Terminal) =>
       Future(Map(
         UtcDate(2020, 9, 1) -> FlightsWithSplits(Seq(flight0109)),
         UtcDate(2020, 9, 2) -> FlightsWithSplits(Seq(flight0209onTime, flight0209Late)),

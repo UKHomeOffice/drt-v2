@@ -1,28 +1,22 @@
 package services
 
 import akka.NotUsed
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Source
 
-import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
-import scala.math.Ordering
 
 object SourceUtils {
-  def flatMapIterableStreams[I1, I2, T, S](iterable1: Iterable[I1],
-                                           iterable2: Iterable[I2],
-                                           eventualSourceForIterables: (I1, I2) => Future[Source[T, NotUsed]],
-                                           transformFunc: immutable.Seq[T] => immutable.Seq[T])
-                                          (implicit mat: Materializer, ec: ExecutionContext): Source[T, NotUsed] = {
+  def applyFutureIterablesReducer[I1, I2, T](iterable1: Iterable[I1],
+                                             eventualForIterables: I1 => I2 => Future[T],
+                                             futureReducer: (I2 => Future[T]) => Future[T])
+                                            (implicit ec: ExecutionContext): Source[T, NotUsed] =
     Source(iterable1.toList)
-      .mapAsync(1) { d =>
-        Future.sequence(iterable2.map(eventualSourceForIterables(d, _)))
-          .flatMap { x: Iterable[Source[T, NotUsed]] =>
-            Source(x.to[immutable.Iterable])
-              .flatMapConcat(identity)
-              .runWith(Sink.seq).map(transformFunc)
-          }
-      }
-      .mapConcat(identity)
-  }
+      .mapAsync(1)(d => futureReducer(eventualForIterables(d)))
+
+  def reduceFutureIterables[T, I](iterable: Iterable[I], reducer: Iterable[T] => T)
+                                 (implicit ec: ExecutionContext): (I => Future[T]) => Future[T] =
+    (eventualForIterable: I => Future[T]) =>
+      Future
+        .sequence(iterable.map(eventualForIterable))
+        .map(reducer)
 }

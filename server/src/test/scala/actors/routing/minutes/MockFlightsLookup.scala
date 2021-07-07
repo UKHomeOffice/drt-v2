@@ -16,11 +16,10 @@ case class MockFlightsLookup() {
   var paramsLookup: List[(Terminal, UtcDate, Option[MillisSinceEpoch])] = List()
 
   def lookup(mockData: FlightsWithSplits = FlightsWithSplits.empty): FlightsLookup = {
-
     val byDay: Map[UtcDate, Map[UniqueArrival, ApiFlightWithSplits]] = mockData.flights.groupBy {
       case (_, fws) => SDate(fws.apiFlight.Scheduled).toUtcDate
     }
-    (t: Terminal, d: UtcDate, pit: Option[MillisSinceEpoch]) => {
+    (pit: Option[MillisSinceEpoch]) => (d: UtcDate) => (t: Terminal) => {
       paramsLookup = paramsLookup :+ ((t, d, pit))
       Future(FlightsWithSplits(byDay.getOrElse(d, Map())))
     }
