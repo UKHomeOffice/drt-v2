@@ -86,15 +86,19 @@ object FlightsRouterActor {
 
     Source(dates.toList)
       .mapAsync(1)(d => terminalFlightsReducer(flightsLookupByDay(d)))
+      .map(_.scheduledOrPcpWindow(start, end))
+      .filter(_.nonEmpty)
   }
 
-  val reducer: Iterable[FlightsWithSplits] => FlightsWithSplits = (flights: Iterable[FlightsWithSplits]) =>
-    FlightsWithSplits(flights
+  val reducer: Iterable[FlightsWithSplits] => FlightsWithSplits = (allFlightsWithSplits: Iterable[FlightsWithSplits]) => {
+    val reducedFlightsWithSplits = allFlightsWithSplits
       .reduce(_ ++ _)
       .flights.values.toList.sortBy { fws =>
       val arrival = fws.apiFlight
       (arrival.PcpTime, arrival.VoyageNumber.numeric, arrival.Origin.iata)
-    })
+    }
+    FlightsWithSplits(reducedFlightsWithSplits)
+  }
 
 
   def forwardRequestAndKillActor(killActor: ActorRef)

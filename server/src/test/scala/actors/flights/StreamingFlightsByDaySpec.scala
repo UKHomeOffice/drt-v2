@@ -1,8 +1,9 @@
 package actors.flights
 
-import actors.{ArrivalGenerator, DateRange}
-import actors.routing.FlightsRouterActor._
+import actors.DateRange
 import actors.routing.FlightsRouterActor
+import actors.routing.FlightsRouterActor._
+import controllers.ArrivalGenerator
 import drt.shared.ApiFlightWithSplits
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits

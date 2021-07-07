@@ -2,22 +2,23 @@ package actors.routing.minutes
 
 import actors.FlightLookups
 import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, PointInTimeQuery}
-import actors.routing.FlightsRouterActor.runAndCombine
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.FlightsRouterActor
+import actors.routing.FlightsRouterActor.runAndCombine
 import akka.NotUsed
-import akka.actor.{ActorRef, Props}
+import akka.actor.{ActorRef, PoisonPill, Props, Terminated}
 import akka.pattern.ask
-import akka.stream.{ActorMaterializer, Materializer}
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
+import controllers.model.{RedListCount, RedListCounts}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
 import drt.shared.PaxTypes.EeaNonMachineReadable
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.SplitSources.Historical
-import drt.shared.Terminals.{T1, Terminal}
+import drt.shared.Terminals._
 import drt.shared._
 import drt.shared.dates.UtcDate
 import services.SDate
@@ -298,11 +299,90 @@ class FlightsRouterActorSpec extends CrunchTestLike {
                 .mapTo[Source[FlightsWithSplits, NotUsed]])
               .map(_.flights.values.headOption)))
 
-
         val result = Await.result(eventualFlights, 1 second)
 
         result === Option(ApiFlightWithSplits(arrival, Set(splits), lastUpdated = Option(myNow().millisSinceEpoch)))
       }
     }
+
+    val updatesProbe: TestProbe = TestProbe("updates")
+
+    "A flights router actor" should {
+      val scheduled = "2021-06-24T10:25"
+      val redListPax = 10
+      val redListPax2 = 15
+
+      "Add red list pax to an existing arrival" in {
+        val redListNow = SDate("2021-06-24T12:10:00")
+        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), updatesProbe.ref, None)
+        val flightsRouter = lookups.flightsActor
+        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
+        Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrival), Seq()), 1.second)
+        Await.ready(flightsRouter ? RedListCounts(Seq(RedListCount("BA0001", PortCode("LHR"), SDate(scheduled), redListPax))), 1.second)
+        val eventualFlights = (flightsRouter ? GetFlightsForTerminalDateRange(redListNow.getLocalLastMidnight.millisSinceEpoch, redListNow.getLocalNextMidnight.millisSinceEpoch, T1)).flatMap {
+          case source: Source[FlightsWithSplits, NotUsed] => source.runFold(FlightsWithSplits.empty)(_ ++ _)
+        }
+
+        val flights = Await.result(eventualFlights, 1.second)
+
+        flights.flights.values.head.apiFlight === arrival.copy(RedListPax = Option(redListPax))
+      }
+
+      "Add red list pax counts to the appropriate arrivals" in {
+        val redListNow = SDate("2021-06-24T12:10:00")
+        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), updatesProbe.ref, None)
+        val flightsRouter = lookups.flightsActor
+        val scheduled2 = "2021-06-24T15:05"
+        val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
+        val arrivalT2 = ArrivalGenerator.arrival(iata = "AB1234", terminal = T2, schDt = scheduled2)
+        Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrivalT1, arrivalT2), Seq()), 1.second)
+        val redListPax = 10
+        Await.ready(flightsRouter ? RedListCounts(Seq(
+          RedListCount("BA0001", PortCode("LHR"), SDate(scheduled), redListPax),
+          RedListCount("EZT1234", PortCode("LHR"), SDate(scheduled2), redListPax2),
+        )), 1.second)
+        val eventualFlights = (flightsRouter ? GetFlights(redListNow.getLocalLastMidnight.millisSinceEpoch, redListNow.getLocalNextMidnight.millisSinceEpoch)).flatMap {
+          case source: Source[FlightsWithSplits, NotUsed] => source.runFold(FlightsWithSplits.empty)(_ ++ _)
+        }
+        val arrivals = Await.result(eventualFlights, 1.second).flights.values.map(_.apiFlight).toList
+
+        arrivals.contains(arrivalT1.copy(RedListPax = Option(redListPax))) && arrivals.contains(arrivalT2.copy(RedListPax = Option(redListPax2)))
+      }
+    }
+  }
+
+  "Concerning multi-terminal queries" >> {
+    val terminals: Seq[Terminal] = List(T2, T3, T4, T5)
+
+    val t21015 = ApiFlightWithSplits(ArrivalGenerator.arrival(pcpDt = "2021-07-10T15:00", iata = "BA0001", origin = PortCode("JFK"), terminal = T2), Set())
+    val t21013 = ApiFlightWithSplits(ArrivalGenerator.arrival(pcpDt = "2021-07-10T13:00", iata = "BA0002", origin = PortCode("JFK"), terminal = T2), Set())
+    val t31015 = ApiFlightWithSplits(ArrivalGenerator.arrival(pcpDt = "2021-07-10T15:00", iata = "BA0003", origin = PortCode("JFK"), terminal = T3), Set())
+    val t31013 = ApiFlightWithSplits(ArrivalGenerator.arrival(pcpDt = "2021-07-10T13:00", iata = "BA0004", origin = PortCode("JFK"), terminal = T3), Set())
+    val t21115 = ApiFlightWithSplits(ArrivalGenerator.arrival(pcpDt = "2021-07-10T15:00", iata = "BA0005", origin = PortCode("JFK"), terminal = T2), Set())
+    val t21113 = ApiFlightWithSplits(ArrivalGenerator.arrival(pcpDt = "2021-07-10T13:00", iata = "BA0006", origin = PortCode("JFK"), terminal = T2), Set())
+    val t31115 = ApiFlightWithSplits(ArrivalGenerator.arrival(pcpDt = "2021-07-10T15:00", iata = "BA0007", origin = PortCode("JFK"), terminal = T3), Set())
+    val t31113 = ApiFlightWithSplits(ArrivalGenerator.arrival(pcpDt = "2021-07-10T13:00", iata = "BA0008", origin = PortCode("JFK"), terminal = T3), Set())
+    val flights: Map[(Terminal, UtcDate), FlightsWithSplits] = Map(
+      (T2, UtcDate(2021, 7, 10)) -> FlightsWithSplits(List(t21015, t21013)),
+      (T3, UtcDate(2021, 7, 10)) -> FlightsWithSplits(List(t31015, t31013)),
+      (T2, UtcDate(2021, 7, 11)) -> FlightsWithSplits(List(t21115, t21113)),
+      (T3, UtcDate(2021, 7, 11)) -> FlightsWithSplits(List(t31115, t31113)),
+    )
+
+    def flightsForDayAndTerminal(d: UtcDate)(t: Terminal): Future[FlightsWithSplits] =
+      Future.successful(flights.getOrElse((t, d), FlightsWithSplits.empty))
+
+    "sortedSourceForIterables" should {
+      "produce a FlightsWithSplits for each date, with flights from all terminals sorted by pcp time & voyage number" in {
+        val flightsByDayAndTerminalProvider: Option[MillisSinceEpoch] => UtcDate => Terminal => Future[FlightsWithSplits] = _ => flightsForDayAndTerminal
+
+        val flightsStream = FlightsRouterActor.multiTerminalFlightsByDaySource(flightsByDayAndTerminalProvider)(SDate(UtcDate(2021, 7, 10)), SDate(UtcDate(2021, 7, 11)), terminals, None)
+
+        val result = Await.result(flightsStream.runWith(Sink.seq), 1.second)
+
+        result === Seq(FlightsWithSplits(Seq(t21013, t31013, t21015, t31015)), FlightsWithSplits(Seq(t21113, t31113, t21115, t31115)))
+      }
+    }
+
   }
 }

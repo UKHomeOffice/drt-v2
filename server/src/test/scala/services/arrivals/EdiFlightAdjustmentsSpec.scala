@@ -1,6 +1,6 @@
 package services.arrivals
 
-import actors.ArrivalGenerator
+import controllers.ArrivalGenerator
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalsDiff, UniqueArrival}

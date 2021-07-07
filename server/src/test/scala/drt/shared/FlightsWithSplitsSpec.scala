@@ -19,7 +19,7 @@ class FlightsWithSplitsSpec extends Specification{
 
         val start = SDate("2020-09-21T10:00").getUtcLastMidnight
         val end = start.addDays(1)
-        val result = flightsWithSplits.scheduledWindow(start.millisSinceEpoch, end.millisSinceEpoch)
+        val result = flightsWithSplits.scheduledOrPcpWindow(start, end)
 
         val expected = FlightsWithSplits(Map(fws2.unique -> fws2))
 

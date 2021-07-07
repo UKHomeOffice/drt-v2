@@ -1,9 +1,9 @@
 package services.graphstages
 
-import actors.ArrivalGenerator
+import controllers.ArrivalGenerator
 import drt.shared.Terminals._
 import drt.shared.airportconfig.Lhr
-import drt.shared.{ApiFlightWithSplits, PortCode}
+import drt.shared.{ApiFlightWithSplits, ArrivalStatus, PortCode}
 import org.specs2.mutable.Specification
 
 class FlightFilterSpec extends Specification {
@@ -30,11 +30,11 @@ class FlightFilterSpec extends Specification {
   }
   "Not cancelled filter" >> {
     "Given a flight with a scheduled status, the filter should return true to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(status = "scheduled"), Set())
+      val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(status = ArrivalStatus("scheduled")), Set())
       FlightFilter.notCancelledFilter.apply(fws) === true
     }
     "Given a flight with a cancelled status, the filter should return false to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(status = "cancelled"), Set())
+      val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(status = ArrivalStatus("cancelled")), Set())
       FlightFilter.notCancelledFilter.apply(fws) === false
     }
   }
