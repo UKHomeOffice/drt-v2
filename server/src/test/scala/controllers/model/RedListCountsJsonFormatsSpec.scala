@@ -3,7 +3,9 @@ package controllers.model
 import drt.shared.PortCode
 import org.specs2.mutable.Specification
 import services.SDate
+import spray.json.DefaultJsonProtocol.StringJsonFormat
 import spray.json.enrichAny
+import spray.json._
 
 class RedListCountsJsonFormatsSpec extends Specification {
   "Given a RedListCounts" >> {
@@ -32,6 +34,26 @@ class RedListCountsJsonFormatsSpec extends Specification {
     "I should be able to convert it to json and back without any data loss" >> {
       import RedListCountsJsonFormats._
       val json = redListCounts.toJson
+      val recovered = json.convertTo[RedListCounts]
+
+      recovered === redListCounts
+    }
+
+    "I should be able to convert it to json with additional fields safely ignored" >> {
+      import RedListCountsJsonFormats._
+      val json = """[{
+                   |  "departurePort": "FRA",
+                   |  "embarkPort": "SJO",
+                   |  "flightCode": "BA0001",
+                   |  "paxCount": 10,
+                   |  "portCode": "LHR",
+                   |  "scheduled": 1624449600000
+                   |}, {
+                   |  "flightCode": "ZZ0072",
+                   |  "paxCount": 20,
+                   |  "portCode": "LHR",
+                   |  "scheduled": 1624462200000
+                   |}]""".stripMargin.parseJson
       val recovered = json.convertTo[RedListCounts]
 
       recovered === redListCounts
