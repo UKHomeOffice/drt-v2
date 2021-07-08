@@ -190,7 +190,7 @@ object TerminalContentComponent {
                             case _ => DefaultFlightDisplayFilter
                           }
                           val flights = portState.window(viewStart, viewEnd).flights.values
-                          val flightsForTerminal = flightDisplayFilter.forTerminal(flights, props.terminalPageTab.terminal)
+                          val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminalPageTab.terminal)
                           arrivalsTableComponent(
                             FlightsWithSplitsTable.Props(
                               flightsWithSplits = flightsForTerminal.toList,

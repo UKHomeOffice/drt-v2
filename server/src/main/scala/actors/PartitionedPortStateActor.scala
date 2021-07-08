@@ -173,6 +173,8 @@ object PartitionedPortStateActor {
 
   case class GetFlights(from: MillisSinceEpoch, to: MillisSinceEpoch) extends FlightsRequest
 
+  case class GetFlightsForTerminals(from: MillisSinceEpoch, to: MillisSinceEpoch, terminals: Iterable[Terminal]) extends FlightsRequest
+
   case class GetFlightsForTerminalDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch, terminal: Terminal) extends FlightsRequest with TerminalRequest
 
   case class GetStateForDateRange(from: MillisSinceEpoch, to: MillisSinceEpoch) extends PortStateRequest

@@ -1,8 +1,8 @@
 package services.exports.flights.templates
 
-import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
+import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange, GetFlightsForTerminals}
 import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import drt.shared.Terminals.{T2, T3, T4, T5, Terminal}
 import drt.shared.{ApiFlightWithSplits, SDateLike}
 
 
@@ -18,4 +18,14 @@ trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
 }
 
 case class FlightsWithSplitsWithActualApiExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithActualApiExport
+
+case class LHRFlightsWithSplitsWithActualApiExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithActualApiExport {
+  val terminalsToQuery: Seq[Terminal] = terminal match {
+    case T2 => Seq(T2)
+    case T3 => Seq(T2, T3, T5)
+    case T4 => Seq(T2, T4, T5)
+    case T5 => Seq(T5)
+  }
+  override val request: FlightsRequest = GetFlightsForTerminals(start.millisSinceEpoch, end.millisSinceEpoch, terminalsToQuery)
+}
 

@@ -96,7 +96,7 @@ object FlightsRouterActor {
 }
 
 class FlightsRouterActor(val updatesSubscriber: ActorRef,
-                         terminals: Iterable[Terminal],
+                         allTerminals: Iterable[Terminal],
                          flightsByDayLookup: FlightsLookup,
                          updateFlights: FlightsUpdate
                         ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate)] {
@@ -106,17 +106,22 @@ class FlightsRouterActor(val updatesSubscriber: ActorRef,
 
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
-      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, Option(pit))
+      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), allTerminals, Option(pit))
 
+    case PointInTimeQuery(pit, GetFlightsForTerminals(startMillis, endMillis, terminals)) =>
+      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, Option(pit))
 
     case PointInTimeQuery(pit, GetFlights(startMillis, endMillis)) =>
       self.forward(PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)))
 
     case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
-      sender() ! flightsLookupService(SDate(request.from), SDate(request.to), terminals, Option(pit))
+      sender() ! flightsLookupService(SDate(request.from), SDate(request.to), allTerminals, Option(pit))
+
+    case GetFlightsForTerminals(startMillis, endMillis, terminals) =>
+      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, None)
 
     case GetStateForDateRange(startMillis, endMillis) =>
-      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, None)
+      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), allTerminals, None)
 
     case GetFlights(startMillis, endMillis) =>
       self.forward(GetStateForDateRange(startMillis, endMillis))
@@ -136,7 +141,7 @@ class FlightsRouterActor(val updatesSubscriber: ActorRef,
         }
         .flatMap {
           case (sch, counts) =>
-            terminals.map(t => ((t, sch), RedListCounts(counts)))
+            allTerminals.map(t => ((t, sch), RedListCounts(counts)))
         }
 
     case container: SplitsForArrivals =>
