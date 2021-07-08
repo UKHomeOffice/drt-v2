@@ -7,6 +7,7 @@ import org.specs2.mutable.Specification
 import scala.collection.immutable.HashSet
 
 class FlightDisplayFilterSpec extends Specification {
+  private val t3OpeningMillis = 10L
   private val t4OpeningMillis = 1000L
   private val beforeT4Opening: MillisSinceEpoch = t4OpeningMillis - 10
   private val afterT4Opening: MillisSinceEpoch = t4OpeningMillis + 10
@@ -35,7 +36,7 @@ class FlightDisplayFilterSpec extends Specification {
   val nonRedListT5postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = nonRedListOriginInFrance, terminal = T5), Set())
 
 
-  val filter = LhrFlightDisplayFilter(isRedListOrigin, t4OpeningMillis)
+  val filter = LhrFlightDisplayFilter(isRedListOrigin, t3OpeningMillis, t4OpeningMillis)
 
   "Given flights for LHR spanning all terminals arriving before T4 starts handling red list flights" >> {
     val flightsPreT4Opening = List(redListT2preT4, nonRedListT2preT4, redListT3preT4, nonRedListT3preT4, redListT4preT4, nonRedListT4preT4, redListT5preT4, nonRedListT5preT4)

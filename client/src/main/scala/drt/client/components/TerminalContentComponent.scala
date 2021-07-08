@@ -186,7 +186,7 @@ object TerminalContentComponent {
                       props.featureFlags.render { features =>
                         props.redListPorts.render { redListPorts =>
                           val flightDisplayFilter = props.airportConfig.portCode match {
-                            case PortCode("LHR") => LhrFlightDisplayFilter(redListPorts.contains, SDate("2021-06-29T00:00").millisSinceEpoch)
+                            case PortCode("LHR") => LhrFlightDisplayFilter(redListPorts.contains, SDate("2021-06-01T00:00").millisSinceEpoch, SDate("2021-06-29T00:00").millisSinceEpoch)
                             case _ => DefaultFlightDisplayFilter
                           }
                           val flights = portState.window(viewStart, viewEnd).flights.values

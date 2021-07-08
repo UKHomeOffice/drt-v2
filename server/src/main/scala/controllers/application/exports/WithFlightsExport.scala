@@ -17,7 +17,7 @@ import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
 import services.exports.flights.ArrivalFeedExport
-import services.exports.flights.templates.{CedatFlightsExport, FlightsExport, FlightsWithSplitsWithActualApiExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExport}
+import services.exports.flights.templates._
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, CedatStaff}
 
@@ -80,10 +80,10 @@ trait WithFlightsExport {
     (start, end, terminal) =>
       (user.hasRole(CedatStaff), user.hasRole(ApiView), portCode) match {
         case (true, _, _) => CedatFlightsExport(start, end, terminal)
-        case (false, true, PortCode("LHR")) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
-        case (false, false, PortCode("LHR")) => FlightsWithSplitsWithoutActualApiExport(start, end, terminal)
+        case (false, true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
+        case (false, false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
         case (false, true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
-        case (false, true, _) => FlightsWithSplitsWithoutActualApiExport(start, end, terminal)
+        case (false, true, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
       }
 
   def exportArrivalsFromFeed(terminalString: String,
