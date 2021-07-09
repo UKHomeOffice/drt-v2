@@ -75,4 +75,6 @@ case class CedatFlightsExport(start: SDateLike, end: SDateLike, terminal: Termin
   override def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =
     headings.map(h => Exports.cedatActualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
       .map(n => Math.round(n).toDouble)
+
+  override val flightsFilter: (Terminal, ApiFlightWithSplits) => Boolean = standardFilter
 }
