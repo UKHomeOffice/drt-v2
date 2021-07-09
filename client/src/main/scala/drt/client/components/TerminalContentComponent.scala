@@ -5,6 +5,7 @@ import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
+import drt.client.components.Icon.Icon
 import drt.client.components.ToolTips._
 import drt.client.components.scenarios.ScenarioSimulationComponent
 import drt.client.logger.log
@@ -129,23 +130,38 @@ object TerminalContentComponent {
                     )
                   ),
                   <.div(^.className := "exports",
-                    exportLink(
-                      props.terminalPageTab.dateFromUrlOrNow,
-                      terminalName,
-                      ExportArrivals,
-                      SPAMain.exportArrivalViewUrl(props.terminalPageTab.viewMode, terminal)
-                    ),
+                    if (props.airportConfig.portCode == PortCode("LHR"))
+                      LhrArrivalsExportComponent(
+                        props.terminalPageTab.terminal,
+                        props.terminalPageTab.dateFromUrlOrNow,
+                        props.loggedInUser,
+                        props.viewMode
+                      )
+                    else if (props.airportConfig.portCode == PortCode("BHX"))
+                      BhxArrivalsExportComponent(
+                        props.terminalPageTab.terminal,
+                        props.terminalPageTab.dateFromUrlOrNow,
+                        props.loggedInUser,
+                        props.viewMode
+                      )
+                    else
+                      exportLink(
+                        props.terminalPageTab.dateFromUrlOrNow,
+                        terminalName,
+                        ExportArrivals,
+                        SPAMain.exportUrl(ExportArrivals, props.terminalPageTab.viewMode, terminal)
+                      ),
                     exportLink(
                       props.terminalPageTab.dateFromUrlOrNow,
                       terminalName,
                       ExportDeskRecs,
-                      SPAMain.exportDesksUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal)
+                      SPAMain.exportUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal)
                     ),
                     exportLink(
                       props.terminalPageTab.dateFromUrlOrNow,
                       terminalName,
                       ExportDeployments,
-                      SPAMain.exportDesksUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal)
+                      SPAMain.exportUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal)
                     ),
                     displayForRole(
                       exportLink(
@@ -254,9 +270,10 @@ object TerminalContentComponent {
   def exportLink(exportDay: SDateLike,
                  terminalName: String,
                  exportType: ExportType,
-                 exportUrl: String
-                ): VdomTagOf[Anchor] =
-    <.a(Icon.download, s" $exportType",
+                 exportUrl: String,
+                 maybeExtraIcon: Option[Icon] = None
+                ): VdomTagOf[Anchor] = {
+    <.a(Icon.download, s" $exportType", maybeExtraIcon.getOrElse(EmptyVdom),
       ^.className := "btn btn-default",
       ^.href := exportUrl,
       ^.target := "_blank",
@@ -264,6 +281,7 @@ object TerminalContentComponent {
       ^.onClick --> {
         Callback(GoogleEventTracker.sendEvent(terminalName, s"Export $exportType", exportDay.toISODateOnly))
       })
+  }
 
   def displayForRole(node: VdomNode, role: Role, loggedInUser: LoggedInUser): TagMod =
     if (loggedInUser.hasRole(role))

@@ -27,13 +27,15 @@ import scala.util.{Failure, Success, Try}
 trait WithFlightsExport {
   self: Application =>
 
-  def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDateString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {
+  def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDateString: String,
+                                                    pointInTime: MillisSinceEpoch,
+                                                    terminalName: String): Action[AnyContent] =
     doExportForPointInTime(localDateString, pointInTime, terminalName, exportForUser)
-  }
 
-  def exportFlightsWithSplitsForDayAtPointInTimeCSVWithRedListDiversions(localDateString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {
+  def exportFlightsWithSplitsForDayAtPointInTimeCSVWithRedListDiversions(localDateString: String,
+                                                                         pointInTime: MillisSinceEpoch,
+                                                                         terminalName: String): Action[AnyContent] =
     doExportForPointInTime(localDateString, pointInTime, terminalName, redListDiversionsExportForUser)
-  }
 
   private def doExportForPointInTime(localDateString: String,
                                      pointInTime: MillisSinceEpoch,
@@ -60,9 +62,9 @@ trait WithFlightsExport {
   }
 
   def exportFlightsWithSplitsForDateRangeCSVWithRedListDiversions(startLocalDateString: String,
-                                             endLocalDateString: String,
-                                             terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
-    doExportForDateRange(startLocalDateString, endLocalDateString, terminalName, exportForUser)
+                                                                  endLocalDateString: String,
+                                                                  terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+    doExportForDateRange(startLocalDateString, endLocalDateString, terminalName, redListDiversionsExportForUser)
   }
 
   private def doExportForDateRange(startLocalDateString: String,
@@ -100,12 +102,12 @@ trait WithFlightsExport {
 
   private val exportForUser: (LoggedInUser, PortCode) => (SDateLike, SDateLike, Terminal) => FlightsExport =
     (user, portCode) =>
-    (start, end, terminal) =>
-      (user.hasRole(CedatStaff), user.hasRole(ApiView), portCode) match {
-        case (true, _, _) => CedatFlightsExport(start, end, terminal)
-        case (false, true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
-        case (false, false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
-      }
+      (start, end, terminal) =>
+        (user.hasRole(CedatStaff), user.hasRole(ApiView), portCode) match {
+          case (true, _, _) => CedatFlightsExport(start, end, terminal)
+          case (false, true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
+          case (false, false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
+        }
 
   private val redListDiversionsExportForUser: (LoggedInUser, PortCode) => (SDateLike, SDateLike, Terminal) => FlightsExport =
     (user, portCode) =>
