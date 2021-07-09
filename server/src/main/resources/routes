@@ -41,6 +41,8 @@ GET           /export/desk-deps/:startLocalDate/:endLocalDate/:terminalName     
 GET           /export/desk-deps/snapshot/:localDate/:pointInTime/:terminalName        controllers.Application.exportDesksAndQueuesDepsAtPointInTimeCSV(localDate, pointInTime, terminalName)
 GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName              controllers.Application.exportFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
 GET           /export/arrivals/snapshot/:localDate/:pointInTime/:terminalName         controllers.Application.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDate: String, pointInTime: Long, terminalName: String)
+GET           /export/arrivals-with-red-list-diversions/:startLocalDay/:endLocalDay/:terminalName              controllers.Application.exportFlightsWithSplitsForDateRangeCSVWithRedListDiversions(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /export/arrivals-with-red-list-diversions/snapshot/:localDate/:pointInTime/:terminalName         controllers.Application.exportFlightsWithSplitsForDayAtPointInTimeCSVWithRedListDiversions(localDate: String, pointInTime: Long, terminalName: String)
 
 GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource                 controllers.Application.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
 GET           /export/planning/:weekStarting/:terminalName                            controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
