@@ -2,7 +2,6 @@ package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
 import drt.shared.Terminals._
-import drt.shared.api.Arrival
 import drt.shared._
 import services.{AirportToCountry, SDate}
 
@@ -32,8 +31,6 @@ trait LHRFlightsWithSplitsExportWithDiversions {
   }
 
   val requestForDiversions: FlightsRequest = GetFlightsForTerminals(start.millisSinceEpoch, end.millisSinceEpoch, terminalsToQuery)
-
-  val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])]
 }
 
 case class LHRFlightsWithSplitsWithoutActualApiExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithoutActualApiExport with LHRFlightsWithSplitsExportWithDiversions
