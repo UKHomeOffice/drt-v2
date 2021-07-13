@@ -358,7 +358,7 @@ case class AirportConfig(portCode: PortCode,
                          desksByTerminal: Map[Terminal, Int],
                          queuePriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack, EGate),
                          assumedAdultsPerChild: Double = 1.0,
-                         coachTransfer: List[CoachTransfer] = List[CoachTransfer]()
+                         coachTransfer: List[CoachTransfer] = List.empty[CoachTransfer]
 
                         ) {
   def assertValid(): Unit = {
