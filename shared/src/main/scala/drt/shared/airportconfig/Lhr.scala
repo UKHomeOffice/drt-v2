@@ -133,6 +133,8 @@ object Lhr extends AirportConfigLike {
       T3 -> 28,
       T4 -> 39,
       T5 -> 34
-    )
+    ),
+    coachTransfer = List(CoachTransfer(T2, 10 * 60L, 21 * 60000L, 900000L),
+      CoachTransfer(T5, 10 * 60L, 27 * 60000L, 900000L))
   )
 }
