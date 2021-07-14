@@ -410,7 +410,7 @@ object FlightTableRow {
 
   def coachWalkTime(hasRedListOrigin: Boolean, walkTime: String, flight: Arrival, coachTransfer: List[CoachTransfer]) = {
     if (hasRedListOrigin && List(T2, T5).contains(flight.Terminal) && coachTransfer.nonEmpty) {
-      val redListOriginWalkTime = coachTransfer.filter(_.fromTerminal == flight.Terminal).map(ct => ct.passengerLoadingTime + ct.transferTime + ct.fromCoachGateWalkTime).headOption.getOrElse(walkTime)
+      val redListOriginWalkTime = coachTransfer.filter(_.fromTerminal == flight.Terminal).map(ct => (ct.passengerLoadingTime + ct.transferTime + ct.fromCoachGateWalkTime)/60000).headOption.getOrElse(walkTime)
       log.info(s"Redlist walkTimeForFlight ${Arrival.summaryString(flight)} is $redListOriginWalkTime millis ${redListOriginWalkTime} mins default is $walkTime")
       redListOriginWalkTime + " walk time inclcude coach transfer"
     } else {
