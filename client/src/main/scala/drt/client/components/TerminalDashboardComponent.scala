@@ -103,6 +103,7 @@ object TerminalDashboardComponent {
                           terminal = terminal,
                           portCode = p.airportConfig.portCode,
                           redListPorts = redListPorts,
+                          coachTransfer = p.airportConfig.coachTransfer
                         )
                       )
                     }

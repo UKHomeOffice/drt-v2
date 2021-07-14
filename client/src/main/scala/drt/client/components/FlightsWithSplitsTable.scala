@@ -7,11 +7,12 @@ import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.ToolTips._
 import drt.client.components.styles.ArrivalsPageStylesDefault
+import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import drt.shared.Terminals.{T2, T5, Terminal}
 import drt.shared._
 import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
@@ -42,6 +43,7 @@ object FlightsWithSplitsTable {
                    terminal: Terminal,
                    portCode: PortCode,
                    redListPorts: HashSet[PortCode],
+                   coachTransfer: List[CoachTransfer]
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
@@ -116,6 +118,8 @@ object FlightsWithSplitsTable {
                     hasTransfer = props.hasTransfer,
                     indirectRedListPax = redListPaxInfo,
                     directRedListFlight = directRedListFlight,
+                    coachTransfer = props.coachTransfer,
+                    hasRedListOrigin = isRedListOrigin
                   ))
               }.toTagMod)
           ),
@@ -226,6 +230,8 @@ object FlightTableRow {
                    hasTransfer: Boolean,
                    indirectRedListPax: IndirectRedListPax,
                    directRedListFlight: DirectRedListFlight,
+                   coachTransfer: List[CoachTransfer],
+                   hasRedListOrigin: Boolean
                   )
 
   case class RowState(hasChanged: Boolean)
@@ -335,7 +341,7 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
-        <.td(gateOrStand(props.walkTimes, props.defaultWalkTime, flight)),
+        <.td(gateOrStand(props.walkTimes, props.defaultWalkTime, flight, props.coachTransfer, props.hasRedListOrigin)),
         <.td(flight.displayStatus.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
         <.td(localDateTimeWithPopup(flight.Estimated)),
@@ -390,16 +396,26 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  private def gateOrStand(walkTimes: WalkTimes, defaultWalkTime: Long, flight: Arrival): VdomTagOf[Span] = {
+  private def gateOrStand(walkTimes: WalkTimes, defaultWalkTime: Long, flight: Arrival, coachTransfer: List[CoachTransfer], hasRedListOrigin: Boolean): VdomTagOf[Span] = {
     val walkTimeProvider: (Option[String], Option[String], Terminal) => String =
       walkTimes.walkTimeForArrival(defaultWalkTime)
     val gateOrStand = <.span(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}")
     val gateOrStandWithWalkTimes = Tippy.interactive(
-      <.span(walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal)),
+      <.span(coachWalkTime(hasRedListOrigin, walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal), flight, coachTransfer)),
       gateOrStand
     )
     val displayGatesOrStands = if (walkTimes.isEmpty) gateOrStand else <.span(gateOrStandWithWalkTimes)
     displayGatesOrStands
+  }
+
+  def coachWalkTime(hasRedListOrigin: Boolean, walkTime: String, flight: Arrival, coachTransfer: List[CoachTransfer]) = {
+    if (hasRedListOrigin && List(T2, T5).contains(flight.Terminal) && coachTransfer.nonEmpty) {
+      val redListOriginWalkTime = coachTransfer.filter(_.fromTerminal == flight.Terminal).map(ct => ct.passengerLoadingTime + ct.transferTime + ct.fromCoachGateWalkTime).headOption.getOrElse(walkTime)
+      log.info(s"Redlist walkTimeForFlight ${Arrival.summaryString(flight)} is $redListOriginWalkTime millis ${redListOriginWalkTime} mins default is $walkTime")
+      redListOriginWalkTime + " walk time inclcude coach transfer"
+    } else {
+      walkTime
+    }
   }
 
   def offScheduleClass(arrival: Arrival): String = {
