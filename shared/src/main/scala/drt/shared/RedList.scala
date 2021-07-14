@@ -1,6 +1,6 @@
 package drt.shared
 
-import drt.shared.Terminals.{T2, T5, Terminal}
+import drt.shared.Terminals.{T2, T3, T5, Terminal}
 import drt.shared.api.PassengerInfoSummary
 
 import scala.collection.immutable.Map
@@ -91,7 +91,7 @@ case class DefaultDirectRedListFlight(isRedListOrigin: Boolean) extends DirectRe
 
 object DirectRedListFlight {
   def apply(portCode: PortCode, displayTerminal: Terminal, flightTerminal: Terminal, isRedListOrigin: Boolean): DirectRedListFlight = {
-    val greenTerminal = portCode == PortCode("LHR") && List(T2, T5).contains(displayTerminal)
+    val greenTerminal = portCode == PortCode("LHR") && List(T2, T3 ,T5).contains(displayTerminal)
     val terminalDiversion = displayTerminal != flightTerminal
 
     val outgoingDiversion =

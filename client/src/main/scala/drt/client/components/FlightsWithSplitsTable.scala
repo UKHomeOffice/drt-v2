@@ -12,7 +12,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
-import drt.shared.Terminals.{T2, T5, Terminal}
+import drt.shared.Terminals.{T2, T3, T5, Terminal}
 import drt.shared.TimeUtil.millisToMinutes
 import drt.shared._
 import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
@@ -410,7 +410,7 @@ object FlightTableRow {
   }
 
   def coachWalkTime(hasRedListOrigin: Boolean, walkTime: String, flight: Arrival, coachTransfer: List[CoachTransfer]) = {
-    if (hasRedListOrigin && List(T2, T5).contains(flight.Terminal) && coachTransfer.nonEmpty) {
+    if (hasRedListOrigin && List(T2, T3, T5).contains(flight.Terminal) && coachTransfer.nonEmpty) {
       coachTransfer.filter(_.fromTerminal == flight.Terminal)
         .map(ct => MinuteAsAdjective(millisToMinutes(ct.passengerLoadingTime + ct.transferTime + ct.fromCoachGateWalkTime)).display + " walk time")
         .headOption
