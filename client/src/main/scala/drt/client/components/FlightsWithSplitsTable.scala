@@ -13,6 +13,7 @@ import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T2, T5, Terminal}
+import drt.shared.TimeUtil.millisToMinutes
 import drt.shared._
 import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
@@ -410,9 +411,10 @@ object FlightTableRow {
 
   def coachWalkTime(hasRedListOrigin: Boolean, walkTime: String, flight: Arrival, coachTransfer: List[CoachTransfer]) = {
     if (hasRedListOrigin && List(T2, T5).contains(flight.Terminal) && coachTransfer.nonEmpty) {
-      val redListOriginWalkTime = coachTransfer.filter(_.fromTerminal == flight.Terminal).map(ct => (ct.passengerLoadingTime + ct.transferTime + ct.fromCoachGateWalkTime)/60000).headOption.getOrElse(walkTime)
-      log.info(s"Redlist walkTimeForFlight ${Arrival.summaryString(flight)} is $redListOriginWalkTime millis ${redListOriginWalkTime} mins default is $walkTime")
-      redListOriginWalkTime + " walk time inclcude coach transfer"
+      coachTransfer.filter(_.fromTerminal == flight.Terminal)
+        .map(ct => MinuteAsAdjective(millisToMinutes(ct.passengerLoadingTime + ct.transferTime + ct.fromCoachGateWalkTime)).display + " walk time")
+        .headOption
+        .getOrElse(walkTime)
     } else {
       walkTime
     }
