@@ -89,14 +89,19 @@ object PcpArrival {
                                     standWalkTimesProvider: GateOrStandWalkTime,
                                     defaultWalkTimeMillis: MillisSinceEpoch,
                                     coachTransfer: List[CoachTransfer])(flight: Arrival): MillisSinceEpoch = {
-    val walkTime = standWalkTimesProvider(flight.Stand.getOrElse(""), flight.Terminal).getOrElse(
-      gateWalkTimesProvider(flight.Gate.getOrElse(""), flight.Terminal).getOrElse(defaultWalkTimeMillis))
-    log.debug(s"walkTimeForFlight ${Arrival.summaryString(flight)} is $walkTime millis ${walkTime / 60000} mins default is $defaultWalkTimeMillis")
-    if (AirportToCountry.isRedListed(flight.Origin) && List(T2, T3, T5).contains(flight.Terminal) && coachTransfer.nonEmpty) {
-      val redListOriginWalkTime = coachTransfer.filter(_.fromTerminal == flight.Terminal).map(ct => ct.passengerLoadingTime + ct.transferTime + ct.fromCoachGateWalkTime).headOption.getOrElse(walkTime)
-      log.info(s"Redlist walkTimeForFlight ${Arrival.summaryString(flight)} is $redListOriginWalkTime millis ${redListOriginWalkTime / 60000} mins default is $defaultWalkTimeMillis")
+    val greenListTerminal = List(T2, T3, T5)
+    val walkTime = standWalkTimesProvider(flight.Stand.getOrElse(""), flight.Terminal)
+      .getOrElse(gateWalkTimesProvider(flight.Gate.getOrElse(""), flight.Terminal).getOrElse(defaultWalkTimeMillis))
+    if (AirportToCountry.isRedListed(flight.Origin) && greenListTerminal.contains(flight.Terminal) && coachTransfer.nonEmpty) {
+      val redListOriginWalkTime = coachTransfer
+        .filter(_.fromTerminal == flight.Terminal)
+        .map(ct => ct.passengerLoadingTime + ct.transferTime + ct.fromCoachGateWalkTime)
+        .headOption
+        .getOrElse(walkTime)
+      log.debug(s"Red list country walkTimeForFlight including coach transfer for ${Arrival.summaryString(flight)} is $redListOriginWalkTime millis ${redListOriginWalkTime / 60000} mins default is $defaultWalkTimeMillis")
       redListOriginWalkTime
     } else {
+      log.debug(s"walkTimeForFlight ${Arrival.summaryString(flight)} is $walkTime millis ${walkTime / 60000} mins default is $defaultWalkTimeMillis")
       walkTime
     }
   }
