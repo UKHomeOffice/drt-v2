@@ -147,7 +147,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def run(): Unit
 
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
-    gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L))(flight)
+    gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L), airportConfig.coachTransfer)(flight)
 
   def pcpArrivalTimeCalculator: Arrival => MilliDate =
     PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)

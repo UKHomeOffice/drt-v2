@@ -208,6 +208,7 @@ object TerminalContentComponent {
                               terminal = terminal,
                               portCode = props.airportConfig.portCode,
                               redListPorts = redListPorts,
+                              coachTransfer = props.airportConfig.coachTransfer
                             )
                           )
                         }

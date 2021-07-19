@@ -16,7 +16,7 @@ case class LhrFlightDisplayFilter(isRedListOrigin: PortCode => Boolean, t4Openin
   def lhrRedListTerminalForDate(scheduled: MillisSinceEpoch): Terminal =
     if (scheduled < t4OpeningDate) T3 else T4
 
-  val lhrNonRedListTerminals = List(T2, T5)
+  val lhrNonRedListTerminals = List(T2, T3 ,T5)
 
   def forTerminal(flights: Iterable[ApiFlightWithSplits], terminal: Terminal): Iterable[ApiFlightWithSplits] =
     flights.filter { fws =>
