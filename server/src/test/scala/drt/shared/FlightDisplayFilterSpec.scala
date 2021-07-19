@@ -61,8 +61,8 @@ class FlightDisplayFilterSpec extends Specification {
     "When I ask for T3 display flights, I should get only T3 flights" >> {
       filter.forTerminal(flightsPostT4Opening, T3) === List(redListT3postT4, nonRedListT3postT4)
     }
-    "When I ask for T4 display flights, I should get all the T4 flights, plus any T2 & T5 red list origin flights" >> {
-      filter.forTerminal(flightsPostT4Opening, T4) === List(redListT2postT4, redListT4postT4, nonRedListT4postT4, redListT5postT4)
+    "When I ask for T4 display flights, I should get all the T4 flights, plus any T2 , T3 & T5 red list origin flights" >> {
+      filter.forTerminal(flightsPostT4Opening, T4) === List(redListT2postT4, redListT3postT4 ,redListT4postT4, nonRedListT4postT4, redListT5postT4)
     }
     "When I ask for T5 display flights, I should get only T5 flights" >> {
       filter.forTerminal(flightsPostT4Opening, T5) === List(redListT5postT4, nonRedListT5postT4)
