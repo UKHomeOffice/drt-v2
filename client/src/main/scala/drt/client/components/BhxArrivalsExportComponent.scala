@@ -96,6 +96,5 @@ object BhxArrivalsExportComponent extends WithScalaCssImplicits {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser, viewMode: ViewMode): VdomElement =
-    component(Props(terminal, selectedDate, loggedInUser, viewMode))
-}
+  def apply: (Terminal, SDateLike, LoggedInUser, ViewMode) => VdomElement = (terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser, viewMode: ViewMode) =>
+    component(Props(terminal, selectedDate, loggedInUser, viewMode))}

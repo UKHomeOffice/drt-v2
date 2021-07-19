@@ -102,6 +102,7 @@ object TerminalContentComponent {
               val queues = props.airportConfig.queuesByTerminal.filterKeys(_ == terminal)
               val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
               val terminalName = terminal.toString
+              val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode)
               <.div(^.className := s"view-mode-content $viewModeStr",
                 <.div(^.className := "tabs-with-export",
                   <.ul(^.className := "nav nav-tabs",
@@ -130,27 +131,11 @@ object TerminalContentComponent {
                     )
                   ),
                   <.div(^.className := "exports",
-                    if (props.airportConfig.portCode == PortCode("LHR"))
-                      LhrArrivalsExportComponent(
-                        props.terminalPageTab.terminal,
-                        props.terminalPageTab.dateFromUrlOrNow,
-                        props.loggedInUser,
-                        props.viewMode
-                      )
-                    else if (props.airportConfig.portCode == PortCode("BHX"))
-                      BhxArrivalsExportComponent(
-                        props.terminalPageTab.terminal,
-                        props.terminalPageTab.dateFromUrlOrNow,
-                        props.loggedInUser,
-                        props.viewMode
-                      )
-                    else
-                      exportLink(
-                        props.terminalPageTab.dateFromUrlOrNow,
-                        terminalName,
-                        ExportArrivals,
-                        SPAMain.exportUrl(ExportArrivals, props.terminalPageTab.viewMode, terminal)
-                      ),
+                    arrivalsExportForPort(
+                      props.terminalPageTab.terminal,
+                      props.terminalPageTab.dateFromUrlOrNow,
+                      props.loggedInUser,
+                      props.viewMode),
                     exportLink(
                       props.terminalPageTab.dateFromUrlOrNow,
                       terminalName,
@@ -175,7 +160,7 @@ object TerminalContentComponent {
                       StaffMovementsExport,
                       props.loggedInUser
                     ),
-                    MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
+                    MultiDayExportComponent(props.airportConfig.portCode, terminal, props.viewMode, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
                 <.div(^.className := "tab-content",
                   <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
                     if (state.activeTab == "desksAndQueues") {

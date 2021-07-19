@@ -3,7 +3,7 @@ package drt.client.components
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.SPACircuit
+import drt.client.services.{SPACircuit, ViewLive}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 
@@ -20,7 +20,7 @@ object PortExportDashboardPage {
           <.div(config.terminals.map(tn => {
             <.div(
               <.h3(s"Terminal $tn"),
-              MultiDayExportComponent(tn, SDate.now(), p.loggedInUser)
+              MultiDayExportComponent(config.portCode, tn, ViewLive, SDate.now(), p.loggedInUser)
             )
           }).toTagMod)
         }))

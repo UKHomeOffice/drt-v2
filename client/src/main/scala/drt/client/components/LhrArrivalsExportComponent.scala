@@ -8,16 +8,29 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.{ExportArrivals, ExportArrivalsWithRedListDiversions, ExportArrivalsWithoutRedListDiversions, ViewMode}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
+import drt.shared.{PortCode, SDateLike}
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
 import io.kinoplan.scalajs.react.material.ui.core.{MuiFormLabel, MuiGrid, MuiTextField}
 import io.kinoplan.scalajs.react.material.ui.icons.{MuiIcons, MuiIconsModule}
-import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
+
+object ArrivalsExportComponent {
+  def apply(portCode: PortCode): (Terminal, SDateLike, LoggedInUser, ViewMode) => VdomElement = portCode match {
+    case PortCode("LHR") => LhrArrivalsExportComponent.apply
+    case PortCode("BHX") => BhxArrivalsExportComponent.apply
+    case _ => (terminal, date, user, viewMode) => exportLink(
+      date,
+      terminal.toString,
+      ExportArrivals,
+      SPAMain.exportUrl(ExportArrivals, viewMode, terminal)
+    )
+  }
+}
 
 object LhrArrivalsExportComponent extends WithScalaCssImplicits {
   val today: SDateLike = SDate.now()
@@ -99,6 +112,6 @@ object LhrArrivalsExportComponent extends WithScalaCssImplicits {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser, viewMode: ViewMode): VdomElement =
+  def apply: (Terminal, SDateLike, LoggedInUser, ViewMode) => VdomElement = (terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser, viewMode: ViewMode) =>
     component(Props(terminal, selectedDate, loggedInUser, viewMode))
 }

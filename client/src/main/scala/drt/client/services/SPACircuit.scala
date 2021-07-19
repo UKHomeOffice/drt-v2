@@ -87,13 +87,13 @@ object ExportArrivals extends ExportType {
 }
 
 object ExportArrivalsWithRedListDiversions extends ExportType {
-  override def toString = "Divert red list arrivals"
+  override def toString = "With red list diversions"
 
   override def toUrlString: String = "arrivals-with-red-list-diversions"
 }
 
 object ExportArrivalsWithoutRedListDiversions extends ExportType {
-  override def toString = "Don't divert red list arrivals"
+  override def toString = "Without red list diversions"
 
   override def toUrlString: String = "arrivals"
 }

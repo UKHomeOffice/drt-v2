@@ -1,12 +1,14 @@
 package drt.client.components
 
 import drt.client.SPAMain
+import drt.client.components.TerminalContentComponent.exportLink
 import drt.client.components.styles.{DefaultFormFieldsStyle, WithScalaCssImplicits}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
+import drt.client.services.{ExportArrivalsCombinedTerminals, ExportArrivalsSingleTerminal, ExportArrivalsWithRedListDiversions, ExportArrivalsWithoutRedListDiversions, ExportType, ViewMode}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
+import drt.shared.{PortCode, SDateLike}
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
 import io.kinoplan.scalajs.react.material.ui.core.{MuiFormLabel, MuiGrid, MuiTextField}
@@ -20,7 +22,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
   val today: SDateLike = SDate.now()
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser)
+  case class Props(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser)
 
   case class State(startDate: LocalDate, endDate: LocalDate, showDialogue: Boolean = false) {
 
@@ -57,6 +59,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
         scope.modState(_.setEnd(e.target.value))
       }
 
+      val gridXs = 4
       <.div(
         <.a(
           "Multi Day Export",
@@ -80,13 +83,10 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                 ^.className := "modal-body",
                 ^.id := "multi-day-export-modal-body",
                 MuiGrid(container = true)(
-
                   MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
                     MuiGrid(item = true, xs = 1)(
                       DefaultFormFieldsStyle.datePickerLabel,
-                      MuiFormLabel()(
-                        "From"
-                      ),
+                      MuiFormLabel()("From"),
                     ),
                     MuiGrid(item = true, xs = 11)(
                       MuiTextField()(
@@ -98,9 +98,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                     ),
                     MuiGrid(item = true, xs = 1)(
                       DefaultFormFieldsStyle.datePickerLabel,
-                      MuiFormLabel()(
-                        "To"
-                      ),
+                      MuiFormLabel()("To"),
                     ),
                     MuiGrid(item = true, xs = 11)(
                       MuiTextField()(
@@ -115,22 +113,67 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                     else
                       EmptyVdom,
 
-                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
-                      MuiGrid(item = true, xs = 3)(<.a(Icon.download, " Arrivals",
-                        ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
-                          s"${state.startDate.toISOString}/" +
-                          s"${state.endDate.toISOString}/${props.terminal}"),
-                        ^.target := "_blank",
-                        ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                        }
-                      ))
-                    else
+                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
+                      def arrivalsExportUrl(exportType: ExportType) = SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/" +
+                        s"${state.startDate.toISOString}/" +
+                        s"${state.endDate.toISOString}/${props.terminal}")
+
+                      if (props.portCode == PortCode("LHR")) {
+                        MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
+                          MuiGrid(item = true, xs = 12)("Arrivals"),
+                          MuiGrid(item = true, xs = gridXs)(
+                            exportLink(
+                              props.selectedDate,
+                              props.terminal.toString,
+                              ExportArrivalsWithRedListDiversions,
+                              SPAMain.exportDatesUrl(ExportArrivalsWithRedListDiversions, state.startDate, state.endDate, props.terminal)
+                            )
+                          ),
+                          MuiGrid(item = true, xs = gridXs)(
+                            exportLink(
+                              props.selectedDate,
+                              props.terminal.toString,
+                              ExportArrivalsWithoutRedListDiversions,
+                              SPAMain.exportDatesUrl(ExportArrivalsWithoutRedListDiversions, state.startDate, state.endDate, props.terminal)
+                            )
+                          )
+                        )
+                      } else if (props.portCode == PortCode("BHX")) {
+                        MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
+                          MuiGrid(item = true, xs = gridXs)(
+                            exportLink(
+                              props.selectedDate,
+                              props.terminal.toString,
+                              ExportArrivalsSingleTerminal,
+                              SPAMain.exportUrl(ExportArrivalsSingleTerminal, props.viewMode, props.terminal)
+                            )
+                          ),
+                          MuiGrid(item = true, xs = gridXs)(
+                            exportLink(
+                              props.selectedDate,
+                              props.terminal.toString,
+                              ExportArrivalsCombinedTerminals,
+                              SPAMain.exportUrl(ExportArrivalsCombinedTerminals, props.viewMode, props.terminal)
+                            )
+                          )
+                        )
+                      } else
+                        MuiGrid(item = true, xs = gridXs)(<.a(Icon.download, " Arrivals",
+                          ^.className := "btn btn-default",
+                          ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
+                            s"${state.startDate.toISOString}/" +
+                            s"${state.endDate.toISOString}/${props.terminal}"),
+                          ^.target := "_blank",
+                          ^.onClick --> {
+                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                          }
+                        ))
+                    } else
                       EmptyVdom,
                     if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                      List(
-                        MuiGrid(item = true, xs = 3)(
+                      MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
+                        MuiGrid(item = true, xs = 12)("Desks and queues"),
+                        MuiGrid(item = true, xs = gridXs)(
                           <.a(Icon.download, s" Recommendations",
                             ^.className := "btn btn-default",
                             ^.key := "recs",
@@ -141,7 +184,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                             }
                           ))
                         ,
-                        MuiGrid(item = true, xs = 3)(
+                        MuiGrid(item = true, xs = gridXs)(
                           <.a(Icon.download, s" Deployments",
                             ^.key := "deps",
                             ^.className := "btn btn-default",
@@ -151,19 +194,23 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                               Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Deployments", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
                             }
                           )
-                        )).toVdomArray
+                        ))
                     else
                       EmptyVdom,
-                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate <= SDate.now().toLocalDate))
-                      MuiGrid(item = true, xs = 3)(
-                        <.a(Icon.file, " Live Feed",
-                          ^.className := "btn btn-default",
-                          ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
-                          ^.target := "_blank",
-                          ^.onClick --> {
-                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Live Feed", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                          }
-                        ))
+                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate <= SDate.now().toLocalDate)) {
+                      MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
+                        MuiGrid(item = true, xs = 12)("Feeds"),
+                        MuiGrid(item = true, xs = gridXs)(
+                          <.a(Icon.file, " Live arrivals feed",
+                            ^.className := "btn btn-default",
+                            ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
+                            ^.target := "_blank",
+                            ^.onClick --> {
+                              Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Live Feed", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
+                            }
+                          ))
+                      )
+                    }
                     else
                       EmptyVdom
                   )),
@@ -184,5 +231,5 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(terminal, selectedDate, loggedInUser: LoggedInUser))
+  def apply(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(portCode, terminal, viewMode, selectedDate, loggedInUser: LoggedInUser))
 }
