@@ -318,12 +318,6 @@ object QueueStatusProviders {
 
 }
 
-object CoachTransfer {
-  implicit val rw: ReadWriter[CoachTransfer] = macroRW
-}
-
-case class CoachTransfer(fromTerminal: Terminal, passengerLoadingTime: Long, transferTime: Long, fromCoachGateWalkTime: Long)
-
 case class AirportConfig(portCode: PortCode,
                          queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
                          divertedQueues: Map[Queue, Queue] = Map(),
@@ -357,9 +351,7 @@ case class AirportConfig(portCode: PortCode,
                          feedSourceMonitorExemptions: Seq[FeedSource] = Seq(),
                          desksByTerminal: Map[Terminal, Int],
                          queuePriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack, EGate),
-                         assumedAdultsPerChild: Double = 1.0,
-                         coachTransfer: List[CoachTransfer] = List.empty[CoachTransfer]
-
+                         assumedAdultsPerChild: Double = 1.0
                         ) {
   def assertValid(): Unit = {
     queuesByTerminal.values.flatten.toSet

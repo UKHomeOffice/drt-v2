@@ -11,6 +11,7 @@ import drt.client.services._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
+import drt.shared.coachTime.{CoachWalkTime, DefaultCoachWalkTime, LhrCoachWalkTime}
 import drt.shared.dates.UtcDate
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -94,6 +95,10 @@ object TerminalComponent {
             val staffingContentClass = if (props.terminalPageTab.mode == "staffing") "fade in active" else "fade out"
             val dashboardContentClass = if (props.terminalPageTab.mode == "dashboard") "fade in active" else "fade out"
 
+            val coachWalkTime = airportConfig.portCode match {
+              case PortCode("LHR") => new LhrCoachWalkTime(SDate("2021-06-29T00:00").millisSinceEpoch)
+              case _ => new DefaultCoachWalkTime
+            }
             val subMode = if (props.terminalPageTab.mode != "current" && props.terminalPageTab.mode != "snapshot")
               "desksAndQueues"
             else
@@ -121,6 +126,7 @@ object TerminalComponent {
                 arrivalSources = model.arrivalSources,
                 potWalkTimes = model.potWalkTimes,
                 redListPorts = model.redListPorts,
+                coachWalkTime = coachWalkTime
               )
               <.div(
                 <.ul(^.className := "nav nav-tabs",
@@ -186,6 +192,7 @@ object TerminalComponent {
                             potWalktTimes = model.potWalkTimes,
                             loggedInUser = loggedInUser,
                             redListPorts = model.redListPorts,
+                            coachWalkTime = coachWalkTime
                           )
                         }))
                     } else ""

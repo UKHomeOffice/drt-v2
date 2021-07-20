@@ -1,10 +1,11 @@
 package services
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{CoachTransfer, MilliDate}
+import drt.shared.MilliDate
 import drt.shared.MilliTimes.timeToNearestMinute
-import drt.shared.Terminals.{T2, T3, T5, Terminal}
+import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, WalkTime}
+import drt.shared.coachTime.CoachWalkTime
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.util.{Success, Try}
@@ -88,16 +89,12 @@ object PcpArrival {
   def gateOrStandWalkTimeCalculator(gateWalkTimesProvider: GateOrStandWalkTime,
                                     standWalkTimesProvider: GateOrStandWalkTime,
                                     defaultWalkTimeMillis: MillisSinceEpoch,
-                                    coachTransfer: List[CoachTransfer])(flight: Arrival): MillisSinceEpoch = {
-    val greenListTerminal = List(T2, T3, T5)
+                                    coachWalkTime: CoachWalkTime
+                                   )(flight: Arrival): MillisSinceEpoch = {
     val walkTime = standWalkTimesProvider(flight.Stand.getOrElse(""), flight.Terminal)
       .getOrElse(gateWalkTimesProvider(flight.Gate.getOrElse(""), flight.Terminal).getOrElse(defaultWalkTimeMillis))
-    if (AirportToCountry.isRedListed(flight.Origin) && greenListTerminal.contains(flight.Terminal) && coachTransfer.nonEmpty) {
-      val redListOriginWalkTime = coachTransfer
-        .filter(_.fromTerminal == flight.Terminal)
-        .map(ct => ct.passengerLoadingTime + ct.transferTime + ct.fromCoachGateWalkTime)
-        .headOption
-        .getOrElse(walkTime)
+    if (AirportToCountry.isRedListed(flight.Origin)) {
+      val redListOriginWalkTime = coachWalkTime.walkTime(flight).getOrElse(walkTime)
       log.debug(s"Red list country walkTimeForFlight including coach transfer for ${Arrival.summaryString(flight)} is $redListOriginWalkTime millis ${redListOriginWalkTime / 60000} mins default is $defaultWalkTimeMillis")
       redListOriginWalkTime
     } else {

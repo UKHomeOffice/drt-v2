@@ -13,6 +13,7 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
+import drt.shared.coachTime.{CoachWalkTime, DefaultCoachWalkTime, LhrCoachWalkTime}
 import drt.shared.dates.UtcDate
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -36,7 +37,8 @@ object TerminalDashboardComponent {
                     featureFlags: Pot[FeatureFlags],
                     walkTimes: Pot[WalkTimes],
                     loggedInUser: LoggedInUser,
-                    redListPorts: Pot[HashSet[PortCode]]
+                    redListPorts: Pot[HashSet[PortCode]],
+                    coachWalkTime : CoachWalkTime
                   )
 
   val defaultSlotSize = 120
@@ -76,7 +78,6 @@ object TerminalDashboardComponent {
           )
           <.div(<.div(^.className := "popover-overlay",
             ^.onClick --> p.router.set(closeArrivalsPopupLink)),
-
             <.div(^.className := "dashboard-arrivals-popup",
               <.h2("Arrivals"),
               <.div(^.className := "terminal-dashboard__arrivals_popup_table",
@@ -103,7 +104,7 @@ object TerminalDashboardComponent {
                           terminal = terminal,
                           portCode = p.airportConfig.portCode,
                           redListPorts = redListPorts,
-                          coachTransfer = p.airportConfig.coachTransfer
+                          coachWalkTime = p.coachWalkTime
                         )
                       )
                     }
@@ -190,7 +191,8 @@ object TerminalDashboardComponent {
             featureFlags: Pot[FeatureFlags],
             potWalktTimes: Pot[WalkTimes],
             loggedInUser: LoggedInUser,
-            redListPorts: Pot[HashSet[PortCode]]
+            redListPorts: Pot[HashSet[PortCode]],
+            coachWalkTime : CoachWalkTime
            ): VdomElement =
     component(Props(
       terminalPageTabLoc,
@@ -201,7 +203,8 @@ object TerminalDashboardComponent {
       featureFlags,
       potWalktTimes,
       loggedInUser,
-      redListPorts
+      redListPorts,
+      coachWalkTime
     ))
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {

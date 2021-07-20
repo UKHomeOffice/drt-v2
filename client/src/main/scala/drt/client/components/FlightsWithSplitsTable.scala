@@ -7,7 +7,6 @@ import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.ToolTips._
 import drt.client.components.styles.ArrivalsPageStylesDefault
-import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -16,6 +15,7 @@ import drt.shared.Terminals.{T2, T3, T5, Terminal}
 import drt.shared.TimeUtil.millisToMinutes
 import drt.shared._
 import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
+import drt.shared.coachTime.{CoachTransfer, CoachWalkTime, LhrCoachWalkTime}
 import drt.shared.dates.UtcDate
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -44,7 +44,7 @@ object FlightsWithSplitsTable {
                    terminal: Terminal,
                    portCode: PortCode,
                    redListPorts: HashSet[PortCode],
-                   coachTransfer: List[CoachTransfer]
+                   coachWalkTime: CoachWalkTime
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
@@ -119,8 +119,7 @@ object FlightsWithSplitsTable {
                     hasTransfer = props.hasTransfer,
                     indirectRedListPax = redListPaxInfo,
                     directRedListFlight = directRedListFlight,
-                    coachTransfer = props.coachTransfer,
-                    hasRedListOrigin = isRedListOrigin
+                    coachWalkTime = props.coachWalkTime
                   ))
               }.toTagMod)
           ),
@@ -231,8 +230,7 @@ object FlightTableRow {
                    hasTransfer: Boolean,
                    indirectRedListPax: IndirectRedListPax,
                    directRedListFlight: DirectRedListFlight,
-                   coachTransfer: List[CoachTransfer],
-                   hasRedListOrigin: Boolean
+                   coachWalkTime: CoachWalkTime
                   )
 
   case class RowState(hasChanged: Boolean)
@@ -342,7 +340,7 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
-        <.td(gateOrStand(props.walkTimes, props.defaultWalkTime, flight, props.coachTransfer, props.hasRedListOrigin)),
+        <.td(gateOrStand(props.walkTimes, props.defaultWalkTime, flight, props.coachWalkTime)),
         <.td(flight.displayStatus.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
         <.td(localDateTimeWithPopup(flight.Estimated)),
@@ -397,28 +395,19 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  private def gateOrStand(walkTimes: WalkTimes, defaultWalkTime: Long, flight: Arrival, coachTransfer: List[CoachTransfer], hasRedListOrigin: Boolean): VdomTagOf[Span] = {
+  private def gateOrStand(walkTimes: WalkTimes, defaultWalkTime: Long, flight: Arrival, coachWalkTime: CoachWalkTime): VdomTagOf[Span] = {
     val walkTimeProvider: (Option[String], Option[String], Terminal) => String =
       walkTimes.walkTimeForArrival(defaultWalkTime)
     val gateOrStand = <.span(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}")
+    val coachWalkTimeString: String = coachWalkTime.displayWalkTime(flight).getOrElse(walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal))
     val gateOrStandWithWalkTimes = Tippy.interactive(
-      <.span(coachWalkTime(hasRedListOrigin, walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal), flight, coachTransfer)),
+      <.span(coachWalkTimeString),
       gateOrStand
     )
     val displayGatesOrStands = if (walkTimes.isEmpty) gateOrStand else <.span(gateOrStandWithWalkTimes)
     displayGatesOrStands
   }
 
-  def coachWalkTime(hasRedListOrigin: Boolean, walkTime: String, flight: Arrival, coachTransfer: List[CoachTransfer]) = {
-    if (hasRedListOrigin && List(T2, T3, T5).contains(flight.Terminal) && coachTransfer.nonEmpty) {
-      coachTransfer.filter(_.fromTerminal == flight.Terminal)
-        .map(ct => MinuteAsAdjective(millisToMinutes(ct.passengerLoadingTime + ct.transferTime + ct.fromCoachGateWalkTime)).display + " walk time")
-        .headOption
-        .getOrElse(walkTime)
-    } else {
-      walkTime
-    }
-  }
 
   def offScheduleClass(arrival: Arrival): String = {
     val eta = bestArrivalTime(arrival)

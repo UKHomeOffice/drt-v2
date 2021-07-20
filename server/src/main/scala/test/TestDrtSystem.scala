@@ -9,6 +9,7 @@ import akka.stream.scaladsl.Source
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
 import drt.shared._
+import drt.shared.coachTime.{CoachWalkTime, DefaultCoachWalkTime, LhrCoachWalkTime}
 import manifests.passengers.BestAvailableManifest
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -172,6 +173,11 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)
 
     cs.killSwitches
+  }
+
+  val coachWalkTime: CoachWalkTime = airportConfig.portCode match {
+    case PortCode("LHR") => new LhrCoachWalkTime(SDate("2021-06-29T00:00").millisSinceEpoch)
+    case _ => new DefaultCoachWalkTime()
   }
 }
 
