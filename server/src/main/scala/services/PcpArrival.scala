@@ -13,7 +13,6 @@ object PcpArrival {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-
   def walkTimesLinesFromFileUrl(walkTimesFileUrl: String): Seq[String] = {
     Try(scala.io.Source.fromURL(walkTimesFileUrl)).map(_.getLines().drop(1).toSeq) match {
       case Success(walkTimes) => walkTimes

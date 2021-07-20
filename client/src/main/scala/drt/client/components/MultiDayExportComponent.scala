@@ -4,17 +4,17 @@ import drt.client.SPAMain
 import drt.client.components.TerminalContentComponent.exportLink
 import drt.client.components.styles.{DefaultFormFieldsStyle, WithScalaCssImplicits}
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.modules.GoogleEventTracker
-import drt.client.services.{ExportArrivalsCombinedTerminals, ExportArrivalsSingleTerminal, ExportArrivalsWithRedListDiversions, ExportArrivalsWithoutRedListDiversions, ExportType, ViewMode}
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{PortCode, SDateLike}
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
+import drt.shared.{PortCode, SDateLike}
 import io.kinoplan.scalajs.react.material.ui.core.{MuiFormLabel, MuiGrid, MuiTextField}
 import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{CallbackTo, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
 
@@ -49,12 +49,12 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
       val showClass = if (state.showDialogue) "show" else "fade"
 
-      def setStartDate(e: ReactEventFromInput): CallbackTo[Unit] = {
+      val setStartDate: ReactEventFromInput => CallbackTo[Unit] = e => {
         e.persist()
         scope.modState(_.setStart(e.target.value))
       }
 
-      def setEndDate(e: ReactEventFromInput): CallbackTo[Unit] = {
+      val setEndDate: ReactEventFromInput => CallbackTo[Unit] = e => {
         e.persist()
         scope.modState(_.setEnd(e.target.value))
       }
@@ -84,137 +84,28 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                 ^.id := "multi-day-export-modal-body",
                 MuiGrid(container = true)(
                   MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
-                    MuiGrid(item = true, xs = 1)(
-                      DefaultFormFieldsStyle.datePickerLabel,
-                      MuiFormLabel()("From"),
-                    ),
-                    MuiGrid(item = true, xs = 11)(
-                      MuiTextField()(
-                        DefaultFormFieldsStyle.datePicker,
-                        ^.`type` := "date",
-                        ^.defaultValue := today.toISODateOnly,
-                        ^.onChange ==> setStartDate
-                      )
-                    ),
-                    MuiGrid(item = true, xs = 1)(
-                      DefaultFormFieldsStyle.datePickerLabel,
-                      MuiFormLabel()("To"),
-                    ),
-                    MuiGrid(item = true, xs = 11)(
-                      MuiTextField()(
-                        DefaultFormFieldsStyle.datePicker,
-                        ^.`type` := "date",
-                        ^.defaultValue := today.toISODateOnly,
-                        ^.onChange ==> setEndDate
-                      )
-                    ),
+                    datePickerWithLabel(setStartDate, "From"),
+                    datePickerWithLabel(setEndDate, "To"),
                     if (state.startDate > state.endDate)
                       MuiGrid(item = true, xs = 12)(<.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date."))
                     else
                       EmptyVdom,
 
                     if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
-                      def arrivalsExportUrl(exportType: ExportType) = SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/" +
-                        s"${state.startDate.toISOString}/" +
-                        s"${state.endDate.toISOString}/${props.terminal}")
-
-                      if (props.portCode == PortCode("LHR")) {
-                        MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
-                          MuiGrid(item = true, xs = 12)("Arrivals"),
-                          MuiGrid(item = true, xs = gridXs)(
-                            exportLink(
-                              props.selectedDate,
-                              props.terminal.toString,
-                              ExportArrivalsWithRedListDiversions,
-                              SPAMain.exportDatesUrl(ExportArrivalsWithRedListDiversions, state.startDate, state.endDate, props.terminal)
-                            )
-                          ),
-                          MuiGrid(item = true, xs = gridXs)(
-                            exportLink(
-                              props.selectedDate,
-                              props.terminal.toString,
-                              ExportArrivalsWithoutRedListDiversions,
-                              SPAMain.exportDatesUrl(ExportArrivalsWithoutRedListDiversions, state.startDate, state.endDate, props.terminal)
-                            )
-                          )
-                        )
-                      } else if (props.portCode == PortCode("BHX")) {
-                        MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
-                          MuiGrid(item = true, xs = gridXs)(
-                            exportLink(
-                              props.selectedDate,
-                              props.terminal.toString,
-                              ExportArrivalsSingleTerminal,
-                              SPAMain.exportUrl(ExportArrivalsSingleTerminal, props.viewMode, props.terminal)
-                            )
-                          ),
-                          MuiGrid(item = true, xs = gridXs)(
-                            exportLink(
-                              props.selectedDate,
-                              props.terminal.toString,
-                              ExportArrivalsCombinedTerminals,
-                              SPAMain.exportUrl(ExportArrivalsCombinedTerminals, props.viewMode, props.terminal)
-                            )
-                          )
-                        )
-                      } else
-                        MuiGrid(item = true, xs = gridXs)(<.a(Icon.download, " Arrivals",
-                          ^.className := "btn btn-default",
-                          ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
-                            s"${state.startDate.toISOString}/" +
-                            s"${state.endDate.toISOString}/${props.terminal}"),
-                          ^.target := "_blank",
-                          ^.onClick --> {
-                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                          }
-                        ))
-                    } else
-                      EmptyVdom,
+                      val exports = props.portCode match {
+                        case PortCode("LHR") => List(ExportArrivalsWithRedListDiversions, ExportArrivalsWithoutRedListDiversions)
+                        case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
+                        case _ => List(ExportArrivals)
+                      }
+                      exportLinksGroup(props, state, gridXs, exports, "Arrivals")
+                    } else EmptyVdom,
                     if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                      MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
-                        MuiGrid(item = true, xs = 12)("Desks and queues"),
-                        MuiGrid(item = true, xs = gridXs)(
-                          <.a(Icon.download, s" Recommendations",
-                            ^.className := "btn btn-default",
-                            ^.key := "recs",
-                            ^.href := SPAMain.absoluteUrl(s"export/desk-recs/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
-                            ^.target := "_blank",
-                            ^.onClick --> {
-                              Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", s"Export Desks", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                            }
-                          ))
-                        ,
-                        MuiGrid(item = true, xs = gridXs)(
-                          <.a(Icon.download, s" Deployments",
-                            ^.key := "deps",
-                            ^.className := "btn btn-default",
-                            ^.href := SPAMain.absoluteUrl(s"export/desk-deps/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
-                            ^.target := "_blank",
-                            ^.onClick --> {
-                              Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Deployments", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                            }
-                          )
-                        ))
-                    else
-                      EmptyVdom,
-                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate <= SDate.now().toLocalDate)) {
-                      MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
-                        MuiGrid(item = true, xs = 12)("Feeds"),
-                        MuiGrid(item = true, xs = gridXs)(
-                          <.a(Icon.file, " Live arrivals feed",
-                            ^.className := "btn btn-default",
-                            ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
-                            ^.target := "_blank",
-                            ^.onClick --> {
-                              Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Live Feed", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                            }
-                          ))
-                      )
-                    }
-                    else
-                      EmptyVdom
+                      exportLinksGroup(props, state, gridXs, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
+                    else EmptyVdom,
+                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate <= SDate.now().toLocalDate))
+                      exportLinksGroup(props, state, gridXs, List(ExportLiveArrivalsFeed), "Feeds")
+                    else EmptyVdom
                   )),
-
                 <.div(
                   ^.className := "modal-footer",
                   ^.id := "multi-day-export-modal-footer",
@@ -230,6 +121,37 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
     })
     .configure(Reusability.shouldComponentUpdate)
     .build
+
+  private def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String): html_<^.VdomElement = {
+    MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
+      MuiGrid(item = true, xs = 1)(
+        DefaultFormFieldsStyle.datePickerLabel,
+        MuiFormLabel()(label),
+      ),
+      MuiGrid(item = true, xs = 11)(
+        MuiTextField()(
+          DefaultFormFieldsStyle.datePicker,
+          ^.`type` := "date",
+          ^.defaultValue := today.toISODateOnly,
+          ^.onChange ==> setDate
+        )
+      ))
+  }
+
+  private def exportLinksGroup(props: Props, state: State, gridXs: Int, exports: List[ExportType], title: String): VdomElement =
+    MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
+      MuiGrid(item = true, xs = 12)(title),
+      exports.map(export =>
+        MuiGrid(item = true, xs = gridXs)(
+          exportLink(
+            props.selectedDate,
+            props.terminal.toString,
+            export,
+            SPAMain.exportDatesUrl(export, state.startDate, state.endDate, props.terminal)
+          )
+        )
+      ).toVdomArray
+    )
 
   def apply(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(portCode, terminal, viewMode, selectedDate, loggedInUser: LoggedInUser))
 }

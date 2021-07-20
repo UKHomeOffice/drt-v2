@@ -86,6 +86,12 @@ object ExportArrivals extends ExportType {
   override def toUrlString: String = toString.toLowerCase
 }
 
+object ExportLiveArrivalsFeed extends ExportType {
+  override def toString = "Live arrivals feed"
+
+  override def toUrlString: String = "arrivals-feed"
+}
+
 object ExportArrivalsWithRedListDiversions extends ExportType {
   override def toString = "With red list diversions"
 
