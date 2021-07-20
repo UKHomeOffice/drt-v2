@@ -1,5 +1,6 @@
 package drt.shared
 
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{T2, T5, Terminal}
 import drt.shared.api.PassengerInfoSummary
 
@@ -69,13 +70,18 @@ object RedList {
   )
 }
 
-
 sealed trait DirectRedListFlight {
   val isRedListOrigin: Boolean
   val terminalDiversion: Boolean
   val outgoingDiversion: Boolean
   val incomingDiversion: Boolean
   val paxDiversion: Boolean = outgoingDiversion || incomingDiversion
+}
+
+case object LhrRedList {
+  val t3RedListOpeningDate = 1622502000000L // 2021-06-01 BST
+  val t4RedListOpeningDate = 1624921200000L // 2021-06-29 BST
+  val t3NonRedListOpeningDate = 1626303600000L // 2021-07-15 BST
 }
 
 case class LhrDirectRedListFlight(isRedListOrigin: Boolean,

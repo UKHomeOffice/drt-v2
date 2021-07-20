@@ -1,6 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.LhrRedList.{t3NonRedListOpeningDate, t3RedListOpeningDate, t4RedListOpeningDate}
 import drt.shared.Terminals.{T2, T3, T4, T5, Terminal}
 
 sealed trait FlightDisplayFilter {
@@ -28,15 +29,21 @@ case object DefaultFlightDisplayFilter extends FlightDisplayFilter {
 }
 
 case class LhrFlightDisplayFilter(isRedListOrigin: PortCode => Boolean,
-                                  t3OpeningDate: MillisSinceEpoch,
-                                  t4OpeningDate: MillisSinceEpoch) extends FlightDisplayFilter {
+                                  t3RedListOpeningDate: MillisSinceEpoch,
+                                  t4RedListOpeningDate: MillisSinceEpoch,
+                                  t3NonRedListOpeningDate: MillisSinceEpoch) extends FlightDisplayFilter {
   def lhrRedListTerminalForDate(scheduled: MillisSinceEpoch): Option[Terminal] = {
-    if (t3OpeningDate <= scheduled && scheduled < t4OpeningDate) Option(T3)
-    else if (t4OpeningDate <= scheduled) Option(T4)
+    if (t3RedListOpeningDate <= scheduled && scheduled < t4RedListOpeningDate) Option(T3)
+    else if (t4RedListOpeningDate <= scheduled) Option(T4)
     else None
   }
 
-  val lhrNonRedListTerminals = List(T2, T5)
+  def lhrNonRedListTerminalsForDate(scheduled: MillisSinceEpoch): List[Terminal] = {
+    if (scheduled < t3NonRedListOpeningDate)
+      List(T2, T5)
+    else
+      List(T2, T3, T4)
+  }
 
   val filterIncludingIncomingDivertedRedListPaxFlight: (Terminal, ApiFlightWithSplits) => Boolean = (terminal: Terminal, fws: ApiFlightWithSplits) =>
     fws.apiFlight.Terminal == terminal || isIncomingDivertedRedListPaxFlight(terminal, fws)
@@ -47,7 +54,7 @@ case class LhrFlightDisplayFilter(isRedListOrigin: PortCode => Boolean,
   private def isIncomingDivertedRedListPaxFlight(terminal: Terminal, fws: ApiFlightWithSplits) =
     lhrRedListTerminalForDate(fws.apiFlight.Scheduled).exists { redListTerminal =>
       val isRedListTerminal = terminal == redListTerminal
-      val flightIsNonRedListTerminal: Boolean = lhrNonRedListTerminals.contains(fws.apiFlight.Terminal)
+      val flightIsNonRedListTerminal: Boolean = lhrNonRedListTerminalsForDate(fws.apiFlight.Scheduled).contains(fws.apiFlight.Terminal)
       val flightIsRedListOrigin = isRedListOrigin(fws.apiFlight.Origin)
 
       isRedListTerminal && flightIsNonRedListTerminal && flightIsRedListOrigin
@@ -55,7 +62,7 @@ case class LhrFlightDisplayFilter(isRedListOrigin: PortCode => Boolean,
 
   private def isOutgoingRedListPaxFlight(terminal: Terminal, fws: ApiFlightWithSplits) = {
     val redListDiversionsActive = lhrRedListTerminalForDate(fws.apiFlight.Scheduled).isDefined
-    val isNonRedListTerminal = lhrNonRedListTerminals.contains(terminal)
+    val isNonRedListTerminal = lhrNonRedListTerminalsForDate(fws.apiFlight.Scheduled).contains(terminal)
     val flightIsRedListOrigin = isRedListOrigin(fws.apiFlight.Origin)
 
     redListDiversionsActive && isNonRedListTerminal && flightIsRedListOrigin
