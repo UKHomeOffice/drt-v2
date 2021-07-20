@@ -340,7 +340,7 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
-        <.td(gateOrStand(props.walkTimes, props.defaultWalkTime, flight, props.coachWalkTime)),
+        <.td(gateOrStand(props.walkTimes, props.defaultWalkTime, flight, props.coachWalkTime, props.directRedListFlight.isRedListOrigin)),
         <.td(flight.displayStatus.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
         <.td(localDateTimeWithPopup(flight.Estimated)),
@@ -395,11 +395,12 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  private def gateOrStand(walkTimes: WalkTimes, defaultWalkTime: Long, flight: Arrival, coachWalkTime: CoachWalkTime): VdomTagOf[Span] = {
+  private def gateOrStand(walkTimes: WalkTimes, defaultWalkTime: Long, flight: Arrival, coachWalkTime: CoachWalkTime, isRedListOrigin: Boolean): VdomTagOf[Span] = {
     val walkTimeProvider: (Option[String], Option[String], Terminal) => String =
       walkTimes.walkTimeForArrival(defaultWalkTime)
     val gateOrStand = <.span(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}")
-    val coachWalkTimeString: String = coachWalkTime.displayWalkTime(flight).getOrElse(walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal))
+    val walkTime = walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal)
+    val coachWalkTimeString: String = if (isRedListOrigin) coachWalkTime.displayWalkTime(flight).getOrElse() else walkTime
     val gateOrStandWithWalkTimes = Tippy.interactive(
       <.span(coachWalkTimeString),
       gateOrStand
