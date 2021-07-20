@@ -2,9 +2,8 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
-import drt.shared.coachTime.LhrCoachWalkTime
+import drt.shared.coachTime.CoachWalkTime
 import org.specs2.mutable.Specification
-import services.SDate
 
 import scala.collection.immutable.HashSet
 
@@ -18,7 +17,7 @@ class FlightDisplayFilterSpec extends Specification {
   val redListPorts = HashSet(redListOriginInBolivia)
   val isRedListOrigin: PortCode => Boolean = pc => redListPorts.contains(pc)
 
-  val coachWalkTime = new LhrCoachWalkTime(t4OpeningMillis)
+  val coachWalkTime = CoachWalkTime(PortCode("LHR"), t4OpeningMillis)
 
   val redListT2preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = redListOriginInBolivia, terminal = T2), Set())
   val nonRedListT2preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = nonRedListOriginInFrance, terminal = T2), Set())

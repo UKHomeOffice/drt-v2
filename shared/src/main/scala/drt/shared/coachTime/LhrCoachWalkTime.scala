@@ -18,7 +18,7 @@ class LhrCoachWalkTime(t4OpeningDate: MillisSinceEpoch) extends CoachWalkTime {
   def greenListTerminals(scheduled: MillisSinceEpoch, t4OpeningDate: MillisSinceEpoch): List[Terminal] =
     if (scheduled > t4OpeningDate) List(T2, T3, T5) else List(T2, T5)
 
-  val coachTransferTerminalWaitTime = List(
+    val coachTransferTerminalWaitTime = List(
     CoachTransfer(T2, 10 * 60000L, 21 * 60000L, 900000L),
     CoachTransfer(T3, 10 * 60000L, 21 * 60000L, 900000L),
     CoachTransfer(T5, 10 * 60000L, 27 * 60000L, 900000L)

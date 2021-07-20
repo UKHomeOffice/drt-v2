@@ -3,7 +3,7 @@ package services
 import controllers.ArrivalGenerator.arrival
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared.api.{Arrival, WalkTime}
-import drt.shared.coachTime.LhrCoachWalkTime
+import drt.shared.coachTime.CoachWalkTime
 import drt.shared.{MilliDate, PortCode}
 import org.specs2.mutable.SpecificationLike
 
@@ -11,7 +11,7 @@ class PcpArrivalSpec extends SpecificationLike {
 
   import PcpArrival._
 
-  val coachWalkTime = new LhrCoachWalkTime(SDate("2021-06-29T00:00").millisSinceEpoch)
+  val coachWalkTime = CoachWalkTime(PortCode("LHR"), SDate("2021-06-29T00:00").millisSinceEpoch)
   "DRT-4607 parseWalkTimeWithMinuteRounding" +
     "We must round the walktimes to the nearest hour to keep the web client happy" +
     "See DRT-4607 for the why. Perhaps we will revisit" >> {

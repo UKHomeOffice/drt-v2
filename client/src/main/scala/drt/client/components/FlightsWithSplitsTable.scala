@@ -11,11 +11,10 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
-import drt.shared.Terminals.{T2, T3, T5, Terminal}
-import drt.shared.TimeUtil.millisToMinutes
+import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
-import drt.shared.coachTime.{CoachTransfer, CoachWalkTime, LhrCoachWalkTime}
+import drt.shared.coachTime.CoachWalkTime
 import drt.shared.dates.UtcDate
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -400,7 +399,7 @@ object FlightTableRow {
       walkTimes.walkTimeForArrival(defaultWalkTime)
     val gateOrStand = <.span(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}")
     val walkTime = walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal)
-    val coachWalkTimeString: String = if (isRedListOrigin) coachWalkTime.displayWalkTime(flight).getOrElse() else walkTime
+    val coachWalkTimeString: String = if (isRedListOrigin) coachWalkTime.displayWalkTime(flight).getOrElse(walkTime) else walkTime
     val gateOrStandWithWalkTimes = Tippy.interactive(
       <.span(coachWalkTimeString),
       gateOrStand

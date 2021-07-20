@@ -14,7 +14,7 @@ import drt.client.services._
 import drt.shared.Queues.Queue
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
-import drt.shared.coachTime.{CoachWalkTime, DefaultCoachWalkTime, LhrCoachWalkTime}
+import drt.shared.coachTime.CoachWalkTime
 import drt.shared.dates.UtcDate
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl

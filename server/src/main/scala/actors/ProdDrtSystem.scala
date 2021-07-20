@@ -14,7 +14,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.coachTime.{CoachWalkTime, DefaultCoachWalkTime, LhrCoachWalkTime}
+import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookup
 import manifests.passengers.S3ManifestPoller
 import play.api.Configuration
@@ -68,7 +68,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
   override val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
   override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, deploymentQueueActor)
-
 
 
   val flightLookups: FlightLookups = FlightLookups(
@@ -174,10 +173,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
     }
   }
 
-  val coachWalkTime : CoachWalkTime = airportConfig.portCode match {
-    case PortCode("LHR") => new LhrCoachWalkTime(SDate("2021-06-29T00:00").millisSinceEpoch)
-    case _ => new DefaultCoachWalkTime()
-  }
+  val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode, SDate("2021-06-29T00:00").millisSinceEpoch)
 
 }
 

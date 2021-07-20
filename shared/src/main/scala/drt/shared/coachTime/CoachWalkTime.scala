@@ -18,6 +18,15 @@ trait CoachWalkTime {
 
 }
 
+object CoachWalkTime {
+  def apply(portCode: PortCode, t4OpeningDate: MillisSinceEpoch): CoachWalkTime = {
+    portCode match {
+      case PortCode("LHR") => new LhrCoachWalkTime(t4OpeningDate)
+      case _ => new DefaultCoachWalkTime()
+    }
+  }
+}
+
 
 
 
