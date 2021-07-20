@@ -14,6 +14,7 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
+import drt.shared.coachTime.CoachWalkTime
 import drt.shared.dates.UtcDate
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -42,6 +43,7 @@ object FlightsWithSplitsTable {
                    terminal: Terminal,
                    portCode: PortCode,
                    redListPorts: HashSet[PortCode],
+                   coachWalkTime: CoachWalkTime
                   )
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
@@ -116,6 +118,7 @@ object FlightsWithSplitsTable {
                     hasTransfer = props.hasTransfer,
                     indirectRedListPax = redListPaxInfo,
                     directRedListFlight = directRedListFlight,
+                    coachWalkTime = props.coachWalkTime
                   ))
               }.toTagMod)
           ),
@@ -226,6 +229,7 @@ object FlightTableRow {
                    hasTransfer: Boolean,
                    indirectRedListPax: IndirectRedListPax,
                    directRedListFlight: DirectRedListFlight,
+                   coachWalkTime: CoachWalkTime
                   )
 
   case class RowState(hasChanged: Boolean)
@@ -335,7 +339,7 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
-        <.td(gateOrStand(props.walkTimes, props.defaultWalkTime, flight)),
+        <.td(gateOrStand(props.walkTimes, props.defaultWalkTime, flight, props.coachWalkTime, props.directRedListFlight.isRedListOrigin)),
         <.td(flight.displayStatus.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
         <.td(localDateTimeWithPopup(flight.Estimated)),
@@ -390,17 +394,20 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  private def gateOrStand(walkTimes: WalkTimes, defaultWalkTime: Long, flight: Arrival): VdomTagOf[Span] = {
+  private def gateOrStand(walkTimes: WalkTimes, defaultWalkTime: Long, flight: Arrival, coachWalkTime: CoachWalkTime, isRedListOrigin: Boolean): VdomTagOf[Span] = {
     val walkTimeProvider: (Option[String], Option[String], Terminal) => String =
       walkTimes.walkTimeForArrival(defaultWalkTime)
     val gateOrStand = <.span(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}")
+    val walkTime = walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal)
+    val coachWalkTimeString: String = if (isRedListOrigin) coachWalkTime.displayWalkTime(flight).getOrElse(walkTime) else walkTime
     val gateOrStandWithWalkTimes = Tippy.interactive(
-      <.span(walkTimeProvider(flight.Gate, flight.Stand, flight.Terminal)),
+      <.span(coachWalkTimeString),
       gateOrStand
     )
     val displayGatesOrStands = if (walkTimes.isEmpty) gateOrStand else <.span(gateOrStandWithWalkTimes)
     displayGatesOrStands
   }
+
 
   def offScheduleClass(arrival: Arrival): String = {
     val eta = bestArrivalTime(arrival)

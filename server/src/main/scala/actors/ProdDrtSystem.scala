@@ -2,7 +2,7 @@ package actors
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
-import actors.persistent.arrivals.{ArrivalsState, AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
 import akka.NotUsed
@@ -14,6 +14,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookup
 import manifests.passengers.S3ManifestPoller
 import play.api.Configuration
@@ -67,7 +68,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
   override val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
   override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, deploymentQueueActor)
-
 
 
   val flightLookups: FlightLookups = FlightLookups(
@@ -172,6 +172,9 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         System.exit(1)
     }
   }
+
+  val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode, SDate("2021-06-29T00:00").millisSinceEpoch)
+
 }
 
 case class SetCrunchRequestQueue(source: SourceQueueWithComplete[CrunchRequest])

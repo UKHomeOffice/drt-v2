@@ -246,6 +246,7 @@ object PaxTypes {
 
 case class PaxTypeAndQueue(passengerType: PaxType, queueType: Queue) {
   def key = s"${passengerType}_$queueType"
+
   def displayName = s"${PaxTypes.displayName(passengerType)} to ${Queues.displayName(queueType)}"
 }
 
@@ -350,21 +351,24 @@ case class AirportConfig(portCode: PortCode,
                          feedSourceMonitorExemptions: Seq[FeedSource] = Seq(),
                          desksByTerminal: Map[Terminal, Int],
                          queuePriority: List[Queue] = List(EeaDesk, NonEeaDesk, QueueDesk, FastTrack, EGate),
-                         assumedAdultsPerChild: Double = 1.0,
+                         assumedAdultsPerChild: Double = 1.0
                         ) {
   def assertValid(): Unit = {
     queuesByTerminal.values.flatten.toSet
       .filterNot(_ == Transfer)
-      .foreach { queue: Queue =>
-        assert(slaByQueue.contains(queue), s"Missing sla for $queue @ $portCode")
+      .foreach {
+        queue: Queue =>
+          assert(slaByQueue.contains(queue), s"Missing sla for $queue @ $portCode")
       }
-    queuesByTerminal.foreach { case (terminal, tQueues) =>
-      assert(minMaxDesksByTerminalQueue24Hrs.contains(terminal), s"Missing min/max desks for terminal $terminal @ $portCode")
-      tQueues
-        .filterNot(_ == Transfer)
-        .foreach { tQueue =>
-          assert(minMaxDesksByTerminalQueue24Hrs(terminal).contains(tQueue), s"Missing min/max desks for $tQueue for terminal $terminal @ $portCode")
-        }
+    queuesByTerminal.foreach {
+      case (terminal, tQueues) =>
+        assert(minMaxDesksByTerminalQueue24Hrs.contains(terminal), s"Missing min/max desks for terminal $terminal @ $portCode")
+        tQueues
+          .filterNot(_ == Transfer)
+          .foreach {
+            tQueue =>
+              assert(minMaxDesksByTerminalQueue24Hrs(terminal).contains(tQueue), s"Missing min/max desks for $tQueue for terminal $terminal @ $portCode")
+          }
     }
   }
 
@@ -383,8 +387,9 @@ case class AirportConfig(portCode: PortCode,
       (terminal, splitRatios.splits.map(_.paxType.queueType).toSet)
   }
 
-  def queueTypeSplitOrder(terminal: Terminal): List[Queue] = Queues.queueOrder.filter { q =>
-    terminalSplitQueueTypes.getOrElse(terminal, Set()).contains(q)
+  def queueTypeSplitOrder(terminal: Terminal): List[Queue] = Queues.queueOrder.filter {
+    q =>
+      terminalSplitQueueTypes.getOrElse(terminal, Set()).contains(q)
   }
 
   def feedPortCode: PortCode = cloneOfPortCode.getOrElse(portCode)

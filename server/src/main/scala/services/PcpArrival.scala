@@ -5,6 +5,7 @@ import drt.shared.MilliDate
 import drt.shared.MilliTimes.timeToNearestMinute
 import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, WalkTime}
+import drt.shared.coachTime.CoachWalkTime
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.util.{Success, Try}
@@ -87,11 +88,19 @@ object PcpArrival {
 
   def gateOrStandWalkTimeCalculator(gateWalkTimesProvider: GateOrStandWalkTime,
                                     standWalkTimesProvider: GateOrStandWalkTime,
-                                    defaultWalkTimeMillis: MillisSinceEpoch)(flight: Arrival): MillisSinceEpoch = {
-    val walkTime = standWalkTimesProvider(flight.Stand.getOrElse(""), flight.Terminal).getOrElse(
-      gateWalkTimesProvider(flight.Gate.getOrElse(""), flight.Terminal).getOrElse(defaultWalkTimeMillis))
-    log.debug(s"walkTimeForFlight ${Arrival.summaryString(flight)} is $walkTime millis ${walkTime / 60000} mins default is $defaultWalkTimeMillis")
-    walkTime
+                                    defaultWalkTimeMillis: MillisSinceEpoch,
+                                    coachWalkTime: CoachWalkTime
+                                   )(flight: Arrival): MillisSinceEpoch = {
+    val walkTime = standWalkTimesProvider(flight.Stand.getOrElse(""), flight.Terminal)
+      .getOrElse(gateWalkTimesProvider(flight.Gate.getOrElse(""), flight.Terminal).getOrElse(defaultWalkTimeMillis))
+    if (AirportToCountry.isRedListed(flight.Origin)) {
+      val redListOriginWalkTime = coachWalkTime.walkTime(flight).getOrElse(walkTime)
+      log.debug(s"Red list country walkTimeForFlight including coach transfer for ${Arrival.summaryString(flight)} is $redListOriginWalkTime millis ${redListOriginWalkTime / 60000} mins default is $defaultWalkTimeMillis")
+      redListOriginWalkTime
+    } else {
+      log.debug(s"walkTimeForFlight ${Arrival.summaryString(flight)} is $walkTime millis ${walkTime / 60000} mins default is $defaultWalkTimeMillis")
+      walkTime
+    }
   }
 
   def bestChoxTime(timeToChoxMillis: Long, flight: Arrival): Option[MillisSinceEpoch] = {

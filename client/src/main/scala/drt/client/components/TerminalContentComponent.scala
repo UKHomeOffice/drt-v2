@@ -14,6 +14,7 @@ import drt.client.services._
 import drt.shared.Queues.Queue
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
+import drt.shared.coachTime.CoachWalkTime
 import drt.shared.dates.UtcDate
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -45,6 +46,7 @@ object TerminalContentComponent {
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    potWalkTimes: Pot[WalkTimes],
                    redListPorts: Pot[HashSet[PortCode]],
+                   coachWalkTime : CoachWalkTime
                   )
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
@@ -185,12 +187,8 @@ object TerminalContentComponent {
                     if (state.activeTab == "arrivals") {
                       props.featureFlags.render { features =>
                         props.redListPorts.render { redListPorts =>
-                          val flightDisplayFilter = props.airportConfig.portCode match {
-                            case PortCode("LHR") => LhrFlightDisplayFilter(redListPorts.contains, SDate("2021-06-29T00:00").millisSinceEpoch)
-                            case _ => DefaultFlightDisplayFilter
-                          }
                           val flights = portState.window(viewStart, viewEnd).flights.values
-                          val flightsForTerminal = flightDisplayFilter.forTerminal(flights, props.terminalPageTab.terminal)
+                          val flightsForTerminal = props.coachWalkTime.flightFilterForTerminal(flights, props.terminalPageTab.terminal,redListPorts.contains)
                           arrivalsTableComponent(
                             FlightsWithSplitsTable.Props(
                               flightsWithSplits = flightsForTerminal.toList,
@@ -208,6 +206,7 @@ object TerminalContentComponent {
                               terminal = terminal,
                               portCode = props.airportConfig.portCode,
                               redListPorts = redListPorts,
+                              coachWalkTime = props.coachWalkTime
                             )
                           )
                         }

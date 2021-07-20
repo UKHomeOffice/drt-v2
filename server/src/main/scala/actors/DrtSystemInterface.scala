@@ -39,6 +39,7 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
@@ -146,8 +147,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def run(): Unit
 
+  def coachWalkTime : CoachWalkTime
+
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch =
-    gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L))(flight)
+    gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L),coachWalkTime)(flight)
 
   def pcpArrivalTimeCalculator: Arrival => MilliDate =
     PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
