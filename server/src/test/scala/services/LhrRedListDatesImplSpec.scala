@@ -10,7 +10,7 @@ class LhrRedListDatesImplSpec extends Specification {
       LhrRedListDatesImpl.t3RedListOpeningDate === SDate("2021-06-01T00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
     }
     "Give the T4 opening date as 2021-06-29 in BST" >> {
-      LhrRedListDatesImpl.t3RedListOpeningDate === SDate("2021-06-01T00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
+      LhrRedListDatesImpl.t4RedListOpeningDate === SDate("2021-06-29T00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
     }
   }
 }
