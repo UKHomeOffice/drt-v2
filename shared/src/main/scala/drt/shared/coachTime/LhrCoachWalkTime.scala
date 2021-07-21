@@ -25,13 +25,4 @@ case class LhrCoachWalkTime(lhrRedListDates: LhrRedListDates, coachTransfers: Li
         .headOption
     } else None
   }
-
-  def displayWalkTime(flight: Arrival): Option[String] = {
-    if (lhrTerminalTypes.lhrNonRedListTerminalsForDate(flight.Scheduled).contains(flight.Terminal)) {
-      coachTransfers.filter(_.fromTerminal == flight.Terminal)
-        .map(ct => ct.passengerLoadingTime + ct.transferTime + ct.fromCoachGateWalkTime)
-        .map(ct => MinuteAsAdjective(millisToMinutes(ct)).display + " walk time")
-        .headOption
-    } else None
-  }
 }

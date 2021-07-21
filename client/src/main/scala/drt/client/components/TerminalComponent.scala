@@ -10,8 +10,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
-import drt.shared.api.{PassengerInfoSummary, WalkTimes}
-import drt.shared.coachTime.CoachWalkTime
+import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -45,7 +44,6 @@ object TerminalComponent {
                             maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState],
                             featureFlags: Pot[FeatureFlags],
                             arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                            potWalkTimes: Pot[WalkTimes],
                             redListPorts: Pot[HashSet[PortCode]],
                           ) extends UseValueEq
 
@@ -68,7 +66,6 @@ object TerminalComponent {
         model.maybeStaffDeploymentAdjustmentPopoverState,
         model.featureFlags,
         model.arrivalSources,
-        model.walkTimes,
         model.redListPorts,
       ))
 
@@ -95,8 +92,6 @@ object TerminalComponent {
             val staffingContentClass = if (props.terminalPageTab.mode == "staffing") "fade in active" else "fade out"
             val dashboardContentClass = if (props.terminalPageTab.mode == "dashboard") "fade in active" else "fade out"
 
-            val coachWalkTime = CoachWalkTime(airportConfig.portCode)
-
             val subMode = if (props.terminalPageTab.mode != "current" && props.terminalPageTab.mode != "snapshot")
               "desksAndQueues"
             else
@@ -122,9 +117,7 @@ object TerminalComponent {
                 minuteTicker = model.minuteTicker,
                 featureFlags = model.featureFlags,
                 arrivalSources = model.arrivalSources,
-                potWalkTimes = model.potWalkTimes,
                 redListPorts = model.redListPorts,
-                coachWalkTime = coachWalkTime
               )
               <.div(
                 <.ul(^.className := "nav nav-tabs",
@@ -187,10 +180,8 @@ object TerminalComponent {
                             passengerInfoSummaryByDay = paxInfo,
                             router = props.router,
                             featureFlags = model.featureFlags,
-                            potWalktTimes = model.potWalkTimes,
                             loggedInUser = loggedInUser,
                             redListPorts = model.redListPorts,
-                            coachWalkTime = coachWalkTime
                           )
                         }))
                     } else ""

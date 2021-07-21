@@ -6,9 +6,5 @@ import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 
 object DefaultCoachWalkTime extends CoachWalkTime {
-
   override def walkTime(flight: Arrival): Option[MillisSinceEpoch] = None
-
-  override def displayWalkTime(flight: Arrival): Option[String] = None
-
 }

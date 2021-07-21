@@ -7,11 +7,7 @@ import drt.shared.redlist.LhrRedListDatesImpl
 
 
 trait CoachWalkTime {
-
   def walkTime(flight: Arrival): Option[MillisSinceEpoch]
-
-  def displayWalkTime(flight: Arrival): Option[String]
-
 }
 
 object CoachWalkTime {
