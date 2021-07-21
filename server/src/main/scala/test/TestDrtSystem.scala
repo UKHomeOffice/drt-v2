@@ -175,7 +175,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     cs.killSwitches
   }
 
-  val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode, SDate("2021-06-29T00:00").millisSinceEpoch)
+  val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode)
 }
 
 

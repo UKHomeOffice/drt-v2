@@ -187,8 +187,12 @@ object TerminalContentComponent {
                     if (state.activeTab == "arrivals") {
                       props.featureFlags.render { features =>
                         props.redListPorts.render { redListPorts =>
+                          val flightDisplayFilter = props.airportConfig.portCode match {
+                            case PortCode("LHR") => LhrFlightDisplayFilter(redListPorts.contains, LhrTerminalTypes(LhrRedListDatesImpl))
+                            case _ => DefaultFlightDisplayFilter
+                          }
                           val flights = portState.window(viewStart, viewEnd).flights.values
-                          val flightsForTerminal = props.coachWalkTime.flightFilterForTerminal(flights, props.terminalPageTab.terminal,redListPorts.contains)
+                          val flightsForTerminal = flightDisplayFilter.forTerminal(flights, props.terminalPageTab.terminal)
                           arrivalsTableComponent(
                             FlightsWithSplitsTable.Props(
                               flightsWithSplits = flightsForTerminal.toList,

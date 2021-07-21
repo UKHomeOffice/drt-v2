@@ -95,7 +95,7 @@ object TerminalComponent {
             val staffingContentClass = if (props.terminalPageTab.mode == "staffing") "fade in active" else "fade out"
             val dashboardContentClass = if (props.terminalPageTab.mode == "dashboard") "fade in active" else "fade out"
 
-            val coachWalkTime = CoachWalkTime(airportConfig.portCode, SDate("2021-06-29T00:00").millisSinceEpoch)
+            val coachWalkTime = CoachWalkTime(airportConfig.portCode)
 
             val subMode = if (props.terminalPageTab.mode != "current" && props.terminalPageTab.mode != "snapshot")
               "desksAndQueues"
