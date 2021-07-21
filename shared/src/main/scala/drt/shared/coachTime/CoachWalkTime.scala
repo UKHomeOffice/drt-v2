@@ -1,8 +1,9 @@
 package drt.shared.coachTime
 
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.PortCode
 import drt.shared.api.Arrival
-import drt.shared.{LhrRedListDatesImpl, PortCode}
+import drt.shared.redlist.LhrRedListDatesImpl
 
 
 trait CoachWalkTime {

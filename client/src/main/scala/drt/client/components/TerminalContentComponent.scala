@@ -16,6 +16,7 @@ import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.coachTime.CoachWalkTime
 import drt.shared.dates.UtcDate
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf

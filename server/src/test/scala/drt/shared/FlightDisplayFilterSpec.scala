@@ -3,6 +3,7 @@ package drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
 import drt.shared.coachTime.CoachWalkTime
+import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes}
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.HashSet
@@ -76,6 +77,3 @@ class FlightDisplayFilterSpec extends Specification {
     }
   }
 }
-
-//List(ApiFlightWithSplits(Arrival(None,,0,None,,None,None,None,None,None,None,None,None,None,None,None,,T2,VVI,990,Some(990),Set(),None,None,None,None),Set(),None), ApiFlightWithSplits(Arrival(None,,0,None,,None,None,None,None,None,None,None,None,None,None,None,,T3,VVI,990,Some(990),Set(),None,None,None,None),Set(),None), ApiFlightWithSplits(Arrival(None,,0,None,,None,None,None,None,None,None,None,None,None,None,None,,T3,CDG,990,Some(990),Set(),None,None,None,None),Set(),None), ApiFlightWithSplits(Arrival(None,,0,None,,None,None,None,None,None,None,None,None,None,None,None,,T4,VVI,990,Some(990),Set(),None,None,None,None),Set(),None), ApiFlightWithSplits(Arrival(None,,0,None,,None,None,None,None,None,None,None,None,None,None,None,,T5,VVI,990,Some(990),Set(),None,None,None,None),Set(),None))
-//List(ApiFlightWithSplits(Arrival(None,,0,None,,None,None,None,None,None,None,None,None,None,None,None,,T2,VVI,990,Some(990),Set(),None,None,None,None),Set(),None), ApiFlightWithSplits(Arrival(None,,0,None,,None,None,None,None,None,None,None,None,None,None,None,,T3,VVI,990,Some(990),Set(),None,None,None,None),Set(),None), ApiFlightWithSplits(Arrival(None,,0,None,,None,None,None,None,None,None,None,None,None,None,None,,T3,CDG,990,Some(990),Set(),None,None,None,None),Set(),None), ApiFlightWithSplits(Arrival(None,,0,None,,None,None,None,None,None,None,None,None,None,None,None,,T5,VVI,990,Some(990),Set(),None,None,None,None),Set(),None))

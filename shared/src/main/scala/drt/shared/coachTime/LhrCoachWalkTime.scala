@@ -1,10 +1,11 @@
 package drt.shared.coachTime
 
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.MinuteAsAdjective
 import drt.shared.Terminals._
 import drt.shared.TimeUtil.millisToMinutes
 import drt.shared.api.Arrival
-import drt.shared.{ApiFlightWithSplits, LhrTerminalTypes, LhrRedListDates, MinuteAsAdjective, PortCode}
+import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes}
 
 object LhrCoachWalkTime {
   val coachTransfers: List[CoachTransfer] = List(
