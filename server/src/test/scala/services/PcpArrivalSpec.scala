@@ -361,7 +361,7 @@ class PcpArrivalSpec extends SpecificationLike {
       "when we ask for the pcpFrom time for a red list flight at T2 scheduled after T4 has opened as a red list terminal"  >> {
         val flight = arrival(schDt = "2021-07-01T00:20.00Z", terminal = T2, gate = Option("2"), stand = Option("2L"), origin = PortCode("KBL"))
 
-        "then we should get scheduled + time to chox + first pax off + stand walk time" >> {
+        "then we should get scheduled + time to chox + first pax off + coach load + coach transfer + coach gate walk time" >> {
           val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
           val expected = MilliDate(flight.Scheduled + timeToChoxMillis + firstPaxOffMillis + paxLoadingTime + coachTransferTime + walkTimeFromCoach)
           result === expected
@@ -381,7 +381,7 @@ class PcpArrivalSpec extends SpecificationLike {
       "when we ask for the pcpFrom time for a red list flight at T2 scheduled before T3 has opened as a red list terminal"  >> {
         val flight = arrival(schDt = "2021-05-10T00:20.00Z", terminal = T2, gate = Option("2"), stand = Option("2L"), origin = PortCode("KBL"))
 
-        "then we should get scheduled + time to chox + first pax off + coach load + coach transfer + coach gate walk time" >> {
+        "then we should get scheduled + time to chox + first pax off + stand walk time" >> {
           val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
           val expected = MilliDate(flight.Scheduled + timeToChoxMillis + firstPaxOffMillis + standWalkTimeMillis)
           result === expected
