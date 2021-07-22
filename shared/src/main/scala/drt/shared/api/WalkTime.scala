@@ -20,8 +20,8 @@ object TerminalWalkTimes {
 
 case class WalkTimes(byTerminal: Map[Terminal, TerminalWalkTimes]) {
 
-  def walkTimeForArrival(defaultWalkTime: Long)
-                        (gate: Option[String], stand: Option[String], terminal: Terminal): String = {
+  def walkTimeStringForArrival(defaultWalkTime: Long)
+                              (gate: Option[String], stand: Option[String], terminal: Terminal): String = {
     val defaultString = s"${MinuteAsNoun(millisToMinutes(defaultWalkTime)).display} (default walk time for terminal)"
     val maybeWalkTime: Option[String] = (gate, stand, byTerminal.get(terminal)) match {
       case (Some(g), _, Some(t)) if t.gateWalktimes.contains(g) =>

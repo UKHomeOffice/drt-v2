@@ -36,7 +36,7 @@ object PcpArrival {
           None
       }
     case f =>
-      log.info(s"Failed to parse walk time line '$walkTimeCsvLine': $f")
+      log.info(s"Failed to parse walk time line '$walkTimeCsvLine': ${f.toString}")
       None
   }
 
@@ -67,7 +67,6 @@ object PcpArrival {
 
   type GateOrStand = String
   type GateOrStandWalkTime = (GateOrStand, Terminal) => Option[MillisSinceEpoch]
-  type FlightPcpArrivalTimeCalculator = Arrival => MilliDate
 
   def walkTimeMillis(walkTimes: Map[(String, Terminal), Long])(from: String, terminal: Terminal): Option[MillisSinceEpoch] = {
     walkTimes.get((from, terminal))
