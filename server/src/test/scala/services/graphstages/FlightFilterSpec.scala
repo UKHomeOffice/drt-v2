@@ -60,6 +60,6 @@ class FlightFilterSpec extends Specification {
   }
 
   private def fws(origin: PortCode, terminal: Terminal): ApiFlightWithSplits = {
-    ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(10), origin = origin, terminal = terminal), Set())
+    ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2021-06-01T12:00", actPax = Option(10), origin = origin, terminal = terminal), Set())
   }
 }

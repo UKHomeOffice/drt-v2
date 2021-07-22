@@ -90,7 +90,7 @@ class WalkTimesSpec extends Specification {
 
     val wt = WalkTimes(gateWalkTimes, standWalkTimes)
 
-    val walkTimeProvider: (Option[String], Option[String], Terminal) => String = wt.walkTimeForArrival(300000L)
+    val walkTimeProvider: (Option[String], Option[String], Terminal) => String = wt.walkTimeStringForArrival(300000L)
 
     "Given a gate and no stand I should get back the gate walk time" >> {
 

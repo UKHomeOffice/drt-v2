@@ -1,12 +1,12 @@
 package drt.shared.airportconfig
 
-import uk.gov.homeoffice.drt.auth.Roles.LHR
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals._
 import drt.shared._
+import uk.gov.homeoffice.drt.auth.Roles.LHR
 
 import scala.collection.immutable.SortedMap
 

@@ -2,16 +2,21 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
+import drt.shared.coachTime.CoachWalkTime
+import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes}
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.HashSet
 
 class FlightDisplayFilterSpec extends Specification {
-  private val t3RedListOpeningMillis = 10L
-  private val t4RedListOpeningMillis = 1000L
-  private val t3NonRedListOpeningMillis = 2000L
-  private val beforeT4Opening: MillisSinceEpoch = t4RedListOpeningMillis - 10
-  private val afterT4Opening: MillisSinceEpoch = t4RedListOpeningMillis + 10
+
+  object LhrRedListDatesImpl extends LhrRedListDates {
+    override val t3RedListOpeningDate: MillisSinceEpoch = 500L
+    override val t4RedListOpeningDate: MillisSinceEpoch = 1000L
+  }
+
+  private val beforeT4Opening: MillisSinceEpoch = LhrRedListDatesImpl.t4RedListOpeningDate - 10
+  private val afterT4Opening: MillisSinceEpoch = LhrRedListDatesImpl.t4RedListOpeningDate + 10
 
   val redListOriginInBolivia = PortCode("VVI")
   val nonRedListOriginInFrance = PortCode("CDG")
@@ -36,11 +41,12 @@ class FlightDisplayFilterSpec extends Specification {
   val redListT5postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = redListOriginInBolivia, terminal = T5), Set())
   val nonRedListT5postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = nonRedListOriginInFrance, terminal = T5), Set())
 
-
-  val filter = LhrFlightDisplayFilter(isRedListOrigin, t3RedListOpeningMillis, t4RedListOpeningMillis, t3NonRedListOpeningMillis)
+  val filter = LhrFlightDisplayFilter(isRedListOrigin, LhrTerminalTypes(LhrRedListDatesImpl))
 
   "Given flights for LHR spanning all terminals arriving before T4 starts handling red list flights" >> {
-    val flightsPreT4Opening = List(redListT2preT4, nonRedListT2preT4, redListT3preT4, nonRedListT3preT4, redListT4preT4, nonRedListT4preT4, redListT5preT4, nonRedListT5preT4)
+    val flightsPreT4Opening = List(
+      redListT2preT4, nonRedListT2preT4, redListT3preT4, nonRedListT3preT4, redListT4preT4, nonRedListT4preT4, redListT5preT4, nonRedListT5preT4)
+
     "When I ask for T2 display flights, I should get only T2 flights" >> {
       filter.forTerminalIncludingIncomingDiversions(flightsPreT4Opening, T2) === List(redListT2preT4, nonRedListT2preT4)
     }
@@ -63,8 +69,8 @@ class FlightDisplayFilterSpec extends Specification {
     "When I ask for T3 display flights, I should get only T3 flights" >> {
       filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T3) === List(redListT3postT4, nonRedListT3postT4)
     }
-    "When I ask for T4 display flights, I should get all the T4 flights, plus any T2 & T5 red list origin flights" >> {
-      filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T4) === List(redListT2postT4, redListT4postT4, nonRedListT4postT4, redListT5postT4)
+    "When I ask for T4 display flights, I should get all the T4 flights, plus any T2, T3 & T5 red list origin flights" >> {
+      filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T4) === List(redListT2postT4, redListT3postT4, redListT4postT4, nonRedListT4postT4, redListT5postT4)
     }
     "When I ask for T5 display flights, I should get only T5 flights" >> {
       filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T5) === List(redListT5postT4, nonRedListT5postT4)

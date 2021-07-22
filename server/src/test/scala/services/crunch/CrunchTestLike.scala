@@ -191,7 +191,7 @@ object TestDefaults {
 
   def testProbe(name: String)(implicit system: ActorSystem): TestProbe = TestProbe(name = name)
 
-  val pcpPaxFn: Arrival => Int = PcpPax.bestPcpPaxEstimate
+  val pcpPaxFn: Arrival => Int = PcpUtils.bestPcpPaxEstimate
 }
 
 class CrunchTestLike

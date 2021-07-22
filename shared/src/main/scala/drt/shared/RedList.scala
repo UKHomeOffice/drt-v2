@@ -1,7 +1,6 @@
 package drt.shared
 
-import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.{T2, T5, Terminal}
+import drt.shared.Terminals.{T2, T3, T5, Terminal}
 import drt.shared.api.PassengerInfoSummary
 
 import scala.collection.immutable.Map
@@ -78,11 +77,11 @@ sealed trait DirectRedListFlight {
   val paxDiversion: Boolean = outgoingDiversion || incomingDiversion
 }
 
-case object LhrRedList {
-  val t3RedListOpeningDate = 1622502000000L // 2021-06-01 BST
-  val t4RedListOpeningDate = 1624921200000L // 2021-06-29 BST
-  val t3NonRedListOpeningDate = 1626303600000L // 2021-07-15 BST
-}
+//case object LhrRedList {
+//  val t3RedListOpeningDate = 1622502000000L // 2021-06-01 BST
+//  val t4RedListOpeningDate = 1624921200000L // 2021-06-29 BST
+//  val t3NonRedListOpeningDate = 1626303600000L // 2021-07-15 BST
+//}
 
 case class LhrDirectRedListFlight(isRedListOrigin: Boolean,
                                   terminalDiversion: Boolean,
@@ -97,17 +96,14 @@ case class DefaultDirectRedListFlight(isRedListOrigin: Boolean) extends DirectRe
 
 object DirectRedListFlight {
   def apply(portCode: PortCode, displayTerminal: Terminal, flightTerminal: Terminal, isRedListOrigin: Boolean): DirectRedListFlight = {
-    val greenTerminal = portCode == PortCode("LHR") && List(T2, T5).contains(displayTerminal)
-    val terminalDiversion = displayTerminal != flightTerminal
+    if (portCode == PortCode("LHR")) {
+      val greenTerminal = List(T2, T3 ,T5).contains(displayTerminal)
+      val terminalDiversion = displayTerminal != flightTerminal
+      val outgoingDiversion = isRedListOrigin && greenTerminal
+      val incomingDiversion = isRedListOrigin && terminalDiversion && !greenTerminal
 
-    val outgoingDiversion =
-      portCode == PortCode("LHR") && isRedListOrigin && greenTerminal
-    val incomingDiversion =
-      portCode == PortCode("LHR") && isRedListOrigin && terminalDiversion && !greenTerminal
-
-    if (portCode == PortCode("LHR"))
       LhrDirectRedListFlight(isRedListOrigin, terminalDiversion, outgoingDiversion, incomingDiversion)
-    else
+    } else
       DefaultDirectRedListFlight(isRedListOrigin)
   }
 }

@@ -118,8 +118,6 @@ object Actions {
 
   case class UpdateRedListPorts(codes: HashSet[PortCode]) extends Action
 
-  case object GetWalktimes extends Action
-
   case class SetWalktimes(walkTimes: WalkTimes) extends Action
 
   case class GetPassengerInfoSummary(utcDate: UtcDate) extends Action

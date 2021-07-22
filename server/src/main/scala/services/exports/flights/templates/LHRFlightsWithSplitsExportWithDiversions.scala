@@ -3,6 +3,7 @@ package services.exports.flights.templates
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
 import drt.shared.Terminals._
 import drt.shared._
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import services.AirportToCountry
 
 object RedList {
@@ -24,7 +25,7 @@ trait LHRFlightsWithSplitsExportWithDiversions {
   }
 
   val directRedListFilter: LhrFlightDisplayFilter = LhrFlightDisplayFilter(
-    RedList.ports.toList.contains, LhrRedList.t3RedListOpeningDate, LhrRedList.t4RedListOpeningDate, LhrRedList.t3NonRedListOpeningDate)
+    RedList.ports.toList.contains, LhrTerminalTypes(LhrRedListDatesImpl))
 
   val flightsFilter: (Terminal, ApiFlightWithSplits) => Boolean = terminal match {
     case T2 => directRedListFilter.filterExcludingOutgoingDivertedRedListPaxFlight

@@ -1,10 +1,9 @@
 package drt.client
 
-import java.util.UUID
 import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle, ScenarioSimulationStyle}
+import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle}
 import drt.client.components.{ContactPage, EditKeyCloakUserPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
@@ -20,6 +19,7 @@ import org.scalajs.dom.console
 import scalacss.ProdDefaults._
 import uk.gov.homeoffice.drt.Urls
 
+import java.util.UUID
 import scala.collection.immutable.Seq
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 
@@ -146,7 +146,6 @@ object SPAMain {
   def requestInitialActions(): Unit = {
     val initActions = Seq(
       GetApplicationVersion,
-      GetWalktimes,
       GetContactDetails,
       GetLoggedInUser,
       GetUserHasPortAccess,

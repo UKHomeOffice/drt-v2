@@ -1,9 +1,9 @@
 package services.graphstages
 
-import drt.shared.{AirportConfig, ApiFlightWithSplits, LhrFlightDisplayFilter, LhrRedList, PortCode}
-import drt.shared.Terminals.{T2, T5, Terminal}
+import drt.shared.Terminals.Terminal
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
+import drt.shared.{AirportConfig, ApiFlightWithSplits, PortCode}
 import services.AirportToCountry
-import services.exports.flights.templates.RedList
 
 case class FlightFilter(filters: List[ApiFlightWithSplits => Boolean]) {
   def +(other: FlightFilter): FlightFilter = FlightFilter(filters ++ other.filters)
@@ -12,8 +12,7 @@ case class FlightFilter(filters: List[ApiFlightWithSplits => Boolean]) {
 }
 
 object FlightFilter {
-  val lhrFlightFilter: LhrFlightDisplayFilter = LhrFlightDisplayFilter(
-    RedList.ports.toList.contains, LhrRedList.t3RedListOpeningDate, LhrRedList.t4RedListOpeningDate, LhrRedList.t3NonRedListOpeningDate)
+  private val terminalTypes: LhrTerminalTypes = LhrTerminalTypes(LhrRedListDatesImpl)
 
   def apply(filter: ApiFlightWithSplits => Boolean): FlightFilter = FlightFilter(List(filter))
 
@@ -24,7 +23,7 @@ object FlightFilter {
   val outsideCtaFilter: FlightFilter = FlightFilter(fws => !fws.apiFlight.Origin.isCta)
 
   val lhrRedListFilter: FlightFilter = FlightFilter { fws =>
-    val isGreenOnlyTerminal = lhrFlightFilter.lhrNonRedListTerminalsForDate(fws.apiFlight.Scheduled).contains(fws.apiFlight.Terminal)
+    val isGreenOnlyTerminal = terminalTypes.lhrNonRedListTerminalsForDate(fws.apiFlight.Scheduled).contains(fws.apiFlight.Terminal)
     val isRedListOrigin = AirportToCountry.isRedListed(fws.apiFlight.Origin)
     val okToProcess = !isRedListOrigin || !isGreenOnlyTerminal
     okToProcess
