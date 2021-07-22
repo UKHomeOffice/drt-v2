@@ -2,7 +2,7 @@ package drt.shared
 
 import drt.shared.api.Arrival
 
-object PcpPax {
+object PcpUtils {
   val defaultPax = 0
 
   def bestPcpPaxEstimate(flight: Arrival): Int =
@@ -13,4 +13,7 @@ object PcpPax {
       case (Some(apiPax), _, _, _) => apiPax
       case _ => defaultPax
     }
+
+  def walkTime(arrival: Arrival, timeToChox: Long, firstPaxOff: Long): Option[Long] =
+    arrival.PcpTime.map(pcpTime => pcpTime - (arrival.bestArrivalTime(timeToChox) + firstPaxOff))
 }

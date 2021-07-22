@@ -92,7 +92,18 @@ case class Arrival(Operator: Option[Operator],
     (minutesToDisembark * oneMinuteInMillis).toLong
   }
 
-  val bestPcpPaxEstimate: Int = PcpPax.bestPcpPaxEstimate(this)
+  val bestPcpPaxEstimate: Int = PcpUtils.bestPcpPaxEstimate(this)
+
+  def bestArrivalTime(timeToChox: MillisSinceEpoch): MillisSinceEpoch =
+    (ActualChox, EstimatedChox, Actual, Estimated, Scheduled) match {
+      case (Some(actChox), _, _, _, _) => actChox
+      case (_, Some(estChox), _, _, _) => estChox
+      case (_, _, Some(touchdown), _, _) => touchdown + timeToChox
+      case (_, _, _, Some(estimated), _) => estimated + timeToChox
+      case (_, _, _, _, scheduled) => scheduled + timeToChox
+    }
+
+  def walkTime(timeToChox: Long, firstPaxOff: Long): Option[Long] = PcpUtils.walkTime(this, timeToChox, firstPaxOff)
 
   def minutesOfPaxArrivals: Int = {
     val totalPax = bestPcpPaxEstimate

@@ -332,7 +332,7 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
-        <.td(gateOrStand(flight, props.airportConfig)),
+        <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
         <.td(flight.displayStatus.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
         <.td(localDateTimeWithPopup(flight.Estimated)),
@@ -387,12 +387,16 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  private def gateOrStand(flight: Arrival, airportConfig: AirportConfig): VdomTagOf[Span] = {
-    val gateOrStand = <.span(s"${flight.Gate.getOrElse("")} / ${flight.Stand.getOrElse("")}")
-    flight.PcpTime.map { pcpTime =>
-      val wt = pcpTime - (bestArrivalTime(flight) + airportConfig.firstPaxOffMillis + airportConfig.timeToChoxMillis)
-      println(s"${flight.flightCode}: $wt = ${SDate(pcpTime).toISOString()} - (${SDate(bestArrivalTime(flight)).toISOString()} + ${airportConfig.firstPaxOffMillis} + ${airportConfig.timeToChoxMillis})")
-      val walkTimeString = MinuteAsAdjective(millisToMinutes(wt)).display + " walk time"
+  private def gateOrStand(arrival: Arrival, airportConfig: AirportConfig, paxAreDiverted: Boolean): VdomTagOf[Span] = {
+    val gateOrStand = <.span(s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
+    arrival.walkTime(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis).map { wt =>
+      val description = (paxAreDiverted, arrival.Stand.isDefined, arrival.Gate.isDefined) match {
+        case (true, _, _) => "walk time including transfer bus"
+        case (false, true, _) => "walk time from stand"
+        case (false, false, true) => "walk time from gate"
+        case _ => "default walk time"
+      }
+      val walkTimeString = MinuteAsAdjective(millisToMinutes(wt)).display + " " + description
       <.span(Tippy.interactive(<.span(walkTimeString), gateOrStand))
     }.getOrElse(gateOrStand)
   }

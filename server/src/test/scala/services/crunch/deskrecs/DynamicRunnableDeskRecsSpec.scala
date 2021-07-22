@@ -106,7 +106,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig)
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
-  val pcpPaxCalcFn: Arrival => Int = PcpPax.bestPcpPaxEstimate
+  val pcpPaxCalcFn: Arrival => Int = PcpUtils.bestPcpPaxEstimate
 
   val ptqa: PaxTypeQueueAllocation = PaxTypeQueueAllocation(
     B5JPlusTypeAllocator,
