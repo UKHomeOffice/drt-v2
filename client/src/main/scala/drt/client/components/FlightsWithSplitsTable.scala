@@ -9,13 +9,11 @@ import drt.client.components.ToolTips._
 import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.TimeUtil.millisToMinutes
 import drt.shared._
-import drt.shared.api.{Arrival, PassengerInfoSummary, WalkTimes}
-import drt.shared.coachTime.CoachWalkTime
+import drt.shared.api.{Arrival, PassengerInfoSummary}
 import drt.shared.dates.UtcDate
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -235,16 +233,6 @@ object FlightTableRow {
   implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.flightWithSplits.hashCode, p.idx, p.maybePassengerInfoSummary.hashCode, p.directRedListFlight.hashCode()))
   implicit val stateReuse: Reusability[RowState] = Reusability.derive[RowState]
 
-  def bestArrivalTime(f: Arrival): MillisSinceEpoch =
-    List(
-      f.ActualChox,
-      f.EstimatedChox,
-      f.Actual,
-      f.Estimated,
-    ).collectFirst {
-      case Some(time) => time
-    }.getOrElse(f.Scheduled)
-
   val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TableRow")
     .initialState[RowState](RowState(false))
     .render_PS((props, state) => {
@@ -354,7 +342,7 @@ object FlightTableRow {
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
       val noPcpPax = if (flight.Origin.isCta || outgoingDiversion) " arrival-cta" else ""
-      val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass$cancelledClass$noPcpPax"
+      val trClassName = s"${offScheduleClass(flight, props.airportConfig.timeToChoxMillis)} $timeIndicatorClass$cancelledClass$noPcpPax"
 
       val queueTagMod = props.splitsQueueOrder.map { q =>
         val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
@@ -401,8 +389,8 @@ object FlightTableRow {
     }.getOrElse(gateOrStand)
   }
 
-  def offScheduleClass(arrival: Arrival): String = {
-    val eta = bestArrivalTime(arrival)
+  def offScheduleClass(arrival: Arrival, timeToChoxMillis: Long): String = {
+    val eta = arrival.bestArrivalTime(timeToChoxMillis)
     val differenceFromScheduled = eta - arrival.Scheduled
     val hourInMillis = 3600000
     val offScheduleClass = if (differenceFromScheduled > hourInMillis || differenceFromScheduled < -1 * hourInMillis)
