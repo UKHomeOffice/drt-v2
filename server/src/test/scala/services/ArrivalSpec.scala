@@ -238,4 +238,25 @@ class ArrivalSpec extends Specification {
       }
     }
   }
+  "Arrival equality" >> {
+    val arrivalWithPcp = ArrivalGenerator.arrival(pcpDt = "2021-06-01T12:00")
+    "Arrivals should be considered equal when" >> {
+      "They are identical apart from one having a PCP time and the other not" >> {
+        val arrivalWithoutPcp = arrivalWithPcp.copy(PcpTime = None)
+        arrivalWithoutPcp.isEqualTo(arrivalWithPcp) === true
+      }
+      "They are identical with both having the same PCP time" >> {
+        val identicalArrivalWithPcp = arrivalWithPcp.copy()
+        identicalArrivalWithPcp.isEqualTo(arrivalWithPcp) === true
+      }
+      "They are identical with both not having a PCP time" >> {
+        val arrivalWithoutPcp = arrivalWithPcp.copy(PcpTime = None)
+        arrivalWithoutPcp.isEqualTo(arrivalWithPcp.copy(PcpTime = None)) === true
+      }
+    }
+    "Arrivals should not be considered equal if the only difference is their PCP time" >> {
+      val arrivalWithDifferentPcp = arrivalWithPcp.copy(PcpTime = arrivalWithPcp.PcpTime.map(_ + 60000))
+      arrivalWithDifferentPcp.isEqualTo(arrivalWithPcp) === false
+    }
+  }
 }

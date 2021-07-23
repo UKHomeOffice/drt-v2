@@ -155,7 +155,7 @@ class ArrivalsGraphStage(name: String = "",
     def updateArrivalsSource(existingArrivals: SortedMap[UniqueArrival, Arrival],
                              newArrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = newArrivals.foldLeft(existingArrivals) {
       case (soFar, (key, newArrival)) =>
-        if (!existingArrivals.contains(key) || !existingArrivals(key).equals(newArrival)) soFar + (key -> newArrival)
+        if (!existingArrivals.contains(key) || !existingArrivals(key).isEqualTo(newArrival)) soFar + (key -> newArrival)
         else soFar
     }
 
@@ -264,7 +264,7 @@ class ArrivalsGraphStage(name: String = "",
         }
 
     def arrivalHasUpdates(maybeExistingArrival: Option[Arrival], updatedArrival: Arrival): Boolean = {
-      maybeExistingArrival.isEmpty || !maybeExistingArrival.get.equals(updatedArrival)
+      maybeExistingArrival.isEmpty || !maybeExistingArrival.get.isEqualTo(updatedArrival)
     }
 
     def mergeBaseArrival(baseArrival: Arrival): Arrival = {
