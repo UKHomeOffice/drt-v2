@@ -68,9 +68,13 @@ case class Arrival(Operator: Option[Operator],
 
   def flightCodeString: String = flightCode.toString
 
-  def basicForComparison: Arrival = copy(PcpTime = None)
+  def withoutPcpTime: Arrival = copy(PcpTime = None)
 
-  def equals(arrival: Arrival): Boolean = arrival.basicForComparison == basicForComparison
+  def isEqualTo(arrival: Arrival): Boolean =
+    if (arrival.PcpTime.isDefined && PcpTime.isDefined)
+      arrival == this
+    else
+      arrival.withoutPcpTime == withoutPcpTime
 
   lazy val uniqueId: Int = uniqueStr.hashCode
   lazy val uniqueStr: String = s"$Terminal$Scheduled${VoyageNumber.numeric}"
