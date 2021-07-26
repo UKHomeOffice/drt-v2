@@ -115,7 +115,7 @@ class FlightsRouterActor(val updatesSubscriber: ActorRef,
       self.forward(PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)))
 
     case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
-      sender() ! flightsLookupService(SDate(request.from), SDate(request.to), allTerminals, Option(pit))
+      sender() ! flightsLookupService(SDate(request.from), SDate(request.to), Seq(request.terminal), Option(pit))
 
     case GetFlightsForTerminals(startMillis, endMillis, terminals) =>
       sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, None)

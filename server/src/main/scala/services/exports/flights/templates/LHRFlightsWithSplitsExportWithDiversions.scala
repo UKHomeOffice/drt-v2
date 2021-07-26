@@ -12,7 +12,7 @@ object RedList {
   }
 }
 
-trait LHRFlightsWithSplitsExportWithDiversions {
+trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {
   val terminal: Terminal
   val start: SDateLike
   val end: SDateLike
@@ -27,14 +27,10 @@ trait LHRFlightsWithSplitsExportWithDiversions {
   val directRedListFilter: LhrFlightDisplayFilter = LhrFlightDisplayFilter(
     RedList.ports.toList.contains, LhrTerminalTypes(LhrRedListDatesImpl))
 
-  val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean = terminal match {
-    case T2 => directRedListFilter.filterReflectingDivertedRedListFlights
-    case T3 => directRedListFilter.filterIncludingIncomingDivertedRedListFlights
-    case T4 => directRedListFilter.filterIncludingIncomingDivertedRedListFlights
-    case T5 => directRedListFilter.filterReflectingDivertedRedListFlights
-  }
+  override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean =
+    directRedListFilter.filterReflectingDivertedRedListFlights
 
-  val requestForDiversions: FlightsRequest = GetFlightsForTerminals(start.millisSinceEpoch, end.millisSinceEpoch, terminalsToQuery)
+  override val request: FlightsRequest = GetFlightsForTerminals(start.millisSinceEpoch, end.millisSinceEpoch, terminalsToQuery)
 }
 
 case class LHRFlightsWithSplitsWithoutActualApiExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithoutActualApiExport with LHRFlightsWithSplitsExportWithDiversions
