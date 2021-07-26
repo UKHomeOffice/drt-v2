@@ -43,37 +43,75 @@ class FlightDisplayFilterSpec extends Specification {
 
   val filter = LhrFlightDisplayFilter(isRedListOrigin, LhrTerminalTypes(LhrRedListDatesImpl))
 
-  "Given flights for LHR spanning all terminals arriving before T4 starts handling red list flights" >> {
-    val flightsPreT4Opening = List(
-      redListT2preT4, nonRedListT2preT4, redListT3preT4, nonRedListT3preT4, redListT4preT4, nonRedListT4preT4, redListT5preT4, nonRedListT5preT4)
+  "Concerning LHR filter to include incoming red list diversions" >> {
+    "Given flights for LHR spanning all terminals arriving when T3 is a red list terminal" >> {
+      val flightsPreT4Opening = List(
+        redListT2preT4, nonRedListT2preT4, redListT3preT4, nonRedListT3preT4, redListT4preT4, nonRedListT4preT4, redListT5preT4, nonRedListT5preT4)
 
-    "When I ask for T2 display flights, I should get only T2 flights" >> {
-      filter.forTerminalIncludingIncomingDiversions(flightsPreT4Opening, T2) === List(redListT2preT4, nonRedListT2preT4)
+      "When I ask for T2 display flights, I should get only T2 flights" >> {
+        filter.forTerminalIncludingIncomingDiversions(flightsPreT4Opening, T2) === List(redListT2preT4, nonRedListT2preT4)
+      }
+      "When I ask for T3 display flights, I should get all the T3 flights, plus any T2 & T5 red list origin flights" >> {
+        filter.forTerminalIncludingIncomingDiversions(flightsPreT4Opening, T3) === List(redListT2preT4, redListT3preT4, nonRedListT3preT4, redListT5preT4)
+      }
+      "When I ask for T4 display flights, I should get only T4 flights" >> {
+        filter.forTerminalIncludingIncomingDiversions(flightsPreT4Opening, T4) === List(redListT4preT4, nonRedListT4preT4)
+      }
+      "When I ask for T5 display flights, I should get only T5 flights" >> {
+        filter.forTerminalIncludingIncomingDiversions(flightsPreT4Opening, T5) === List(redListT5preT4, nonRedListT5preT4)
+      }
     }
-    "When I ask for T3 display flights, I should get all the T3 flights, plus any T2 & T5 red list origin flights" >> {
-      filter.forTerminalIncludingIncomingDiversions(flightsPreT4Opening, T3) === List(redListT2preT4, redListT3preT4, nonRedListT3preT4, redListT5preT4)
-    }
-    "When I ask for T4 display flights, I should get only T4 flights" >> {
-      filter.forTerminalIncludingIncomingDiversions(flightsPreT4Opening, T4) === List(redListT4preT4, nonRedListT4preT4)
-    }
-    "When I ask for T5 display flights, I should get only T5 flights" >> {
-      filter.forTerminalIncludingIncomingDiversions(flightsPreT4Opening, T5) === List(redListT5preT4, nonRedListT5preT4)
+
+    "Given flights for LHR spanning all terminals arriving after T4 starts handling red list flights" >> {
+      val flightsPostT4Opening = List(redListT2postT4, nonRedListT2postT4, redListT3postT4, nonRedListT3postT4, redListT4postT4, nonRedListT4postT4, redListT5postT4, nonRedListT5postT4)
+      "When I ask for T2 display flights, I should get only T2 flights" >> {
+        filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T2) === List(redListT2postT4, nonRedListT2postT4)
+      }
+      "When I ask for T3 display flights, I should get only T3 flights" >> {
+        filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T3) === List(redListT3postT4, nonRedListT3postT4)
+      }
+      "When I ask for T4 display flights, I should get all the T4 flights, plus any T2, T3 & T5 red list origin flights" >> {
+        filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T4) === List(redListT2postT4, redListT3postT4, redListT4postT4, nonRedListT4postT4, redListT5postT4)
+      }
+      "When I ask for T5 display flights, I should get only T5 flights" >> {
+        filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T5) === List(redListT5postT4, nonRedListT5postT4)
+      }
     }
   }
 
-  "Given flights for LHR spanning all terminals arriving after T4 starts handling red list flights" >> {
-    val flightsPostT4Opening = List(redListT2postT4, nonRedListT2postT4, redListT3postT4, nonRedListT3postT4, redListT4postT4, nonRedListT4postT4, redListT5postT4, nonRedListT5postT4)
-    "When I ask for T2 display flights, I should get only T2 flights" >> {
-      filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T2) === List(redListT2postT4, nonRedListT2postT4)
+  "Concerning LHR filter to reflect red list diversions" >> {
+    "Given flights for LHR spanning all terminals arriving when T3 is a red list terminal" >> {
+      val flightsPreT4Opening = List(
+        redListT2preT4, nonRedListT2preT4, redListT3preT4, nonRedListT3preT4, redListT4preT4, nonRedListT4preT4, redListT5preT4, nonRedListT5preT4)
+
+      "When I ask for T2 display flights, I should get only T2 non-red list flights" >> {
+        filter.forTerminalReflectingDiversions(flightsPreT4Opening, T2) === List(nonRedListT2preT4)
+      }
+      "When I ask for T3 display flights, I should get all the T3 flights, plus any T2 & T5 red list origin flights" >> {
+        filter.forTerminalReflectingDiversions(flightsPreT4Opening, T3) === List(redListT2preT4, redListT3preT4, nonRedListT3preT4, redListT5preT4)
+      }
+      "When I ask for T4 display flights, I should get all T4 flights" >> {
+        filter.forTerminalReflectingDiversions(flightsPreT4Opening, T4) === List(redListT4preT4, nonRedListT4preT4)
+      }
+      "When I ask for T5 display flights, I should get only T5 non-red list flights" >> {
+        filter.forTerminalReflectingDiversions(flightsPreT4Opening, T5) === List(nonRedListT5preT4)
+      }
     }
-    "When I ask for T3 display flights, I should get only T3 flights" >> {
-      filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T3) === List(redListT3postT4, nonRedListT3postT4)
-    }
-    "When I ask for T4 display flights, I should get all the T4 flights, plus any T2, T3 & T5 red list origin flights" >> {
-      filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T4) === List(redListT2postT4, redListT3postT4, redListT4postT4, nonRedListT4postT4, redListT5postT4)
-    }
-    "When I ask for T5 display flights, I should get only T5 flights" >> {
-      filter.forTerminalIncludingIncomingDiversions(flightsPostT4Opening, T5) === List(redListT5postT4, nonRedListT5postT4)
+
+    "Given flights for LHR spanning all terminals arriving after T4 starts handling red list flights" >> {
+      val flightsPostT4Opening = List(redListT2postT4, nonRedListT2postT4, redListT3postT4, nonRedListT3postT4, redListT4postT4, nonRedListT4postT4, redListT5postT4, nonRedListT5postT4)
+      "When I ask for T2 display flights, I should get only T2 non-red list flights" >> {
+        filter.forTerminalReflectingDiversions(flightsPostT4Opening, T2) === List(nonRedListT2postT4)
+      }
+      "When I ask for T3 display flights, I should get only T3 non-red list flights" >> {
+        filter.forTerminalReflectingDiversions(flightsPostT4Opening, T3) === List(nonRedListT3postT4)
+      }
+      "When I ask for T4 display flights, I should get all the T4 flights, plus any T2, T3 & T5 red list origin flights" >> {
+        filter.forTerminalReflectingDiversions(flightsPostT4Opening, T4) === List(redListT2postT4, redListT3postT4, redListT4postT4, nonRedListT4postT4, redListT5postT4)
+      }
+      "When I ask for T5 display flights, I should get only T5 non-red list flights" >> {
+        filter.forTerminalReflectingDiversions(flightsPostT4Opening, T5) === List(nonRedListT5postT4)
+      }
     }
   }
 }

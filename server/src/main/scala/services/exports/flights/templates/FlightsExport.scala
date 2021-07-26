@@ -33,9 +33,9 @@ trait FlightsExport {
 
   val request: FlightsRequest
 
-  val standardFilter: (Terminal, ApiFlightWithSplits) => Boolean = (terminal, fws) => fws.apiFlight.Terminal == terminal
+  val standardFilter: (ApiFlightWithSplits, Terminal) => Boolean = (fws, terminal) => fws.apiFlight.Terminal == terminal
 
-  val flightsFilter: (Terminal, ApiFlightWithSplits) => Boolean
+  val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean
 
   val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
 
@@ -72,7 +72,7 @@ trait FlightsExport {
     flightsStream.mapConcat { flights =>
       uniqueArrivalsWithCodeShares(flights.flights.values.toSeq)
         .map(_._1)
-        .filter(fws => flightsFilter(terminal, fws))
+        .filter(fws => flightsFilter(fws, terminal))
         .sortBy { fws =>
           val arrival = fws.apiFlight
           (arrival.PcpTime, arrival.VoyageNumber.numeric, arrival.Origin.iata)

@@ -2,9 +2,7 @@ package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
 import drt.shared.Terminals._
-import drt.shared.api.Arrival
 import drt.shared._
-import services.{AirportToCountry, SDate}
 
 trait BhxFlightsWithSplitsExportWithCombinedTerminals {
   val terminal: Terminal
@@ -13,7 +11,7 @@ trait BhxFlightsWithSplitsExportWithCombinedTerminals {
 
   val terminalsToQuery: Seq[Terminal] = Seq(T1, T2)
 
-  val flightsFilter: (Terminal, ApiFlightWithSplits) => Boolean = (_, fws) => terminalsToQuery.contains(fws.apiFlight.Terminal)
+  val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean = (fws, _) => terminalsToQuery.contains(fws.apiFlight.Terminal)
 
   val requestForDiversions: FlightsRequest = GetFlightsForTerminals(start.millisSinceEpoch, end.millisSinceEpoch, terminalsToQuery)
 }

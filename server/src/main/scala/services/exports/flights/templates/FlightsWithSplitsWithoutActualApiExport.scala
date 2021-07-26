@@ -9,5 +9,5 @@ trait FlightsWithSplitsWithoutActualApiExport extends FlightsWithSplitsExport {
 }
 
 case class FlightsWithSplitsWithoutActualApiExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithoutActualApiExport {
-  override val flightsFilter: (Terminal, ApiFlightWithSplits) => Boolean = standardFilter
+  override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean = standardFilter
 }

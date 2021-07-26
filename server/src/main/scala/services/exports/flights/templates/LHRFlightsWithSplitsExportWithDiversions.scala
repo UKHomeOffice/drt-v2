@@ -27,11 +27,11 @@ trait LHRFlightsWithSplitsExportWithDiversions {
   val directRedListFilter: LhrFlightDisplayFilter = LhrFlightDisplayFilter(
     RedList.ports.toList.contains, LhrTerminalTypes(LhrRedListDatesImpl))
 
-  val flightsFilter: (Terminal, ApiFlightWithSplits) => Boolean = terminal match {
-    case T2 => directRedListFilter.filterExcludingOutgoingDivertedRedListPaxFlight
-    case T3 => directRedListFilter.filterIncludingIncomingDivertedRedListPaxFlight
-    case T4 => directRedListFilter.filterIncludingIncomingDivertedRedListPaxFlight
-    case T5 => directRedListFilter.filterExcludingOutgoingDivertedRedListPaxFlight
+  val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean = terminal match {
+    case T2 => directRedListFilter.filterReflectingDivertedRedListFlights
+    case T3 => directRedListFilter.filterIncludingIncomingDivertedRedListFlights
+    case T4 => directRedListFilter.filterIncludingIncomingDivertedRedListFlights
+    case T5 => directRedListFilter.filterReflectingDivertedRedListFlights
   }
 
   val requestForDiversions: FlightsRequest = GetFlightsForTerminals(start.millisSinceEpoch, end.millisSinceEpoch, terminalsToQuery)
