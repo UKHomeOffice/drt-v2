@@ -100,7 +100,7 @@ object TerminalContentComponent {
             val queues = props.airportConfig.queuesByTerminal.filterKeys(_ == terminal)
             val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
             val terminalName = terminal.toString
-            val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode)
+            val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, viewStart)
             <.div(^.className := s"view-mode-content $viewModeStr",
               <.div(^.className := "tabs-with-export",
                 <.ul(^.className := "nav nav-tabs",

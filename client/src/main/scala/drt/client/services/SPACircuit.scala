@@ -92,14 +92,14 @@ object ExportLiveArrivalsFeed extends ExportType {
   override def toUrlString: String = "arrivals-feed"
 }
 
-object ExportArrivalsWithRedListDiversions extends ExportType {
-  override def toString = "With red list diversions"
+case class ExportArrivalsWithRedListDiversions(label: String) extends ExportType {
+  override def toString = label//"Reflect pax diversions"
 
   override def toUrlString: String = "arrivals-with-red-list-diversions"
 }
 
-object ExportArrivalsWithoutRedListDiversions extends ExportType {
-  override def toString = "Without red list diversions"
+case class ExportArrivalsWithoutRedListDiversions(label: String) extends ExportType {
+  override def toString = label//"Don't reflect pax diversions"
 
   override def toUrlString: String = "arrivals"
 }

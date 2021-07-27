@@ -114,10 +114,10 @@ trait WithFlightsExport {
       (start, end, terminal) =>
         (user.hasRole(CedatStaff), user.hasRole(ApiView), portCode) match {
           case (true, _, _) => CedatFlightsExport(start, end, terminal)
-          case (false, true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
-          case (false, false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
-          case (false, true, PortCode("BHX")) => BhxFlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
-          case (false, false, PortCode("BHX")) => BhxFlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
+          case (false, true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start, end, terminal)
+          case (false, false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start, end, terminal)
+          case (false, true, PortCode("BHX")) => BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals(start, end, terminal)
+          case (false, false, PortCode("BHX")) => BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals(start, end, terminal)
           case (false, true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
           case (false, false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
         }

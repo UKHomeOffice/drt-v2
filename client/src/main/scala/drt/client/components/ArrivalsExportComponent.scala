@@ -4,10 +4,10 @@ import drt.client.SPAMain
 import drt.client.components.TerminalContentComponent.exportLink
 import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{ExportArrivals, ExportArrivalsCombinedTerminals, ExportArrivalsSingleTerminal, ExportArrivalsWithRedListDiversions, ExportArrivalsWithoutRedListDiversions, ExportType, ViewMode}
+import drt.client.services._
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import drt.shared.{PortCode, SDateLike}
 import io.kinoplan.scalajs.react.material.ui.core.MuiGrid
 import japgolly.scalajs.react.component.Scala.Component
@@ -19,7 +19,6 @@ import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 
 
 object ArrivalsExportComponent extends WithScalaCssImplicits {
-  val today: SDateLike = SDate.now()
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props(terminal: Terminal,
@@ -94,20 +93,32 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
     (terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser, viewMode: ViewMode) =>
       component(Props(terminal, selectedDate, loggedInUser, viewMode, title, exports))
 
-  def apply(portCode: PortCode): (Terminal, SDateLike, LoggedInUser, ViewMode) => VdomElement = portCode match {
-    case PortCode("LHR") => componentFactory(
-      "Reflect Red List Pax Diversions?",
-      List(ExportArrivalsWithRedListDiversions, ExportArrivalsWithoutRedListDiversions)
-    )
+  def apply(portCode: PortCode, terminal: Terminal, exportDate: SDateLike): (Terminal, SDateLike, LoggedInUser, ViewMode) => VdomElement = portCode match {
+    case PortCode("LHR") if LhrRedListDatesImpl.dayHasPaxDiversions(exportDate) =>
+      LhrTerminalTypes(LhrRedListDatesImpl).lhrRedListTerminalForDate(exportDate.millisSinceEpoch) match {
+        case None => defaultArrivalsExport
+        case Some(redListTerminal) if redListTerminal == terminal =>
+          componentFactory(
+            "Passengers from red list flights arriving at other terminals are processed at this PCP",
+            List(ExportArrivalsWithRedListDiversions("Include them"), ExportArrivalsWithoutRedListDiversions("Leave them out"))
+          )
+        case Some(_) =>
+          componentFactory(
+            "Passengers from red list flights are not processed at this PCP",
+            List(ExportArrivalsWithRedListDiversions("Remove them"), ExportArrivalsWithoutRedListDiversions("Leave them in"))
+          )
+      }
     case PortCode("BHX") => componentFactory(
       "Single terminal or both?",
       List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals))
-    case _ => (terminal, date, user, viewMode) =>
-      exportLink(
-        date,
-        terminal.toString,
-        ExportArrivals,
-        SPAMain.exportUrl(ExportArrivals, viewMode, terminal)
-      )
+    case _ => defaultArrivalsExport
   }
+
+  val defaultArrivalsExport: (Terminal, SDateLike, LoggedInUser, ViewMode) => VdomElement = (term, date, user, viewMode) =>
+    exportLink(
+      date,
+      term.toString,
+      ExportArrivals,
+      SPAMain.exportUrl(ExportArrivals, viewMode, term)
+    )
 }

@@ -370,8 +370,6 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         }
         val arrivals = Await.result(eventualFlights, 1.second).flights.values.map(_.apiFlight).toList
 
-        println(s"arrivals: $arrivals")
-
         arrivals.contains(updatedArrival.copy(RedListPax = Option(redListPax)))
       }
 

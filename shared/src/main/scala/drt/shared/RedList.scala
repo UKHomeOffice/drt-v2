@@ -77,12 +77,6 @@ sealed trait DirectRedListFlight {
   val paxDiversion: Boolean = outgoingDiversion || incomingDiversion
 }
 
-//case object LhrRedList {
-//  val t3RedListOpeningDate = 1622502000000L // 2021-06-01 BST
-//  val t4RedListOpeningDate = 1624921200000L // 2021-06-29 BST
-//  val t3NonRedListOpeningDate = 1626303600000L // 2021-07-15 BST
-//}
-
 case class LhrDirectRedListFlight(isRedListOrigin: Boolean,
                                   terminalDiversion: Boolean,
                                   outgoingDiversion: Boolean,
