@@ -93,13 +93,13 @@ object ExportLiveArrivalsFeed extends ExportType {
 }
 
 case class ExportArrivalsWithRedListDiversions(label: String) extends ExportType {
-  override def toString = label//"Reflect pax diversions"
+  override def toString: String = label
 
   override def toUrlString: String = "arrivals-with-red-list-diversions"
 }
 
 case class ExportArrivalsWithoutRedListDiversions(label: String) extends ExportType {
-  override def toString = label//"Don't reflect pax diversions"
+  override def toString: String = label
 
   override def toUrlString: String = "arrivals"
 }
