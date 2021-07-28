@@ -86,6 +86,36 @@ object ExportArrivals extends ExportType {
   override def toUrlString: String = toString.toLowerCase
 }
 
+object ExportLiveArrivalsFeed extends ExportType {
+  override def toString = "Live arrivals feed"
+
+  override def toUrlString: String = "arrivals-feed"
+}
+
+case class ExportArrivalsWithRedListDiversions(label: String) extends ExportType {
+  override def toString: String = label
+
+  override def toUrlString: String = "arrivals-with-red-list-diversions"
+}
+
+case class ExportArrivalsWithoutRedListDiversions(label: String) extends ExportType {
+  override def toString: String = label
+
+  override def toUrlString: String = "arrivals"
+}
+
+object ExportArrivalsSingleTerminal extends ExportType {
+  override def toString = "Single terminal"
+
+  override def toUrlString: String = "arrivals"
+}
+
+object ExportArrivalsCombinedTerminals extends ExportType {
+  override def toString = "Combined terminals"
+
+  override def toUrlString: String = "arrivals-with-red-list-diversions"
+}
+
 object ExportStaffMovements extends ExportType {
   override def toString = "Movements"
 

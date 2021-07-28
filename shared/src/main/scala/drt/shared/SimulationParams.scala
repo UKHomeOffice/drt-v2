@@ -2,17 +2,14 @@ package drt.shared
 
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.Queue
-import drt.shared.SplitRatiosNs.SplitSources
-import drt.shared.SplitRatiosNs.SplitSources.ScenarioSimulationSplits
 import drt.shared.Terminals.Terminal
-import drt.shared.dates.LocalDate
 import upickle.default.{ReadWriter, macroRW}
 
 import scala.util.{Success, Try}
 
 case class SimulationParams(
                              terminal: Terminal,
-                             date: LocalDate,
+                             date: dates.LocalDate,
                              passengerWeighting: Double,
                              processingTimes: Map[PaxTypeAndQueue, Int],
                              minDesks: Map[Queue, Int],
@@ -62,14 +59,7 @@ case class SimulationParams(
     })
 }
 
-case class SimulationResult(params: SimulationParams, queueToCrunchMinutes: Map[Queues.Queue, List[CrunchApi.CrunchMinute]])
-
-object SimulationResult {
-  implicit val rw: ReadWriter[SimulationResult] = macroRW
-}
-
 object SimulationParams {
-
   implicit val rw: ReadWriter[SimulationParams] = macroRW
 
   val fullDay = Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
@@ -100,7 +90,7 @@ object SimulationParams {
     val maybeParams = for {
       terminalName: String <- maybeSimulationFieldsStrings("terminal")
       dateString: String <- maybeSimulationFieldsStrings("date")
-      localDate <- LocalDate.parse(dateString)
+      localDate <- dates.LocalDate.parse(dateString)
       passengerWeightingString: String <- maybeSimulationFieldsStrings("passengerWeighting")
       eGateBankSizeString: String <- maybeSimulationFieldsStrings("eGateBankSizes")
       crunchOffsetMinutes: String <- maybeSimulationFieldsStrings("crunchOffsetMinutes")
@@ -143,5 +133,11 @@ object SimulationParams {
     .collect {
       case (k, Some(v)) => k -> v
     }
+}
 
+
+case class SimulationResult(params: SimulationParams, queueToCrunchMinutes: Map[Queues.Queue, List[CrunchApi.CrunchMinute]])
+
+object SimulationResult {
+  implicit val rw: ReadWriter[SimulationResult] = macroRW
 }

@@ -1,8 +1,9 @@
 package actors.flights
 
-import actors.{ArrivalGenerator, DateRange}
-import actors.routing.FlightsRouterActor._
+import actors.DateRange
 import actors.routing.FlightsRouterActor
+import actors.routing.FlightsRouterActor._
+import controllers.ArrivalGenerator
 import drt.shared.ApiFlightWithSplits
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
@@ -72,7 +73,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     val flight0509Early = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T01:10Z", pcpDt = "2020-09-04T23:50Z", actPax = Option(100)), Set())
     val flight0609 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-06T12:00Z", pcpDt = "2020-09-06T12:00Z", actPax = Option(100)), Set())
 
-    val earlyOnTimeAndLateFlights = (_: Terminal, utcDate: UtcDate, _: Option[MillisSinceEpoch]) =>
+    val earlyOnTimeAndLateFlights = (_: Option[MillisSinceEpoch]) => (utcDate: UtcDate) => (_: Terminal) =>
       Future(Map(
         UtcDate(2020, 9, 1) -> FlightsWithSplits(Seq(flight0109)),
         UtcDate(2020, 9, 2) -> FlightsWithSplits(Seq(flight0209onTime, flight0209Late)),
@@ -87,7 +88,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
         val startDate = SDate(2020, 9, 3)
         val endDate = SDate(2020, 9, 4, 23, 59)
 
-        val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights)(startDate, endDate, T1, None)
+        val flights = FlightsRouterActor.multiTerminalFlightsByDaySource(earlyOnTimeAndLateFlights)(startDate, endDate, Seq(T1), None)
         val result = Await.result(FlightsRouterActor.runAndCombine(Future(flights)), 1 second)
         val expected = FlightsWithSplits(Seq(flight0209Late, flight0309, flight0409, flight0509Early))
         result === expected

@@ -5,6 +5,7 @@ import actors.routing.FlightsRouterActor
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.scaladsl.Source
 import akka.testkit.{ImplicitSender, TestProbe}
+import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PortStateUpdates, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.EeaDesk

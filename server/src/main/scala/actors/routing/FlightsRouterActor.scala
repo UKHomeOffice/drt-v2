@@ -19,7 +19,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.dates.UtcDate
-import services.SDate
+import services.{SDate, SourceUtils}
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.{ExecutionContext, Future}
@@ -50,28 +50,31 @@ object FlightsRouterActor {
     pcpStartInRange || pcpEndInRange
   }
 
-  def flightsByDaySource(flightsLookupByDay: FlightsLookup)
-                        (start: SDateLike,
-                         end: SDateLike,
-                         terminal: Terminal,
-                         maybePit: Option[MillisSinceEpoch]): Source[FlightsWithSplits, NotUsed] = {
-    val dates = DateRange.utcDateRangeWithBuffer(2, 1)(start, end)
+  def multiTerminalFlightsByDaySource(flightsLookupByDayAndTerminal: FlightsLookup)
+                                     (start: SDateLike,
+                                      end: SDateLike,
+                                      terminals: Iterable[Terminal],
+                                      maybePit: Option[MillisSinceEpoch])
+                                     (implicit ec: ExecutionContext): Source[FlightsWithSplits, NotUsed] = {
+    val dates: Seq[UtcDate] = DateRange.utcDateRangeWithBuffer(2, 1)(start, end)
 
-    val queries = queryStream(dates)
+    val reduceAndSort = SourceUtils.reduceFutureIterables(terminals, reduceAndSortFlightsWithSplits)
+    val flightsLookupByDay = flightsLookupByDayAndTerminal(maybePit)
 
-    queries
-      .mapAsync(1) {
-        query =>
-          flightsLookupByDay(terminal, query.date, maybePit)
-      }
-      .map {
-        case FlightsWithSplits(flights) =>
-          FlightsWithSplits(flights.filter { case (_, fws) =>
-            val scheduledMatches = scheduledInRange(start, end, fws.apiFlight.Scheduled)
-            val pcpMatches = pcpFallsInRange(start, end, fws.apiFlight.pcpRange)
-            scheduledMatches || pcpMatches
-          })
-      }
+    Source(dates.toList)
+      .mapAsync(1)(d => reduceAndSort(flightsLookupByDay(d)))
+      .map(_.scheduledOrPcpWindow(start, end))
+      .filter(_.nonEmpty)
+  }
+
+  val reduceAndSortFlightsWithSplits: Iterable[FlightsWithSplits] => FlightsWithSplits = (allFlightsWithSplits: Iterable[FlightsWithSplits]) => {
+    val reducedFlightsWithSplits = allFlightsWithSplits
+      .reduce(_ ++ _)
+      .flights.values.toList.sortBy { fws =>
+      val arrival = fws.apiFlight
+      (arrival.PcpTime, arrival.VoyageNumber.numeric, arrival.Origin.iata)
+    }
+    FlightsWithSplits(reducedFlightsWithSplits)
   }
 
   def forwardRequestAndKillActor(killActor: ActorRef)
@@ -88,12 +91,12 @@ object FlightsRouterActor {
                    (implicit mat: Materializer, ec: ExecutionContext): Future[FlightsWithSplits] = eventualSource
     .flatMap(source => source
       .log(getClass.getName)
-      .runWith(Sink.reduce[FlightsWithSplits](_ ++ _))
+      .runWith(Sink.fold(FlightsWithSplits.empty)(_ ++ _))
     )
 }
 
 class FlightsRouterActor(val updatesSubscriber: ActorRef,
-                         terminals: Iterable[Terminal],
+                         allTerminals: Iterable[Terminal],
                          flightsByDayLookup: FlightsLookup,
                          updateFlights: FlightsUpdate
                         ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate)] {
@@ -103,32 +106,32 @@ class FlightsRouterActor(val updatesSubscriber: ActorRef,
 
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
-      sender() ! handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit))
+      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), allTerminals, Option(pit))
+
+    case PointInTimeQuery(pit, GetFlightsForTerminals(startMillis, endMillis, terminals)) =>
+      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, Option(pit))
 
     case PointInTimeQuery(pit, GetFlights(startMillis, endMillis)) =>
       self.forward(PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)))
 
     case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
-      sender() ! handleLookups(SDate(request.from), SDate(request.to), request.terminal, Option(pit))
+      sender() ! flightsLookupService(SDate(request.from), SDate(request.to), Seq(request.terminal), Option(pit))
+
+    case GetFlightsForTerminals(startMillis, endMillis, terminals) =>
+      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), terminals, None)
 
     case GetStateForDateRange(startMillis, endMillis) =>
-      sender() ! handleAllTerminalLookupsStream(startMillis, endMillis, None)
+      sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), allTerminals, None)
 
     case GetFlights(startMillis, endMillis) =>
       self.forward(GetStateForDateRange(startMillis, endMillis))
 
     case request: DateRangeLike with TerminalRequest =>
-      sender() ! handleLookups(SDate(request.from), SDate(request.to), request.terminal, None)
+      sender() ! flightsLookupService(SDate(request.from), SDate(request.to), Seq(request.terminal), None)
   }
 
-  def handleAllTerminalLookupsStream(startMillis: MillisSinceEpoch,
-                                     endMillis: MillisSinceEpoch,
-                                     maybePit: Option[MillisSinceEpoch]): Source[FlightsWithSplits, NotUsed] =
-    Source(terminals.toList)
-      .flatMapConcat(terminal => handleLookups(SDate(startMillis), SDate(endMillis), terminal, maybePit))
-
-  val handleLookups: (SDateLike, SDateLike, Terminal, Option[MillisSinceEpoch]) => Source[FlightsWithSplits, NotUsed] =
-    FlightsRouterActor.flightsByDaySource(flightsByDayLookup)
+  val flightsLookupService: (SDateLike, SDateLike, Iterable[Terminal], Option[MillisSinceEpoch]) => Source[FlightsWithSplits, NotUsed] =
+    FlightsRouterActor.multiTerminalFlightsByDaySource(flightsByDayLookup)
 
   override def partitionUpdates: PartialFunction[FlightUpdates, Map[(Terminal, UtcDate), FlightUpdates]] = {
     case container: RedListCounts =>
@@ -138,7 +141,7 @@ class FlightsRouterActor(val updatesSubscriber: ActorRef,
         }
         .flatMap {
           case (sch, counts) =>
-            terminals.map(t => ((t, sch), RedListCounts(counts)))
+            allTerminals.map(t => ((t, sch), RedListCounts(counts)))
         }
 
     case container: SplitsForArrivals =>

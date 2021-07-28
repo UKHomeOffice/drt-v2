@@ -115,7 +115,7 @@ class WorkloadSpec extends Specification {
   }
 
    def workloadForFlightFromTo(origin: PortCode, config: AirportConfig, terminal: Terminal, paxCount: Int): Double = {
-    val arrival = ArrivalGenerator.arrival(actPax = Option(paxCount), terminal = terminal, origin = origin)
+    val arrival = ArrivalGenerator.arrival(schDt = "2021-06-01T12:00", actPax = Option(paxCount), terminal = terminal, origin = origin)
     val splits = generateSplits(paxCount, SplitSources.Historical, None)
     workloadForFlight(arrival, splits, FlightFilter.forPortConfig(config))
   }

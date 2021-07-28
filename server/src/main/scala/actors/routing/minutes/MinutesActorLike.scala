@@ -25,7 +25,7 @@ case class GetStreamingDesksForTerminalDateRange(terminal: Terminal, from: Milli
 
 object MinutesActorLike {
   type MinutesLookup[A, B <: WithTimeAccessor] = ((Terminals.Terminal, UtcDate), Option[MillisSinceEpoch]) => Future[Option[MinutesContainer[A, B]]]
-  type FlightsLookup = (Terminals.Terminal, UtcDate, Option[MillisSinceEpoch]) => Future[FlightsWithSplits]
+  type FlightsLookup = Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[FlightsWithSplits]
   type ManifestLookup = (UtcDate, Option[MillisSinceEpoch]) => Future[VoyageManifests]
 
   type MinutesUpdate[A, B <: WithTimeAccessor] = ((Terminals.Terminal, UtcDate), MinutesContainer[A, B]) => Future[UpdatedMillis]

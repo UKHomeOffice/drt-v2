@@ -7,7 +7,7 @@ import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.{ApiFlightWithSplits, PaxTypeAndQueue, Queues}
 
 
-trait FlightWithSplitsExportTemplate extends FlightExportTemplate {
+trait FlightsWithSplitsExport extends FlightsExport {
   val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
 
   val actualApiHeadings: Seq[String] = List(

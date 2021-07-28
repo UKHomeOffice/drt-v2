@@ -1,6 +1,6 @@
 package controllers.application.exports
 
-import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.PointInTimeQuery
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import akka.NotUsed
 import akka.pattern.ask
@@ -11,15 +11,13 @@ import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToC
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
+import drt.shared._
 import drt.shared.dates.LocalDate
-import drt.shared.{SDateLike, _}
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
-import services.exports._
 import services.exports.flights.ArrivalFeedExport
-import services.exports.flights.templates.{CedatFlightExportTemplate, FlightExportTemplate, FlightWithSplitsWithActualApiExportTemplate, FlightWithSplitsWithoutActualApiExportTemplate}
-import services.graphstages.Crunch
+import services.exports.flights.templates._
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, CedatStaff}
 
@@ -29,68 +27,100 @@ import scala.util.{Failure, Success, Try}
 trait WithFlightsExport {
   self: Application =>
 
-  def csvTemplateForUser(user: LoggedInUser): FlightExportTemplate = {
-    if (user.hasRole(CedatStaff))
-      CedatFlightExportTemplate(Crunch.europeLondonTimeZone)
-    else if (user.hasRole(ApiView))
-      FlightWithSplitsWithActualApiExportTemplate(Crunch.europeLondonTimeZone)
-    else
-      FlightWithSplitsWithoutActualApiExportTemplate(Crunch.europeLondonTimeZone)
-  }
+  def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDateString: String,
+                                                    pointInTime: MillisSinceEpoch,
+                                                    terminalName: String): Action[AnyContent] =
+    doExportForPointInTime(localDateString, pointInTime, terminalName, exportForUser)
 
-  def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDayString: String, pointInTime: MillisSinceEpoch, terminalName: String): Action[AnyContent] = {
+  def exportFlightsWithSplitsForDayAtPointInTimeCSVWithRedListDiversions(localDateString: String,
+                                                                         pointInTime: MillisSinceEpoch,
+                                                                         terminalName: String): Action[AnyContent] =
+    doExportForPointInTime(localDateString, pointInTime, terminalName, redListDiversionsExportForUser)
+
+  private def doExportForPointInTime(localDateString: String,
+                                     pointInTime: MillisSinceEpoch,
+                                     terminalName: String,
+                                     export: (LoggedInUser, PortCode) => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] =
     Action.async {
       request =>
         val user = ctrl.getLoggedInUser(config, request.headers, request.session)
-        LocalDate.parse(localDayString) match {
+        val maybeDate = LocalDate.parse(localDateString)
+        maybeDate match {
           case Some(localDate) =>
-            val startDate = SDate(localDate)
-            val endDate = startDate.addDays(1).addMinutes(-1)
-            val terminal = Terminal(terminalName)
-            flightsRequestToCsv(pointInTime, startDate, endDate, terminal, csvTemplateForUser(user))
+            val start = SDate(localDate)
+            val end = start.addDays(1).addMinutes(-1)
+            flightsRequestToCsv(pointInTime, export(user, airportConfig.portCode)(start, end, Terminal(terminalName)))
           case _ =>
             Future(BadRequest("Invalid date format for export day."))
         }
     }
-  }
 
-  private def flightsRequestToCsv(
-                                   pointInTime: MillisSinceEpoch,
-                                   startDate: SDateLike,
-                                   endDate: SDateLike, terminal: Terminal,
-                                   csvTemplate: FlightExportTemplate):
-  Future[Result] = {
-    val request = GetFlightsForTerminalDateRange(startDate.millisSinceEpoch, endDate.millisSinceEpoch, terminal)
-    val pitRequest = PointInTimeQuery(pointInTime, request)
-    ctrl.flightsActor.ask(pitRequest).mapTo[Source[FlightsWithSplits, NotUsed]].map { flightsStream =>
-      val csvStream = StreamingFlightsExport.toCsvStreamFromTemplate(csvTemplate)(flightsStream)
-      val fileName = makeFileName("flights", terminal, startDate, endDate, airportConfig.portCode)
-      Try(sourceToCsvResponse(csvStream, fileName)) match {
-        case Success(value) => value
-        case Failure(t) =>
-          log.error("Failed to get CSV export", t)
-          BadRequest("Failed to get CSV export")
-      }
-    }
-  }
-
-  def exportFlightsWithSplitsForDateRangeCSV(startLocalDate: String,
-                                             endLocalDate: String,
+  def exportFlightsWithSplitsForDateRangeCSV(startLocalDateString: String,
+                                             endLocalDateString: String,
                                              terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+    doExportForDateRange(startLocalDateString, endLocalDateString, terminalName, exportForUser)
+  }
+
+  def exportFlightsWithSplitsForDateRangeCSVWithRedListDiversions(startLocalDateString: String,
+                                                                  endLocalDateString: String,
+                                                                  terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+    doExportForDateRange(startLocalDateString, endLocalDateString, terminalName, redListDiversionsExportForUser)
+  }
+
+  private def doExportForDateRange(startLocalDateString: String,
+                                   endLocalDateString: String,
+                                   terminalName: String,
+                                   export: (LoggedInUser, PortCode) => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] = {
     Action.async {
       request =>
         val user = ctrl.getLoggedInUser(config, request.headers, request.session)
-        (LocalDate.parse(startLocalDate), LocalDate.parse(endLocalDate)) match {
+        (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
           case (Some(start), Some(end)) =>
             val startDate = SDate(start)
             val endDate = SDate(end).addDays(1).addMinutes(-1)
-            val terminal = Terminal(terminalName)
-            flightsRequestToCsv(now().millisSinceEpoch, startDate, endDate, terminal, csvTemplateForUser(user))
+            flightsRequestToCsv(now().millisSinceEpoch, export(user, airportConfig.portCode)(startDate, endDate, Terminal(terminalName)))
           case _ =>
             Future(BadRequest("Invalid date format for start or end date"))
         }
     }
   }
+
+  private def flightsRequestToCsv(pointInTime: MillisSinceEpoch, export: FlightsExport): Future[Result] = {
+    val pitRequest = PointInTimeQuery(pointInTime, export.request)
+    ctrl.flightsActor.ask(pitRequest).mapTo[Source[FlightsWithSplits, NotUsed]].map {
+      flightsStream =>
+        val csvStream = export.csvStream(flightsStream)
+        val fileName = makeFileName("flights", export.terminal, export.start, export.end, airportConfig.portCode)
+        Try(sourceToCsvResponse(csvStream, fileName)) match {
+          case Success(value) => value
+          case Failure(t) =>
+            log.error("Failed to get CSV export", t)
+            BadRequest("Failed to get CSV export")
+        }
+    }
+  }
+
+  private val exportForUser: (LoggedInUser, PortCode) => (SDateLike, SDateLike, Terminal) => FlightsExport =
+    (user, portCode) =>
+      (start, end, terminal) =>
+        (user.hasRole(CedatStaff), user.hasRole(ApiView), portCode) match {
+          case (true, _, _) => CedatFlightsExport(start, end, terminal)
+          case (false, true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
+          case (false, false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
+        }
+
+  private val redListDiversionsExportForUser: (LoggedInUser, PortCode) => (SDateLike, SDateLike, Terminal) => FlightsExport =
+    (user, portCode) =>
+      (start, end, terminal) =>
+        (user.hasRole(CedatStaff), user.hasRole(ApiView), portCode) match {
+          case (true, _, _) => CedatFlightsExport(start, end, terminal)
+          case (false, true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start, end, terminal)
+          case (false, false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start, end, terminal)
+          case (false, true, PortCode("BHX")) => BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals(start, end, terminal)
+          case (false, false, PortCode("BHX")) => BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals(start, end, terminal)
+          case (false, true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
+          case (false, false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
+        }
 
   def exportArrivalsFromFeed(terminalString: String,
                              startPit: MillisSinceEpoch,
@@ -121,7 +151,9 @@ trait WithFlightsExport {
         else
           startDate.getLocalLastMidnight.toISODateOnly
 
-        val fileName = s"${airportConfig.portCode}-$terminal-$feedSourceString-$periodString"
+        val fileName = s"${
+          airportConfig.portCode
+        }-$terminal-$feedSourceString-$periodString"
 
         Result(
           header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
@@ -133,6 +165,4 @@ trait WithFlightsExport {
         NotFound(s"Unknown feed source $feedSourceString")
     })
   }
-
 }
-

@@ -613,7 +613,6 @@ object MonthStrings {
 }
 
 trait SDateLike {
-
   import MonthStrings._
 
   def ddMMyyString: String = f"$getDate%02d/$getMonth%02d/${getFullYear - 2000}%02d"
@@ -715,6 +714,10 @@ trait SDateLike {
   def compare(that: SDateLike): Int = millisSinceEpoch.compare(that.millisSinceEpoch)
 
   def <=(compareTo: SDateLike): Boolean = millisSinceEpoch <= compareTo.millisSinceEpoch
+
+  def <=(compareTo: MillisSinceEpoch): Boolean = millisSinceEpoch <= compareTo
+
+  def >=(compareTo: MillisSinceEpoch): Boolean = millisSinceEpoch >= compareTo
 
   def daysBetweenInclusive(that: SDateLike): Int = ((millisSinceEpoch - that.millisSinceEpoch) / oneDayMillis).abs.toInt + 1
 
@@ -825,13 +828,19 @@ object FlightsApi {
   case class Flights(flights: Iterable[Arrival])
 
   case class FlightsWithSplits(flights: Map[UniqueArrival, ApiFlightWithSplits]) {
+    val isEmpty: Boolean = flights.isEmpty
+    val nonEmpty: Boolean = !isEmpty
+
     def scheduledSince(sinceMillis: MillisSinceEpoch): FlightsWithSplits = FlightsWithSplits(flights.filter {
       case (UniqueArrival(_, _, scheduledMillis, _), _) => scheduledMillis >= sinceMillis
     })
 
-    def scheduledWindow(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): FlightsWithSplits = {
+    def scheduledOrPcpWindow(start: SDateLike, end: SDateLike): FlightsWithSplits = {
       val inWindow = flights.filter {
-        case (_, fws) => startMillis <= fws.apiFlight.Scheduled && fws.apiFlight.Scheduled <= endMillis
+        case (_, fws) =>
+          val pcpMatches = fws.apiFlight.hasPcpDuring(start, end)
+          val scheduledMatches = start <= fws.apiFlight.Scheduled && end >= fws.apiFlight.Scheduled
+          scheduledMatches || pcpMatches
       }
       FlightsWithSplits(inWindow)
     }

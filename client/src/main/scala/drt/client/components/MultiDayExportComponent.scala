@@ -1,18 +1,21 @@
 package drt.client.components
 
 import drt.client.SPAMain
+import drt.client.components.TerminalContentComponent.exportLink
 import drt.client.components.styles.{DefaultFormFieldsStyle, WithScalaCssImplicits}
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
+import drt.shared.redlist.LhrRedListDatesImpl
+import drt.shared.{PortCode, SDateLike}
 import io.kinoplan.scalajs.react.material.ui.core.{MuiFormLabel, MuiGrid, MuiTextField}
 import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{CallbackTo, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
 
@@ -20,7 +23,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
   val today: SDateLike = SDate.now()
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser)
+  case class Props(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser)
 
   case class State(startDate: LocalDate, endDate: LocalDate, showDialogue: Boolean = false) {
 
@@ -39,24 +42,28 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
   implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.terminal, p.selectedDate.millisSinceEpoch))
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
-    .initialStateFromProps(p => State(
-      startDate = p.selectedDate.toLocalDate,
-      endDate = p.selectedDate.toLocalDate
-    ))
+    .initialStateFromProps { p =>
+      println(s"Setting start and end date to ${SDate(p.selectedDate.toLocalDate).toISOString()}")
+      State(
+        startDate = p.selectedDate.toLocalDate,
+        endDate = p.selectedDate.toLocalDate
+      )
+    }
     .renderPS((scope, props, state) => {
 
       val showClass = if (state.showDialogue) "show" else "fade"
 
-      def setStartDate(e: ReactEventFromInput): CallbackTo[Unit] = {
+      val setStartDate: ReactEventFromInput => CallbackTo[Unit] = e => {
         e.persist()
         scope.modState(_.setStart(e.target.value))
       }
 
-      def setEndDate(e: ReactEventFromInput): CallbackTo[Unit] = {
+      val setEndDate: ReactEventFromInput => CallbackTo[Unit] = e => {
         e.persist()
         scope.modState(_.setEnd(e.target.value))
       }
 
+      val gridXs = 4
       <.div(
         <.a(
           "Multi Day Export",
@@ -80,94 +87,30 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                 ^.className := "modal-body",
                 ^.id := "multi-day-export-modal-body",
                 MuiGrid(container = true)(
-
                   MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
-                    MuiGrid(item = true, xs = 1)(
-                      DefaultFormFieldsStyle.datePickerLabel,
-                      MuiFormLabel()(
-                        "From"
-                      ),
-                    ),
-                    MuiGrid(item = true, xs = 11)(
-                      MuiTextField()(
-                        DefaultFormFieldsStyle.datePicker,
-                        ^.`type` := "date",
-                        ^.defaultValue := today.toISODateOnly,
-                        ^.onChange ==> setStartDate
-                      )
-                    ),
-                    MuiGrid(item = true, xs = 1)(
-                      DefaultFormFieldsStyle.datePickerLabel,
-                      MuiFormLabel()(
-                        "To"
-                      ),
-                    ),
-                    MuiGrid(item = true, xs = 11)(
-                      MuiTextField()(
-                        DefaultFormFieldsStyle.datePicker,
-                        ^.`type` := "date",
-                        ^.defaultValue := today.toISODateOnly,
-                        ^.onChange ==> setEndDate
-                      )
-                    ),
+                    datePickerWithLabel(setStartDate, "From", state.startDate),
+                    datePickerWithLabel(setEndDate, "To", state.endDate),
                     if (state.startDate > state.endDate)
                       MuiGrid(item = true, xs = 12)(<.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date."))
                     else
                       EmptyVdom,
 
-                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
-                      MuiGrid(item = true, xs = 3)(<.a(Icon.download, " Arrivals",
-                        ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
-                          s"${state.startDate.toISOString}/" +
-                          s"${state.endDate.toISOString}/${props.terminal}"),
-                        ^.target := "_blank",
-                        ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                        }
-                      ))
-                    else
-                      EmptyVdom,
+                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
+                      val exports = props.portCode match {
+                        case PortCode("LHR") if LhrRedListDatesImpl.dayHasPaxDiversions(SDate(state.endDate)) =>
+                          List(ExportArrivalsWithRedListDiversions("Reflect pax diversions"), ExportArrivalsWithoutRedListDiversions("Don't reflect pax diversions"))
+                        case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
+                        case _ => List(ExportArrivals)
+                      }
+                      exportLinksGroup(props, state, gridXs, exports, "Arrivals")
+                    } else EmptyVdom,
                     if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                      List(
-                        MuiGrid(item = true, xs = 3)(
-                          <.a(Icon.download, s" Recommendations",
-                            ^.className := "btn btn-default",
-                            ^.key := "recs",
-                            ^.href := SPAMain.absoluteUrl(s"export/desk-recs/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
-                            ^.target := "_blank",
-                            ^.onClick --> {
-                              Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", s"Export Desks", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                            }
-                          ))
-                        ,
-                        MuiGrid(item = true, xs = 3)(
-                          <.a(Icon.download, s" Deployments",
-                            ^.key := "deps",
-                            ^.className := "btn btn-default",
-                            ^.href := SPAMain.absoluteUrl(s"export/desk-deps/${state.startDate.toISOString}/${state.endDate.toISOString}/${props.terminal}"),
-                            ^.target := "_blank",
-                            ^.onClick --> {
-                              Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Deployments", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                            }
-                          )
-                        )).toVdomArray
-                    else
-                      EmptyVdom,
+                      exportLinksGroup(props, state, gridXs, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
+                    else EmptyVdom,
                     if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate <= SDate.now().toLocalDate))
-                      MuiGrid(item = true, xs = 3)(
-                        <.a(Icon.file, " Live Feed",
-                          ^.className := "btn btn-default",
-                          ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
-                          ^.target := "_blank",
-                          ^.onClick --> {
-                            Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Live Feed", f"${state.startDate.toISOString} - ${state.endDate.toISOString}"))
-                          }
-                        ))
-                    else
-                      EmptyVdom
+                      exportLinksGroup(props, state, gridXs, List(ExportLiveArrivalsFeed), "Feeds")
+                    else EmptyVdom
                   )),
-
                 <.div(
                   ^.className := "modal-footer",
                   ^.id := "multi-day-export-modal-footer",
@@ -184,5 +127,36 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(terminal, selectedDate, loggedInUser: LoggedInUser))
+  private def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String, currentDate: LocalDate): html_<^.VdomElement = {
+    MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
+      MuiGrid(item = true, xs = 1)(
+        DefaultFormFieldsStyle.datePickerLabel,
+        MuiFormLabel()(label),
+      ),
+      MuiGrid(item = true, xs = 11)(
+        MuiTextField()(
+          DefaultFormFieldsStyle.datePicker,
+          ^.`type` := "date",
+          ^.defaultValue := SDate(currentDate).toISODateOnly,
+          ^.onChange ==> setDate
+        )
+      ))
+  }
+
+  private def exportLinksGroup(props: Props, state: State, gridXs: Int, exports: List[ExportType], title: String): VdomElement =
+    MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
+      MuiGrid(item = true, xs = 12)(title),
+      exports.map(export =>
+        MuiGrid(item = true, xs = gridXs)(
+          exportLink(
+            props.selectedDate,
+            props.terminal.toString,
+            export,
+            SPAMain.exportDatesUrl(export, state.startDate, state.endDate, props.terminal)
+          )
+        )
+      ).toVdomArray
+    )
+
+  def apply(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(portCode, terminal, viewMode, selectedDate, loggedInUser: LoggedInUser))
 }

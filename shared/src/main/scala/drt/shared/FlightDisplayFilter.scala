@@ -1,24 +1,49 @@
 package drt.shared
 
-import drt.shared.Terminals._
+import drt.shared.Terminals.Terminal
 import drt.shared.redlist.LhrTerminalTypes
 
 sealed trait FlightDisplayFilter {
-  def forTerminal(flights: Iterable[ApiFlightWithSplits], terminal: Terminal): Iterable[ApiFlightWithSplits]
+  val forTerminalIncludingIncomingDiversions: (Iterable[ApiFlightWithSplits], Terminal) => Iterable[ApiFlightWithSplits] =
+    (flights: Iterable[ApiFlightWithSplits], terminal: Terminal) => flights.filter { fws =>
+      filterIncludingIncomingDivertedRedListFlights(fws, terminal)
+    }
+
+  val forTerminalReflectingDiversions: (Iterable[ApiFlightWithSplits], Terminal) => Iterable[ApiFlightWithSplits] =
+    (flights: Iterable[ApiFlightWithSplits], terminal: Terminal) => flights.filter { fws =>
+      filterReflectingDivertedRedListFlights(fws, terminal)
+    }
+
+  val filterIncludingIncomingDivertedRedListFlights: (ApiFlightWithSplits, Terminal) => Boolean
+
+  val filterReflectingDivertedRedListFlights: (ApiFlightWithSplits, Terminal) => Boolean
 }
 
 case object DefaultFlightDisplayFilter extends FlightDisplayFilter {
-  def forTerminal(flights: Iterable[ApiFlightWithSplits], terminal: Terminal): Iterable[ApiFlightWithSplits] =
-    flights.filter(_.apiFlight.Terminal == terminal)
+  override val filterIncludingIncomingDivertedRedListFlights: (ApiFlightWithSplits, Terminal) => Boolean =
+    (fws, terminal) => fws.apiFlight.Terminal == terminal
+
+  override val filterReflectingDivertedRedListFlights: (ApiFlightWithSplits, Terminal) => Boolean =
+    (fws, terminal) => fws.apiFlight.Terminal == terminal
 }
 
 case class LhrFlightDisplayFilter(isRedListOrigin: PortCode => Boolean, terminalTypes: LhrTerminalTypes) extends FlightDisplayFilter {
-  def forTerminal(flights: Iterable[ApiFlightWithSplits], terminal: Terminal): Iterable[ApiFlightWithSplits] =
-    flights.filter { fws =>
-      fws.apiFlight.Terminal == terminal || isDivertedRedListPaxFlight(terminal, fws)
-    }
+  override val filterIncludingIncomingDivertedRedListFlights: (ApiFlightWithSplits, Terminal) => Boolean = (fws: ApiFlightWithSplits, terminal: Terminal) =>
+    fws.apiFlight.Terminal == terminal || isIncomingDivertedRedListPaxFlight(fws, terminal)
 
-  private def isDivertedRedListPaxFlight(terminal: Terminal, fws: ApiFlightWithSplits) = {
+  override val filterReflectingDivertedRedListFlights: (ApiFlightWithSplits, Terminal) => Boolean = (fws: ApiFlightWithSplits, terminal: Terminal) => {
+    terminalTypes.lhrRedListTerminalForDate(fws.apiFlight.Scheduled) match {
+      case Some(redListTerminal) =>
+        if (terminal == redListTerminal)
+          fws.apiFlight.Terminal == terminal || isIncomingDivertedRedListPaxFlight(fws, terminal)
+        else
+          fws.apiFlight.Terminal == terminal && !isOutgoingRedListPaxFlight(fws, terminal)
+      case None =>
+        fws.apiFlight.Terminal == terminal
+    }
+  }
+
+  private def isIncomingDivertedRedListPaxFlight(fws: ApiFlightWithSplits, terminal: Terminal) = {
     def isRedListTerminal = terminalTypes.lhrRedListTerminalForDate(fws.apiFlight.Scheduled).contains(terminal)
 
     def flightIsNonRedListTerminal: Boolean = terminalTypes
@@ -28,5 +53,13 @@ case class LhrFlightDisplayFilter(isRedListOrigin: PortCode => Boolean, terminal
     def flightIsRedListOrigin = isRedListOrigin(fws.apiFlight.Origin)
 
     isRedListTerminal && flightIsNonRedListTerminal && flightIsRedListOrigin
+  }
+
+  private def isOutgoingRedListPaxFlight(fws: ApiFlightWithSplits, terminal: Terminal) = {
+    val redListDiversionsActive = terminalTypes.lhrRedListTerminalForDate(fws.apiFlight.Scheduled).isDefined
+    val isNonRedListTerminal = terminalTypes.lhrNonRedListTerminalsForDate(fws.apiFlight.Scheduled).contains(terminal)
+    val flightIsRedListOrigin = isRedListOrigin(fws.apiFlight.Origin)
+
+    redListDiversionsActive && isNonRedListTerminal && flightIsRedListOrigin
   }
 }

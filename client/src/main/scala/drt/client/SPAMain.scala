@@ -11,6 +11,7 @@ import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
 import drt.shared.SDateLike
 import drt.shared.Terminals.Terminal
+import drt.shared.dates.LocalDate
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
@@ -287,19 +288,18 @@ object SPAMain {
     else s"$pathToThisApp/$relativeUrl"
   }
 
-  def exportDesksUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
+  def exportUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
     case view: ViewPointInTime =>
       SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/${view.time.toLocalDate}/${view.millis}/$terminal")
     case view =>
       SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.toLocalDate.toISOString}/${view.dayEnd.toLocalDate.toISOString}/$terminal")
   }
 
-  def exportArrivalViewUrl(viewMode: ViewMode, terminal: Terminal): String = viewMode match {
-    case view: ViewPointInTime =>
-      SPAMain.absoluteUrl(s"export/arrivals/snapshot/${view.time.toLocalDate}/${view.millis}/$terminal")
-    case view =>
-      SPAMain.absoluteUrl(s"export/arrivals/${view.dayStart.toLocalDate.toISOString}/${view.dayEnd.toLocalDate.toISOString}/$terminal")
-  }
+  def exportSnapshotUrl(exportType: ExportType, date: LocalDate, pointInTime: SDateLike, terminal: Terminal): String =
+    SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/$date/${pointInTime.millisSinceEpoch}/$terminal")
+
+  def exportDatesUrl(exportType: ExportType, start: LocalDate, end: LocalDate, terminal: Terminal): String =
+    SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${start.toISOString}/${end.toISOString}/$terminal")
 
   def assetsPrefix: String = if (pathToThisApp == "/") s"/assets" else s"live/assets"
 

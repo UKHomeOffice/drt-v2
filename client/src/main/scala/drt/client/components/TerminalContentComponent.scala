@@ -5,6 +5,7 @@ import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
+import drt.client.components.Icon.Icon
 import drt.client.components.ToolTips._
 import drt.client.components.scenarios.ScenarioSimulationComponent
 import drt.client.logger.log
@@ -99,6 +100,7 @@ object TerminalContentComponent {
             val queues = props.airportConfig.queuesByTerminal.filterKeys(_ == terminal)
             val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
             val terminalName = terminal.toString
+            val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, viewStart)
             <.div(^.className := s"view-mode-content $viewModeStr",
               <.div(^.className := "tabs-with-export",
                 <.ul(^.className := "nav nav-tabs",
@@ -127,23 +129,22 @@ object TerminalContentComponent {
                   )
                 ),
                 <.div(^.className := "exports",
-                  exportLink(
+                    arrivalsExportForPort(
+                    props.terminalPageTab.terminal,
                     props.terminalPageTab.dateFromUrlOrNow,
-                    terminalName,
-                    ExportArrivals,
-                    SPAMain.exportArrivalViewUrl(props.terminalPageTab.viewMode, terminal)
-                  ),
+                    props.loggedInUser,
+                    props.viewMode),
                   exportLink(
                     props.terminalPageTab.dateFromUrlOrNow,
                     terminalName,
                     ExportDeskRecs,
-                    SPAMain.exportDesksUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal)
+                    SPAMain.exportUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal)
                   ),
                   exportLink(
                     props.terminalPageTab.dateFromUrlOrNow,
                     terminalName,
                     ExportDeployments,
-                    SPAMain.exportDesksUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal)
+                    SPAMain.exportUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal)
                   ),
                   displayForRole(
                     exportLink(
@@ -157,7 +158,7 @@ object TerminalContentComponent {
                     StaffMovementsExport,
                     props.loggedInUser
                   ),
-                  MultiDayExportComponent(terminal, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
+                  MultiDayExportComponent(props.airportConfig.portCode, terminal, props.viewMode, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
               <.div(^.className := "tab-content",
                 <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
                   if (state.activeTab == "desksAndQueues") {
@@ -188,7 +189,7 @@ object TerminalContentComponent {
                           case _ => DefaultFlightDisplayFilter
                         }
                         val flights = portState.window(viewStart, viewEnd).flights.values
-                        val flightsForTerminal = flightDisplayFilter.forTerminal(flights, props.terminalPageTab.terminal)
+                        val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminalPageTab.terminal)
                         arrivalsTableComponent(
                           FlightsWithSplitsTable.Props(
                             flightsWithSplits = flightsForTerminal.toList,
@@ -251,9 +252,10 @@ object TerminalContentComponent {
   def exportLink(exportDay: SDateLike,
                  terminalName: String,
                  exportType: ExportType,
-                 exportUrl: String
-                ): VdomTagOf[Anchor] =
-    <.a(Icon.download, s" $exportType",
+                 exportUrl: String,
+                 maybeExtraIcon: Option[Icon] = None
+                ): VdomTagOf[Anchor] = {
+    <.a(Icon.download, s" $exportType", maybeExtraIcon.getOrElse(EmptyVdom),
       ^.className := "btn btn-default",
       ^.href := exportUrl,
       ^.target := "_blank",
@@ -261,6 +263,7 @@ object TerminalContentComponent {
       ^.onClick --> {
         Callback(GoogleEventTracker.sendEvent(terminalName, s"Export $exportType", exportDay.toISODateOnly))
       })
+  }
 
   def displayForRole(node: VdomNode, role: Role, loggedInUser: LoggedInUser): TagMod =
     if (loggedInUser.hasRole(role))

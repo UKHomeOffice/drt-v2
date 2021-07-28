@@ -1,5 +1,6 @@
 package actors
 
+import controllers.ArrivalGenerator
 import drt.shared.PortCode
 import drt.shared.Terminals.{T1, T2}
 import drt.shared.api.Arrival

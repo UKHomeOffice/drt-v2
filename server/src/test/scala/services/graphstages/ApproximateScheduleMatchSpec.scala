@@ -1,6 +1,6 @@
 package services.graphstages
 
-import actors.ArrivalGenerator
+import controllers.ArrivalGenerator
 import drt.shared.PortCode
 import services.SDate
 import services.crunch.CrunchTestLike

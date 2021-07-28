@@ -73,7 +73,6 @@ object RedList {
   )
 }
 
-
 sealed trait DirectRedListFlight {
   val isRedListOrigin: Boolean
   val terminalDiversion: Boolean
@@ -95,17 +94,14 @@ case class DefaultDirectRedListFlight(isRedListOrigin: Boolean) extends DirectRe
 
 object DirectRedListFlight {
   def apply(portCode: PortCode, displayTerminal: Terminal, flightTerminal: Terminal, isRedListOrigin: Boolean): DirectRedListFlight = {
-    val greenTerminal = portCode == PortCode("LHR") && List(T2, T3 ,T5).contains(displayTerminal)
-    val terminalDiversion = displayTerminal != flightTerminal
+    if (portCode == PortCode("LHR")) {
+      val greenTerminal = List(T2, T3 ,T5).contains(displayTerminal)
+      val terminalDiversion = displayTerminal != flightTerminal
+      val outgoingDiversion = isRedListOrigin && greenTerminal
+      val incomingDiversion = isRedListOrigin && terminalDiversion && !greenTerminal
 
-    val outgoingDiversion =
-      portCode == PortCode("LHR") && isRedListOrigin && greenTerminal
-    val incomingDiversion =
-      portCode == PortCode("LHR") && isRedListOrigin && terminalDiversion && !greenTerminal
-
-    if (portCode == PortCode("LHR"))
       LhrDirectRedListFlight(isRedListOrigin, terminalDiversion, outgoingDiversion, incomingDiversion)
-    else
+    } else
       DefaultDirectRedListFlight(isRedListOrigin)
   }
 }
