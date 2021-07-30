@@ -48,14 +48,15 @@ object Pik extends AirportConfigLike {
     eGateBankSizes = Map(T1 -> Iterable()),
     role = PIK,
     terminalPaxTypeQueueAllocation = Map(
-      EeaMachineReadable -> List(Queues.Queue -> 1.0),
-      EeaBelowEGateAge -> List(Queues.Queue -> 1.0),
-      EeaNonMachineReadable -> List(Queues.Queue -> 1.0),
-      NonVisaNational -> List(Queues.Queue -> 1.0),
-      VisaNational -> List(Queues.Queue -> 1.0),
-      B5JPlusNational -> List(Queues.Queue -> 1.0),
-      B5JPlusNationalBelowEGateAge -> List(Queues.Queue -> 1.0)
-    ),
+      T1 -> Map(
+        EeaMachineReadable -> List(Queues.QueueDesk -> 1.0),
+        EeaBelowEGateAge -> List(Queues.QueueDesk -> 1.0),
+        EeaNonMachineReadable -> List(Queues.QueueDesk -> 1.0),
+        NonVisaNational -> List(Queues.QueueDesk -> 1.0),
+        VisaNational -> List(Queues.QueueDesk -> 1.0),
+        B5JPlusNational -> List(Queues.QueueDesk -> 1.0),
+        B5JPlusNationalBelowEGateAge -> List(Queues.QueueDesk -> 1.0)
+      )),
     flexedQueues = Set(),
     desksByTerminal = Map(T1 -> 5),
     feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
