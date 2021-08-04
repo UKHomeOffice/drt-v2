@@ -1,7 +1,7 @@
 package services.arrivals
 
-import drt.shared.{ArrivalsDiff, UniqueArrival}
+import drt.shared.api.Arrival
 
 object ArrivalsAdjustmentsNoop extends ArrivalsAdjustmentsLike {
-  override def apply(arrivalsDiff: ArrivalsDiff, arrivalsKeys: Iterable[UniqueArrival]): ArrivalsDiff = arrivalsDiff
+  override def apply(arrivals: Iterable[Arrival]): Iterable[Arrival] = arrivals
 }

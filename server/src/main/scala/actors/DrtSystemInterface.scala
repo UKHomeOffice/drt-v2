@@ -170,10 +170,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
 
-    val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(
-      airportConfig.portCode,
-      params.maybeEdiTerminalMapCsvUrl
-    )
+    val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode)
 
     val simulator: TrySimulator = OptimiserWithFlexibleProcessors.runSimulationOfWork
 
@@ -312,8 +309,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         val password = config.get[String]("feeds.lhr.sftp.live.password")
         val contentProvider = () => LhrSftpLiveContentProvider(host, username, password).latestContent
         LHRFlightFeed(contentProvider)
-      case "EDI" =>
-        createLiveChromaFlightFeed(ChromaLive).chromaEdiFlights()
       case "LGW" =>
         val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
         val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))

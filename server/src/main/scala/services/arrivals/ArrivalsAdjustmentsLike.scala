@@ -1,41 +1,23 @@
 package services.arrivals
 
-import drt.shared.Terminals.Terminal
-import drt.shared.{ArrivalsDiff, PortCode, UniqueArrival}
-import org.slf4j.LoggerFactory
-
-import java.net.URL
-import scala.util.{Failure, Success}
+import drt.shared.PortCode
+import drt.shared.api.Arrival
+import org.slf4j.{Logger, LoggerFactory}
+import services.AirportToCountry
 
 trait ArrivalsAdjustmentsLike {
-
-  def apply(arrivalsDiff: ArrivalsDiff, arrivalsKeys: Iterable[UniqueArrival]): ArrivalsDiff
-
+  def apply(arrivals: Iterable[Arrival]): Iterable[Arrival]
 }
 
 object ArrivalsAdjustments {
-  val log = LoggerFactory.getLogger(getClass)
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def adjustmentsForPort(portCode: PortCode, maybeCsvUrl: Option[String]): ArrivalsAdjustmentsLike =
+  def adjustmentsForPort(portCode: PortCode): ArrivalsAdjustmentsLike =
     if (portCode == PortCode("EDI")) {
-      val historicTerminalMap: Map[String, Map[String, Terminal]] = maybeCsvUrl
-        .map(url =>
-          EdiArrivalTerminalCsvMapper(new URL(url)) match {
-            case Success(arrivalsMap) =>
-              log.info(s"Using EdiArrivalsTerminalAdjustments with Historic CSV")
-              arrivalsMap
-            case Failure(exception) =>
-              log.error(
-                "Failed to load EDI terminal Map CSV - using EdiArrivalsTerminalAdjustments with no historic csv",
-                exception
-              )
-              Map[String, Map[String, Terminal]]()
-          }
-        ).getOrElse(Map[String, Map[String, Terminal]]())
-      EdiArrivalsTerminalAdjustments(historicTerminalMap)
+      EdiArrivalsTerminalAdjustments(AirportToCountry.isRedListed)
     }
     else {
-      log.info(s"Using  ArrivalsAdjustmentsNoop")
+      log.info(s"Using ArrivalsAdjustmentsNoop")
       ArrivalsAdjustmentsNoop
     }
 }

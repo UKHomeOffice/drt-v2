@@ -23,6 +23,23 @@ case object ForecastArrivals extends ArrivalsSourceType
 
 case object BaseArrivals extends ArrivalsSourceType
 
+object ArrivalsGraphStage {
+  def terminalRemovals(incomingArrivals: Iterable[Arrival], existingArrivals: Iterable[Arrival]): Iterable[Arrival] =
+    existingArrivals.filter { oldArrival =>
+      val oldKey = oldArrival.unique
+      val noLongerExists = !incomingArrivals.exists(_.unique == oldKey)
+      val existsAtDifferentTerminal = incomingArrivals.exists { incoming =>
+        val incomingKey = incoming.unique
+        val numberMatches = incomingKey.number == oldKey.number
+        val originMatches = incomingKey.origin == oldKey.origin
+        val scheduledMatches = incomingKey.scheduled == oldKey.scheduled
+        val differentTerminal = incomingKey.terminal != oldKey.terminal
+        numberMatches && originMatches && scheduledMatches && differentTerminal
+      }
+      noLongerExists && existsAtDifferentTerminal
+    }
+}
+
 class ArrivalsGraphStage(name: String = "",
                          initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival],
                          initialForecastArrivals: SortedMap[UniqueArrival, Arrival],
@@ -36,6 +53,8 @@ class ArrivalsGraphStage(name: String = "",
                          expireAfterMillis: Int,
                          now: () => SDateLike)
   extends GraphStage[FanInShape4[List[Arrival], List[Arrival], List[Arrival], List[Arrival], ArrivalsDiff]] {
+
+  import ArrivalsGraphStage._
 
   val inForecastBaseArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsForecastBase.in")
   val inForecastArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsForecast.in")
@@ -117,7 +136,7 @@ class ArrivalsGraphStage(name: String = "",
     def onPushArrivals(arrivalsInlet: Inlet[List[Arrival]], sourceType: ArrivalsSourceType): Unit = {
       val timer = StageTimer(stageName, outArrivalsDiff)
 
-      val incoming = grab(arrivalsInlet)
+      val incoming = arrivalsAdjustments.apply(grab(arrivalsInlet)).toList
 
       log.info(s"Grabbed ${incoming.length} arrivals from $arrivalsInlet of $sourceType")
       if (incoming.nonEmpty || sourceType == BaseArrivals) handleIncomingArrivals(sourceType, incoming)
@@ -132,8 +151,9 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"${filteredArrivals.size} arrivals after filtering")
       sourceType match {
         case LiveArrivals =>
+          val toRemove = terminalRemovals(incomingArrivals, liveArrivals.values)
           liveArrivals = updateArrivalsSource(liveArrivals, filteredArrivals)
-          toPush = mergeUpdatesFromKeys(liveArrivals.keys)
+          toPush = mergeUpdatesFromKeys(liveArrivals.keys).map {diff => diff.copy(toRemove = diff.toRemove ++ toRemove)}
         case LiveBaseArrivals =>
           ciriumArrivals = updateArrivalsSource(ciriumArrivals, filteredArrivals)
           val missingTerminals = ciriumArrivals.count {
@@ -149,7 +169,7 @@ class ArrivalsGraphStage(name: String = "",
           aclArrivals = filteredArrivals
           toPush = mergeUpdatesFromAllSources()
       }
-      pushIfAvailable(toPush.map(arrivalsAdjustments(_, merged.keys)), outArrivalsDiff)
+      pushIfAvailable(toPush, outArrivalsDiff)
     }
 
     def updateArrivalsSource(existingArrivals: SortedMap[UniqueArrival, Arrival],
