@@ -48,13 +48,16 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
       val hideLoader = Effect(Future(HideLoader()))
       val fetchOrigins = Effect(Future(GetAirportInfos(originCodes)))
+      val fetchRedList = Effect(Future(GetRedListPorts(viewMode.dayEnd.toLocalDate)))
+
+      val actions = hideLoader + fetchOrigins + fetchRedList
 
       val effects = if (getCurrentViewMode().isHistoric(SDate.now())) {
         log.info(s"Setting historic flight paxinfo")
-        hideLoader + fetchOrigins + Effect(Future(GetPassengerInfoForFlights))
+        actions + Effect(Future(GetPassengerInfoForFlights))
       } else {
         log.info(s"Starting to poll for crunch updates")
-        hideLoader + fetchOrigins + getCrunchUpdatesAfterDelay(viewMode)
+        actions + getCrunchUpdatesAfterDelay(viewMode)
       }
 
       updated((Ready(portState), portState.latestUpdate), effects)

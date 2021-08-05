@@ -1,5 +1,6 @@
 package drt.shared
 
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{T2, T3, T5, Terminal}
 import drt.shared.api.PassengerInfoSummary
 
@@ -9,7 +10,7 @@ object RedList {
   def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =
     portCode == PortCode("LHR") && List(T2, T5).contains(terminal)
 
-  val countryToCode: Map[String, String] = Map(
+  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] = Map(
     "Afghanistan" -> "AFG",
     "Angola" -> "AGO",
     "Argentina" -> "ARG",
@@ -111,19 +112,23 @@ sealed trait IndirectRedListPax {
 }
 
 object IndirectRedListPax {
-  def apply(displayRedListInfo: Boolean, portCode: PortCode, flightWithSplits: ApiFlightWithSplits, maybePassengerInfo: Option[PassengerInfoSummary]): IndirectRedListPax =
+  def apply(displayRedListInfo: Boolean,
+            portCode: PortCode,
+            flightWithSplits: ApiFlightWithSplits,
+            maybePassengerInfo: Option[PassengerInfoSummary]): IndirectRedListPax =
     (displayRedListInfo, portCode) match {
       case (false, _) => NoIndirectRedListPax
       case (true, PortCode("LHR")) =>
         NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
       case (true, _) =>
         val maybeNats = maybePassengerInfo.map(_.nationalities.filter {
-          case (nat, _) => redListNats.toList.contains(nat)
+          case (nat, _) => redListNats(flightWithSplits.apiFlight.Scheduled).toList.contains(nat)
         })
         ApiIndirectRedListPax(maybeNats)
     }
 
-  val redListNats: Iterable[Nationality] = RedList.countryToCode.values.map(Nationality(_))
+  def redListNats(date: MillisSinceEpoch): Iterable[Nationality] =
+    RedList.countryCodesByName(date).values.map(Nationality(_))
 }
 
 sealed trait EnabledIndirectRedListPax extends IndirectRedListPax {

@@ -4,7 +4,7 @@ import controllers.Application
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
-import services.AirportToCountry
+import services.{AirportToCountry, SDate}
 
 
 trait WithAirportInfo {
@@ -31,12 +31,12 @@ trait WithAirportInfo {
     }
   }
 
-  def getRedListPorts: Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
-    Action { request =>
+  def getRedListPorts(dateString: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+    Action { _ =>
       import upickle.default._
 
       val redListPorts = AirportToCountry.airportInfoByIataPortCode.values.collect {
-        case AirportInfo(_, _, country, portCode) if RedList.countryToCode.contains(country) => PortCode(portCode)
+        case AirportInfo(_, _, country, portCode) if RedList.countryCodesByName(SDate(dateString).millisSinceEpoch).contains(country) => PortCode(portCode)
       }
 
       Ok(write(redListPorts))

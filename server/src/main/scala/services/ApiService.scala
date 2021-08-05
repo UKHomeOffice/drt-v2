@@ -52,9 +52,9 @@ trait AirportToCountryLike {
 }
 
 object AirportToCountry extends AirportToCountryLike {
-  def isRedListed(redListPort: PortCode): Boolean = airportInfoByIataPortCode
-    .get(redListPort.iata)
-    .exists(ai => RedList.countryToCode.contains(ai.country))
+  def isRedListed(portToCheck: PortCode, forDate: MillisSinceEpoch): Boolean = airportInfoByIataPortCode
+    .get(portToCheck.iata)
+    .exists(ai => RedList.countryCodesByName(forDate).contains(ai.country))
 }
 
 abstract class ApiService(val airportConfig: AirportConfig,

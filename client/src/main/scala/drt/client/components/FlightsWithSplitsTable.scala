@@ -302,7 +302,7 @@ object FlightTableRow {
           <.span(
             proxy().renderEmpty(<.span()),
             proxy().render(ai => {
-              val style = if (props.indirectRedListPax.isEnabled && NationalityFinderComponent.isRedListCountry(ai.country)) {
+              val style = if (props.indirectRedListPax.isEnabled && NationalityFinderComponent.isRedListCountry(ai.country, props.viewMode.dayEnd)) {
                 ScalaCssReact.scalacssStyleaToTagMod(
                   ArrivalsPageStylesDefault.redListCountryField)
               } else EmptyVdom

@@ -24,7 +24,7 @@ object FlightFilter {
 
   val lhrRedListFilter: FlightFilter = FlightFilter { fws =>
     val isGreenOnlyTerminal = terminalTypes.lhrNonRedListTerminalsForDate(fws.apiFlight.Scheduled).contains(fws.apiFlight.Terminal)
-    val isRedListOrigin = AirportToCountry.isRedListed(fws.apiFlight.Origin)
+    val isRedListOrigin = AirportToCountry.isRedListed(fws.apiFlight.Origin, fws.apiFlight.Scheduled)
     val okToProcess = !isRedListOrigin || !isGreenOnlyTerminal
     okToProcess
   }

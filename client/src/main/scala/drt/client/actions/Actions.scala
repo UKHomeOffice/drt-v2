@@ -10,7 +10,7 @@ import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
-import drt.shared.dates.UtcDate
+import drt.shared.dates.{LocalDate, UtcDate}
 import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 
@@ -114,7 +114,7 @@ object Actions {
 
   case class GetAirportInfos(codes: Set[PortCode]) extends Action
 
-  case object GetRedListPorts extends Action
+  case class GetRedListPorts(localDate: LocalDate) extends Action
 
   case class UpdateRedListPorts(codes: HashSet[PortCode]) extends Action
 

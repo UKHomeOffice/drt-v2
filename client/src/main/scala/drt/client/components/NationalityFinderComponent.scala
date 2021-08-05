@@ -1,13 +1,14 @@
 package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.shared.{ApiIndirectRedListPax, RedList}
+import drt.shared.{ApiIndirectRedListPax, RedList, SDateLike}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
 
 object NationalityFinderComponent {
-  def isRedListCountry(country: String): Boolean = RedList.countryToCode.keys.exists(_.toLowerCase == country.toLowerCase)
+  def isRedListCountry(country: String, date: SDateLike): Boolean =
+    RedList.countryCodesByName(date.millisSinceEpoch).keys.exists(_.toLowerCase == country.toLowerCase)
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
   val component: Component[ApiIndirectRedListPax, Unit, Unit, CtorType.Props] = ScalaComponent.builder[ApiIndirectRedListPax]("FlightChart")
