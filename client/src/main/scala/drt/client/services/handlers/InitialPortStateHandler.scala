@@ -8,17 +8,18 @@ import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi._
-import drt.shared.PortState
+import drt.shared.{PortCode, PortState}
 import org.scalajs.dom
 import upickle.default.read
 
+import scala.collection.immutable.HashSet
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
-                                 modelRW: ModelRW[M, (Pot[PortState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
+                                 modelRW: ModelRW[M, (Pot[PortState], MillisSinceEpoch, Pot[HashSet[PortCode]])]) extends LoggingActionHandler(modelRW) {
   val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
   val thirtySixHoursInMillis: Long = 1000L * 60 * 60 * 36
@@ -34,7 +35,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
       val eventualAction = processRequest(viewMode, updateRequestFuture)
 
-      updated((Pending(), 0L), Effect(Future(ShowLoader())) + Effect(eventualAction))
+      updated((Pending(), 0L, Pending()), Effect(Future(ShowLoader())) + Effect(eventualAction))
 
     case SetPortState(viewMode, _) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring out of date view response")
@@ -60,7 +61,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
         actions + getCrunchUpdatesAfterDelay(viewMode)
       }
 
-      updated((Ready(portState), portState.latestUpdate), effects)
+      updated((Ready(portState), portState.latestUpdate, Pending()), effects)
   }
 
   def processRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {

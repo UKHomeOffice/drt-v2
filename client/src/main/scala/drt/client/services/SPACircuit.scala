@@ -184,7 +184,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   override val actionHandler: HandlerFunction = {
     val composedHandlers: HandlerFunction = composeHandlers(
-      new InitialPortStateHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
+      new InitialPortStateHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis, m.redListPorts))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2, redListPorts = v._3))),
       new PortStateUpdatesHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),

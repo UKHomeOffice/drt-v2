@@ -11,12 +11,10 @@ object RedList {
     portCode == PortCode("LHR") && List(T2, T5).contains(terminal)
 
   def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
-    if (date >= 1628204400000L) Map(
-//    if (date >= 1628377200000L) Map(
+    if (date >= 1628377200000L) Map(
       "Afghanistan" -> "AFG",
       "Angola" -> "AGO",
       "Argentina" -> "ARG",
-      "Bahrain" -> "BHR",
       "Bangladesh" -> "BGD",
       "Bolivia" -> "BOL",
       "Botswana" -> "BWA",
@@ -33,16 +31,18 @@ object RedList {
       "Egypt" -> "EGY",
       "Eritrea" -> "ERI",
       "Eswatini" -> "SWZ",
-//      "Ethiopia" -> "ETH",
+      "Ethiopia" -> "ETH",
       "French Guiana" -> "GUF",
+      "Georgia" -> "GEO",
       "Guyana" -> "GUY",
       "Haiti" -> "HTI",
-      "India" -> "IND",
       "Indonesia" -> "IDN",
       "Kenya" -> "KEN",
       "Lesotho" -> "LSO",
       "Malawi" -> "MWI",
       "Maldives" -> "MDV",
+      "Mayotte" -> "MYT",
+      "Mexico" -> "MEX",
       "Mongolia" -> "MNG",
       "Mozambique" -> "MOZ",
       "Myanmar" -> "MMR",
@@ -54,7 +54,7 @@ object RedList {
       "Paraguay" -> "PRY",
       "Peru" -> "PER",
       "Philippines" -> "PHL",
-      "Qatar" -> "QAT",
+      "Reunion" -> "REU",
       "Rwanda" -> "RWA",
       "Seychelles" -> "SYC",
       "Sierra Leone" -> "SLE",
@@ -68,7 +68,6 @@ object RedList {
       "Turkey" -> "TUR",
       "Trinidad and Tobago" -> "TTO",
       "Uganda" -> "UGA",
-      "United Arab Emirates" -> "ARE",
       "Uruguay" -> "URY",
       "Venezuela" -> "VEN",
       "Zambia" -> "ZMB",
