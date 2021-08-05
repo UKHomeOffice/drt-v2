@@ -4,6 +4,7 @@ import controllers.Application
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
+import services.graphstages.Crunch
 import services.{AirportToCountry, SDate}
 
 
@@ -35,8 +36,11 @@ trait WithAirportInfo {
     Action { _ =>
       import upickle.default._
 
+      val forDate = SDate(dateString, Crunch.europeLondonTimeZone).millisSinceEpoch
+      println(s"\n\n** forDate: $forDate (${SDate(forDate).toISOString()})")
+
       val redListPorts = AirportToCountry.airportInfoByIataPortCode.values.collect {
-        case AirportInfo(_, _, country, portCode) if RedList.countryCodesByName(SDate(dateString).millisSinceEpoch).contains(country) => PortCode(portCode)
+        case AirportInfo(_, _, country, portCode) if RedList.countryCodesByName(forDate).contains(country) => PortCode(portCode)
       }
 
       Ok(write(redListPorts))

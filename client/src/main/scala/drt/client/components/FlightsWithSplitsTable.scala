@@ -97,6 +97,7 @@ object FlightsWithSplitsTable {
                     .get(SDate(flightWithSplits.apiFlight.Scheduled).toUtcDate)
                     .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
                   val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
+                  println(s"${flightWithSplits.apiFlight.Origin}: $isRedListOrigin")
                   val directRedListFlight = DirectRedListFlight(props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
                   val redListPaxInfo = IndirectRedListPax(props.displayRedListInfo, props.portCode, flightWithSplits, maybePassengerInfo)
                   FlightTableRow.component(FlightTableRow.Props(
@@ -230,9 +231,6 @@ object FlightTableRow {
 
   case class RowState(hasChanged: Boolean)
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.flightWithSplits.hashCode, p.idx, p.maybePassengerInfoSummary.hashCode, p.directRedListFlight.hashCode()))
-  implicit val stateReuse: Reusability[RowState] = Reusability.derive[RowState]
-
   val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TableRow")
     .initialState[RowState](RowState(false))
     .render_PS((props, state) => {
@@ -303,8 +301,7 @@ object FlightTableRow {
             proxy().renderEmpty(<.span()),
             proxy().render(ai => {
               val style = if (props.indirectRedListPax.isEnabled && NationalityFinderComponent.isRedListCountry(ai.country, props.viewMode.dayEnd)) {
-                ScalaCssReact.scalacssStyleaToTagMod(
-                  ArrivalsPageStylesDefault.redListCountryField)
+                ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField)
               } else EmptyVdom
 
               <.span(
@@ -372,7 +369,6 @@ object FlightTableRow {
       }
 
     })
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def gateOrStand(arrival: Arrival, airportConfig: AirportConfig, paxAreDiverted: Boolean): VdomTagOf[Span] = {
