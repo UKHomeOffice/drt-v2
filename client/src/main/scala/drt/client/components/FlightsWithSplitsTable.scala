@@ -12,9 +12,10 @@ import drt.client.services._
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.TimeUtil.millisToMinutes
-import drt.shared._
+import drt.shared.{redlist, _}
 import drt.shared.api.{Arrival, PassengerInfoSummary}
 import drt.shared.dates.UtcDate
+import drt.shared.redlist.{ApiIndirectRedListPax, DirectRedListFlight, IndirectRedListPax, NeboIndirectRedListPax, NoIndirectRedListPax}
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
@@ -98,8 +99,8 @@ object FlightsWithSplitsTable {
                     .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
                   val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
                   println(s"${flightWithSplits.apiFlight.Origin}: $isRedListOrigin")
-                  val directRedListFlight = DirectRedListFlight(props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
-                  val redListPaxInfo = IndirectRedListPax(props.displayRedListInfo, props.portCode, flightWithSplits, maybePassengerInfo)
+                  val directRedListFlight = redlist.DirectRedListFlight(props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
+                  val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, props.portCode, flightWithSplits, maybePassengerInfo)
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits = flightWithSplits,
                     maybePassengerInfoSummary = maybePassengerInfo,

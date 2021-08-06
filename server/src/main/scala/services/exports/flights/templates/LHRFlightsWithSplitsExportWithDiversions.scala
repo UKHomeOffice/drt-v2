@@ -3,13 +3,13 @@ package services.exports.flights.templates
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
-import drt.shared._
+import drt.shared.{redlist, _}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import services.{AirportToCountry, SDate}
 
 object RedList {
   def ports(date: SDateLike): Iterable[PortCode] = AirportToCountry.airportInfoByIataPortCode.values.collect {
-    case AirportInfo(_, _, country, portCode) if drt.shared.RedList.countryCodesByName(date.millisSinceEpoch).contains(country) =>
+    case AirportInfo(_, _, country, portCode) if redlist.RedList.countryCodesByName(date.millisSinceEpoch).contains(country) =>
       PortCode(portCode)
   }
 }

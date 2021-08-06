@@ -1,17 +1,20 @@
-package drt.shared
+package drt.shared.redlist
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{T2, T3, T5, Terminal}
 import drt.shared.api.PassengerInfoSummary
+import drt.shared.{ApiFlightWithSplits, Nationality, PortCode}
 
 import scala.collection.immutable.Map
 
 object RedList {
+  val change20210808 = 1628377200000L
+
   def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =
     portCode == PortCode("LHR") && List(T2, T5).contains(terminal)
 
-  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
-    if (date >= 1628377200000L) Map(
+  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] = {
+    if (date >= change20210808) Map(
       "Afghanistan" -> "AFG",
       "Angola" -> "AGO",
       "Argentina" -> "ARG",
@@ -134,6 +137,7 @@ object RedList {
       "Zambia" -> "ZMB",
       "Zimbabwe" -> "ZWE",
     )
+  }
 }
 
 sealed trait DirectRedListFlight {

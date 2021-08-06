@@ -16,7 +16,7 @@ import drt.shared.Queues.Queue
 import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
-import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedList}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
