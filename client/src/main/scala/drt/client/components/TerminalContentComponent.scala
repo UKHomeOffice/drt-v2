@@ -16,7 +16,7 @@ import drt.shared.Queues.Queue
 import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
-import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedList}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
@@ -185,7 +185,7 @@ object TerminalContentComponent {
                     props.featureFlags.render { features =>
                       props.redListPorts.render { redListPorts =>
                         val flightDisplayFilter = props.airportConfig.portCode match {
-                          case PortCode("LHR") => LhrFlightDisplayFilter(redListPorts.contains, LhrTerminalTypes(LhrRedListDatesImpl))
+                          case PortCode("LHR") => LhrFlightDisplayFilter((portCode, _) => redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
                           case _ => DefaultFlightDisplayFilter
                         }
                         val flights = portState.window(viewStart, viewEnd).flights.values

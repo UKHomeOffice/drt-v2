@@ -157,7 +157,6 @@ object SPAMain {
       GetShowAlertModalDialog,
       GetOohStatus,
       GetFeatureFlags,
-      GetRedListPorts,
     )
 
     initActions.foreach(SPACircuit.dispatch(_))

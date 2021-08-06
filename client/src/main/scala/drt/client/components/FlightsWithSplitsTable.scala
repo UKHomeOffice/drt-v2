@@ -12,9 +12,10 @@ import drt.client.services._
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.TimeUtil.millisToMinutes
-import drt.shared._
+import drt.shared.{redlist, _}
 import drt.shared.api.{Arrival, PassengerInfoSummary}
 import drt.shared.dates.UtcDate
+import drt.shared.redlist.{ApiIndirectRedListPax, DirectRedListFlight, IndirectRedListPax, NeboIndirectRedListPax, NoIndirectRedListPax}
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
@@ -97,8 +98,8 @@ object FlightsWithSplitsTable {
                     .get(SDate(flightWithSplits.apiFlight.Scheduled).toUtcDate)
                     .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
                   val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
-                  val directRedListFlight = DirectRedListFlight(props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
-                  val redListPaxInfo = IndirectRedListPax(props.displayRedListInfo, props.portCode, flightWithSplits, maybePassengerInfo)
+                  val directRedListFlight = redlist.DirectRedListFlight(props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
+                  val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, props.portCode, flightWithSplits, maybePassengerInfo)
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits = flightWithSplits,
                     maybePassengerInfoSummary = maybePassengerInfo,
@@ -230,9 +231,6 @@ object FlightTableRow {
 
   case class RowState(hasChanged: Boolean)
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.flightWithSplits.hashCode, p.idx, p.maybePassengerInfoSummary.hashCode, p.directRedListFlight.hashCode()))
-  implicit val stateReuse: Reusability[RowState] = Reusability.derive[RowState]
-
   val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TableRow")
     .initialState[RowState](RowState(false))
     .render_PS((props, state) => {
@@ -302,9 +300,8 @@ object FlightTableRow {
           <.span(
             proxy().renderEmpty(<.span()),
             proxy().render(ai => {
-              val style = if (props.indirectRedListPax.isEnabled && NationalityFinderComponent.isRedListCountry(ai.country)) {
-                ScalaCssReact.scalacssStyleaToTagMod(
-                  ArrivalsPageStylesDefault.redListCountryField)
+              val style = if (props.indirectRedListPax.isEnabled && NationalityFinderComponent.isRedListCountry(ai.country, props.viewMode.dayEnd)) {
+                ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField)
               } else EmptyVdom
 
               <.span(
@@ -372,7 +369,6 @@ object FlightTableRow {
       }
 
     })
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def gateOrStand(arrival: Arrival, airportConfig: AirportConfig, paxAreDiverted: Boolean): VdomTagOf[Span] = {
