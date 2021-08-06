@@ -38,7 +38,6 @@ trait WithAirportInfo {
       import upickle.default._
 
       val forDate = SDate(dateString, Crunch.europeLondonTimeZone).millisSinceEpoch
-      println(s"\n\n** forDate: $forDate (${SDate(forDate).toISOString()})")
 
       val redListPorts = AirportToCountry.airportInfoByIataPortCode.values.collect {
         case AirportInfo(_, _, country, portCode) if RedList.countryCodesByName(forDate).contains(country) => PortCode(portCode)
