@@ -26,7 +26,7 @@ class RedListSpec extends Specification{
     "The red list should not contain India" >> {
       val expectedToNotExist = redList20210808.keys.toSet.intersect(countriesRemovedFrom20210808)
       val expectedToExist = redList20210808.keys.toSet.intersect(countriesAddedFrom20210808)
-      
+
       expectedToNotExist === Set() && expectedToExist == countriesAddedFrom20210808
     }
   }
