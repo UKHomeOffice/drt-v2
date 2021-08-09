@@ -132,8 +132,8 @@ case class DefaultDirectRedListFlight(isRedListOrigin: Boolean) extends DirectRe
 }
 
 object DirectRedListFlight {
-  def apply(portCode: PortCode, displayTerminal: Terminal, flightTerminal: Terminal, isRedListOrigin: Boolean): DirectRedListFlight = {
-    if (portCode == PortCode("LHR")) {
+  def apply(date: MillisSinceEpoch, portCode: PortCode, displayTerminal: Terminal, flightTerminal: Terminal, isRedListOrigin: Boolean): DirectRedListFlight = {
+    if (portCode == PortCode("LHR") && date >= LhrRedListDatesImpl.t3RedListOpeningDate) {
       val greenTerminal = List(T2, T3, T5).contains(displayTerminal)
       val terminalDiversion = displayTerminal != flightTerminal
       val outgoingDiversion = isRedListOrigin && greenTerminal
