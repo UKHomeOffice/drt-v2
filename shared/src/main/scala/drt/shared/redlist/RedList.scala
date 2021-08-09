@@ -5,20 +5,18 @@ import drt.shared.Terminals.{T2, T3, T5, Terminal}
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.{ApiFlightWithSplits, Nationality, PortCode}
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Map, SortedMap}
+
+case class RedListUpdate(additions: Map[String, String], removals: List[String])
 
 object RedList {
-  val change20210808 = 1628377200000L
-
   def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =
     portCode == PortCode("LHR") && List(T2, T5).contains(terminal)
 
-  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] = {
-    if (date >= change20210808) Map(
-      "Afghanistan" -> "AFG",
+  val redListChanges: SortedMap[MillisSinceEpoch, RedListUpdate] = SortedMap(
+    1613347200000L -> RedListUpdate(Map( //15 feb
       "Angola" -> "AGO",
       "Argentina" -> "ARG",
-      "Bangladesh" -> "BGD",
       "Bolivia" -> "BOL",
       "Botswana" -> "BWA",
       "Brazil" -> "BRA",
@@ -26,118 +24,92 @@ object RedList {
       "Cape Verde" -> "CPV",
       "Chile" -> "CHL",
       "Colombia" -> "COL",
-      "Costa Rica" -> "CRI",
-      "Cuba" -> "CUB",
-      "Democratic Republic of the Congo" -> "COD",
-      "Dominican Republic" -> "DOM",
+      "Congo (Kinshasa)" -> "COD",
       "Ecuador" -> "ECU",
-      "Egypt" -> "EGY",
-      "Eritrea" -> "ERI",
       "Eswatini" -> "SWZ",
-      "Ethiopia" -> "ETH",
       "French Guiana" -> "GUF",
-      "Georgia" -> "GEO",
       "Guyana" -> "GUY",
-      "Haiti" -> "HTI",
-      "Indonesia" -> "IDN",
-      "Kenya" -> "KEN",
       "Lesotho" -> "LSO",
       "Malawi" -> "MWI",
-      "Maldives" -> "MDV",
-      "Mayotte" -> "MYT",
-      "Mexico" -> "MEX",
-      "Mongolia" -> "MNG",
+      "Mauritius" -> "MUS",
       "Mozambique" -> "MOZ",
-      "Myanmar" -> "MMR",
       "Namibia" -> "NAM",
-      "Nepal" -> "NPL",
-      "Oman" -> "OMN",
-      "Pakistan" -> "PAK",
       "Panama" -> "PAN",
       "Paraguay" -> "PRY",
       "Peru" -> "PER",
-      "Philippines" -> "PHL",
-      "Reunion" -> "REU",
+      "Portugal" -> "PRT",
       "Rwanda" -> "RWA",
       "Seychelles" -> "SYC",
-      "Sierra Leone" -> "SLE",
-      "Somalia" -> "SOM",
       "South Africa" -> "ZAF",
-      "Sri Lanka" -> "LKA",
-      "Sudan" -> "SDN",
       "Suriname" -> "SUR",
       "Tanzania" -> "TZA",
-      "Tunisia" -> "TUN",
-      "Turkey" -> "TUR",
-      "Trinidad and Tobago" -> "TTO",
-      "Uganda" -> "UGA",
-      "Uruguay" -> "URY",
-      "Venezuela" -> "VEN",
-      "Zambia" -> "ZMB",
-      "Zimbabwe" -> "ZWE",
-    ) else Map(
-      "Afghanistan" -> "AFG",
-      "Angola" -> "AGO",
-      "Argentina" -> "ARG",
-      "Bahrain" -> "BHR",
-      "Bangladesh" -> "BGD",
-      "Bolivia" -> "BOL",
-      "Botswana" -> "BWA",
-      "Brazil" -> "BRA",
-      "Burundi" -> "BDI",
-      "Cape Verde" -> "CPV",
-      "Chile" -> "CHL",
-      "Colombia" -> "COL",
-      "Costa Rica" -> "CRI",
-      "Cuba" -> "CUB",
-      "Democratic Republic of the Congo" -> "COD",
-      "Dominican Republic" -> "DOM",
-      "Ecuador" -> "ECU",
-      "Egypt" -> "EGY",
-      "Eritrea" -> "ERI",
-      "Eswatini" -> "SWZ",
-      "Ethiopia" -> "ETH",
-      "French Guiana" -> "GUF",
-      "Guyana" -> "GUY",
-      "Haiti" -> "HTI",
-      "India" -> "IND",
-      "Indonesia" -> "IDN",
-      "Kenya" -> "KEN",
-      "Lesotho" -> "LSO",
-      "Malawi" -> "MWI",
-      "Maldives" -> "MDV",
-      "Mongolia" -> "MNG",
-      "Mozambique" -> "MOZ",
-      "Myanmar" -> "MMR",
-      "Namibia" -> "NAM",
-      "Nepal" -> "NPL",
-      "Oman" -> "OMN",
-      "Pakistan" -> "PAK",
-      "Panama" -> "PAN",
-      "Paraguay" -> "PRY",
-      "Peru" -> "PER",
-      "Philippines" -> "PHL",
-      "Qatar" -> "QAT",
-      "Rwanda" -> "RWA",
-      "Seychelles" -> "SYC",
-      "Sierra Leone" -> "SLE",
-      "Somalia" -> "SOM",
-      "South Africa" -> "ZAF",
-      "Sri Lanka" -> "LKA",
-      "Sudan" -> "SDN",
-      "Suriname" -> "SUR",
-      "Tanzania" -> "TZA",
-      "Tunisia" -> "TUN",
-      "Turkey" -> "TUR",
-      "Trinidad and Tobago" -> "TTO",
-      "Uganda" -> "UGA",
       "United Arab Emirates" -> "ARE",
       "Uruguay" -> "URY",
       "Venezuela" -> "VEN",
       "Zambia" -> "ZMB",
       "Zimbabwe" -> "ZWE",
-    )
-  }
+    ), List()),
+    1616112000000L -> RedListUpdate(Map( //19 march
+      "Ethiopia" -> "ETH",
+      "Oman" -> "OMN",
+      "Qatar" -> "QAT",
+      "Somalia" -> "SOM",
+    ), List("Portugal", "Mauritius")),
+    1617922800000L -> RedListUpdate(Map( // 9 april
+      "Philippines" -> "PHL",
+      "Pakistan" -> "PAK",
+      "Kenya" -> "KEN",
+      "Bangladesh" -> "BGD",
+    ), List()),
+    1619132400000L -> RedListUpdate(Map( // 23 april
+      "India" -> "IND"), List()),
+    1620774000000L -> RedListUpdate(Map( // 12 May
+      "Turkey" -> "TUR",
+      "Maldives" -> "MDV",
+      "Nepal" -> "NPL",
+    ), List()),
+    1623106800000L -> RedListUpdate(Map( // 8 June
+      "Afghanistan" -> "AFG",
+      "Bahrain" -> "BHR",
+      "Costa Rica" -> "CRI",
+      "Egypt" -> "EGY",
+      "Sri Lanka" -> "LKA",
+      "Sudan" -> "SDN",
+      "Trinidad and Tobago" -> "TTO",
+    ), List()),
+    1625007600000L -> RedListUpdate(Map( // 30 June
+      "Dominican Republic" -> "DOM",
+      "Eritrea" -> "ERI",
+      "Haiti" -> "HTI",
+      "Mongolia" -> "MNG",
+      "Tunisia" -> "TUN",
+      "Uganda" -> "UGA",
+    ), List()),
+    1626649200000L -> RedListUpdate(Map( // 19 July
+      "Cuba" -> "CUB",
+      "Indonesia" -> "IDN",
+      "Myanmar" -> "MMR",
+      "Sierra Leone" -> "SLE",
+    ), List()),
+    1628377200000L -> RedListUpdate(Map( // 8 Aug
+      "Georgia" -> "GEO",
+      "Mayotte" -> "MYT",
+      "Mexico" -> "MEX",
+      "Reunion" -> "REU",
+    ), List(
+      "Bahrain",
+      "India",
+      "Qatar",
+      "United Arab Emirates",
+    ))
+  )
+
+  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
+    redListChanges
+      .filterKeys(changeDate => changeDate <= date)
+      .foldLeft(Map[String, String]()) {
+        case (acc, (date, updates)) => (acc ++ updates.additions) -- updates.removals
+      }
 }
 
 sealed trait DirectRedListFlight {
