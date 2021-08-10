@@ -67,27 +67,24 @@ object TerminalPlanningComponent {
               defaultStartDate(props.page.dateFromUrlOrNow).toISOString())
           )
         ),
-        <.div(^.className := "export-links",
-          MuiGrid(container = true, spacing = MuiGrid.Spacing.`0`)(
-            MuiGrid(item = true, xs = 2)(
-              MuiButton(color = Color.default, variant = "outlined", size = "medium")(
-                MuiIcons(GetApp)(fontSize = "small"),
-                "Export Headlines",
-                ^.className := "btn btn-link",
-                ^.href := SPAMain.absoluteUrl(s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
-                ^.target := "_blank"
-              )
-            ),
-            MuiGrid(item = true, xs = 2)(
-              MuiButton(color = Color.default, variant = "outlined", size = "medium")(
-                MuiIcons(GetApp)(fontSize = "small"),
-                "Export Week",
-                ^.className := "btn btn-link",
-                ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
-                ^.target := "_blank"
-              )
-            )
+        <.div(
+          <.span(
+          MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+            MuiIcons(GetApp)(fontSize = "small"),
+            "Export Headlines",
+            ^.className := "btn btn-link",
+            ^.href := SPAMain.absoluteUrl(s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
+            ^.target := "_blank"
           )),
+          <.span(^.className := "planning-export",
+            MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+              MuiIcons(GetApp)(fontSize = "small"),
+              "Export Week",
+              ^.className := "btn btn-link",
+              ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
+              ^.target := "_blank"
+            ))
+        ),
         <.h3("Headline Figures"),
         <.table(^.className := "headlines",
           <.thead(
