@@ -98,7 +98,7 @@ object FlightsWithSplitsTable {
                     .get(SDate(flightWithSplits.apiFlight.Scheduled).toUtcDate)
                     .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
                   val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
-                  val directRedListFlight = redlist.DirectRedListFlight(props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
+                  val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch, props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
                   val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, props.portCode, flightWithSplits, maybePassengerInfo)
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits = flightWithSplits,
