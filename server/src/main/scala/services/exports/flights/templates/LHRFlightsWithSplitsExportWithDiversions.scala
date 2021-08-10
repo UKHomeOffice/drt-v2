@@ -1,14 +1,16 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
-import drt.shared._
+import drt.shared.{redlist, _}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
-import services.AirportToCountry
+import services.{AirportToCountry, SDate}
 
 object RedList {
-  val ports: Iterable[PortCode] = AirportToCountry.airportInfoByIataPortCode.values.collect {
-    case AirportInfo(_, _, country, portCode) if drt.shared.RedList.countryToCode.contains(country) => PortCode(portCode)
+  def ports(date: SDateLike): Iterable[PortCode] = AirportToCountry.airportInfoByIataPortCode.values.collect {
+    case AirportInfo(_, _, country, portCode) if redlist.RedList.countryCodesByName(date.millisSinceEpoch).contains(country) =>
+      PortCode(portCode)
   }
 }
 
@@ -24,8 +26,11 @@ trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {
     case T5 => Seq(T5)
   }
 
-  val directRedListFilter: LhrFlightDisplayFilter = LhrFlightDisplayFilter(
-    RedList.ports.toList.contains, LhrTerminalTypes(LhrRedListDatesImpl))
+  val isRedListedForDate: (PortCode, MillisSinceEpoch) => Boolean =
+    (origin, scheduled) => RedList.ports(SDate(scheduled)).toList.contains(origin)
+
+  val directRedListFilter: LhrFlightDisplayFilter =
+    LhrFlightDisplayFilter(isRedListedForDate, LhrTerminalTypes(LhrRedListDatesImpl))
 
   override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean =
     directRedListFilter.filterReflectingDivertedRedListFlights

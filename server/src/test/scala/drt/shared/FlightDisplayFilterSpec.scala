@@ -21,7 +21,7 @@ class FlightDisplayFilterSpec extends Specification {
   val redListOriginInBolivia = PortCode("VVI")
   val nonRedListOriginInFrance = PortCode("CDG")
   val redListPorts = HashSet(redListOriginInBolivia)
-  val isRedListOrigin: PortCode => Boolean = pc => redListPorts.contains(pc)
+  val isRedListOrigin: (PortCode, MillisSinceEpoch) => Boolean = (pc, _) => redListPorts.contains(pc)
 
   val redListT2preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = redListOriginInBolivia, terminal = T2), Set())
   val nonRedListT2preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = nonRedListOriginInFrance, terminal = T2), Set())

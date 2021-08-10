@@ -28,7 +28,7 @@ GET           /feed-statuses                                                    
 GET           /arrival/:number/:terminal/:scheduled/:origin                           controllers.Application.getArrival(number: Int, terminal: String, scheduled: Long, origin: String)
 GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin              controllers.Application.getArrivalAtPointInTime(pointInTime: Long, number: Int, terminal: String, scheduled: Long, origin: String)
 GET           /manifest/:utcDate/summary                                              controllers.Application.getPassengerInfoForDay(utcDate: String)
-GET           /red-list-ports                                                         controllers.Application.getRedListPorts
+GET           /red-list-ports/:date                                                   controllers.Application.getRedListPorts(date: String)
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 
