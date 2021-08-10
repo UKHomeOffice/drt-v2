@@ -11,13 +11,16 @@ import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
 import drt.shared.redlist.LhrRedListDatesImpl
 import drt.shared.{PortCode, SDateLike}
-import io.kinoplan.scalajs.react.material.ui.core.{MuiFormLabel, MuiGrid, MuiTextField}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiFormLabel, MuiGrid, MuiTextField}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CallbackTo, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 
 object MultiDayExportComponent extends WithScalaCssImplicits {
   val today: SDateLike = SDate.now()
@@ -65,7 +68,8 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
       val gridXs = 4
       <.div(
-        <.a(
+        MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+          MuiIcons(GetApp)(fontSize = "small"),
           "Multi Day Export",
           ^.className := "btn btn-default",
           VdomAttr("data-toggle") := "modal",
