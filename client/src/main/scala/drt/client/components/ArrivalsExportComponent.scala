@@ -46,7 +46,7 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
         MuiButton(color = Color.default, variant = "outlined", size = "medium")(
           MuiIcons(GetApp)(fontSize = "small"),
           "Arrivals",
-          ^.className := "btn btn-default",
+          ^.className := "btn btn-default muiButton",
           VdomAttr("data-toggle") := "modal",
           VdomAttr("data-target") := "#arrivals-export",
           ^.onClick --> scope.modState(_.copy(showDialogue = true)))

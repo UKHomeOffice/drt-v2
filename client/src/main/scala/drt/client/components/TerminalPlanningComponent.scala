@@ -72,7 +72,7 @@ object TerminalPlanningComponent {
           MuiButton(color = Color.default, variant = "outlined", size = "medium")(
             MuiIcons(GetApp)(fontSize = "small"),
             "Export Headlines",
-            ^.className := "btn btn-link",
+            ^.className := "btn btn-link muiButton",
             ^.href := SPAMain.absoluteUrl(s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
             ^.target := "_blank"
           )),
@@ -80,7 +80,7 @@ object TerminalPlanningComponent {
             MuiButton(color = Color.default, variant = "outlined", size = "medium")(
               MuiIcons(GetApp)(fontSize = "small"),
               "Export Week",
-              ^.className := "btn btn-link",
+              ^.className := "btn btn-link muiButton",
               ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
               ^.target := "_blank"
             ))
