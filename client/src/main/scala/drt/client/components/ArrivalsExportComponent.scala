@@ -9,14 +9,16 @@ import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import drt.shared.{PortCode, SDateLike}
-import io.kinoplan.scalajs.react.material.ui.core.MuiGrid
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
+import io.kinoplan.scalajs.react.material.ui.icons._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, Reusability, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
-
 
 object ArrivalsExportComponent extends WithScalaCssImplicits {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -40,15 +42,15 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
     .initialStateFromProps(p => State(false))
     .renderPS((scope, props, state) => {
       val showClass = if (state.showDialogue) "show" else "fade"
-      <.div(
-        <.a(
-          Icon.download,
-          " Arrivals",
+      <.div(^.className := "arrival-export",
+        MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+          MuiIcons(GetApp)(fontSize = "small"),
+          "Arrivals",
           ^.className := "btn btn-default",
           VdomAttr("data-toggle") := "modal",
           VdomAttr("data-target") := "#arrivals-export",
-          ^.onClick --> scope.modState(_.copy(showDialogue = true))
-        ),
+          ^.onClick --> scope.modState(_.copy(showDialogue = true)))
+        ,
         <.div(^.className := "arrivals-export modal " + showClass, ^.id := "#arrivals-export", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
             ^.className := "modal-dialog modal-dialog-centered",
@@ -115,10 +117,10 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
   }
 
   val defaultArrivalsExport: (Terminal, SDateLike, LoggedInUser, ViewMode) => VdomElement = (term, date, user, viewMode) =>
-    exportLink(
+    <.div(exportLink(
       date,
       term.toString,
       ExportArrivals,
       SPAMain.exportUrl(ExportArrivals, viewMode, term)
-    )
+    ))
 }
