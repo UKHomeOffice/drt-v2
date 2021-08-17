@@ -129,11 +129,12 @@ object DashboardTerminalSummary {
       } else {
 
         val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal))
+
         def pressureStaffMinute = props.staffMinutes.find(_.minute == pressurePoint.minute)
 
         val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.available).getOrElse(0)
         val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
-        
+
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.flights)
         val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
         val queueTotals = totalsByQueue(summary)
@@ -190,10 +191,10 @@ object DashboardTerminalSummary {
           <.div(^.className := "summary-box-container col-sm-1 pcp-summary",
             <.div(^.className := "pcp-pressure",
               <.div(^.className := "title", "PCP Pressure"),
-              <.div(^.className := "highest",
+              <.div(^.className := "highest",^.aria.label := "High pressure",
                 Icon.chevronUp, s" ${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime()}"
               ),
-              <.div(^.className := "lowest",
+              <.div(^.className := "lowest", ^.aria.label := "Low pressure",
                 Icon.chevronDown, s" ${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime()}"
               )
             )

@@ -136,9 +136,9 @@ object TerminalDashboardComponent {
           ),
 
           <.div(^.className := "tb-bar row",
-            p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlPrevTime")))(^.className := "dashboard-time-switcher prev-bar col", Icon.angleDoubleLeft),
+            p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlPrevTime")))(^.aria.label := "Change time by previous two hours", ^.className := "dashboard-time-switcher prev-bar col", Icon.angleDoubleLeft),
             <.div(^.className := "time-label col", s"${start.prettyTime()} - ${end.prettyTime()}"),
-            p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlNextTime")))(^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
+            p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlNextTime")))(^.aria.label := "Change time by next two hours", ^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
           )
         )
         ,
@@ -149,8 +149,8 @@ object TerminalDashboardComponent {
             ))(^.className := "terminal-dashboard-side__sidebar_widget", "View Arrivals"),
           <.div(
             ^.className := "terminal-dashboard-side__sidebar_widget time-slot-changer",
-            <.label(^.className := "terminal-dashboard-side__sidebar_widget__label", "Time slot duration"),
-            <.select(
+            <.label(^.className := "terminal-dashboard-side__sidebar_widget__label", ^.aria.label := "Select Time duration slot to show pcp passenger on Dashboard" , "Select Time slot duration"),
+            <.select( ^.aria.label := "Select Time duration slot to show pcp passenger on Dashboard",
               ^.onChange ==> ((e: ReactEventFromInput) =>
                 p.router.set(p.terminalPageTabLoc.copy(subMode = e.target.value))),
               ^.value := slotSize,
