@@ -27,9 +27,10 @@ case class DrtConfigParameters(config: Configuration) {
 
     override def getAWSSecretKey: String = config.getOptional[String]("aws.credentials.secret_key").getOrElse("")
   }
-  val ftpServer: String = ConfigFactory.load.getString("acl.host")
-  val username: String = ConfigFactory.load.getString("acl.username")
-  val path: String = ConfigFactory.load.getString("acl.keypath")
+  val aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)
+  val aclHost: Option[String] = config.getOptional[String]("acl.host")
+  val aclUsername: Option[String] = config.getOptional[String]("acl.username")
+  val aclKeyPath: Option[String] = config.getOptional[String]("acl.keypath")
   val aclMinFileSizeInBytes: Long = config.getOptional[Long]("acl.min-file-size-in-bytes").getOrElse(10000L)
   val refreshArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.refresh-arrivals-on-start").getOrElse(false)
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
