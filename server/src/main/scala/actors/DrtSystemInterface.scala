@@ -120,11 +120,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     case (feedSource: FeedSource, _) => isValidFeedSource(feedSource)
   }
 
-  val maybeAclFeed: Option[AclFeed] = for {
-    host <- params.aclHost
-    username <- params.aclUsername
-    keyPath <- params.aclKeyPath
-  } yield AclFeed(host, username, keyPath, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
+  val maybeAclFeed: Option[AclFeed] =
+    if (params.aclDisabled) None
+    else
+      for {
+        host <- params.aclHost
+        username <- params.aclUsername
+        keyPath <- params.aclKeyPath
+      } yield AclFeed(host, username, keyPath, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
 
   val maxDaysToConsider: Int = 14
   val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, now)), name = "passengers-actor")

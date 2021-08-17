@@ -27,6 +27,7 @@ case class DrtConfigParameters(config: Configuration) {
 
     override def getAWSSecretKey: String = config.getOptional[String]("aws.credentials.secret_key").getOrElse("")
   }
+  val aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)
   val aclHost: Option[String] = config.getOptional[String]("acl.host")
   val aclUsername: Option[String] = config.getOptional[String]("acl.username")
   val aclKeyPath: Option[String] = config.getOptional[String]("acl.keypath")
