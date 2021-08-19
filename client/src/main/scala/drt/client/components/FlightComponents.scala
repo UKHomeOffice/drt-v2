@@ -89,8 +89,7 @@ object FlightComponents {
                 case (paxTypeAndQueue, paxCount) =>
                   val percentage = ((paxCount.toDouble / maxSplit) * 100).toInt
                   val label = paxTypeAndQueueString(paxTypeAndQueue)
-                    <.div( ^.aria.label := s"$percentage percentage $label",
-                    ^.className := s"dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--${paxTypeAndQueue.queueType.toString.toLowerCase}",
+                    <.div(^.className := s"dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--${paxTypeAndQueue.queueType.toString.toLowerCase}",
                     ^.height := s"$percentage%",
                     ^.title := s"$label")
               }.toTagMod
