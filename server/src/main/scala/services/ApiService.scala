@@ -63,9 +63,7 @@ abstract class ApiService(val airportConfig: AirportConfig,
                           val staffMovementsActor: ActorRef,
                           val headers: Headers,
                           val session: Session)
-  extends Api
-    with AirportToCountryLike
-    with ShiftPersistence {
+  extends Api with ShiftPersistence {
 
   override implicit val timeout: akka.util.Timeout = Timeout(30 seconds)
 

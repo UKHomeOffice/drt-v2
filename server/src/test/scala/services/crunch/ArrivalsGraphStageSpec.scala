@@ -6,7 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.Queues.EeaDesk
 import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
-import drt.shared.Terminals.T1
+import drt.shared.Terminals.{T1, T2}
 import drt.shared._
 import drt.shared.api.Arrival
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
@@ -238,5 +238,53 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         success
       }
     }
+  }
+
+  "Given an ACL flight into T1, when it changes to T2 we should no longer see it in T1" >> {
+    val scheduled = "2021-06-01T12:40"
+    val aclArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
+
+    val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
+
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival))))
+
+    crunch.portStateTestProbe.fishForMessage(1 second) {
+      case PortState(flights, _, _) => flights.values.map(a => a.apiFlight.Terminal) == Iterable(T1)
+    }
+
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival.copy(Terminal = T2)))))
+
+    crunch.portStateTestProbe.fishForMessage(1 second) {
+      case PortState(flights, _, _) =>
+        val terminals = flights.values.map(a => a.apiFlight.Terminal)
+        println(s"terminals: $terminals")
+        terminals == Iterable(T2)
+    }
+
+    success
+  }
+
+  "Given a live feed flight into T1, when it changes to T2 we should no longer see it in T1" >> {
+    val scheduled = "2021-06-01T12:40"
+    val aclArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
+
+    val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
+
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival))))
+
+    crunch.portStateTestProbe.fishForMessage(1 second) {
+      case PortState(flights, _, _) => flights.values.map(a => a.apiFlight.Terminal) == Iterable(T1)
+    }
+
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival.copy(Terminal = T2)))))
+
+    crunch.portStateTestProbe.fishForMessage(1 second) {
+      case PortState(flights, _, _) =>
+        val terminals = flights.values.map(a => a.apiFlight.Terminal)
+        println(s"terminals: $terminals")
+        terminals == Iterable(T2)
+    }
+
+    success
   }
 }

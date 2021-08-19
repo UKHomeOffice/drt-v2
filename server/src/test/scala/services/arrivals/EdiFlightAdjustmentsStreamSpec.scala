@@ -1,6 +1,7 @@
 package services.arrivals
 
 import controllers.ArrivalGenerator
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.{A1, A2}
 import drt.shared.api.Arrival
@@ -12,42 +13,48 @@ import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig, 
 import scala.concurrent.duration._
 
 class EdiFlightAdjustmentsStreamSpec extends CrunchTestLike {
+  var portIsRedListed = false
+  val isRedListed: (PortCode, MillisSinceEpoch) => Boolean = (_, _) => portIsRedListed
   val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
     now = () => SDate("2019-01-01T01:00"),
     pcpArrivalTime = TestDefaults.pcpForFlightFromBest,
     airportConfig = AirportConfigs.confByPort(PortCode("EDI")),
-    arrivalsAdjustments = EdiArrivalsTerminalAdjustments(Map())
+    arrivalsAdjustments = EdiArrivalsTerminalAdjustments(isRedListed)
   ))
   val arrivalOne: Arrival = ArrivalGenerator.arrival(iata = "TST001", terminal = A1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", actPax = Option(100))
 
-  val arrivalTwo: Arrival = ArrivalGenerator.arrival(iata = "TST001", terminal = A1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", actPax = Option(117), baggageReclaimId = Option("7"))
-
-  "Given a flight with a terminal mapped to A1 followed by the same flight with a baggage carousel of 7" >> {
+  "Given a flight from an amber country" >> {
     "Then we should see the flight in A2 in the port state and not in A1" >> {
+      val result = offerAndCheck(arrivalOne)
+      portIsRedListed = true
 
-      offerAndCheck(arrivalOne)
-      val result = offerAndCheck(arrivalTwo)
-
-      result.flights(arrivalTwo.unique.copy(terminal = A2)).apiFlight.ActPax === arrivalTwo.ActPax
+      result.flights(arrivalOne.unique.copy(terminal = A2)).apiFlight.ActPax === arrivalOne.ActPax
       result.flights.get(arrivalOne.unique) === None
-      result.flights.size mustEqual (1)
+      result.flights.size mustEqual 1
     }
   }
 
-  "Given a flight with a baggage carousel of 7 that receives an update to the passengers" >> {
-    "Then we should see the flight in A2 in the port state" >> {
+  "Given a flight from an amber country followed by the same flight after its country has been put on the red list" >> {
+    "Then we should see the flight in A1 in the port state and not in A2" >> {
+      offerAndCheck(arrivalOne)
+      portIsRedListed = true
 
-      offerAndCheck(arrivalTwo)
-      val result = offerAndCheck(arrivalTwo.copy(ActPax = Option(7)))
+      val updatedActPax = Option(110)
+      val result = offerAndCheck(arrivalOne.copy(ActPax = updatedActPax))
 
-      result.flights(arrivalTwo.unique.copy(terminal = A2)).apiFlight.ActPax === Option(7)
+      println(s"flights: ${result.flights}")
+
+      result.flights(arrivalOne.unique).apiFlight.ActPax === updatedActPax
+      result.flights.get(arrivalOne.unique.copy(terminal = A2)) === None
+      result.flights.size mustEqual 1
     }
   }
 
   private def offerAndCheck(arrival: Arrival): PortState = {
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(arrival))))
+    val adjustedArrivals = EdiArrivalsTerminalAdjustments(isRedListed).apply(List(arrival))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(adjustedArrivals)))
 
-    crunch.portStateTestProbe.fishForMessage(1 second) {
+    crunch.portStateTestProbe.fishForMessage(1.second) {
       case ps: PortState =>
         ps.flights.values.exists(a => a.apiFlight.ActPax == arrival.ActPax)
     }.asInstanceOf[PortState]
