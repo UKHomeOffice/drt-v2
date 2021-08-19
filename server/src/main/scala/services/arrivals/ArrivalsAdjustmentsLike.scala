@@ -1,5 +1,6 @@
 package services.arrivals
 
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.PortCode
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
