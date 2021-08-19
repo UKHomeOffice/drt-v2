@@ -191,10 +191,10 @@ object DashboardTerminalSummary {
           <.div(^.className := "summary-box-container col-sm-1 pcp-summary",
             <.div(^.className := "pcp-pressure",
               <.div(^.className := "title", "PCP Pressure"),
-              <.div(^.className := "highest",^.aria.label := "High pressure",
+              <.div(^.className := "highest", <.span(^.className := "sr-only", "Highest Pressure"),
                 Icon.chevronUp, s" ${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime()}"
               ),
-              <.div(^.className := "lowest", ^.aria.label := "Low pressure",
+              <.div(^.className := "lowest", <.span(^.className := "sr-only", "Lowest Pressure"),
                 Icon.chevronDown, s" ${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime()}"
               )
             )
