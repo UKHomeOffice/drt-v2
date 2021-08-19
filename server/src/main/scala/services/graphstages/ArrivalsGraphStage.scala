@@ -96,12 +96,21 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"Received ${initialLiveArrivals.size} initial live arrivals")
       liveArrivals = prepInitialArrivals(initialLiveArrivals)
 
-      merged = initialMergedArrivals
+      val withAdjustments = arrivalsAdjustments(initialMergedArrivals.values)
+      val removals = terminalRemovals(withAdjustments, initialMergedArrivals.values)
+
+      if (removals.nonEmpty) {
+        log.info(s"Adjusting ${removals.size} existing arrivals")
+        toPush = Option(ArrivalsDiff(Seq(), removals))
+      }
+
+      merged = SortedMap[UniqueArrival, Arrival]() ++ withAdjustments.map(a => (a.unique, a))
+
       super.preStart()
     }
 
     def prepInitialArrivals(initialArrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = {
-      Crunch.purgeExpired(relevantFlights(SortedMap[UniqueArrival, Arrival]() ++ initialArrivals), UniqueArrival.atTime, now, expireAfterMillis.toInt)
+      Crunch.purgeExpired(relevantFlights(SortedMap[UniqueArrival, Arrival]() ++ initialArrivals), UniqueArrival.atTime, now, expireAfterMillis)
     }
 
     setHandler(inForecastBaseArrivals, new InHandler {
@@ -225,11 +234,11 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def purgeExpired(): Unit = {
-      liveArrivals = Crunch.purgeExpired(liveArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
-      ciriumArrivals = Crunch.purgeExpired(ciriumArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
-      forecastArrivals = Crunch.purgeExpired(forecastArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
-      aclArrivals = Crunch.purgeExpired(aclArrivals, UniqueArrival.atTime, now, expireAfterMillis.toInt)
-      merged = Crunch.purgeExpired(merged, UniqueArrival.atTime, now, expireAfterMillis.toInt)
+      liveArrivals = Crunch.purgeExpired(liveArrivals, UniqueArrival.atTime, now, expireAfterMillis)
+      ciriumArrivals = Crunch.purgeExpired(ciriumArrivals, UniqueArrival.atTime, now, expireAfterMillis)
+      forecastArrivals = Crunch.purgeExpired(forecastArrivals, UniqueArrival.atTime, now, expireAfterMillis)
+      aclArrivals = Crunch.purgeExpired(aclArrivals, UniqueArrival.atTime, now, expireAfterMillis)
+      merged = Crunch.purgeExpired(merged, UniqueArrival.atTime, now, expireAfterMillis)
     }
 
     def relevantFlights(arrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = {
