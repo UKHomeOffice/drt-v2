@@ -3,6 +3,7 @@ package drt.client.components
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.DirectRedListFlight
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.TrendingFlat
 import japgolly.scalajs.react.vdom.html_<^._

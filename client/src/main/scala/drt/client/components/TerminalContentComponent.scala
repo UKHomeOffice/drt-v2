@@ -17,12 +17,18 @@ import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
+import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedList}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
-import org.scalajs.dom.html.{Anchor, Div}
+import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
 import uk.gov.homeoffice.drt.auth._
 
@@ -129,7 +135,7 @@ object TerminalContentComponent {
                   )
                 ),
                 <.div(^.className := "exports",
-                    arrivalsExportForPort(
+                  arrivalsExportForPort(
                     props.terminalPageTab.terminal,
                     props.terminalPageTab.dateFromUrlOrNow,
                     props.loggedInUser,
@@ -185,7 +191,7 @@ object TerminalContentComponent {
                     props.featureFlags.render { features =>
                       props.redListPorts.render { redListPorts =>
                         val flightDisplayFilter = props.airportConfig.portCode match {
-                          case PortCode("LHR") => LhrFlightDisplayFilter(redListPorts.contains, LhrTerminalTypes(LhrRedListDatesImpl))
+                          case PortCode("LHR") => LhrFlightDisplayFilter((portCode, _) => redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
                           case _ => DefaultFlightDisplayFilter
                         }
                         val flights = portState.window(viewStart, viewEnd).flights.values
@@ -254,8 +260,11 @@ object TerminalContentComponent {
                  exportType: ExportType,
                  exportUrl: String,
                  maybeExtraIcon: Option[Icon] = None
-                ): VdomTagOf[Anchor] = {
-    <.a(Icon.download, s" $exportType", maybeExtraIcon.getOrElse(EmptyVdom),
+                ): WithPropsAndTagsMods = {
+    MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+      MuiIcons(GetApp)(fontSize = "small"),
+      s" $exportType",
+      maybeExtraIcon.getOrElse(EmptyVdom),
       ^.className := "btn btn-default",
       ^.href := exportUrl,
       ^.target := "_blank",

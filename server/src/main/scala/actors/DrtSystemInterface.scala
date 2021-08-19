@@ -120,7 +120,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     case (feedSource: FeedSource, _) => isValidFeedSource(feedSource)
   }
 
-  val aclFeed: AclFeed = AclFeed(params.ftpServer, params.username, params.path, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
+  val maybeAclFeed: Option[AclFeed] =
+    if (params.aclDisabled) None
+    else
+      for {
+        host <- params.aclHost
+        username <- params.aclUsername
+        keyPath <- params.aclKeyPath
+      } yield AclFeed(host, username, keyPath, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
 
   val maxDaysToConsider: Int = 14
   val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, now)), name = "passengers-actor")
@@ -147,7 +154,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def run(): Unit
 
-  def coachWalkTime : CoachWalkTime
+  def coachWalkTime: CoachWalkTime
 
   def walkTimeProvider(flight: Arrival): MillisSinceEpoch = {
     val defaultWalkTimeMillis = airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L)
@@ -201,7 +208,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       initialForecastArrivals = initialForecastArrivals.getOrElse(SortedMap()),
       initialLiveBaseArrivals = initialLiveBaseArrivals.getOrElse(SortedMap()),
       initialLiveArrivals = initialLiveArrivals.getOrElse(SortedMap()),
-      arrivalsForecastBaseSource = baseArrivalsSource(),
+      arrivalsForecastBaseSource = baseArrivalsSource(maybeAclFeed),
       arrivalsForecastSource = forecastArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveBaseSource = liveBaseArrivalsSource(airportConfig.feedPortCode),
       arrivalsLiveSource = liveArrivalsSource(airportConfig.feedPortCode),
@@ -222,15 +229,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def arrivalsNoOp: Source[ArrivalsFeedResponse, Cancellable] = Source.tick[ArrivalsFeedResponse](100 days, 100 days, ArrivalsFeedSuccess(Flights(Seq()), SDate.now()))
 
-  def baseArrivalsSource(): Source[ArrivalsFeedResponse, Cancellable] = if (isTestEnvironment)
-    arrivalsNoOp
-  else
-    Source.tick(1 second, 10 minutes, NotUsed).map(_ => {
-      system.log.info(s"Requesting ACL feed")
-      aclFeed.requestArrivals
-    })
-
-  private def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
+  def baseArrivalsSource(maybeAclFeed: Option[AclFeed]): Source[ArrivalsFeedResponse, Cancellable] = maybeAclFeed match {
+    case None => arrivalsNoOp
+    case Some(aclFeed) =>
+      Source.tick(1 second, 10 minutes, NotUsed).map { _ =>
+        system.log.info(s"Requesting ACL feed")
+        aclFeed.requestArrivals
+      }
+  }
 
   val startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch) = () => {
     val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig) _
@@ -350,6 +356,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         val liveToken = params.maybeGlaLiveToken.getOrElse(throw new Exception("Missing GLA Live Feed Token"))
         val liveUsername = params.maybeGlaLiveUsername.getOrElse(throw new Exception("Missing GLA Live Feed Username"))
         GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).tickingSource
+      case "PIK" =>
+        CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).tickingSource(30 seconds)
       case _ => arrivalsNoOp
     }
 

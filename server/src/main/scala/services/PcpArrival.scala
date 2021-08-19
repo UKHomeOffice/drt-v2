@@ -91,7 +91,7 @@ object PcpArrival {
                                    )(flight: Arrival): MillisSinceEpoch = {
     val walkTime = standWalkTimesProvider(flight.Stand.getOrElse(""), flight.Terminal)
       .getOrElse(gateWalkTimesProvider(flight.Gate.getOrElse(""), flight.Terminal).getOrElse(defaultWalkTimeMillis))
-    if (AirportToCountry.isRedListed(flight.Origin)) {
+    if (AirportToCountry.isRedListed(flight.Origin, flight.Scheduled)) {
       val redListOriginWalkTime = coachWalkTime.walkTime(flight).getOrElse(walkTime)
       log.debug(s"Red list country walkTimeForFlight including coach transfer for ${Arrival.summaryString(flight)} is $redListOriginWalkTime millis ${redListOriginWalkTime / 60000} mins default is $defaultWalkTimeMillis")
       redListOriginWalkTime

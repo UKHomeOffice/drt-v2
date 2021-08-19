@@ -13,7 +13,7 @@ object AirportToCountryTests extends SpecificationLike {
   "Given a PortCode in a red list country" >> {
     "AirportToCountry should tell me it's a red list port" >> {
       val bulawayoAirport = PortCode("BUQ")
-      AirportToCountry.isRedListed(bulawayoAirport) === true
+      AirportToCountry.isRedListed(bulawayoAirport, SDate("2021-08-01T00:00").millisSinceEpoch) === true
     }
   }
 }

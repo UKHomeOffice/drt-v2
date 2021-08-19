@@ -6,6 +6,10 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
 import drt.shared.{Forecast, MilliDate, Queues, SDateLike}
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
@@ -63,19 +67,23 @@ object TerminalPlanningComponent {
               defaultStartDate(props.page.dateFromUrlOrNow).toISOString())
           )
         ),
-        <.div(^.className := "export-links",
-          <.a(
+        <.div(
+          <.span(
+          MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+            MuiIcons(GetApp)(fontSize = "small"),
             "Export Headlines",
-            ^.className := "btn btn-link",
+            ^.className := "btn btn-link muiButton",
             ^.href := SPAMain.absoluteUrl(s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
             ^.target := "_blank"
-          ),
-          <.a(
-            "Export Week",
-            ^.className := "btn btn-link",
-            ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
-            ^.target := "_blank"
-          )
+          )),
+          <.span(^.className := "planning-export",
+            MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+              MuiIcons(GetApp)(fontSize = "small"),
+              "Export Week",
+              ^.className := "btn btn-link muiButton",
+              ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
+              ^.target := "_blank"
+            ))
         ),
         <.h3("Headline Figures"),
         <.table(^.className := "headlines",
