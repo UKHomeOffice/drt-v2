@@ -57,7 +57,7 @@ object ApproximateScheduleMatch {
         else
           Option(LiveArrivalsUtil.mergePortFeedWithLiveBase(matchedArrival, arrival))
       case Right(none) if none.isEmpty =>
-        log.warn(s"No approximate schedule $searchSource matches found for arrival $key")
+        log.debug(s"No approximate schedule $searchSource matches found for arrival $key")
         None
       case Right(_) =>
         log.warn(s"Multiple approximate schedule $searchSource matches found for arrival $key")
