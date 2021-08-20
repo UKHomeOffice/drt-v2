@@ -150,7 +150,7 @@ object TerminalDashboardComponent {
             ))(^.className := "terminal-dashboard-side__sidebar_widget", "View Arrivals"),
           <.div(
             ^.className := "terminal-dashboard-side__sidebar_widget time-slot-changer",
-            <.label(^.className := "terminal-dashboard-side__sidebar_widget__label", ^.aria.label := "Select time slot to display pcp passenger numbers on the Dashboard accordingly to timeslot", "Time slot duration"),
+            <.label(^.className := "terminal-dashboard-side__sidebar_widget__label", ^.aria.label := "Select timeslot size for PCP passengers display", "Time slot duration"),
             <.select(
               ^.onChange ==> ((e: ReactEventFromInput) =>
                 p.router.set(p.terminalPageTabLoc.copy(subMode = e.target.value))),
