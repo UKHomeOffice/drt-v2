@@ -7,11 +7,13 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared._
-import drt.shared.api.Arrival
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.lab.MuiToggleButtonGroup
 
 object PortDashboardPage {
 
@@ -58,12 +60,14 @@ object PortDashboardPage {
 
             <.div(
               <.div(
-                <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
+                MuiToggleButtonGroup(selected = true)(^.className := "btn-group no-gutters",
                   periods.zipWithIndex.map {
-                    case (p, index) => <.div(
-                      ^.className := s"btn btn-primary${if (p == displayPeriod) " active" else ""}",
-                      s"${p.start.prettyTime()}-${p.end.prettyTime()}", ^.onClick ==> switchDashboardPeriod(index)
-                    )
+                    case (p, index) =>
+                      MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+                        s"${p.start.prettyTime()}-${p.end.prettyTime()}",
+                        ^.className := s"btn btn-primary${if (p == displayPeriod) " active" else ""} muiFontSize",
+                        ^.target := "_blank",
+                        ^.onClick ==> switchDashboardPeriod(index))
                   }.toTagMod)),
               terminals.map { terminalName =>
                 <.div(

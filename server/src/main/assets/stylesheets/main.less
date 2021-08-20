@@ -40,6 +40,7 @@
   }
 }
 
+
 .navbar-default {
   background-color: @bgDefault;
   border-color: @bgHighlight;
@@ -188,6 +189,10 @@
 .view-mode-content {
   clear: left;
   position: relative;
+}
+
+a:hover {
+    cursor:pointer;
 }
 
 .modal-header {
@@ -585,6 +590,10 @@ table.headlines tr:nth-child(odd) {
 
 .muiButton {
     width: 149px;
+}
+
+.muiFontSize {
+    font-size: 14px !important;
 }
 
 .exports {
@@ -2212,3 +2221,10 @@ div.access-restricted {
   right: 50%;
 }
 
+.sr-only {
+  height: 1px;
+  width: 1px;
+  clip: rect(1px, 1px, 1px, 1px);
+  overflow: hidden;
+  position: absolute;
+}

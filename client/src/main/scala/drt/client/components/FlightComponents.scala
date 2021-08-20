@@ -84,17 +84,16 @@ object FlightComponents {
       <.div(
         ^.className := "dashboard-summary__pax",
         <.div(^.className := "dashboard-summary__total-pax", s"${props.splitTotal} Pax"),
-        <.div(^.className := "dashboard-summary__splits-graph-bars",
-          splits.map {
-            case (paxTypeAndQueue, paxCount) =>
-              val percentage = ((paxCount.toDouble / maxSplit) * 100).toInt
-              val label = paxTypeAndQueueString(paxTypeAndQueue)
-              <.div(
-                ^.className := s"dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--${paxTypeAndQueue.queueType.toString.toLowerCase}",
-                ^.height := s"$percentage%",
-                ^.title := s"$label")
-          }.toTagMod
-        )
+          <.div(^.className := "dashboard-summary__splits-graph-bars",
+              splits.map {
+                case (paxTypeAndQueue, paxCount) =>
+                  val percentage = ((paxCount.toDouble / maxSplit) * 100).toInt
+                  val label = paxTypeAndQueueString(paxTypeAndQueue)
+                    <.div(^.className := s"dashboard-summary__splits-graph-bar dashboard-summary__splits-graph-bar--${paxTypeAndQueue.queueType.toString.toLowerCase}",
+                    ^.height := s"$percentage%",
+                    ^.title := s"$label")
+              }.toTagMod
+            )
       )
     }
   }
