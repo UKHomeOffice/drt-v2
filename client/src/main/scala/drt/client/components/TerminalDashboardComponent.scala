@@ -138,7 +138,7 @@ object TerminalDashboardComponent {
 
           <.div(^.className := "tb-bar row", ^.aria.label := "Change time by selected time slot hours",
             p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlPrevTime")))(^.aria.label := s"View previous $slotSize minutes", ^.className := "dashboard-time-switcher prev-bar col", Icon.angleDoubleLeft),
-            <.div(^.className := "time-label col", ^.aria.label := s"display time range from ${start.prettyTime()} to ${end.prettyTime()}", s"${start.prettyTime()} - ${end.prettyTime()}"),
+            <.div(^.className := "time-label col", ^.aria.label := s"current display time range", s"${start.prettyTime()} - ${end.prettyTime()}"),
             p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlNextTime")))(^.aria.label := s"View next $slotSize minutes", ^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
           )
         )
