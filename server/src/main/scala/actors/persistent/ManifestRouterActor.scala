@@ -216,4 +216,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       case (Some(scheduled), vm) =>
         scheduled -> VoyageManifests(vm)
     }
+
+  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  override val maybeSnapshotInterval: Option[Int] = Option(1000)
 }

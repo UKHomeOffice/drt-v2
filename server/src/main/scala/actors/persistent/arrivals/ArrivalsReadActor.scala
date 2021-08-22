@@ -1,5 +1,6 @@
 package actors.persistent.arrivals
 
+import actors.persistent.Sizes
 import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.{FeedSource, SDateLike}
@@ -12,12 +13,14 @@ object ArrivalsReadActor {
   )
 }
 
-class ArrivalsReadActor(pointInTime: SDateLike, persistenceIdString: String, feedSource: FeedSource) extends ArrivalsActor(() => pointInTime, Int.MaxValue, feedSource) {
+class ArrivalsReadActor(pointInTime: SDateLike, persistenceIdString: String, feedSource: FeedSource)
+  extends ArrivalsActor(() => pointInTime, Int.MaxValue, feedSource) {
   override def persistenceId: String = persistenceIdString
 
   def now: () => SDateLike = () => pointInTime
 
-  override val snapshotBytesThreshold: Int = 0
+  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  override val maybeSnapshotInterval: Option[Int] = Option(1000)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 

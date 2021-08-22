@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.persistent.RecoveryActorLike
+import actors.persistent.{RecoveryActorLike, Sizes}
 import akka.actor.ActorRef
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -118,5 +118,8 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
       case PaxCountMessage(Some(pit), Some(day), Some(paxCount)) => ((pit, day), paxCount)
     }
     .toMap
+
+  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  override val maybeSnapshotInterval: Option[Int] = Option(1000)
 }
 
