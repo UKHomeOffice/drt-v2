@@ -86,23 +86,23 @@ class ArrivalsGraphStage(name: String = "",
       sources.map(s => (s, arrivalsForSource(s)))
 
     override def preStart(): Unit = {
-      log.info(s"Received ${initialForecastBaseArrivals.size} initial base arrivals")
+      log.info(s"Received ${initialForecastBaseArrivals.size} base initial arrivals")
       aclArrivals ++= relevantFlights(SortedMap[UniqueArrival, Arrival]() ++ initialForecastBaseArrivals)
-      log.info(s"Received ${initialForecastArrivals.size} initial forecast arrivals")
+      log.info(s"Received ${initialForecastArrivals.size} forecast initial arrivals")
       forecastArrivals = prepInitialArrivals(initialForecastArrivals)
 
-      log.info(s"Received ${initialLiveBaseArrivals.size} initial live base arrivals")
+      log.info(s"Received ${initialLiveBaseArrivals.size} live base initial arrivals")
       ciriumArrivals = prepInitialArrivals(initialLiveBaseArrivals)
-      log.info(s"Received ${initialLiveArrivals.size} initial live arrivals")
+      log.info(s"Received ${initialLiveArrivals.size} live initial arrivals")
       liveArrivals = prepInitialArrivals(initialLiveArrivals)
 
       val withAdjustments = arrivalsAdjustments(initialMergedArrivals.values)
       val removals = terminalRemovals(withAdjustments, initialMergedArrivals.values)
 
       if (removals.nonEmpty) {
-        log.info(s"Adjusting ${removals.size} existing arrivals")
+        log.info(s"Adjusting ${removals.size} initial arrivals")
         toPush = Option(ArrivalsDiff(Seq(), removals))
-      }
+      } else log.info("No adjustments to make to initial arrivals")
 
       merged = SortedMap[UniqueArrival, Arrival]() ++ withAdjustments.map(a => (a.unique, a))
 
