@@ -7,7 +7,7 @@ import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, LiveArrivalsUtil}
+import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop, LiveArrivalsUtil}
 import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone, mergeApproxIfFoundElseOriginal}
 import services.metrics.{Metrics, StageTimer}
 
@@ -96,8 +96,13 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"Received ${initialLiveArrivals.size} live initial arrivals")
       liveArrivals = prepInitialArrivals(initialLiveArrivals)
 
-      val withAdjustments = arrivalsAdjustments(initialMergedArrivals.values)
-      val removals = terminalRemovals(withAdjustments, initialMergedArrivals.values)
+      val (withAdjustments, removals) = arrivalsAdjustments match {
+        case ArrivalsAdjustmentsNoop =>
+          (initialMergedArrivals.values, Iterable[Arrival]())
+        case adjustments =>
+          val adjusted = adjustments(initialMergedArrivals.values)
+          (adjusted, terminalRemovals(adjusted, initialMergedArrivals.values))
+      }
 
       if (removals.nonEmpty) {
         log.info(s"Adjusting ${removals.size} initial arrivals")
@@ -162,7 +167,7 @@ class ArrivalsGraphStage(name: String = "",
         case LiveArrivals =>
           val toRemove = terminalRemovals(incomingArrivals, liveArrivals.values)
           liveArrivals = updateArrivalsSource(liveArrivals, filteredArrivals)
-          toPush = mergeUpdatesFromKeys(liveArrivals.keys).map {diff => diff.copy(toRemove = diff.toRemove ++ toRemove)}
+          toPush = mergeUpdatesFromKeys(liveArrivals.keys).map { diff => diff.copy(toRemove = diff.toRemove ++ toRemove) }
         case LiveBaseArrivals =>
           ciriumArrivals = updateArrivalsSource(ciriumArrivals, filteredArrivals)
           val missingTerminals = ciriumArrivals.count {
