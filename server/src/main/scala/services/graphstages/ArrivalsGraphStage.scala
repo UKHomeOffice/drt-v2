@@ -98,10 +98,11 @@ class ArrivalsGraphStage(name: String = "",
 
       val (withAdjustments, removals) = arrivalsAdjustments match {
         case ArrivalsAdjustmentsNoop =>
-          (initialMergedArrivals.values, Iterable[Arrival]())
+          (initialMergedArrivals, Iterable[Arrival]())
         case adjustments =>
           val adjusted = adjustments(initialMergedArrivals.values)
-          (adjusted, terminalRemovals(adjusted, initialMergedArrivals.values))
+          val adjustedByUnique = SortedMap[UniqueArrival, Arrival]() ++ adjusted.map(a => (a.unique, a))
+          (adjustedByUnique, terminalRemovals(adjusted, initialMergedArrivals.values))
       }
 
       if (removals.nonEmpty) {
@@ -109,7 +110,7 @@ class ArrivalsGraphStage(name: String = "",
         toPush = Option(ArrivalsDiff(Seq(), removals))
       } else log.info("No adjustments to make to initial arrivals")
 
-      merged = SortedMap[UniqueArrival, Arrival]() ++ withAdjustments.map(a => (a.unique, a))
+      merged = withAdjustments
 
       super.preStart()
     }
