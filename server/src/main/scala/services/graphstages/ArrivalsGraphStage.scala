@@ -7,7 +7,7 @@ import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, LiveArrivalsUtil}
+import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop, LiveArrivalsUtil}
 import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone, mergeApproxIfFoundElseOriginal}
 import services.metrics.{Metrics, StageTimer}
 
@@ -86,25 +86,31 @@ class ArrivalsGraphStage(name: String = "",
       sources.map(s => (s, arrivalsForSource(s)))
 
     override def preStart(): Unit = {
-      log.info(s"Received ${initialForecastBaseArrivals.size} initial base arrivals")
+      log.info(s"Received ${initialForecastBaseArrivals.size} base initial arrivals")
       aclArrivals ++= relevantFlights(SortedMap[UniqueArrival, Arrival]() ++ initialForecastBaseArrivals)
-      log.info(s"Received ${initialForecastArrivals.size} initial forecast arrivals")
+      log.info(s"Received ${initialForecastArrivals.size} forecast initial arrivals")
       forecastArrivals = prepInitialArrivals(initialForecastArrivals)
 
-      log.info(s"Received ${initialLiveBaseArrivals.size} initial live base arrivals")
+      log.info(s"Received ${initialLiveBaseArrivals.size} live base initial arrivals")
       ciriumArrivals = prepInitialArrivals(initialLiveBaseArrivals)
-      log.info(s"Received ${initialLiveArrivals.size} initial live arrivals")
+      log.info(s"Received ${initialLiveArrivals.size} live initial arrivals")
       liveArrivals = prepInitialArrivals(initialLiveArrivals)
 
-      val withAdjustments = arrivalsAdjustments(initialMergedArrivals.values)
-      val removals = terminalRemovals(withAdjustments, initialMergedArrivals.values)
-
-      if (removals.nonEmpty) {
-        log.info(s"Adjusting ${removals.size} existing arrivals")
-        toPush = Option(ArrivalsDiff(Seq(), removals))
+      val (withAdjustments, removals) = arrivalsAdjustments match {
+        case ArrivalsAdjustmentsNoop =>
+          (initialMergedArrivals, Iterable[Arrival]())
+        case adjustments =>
+          val adjusted = adjustments(initialMergedArrivals.values)
+          val adjustedByUnique = SortedMap[UniqueArrival, Arrival]() ++ adjusted.map(a => (a.unique, a))
+          (adjustedByUnique, terminalRemovals(adjusted, initialMergedArrivals.values))
       }
 
-      merged = SortedMap[UniqueArrival, Arrival]() ++ withAdjustments.map(a => (a.unique, a))
+      if (removals.nonEmpty) {
+        log.info(s"Adjusting ${removals.size} initial arrivals")
+        toPush = Option(ArrivalsDiff(Seq(), removals))
+      } else log.info("No adjustments to make to initial arrivals")
+
+      merged = withAdjustments
 
       super.preStart()
     }
@@ -162,7 +168,7 @@ class ArrivalsGraphStage(name: String = "",
         case LiveArrivals =>
           val toRemove = terminalRemovals(incomingArrivals, liveArrivals.values)
           liveArrivals = updateArrivalsSource(liveArrivals, filteredArrivals)
-          toPush = mergeUpdatesFromKeys(liveArrivals.keys).map {diff => diff.copy(toRemove = diff.toRemove ++ toRemove)}
+          toPush = mergeUpdatesFromKeys(liveArrivals.keys).map { diff => diff.copy(toRemove = diff.toRemove ++ toRemove) }
         case LiveBaseArrivals =>
           ciriumArrivals = updateArrivalsSource(ciriumArrivals, filteredArrivals)
           val missingTerminals = ciriumArrivals.count {

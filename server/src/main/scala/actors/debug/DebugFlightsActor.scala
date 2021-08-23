@@ -1,6 +1,6 @@
 package actors.debug
 
-import actors.persistent.RecoveryActorLike
+import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.persistent.staffing.GetState
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -78,4 +78,7 @@ class DebugFlightsActor(lookupId: String, maybePointInTime: Option[MillisSinceEp
       val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
       Recovery(fromSnapshot = criteria, replayMax = 1000)
   }
+
+  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  override val maybeSnapshotInterval: Option[Int] = Option(1000)
 }

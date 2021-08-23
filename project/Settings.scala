@@ -81,6 +81,7 @@ object Settings {
     val akkaHttp = "10.1.9"
     val slick = "3.3.2"
     val censorinus = "2.1.13"
+    val janinoVersion = "3.1.6"
   }
 
   import versions._
@@ -184,6 +185,7 @@ object Settings {
 
     "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
+    "org.codehaus.janino" % "janino" % janinoVersion,
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.0",
 
     "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),

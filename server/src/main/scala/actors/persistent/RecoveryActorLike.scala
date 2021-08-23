@@ -20,8 +20,8 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   val recoveryStartMillis: MillisSinceEpoch
 
-  val snapshotBytesThreshold: Int = Sizes.oneMegaByte
-  val maybeSnapshotInterval: Option[Int] = None
+  val snapshotBytesThreshold: Int
+  val maybeSnapshotInterval: Option[Int]
   var messagesPersistedSinceSnapshotCounter = 0
   var bytesSinceSnapshotCounter = 0
   var maybeAckAfterSnapshot: Option[(ActorRef, Any)] = None
