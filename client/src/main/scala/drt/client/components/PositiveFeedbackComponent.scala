@@ -14,6 +14,7 @@ object PositiveFeedbackComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props(url: String, feedbackUserEmail: String)
+
   implicit val rw: RW[Props] = macroRW
 
   implicit val propsReuse: Reusability[Props] = Reusability.by(_.url)
@@ -22,6 +23,7 @@ object PositiveFeedbackComponent {
     .render_P(props => {
       <.div(
         <.button(Icon.thumbsOUp,
+          ^.aria.label := "Positive feedback",
           ^.className := "btn btn-default btn-success",
           ^.onClick --> (Callback(DrtApi.post("email/feedback/positive", write(props)))
             >> Callback(SPACircuit.dispatch(SetSnackbarMessage(Ready("Thanks for your feedback. This helps us improve the service.")))))
