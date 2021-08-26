@@ -7,14 +7,14 @@ import drt.shared.{ApiFlightWithSplits, Nationality, PortCode}
 
 import scala.collection.immutable.{Map, SortedMap}
 
-case class RedListUpdate(additions: Map[String, String], removals: List[String])
+case class RedListUpdate(effectiveFrom: MillisSinceEpoch, additions: Map[String, String], removals: List[String])
 
 object RedList {
   def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =
     portCode == PortCode("LHR") && List(T2, T5).contains(terminal)
 
   val redListChanges: SortedMap[MillisSinceEpoch, RedListUpdate] = SortedMap(
-    1613347200000L -> RedListUpdate(Map( //15 feb
+    1613347200000L -> RedListUpdate(1613347200000L, Map( //15 feb
       "Angola" -> "AGO",
       "Argentina" -> "ARG",
       "Bolivia" -> "BOL",
@@ -49,26 +49,26 @@ object RedList {
       "Zambia" -> "ZMB",
       "Zimbabwe" -> "ZWE",
     ), List()),
-    1616112000000L -> RedListUpdate(Map( //19 march
+    1616112000000L -> RedListUpdate(1616112000000L, Map( //19 march
       "Ethiopia" -> "ETH",
       "Oman" -> "OMN",
       "Qatar" -> "QAT",
       "Somalia" -> "SOM",
     ), List("Portugal", "Mauritius")),
-    1617922800000L -> RedListUpdate(Map( // 9 april
+    1617922800000L -> RedListUpdate(1617922800000L, Map( // 9 april
       "Philippines" -> "PHL",
       "Pakistan" -> "PAK",
       "Kenya" -> "KEN",
       "Bangladesh" -> "BGD",
     ), List()),
-    1619132400000L -> RedListUpdate(Map( // 23 april
+    1619132400000L -> RedListUpdate(1619132400000L, Map( // 23 april
       "India" -> "IND"), List()),
-    1620774000000L -> RedListUpdate(Map( // 12 May
+    1620774000000L -> RedListUpdate(1620774000000L, Map( // 12 May
       "Turkey" -> "TUR",
       "Maldives" -> "MDV",
       "Nepal" -> "NPL",
     ), List()),
-    1623106800000L -> RedListUpdate(Map( // 8 June
+    1623106800000L -> RedListUpdate(1623106800000L, Map( // 8 June
       "Afghanistan" -> "AFG",
       "Bahrain" -> "BHR",
       "Costa Rica" -> "CRI",
@@ -77,7 +77,7 @@ object RedList {
       "Sudan" -> "SDN",
       "Trinidad and Tobago" -> "TTO",
     ), List()),
-    1625007600000L -> RedListUpdate(Map( // 30 June
+    1625007600000L -> RedListUpdate(1625007600000L, Map( // 30 June
       "Dominican Republic" -> "DOM",
       "Eritrea" -> "ERI",
       "Haiti" -> "HTI",
@@ -85,13 +85,13 @@ object RedList {
       "Tunisia" -> "TUN",
       "Uganda" -> "UGA",
     ), List()),
-    1626649200000L -> RedListUpdate(Map( // 19 July
+    1626649200000L -> RedListUpdate(1626649200000L, Map( // 19 July
       "Cuba" -> "CUB",
       "Indonesia" -> "IDN",
       "Myanmar" -> "MMR",
       "Sierra Leone" -> "SLE",
     ), List()),
-    1628377200000L -> RedListUpdate(Map( // 8 Aug
+    1628377200000L -> RedListUpdate(1628377200000L, Map( // 8 Aug
       "Georgia" -> "GEO",
       "Mayotte" -> "MYT",
       "Mexico" -> "MEX",
