@@ -101,7 +101,11 @@ object RedList {
       "India",
       "Qatar",
       "United Arab Emirates",
-    ))
+    )),
+    1630278000000L -> RedListUpdate(Map( // 30 Aug
+      "Thailand" -> "THA",
+      "Montenegro" -> "MNE",
+    ), List()),
   )
 
   def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
