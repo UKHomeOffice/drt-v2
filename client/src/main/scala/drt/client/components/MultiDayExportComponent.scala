@@ -46,7 +46,6 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
     .initialStateFromProps { p =>
-      println(s"Setting start and end date to ${SDate(p.selectedDate.toLocalDate).toISOString()}")
       State(
         startDate = p.selectedDate.toLocalDate,
         endDate = p.selectedDate.toLocalDate
