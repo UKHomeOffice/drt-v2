@@ -117,7 +117,9 @@ object NegativeFeedbackComponent {
           ^.className := s"btn btn-default $btnColor",
           VdomAttr("data-toggle") := "modal",
           VdomAttr("data-target") := s"#$target",
-          ^.onClick --> scope.modState(_.copy(showDialogue = true))
+          ^.onClick --> scope.modState(_.copy(showDialogue = true)),
+          ^.aria.label := "Negative feedback",
+          ^.tabIndex := 0
         )
       }
 
