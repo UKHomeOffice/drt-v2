@@ -102,7 +102,7 @@ object RedList {
       "Qatar",
       "United Arab Emirates",
     )),
-    1630278000000L -> RedListUpdate(Map( // 30 Aug
+    1630278000000L -> RedListUpdate(1630278000000L, Map( // 30 Aug
       "Thailand" -> "THA",
       "Montenegro" -> "MNE",
     ), List()),
