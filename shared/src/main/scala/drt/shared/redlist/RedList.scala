@@ -21,6 +21,8 @@ case class RedListUpdates(updates: Map[MillisSinceEpoch, RedListUpdate]) {
 }
 
 object RedListUpdates {
+  val empty: RedListUpdates = RedListUpdates(Map())
+
   implicit val rw: ReadWriter[RedListUpdates] = macroRW
 }
 
@@ -35,6 +37,8 @@ case class SetRedListUpdate(originalDate: MillisSinceEpoch, redListUpdate: RedLi
 object SetRedListUpdate {
   implicit val rw: ReadWriter[SetRedListUpdate] = macroRW
 }
+
+case class DeleteRedListUpdates(millis: MillisSinceEpoch)
 
 object RedList {
   def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =
