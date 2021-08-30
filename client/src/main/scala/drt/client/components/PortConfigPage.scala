@@ -6,7 +6,6 @@ import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared._
-import drt.shared.redlist.RedList
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
@@ -17,13 +16,20 @@ object PortConfigPage {
   case class Props()
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigPage")
-    .render_P(_ =>
-      <.div(
-        ^.className := "port-config",
-        <.h3("Port Config"),
-        RedListEditor(RedList.redListChanges.values),
-        PortConfigDetails())
-    )
+    .render_P { props =>
+      val rlModel = SPACircuit.connect(_.redListUpdates)
+      rlModel { x =>
+        <.div(
+          x().renderReady(updates =>
+            <.div(
+              ^.className := "port-config",
+              <.h3("Port Config"),
+              RedListEditor(updates),
+              PortConfigDetails())
+          )
+        )
+      }
+    }
     .componentDidMount(_ => Callback {
       GoogleEventTracker.sendPageView(s"port-config")
     })

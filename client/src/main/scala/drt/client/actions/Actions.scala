@@ -11,6 +11,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.{LocalDate, UtcDate}
+import drt.shared.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
 import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 
@@ -171,6 +172,14 @@ object Actions {
   case object DeleteAllAlerts extends Action
 
   case class SaveAlert(alert: Alert) extends Action
+
+  case object GetRedListUpdates extends Action
+
+  case class SaveRedListUpdate(setRedListUpdate: SetRedListUpdate) extends Action
+
+  case object DeleteRedListUpdate extends Action
+
+  case class SetRedListUpdates(updates: RedListUpdates) extends Action
 
   case class UpdateStaffAdjustmentDialogueState(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
 

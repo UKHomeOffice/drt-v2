@@ -8,7 +8,27 @@ import upickle.default.{macroRW, ReadWriter}
 
 import scala.collection.immutable.{Map, SortedMap}
 
+
+case class RedListUpdates(updates: Map[MillisSinceEpoch, RedListUpdate]) {
+  lazy val isEmpty: Boolean = updates.isEmpty
+
+  def update(setRedListUpdate: SetRedListUpdate): RedListUpdates =
+    copy(updates = updates
+      .filter {
+        case (effectiveFrom, update) => effectiveFrom != setRedListUpdate.originalDate
+      } + (setRedListUpdate.redListUpdate.effectiveFrom -> setRedListUpdate.redListUpdate)
+    )
+}
+
+object RedListUpdates {
+  implicit val rw: ReadWriter[RedListUpdates] = macroRW
+}
+
 case class RedListUpdate(effectiveFrom: MillisSinceEpoch, additions: Map[String, String], removals: List[String])
+
+object RedListUpdate {
+  implicit val rw: ReadWriter[RedListUpdate] = macroRW
+}
 
 case class SetRedListUpdate(originalDate: MillisSinceEpoch, redListUpdate: RedListUpdate)
 

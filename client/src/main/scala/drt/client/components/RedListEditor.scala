@@ -1,8 +1,10 @@
 package drt.client.components
 
+import drt.client.actions.Actions.SaveRedListUpdate
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.redlist.RedListUpdate
+import drt.shared.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiDialog, MuiDialogActions, MuiDialogContent, MuiDialogContentText, MuiDialogTitle, MuiGrid, MuiTextField}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
@@ -12,7 +14,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CallbackTo, ReactEventFromInput, ScalaComponent}
 
 object RedListEditor {
-  case class Props(initialUpdates: Iterable[RedListUpdate])
+  case class Props(initialUpdates: RedListUpdates)
 
   case class Editing(updates: RedListUpdate, addingAddition: Option[(String, String)], addingRemoval: Option[String], originalDate: MillisSinceEpoch) {
     def setAdditionName(name: String): Editing = {
@@ -56,10 +58,10 @@ object RedListEditor {
     }
   }
 
-  def apply(redListChanges: Iterable[RedListUpdate]): Unmounted[Props, State, Unit] = {
+  def apply(redListChanges: RedListUpdates): Unmounted[Props, State, Unit] = {
     val comp = ScalaComponent
       .builder[Props]("RedListEditor")
-      .initialStateFromProps(p => State(p.initialUpdates, None))
+      .initialStateFromProps(p => State(p.initialUpdates.updates.values, None))
       .renderS { (scope, s) =>
         val setDate: ReactEventFromInput => CallbackTo[Unit] = e => {
           e.persist()
@@ -75,6 +77,7 @@ object RedListEditor {
           scope.modState { state =>
             val updatedChangeSets = state.editing match {
               case Some(editSet) =>
+                SPACircuit.dispatch(SaveRedListUpdate(SetRedListUpdate(editSet.originalDate, editSet.updates)))
                 val withoutOriginal = state.updates
                   .filter(cs => cs.effectiveFrom != editSet.updates.effectiveFrom && cs.effectiveFrom != editSet.originalDate)
                 withoutOriginal ++ Iterable(editSet.updates)

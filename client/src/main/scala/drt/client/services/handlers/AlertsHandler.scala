@@ -28,7 +28,7 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[List[Alert]]]) extends LoggingAct
       }).recoverWith {
         case _ =>
           log.info(s"Alerts request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-          Future(RetryActionAfter(GetLoggedInUser, PollDelay.recoveryDelay))
+          Future(RetryActionAfter(GetAlerts(since), PollDelay.recoveryDelay))
       }))
 
     case SetAlerts(alerts, since) =>

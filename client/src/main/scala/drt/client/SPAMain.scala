@@ -154,6 +154,7 @@ object SPAMain {
       UpdateMinuteTicker,
       GetFeedSourceStatuses(),
       GetAlerts(0L),
+      GetRedListUpdates,
       GetShowAlertModalDialog,
       GetOohStatus,
       GetFeatureFlags,

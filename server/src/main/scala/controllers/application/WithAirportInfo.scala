@@ -32,18 +32,4 @@ trait WithAirportInfo {
       Ok(write(res))
     }
   }
-
-  def getRedListPorts(dateString: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
-    Action { _ =>
-      import upickle.default._
-
-      val forDate = SDate(dateString, Crunch.europeLondonTimeZone).millisSinceEpoch
-
-      val redListPorts = AirportToCountry.airportInfoByIataPortCode.values.collect {
-        case AirportInfo(_, _, country, portCode) if RedList.countryCodesByName(forDate).contains(country) => PortCode(portCode)
-      }
-
-      Ok(write(redListPorts))
-    }
-  }
 }

@@ -14,7 +14,7 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class RedListPortsHandler[M](modelRW: ModelRW[M, Pot[HashSet[PortCode]]]) extends LoggingActionHandler(modelRW) {
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetRedListPorts(date) =>
-      effectOnly(Effect(DrtApi.get(s"red-list-ports/${date.toISOString}")
+      effectOnly(Effect(DrtApi.get(s"red-list/ports/${date.toISOString}")
         .map { response =>
           val redListCodes = read[HashSet[PortCode]](response.responseText)
           UpdateRedListPorts(redListCodes)

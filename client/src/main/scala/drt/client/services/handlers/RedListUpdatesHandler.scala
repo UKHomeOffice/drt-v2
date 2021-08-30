@@ -5,10 +5,8 @@ import diode.data._
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions._
 import drt.client.logger.log
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{DrtApi, PollDelay}
-import drt.shared.Alert
-import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.redlist.RedListUpdates
 import upickle.default.{read, write}
 
 import scala.concurrent.Future
@@ -16,54 +14,40 @@ import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class RedListUpdatesHandler[M](modelRW: ModelRW[M, Pot[List[Alert]]]) extends LoggingActionHandler(modelRW) {
+class RedListUpdatesHandler[M](modelRW: ModelRW[M, Pot[RedListUpdates]]) extends LoggingActionHandler(modelRW) {
 
   val requestFrequency: FiniteDuration = 60 seconds
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
-    case GetAlerts(since: MillisSinceEpoch) =>
-      effectOnly(Effect(DrtApi.get(s"alerts/$since").map(r => {
-        val alerts = read[List[Alert]](r.responseText)
-        SetAlerts(alerts, since)
+    case GetRedListUpdates =>
+      effectOnly(Effect(DrtApi.get("red-list/updates").map(r => {
+        SetRedListUpdates(read[RedListUpdates](r.responseText))
       }).recoverWith {
         case _ =>
-          log.info(s"Alerts request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-          Future(RetryActionAfter(GetLoggedInUser, PollDelay.recoveryDelay))
+          log.info(s"Red List updates request failed. Re-requesting after ${PollDelay.recoveryDelay}")
+          Future(RetryActionAfter(GetRedListUpdates, PollDelay.recoveryDelay))
       }))
 
-    case SetAlerts(alerts, since) =>
-      val effect = Effect(Future(GetAlerts(since))).after(requestFrequency)
-      val pot = if (alerts.isEmpty) Empty else Ready(alerts)
-      if (modelRW.value.isPending && since <= SDate.now().addMinutes(-1).millisSinceEpoch) {
+    case SetRedListUpdates(updates) =>
+      val effect = Effect(Future(GetRedListUpdates)).after(requestFrequency)
+      val pot = Ready(updates)
+      if (modelRW.value.headOption == Option(updates)) {
         noChange
       } else {
         updated(pot, effect)
       }
 
-    case DeleteAllAlerts =>
-      val responseFuture = DrtApi.delete("alerts")
-        .map(_ => DoNothing())
-        .recoverWith {
-          case _ =>
-            log.error(s"Failed to delete all alerts. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(DeleteAllAlerts, PollDelay.recoveryDelay))
-        }
-      updated(Empty, Effect(responseFuture))
-
-    case SaveAlert(alert) =>
-      val responseFuture = DrtApi.post("alerts", write(alert))
+    case SaveRedListUpdate(updateToSave) =>
+      val responseFuture = DrtApi.post("red-list/updates", write(updateToSave))
         .map(_ => DoNothing())
         .recoverWith {
           case _ =>
             log.error(s"Failed to save Alert. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(SaveAlert(alert), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(SaveRedListUpdate(updateToSave), PollDelay.recoveryDelay))
         }
 
-      val pot = value match {
-        case Ready(alerts) => Ready(alert :: alerts)
-        case _ => Ready(List(alert))
-      }
+      val updatedPot: Pot[RedListUpdates] = value.map(updates => updates.update(updateToSave))
 
-      updated(pot, Effect(responseFuture))
+      updated(updatedPot, Effect(responseFuture))
   }
 }
