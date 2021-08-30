@@ -4,10 +4,17 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{T2, T3, T5, Terminal}
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.{ApiFlightWithSplits, Nationality, PortCode}
+import upickle.default.{macroRW, ReadWriter}
 
 import scala.collection.immutable.{Map, SortedMap}
 
 case class RedListUpdate(effectiveFrom: MillisSinceEpoch, additions: Map[String, String], removals: List[String])
+
+case class SetRedListUpdate(originalDate: MillisSinceEpoch, redListUpdate: RedListUpdate)
+
+object SetRedListUpdate {
+  implicit val rw: ReadWriter[SetRedListUpdate] = macroRW
+}
 
 object RedList {
   def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =

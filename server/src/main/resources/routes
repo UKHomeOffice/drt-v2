@@ -29,6 +29,8 @@ GET           /arrival/:number/:terminal/:scheduled/:origin                     
 GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin              controllers.Application.getArrivalAtPointInTime(pointInTime: Long, number: Int, terminal: String, scheduled: Long, origin: String)
 GET           /manifest/:utcDate/summary                                              controllers.Application.getPassengerInfoForDay(utcDate: String)
 GET           /red-list-ports/:date                                                   controllers.Application.getRedListPorts(date: String)
+GET           /red-list-updates                                                       controllers.Application.getRedListUpdates
+POST          /red-list-updates/update                                                controllers.Application.setRedListUpdates
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 

@@ -71,10 +71,7 @@ object RedListEditor {
 
         val cancelEdit: CallbackTo[Unit] = scope.modState(_.copy(editing = None))
 
-        /**
-         * todo - implement saving
-         */
-        val saveEdit: CallbackTo[Unit] = {
+        val saveEdit: CallbackTo[Unit] =
           scope.modState { state =>
             val updatedChangeSets = state.editing match {
               case Some(editSet) =>
@@ -86,7 +83,6 @@ object RedListEditor {
             }
             state.copy(editing = None, updates = updatedChangeSets)
           }
-        }
 
         def removeAddition(countryName: String): CallbackTo[Unit] =
           scope.modState { state =>
