@@ -3,7 +3,7 @@ package services.crunch
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, PassengersActor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
-import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
+import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor, RedListUpdatesActor}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
@@ -84,6 +84,7 @@ class TestDrtActor extends Actor {
       val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)))
       val deploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)))
       val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)))
+      val redListUpdatesActor: ActorRef = system.actorOf(Props(new RedListUpdatesActor(tc.now)), "red-list-updates-actor")
 
       val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, crunchQueueActor)
       val flightsActor: ActorRef = flightLookups.flightsActor
@@ -192,7 +193,8 @@ class TestDrtActor extends Actor {
           "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
           "live-arrivals" -> liveArrivalsProbe.ref,
           "aggregated-arrivals" -> aggregatedArrivalsActor,
-          "deployment-request" -> deploymentQueueActor
+          "deployment-request" -> deploymentQueueActor,
+          "red-list-updates" -> redListUpdatesActor,
         ),
         useNationalityBasedProcessingTimes = false,
         now = tc.now,
