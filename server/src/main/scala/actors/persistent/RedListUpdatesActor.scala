@@ -7,7 +7,7 @@ import actors.serializers.RedListUpdatesMessageConversion
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
-import drt.shared.redlist.{DeleteRedListUpdates, RedListUpdates, SetRedListUpdate}
+import drt.shared.redlist.{DeleteRedListUpdates, RedList, RedListUpdates, SetRedListUpdate}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.RedListUpdates.{RedListUpdatesMessage, RemoveUpdateMessage, SetRedListUpdateMessage}
@@ -25,6 +25,9 @@ class RedListUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike wi
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case updates: SetRedListUpdateMessage =>
       RedListUpdatesMessageConversion.setUpdatesFromMessage(updates).map(u => state = state.update(u))
+
+    case delete: RemoveUpdateMessage =>
+      delete.date.map(effectiveFrom => state = state.remove(effectiveFrom))
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
@@ -37,7 +40,7 @@ class RedListUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike wi
 
   var state: RedListUpdates = initialState
 
-  override def initialState: RedListUpdates = RedListUpdates.empty
+  override def initialState: RedListUpdates = RedListUpdates(RedList.redListChanges)
 
   override def receiveCommand: Receive = {
     case updates: SetRedListUpdate =>
@@ -50,9 +53,10 @@ class RedListUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike wi
       log.debug(s"Received GetState request. Sending RedListUpdates with ${state.updates.size} update sets")
       sender() ! state
 
-    case DeleteRedListUpdates(millis: MillisSinceEpoch) =>
-      state = state.copy(updates = state.updates.filterKeys(_ != millis))
-      persistAndMaybeSnapshot(RemoveUpdateMessage(Option(millis)))
+    case delete: DeleteRedListUpdates =>
+      state = state.remove(delete.millis)
+      persistAndMaybeSnapshot(RemoveUpdateMessage(Option(delete.millis)))
+      sender() ! delete
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")

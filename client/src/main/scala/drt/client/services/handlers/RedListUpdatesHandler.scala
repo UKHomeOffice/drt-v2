@@ -6,6 +6,7 @@ import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.redlist.RedListUpdates
 import upickle.default.{read, write}
 
@@ -47,6 +48,19 @@ class RedListUpdatesHandler[M](modelRW: ModelRW[M, Pot[RedListUpdates]]) extends
         }
 
       val updatedPot: Pot[RedListUpdates] = value.map(updates => updates.update(updateToSave))
+
+      updated(updatedPot, Effect(responseFuture))
+
+    case DeleteRedListUpdate(effectiveFrom: MillisSinceEpoch) =>
+      val responseFuture = DrtApi.delete(s"red-list/updates/$effectiveFrom")
+        .map(_ => DoNothing())
+        .recoverWith {
+          case _ =>
+            log.error(s"Failed to delete red list update. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(RetryActionAfter(DeleteRedListUpdate(effectiveFrom), PollDelay.recoveryDelay))
+        }
+
+      val updatedPot: Pot[RedListUpdates] = value.map(updates => updates.remove(effectiveFrom))
 
       updated(updatedPot, Effect(responseFuture))
   }

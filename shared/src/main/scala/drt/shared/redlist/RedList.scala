@@ -12,12 +12,16 @@ import scala.collection.immutable.{Map, SortedMap}
 case class RedListUpdates(updates: Map[MillisSinceEpoch, RedListUpdate]) {
   lazy val isEmpty: Boolean = updates.isEmpty
 
+  def remove(effectiveFrom: MillisSinceEpoch): RedListUpdates = copy(updates = updates.filterKeys(_ != effectiveFrom))
+
   def update(setRedListUpdate: SetRedListUpdate): RedListUpdates =
     copy(updates = updates
       .filter {
         case (effectiveFrom, update) => effectiveFrom != setRedListUpdate.originalDate
       } + (setRedListUpdate.redListUpdate.effectiveFrom -> setRedListUpdate.redListUpdate)
     )
+
+  def ++(other: RedListUpdates): RedListUpdates = copy(updates = updates ++ other.updates)
 }
 
 object RedListUpdates {

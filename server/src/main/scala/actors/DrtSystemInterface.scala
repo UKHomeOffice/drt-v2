@@ -3,7 +3,7 @@ package actors
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.GetFlights
 import actors.daily.PassengersActor
-import actors.persistent.AlertsActor
+import actors.persistent.{AlertsActor, RedListUpdatesActor}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
 import actors.persistent.staffing._
@@ -85,6 +85,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val restartOnStop: RestartOnStop = RestartOnStop(minBackoffSeconds seconds, maxBackoffSeconds seconds)
 
   val alertsActor: ActorRef = restartOnStop.actorOf(Props(new AlertsActor(now)), "alerts-actor")
+  val redListUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new RedListUpdatesActor(now)), "red-list-updates-actor")
   val liveBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new CirriumLiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val crunchQueueActor: ActorRef

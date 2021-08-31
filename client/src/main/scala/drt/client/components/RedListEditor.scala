@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.actions.Actions.SaveRedListUpdate
+import drt.client.actions.Actions.{DeleteRedListUpdate, SaveRedListUpdate}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -133,6 +133,11 @@ object RedListEditor {
           state.copy(editing = state.editing.map(_.copy(addingRemoval = None)))
         }
 
+        def deleteUpdates(effectiveFrom: MillisSinceEpoch): CallbackTo[Unit] = scope.modState { state =>
+          SPACircuit.dispatch(DeleteRedListUpdate(effectiveFrom))
+          state.copy(updates = state.updates.filter(_.effectiveFrom != effectiveFrom))
+        }
+
         val today = SDate.now().getLocalLastMidnight.millisSinceEpoch
 
         <.div(
@@ -240,7 +245,7 @@ object RedListEditor {
                     ^.onClick --> scope.modState(_.copy(editing = Option(Editing(updates, None, None, updates.effectiveFrom))))),
                   MuiButton(color = Color.default, variant = "outlined", size = "medium")(
                     MuiIcons(Delete)(fontSize = "small"),
-                    /*^.onClick --> scope.modState(_.copy(showDialogue = true))*/),
+                    ^.onClick --> deleteUpdates(updates.effectiveFrom)),
                 )
               )
             }.toTagMod

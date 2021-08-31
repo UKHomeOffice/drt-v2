@@ -177,7 +177,7 @@ object Actions {
 
   case class SaveRedListUpdate(setRedListUpdate: SetRedListUpdate) extends Action
 
-  case object DeleteRedListUpdate extends Action
+  case class DeleteRedListUpdate(effectiveFrom: MillisSinceEpoch) extends Action
 
   case class SetRedListUpdates(updates: RedListUpdates) extends Action
 

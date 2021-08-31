@@ -31,6 +31,7 @@ GET           /manifest/:utcDate/summary                                        
 GET           /red-list/ports/:date                                                   controllers.Application.getRedListPorts(date: String)
 POST          /red-list/updates                                                       controllers.Application.updateRedListUpdates()
 GET           /red-list/updates                                                       controllers.Application.getRedListUpdates
+DELETE        /red-list/updates/:effectiveFrom                                        controllers.Application.deleteRedListUpdates(effectiveFrom: Long)
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 
