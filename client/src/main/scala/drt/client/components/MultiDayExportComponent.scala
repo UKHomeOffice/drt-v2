@@ -66,6 +66,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       }
 
       val gridXs = 4
+      <.div(
         MuiButton(color = Color.default, variant = "outlined", size = "medium")(
           MuiIcons(GetApp)(fontSize = "small"),
           "Multi Day Export",
@@ -73,7 +74,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
           VdomAttr("data-toggle") := "modal",
           VdomAttr("data-target") := "#multi-day-export",
           ^.onClick --> scope.modState(_.copy(showDialogue = true))
-        )
+        ),
         <.div(^.className := "multi-day-export modal " + showClass, ^.id := "#multi-day-export", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
             ^.className := "modal-dialog modal-dialog-centered",
@@ -124,7 +125,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                 )
               )
             )
-          ))
+          )))
     })
     .configure(Reusability.shouldComponentUpdate)
     .build
