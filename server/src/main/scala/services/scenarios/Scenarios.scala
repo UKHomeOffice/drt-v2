@@ -33,7 +33,7 @@ object Scenarios {
                         historicManifestsProvider: HistoricManifestsProvider,
                         flightsActor: ActorRef,
                         portStateActor: ActorRef,
-                        redListUpdatesActor: ActorRef,
+                        redListUpdatesProvider: () => Future[RedListUpdates],
                       )(implicit system: ActorSystem, timeout: Timeout): Future[DeskRecMinutes] = {
 
 
@@ -57,7 +57,7 @@ object Scenarios {
       flightsToLoads = portDesksAndWaitsProvider.flightsToLoads,
       loadsToQueueMinutes = portDesksAndWaitsProvider.loadsToDesks,
       maxDesksProviders = terminalDeskLimits,
-      redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates]
+      redListUpdatesProvider = redListUpdatesProvider,
     )
 
     val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()

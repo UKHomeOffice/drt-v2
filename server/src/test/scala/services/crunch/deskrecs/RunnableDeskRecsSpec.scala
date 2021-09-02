@@ -8,6 +8,7 @@ import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
+import dispatch.Future
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, SplitsForArrivals}
 import drt.shared.PaxTypes.{EeaMachineReadable, VisaNational}
@@ -16,6 +17,7 @@ import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
@@ -102,14 +104,15 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     implicit val timeout: Timeout = new Timeout(50 milliseconds)
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-      OptimisationProviders.arrivalsProvider(mockPortStateActor),
-      mockLiveManifestsProviderNoop,
-      historicManifests,
-      splitsCalc,
-      mockSplitsSink,
-      desksAndWaitsProvider.flightsToLoads,
-      desksAndWaitsProvider.loadsToDesks,
-      PortDeskLimits.flexed(airportConfig))
+      arrivalsProvider = OptimisationProviders.arrivalsProvider(mockPortStateActor),
+      liveManifestsProvider = mockLiveManifestsProviderNoop,
+      historicManifestsProvider = historicManifests,
+      splitsCalculator = splitsCalc,
+      splitsSink = mockSplitsSink,
+      flightsToLoads = desksAndWaitsProvider.flightsToLoads,
+      loadsToQueueMinutes = desksAndWaitsProvider.loadsToDesks,
+      maxDesksProviders = PortDeskLimits.flexed(airportConfig),
+      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty))
 
     RunnableOptimisation.createGraph(mockPortStateActor, deskRecsProducer).run()
   }

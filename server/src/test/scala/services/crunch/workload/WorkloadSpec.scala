@@ -7,6 +7,7 @@ import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.Terminals.{T1, T2, T3, T4, T5, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
@@ -34,7 +35,7 @@ class WorkloadSpec extends Specification {
   private def workloadForFlight(arrival: Arrival, splits: Set[Splits], filter: FlightFilter): Double = {
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> procTime)
     workloadCalculator(procTimes, filter)
-      .flightLoadMinutes(FlightsWithSplits(Iterable(ApiFlightWithSplits(arrival, splits, None))))
+      .flightLoadMinutes(FlightsWithSplits(Iterable(ApiFlightWithSplits(arrival, splits, None))), RedListUpdates.empty)
       .minutes.values.map(_.workLoad).sum
   }
 

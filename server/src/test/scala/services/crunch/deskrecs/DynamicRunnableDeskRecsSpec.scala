@@ -14,6 +14,7 @@ import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPe
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
@@ -126,14 +127,16 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
 
     val deskRecs = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-      mockFlightsProvider(List(arrival)),
-      mockLiveManifestsProvider(arrival, livePax),
-      mockHistoricManifestsProvider(Map(arrival -> historicPax)),
-      splitsCalculator,
-      mockSplitsSink,
-      desksAndWaitsProvider.flightsToLoads,
-      desksAndWaitsProvider.loadsToDesks,
-      maxDesksProvider)
+      arrivalsProvider = mockFlightsProvider(List(arrival)),
+      liveManifestsProvider = mockLiveManifestsProvider(arrival, livePax),
+      historicManifestsProvider = mockHistoricManifestsProvider(Map(arrival -> historicPax)),
+      splitsCalculator = splitsCalculator,
+      splitsSink = mockSplitsSink,
+      flightsToLoads = desksAndWaitsProvider.flightsToLoads,
+      loadsToQueueMinutes = desksAndWaitsProvider.loadsToDesks,
+      maxDesksProviders = maxDesksProvider,
+      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty)
+    )
 
     val (queue, _) = RunnableOptimisation.createGraph(sink, deskRecs).run()
     queue.offer(request)

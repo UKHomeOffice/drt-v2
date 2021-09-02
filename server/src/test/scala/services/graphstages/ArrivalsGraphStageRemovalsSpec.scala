@@ -4,6 +4,7 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
 
@@ -15,7 +16,7 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
 
   val dayOfArrivals = SDate("2021-03-01T12:00Z")
 
-  def pcpTimeCalc(a: Arrival): MilliDate = PcpArrival.pcpFrom(0, 0, _ => 0)(a)
+  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0)(a, r)
 
   "Given an ACL feed with 2 arrivals, followed by another with only one of them, the other arrival should be removed" >> {
     val (aclSource, _, _, _) = TestableArrivalsGraphStage(

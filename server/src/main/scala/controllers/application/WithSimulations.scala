@@ -1,6 +1,7 @@
 package controllers.application
 
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
+import actors.persistent.staffing.GetState
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.NotUsed
@@ -16,6 +17,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.UtcDate
+import drt.shared.redlist.RedListUpdates
 import manifests.queues.SplitsCalculator
 import play.api.mvc._
 import services.SDate
@@ -65,7 +67,7 @@ trait WithSimulations {
                 OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService),
                 ctrl.flightsActor,
                 portStateActor,
-                ctrl.redListUpdatesActor,
+                () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
               )
             }.flatten
 
@@ -98,15 +100,15 @@ trait WithSimulations {
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws => {
               val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
               simulationResult(
-                simulationParams,
-                simulationConfig,
-                SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
-                OptimisationProviders.arrivalsProvider(portStateActor),
-                OptimisationProviders.liveManifestsProvider(ctrl.manifestsRouterActor),
-                OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService),
-                ctrl.flightsActor,
-                portStateActor,
-                ctrl.redListUpdatesActor,
+                simulationParams = simulationParams,
+                simulationAirportConfig = simulationConfig,
+                splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
+                flightsProvider = OptimisationProviders.arrivalsProvider(portStateActor),
+                liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsRouterActor),
+                historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService),
+                flightsActor = ctrl.flightsActor,
+                portStateActor = portStateActor,
+                redListUpdatesProvider = () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
               )
             }
             }.flatten

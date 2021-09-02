@@ -6,6 +6,7 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, T2}
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
@@ -167,7 +168,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     }
 
     val earliestPcpMinuteAcrossArrivals = arrivals.foldLeft(Long.MaxValue) {
-      case (earliestSoFar, a) => TestDefaults.pcpForFlightFromBest(a).millisSinceEpoch match {
+      case (earliestSoFar, a) => TestDefaults.pcpForFlightFromBest(a, RedListUpdates.empty).millisSinceEpoch match {
         case pcp if pcp < earliestSoFar => pcp
         case _ => earliestSoFar
       }

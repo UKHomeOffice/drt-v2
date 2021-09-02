@@ -12,6 +12,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import drt.shared.Terminals.Terminal
+import drt.shared.redlist.RedListUpdates
 import drt.shared.{MilliTimes, PortCode, SDateLike, VoyageNumber}
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
@@ -133,7 +134,9 @@ class TestDrtActor extends Actor {
           splitsSink = portStateActor,
           flightsToLoads = portDeskRecs.flightsToLoads,
           loadsToQueueMinutes = portDeskRecs.loadsToDesks,
-          maxDesksProviders = deskLimitsProviders)
+          maxDesksProviders = deskLimitsProviders,
+          redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
+        )
 
         val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
 

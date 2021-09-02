@@ -3,7 +3,7 @@ package drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
 import drt.shared.coachTime.CoachWalkTime
-import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes}
+import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes, RedListUpdates}
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.HashSet
@@ -21,7 +21,7 @@ class FlightDisplayFilterSpec extends Specification {
   val redListOriginInBolivia = PortCode("VVI")
   val nonRedListOriginInFrance = PortCode("CDG")
   val redListPorts = HashSet(redListOriginInBolivia)
-  val isRedListOrigin: (PortCode, MillisSinceEpoch) => Boolean = (pc, _) => redListPorts.contains(pc)
+  val isRedListOrigin: (PortCode, MillisSinceEpoch, RedListUpdates) => Boolean = (pc, _, _) => redListPorts.contains(pc)
 
   val redListT2preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = redListOriginInBolivia, terminal = T2), Set())
   val nonRedListT2preT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = beforeT4Opening, origin = nonRedListOriginInFrance, terminal = T2), Set())
@@ -41,7 +41,7 @@ class FlightDisplayFilterSpec extends Specification {
   val redListT5postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = redListOriginInBolivia, terminal = T5), Set())
   val nonRedListT5postT4 = ApiFlightWithSplits(ArrivalGenerator.arrival(sch = afterT4Opening, origin = nonRedListOriginInFrance, terminal = T5), Set())
 
-  val filter = LhrFlightDisplayFilter(isRedListOrigin, LhrTerminalTypes(LhrRedListDatesImpl))
+  val filter = LhrFlightDisplayFilter(RedListUpdates.empty, isRedListOrigin, LhrTerminalTypes(LhrRedListDatesImpl))
 
   "Concerning LHR filter to include incoming red list diversions" >> {
     "Given flights for LHR spanning all terminals arriving when T3 is a red list terminal" >> {

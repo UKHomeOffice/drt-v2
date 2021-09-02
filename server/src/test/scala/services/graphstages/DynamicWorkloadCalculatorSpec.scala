@@ -8,6 +8,7 @@ import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
+import drt.shared.redlist.RedListUpdates
 import services.crunch.CrunchTestLike
 
 class DynamicWorkloadCalculatorSpec extends CrunchTestLike {
@@ -26,7 +27,7 @@ class DynamicWorkloadCalculatorSpec extends CrunchTestLike {
       val calc = calcForConfig(defaultAirportConfig)
 
       "I should see the workload for those passengers in the egate queue" >> {
-        val loads = calc.flightLoadMinutes(FlightsWithSplits(Iterable(allEgatePaxFlight)))
+        val loads = calc.flightLoadMinutes(FlightsWithSplits(Iterable(allEgatePaxFlight)), RedListUpdates.empty)
 
         val byQueue = loads.minutes.values
           .groupBy(_.queue)
@@ -46,7 +47,7 @@ class DynamicWorkloadCalculatorSpec extends CrunchTestLike {
       val calc = calcForConfig(defaultAirportConfig.copy(queueStatusProvider = HourlyStatuses(egatesClosed)))
 
       "I should see the workload for those passengers diverted to the eea queue" >> {
-        val loads = calc.flightLoadMinutes(FlightsWithSplits(Iterable(allEgatePaxFlight)))
+        val loads = calc.flightLoadMinutes(FlightsWithSplits(Iterable(allEgatePaxFlight)), RedListUpdates.empty)
 
         val byQueue = loads.minutes.values
           .groupBy(_.queue)
@@ -66,7 +67,7 @@ class DynamicWorkloadCalculatorSpec extends CrunchTestLike {
       val calc = calcForConfig(defaultAirportConfig.copy(queueStatusProvider = HourlyStatuses(egatesClosed)))
 
       "I should see the workload for those passengers diverted to the non-eea queue" >> {
-        val loads = calc.flightLoadMinutes(FlightsWithSplits(Iterable(allEgatePaxFlight)))
+        val loads = calc.flightLoadMinutes(FlightsWithSplits(Iterable(allEgatePaxFlight)), RedListUpdates.empty)
 
         val byQueue = loads.minutes.values
           .groupBy(_.queue)
@@ -86,7 +87,7 @@ class DynamicWorkloadCalculatorSpec extends CrunchTestLike {
       val calc = calcForConfig(defaultAirportConfig.copy(queueStatusProvider = HourlyStatuses(egatesClosed)))
 
       "I should see the workload for those passengers diverted to the non-eea queue" >> {
-        val loads = calc.flightLoadMinutes(FlightsWithSplits(Iterable(allB5JSSKPaxFlight)))
+        val loads = calc.flightLoadMinutes(FlightsWithSplits(Iterable(allB5JSSKPaxFlight)), RedListUpdates.empty)
 
         val byQueue = loads.minutes.values
           .groupBy(_.queue)

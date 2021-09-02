@@ -16,6 +16,7 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
@@ -180,8 +181,8 @@ object TestDefaults {
     )
   }
 
-  val pcpForFlightFromSch: Arrival => MilliDate = (a: Arrival) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
-  val pcpForFlightFromBest: Arrival => MilliDate = (a: Arrival) => {
+  val pcpForFlightFromSch: (Arrival, RedListUpdates) => MilliDate = (a, _) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
+  val pcpForFlightFromBest: (Arrival, RedListUpdates) => MilliDate = (a, _) => {
     if (a.ActualChox.isDefined) MilliDate(SDate(a.ActualChox.get).millisSinceEpoch)
     else if (a.EstimatedChox.isDefined) MilliDate(SDate(a.EstimatedChox.get).millisSinceEpoch)
     else if (a.Actual.isDefined) MilliDate(SDate(a.Actual.get).millisSinceEpoch)

@@ -9,6 +9,7 @@ import drt.shared.MilliTimes.oneDayMillis
 import drt.shared.Terminals.T1
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import org.specs2.specification.AfterEach
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsNoop}
 import services.crunch.CrunchTestLike
@@ -59,22 +60,23 @@ object TestableArrivalsGraphStage {
     RunnableGraph.fromGraph(graph)
   }
 
-  def buildArrivalsGraphStage(pcpCalcFn: Arrival => MilliDate,
+  def buildArrivalsGraphStage(pcpCalcFn: (Arrival, RedListUpdates) => MilliDate,
                               now: SDateLike,
                               sanitiser: ArrivalDataSanitiser = ArrivalDataSanitiser(None, None)
                              ) = new ArrivalsGraphStage(
-    "",
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    SortedMap[UniqueArrival, Arrival](),
-    pcpCalcFn,
-    Set(T1),
-    sanitiser,
-    ArrivalsAdjustmentsNoop,
-    oneDayMillis,
-    () => now
+    name = "",
+    initialRedListUpdates = RedListUpdates.empty,
+    initialForecastBaseArrivals = SortedMap[UniqueArrival, Arrival](),
+    initialForecastArrivals = SortedMap[UniqueArrival, Arrival](),
+    initialLiveBaseArrivals = SortedMap[UniqueArrival, Arrival](),
+    initialLiveArrivals = SortedMap[UniqueArrival, Arrival](),
+    initialMergedArrivals = SortedMap[UniqueArrival, Arrival](),
+    pcpArrivalTime = pcpCalcFn,
+    validPortTerminals = Set(T1),
+    arrivalDataSanitiser = sanitiser,
+    arrivalsAdjustments = ArrivalsAdjustmentsNoop,
+    expireAfterMillis = oneDayMillis,
+    now = () => now
   )
 }
 
@@ -291,7 +293,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     success
   }
 
-  def pcpTimeCalc(a: Arrival): MilliDate = PcpArrival.pcpFrom(0, 0, _ => 0)(a)
+  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0)(a, r)
 
   "Given a base live arrival with an estimated time and a port live arrival with only scheduled time " +
     "Then PCP time should be calculated from the base live arrival time." >> {

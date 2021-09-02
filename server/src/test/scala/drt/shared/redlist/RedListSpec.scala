@@ -14,7 +14,7 @@ class RedListSpec extends Specification{
   val countriesAddedFrom20210808 = Set("Georgia", "Mayotte", "Mexico", "Reunion")
 
   "Given a date just before the red list changes on 08/08/2021" >> {
-    val redList20210807 = RedList.countryCodesByName(date20210807.millisSinceEpoch)
+    val redList20210807 = RedListUpdates(RedList.redListChanges).countryCodesByName(date20210807.millisSinceEpoch)
     "The red list should contain India" >> {
       val expectedToExist = redList20210807.keys.toSet.intersect(countriesRemovedFrom20210808)
       val expectedToNotExist = redList20210807.keys.toSet.intersect(countriesAddedFrom20210808)
@@ -24,7 +24,7 @@ class RedListSpec extends Specification{
   }
 
   "Given a date of the red list changes on 08/08/2021" >> {
-    val redList = RedList.countryCodesByName(date20210808.millisSinceEpoch)
+    val redList = RedListUpdates(RedList.redListChanges).countryCodesByName(date20210808.millisSinceEpoch)
     "The red list should give the correct list as defined by redList20210808" >> {
       redList.keys === redList20210808.keys
     }
