@@ -117,10 +117,10 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
   }
 
   val defaultArrivalsExport: (Terminal, SDateLike, LoggedInUser, ViewMode) => VdomElement = (term, date, user, viewMode) =>
-    <.div(exportLink(
+    exportLink(
       date,
       term.toString,
       ExportArrivals,
       SPAMain.exportUrl(ExportArrivals, viewMode, term)
-    ))
+    ).apply()
 }
