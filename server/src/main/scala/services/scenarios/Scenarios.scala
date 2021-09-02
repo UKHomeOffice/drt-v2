@@ -9,6 +9,7 @@ import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import drt.shared.{AirportConfig, SimulationParams}
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
@@ -31,7 +32,8 @@ object Scenarios {
                         liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
                         historicManifestsProvider: HistoricManifestsProvider,
                         flightsActor: ActorRef,
-                        portStateActor: ActorRef
+                        portStateActor: ActorRef,
+                        redListUpdatesActor: ActorRef,
                       )(implicit system: ActorSystem, timeout: Timeout): Future[DeskRecMinutes] = {
 
 
@@ -47,14 +49,16 @@ object Scenarios {
     val terminalDeskLimits = PortDeskLimits.fixed(simulationAirportConfig)
 
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-      flightsProvider,
-      liveManifestsProvider,
-      historicManifestsProvider,
-      splitsCalculator,
-      flightsActor,
-      portDesksAndWaitsProvider.flightsToLoads,
-      portDesksAndWaitsProvider.loadsToDesks,
-      terminalDeskLimits)
+      arrivalsProvider = flightsProvider,
+      liveManifestsProvider = liveManifestsProvider,
+      historicManifestsProvider = historicManifestsProvider,
+      splitsCalculator = splitsCalculator,
+      splitsSink = flightsActor,
+      flightsToLoads = portDesksAndWaitsProvider.flightsToLoads,
+      loadsToQueueMinutes = portDesksAndWaitsProvider.loadsToDesks,
+      maxDesksProviders = terminalDeskLimits,
+      redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates]
+    )
 
     val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
 

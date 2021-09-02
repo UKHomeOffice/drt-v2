@@ -14,7 +14,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
-import drt.shared.redlist.RedList
+import drt.shared.redlist.{RedList, RedListUpdates}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -37,6 +37,7 @@ object TerminalDashboardComponent {
                     featureFlags: Pot[FeatureFlags],
                     loggedInUser: LoggedInUser,
                     redListPorts: Pot[HashSet[PortCode]],
+                    redListUpdates: RedListUpdates,
                   )
 
   val defaultSlotSize = 120
@@ -100,7 +101,8 @@ object TerminalDashboardComponent {
                         terminal = terminal,
                         portCode = p.airportConfig.portCode,
                         redListPorts = redListPorts,
-                        airportConfig = p.airportConfig
+                        airportConfig = p.airportConfig,
+                        redListUpdates = p.redListUpdates
                       )
                     )
                   }
@@ -187,6 +189,7 @@ object TerminalDashboardComponent {
             featureFlags: Pot[FeatureFlags],
             loggedInUser: LoggedInUser,
             redListPorts: Pot[HashSet[PortCode]],
+            redListUpdates: RedListUpdates,
            ): VdomElement =
     component(Props(
       terminalPageTabLoc,
@@ -197,6 +200,7 @@ object TerminalDashboardComponent {
       featureFlags,
       loggedInUser,
       redListPorts,
+      redListUpdates,
     ))
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {

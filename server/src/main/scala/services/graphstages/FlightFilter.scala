@@ -1,30 +1,30 @@
 package services.graphstages
 
 import drt.shared.Terminals.Terminal
-import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedListUpdates}
 import drt.shared.{AirportConfig, ApiFlightWithSplits, PortCode}
 import services.AirportToCountry
 
-case class FlightFilter(filters: List[ApiFlightWithSplits => Boolean]) {
+case class FlightFilter(filters: List[(ApiFlightWithSplits, RedListUpdates) => Boolean]) {
   def +(other: FlightFilter): FlightFilter = FlightFilter(filters ++ other.filters)
 
-  def apply(fws: ApiFlightWithSplits): Boolean = filters.forall(_ (fws))
+  def apply(fws: ApiFlightWithSplits, redListUpdates: RedListUpdates): Boolean = filters.forall(_(fws, redListUpdates))
 }
 
 object FlightFilter {
   private val terminalTypes: LhrTerminalTypes = LhrTerminalTypes(LhrRedListDatesImpl)
 
-  def apply(filter: ApiFlightWithSplits => Boolean): FlightFilter = FlightFilter(List(filter))
+  def apply(filter: (ApiFlightWithSplits, RedListUpdates) => Boolean): FlightFilter = FlightFilter(List(filter))
 
-  def validTerminalFilter(validTerminals: List[Terminal]): FlightFilter = FlightFilter(fws => validTerminals.contains(fws.apiFlight.Terminal))
+  def validTerminalFilter(validTerminals: List[Terminal]): FlightFilter = FlightFilter((fws, _) => validTerminals.contains(fws.apiFlight.Terminal))
 
-  val notCancelledFilter: FlightFilter = FlightFilter(fws => !fws.apiFlight.isCancelled)
+  val notCancelledFilter: FlightFilter = FlightFilter((fws, _) => !fws.apiFlight.isCancelled)
 
-  val outsideCtaFilter: FlightFilter = FlightFilter(fws => !fws.apiFlight.Origin.isCta)
+  val outsideCtaFilter: FlightFilter = FlightFilter((fws, _) => !fws.apiFlight.Origin.isCta)
 
-  val lhrRedListFilter: FlightFilter = FlightFilter { fws =>
+  val lhrRedListFilter: FlightFilter = FlightFilter { (fws, redListUpdates) =>
     val isGreenOnlyTerminal = terminalTypes.lhrNonRedListTerminalsForDate(fws.apiFlight.Scheduled).contains(fws.apiFlight.Terminal)
-    val isRedListOrigin = AirportToCountry.isRedListed(fws.apiFlight.Origin, fws.apiFlight.Scheduled)
+    val isRedListOrigin = AirportToCountry.isRedListed(fws.apiFlight.Origin, fws.apiFlight.Scheduled, redListUpdates)
     val okToProcess = !isRedListOrigin || !isGreenOnlyTerminal
     okToProcess
   }

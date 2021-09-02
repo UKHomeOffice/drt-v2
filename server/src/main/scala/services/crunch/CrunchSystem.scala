@@ -7,6 +7,7 @@ import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
@@ -35,7 +36,7 @@ case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
 case class CrunchProps[FR](
                             logLabel: String = "",
                             airportConfig: AirportConfig,
-                            pcpArrival: Arrival => MilliDate,
+                            pcpArrival: (Arrival, RedListUpdates) => MilliDate,
                             portStateActor: ActorRef,
                             flightsActor: ActorRef,
                             maxDaysToCrunch: Int,
@@ -89,6 +90,7 @@ object CrunchSystem {
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
+      initialRedListUpdates = RedListUpdates.empty,
       initialForecastBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastBaseArrivals,
       initialForecastArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals,
       initialLiveBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals,
@@ -102,7 +104,8 @@ object CrunchSystem {
       ),
       arrivalsAdjustments = props.arrivalsAdjustments,
       expireAfterMillis = props.expireAfterMillis,
-      now = props.now)
+      now = props.now,
+    )
 
     val forecastArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals, forecastMaxMillis)
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)

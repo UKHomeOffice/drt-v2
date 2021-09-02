@@ -4,15 +4,15 @@ import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
 import drt.shared.{redlist, _}
-import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedListUpdates}
 import services.{AirportToCountry, SDate}
 
-object RedList {
-  def ports(date: SDateLike): Iterable[PortCode] = AirportToCountry.airportInfoByIataPortCode.values.collect {
-    case AirportInfo(_, _, country, portCode) if redlist.RedList.countryCodesByName(date.millisSinceEpoch).contains(country) =>
-      PortCode(portCode)
-  }
-}
+//object RedList {
+//  def ports(date: SDateLike): Iterable[PortCode] = AirportToCountry.airportInfoByIataPortCode.values.collect {
+//    case AirportInfo(_, _, country, portCode) if AirportToCountry.isRedListed(PortCode(portCode), date.millisSinceEpoch, ) =>
+//      PortCode(portCode)
+//  }
+//}
 
 trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {
   val terminal: Terminal
@@ -26,11 +26,10 @@ trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {
     case T5 => Seq(T5)
   }
 
-  val isRedListedForDate: (PortCode, MillisSinceEpoch) => Boolean =
-    (origin, scheduled) => RedList.ports(SDate(scheduled)).toList.contains(origin)
+  val redListUpdates: RedListUpdates
 
   val directRedListFilter: LhrFlightDisplayFilter =
-    LhrFlightDisplayFilter(isRedListedForDate, LhrTerminalTypes(LhrRedListDatesImpl))
+    LhrFlightDisplayFilter(redListUpdates, AirportToCountry.isRedListed, LhrTerminalTypes(LhrRedListDatesImpl))
 
   override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean =
     directRedListFilter.filterReflectingDivertedRedListFlights
@@ -38,6 +37,14 @@ trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {
   override val request: FlightsRequest = GetFlightsForTerminals(start.millisSinceEpoch, end.millisSinceEpoch, terminalsToQuery)
 }
 
-case class LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithoutActualApiExport with LHRFlightsWithSplitsExportWithDiversions
+case class LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start: SDateLike,
+                                                                           end: SDateLike,
+                                                                           terminal: Terminal,
+                                                                           redListUpdates: RedListUpdates)
+  extends FlightsWithSplitsWithoutActualApiExport with LHRFlightsWithSplitsExportWithDiversions
 
-case class LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithActualApiExport with LHRFlightsWithSplitsExportWithDiversions
+case class LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start: SDateLike,
+                                                                        end: SDateLike,
+                                                                        terminal: Terminal,
+                                                                        redListUpdates: RedListUpdates)
+  extends FlightsWithSplitsWithActualApiExport with LHRFlightsWithSplitsExportWithDiversions

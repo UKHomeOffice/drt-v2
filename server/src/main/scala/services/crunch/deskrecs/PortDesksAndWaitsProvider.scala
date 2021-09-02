@@ -5,6 +5,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.{Queue, QueueFallbacks, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunch
 import services.crunch.desklimits.TerminalDeskLimitsLike
@@ -43,8 +44,8 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
   def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
     deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSizes.getOrElse(terminal, Iterable()))
 
-  override def flightsToLoads(flights: FlightsWithSplits): Map[TQM, LoadMinute] = workloadCalculator
-    .flightLoadMinutes(flights).minutes
+  override def flightsToLoads(flights: FlightsWithSplits, redListUpdates: RedListUpdates): Map[TQM, LoadMinute] = workloadCalculator
+    .flightLoadMinutes(flights, redListUpdates).minutes
     .groupBy {
       case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
         TQM(t, finalQueueName, m)

@@ -2,6 +2,7 @@ package controllers.application.exports
 
 import actors.PartitionedPortStateActor.PointInTimeQuery
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.staffing.GetState
 import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
@@ -13,6 +14,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.LocalDate
+import drt.shared.redlist.RedListUpdates
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
@@ -40,7 +42,7 @@ trait WithFlightsExport {
   private def doExportForPointInTime(localDateString: String,
                                      pointInTime: MillisSinceEpoch,
                                      terminalName: String,
-                                     export: (LoggedInUser, PortCode) => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] =
+                                     export: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] =
     Action.async {
       request =>
         val user = ctrl.getLoggedInUser(config, request.headers, request.session)
@@ -49,7 +51,9 @@ trait WithFlightsExport {
           case Some(localDate) =>
             val start = SDate(localDate)
             val end = start.addDays(1).addMinutes(-1)
-            flightsRequestToCsv(pointInTime, export(user, airportConfig.portCode)(start, end, Terminal(terminalName)))
+            ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].flatMap { redListUpdates =>
+              flightsRequestToCsv(pointInTime, export(user, airportConfig.portCode, redListUpdates)(start, end, Terminal(terminalName)))
+            }
           case _ =>
             Future(BadRequest("Invalid date format for export day."))
         }
@@ -70,7 +74,7 @@ trait WithFlightsExport {
   private def doExportForDateRange(startLocalDateString: String,
                                    endLocalDateString: String,
                                    terminalName: String,
-                                   export: (LoggedInUser, PortCode) => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] = {
+                                   export: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] = {
     Action.async {
       request =>
         val user = ctrl.getLoggedInUser(config, request.headers, request.session)
@@ -78,7 +82,9 @@ trait WithFlightsExport {
           case (Some(start), Some(end)) =>
             val startDate = SDate(start)
             val endDate = SDate(end).addDays(1).addMinutes(-1)
-            flightsRequestToCsv(now().millisSinceEpoch, export(user, airportConfig.portCode)(startDate, endDate, Terminal(terminalName)))
+            ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].flatMap { redListUpdates =>
+              flightsRequestToCsv(now().millisSinceEpoch, export(user, airportConfig.portCode, redListUpdates)(startDate, endDate, Terminal(terminalName)))
+            }
           case _ =>
             Future(BadRequest("Invalid date format for start or end date"))
         }
@@ -100,8 +106,8 @@ trait WithFlightsExport {
     }
   }
 
-  private val exportForUser: (LoggedInUser, PortCode) => (SDateLike, SDateLike, Terminal) => FlightsExport =
-    (user, portCode) =>
+  private val exportForUser: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport =
+    (user, portCode, _) =>
       (start, end, terminal) =>
         (user.hasRole(CedatStaff), user.hasRole(ApiView), portCode) match {
           case (true, _, _) => CedatFlightsExport(start, end, terminal)
@@ -109,13 +115,13 @@ trait WithFlightsExport {
           case (false, false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
         }
 
-  private val redListDiversionsExportForUser: (LoggedInUser, PortCode) => (SDateLike, SDateLike, Terminal) => FlightsExport =
-    (user, portCode) =>
+  private val redListDiversionsExportForUser: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport =
+    (user, portCode, redListUpdates) =>
       (start, end, terminal) =>
         (user.hasRole(CedatStaff), user.hasRole(ApiView), portCode) match {
           case (true, _, _) => CedatFlightsExport(start, end, terminal)
-          case (false, true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start, end, terminal)
-          case (false, false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start, end, terminal)
+          case (false, true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates)
+          case (false, false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates)
           case (false, true, PortCode("BHX")) => BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals(start, end, terminal)
           case (false, false, PortCode("BHX")) => BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals(start, end, terminal)
           case (false, true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)

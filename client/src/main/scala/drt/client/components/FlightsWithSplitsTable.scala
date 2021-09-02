@@ -15,7 +15,7 @@ import drt.shared.TimeUtil.millisToMinutes
 import drt.shared.{redlist, _}
 import drt.shared.api.{Arrival, PassengerInfoSummary}
 import drt.shared.dates.UtcDate
-import drt.shared.redlist.{ApiIndirectRedListPax, DirectRedListFlight, IndirectRedListPax, NeboIndirectRedListPax, NoIndirectRedListPax}
+import drt.shared.redlist.{ApiIndirectRedListPax, DirectRedListFlight, IndirectRedListPax, NeboIndirectRedListPax, NoIndirectRedListPax, RedListUpdates}
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
@@ -42,12 +42,13 @@ object FlightsWithSplitsTable {
                    terminal: Terminal,
                    portCode: PortCode,
                    redListPorts: HashSet[PortCode],
+                   redListUpdates: RedListUpdates,
                    airportConfig: AirportConfig,
                   )
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by((props: Props) => {
-    (props.flightsWithSplits, props.arrivalSources, props.passengerInfoSummaryByDay).hashCode()
-  })
+  implicit val propsReuse: Reusability[Props] = Reusability.by { props =>
+    (props.flightsWithSplits, props.arrivalSources, props.passengerInfoSummaryByDay, props.redListUpdates, props.redListPorts, props.displayRedListInfo).hashCode()
+  }
 
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
                     originMapper: PortCode => VdomNode = portCode => portCode.toString,
@@ -99,7 +100,7 @@ object FlightsWithSplitsTable {
                     .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
                   val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
                   val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch, props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
-                  val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, props.portCode, flightWithSplits, maybePassengerInfo)
+                  val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, props.portCode, flightWithSplits, maybePassengerInfo, props.redListUpdates)
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits = flightWithSplits,
                     maybePassengerInfoSummary = maybePassengerInfo,
@@ -117,6 +118,7 @@ object FlightsWithSplitsTable {
                     indirectRedListPax = redListPaxInfo,
                     directRedListFlight = directRedListFlight,
                     airportConfig = props.airportConfig,
+                    redListUpdates = props.redListUpdates,
                   ))
               }.toTagMod)
           ),
@@ -226,7 +228,8 @@ object FlightTableRow {
                    hasTransfer: Boolean,
                    indirectRedListPax: IndirectRedListPax,
                    directRedListFlight: DirectRedListFlight,
-                   airportConfig: AirportConfig
+                   airportConfig: AirportConfig,
+                   redListUpdates: RedListUpdates,
                   )
 
   case class RowState(hasChanged: Boolean)
@@ -300,7 +303,7 @@ object FlightTableRow {
           <.span(
             proxy().renderEmpty(<.span()),
             proxy().render(ai => {
-              val style = if (props.indirectRedListPax.isEnabled && NationalityFinderComponent.isRedListCountry(ai.country, props.viewMode.dayEnd)) {
+              val style = if (props.indirectRedListPax.isEnabled && NationalityFinderComponent.isRedListCountry(ai.country, props.viewMode.dayEnd, props.redListUpdates)) {
                 ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField)
               } else EmptyVdom
 

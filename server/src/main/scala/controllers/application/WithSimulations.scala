@@ -62,10 +62,10 @@ trait WithSimulations {
                 SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
                 OptimisationProviders.arrivalsProvider(portStateActor),
                 OptimisationProviders.liveManifestsProvider(ctrl.manifestsRouterActor),
-                OptimisationProviders.historicManifestsProvider(airportConfig.portCode,
-                  ctrl.manifestLookupService),
+                OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService),
                 ctrl.flightsActor,
-                portStateActor
+                portStateActor,
+                ctrl.redListUpdatesActor,
               )
             }.flatten
 
@@ -105,7 +105,8 @@ trait WithSimulations {
                 OptimisationProviders.liveManifestsProvider(ctrl.manifestsRouterActor),
                 OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService),
                 ctrl.flightsActor,
-                portStateActor
+                portStateActor,
+                ctrl.redListUpdatesActor,
               )
             }
             }.flatten

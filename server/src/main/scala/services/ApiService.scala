@@ -8,7 +8,7 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.redlist.RedList
+import drt.shared.redlist.{RedList, RedListUpdates}
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Headers, Session}
 
@@ -52,9 +52,9 @@ trait AirportToCountryLike {
 }
 
 object AirportToCountry extends AirportToCountryLike {
-  def isRedListed(portToCheck: PortCode, forDate: MillisSinceEpoch): Boolean = airportInfoByIataPortCode
+  def isRedListed(portToCheck: PortCode, forDate: MillisSinceEpoch, redListUpdates: RedListUpdates): Boolean = airportInfoByIataPortCode
     .get(portToCheck.iata)
-    .exists(ai => RedList.countryCodesByName(forDate).contains(ai.country))
+    .exists(ai => redListUpdates.countryCodesByName(forDate).contains(ai.country))
 }
 
 abstract class ApiService(val airportConfig: AirportConfig,

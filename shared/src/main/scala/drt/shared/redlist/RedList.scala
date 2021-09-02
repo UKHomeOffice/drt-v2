@@ -4,7 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{T2, T3, T5, Terminal}
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.{ApiFlightWithSplits, Nationality, PortCode}
-import upickle.default.{macroRW, ReadWriter}
+import upickle.default.{ReadWriter, macroRW}
 
 import scala.collection.immutable.{Map, SortedMap}
 
@@ -22,6 +22,16 @@ case class RedListUpdates(updates: Map[MillisSinceEpoch, RedListUpdate]) {
     )
 
   def ++(other: RedListUpdates): RedListUpdates = copy(updates = updates ++ other.updates)
+
+  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
+    updates
+      .filterKeys(changeDate => changeDate <= date)
+      .foldLeft(Map[String, String]()) {
+        case (acc, (date, updates)) => (acc ++ updates.additions) -- updates.removals
+      }
+
+  def redListNats(date: MillisSinceEpoch): Iterable[Nationality] =
+    countryCodesByName(date).values.map(Nationality(_))
 }
 
 object RedListUpdates {
@@ -143,12 +153,12 @@ object RedList {
     ), List()),
   )
 
-  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
-    redListChanges
-      .filterKeys(changeDate => changeDate <= date)
-      .foldLeft(Map[String, String]()) {
-        case (acc, (date, updates)) => (acc ++ updates.additions) -- updates.removals
-      }
+//  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
+//    redListChanges
+//      .filterKeys(changeDate => changeDate <= date)
+//      .foldLeft(Map[String, String]()) {
+//        case (acc, (date, updates)) => (acc ++ updates.additions) -- updates.removals
+//      }
 }
 
 sealed trait DirectRedListFlight {
@@ -192,20 +202,18 @@ object IndirectRedListPax {
   def apply(displayRedListInfo: Boolean,
             portCode: PortCode,
             flightWithSplits: ApiFlightWithSplits,
-            maybePassengerInfo: Option[PassengerInfoSummary]): IndirectRedListPax =
+            maybePassengerInfo: Option[PassengerInfoSummary],
+            redListUpdates: RedListUpdates): IndirectRedListPax =
     (displayRedListInfo, portCode) match {
       case (false, _) => NoIndirectRedListPax
       case (true, PortCode("LHR")) =>
         NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
       case (true, _) =>
         val maybeNats = maybePassengerInfo.map(_.nationalities.filter {
-          case (nat, _) => redListNats(flightWithSplits.apiFlight.Scheduled).toList.contains(nat)
+          case (nat, _) => redListUpdates.redListNats(flightWithSplits.apiFlight.Scheduled).toList.contains(nat)
         })
         ApiIndirectRedListPax(maybeNats)
     }
-
-  def redListNats(date: MillisSinceEpoch): Iterable[Nationality] =
-    RedList.countryCodesByName(date).values.map(Nationality(_))
 }
 
 sealed trait EnabledIndirectRedListPax extends IndirectRedListPax {

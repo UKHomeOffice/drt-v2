@@ -11,6 +11,7 @@ import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPe
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import manifests.passengers.ManifestLike
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
@@ -33,7 +34,7 @@ object DynamicRunnableDeskRecs {
 
   type LoadsToQueueMinutes = (NumericRange[MillisSinceEpoch], Map[TQM, Crunch.LoadMinute], Map[Terminal, TerminalDeskLimitsLike]) => PortStateQueueMinutes
 
-  type FlightsToLoads = FlightsWithSplits => Map[TQM, Crunch.LoadMinute]
+  type FlightsToLoads = (FlightsWithSplits, RedListUpdates) => Map[TQM, Crunch.LoadMinute]
 
   def crunchRequestsToQueueMinutes(arrivalsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]],
                                    liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
@@ -42,13 +43,14 @@ object DynamicRunnableDeskRecs {
                                    splitsSink: ActorRef,
                                    flightsToLoads: FlightsToLoads,
                                    loadsToQueueMinutes: LoadsToQueueMinutes,
-                                   maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike])
+                                   maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
+                                   redListUpdatesProvider: () => Future[RedListUpdates])
                                   (implicit ec: ExecutionContext, timeout: Timeout): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
     Flow[CrunchRequest]
       .via(addArrivals(arrivalsProvider))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
       .via(updateSplits(splitsSink))
-      .via(toDeskRecs(maxDesksProviders, flightsToLoads, loadsToQueueMinutes))
+      .via(toDeskRecs(maxDesksProviders, flightsToLoads, loadsToQueueMinutes, redListUpdatesProvider))
 
   private def updateSplits(splitsSink: ActorRef)
                           (implicit ec: ExecutionContext, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
@@ -62,15 +64,20 @@ object DynamicRunnableDeskRecs {
 
   private def toDeskRecs(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
                          flightsToLoads: FlightsToLoads,
-                         loadsToQueueMinutes: LoadsToQueueMinutes
-                        ): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), PortStateQueueMinutes, NotUsed] = {
+                         loadsToQueueMinutes: LoadsToQueueMinutes,
+                         redListUpdatesProvider: () => Future[RedListUpdates],
+                        )
+                        (implicit ec: ExecutionContext): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), PortStateQueueMinutes, NotUsed] = {
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
-      .map { case (crunchDay, flights) =>
-        log.info(s"Crunching ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
-        timeLogger.time({
-          val loadsFromFlights: Map[TQM, Crunch.LoadMinute] = flightsToLoads(FlightsWithSplits(flights))
-          loadsToQueueMinutes(crunchDay.minutesInMillis, loadsFromFlights, maxDesksProviders)
-        })
+      .mapAsync(1) {
+        case (crunchDay, flights) =>
+          redListUpdatesProvider().map { redListUpdates =>
+            log.info(s"Crunching ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
+            timeLogger.time({
+              val loadsFromFlights: Map[TQM, Crunch.LoadMinute] = flightsToLoads(FlightsWithSplits(flights), redListUpdates)
+              loadsToQueueMinutes(crunchDay.minutesInMillis, loadsFromFlights, maxDesksProviders)
+            })
+          }
       }
   }
 

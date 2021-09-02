@@ -16,13 +16,12 @@ import drt.shared.Queues.Queue
 import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
-import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedList, RedListUpdates}
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
-import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedList}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
@@ -35,7 +34,6 @@ import uk.gov.homeoffice.drt.auth._
 import scala.collection.immutable.{HashSet, Map}
 
 object TerminalContentComponent {
-
   case class Props(portStatePot: Pot[PortState],
                    passengerInfoByDayPot: Pot[Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]]],
                    potShifts: Pot[ShiftAssignments],
@@ -52,6 +50,7 @@ object TerminalContentComponent {
                    featureFlags: Pot[FeatureFlags],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    redListPorts: Pot[HashSet[PortCode]],
+                   redListUpdates: Pot[RedListUpdates],
                   )
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
@@ -74,7 +73,6 @@ object TerminalContentComponent {
   }
 
   class Backend() {
-
     val arrivalsTableComponent: Component[FlightsWithSplitsTable.Props, Unit, Unit, CtorType.Props] = FlightsWithSplitsTable.ArrivalsTable(
       None,
       originMapper,
@@ -188,39 +186,44 @@ object TerminalContentComponent {
                 ),
                 <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
                   if (state.activeTab == "arrivals") {
-                    props.featureFlags.render { features =>
-                      props.redListPorts.render { redListPorts =>
-                        val flightDisplayFilter = props.airportConfig.portCode match {
-                          case PortCode("LHR") => LhrFlightDisplayFilter((portCode, _) => redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
-                          case _ => DefaultFlightDisplayFilter
-                        }
-                        val flights = portState.window(viewStart, viewEnd).flights.values
-                        val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminalPageTab.terminal)
-                        arrivalsTableComponent(
-                          FlightsWithSplitsTable.Props(
-                            flightsWithSplits = flightsForTerminal.toList,
-                            passengerInfoSummaryByDay = passengerInfoByDay,
-                            queueOrder = queueOrder,
-                            hasEstChox = props.airportConfig.hasEstChox,
-                            arrivalSources = props.arrivalSources,
-                            loggedInUser = props.loggedInUser,
-                            viewMode = props.viewMode,
-                            defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
-                            hasTransfer = props.airportConfig.hasTransfer,
-                            displayRedListInfo = features.displayRedListInfo,
-                            redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
-                            terminal = terminal,
-                            portCode = props.airportConfig.portCode,
-                            redListPorts = redListPorts,
-                            airportConfig = props.airportConfig
-                          )
-                        )
+                    val maybeArrivalsComp = for {
+                      features <- props.featureFlags
+                      redListPorts <- props.redListPorts
+                      redListUpdates <- props.redListUpdates
+                    } yield {
+
+                      val flightDisplayFilter = props.airportConfig.portCode match {
+                        case PortCode("LHR") => LhrFlightDisplayFilter(redListUpdates, (portCode, _, _) => redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
+                        case _ => DefaultFlightDisplayFilter
                       }
+                      val flights = portState.window(viewStart, viewEnd).flights.values
+                      val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminalPageTab.terminal)
+                      arrivalsTableComponent(
+                        FlightsWithSplitsTable.Props(
+                          flightsWithSplits = flightsForTerminal.toList,
+                          passengerInfoSummaryByDay = passengerInfoByDay,
+                          queueOrder = queueOrder,
+                          hasEstChox = props.airportConfig.hasEstChox,
+                          arrivalSources = props.arrivalSources,
+                          loggedInUser = props.loggedInUser,
+                          viewMode = props.viewMode,
+                          defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
+                          hasTransfer = props.airportConfig.hasTransfer,
+                          displayRedListInfo = features.displayRedListInfo,
+                          redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                          terminal = terminal,
+                          portCode = props.airportConfig.portCode,
+                          redListPorts = redListPorts,
+                          airportConfig = props.airportConfig,
+                          redListUpdates = redListUpdates,
+                        )
+                      )
                     }
-                  } else ""
+                    maybeArrivalsComp.render(x => x)
+                  } else EmptyVdom
                 }),
                 displayForRole(
-                  <.div(^.id := "simluations", ^.className := s"tab-pane in $simulationsActive", {
+                  <.div(^.id := "simulations", ^.className := s"tab-pane in $simulationsActive", {
                     if (state.activeTab == "simulations") {
 
                       props.portStatePot.renderReady(ps =>

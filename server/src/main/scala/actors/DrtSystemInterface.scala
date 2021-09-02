@@ -40,6 +40,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.coachTime.CoachWalkTime
+import drt.shared.redlist.RedListUpdates
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
@@ -157,12 +158,12 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def coachWalkTime: CoachWalkTime
 
-  def walkTimeProvider(flight: Arrival): MillisSinceEpoch = {
+  def walkTimeProvider(flight: Arrival, redListUpdates: RedListUpdates): MillisSinceEpoch = {
     val defaultWalkTimeMillis = airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L)
-    gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, defaultWalkTimeMillis, coachWalkTime)(flight)
+    gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, defaultWalkTimeMillis, coachWalkTime)(flight, redListUpdates)
   }
 
-  def pcpArrivalTimeCalculator: Arrival => MilliDate =
+  def pcpArrivalTimeCalculator: (Arrival, RedListUpdates) => MilliDate =
     PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
@@ -254,7 +255,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       splitsSink = portStateActor,
       flightsToLoads = portDeskRecs.flightsToLoads,
       loadsToQueueMinutes = portDeskRecs.loadsToDesks,
-      maxDesksProviders = deskLimitsProviders)
+      maxDesksProviders = deskLimitsProviders,
+      redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates]
+    )
 
     val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
 

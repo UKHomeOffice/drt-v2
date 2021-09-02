@@ -6,6 +6,7 @@ import drt.shared.MilliTimes.timeToNearestMinute
 import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, WalkTime}
 import drt.shared.coachTime.CoachWalkTime
+import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.util.{Success, Try}
@@ -71,14 +72,15 @@ object PcpArrival {
     walkTimes.get((from, terminal))
   }
 
-  type FlightWalkTime = Arrival => Long
+  type FlightWalkTime = (Arrival, RedListUpdates) => Long
 
-  def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime)(flight: Arrival): MilliDate = {
+  def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime)
+             (flight: Arrival, redListUpdates: RedListUpdates): MilliDate = {
     val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight).getOrElse({
       log.error(s"could not get best choxTime for $flight")
       0L
     })
-    val walkTimeMillis = walkTimeForFlight(flight)
+    val walkTimeMillis = walkTimeForFlight(flight, redListUpdates)
     val date = MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
     log.debug(s"bestChoxTime for ${Arrival.summaryString(flight)} is $bestChoxTimeMillis or ${SDate(bestChoxTimeMillis).toLocalDateTimeString()}, firstPcp ${SDate(date.millisSinceEpoch).toLocalDateTimeString()}")
     date
@@ -88,10 +90,10 @@ object PcpArrival {
                                     standWalkTimesProvider: GateOrStandWalkTime,
                                     defaultWalkTimeMillis: MillisSinceEpoch,
                                     coachWalkTime: CoachWalkTime
-                                   )(flight: Arrival): MillisSinceEpoch = {
+                                   )(flight: Arrival, redListUpdates: RedListUpdates): MillisSinceEpoch = {
     val walkTime = standWalkTimesProvider(flight.Stand.getOrElse(""), flight.Terminal)
       .getOrElse(gateWalkTimesProvider(flight.Gate.getOrElse(""), flight.Terminal).getOrElse(defaultWalkTimeMillis))
-    if (AirportToCountry.isRedListed(flight.Origin, flight.Scheduled)) {
+    if (AirportToCountry.isRedListed(flight.Origin, flight.Scheduled, redListUpdates)) {
       val redListOriginWalkTime = coachWalkTime.walkTime(flight).getOrElse(walkTime)
       log.debug(s"Red list country walkTimeForFlight including coach transfer for ${Arrival.summaryString(flight)} is $redListOriginWalkTime millis ${redListOriginWalkTime / 60000} mins default is $defaultWalkTimeMillis")
       redListOriginWalkTime
