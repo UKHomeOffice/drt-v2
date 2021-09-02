@@ -4,7 +4,6 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
 
@@ -28,14 +27,14 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
     val arrivalThatRemains = ArrivalGenerator.arrival(schDt = dayOfArrivals.addHours(1).toISOString())
 
     val firstAclFeed = List(arrivalThatIsRemoved, arrivalThatRemains)
-    aclSource.offer(ArrivalsWithRedListUpdates(firstAclFeed, RedListUpdates.empty))
+    aclSource.offer(firstAclFeed)
 
     probe.fishForMessage(1 second) {
       case ArrivalsDiff(_, removals) => removals.isEmpty
     }
 
     val secondAclFeed = List(arrivalThatRemains)
-    aclSource.offer(ArrivalsWithRedListUpdates(secondAclFeed, RedListUpdates.empty))
+    aclSource.offer(secondAclFeed)
 
     probe.fishForMessage(1 second) {
       case ArrivalsDiff(_, removals) => removals.exists(_.Scheduled == arrivalThatIsRemoved.Scheduled)
@@ -57,7 +56,7 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
     val newArrival = ArrivalGenerator.arrival(schDt = dayOfArrivals.addHours(2).toISOString())
 
     val firstAclFeed = List(arrivalThatIsRemoved, arrivalThatRemains)
-    aclSource.offer(ArrivalsWithRedListUpdates(firstAclFeed, RedListUpdates.empty))
+    aclSource.offer(firstAclFeed)
 
     probe.fishForMessage(1 second) {
       case ArrivalsDiff(updates, removals) =>
@@ -65,7 +64,7 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
     }
 
     val secondAclFeed = List(arrivalThatRemains, newArrival)
-    aclSource.offer(ArrivalsWithRedListUpdates(secondAclFeed, RedListUpdates.empty))
+    aclSource.offer(secondAclFeed)
 
     probe.fishForMessage(1 second) {
       case ArrivalsDiff(_, removals) => removals.isEmpty

@@ -198,8 +198,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         "live-base-arrivals" -> liveBaseArrivalsActor,
         "live-arrivals" -> liveArrivalsActor,
         "aggregated-arrivals" -> aggregatedArrivalsActor,
-        "deployment-request" -> deploymentQueueActor,
-        "red-list-updates" -> redListUpdatesActor,
+        "deployment-request" -> deploymentQueueActor
       ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       manifestsLiveSource = voyageManifestsLiveSource,

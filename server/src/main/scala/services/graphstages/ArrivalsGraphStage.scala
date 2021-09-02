@@ -5,7 +5,6 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.Terminals.{InvalidTerminal, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop, LiveArrivalsUtil}
@@ -41,8 +40,6 @@ object ArrivalsGraphStage {
     }
 }
 
-case class ArrivalsWithRedListUpdates(arrivals: List[Arrival], redListUpdates: RedListUpdates)
-
 class ArrivalsGraphStage(name: String = "",
                          initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival],
                          initialForecastArrivals: SortedMap[UniqueArrival, Arrival],
@@ -55,14 +52,14 @@ class ArrivalsGraphStage(name: String = "",
                          arrivalsAdjustments: ArrivalsAdjustmentsLike,
                          expireAfterMillis: Int,
                          now: () => SDateLike)
-  extends GraphStage[FanInShape4[ArrivalsWithRedListUpdates, ArrivalsWithRedListUpdates, ArrivalsWithRedListUpdates, ArrivalsWithRedListUpdates, ArrivalsDiff]] {
+  extends GraphStage[FanInShape4[List[Arrival], List[Arrival], List[Arrival], List[Arrival], ArrivalsDiff]] {
 
   import ArrivalsGraphStage._
 
-  val inForecastBaseArrivals: Inlet[ArrivalsWithRedListUpdates] = Inlet[ArrivalsWithRedListUpdates]("FlightsForecastBase.in")
-  val inForecastArrivals: Inlet[ArrivalsWithRedListUpdates] = Inlet[ArrivalsWithRedListUpdates]("FlightsForecast.in")
-  val inLiveBaseArrivals: Inlet[ArrivalsWithRedListUpdates] = Inlet[ArrivalsWithRedListUpdates]("FlightsLiveBase.in")
-  val inLiveArrivals: Inlet[ArrivalsWithRedListUpdates] = Inlet[ArrivalsWithRedListUpdates]("FlightsLive.in")
+  val inForecastBaseArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsForecastBase.in")
+  val inForecastArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsForecast.in")
+  val inLiveBaseArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsLiveBase.in")
+  val inLiveArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsLive.in")
   val outArrivalsDiff: Outlet[ArrivalsDiff] = Outlet[ArrivalsDiff]("ArrivalsDiff.out")
   override val shape = new FanInShape4(inForecastBaseArrivals, inForecastArrivals, inLiveBaseArrivals, inLiveArrivals, outArrivalsDiff)
   val stageName = "arrivals"
@@ -151,11 +148,10 @@ class ArrivalsGraphStage(name: String = "",
       }
     })
 
-    def onPushArrivals(arrivalsInlet: Inlet[ArrivalsWithRedListUpdates], sourceType: ArrivalsSourceType): Unit = {
+    def onPushArrivals(arrivalsInlet: Inlet[List[Arrival]], sourceType: ArrivalsSourceType): Unit = {
       val timer = StageTimer(stageName, outArrivalsDiff)
 
-      val updates = grab(arrivalsInlet)
-      val incoming = arrivalsAdjustments.apply(updates.arrivals).toList
+      val incoming = arrivalsAdjustments.apply(grab(arrivalsInlet)).toList
 
       log.info(s"Grabbed ${incoming.length} arrivals from $arrivalsInlet of $sourceType")
       if (incoming.nonEmpty || sourceType == BaseArrivals) handleIncomingArrivals(sourceType, incoming)
