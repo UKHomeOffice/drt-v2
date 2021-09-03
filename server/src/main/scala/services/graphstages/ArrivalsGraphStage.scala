@@ -5,7 +5,7 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.Terminals.{InvalidTerminal, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
+import drt.shared.redlist.{DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop, LiveArrivalsUtil}
@@ -54,7 +54,7 @@ class ArrivalsGraphStage(name: String = "",
                          arrivalsAdjustments: ArrivalsAdjustmentsLike,
                          expireAfterMillis: Int,
                          now: () => SDateLike)
-  extends GraphStage[FanInShape4[List[Arrival], List[Arrival], List[Arrival], List[Arrival], ArrivalsDiff]] {
+  extends GraphStage[FanInShape5[List[Arrival], List[Arrival], List[Arrival], List[Arrival], List[RedListUpdateCommand], ArrivalsDiff]] {
 
   import ArrivalsGraphStage._
 
@@ -62,8 +62,9 @@ class ArrivalsGraphStage(name: String = "",
   val inForecastArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsForecast.in")
   val inLiveBaseArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsLiveBase.in")
   val inLiveArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsLive.in")
+  val inRedListUpdates: Inlet[List[RedListUpdateCommand]] = Inlet[List[RedListUpdateCommand]]("RedListUpdates.in")
   val outArrivalsDiff: Outlet[ArrivalsDiff] = Outlet[ArrivalsDiff]("ArrivalsDiff.out")
-  override val shape = new FanInShape4(inForecastBaseArrivals, inForecastArrivals, inLiveBaseArrivals, inLiveArrivals, outArrivalsDiff)
+  override val shape = new FanInShape5(inForecastBaseArrivals, inForecastArrivals, inLiveBaseArrivals, inLiveArrivals, inRedListUpdates, outArrivalsDiff)
   val stageName = "arrivals"
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
@@ -139,12 +140,29 @@ class ArrivalsGraphStage(name: String = "",
       override def onPush(): Unit = onPushArrivals(inLiveArrivals, LiveArrivals)
     })
 
+    setHandler(inRedListUpdates, new InHandler {
+      override def onPush(): Unit = {
+        val updates = grab(inRedListUpdates)
+        redListUpdates = updates.foldLeft(redListUpdates) {
+          case (acc, update: SetRedListUpdate) => acc.update(update)
+          case (acc, DeleteRedListUpdates(date)) => acc.remove(date)
+        }
+        log.info(s"Received ${updates.size} red list update commands")
+        if (arrivalsAdjustments != ArrivalsAdjustmentsNoop) {
+          log.info("Recalculating all arrivals due to red list change")
+          handleIncomingArrivals(BaseArrivals, arrivalsAdjustments.apply(aclArrivals.values, redListUpdates).toList)
+        }
+
+        if (!hasBeenPulled(inRedListUpdates)) pull(inRedListUpdates)
+      }
+    })
+
     setHandler(outArrivalsDiff, new OutHandler {
       override def onPull(): Unit = {
         val timer = StageTimer(stageName, outArrivalsDiff)
         pushIfAvailable(toPush, outArrivalsDiff)
 
-        List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals).foreach(inlet => if (!hasBeenPulled(inlet)) {
+        List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals, inRedListUpdates).foreach(inlet => if (!hasBeenPulled(inlet)) {
           log.debug(s"Pulling Inlet: ${inlet.toString()}")
           pull(inlet)
         })

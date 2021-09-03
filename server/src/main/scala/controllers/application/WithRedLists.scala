@@ -23,8 +23,10 @@ trait WithRedLists {
       ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map { redListUpdates =>
         val forDate = SDate(dateString, Crunch.europeLondonTimeZone).millisSinceEpoch
         val redListPorts = AirportToCountry.airportInfoByIataPortCode.values.collect {
-          case AirportInfo(_, _, country, portCode) if redListUpdates.countryCodesByName(forDate).contains(country) => PortCode(portCode)
+          case AirportInfo(_, _, country, portCode) if redListUpdates.countryCodesByName(forDate).contains(country) =>
+            PortCode(portCode)
         }
+
         Ok(write(redListPorts))
       }
     }
@@ -42,7 +44,6 @@ trait WithRedLists {
         request.body.asText match {
           case Some(text) =>
             val update = read[SetRedListUpdate](text)
-            println(s"Got an update to persist: $update")
             ctrl.redListUpdatesActor.ask(update).map(_ => Accepted)
           case None =>
             Future(BadRequest)

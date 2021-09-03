@@ -26,6 +26,7 @@ case class RedListUpdates(updates: Map[MillisSinceEpoch, RedListUpdate]) {
   def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
     updates
       .filterKeys(changeDate => changeDate <= date)
+      .toList.sortBy(_._1)
       .foldLeft(Map[String, String]()) {
         case (acc, (date, updates)) => (acc ++ updates.additions) -- updates.removals
       }
@@ -46,13 +47,15 @@ object RedListUpdate {
   implicit val rw: ReadWriter[RedListUpdate] = macroRW
 }
 
-case class SetRedListUpdate(originalDate: MillisSinceEpoch, redListUpdate: RedListUpdate)
+sealed trait RedListUpdateCommand
+
+case class SetRedListUpdate(originalDate: MillisSinceEpoch, redListUpdate: RedListUpdate) extends RedListUpdateCommand
 
 object SetRedListUpdate {
   implicit val rw: ReadWriter[SetRedListUpdate] = macroRW
 }
 
-case class DeleteRedListUpdates(millis: MillisSinceEpoch)
+case class DeleteRedListUpdates(millis: MillisSinceEpoch) extends RedListUpdateCommand
 
 object RedList {
   def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =

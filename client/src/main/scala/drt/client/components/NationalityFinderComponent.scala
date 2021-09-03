@@ -2,7 +2,7 @@ package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.shared.SDateLike
-import drt.shared.redlist.{ApiIndirectRedListPax, RedList, RedListUpdates}
+import drt.shared.redlist.{ApiIndirectRedListPax, RedListUpdates}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ScalaComponent}

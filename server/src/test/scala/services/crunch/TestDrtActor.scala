@@ -2,6 +2,7 @@ package services.crunch
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
+import actors.acking.AckingReceiver.Ack
 import actors.daily.{FlightUpdatesSupervisor, PassengersActor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
 import actors.persistent.QueueLikeActor.UpdatedMillis
@@ -12,7 +13,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import drt.shared.Terminals.Terminal
-import drt.shared.redlist.RedListUpdates
+import drt.shared.redlist.{RedListUpdateCommand, RedListUpdates}
 import drt.shared.{MilliTimes, PortCode, SDateLike, VoyageNumber}
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
@@ -163,6 +164,7 @@ class TestDrtActor extends Actor {
       val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
+      val redListUpdatesSource = Source.actorRefWithAck[RedListUpdateCommand](Ack)
 
       val aclPaxAdjustmentDays = 7
       val maxDaysToConsider = 14
@@ -221,7 +223,8 @@ class TestDrtActor extends Actor {
         optimiser = tc.cruncher,
         aclPaxAdjustmentDays = aclPaxAdjustmentDays,
         startDeskRecs = startDeskRecs,
-        arrivalsAdjustments = tc.arrivalsAdjustments
+        arrivalsAdjustments = tc.arrivalsAdjustments,
+        redListUpdatesSource = redListUpdatesSource,
       ))
 
       replyTo ! CrunchGraphInputsAndProbes(

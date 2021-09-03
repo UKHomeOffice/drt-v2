@@ -10,6 +10,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdateCommand
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
 import services.StreamSupervision
@@ -24,7 +25,7 @@ object RunnableCrunch {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[FR, MS, SS, SFP, SMM, SAD](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
+  def apply[FR, MS, SS, SFP, SMM, SAD, RL](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                        forecastArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                        liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                        liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
@@ -33,6 +34,7 @@ object RunnableCrunch {
                                        fixedPointsSource: Source[FixedPointAssignments, SFP],
                                        staffMovementsSource: Source[Seq[StaffMovement], SMM],
                                        actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+                                       redListUpdatesSource: Source[List[RedListUpdateCommand], RL],
 
                                        arrivalsGraphStage: ArrivalsGraphStage,
                                        staffGraphStage: StaffGraphStage,
@@ -54,7 +56,7 @@ object RunnableCrunch {
                                        deploymentRequestActor: ActorRef,
 
                                        forecastMaxMillis: () => MillisSinceEpoch
-                                      ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                      ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, SAD, RL, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsFeedResponse]
     val manifestsLiveKillSwitch = KillSwitches.single[ManifestsFeedResponse]
@@ -74,12 +76,13 @@ object RunnableCrunch {
       fixedPointsSource,
       staffMovementsSource,
       actualDesksAndWaitTimesSource,
+      redListUpdatesSource.async,
       arrivalsKillSwitch,
       manifestsLiveKillSwitch,
       shiftsKillSwitch,
       fixedPointsKillSwitch,
       movementsKillSwitch
-      )((_, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
+      )((_, _, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
@@ -92,6 +95,7 @@ object RunnableCrunch {
           fixedPointsSourceAsync,
           staffMovementsSourceAsync,
           actualDesksAndWaitTimesSourceSync,
+          redListUpdatesSourceAsync,
           arrivalsKillSwitchSync,
           manifestsLiveKillSwitchSync,
           shiftsKillSwitchSync,
@@ -162,6 +166,9 @@ object RunnableCrunch {
             .conflate[List[Arrival]] { case (acc, incoming) =>
                 log.info(s"${acc.length + incoming.length} conflated live arrivals")
                 acc ++ incoming } ~> arrivals.in3
+
+          redListUpdatesSourceAsync ~> arrivals.in4
+
           liveArrivalsFanOut ~> liveArrivalsSink
 
           manifestsLiveSourceSync ~> manifestsLiveKillSwitchSync ~> manifestsSink

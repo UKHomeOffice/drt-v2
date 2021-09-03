@@ -3,10 +3,10 @@ package actors
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.GetFlights
 import actors.daily.PassengersActor
-import actors.persistent.{AlertsActor, RedListUpdatesActor}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
 import actors.persistent.staffing._
+import actors.persistent.{AlertsActor, RedListUpdatesActor}
 import actors.routing.FlightsRouterActor
 import actors.supervised.RestartOnStop
 import akka.NotUsed
@@ -40,7 +40,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.coachTime.CoachWalkTime
-import drt.shared.redlist.RedListUpdates
+import drt.shared.redlist.{RedListUpdateCommand, RedListUpdates}
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
@@ -179,6 +179,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
 
+    val redListUpdatesSource: Source[List[RedListUpdateCommand], SourceQueueWithComplete[List[RedListUpdateCommand]]] = Source.queue[List[RedListUpdateCommand]](1, OverflowStrategy.backpressure)
+
     val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode)
 
     val simulator: TrySimulator = OptimiserWithFlexibleProcessors.runSimulationOfWork
@@ -224,7 +226,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       optimiser = optimiser,
       aclPaxAdjustmentDays = aclPaxAdjustmentDays,
       startDeskRecs = startDeskRecs,
-      arrivalsAdjustments = arrivalAdjustments
+      arrivalsAdjustments = arrivalAdjustments,
+      redListUpdatesSource = redListUpdatesSource,
     ))
     crunchInputs
   }

@@ -13,8 +13,8 @@ case class EdiArrivalsTerminalAdjustments(isRedListed: (PortCode, MillisSinceEpo
   override def apply(arrivals: Iterable[Arrival], redListUpdates: RedListUpdates): Iterable[Arrival] =
     arrivals
       .map { arrival =>
-        redListUpdates
-        val correctedTerminal = if (isRedListed(arrival.Origin, arrival.Scheduled, redListUpdates)) A1 else A2
+        val redListed = isRedListed(arrival.Origin, arrival.Scheduled, redListUpdates)
+        val correctedTerminal = if (redListed) A1 else A2
         arrival.copy(Terminal = correctedTerminal)
       }
 }

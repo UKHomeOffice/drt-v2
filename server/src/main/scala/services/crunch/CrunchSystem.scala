@@ -7,7 +7,7 @@ import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
+import drt.shared.redlist.{RedListUpdateCommand, RedListUpdates}
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
@@ -30,6 +30,7 @@ case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
                             liveArrivalsResponse: FR,
                             manifestsLiveResponse: SourceQueueWithComplete[ManifestsFeedResponse],
                             actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
+                            redListUpdates: SourceQueueWithComplete[List[RedListUpdateCommand]],
                             killSwitches: List[UniqueKillSwitch]
                            )
 
@@ -57,6 +58,7 @@ case class CrunchProps[FR](
                             arrivalsForecastBaseSource: Source[ArrivalsFeedResponse, FR], arrivalsForecastSource: Source[ArrivalsFeedResponse, FR],
                             arrivalsLiveBaseSource: Source[ArrivalsFeedResponse, FR],
                             arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
+                            redListUpdatesSource: Source[List[RedListUpdateCommand], SourceQueueWithComplete[List[RedListUpdateCommand]]],
                             passengersActorProvider: () => ActorRef,
                             initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
                             initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
@@ -143,10 +145,11 @@ object CrunchSystem {
       portStateActor = props.portStateActor,
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
       deploymentRequestActor = props.actors("deployment-request"),
-      forecastMaxMillis = forecastMaxMillis
+      forecastMaxMillis = forecastMaxMillis,
+      redListUpdatesSource = props.redListUpdatesSource,
     )
 
-    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
+    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
 
     val (deskRecsKillSwitch, deploymentsKillSwitch) = props.startDeskRecs()
 
@@ -162,6 +165,7 @@ object CrunchSystem {
       liveArrivalsResponse = liveIn,
       manifestsLiveResponse = manifestsLiveIn,
       actualDeskStats = actDesksIn,
+      redListUpdates = redListUpdatesIn,
       killSwitches
     )
   }

@@ -2,6 +2,7 @@ package actors
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
@@ -144,6 +145,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
         new S3ManifestPoller(crunchInputs.manifestsLiveResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
 
+        redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)
 
