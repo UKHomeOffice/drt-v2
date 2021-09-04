@@ -1,10 +1,12 @@
 package actors.persistent
 
+import actors.SetCrunchRequestQueue
 import actors.acking.AckingReceiver.StreamCompleted
 import actors.persistent.RedListUpdatesActor.{AddSubscriber, ReceivedSubscriberAck, SendToSubscriber}
 import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.staffing.GetState
 import actors.serializers.RedListUpdatesMessageConversion
+import akka.actor.ActorRef
 import akka.persistence._
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.SourceQueueWithComplete
@@ -15,7 +17,9 @@ import drt.shared.redlist._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.RedListUpdates.{RedListUpdatesMessage, RemoveUpdateMessage, SetRedListUpdateMessage}
+import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 
+import scala.collection.immutable.SortedSet
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success}
@@ -60,12 +64,17 @@ class RedListUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike wi
   var subscriberMessageQueue: List[RedListUpdateCommand] = List()
   var awaitingSubscriberAck = false
 
+  var maybeCrunchRequestQueueSource: Option[ActorRef] = None
+  var readyToEmit: Boolean = false
+
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val timeout: Timeout = new Timeout(60.seconds)
 
   override def initialState: RedListUpdates = RedListUpdates(RedList.redListChanges)
 
   override def receiveCommand: Receive = {
+    case SetCrunchRequestQueue(crunchRequestQueue) =>
+
     case AddSubscriber(subscriber) =>
       log.info(s"Received subscriber")
       maybeSubscriber = Option(subscriber)

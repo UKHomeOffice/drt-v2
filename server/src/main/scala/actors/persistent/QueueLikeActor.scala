@@ -53,7 +53,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
   val cancellableTick: Cancellable = context.system.scheduler.schedule(1 second, 1 second, self, Tick)
 
-  var maybeDaysQueueSource: Option[SourceQueueWithComplete[CrunchRequest]] = None
+  var maybeCrunchRequestQueueSource: Option[SourceQueueWithComplete[CrunchRequest]] = None
   var queuedDays: SortedSet[CrunchRequest] = SortedSet[CrunchRequest]()
   var readyToEmit: Boolean = false
 
@@ -100,7 +100,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
     case SetCrunchRequestQueue(source) =>
       log.info(s"Received daysQueueSource")
-      maybeDaysQueueSource = Option(source)
+      maybeCrunchRequestQueueSource = Option(source)
       readyToEmit = true
       emitNextDayIfReady()
 
@@ -124,7 +124,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
     queuedDays.headOption match {
       case Some(request) =>
         readyToEmit = false
-        maybeDaysQueueSource.foreach { sourceQueue =>
+        maybeCrunchRequestQueueSource.foreach { sourceQueue =>
           sourceQueue.offer(request).foreach { _ =>
             self ! ReadyToEmit
           }

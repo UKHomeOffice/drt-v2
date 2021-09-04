@@ -144,7 +144,7 @@ object TestActors {
     def reset: Receive = {
       case ResetData =>
         readyToEmit = true
-        maybeDaysQueueSource = None
+        maybeCrunchRequestQueueSource = None
         queuedDays = SortedSet()
         sender() ! Ack
     }
@@ -157,7 +157,7 @@ object TestActors {
     def reset: Receive = {
       case ResetData =>
         readyToEmit = true
-        maybeDaysQueueSource = None
+        maybeCrunchRequestQueueSource = None
         queuedDays = SortedSet()
         sender() ! Ack
     }

@@ -47,7 +47,7 @@ object RunnableOptimisation {
                   crunchRequestsToQueueMinutes: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed]
                  ): RunnableGraph[(SourceQueueWithComplete[CrunchRequest], UniqueKillSwitch)] = {
 
-    val crunchRequestSource = Source.queue[CrunchRequest](1, OverflowStrategy.backpressure)
+    val crunchRequestSource = Source.actorRef(500, OverflowStrategy.)[CrunchRequest](1, OverflowStrategy.backpressure)
     val deskRecsSink = Sink.actorRefWithAck(deskRecsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
     val ks = KillSwitches.single[PortStateQueueMinutes]
 

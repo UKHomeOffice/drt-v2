@@ -274,6 +274,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val (deploymentRequestQueue, deploymentsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deploymentsProducer).run()
 
     crunchQueueActor ! SetCrunchRequestQueue(crunchRequestQueue)
+    redListUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueue)
     deploymentQueueActor ! SetCrunchRequestQueue(deploymentRequestQueue)
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchQueueActor)
