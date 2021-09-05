@@ -1,8 +1,9 @@
 package services.crunch.deskrecs
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.persistent.SortedActorRefSource
 import akka.NotUsed
-import akka.actor.ActorRef
+import akka.actor.{ActorContext, ActorRef, ActorSystem}
 import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
 import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{ClosedShape, KillSwitches, OverflowStrategy, UniqueKillSwitch}
@@ -44,10 +45,10 @@ object RunnableOptimisation {
   }
 
   def createGraph(deskRecsSinkActor: ActorRef,
-                  crunchRequestsToQueueMinutes: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed]
-                 ): RunnableGraph[(SourceQueueWithComplete[CrunchRequest], UniqueKillSwitch)] = {
+                  crunchRequestsToQueueMinutes: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed])
+                 (implicit system: ActorSystem): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
 
-    val crunchRequestSource = Source.actorRef(500, OverflowStrategy.)[CrunchRequest](1, OverflowStrategy.backpressure)
+    val crunchRequestSource = new SortedActorRefSource()
     val deskRecsSink = Sink.actorRefWithAck(deskRecsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
     val ks = KillSwitches.single[PortStateQueueMinutes]
 

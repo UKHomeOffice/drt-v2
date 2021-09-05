@@ -143,9 +143,7 @@ object TestActors {
     extends CrunchQueueActor(now, crunchOffsetMinutes, durationMinutes) {
     def reset: Receive = {
       case ResetData =>
-        readyToEmit = true
-        maybeCrunchRequestQueueSource = None
-        queuedDays = SortedSet()
+        queuedDays.clear
         sender() ! Ack
     }
 
@@ -156,9 +154,7 @@ object TestActors {
     extends DeploymentQueueActor(now, crunchOffsetMinutes, durationMinutes) {
     def reset: Receive = {
       case ResetData =>
-        readyToEmit = true
-        maybeCrunchRequestQueueSource = None
-        queuedDays = SortedSet()
+        queuedDays.clear
         sender() ! Ack
     }
 

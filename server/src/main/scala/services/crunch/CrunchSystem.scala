@@ -68,7 +68,7 @@ case class CrunchProps[FR](
                             adjustEGateUseByUnder12s: Boolean,
                             optimiser: TryCrunch,
                             aclPaxAdjustmentDays: Int,
-                            startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch),
+                            startDeskRecs: () => (ActorRef, UniqueKillSwitch, UniqueKillSwitch),
                             arrivalsAdjustments: ArrivalsAdjustmentsLike
                           )
 
@@ -121,6 +121,8 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       numberOfDays = props.maxDaysToCrunch)
 
+    val (deploymentQueueActor, deskRecsKillSwitch, deploymentsKillSwitch) = props.startDeskRecs()
+
     val crunchSystem = RunnableCrunch(
       forecastBaseArrivalsSource = props.arrivalsForecastBaseSource,
       forecastArrivalsSource = props.arrivalsForecastSource,
@@ -144,14 +146,12 @@ object CrunchSystem {
       manifestsActor = props.voyageManifestsActor,
       portStateActor = props.portStateActor,
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
-      deploymentRequestActor = props.actors("deployment-request"),
+      deploymentRequestActor = deploymentQueueActor,
       forecastMaxMillis = forecastMaxMillis,
       redListUpdatesSource = props.redListUpdatesSource,
     )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
-
-    val (deskRecsKillSwitch, deploymentsKillSwitch) = props.startDeskRecs()
 
     val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS, deskRecsKillSwitch, deploymentsKillSwitch)
 

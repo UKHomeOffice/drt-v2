@@ -1,11 +1,8 @@
 package actors.persistent
 
-import actors.persistent.QueueLikeActor.{ReadyToEmit, Tick, UpdatedMillis}
-import actors.serializers.CrunchRequestMessageConversion.{crunchRequestToMessage, crunchRequestsFromMessages, removeCrunchRequestMessage}
-import actors.SetCrunchRequestQueue
-import akka.actor.Cancellable
+import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.serializers.CrunchRequestMessageConversion.{crunchRequestToMessage, crunchRequestsFromMessages}
 import akka.persistence._
-import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import drt.shared.dates.LocalDate
@@ -15,9 +12,9 @@ import server.protobuf.messages.CrunchState.{CrunchRequestsMessage, DaysMessage,
 import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 
-import scala.collection.immutable.SortedSet
+import scala.collection.mutable
+import scala.collection.mutable.SortedSet
 import scala.concurrent.ExecutionContextExecutor
-import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
@@ -51,63 +48,38 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
-  val cancellableTick: Cancellable = context.system.scheduler.schedule(1 second, 1 second, self, Tick)
-
-  var maybeCrunchRequestQueueSource: Option[SourceQueueWithComplete[CrunchRequest]] = None
-  var queuedDays: SortedSet[CrunchRequest] = SortedSet[CrunchRequest]()
-  var readyToEmit: Boolean = false
-
-  override def postStop(): Unit = {
-    log.info(s"I've stopped so I'll cancel my tick now")
-    cancellableTick.cancel()
-    super.postStop()
-  }
+  val queuedDays: mutable.SortedSet[CrunchRequest]
 
   def crunchRequestFromMillis(millis: MillisSinceEpoch): CrunchRequest =
     CrunchRequest(SDate(millis).toLocalDate, crunchOffsetMinutes, durationMinutes)
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
-      queuedDays = queuedDays ++ crunchRequestsFromMessages(requests)
+      queuedDays ++= crunchRequestsFromMessages(requests)
     case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day)) =>
-      queuedDays = queuedDays.filterNot(cr => cr.localDate == LocalDate(year, month, day))
+      queuedDays.find(_.localDate == LocalDate(year, month, day)).foreach { queuedDays -= _ }
 
-    case DaysMessage(days) => queuedDays = queuedDays ++ days.map(crunchRequestFromMillis)
-    case RemoveDayMessage(Some(day)) => queuedDays = queuedDays - crunchRequestFromMillis(day)
+    case DaysMessage(days) => queuedDays ++= days.map(crunchRequestFromMillis)
+    case RemoveDayMessage(Some(day)) => queuedDays -= crunchRequestFromMillis(day)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
       log.info(s"Restoring queue to ${requests.size} days")
-      queuedDays = crunchRequestsFromMessages(requests).to[SortedSet]
+      queuedDays ++= crunchRequestsFromMessages(requests).to[mutable.SortedSet]
 
     case DaysMessage(days) =>
       log.info(s"Restoring queue to ${days.size} days")
-      queuedDays = days.map(crunchRequestFromMillis).to[SortedSet]
+      queuedDays ++= days.map(crunchRequestFromMillis).to[mutable.SortedSet]
   }
 
   override def stateToMessage: GeneratedMessage =
     CrunchRequestsMessage(queuedDays.map(crunchRequestToMessage).toList)
 
   override def receiveCommand: Receive = {
-    case Tick =>
-      log.debug(s"Got a tick. Will try to emit if I'm able to")
-      emitNextDayIfReady()
-
-    case ReadyToEmit =>
-      readyToEmit = true
-      emitNextDayIfReady()
-
-    case SetCrunchRequestQueue(source) =>
-      log.info(s"Received daysQueueSource")
-      maybeCrunchRequestQueueSource = Option(source)
-      readyToEmit = true
-      emitNextDayIfReady()
-
     case UpdatedMillis(millis) =>
       val requests = millis.map(CrunchRequest(_, crunchOffsetMinutes, durationMinutes)).toSet
       updateState(requests)
-      emitNextDayIfReady()
       persistAndMaybeSnapshot(CrunchRequestsMessage(requests.map(crunchRequestToMessage).toList))
 
     case _: SaveSnapshotSuccess =>
@@ -120,24 +92,9 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
       log.warn(s"Unexpected message: ${u.getClass}")
   }
 
-  def emitNextDayIfReady(): Unit = if (readyToEmit)
-    queuedDays.headOption match {
-      case Some(request) =>
-        readyToEmit = false
-        maybeCrunchRequestQueueSource.foreach { sourceQueue =>
-          sourceQueue.offer(request).foreach { _ =>
-            self ! ReadyToEmit
-          }
-        }
-        queuedDays = queuedDays.drop(1)
-        persistAndMaybeSnapshot(removeCrunchRequestMessage(request))
-      case None =>
-        log.debug(s"Nothing in the queue to emit")
-    }
-
   def updateState(days: Iterable[CrunchRequest]): Unit = {
     log.info(s"Adding ${days.size} days to queue. Queue now contains ${queuedDays.size} days")
-    queuedDays = queuedDays ++ days
+    queuedDays ++= days
   }
 
 }

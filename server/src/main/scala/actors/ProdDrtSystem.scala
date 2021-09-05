@@ -62,14 +62,11 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
 
-  override val crunchQueueActor: ActorRef = restartOnStop.actorOf(Props(new CrunchQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "crunch-queue-actor")
-  override val deploymentQueueActor: ActorRef = restartOnStop.actorOf(Props(new DeploymentQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "staff-queue-actor")
   override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)), name = "voyage-manifests-router-actor")
 
   override val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
   override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, deploymentQueueActor)
-
 
   val flightLookups: FlightLookups = FlightLookups(
     system,
@@ -179,4 +176,4 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
 }
 
-case class SetCrunchRequestQueue(source: SourceQueueWithComplete[CrunchRequest])
+case class SetCrunchRequestQueue(source: ActorRef)
