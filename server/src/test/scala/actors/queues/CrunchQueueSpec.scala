@@ -1,8 +1,7 @@
 package actors.queues
 
-import actors.persistent.CrunchQueueActor
+import actors.persistent.QueueLikeActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.{InMemoryStreamingJournal, SetCrunchRequestQueue}
 import akka.actor.{ActorRef, PoisonPill, Props, Terminated}
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Keep, Sink, Source, SourceQueueWithComplete}
@@ -15,12 +14,15 @@ import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
 
+import scala.collection.mutable
 import scala.concurrent.duration._
 
 
 class TestCrunchQueueActor(now: () => SDateLike, offsetMinutes: Int, durationMinutes: Int)
-  extends CrunchQueueActor(now, offsetMinutes, durationMinutes) {
+  extends QueueLikeActor(now, offsetMinutes, durationMinutes) {
+  override val persistenceId = "crunch-queue"
   override val maybeSnapshotInterval: Option[Int] = Option(1)
+  override val queuedDays: mutable.SortedSet[CrunchRequest] = mutable.SortedSet()
 }
 
 class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
@@ -33,7 +35,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
       .throttle(1, 1 second)
       .toMat(Sink.foreach(probe.ref ! _))(Keep.left)
       .run()
-    val actor = system.actorOf(Props(new TestCrunchQueueActor(myNow, crunchOffsetMinutes, durationMinutes)), "deployment-queue")
+    val actor = system.actorOf(Props(new TestCrunchQueueActor(myNow, crunchOffsetMinutes, durationMinutes)), "crunch-queue")
     actor ! SetCrunchRequestQueue(source)
     actor
   }

@@ -5,7 +5,7 @@ import actors._
 import actors.daily.{FlightUpdatesSupervisor, PassengersActor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
-import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
+import actors.persistent.ManifestRouterActor
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
@@ -82,8 +82,6 @@ class TestDrtActor extends Actor {
       val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now))))
       val manifestLookups = ManifestLookups(system)
 
-      val crunchQueueActor = system.actorOf(Props(new CrunchQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)))
-      val deploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(tc.now, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)))
       val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)))
 
       val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, crunchQueueActor)
@@ -196,7 +194,6 @@ class TestDrtActor extends Actor {
           "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
           "live-arrivals" -> liveArrivalsProbe.ref,
           "aggregated-arrivals" -> aggregatedArrivalsActor,
-          "deployment-request" -> deploymentQueueActor
         ),
         useNationalityBasedProcessingTimes = false,
         now = tc.now,

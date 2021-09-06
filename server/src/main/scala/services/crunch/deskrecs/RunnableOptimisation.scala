@@ -32,6 +32,8 @@ object RunnableOptimisation {
       else 0
   }
 
+  case class RemoveCrunchRequest(crunchRequest: CrunchRequest)
+
   object CrunchRequest {
     def apply(millis: MillisSinceEpoch, offsetMinutes: Int, durationMinutes: Int): CrunchRequest = {
       val midnight = SDate(millis, europeLondonTimeZone)
@@ -44,18 +46,20 @@ object RunnableOptimisation {
     }
   }
 
-  def createGraph(deskRecsSinkActor: ActorRef,
+  def createGraph(crunchRequestSource: SortedActorRefSource,
+                  deskRecsSinkActor: ActorRef,
                   crunchRequestsToQueueMinutes: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed])
                  (implicit system: ActorSystem): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
-
-    val crunchRequestSource = new SortedActorRefSource()
     val deskRecsSink = Sink.actorRefWithAck(deskRecsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
     val ks = KillSwitches.single[PortStateQueueMinutes]
 
     val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {
       implicit builder =>
         (crunchRequests, killSwitch) =>
-          crunchRequests.out ~> crunchRequestsToQueueMinutes ~> killSwitch ~> deskRecsSink
+          crunchRequests.out.map { cr =>
+            println(s"\n\n** passing $cr through")
+            cr
+          } ~> crunchRequestsToQueueMinutes ~> killSwitch ~> deskRecsSink
           ClosedShape
     }
 

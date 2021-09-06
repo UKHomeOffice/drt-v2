@@ -1,15 +1,15 @@
 package test
 
-import actors.persistent.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily._
-import actors.routing.minutes.MinutesActorLike._
-import actors.routing.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
+import actors.persistent.ManifestRouterActor
+import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
-import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
 import actors.routing.FlightsRouterActor
+import actors.routing.minutes.MinutesActorLike._
+import actors.routing.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
@@ -22,7 +22,6 @@ import drt.shared.dates.UtcDate
 import org.slf4j.Logger
 import services.SDate
 
-import scala.collection.immutable.SortedSet
 import scala.concurrent.Future
 
 
@@ -96,8 +95,8 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestVoyageManifestsActor(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate, updatesSubscriber: ActorRef)
-    extends ManifestRouterActor(manifestLookup, manifestsUpdate, updatesSubscriber) with Resettable {
+  class TestVoyageManifestsActor(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate)
+    extends ManifestRouterActor(manifestLookup, manifestsUpdate) with Resettable {
 
     override def resetState(): Unit = state = initialState
 
@@ -139,28 +138,6 @@ object TestActors {
     }
   }
 
-  class TestCrunchQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
-    extends CrunchQueueActor(now, crunchOffsetMinutes, durationMinutes) {
-    def reset: Receive = {
-      case ResetData =>
-        queuedDays.clear
-        sender() ! Ack
-    }
-
-    override def receive: Receive = reset orElse super.receive
-  }
-
-  class TestDeploymentQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
-    extends DeploymentQueueActor(now, crunchOffsetMinutes, durationMinutes) {
-    def reset: Receive = {
-      case ResetData =>
-        queuedDays.clear
-        sender() ! Ack
-    }
-
-    override def receive: Receive = reset orElse super.receive
-  }
-
   trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
     var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
@@ -200,9 +177,8 @@ object TestActors {
   class TestQueueMinutesActor(terminals: Iterable[Terminal],
                               lookup: MinutesLookup[CrunchMinute, TQM],
                               updateMinutes: MinutesUpdate[CrunchMinute, TQM],
-                              val resetData: (Terminal, MillisSinceEpoch) => Future[Any],
-                              updatesSubscriber: ActorRef)
-    extends QueueMinutesActor(terminals, lookup, updateMinutes, updatesSubscriber) with TestMinuteActorLike[CrunchMinute, TQM] {
+                              val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
+    extends QueueMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[CrunchMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
@@ -213,12 +189,11 @@ object TestActors {
   }
 
 
-  class TestFlightsRouterActor(subscriber: ActorRef,
-                               terminals: Iterable[Terminal],
+  class TestFlightsRouterActor(terminals: Iterable[Terminal],
                                byDayLookup: FlightsLookup,
                                updateMinutes: FlightsUpdate,
                                val resetData: (Terminal, UtcDate) => Future[Any])
-    extends FlightsRouterActor(subscriber, terminals, byDayLookup, updateMinutes) {
+    extends FlightsRouterActor(terminals, byDayLookup, updateMinutes) {
     override def receive: Receive = resetReceive orElse super.receive
 
     var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()

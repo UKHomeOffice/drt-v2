@@ -1,5 +1,6 @@
 package actors.routing
 
+import actors.SetCrunchRequestQueue
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.routing.minutes.MinutesActorLike.ProcessNextUpdateRequest
 import actors.persistent.QueueLikeActor.UpdatedMillis
@@ -15,13 +16,20 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 trait RouterActorLikeWithSubscriber[U <: Updates, P] extends RouterActorLike[U, P] {
-  val updatesSubscriber: ActorRef
+  var maybeUpdatesSubscriber: Option[ActorRef] = None
 
   override def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[UpdatedMillis] =
     super.handleUpdatesAndAck(updates, replyTo).map { updatedMillis =>
-      if (shouldSendEffectsToSubscriber(updates)) updatesSubscriber ! updatedMillis
+      if (shouldSendEffectsToSubscriber(updates))
+        maybeUpdatesSubscriber.foreach(_ ! updatedMillis)
       updatedMillis
     }
+
+  override def receiveUtil: Receive = super.receiveUtil orElse {
+    case SetCrunchRequestQueue(queueActor) =>
+      log.info("Received subscriber")
+      maybeUpdatesSubscriber = Option(queueActor)
+  }
 }
 
 trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
@@ -80,6 +88,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
       receiveUnexpected
 
   def receiveUtil: Receive = {
+
     case StreamInitialized => sender() ! Ack
 
     case StreamCompleted => log.info(s"Stream completed")

@@ -1,11 +1,12 @@
 package actors.persistent
 
+import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.stream._
 import akka.stream.stage._
 import drt.shared.SDateLike
 import services.SDate
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, RemoveCrunchRequest}
 
 import scala.collection.mutable
 
@@ -15,7 +16,7 @@ private object SortedActorRefSource {
   }
 }
 
-final class SortedActorRefSource()(implicit system: ActorSystem)
+final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes: Int, durationMinutes: Int)(implicit system: ActorSystem)
   extends GraphStageWithMaterializedValue[SourceShape[CrunchRequest], ActorRef] {
 
   import SortedActorRefSource._
@@ -38,19 +39,27 @@ final class SortedActorRefSource()(implicit system: ActorSystem)
       override protected def stageActorName: String =
         inheritedAttributes.get[Attributes.Name].map(_.n).getOrElse(super.stageActorName)
 
-      class CrunchQueueActor(now: () => SDateLike,
-                             crunchOffsetMinutes: Int,
-                             durationMinutes: Int) extends QueueLikeActor(now,  crunchOffsetMinutes, durationMinutes) {
-        override val persistenceId: String = "crunch-queue"
-        override val queuedDays: mutable.SortedSet[CrunchRequest] = buffer
-      }
 
-      val ref: ActorRef = system.actorOf(Props(new CrunchQueueActor(now = () => SDate.now(), 0, 1440)))
+      val ref: ActorRef = getEagerStageActor(eagerMaterializer, poisonPillCompatibility = true) {
+        case (_, m: CrunchRequest @unchecked) =>
+          buffer += m
+          persistentActor ! m
+          tryPushElement()
+        case (_, UpdatedMillis(millis)) =>
+          val requests = millis.map(CrunchRequest(_, crunchOffsetMinutes, durationMinutes)).toSet
+          requests.foreach(persistentActor ! _)
+          buffer ++= requests
+          tryPushElement()
+      }.ref
 
-      private def tryPush(): Unit = {
+      private def tryPushElement(): Unit = {
+        println("\n\n**tryPush")
         if (isAvailable(out)) {
+          println("\n\n**tryPush -> isAvailable")
           buffer.headOption.foreach { e =>
-            buffer -= 1
+            persistentActor ! RemoveCrunchRequest(e)
+            println(s"\n\n**tryPush -> isAvailable -> pushing $e")
+            buffer -= e
             push(out, e)
           }
         }
@@ -58,7 +67,8 @@ final class SortedActorRefSource()(implicit system: ActorSystem)
 
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
-          tryPush()
+          println(s"\n\n** onPull")
+          tryPushElement()
         }
       })
     }

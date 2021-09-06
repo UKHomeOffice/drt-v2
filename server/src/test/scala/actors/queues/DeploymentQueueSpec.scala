@@ -1,40 +1,55 @@
 package actors.queues
 
 import actors.SetCrunchRequestQueue
-import actors.persistent.DeploymentQueueActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.{QueueLikeActor, SortedActorRefSource}
+import akka.Done
 import akka.actor.{ActorRef, PoisonPill, Props, Terminated}
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Keep, Sink, Source, SourceQueueWithComplete}
+import akka.stream.javadsl.RunnableGraph
+import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
+import akka.stream.{ActorMaterializer, ClosedShape, KillSwitches}
+import akka.stream.scaladsl.{GraphDSL, Sink, Source}
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
+import drt.shared.{PortStateQueueMinutes, SDateLike}
 import drt.shared.dates.LocalDate
 import services.SDate
 import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
 
-import scala.concurrent.duration._
+import java.util.UUID
+import scala.collection.mutable
+import scala.concurrent.Future
 
 
 class TestDeploymentQueueActor(now: () => SDateLike, offsetMinutes: Int, durationMinutes: Int)
-  extends DeploymentQueueActor(now, offsetMinutes, durationMinutes) {
+  extends QueueLikeActor(now, offsetMinutes, durationMinutes) {
   override val maybeSnapshotInterval: Option[Int] = Option(1)
+  override val queuedDays: mutable.SortedSet[CrunchRequest] = mutable.SortedSet()
+
+  override def persistenceId: String = "test-deployment-queue"
 }
+
+
 
 class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
   val myNow: () => SDateLike = () => SDate("2020-05-06", Crunch.europeLondonTimeZone)
   val durationMinutes = 60
 
   def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int): ActorRef = {
-    val source: SourceQueueWithComplete[CrunchRequest] = Source
-      .queue[CrunchRequest](1, OverflowStrategy.backpressure)
-      .throttle(1, 1 second)
-      .toMat(Sink.foreach(probe.ref ! _))(Keep.left)
-      .run()
+    val source = new SortedActorRefSource(UUID.randomUUID().toString, crunchOffsetMinutes, durationMinutes)
+    val ks = KillSwitches.single[PortStateQueueMinutes]
+    val graph = GraphDSL.create(source) {
+      implicit builder =>
+        (crunchRequests) =>
+          val ignore = Sink.ignore
+          crunchRequests ~> ignore
+          ClosedShape
+    }
+    val actorRefSource: ActorRef = RunnableGraph.fromGraph(graph).run(ActorMaterializer.create(system))
     val actor = system.actorOf(Props(new TestDeploymentQueueActor(myNow, crunchOffsetMinutes, durationMinutes)), "deployment-queue")
-    actor ! SetCrunchRequestQueue(source)
+    actor ! SetCrunchRequestQueue(actorRefSource)
     actor
   }
 

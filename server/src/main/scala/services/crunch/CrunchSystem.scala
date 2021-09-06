@@ -8,7 +8,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.api.Arrival
 import drt.shared.redlist.{RedListUpdateCommand, RedListUpdates}
-import drt.shared.{SDateLike, _}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
@@ -31,6 +31,8 @@ case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
                             manifestsLiveResponse: SourceQueueWithComplete[ManifestsFeedResponse],
                             actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
                             redListUpdates: SourceQueueWithComplete[List[RedListUpdateCommand]],
+                            crunchRequestActor: ActorRef,
+                            deploymentRequestActor: ActorRef,
                             killSwitches: List[UniqueKillSwitch]
                            )
 
@@ -68,7 +70,7 @@ case class CrunchProps[FR](
                             adjustEGateUseByUnder12s: Boolean,
                             optimiser: TryCrunch,
                             aclPaxAdjustmentDays: Int,
-                            startDeskRecs: () => (ActorRef, UniqueKillSwitch, UniqueKillSwitch),
+                            startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch),
                             arrivalsAdjustments: ArrivalsAdjustmentsLike
                           )
 
@@ -121,7 +123,7 @@ object CrunchSystem {
       expireAfterMillis = props.expireAfterMillis,
       numberOfDays = props.maxDaysToCrunch)
 
-    val (deploymentQueueActor, deskRecsKillSwitch, deploymentsKillSwitch) = props.startDeskRecs()
+    val (crunchQueueActor, deploymentQueueActor, deskRecsKillSwitch, deploymentsKillSwitch) = props.startDeskRecs()
 
     val crunchSystem = RunnableCrunch(
       forecastBaseArrivalsSource = props.arrivalsForecastBaseSource,
@@ -147,6 +149,7 @@ object CrunchSystem {
       portStateActor = props.portStateActor,
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
       deploymentRequestActor = deploymentQueueActor,
+//      crunchRequestActor = crunchQueueActor,
       forecastMaxMillis = forecastMaxMillis,
       redListUpdatesSource = props.redListUpdatesSource,
     )
@@ -166,6 +169,8 @@ object CrunchSystem {
       manifestsLiveResponse = manifestsLiveIn,
       actualDeskStats = actDesksIn,
       redListUpdates = redListUpdatesIn,
+      crunchRequestActor = crunchQueueActor,
+      deploymentRequestActor = deploymentQueueActor,
       killSwitches
     )
   }

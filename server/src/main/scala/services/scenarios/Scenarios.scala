@@ -1,8 +1,9 @@
 package services.scenarios
 
+import actors.persistent.SortedActorRefSource
 import actors.persistent.staffing.GetState
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
@@ -60,9 +61,17 @@ object Scenarios {
       redListUpdatesProvider = redListUpdatesProvider,
     )
 
-    val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
+    class DummyPersistentActor extends Actor {
+      override def receive: Receive = {
+        case _ => Unit
+      }
+    }
+    val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
 
-    crunchRequestQueue.offer(CrunchRequest(SDate(simulationParams.date).millisSinceEpoch, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch))
+    val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
+    val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, deskRecsProducer).run()
+
+    crunchRequestQueue ! CrunchRequest(SDate(simulationParams.date).millisSinceEpoch, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
 
     val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
       case drm: DeskRecMinutes => DeskRecMinutes(drm.minutes.filter(_.terminal == simulationParams.terminal))
