@@ -35,7 +35,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
 
     "Given a lookups with no data" >> {
       "I should get None" >> {
-        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates, TestProbe().ref)))
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1 second)
 
@@ -45,7 +45,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
 
     "Given a lookup with some data" >> {
       "I should get the data from the source" >> {
-        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates, TestProbe().ref)))
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1 second)
 
@@ -66,7 +66,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
       val minutesState: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
 
       "I should get the one minute back" >> {
-        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesState), noopUpdates, TestProbe().ref)))
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesState), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(startMinute.millisSinceEpoch, endMinute.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1 second)
 

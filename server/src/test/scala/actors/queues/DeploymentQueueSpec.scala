@@ -38,8 +38,7 @@ class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
   val durationMinutes = 60
 
   def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int): ActorRef = {
-    val source = new SortedActorRefSource(UUID.randomUUID().toString, crunchOffsetMinutes, durationMinutes)
-    val ks = KillSwitches.single[PortStateQueueMinutes]
+    val source = new SortedActorRefSource(TestProbe().ref, crunchOffsetMinutes, durationMinutes)
     val graph = GraphDSL.create(source) {
       implicit builder =>
         (crunchRequests) =>

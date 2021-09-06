@@ -209,7 +209,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
 
   private def startOptimisationGraph(deskRecsProducer: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed],
-                                      persistentQueueActor: ActorRef) = {
+                                     persistentQueueActor: ActorRef): (ActorRef, UniqueKillSwitch) = {
     val crunchGraphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
     val (crunchRequestQueueActor, deskRecsKillSwitch) =
       RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, deskRecsProducer).run()

@@ -191,7 +191,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val manifestsLookup = MockManifestsLookup()
       val testManifests = VoyageManifests(Set(manifest1, manifest2, manifest3))
       val manifestRouterActor = system.actorOf(
-        Props(new ManifestRouterActor(manifestsLookup.lookup(testManifests), noopUpdates, mockSubscriber))
+        Props(new ManifestRouterActor(manifestsLookup.lookup(testManifests), noopUpdates))
       )
 
       val resultSource: Future[Source[VoyageManifests, NotUsed]] = manifestRouterActor.ask(
@@ -230,12 +230,12 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
     val mockLookup = MockManifestLookupWithTestProbe(system, probe.ref)
 
     system.actorOf(
-      Props(new ManifestRouterActor(mockLookup.manifestsByDayLookup, mockLookup.updateManifests, mockSubscriber))
+      Props(new ManifestRouterActor(mockLookup.manifestsByDayLookup, mockLookup.updateManifests))
     )
   }
 
   def manifestRouterActorWithMock(mock: MockManifestsLookup): ActorRef =
     system.actorOf(
-      Props(new ManifestRouterActor(mock.lookup(), mock.update, mockSubscriber))
+      Props(new ManifestRouterActor(mock.lookup(), mock.update))
     )
 }

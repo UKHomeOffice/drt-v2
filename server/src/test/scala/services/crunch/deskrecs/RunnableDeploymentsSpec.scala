@@ -42,7 +42,7 @@ class TestQueueMinutesActor(probe: ActorRef,
                             terminals: Iterable[Terminal],
                             lookup: MinutesLookup[CrunchMinute, TQM],
                             updateMinutes: MinutesUpdate[CrunchMinute, TQM],
-                            updatesSubscriber: ActorRef) extends QueueMinutesActor(terminals, lookup, updateMinutes, updatesSubscriber) {
+                            updatesSubscriber: ActorRef) extends QueueMinutesActor(terminals, lookup, updateMinutes) {
 
   override def receive: Receive = testReceives
 

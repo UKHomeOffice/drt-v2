@@ -1,10 +1,13 @@
 package actors.queues
 
-import actors.persistent.QueueLikeActor
+import actors.SetCrunchRequestQueue
+import actors.persistent.{QueueLikeActor, SortedActorRefSource}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.{ActorRef, PoisonPill, Props, Terminated}
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Keep, Sink, Source, SourceQueueWithComplete}
+import akka.stream.javadsl.RunnableGraph
+import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
+import akka.stream.{ActorMaterializer, ClosedShape, OverflowStrategy}
+import akka.stream.scaladsl.{GraphDSL, Keep, Sink, Source, SourceQueueWithComplete}
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
@@ -30,13 +33,17 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
 
   val durationMinutes = 60
   def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int): ActorRef = {
-    val source: SourceQueueWithComplete[CrunchRequest] = Source
-      .queue[CrunchRequest](1, OverflowStrategy.backpressure)
-      .throttle(1, 1 second)
-      .toMat(Sink.foreach(probe.ref ! _))(Keep.left)
-      .run()
+    val source = new SortedActorRefSource(TestProbe().ref, crunchOffsetMinutes, durationMinutes)
+    val graph = GraphDSL.create(source) {
+      implicit builder =>
+        (crunchRequests) =>
+          val ignore = Sink.ignore
+          crunchRequests ~> ignore
+          ClosedShape
+    }
+    val actorRefSource: ActorRef = RunnableGraph.fromGraph(graph).run(ActorMaterializer.create(system))
     val actor = system.actorOf(Props(new TestCrunchQueueActor(myNow, crunchOffsetMinutes, durationMinutes)), "crunch-queue")
-    actor ! SetCrunchRequestQueue(source)
+    actor ! SetCrunchRequestQueue(actorRefSource)
     actor
   }
 

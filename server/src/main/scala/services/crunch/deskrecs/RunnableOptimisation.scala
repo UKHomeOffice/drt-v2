@@ -3,10 +3,10 @@ package services.crunch.deskrecs
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.persistent.SortedActorRefSource
 import akka.NotUsed
-import akka.actor.{ActorContext, ActorRef, ActorSystem}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
-import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
-import akka.stream.{ClosedShape, KillSwitches, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink}
+import akka.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.dates.LocalDate
 import drt.shared.{PortStateQueueMinutes, SDateLike}
@@ -15,7 +15,6 @@ import services.graphstages.Crunch.europeLondonTimeZone
 import services.{SDate, StreamSupervision, TimeLogger}
 
 import scala.collection.immutable.NumericRange
-import scala.concurrent.ExecutionContext
 
 object RunnableOptimisation {
   val log: Logger = LoggerFactory.getLogger(getClass)

@@ -1,6 +1,7 @@
 package services.crunch.deskrecs
 
 import actors.acking.AckingReceiver.{Ack, StreamInitialized}
+import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.Materializer
@@ -138,10 +139,12 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty)
     )
 
-    val (queue, _) = RunnableOptimisation.createGraph(sink, deskRecs).run()
-    queue.offer(request)
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 
-    probe.fishForMessage(1 second) {
+    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, deskRecs).run()
+    queue ! request
+
+    probe.fishForMessage(1.second) {
       case DeskRecMinutes(drms) =>
         val tqPax = drms
           .groupBy(drm => (drm.terminal, drm.queue))
