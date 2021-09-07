@@ -1,11 +1,10 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
-import drt.shared.{redlist, _}
+import drt.shared._
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedListUpdates}
-import services.{AirportToCountry, SDate}
+import services.AirportToCountry
 
 
 trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {
