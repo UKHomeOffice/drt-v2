@@ -82,12 +82,10 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
       sender() ! queuedDays
 
     case cr: CrunchRequest =>
-      println(s"\n\n**$persistenceId Received crunch request: $cr")
       updateState(Seq(cr))
       persistAndMaybeSnapshot(CrunchRequestsMessage(List(crunchRequestToMessage(cr))))
 
     case RemoveCrunchRequest(cr) =>
-      println(s"\n\n**$persistenceId Received remove crunch request: $cr")
       queuedDays -= cr
       persistAndMaybeSnapshot(CrunchRequestsMessage(List(crunchRequestToMessage(cr))))
 

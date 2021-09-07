@@ -53,12 +53,9 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
       }.ref
 
       private def tryPushElement(): Unit = {
-        println("\n\n**tryPush")
         if (isAvailable(out)) {
-          println("\n\n**tryPush -> isAvailable")
           buffer.headOption.foreach { e =>
             persistentActor ! RemoveCrunchRequest(e)
-            println(s"\n\n**tryPush -> isAvailable -> pushing $e")
             buffer -= e
             push(out, e)
           }
@@ -67,7 +64,6 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
 
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
-          println(s"\n\n** onPull")
           tryPushElement()
         }
       })

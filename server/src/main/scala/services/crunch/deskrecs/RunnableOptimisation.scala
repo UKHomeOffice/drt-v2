@@ -4,7 +4,7 @@ import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, Stream
 import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
+import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
 import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink}
 import akka.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -55,10 +55,7 @@ object RunnableOptimisation {
     val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {
       implicit builder =>
         (crunchRequests, killSwitch) =>
-          crunchRequests.out.map { cr =>
-            println(s"\n\n** passing $cr through")
-            cr
-          } ~> crunchRequestsToQueueMinutes ~> killSwitch ~> deskRecsSink
+          crunchRequests ~> crunchRequestsToQueueMinutes ~> killSwitch ~> deskRecsSink
           ClosedShape
     }
 
