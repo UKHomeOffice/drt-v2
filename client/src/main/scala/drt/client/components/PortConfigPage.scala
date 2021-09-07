@@ -10,6 +10,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
+import uk.gov.homeoffice.drt.auth.Roles.RedListsEdit
 
 object PortConfigPage {
 
@@ -17,17 +18,22 @@ object PortConfigPage {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigPage")
     .render_P { props =>
-      val rlModel = SPACircuit.connect(_.redListUpdates)
-      rlModel { x =>
-        <.div(
-          x().renderReady(updates =>
+      val rlModel = SPACircuit.connect(m => (m.redListUpdates, m.loggedInUserPot))
+      rlModel { modelProxy =>
+        <.div({
+          val (redListPot, userPot) = modelProxy()
+          val mp = for {
+            redListUpdates <- redListPot
+            user <- userPot
+          } yield
             <.div(
               ^.className := "port-config",
               <.h3("Port Config"),
-              RedListEditor(updates),
-              PortConfigDetails())
-          )
-        )
+              if (user.hasRole(RedListsEdit)) RedListEditor(redListUpdates) else EmptyVdom,
+              PortConfigDetails()
+            )
+          mp.renderReady(identity)
+        })
       }
     }
     .componentDidMount(_ => Callback {
