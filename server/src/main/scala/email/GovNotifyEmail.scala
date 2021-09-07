@@ -3,11 +3,11 @@ package email
 
 import controllers.application.NegativeFeedbackData
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.service.notify.NotificationClient
 
 import java.util
 import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.util.Try
-import uk.gov.service.notify.{NotificationClient, SendEmailResponse}
 
 
 class GovNotifyEmail(apiKey: String) {

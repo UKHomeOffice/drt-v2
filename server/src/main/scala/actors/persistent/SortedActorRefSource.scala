@@ -1,11 +1,9 @@
 package actors.persistent
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.stream._
 import akka.stream.stage._
-import drt.shared.SDateLike
-import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, RemoveCrunchRequest}
 
 import scala.collection.mutable

@@ -177,7 +177,7 @@ object SPAMain {
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
 
-      rule.notFound(redirectToPage(PortDashboardLoc(None))(Redirect.Replace))
+      rule.notFound(redirectToPage(PortDashboardLoc(None))(SetRouteVia.HistoryReplace))
     }
     .renderWith(Layout(_, _))
     .onPostRender((maybePrevLoc, currentLoc) => {

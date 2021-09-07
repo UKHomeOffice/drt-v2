@@ -2,9 +2,7 @@ package actors
 
 import akka.persistence.inmemory.query.scaladsl.InMemoryReadJournal
 import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
-import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.persistence.query.scaladsl.{CurrentEventsByPersistenceIdQuery, EventsByPersistenceIdQuery, ReadJournal}
-import com.typesafe.config.Config
 import play.api.Configuration
 
 trait StreamingJournalLike {

@@ -2,10 +2,10 @@ package actors
 
 import actors.persistent.Sizes.oneMegaByte
 import com.amazonaws.auth.AWSCredentials
-import com.typesafe.config.ConfigFactory
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
+
 import scala.concurrent.duration._
 case class DrtConfigParameters(config: Configuration) {
   val log: Logger = LoggerFactory.getLogger(getClass)

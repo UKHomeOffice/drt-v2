@@ -1,6 +1,5 @@
 package services
 
-import java.util.UUID
 import akka.actor.{ActorRef, ActorSystem}
 import akka.util.Timeout
 import controllers.ShiftPersistence
@@ -8,10 +7,11 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.redlist.{RedList, RedListUpdates}
+import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Headers, Session}
 
+import java.util.UUID
 import scala.collection.immutable.Map
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

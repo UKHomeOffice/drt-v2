@@ -14,7 +14,6 @@ import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, RemoveCrunc
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
-import scala.language.postfixOps
 
 
 object QueueLikeActor {

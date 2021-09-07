@@ -9,7 +9,7 @@ import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
-import drt.shared.api.{PassengerInfoSummary, WalkTimes}
+import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
 import drt.shared.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.auth.LoggedInUser

@@ -2,7 +2,7 @@ package manifests.passengers
 
 import drt.shared.api._
 import drt.shared.{Nationality, PaxType}
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import queueus.B5JPlusWithTransitTypeAllocator
 
 object PassengerInfo {

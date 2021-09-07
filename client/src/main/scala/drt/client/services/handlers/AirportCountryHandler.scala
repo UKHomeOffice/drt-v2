@@ -1,6 +1,6 @@
 package drt.client.services.handlers
 
-import diode.data.{Pending, Pot, Ready}
+import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions._
 import drt.client.services.{DrtApi, PollDelay}

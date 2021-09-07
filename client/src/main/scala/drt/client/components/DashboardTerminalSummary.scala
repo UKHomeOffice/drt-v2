@@ -5,7 +5,6 @@ import drt.shared.CrunchApi._
 import drt.shared.Queues.{InvalidQueue, Queue}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.Arrival
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{CtorType, ScalaComponent}

@@ -11,7 +11,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.{LocalDate, UtcDate}
-import drt.shared.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
+import drt.shared.redlist.{RedListUpdates, SetRedListUpdate}
 import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 

@@ -11,7 +11,6 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 
-import scala.language.postfixOps
 
 object StatusPage {
 
@@ -68,7 +67,7 @@ object StatusPage {
               <.h4("Recent connections")
               ,
               <.ul(
-                feed.feedStatuses.statuses.sortBy(_.date).reverse.map {
+                feed.feedStatuses.statuses.sortBy(_.date).reverseMap {
                   case FeedStatusSuccess(date, updates) => <.li(s"${displayTime(date)}: $updates updates")
                   case FeedStatusFailure(date, _) => <.li(s"${displayTime(date)}: Connection failed")
                 }.toVdomArray

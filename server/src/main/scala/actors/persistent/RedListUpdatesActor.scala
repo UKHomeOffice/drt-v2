@@ -17,9 +17,7 @@ import drt.shared.redlist._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.RedListUpdates.{RedListUpdatesMessage, RemoveUpdateMessage, SetRedListUpdateMessage}
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 
-import scala.collection.immutable.SortedSet
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success}

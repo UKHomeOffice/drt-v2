@@ -1,11 +1,10 @@
 package actors.routing.minutes
 
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
-import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
 import drt.shared.Queues.EeaDesk
 import drt.shared.Terminals.{T1, Terminal}
