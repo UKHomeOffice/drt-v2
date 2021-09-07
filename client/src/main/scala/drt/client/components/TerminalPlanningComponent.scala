@@ -37,8 +37,6 @@ object TerminalPlanningComponent {
 
   val forecastWeeks: Seq[SDateLike] = (0 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
 
-//  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
-
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TerminalForecast")
     .renderP((_, props) => {
       val sortedDays = props.forecastPeriod.forecast.days.toList.sortBy(_._1)
@@ -138,7 +136,6 @@ object TerminalPlanningComponent {
         )
       )
     })
-//    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}")
     })

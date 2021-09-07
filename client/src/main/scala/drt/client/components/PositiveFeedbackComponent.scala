@@ -17,8 +17,6 @@ object PositiveFeedbackComponent {
 
   implicit val rw: RW[Props] = macroRW
 
-//  implicit val propsReuse: Reusability[Props] = Reusability.by(_.url)
-
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("NegativeFeedbackComponent")
     .render_P(props => {
       <.div(
@@ -30,7 +28,6 @@ object PositiveFeedbackComponent {
         )
       )
     })
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(url: String, userEmail: String): VdomElement = component(Props(url, userEmail))

@@ -16,10 +16,9 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class RedListUpdatesHandler[M](modelRW: ModelRW[M, Pot[RedListUpdates]]) extends LoggingActionHandler(modelRW) {
-
   val requestFrequency: FiniteDuration = 60 seconds
-  protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
+  override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetRedListUpdates =>
       effectOnly(Effect(DrtApi.get("red-list/updates").map(r => {
         SetRedListUpdates(read[RedListUpdates](r.responseText))
@@ -33,7 +32,7 @@ class RedListUpdatesHandler[M](modelRW: ModelRW[M, Pot[RedListUpdates]]) extends
       val effect = Effect(Future(GetRedListUpdates)).after(requestFrequency)
       val pot = Ready(updates)
       if (modelRW.value.headOption == Option(updates)) {
-        noChange
+        effectOnly(effect)
       } else {
         updated(pot, effect)
       }

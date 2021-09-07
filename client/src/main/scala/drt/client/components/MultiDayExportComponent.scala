@@ -40,11 +40,6 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
     def endMillis: MillisSinceEpoch = SDate(endDate).millisSinceEpoch
   }
 
-//  implicit val localDateReuse: Reusability[LocalDate] = Reusability.derive[LocalDate]
-//  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-//  implicit val terminalReuse: Reusability[Terminal] = Reusability.derive[Terminal]
-//  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.terminal, p.selectedDate.millisSinceEpoch))
-
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
     .initialStateFromProps { p =>
       State(
@@ -128,7 +123,6 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
             )
           )))
     })
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String, currentDate: LocalDate): html_<^.VdomElement = {

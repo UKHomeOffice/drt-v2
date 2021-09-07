@@ -47,10 +47,6 @@ object FlightsWithSplitsTable {
                    airportConfig: AirportConfig,
                   ) extends UseValueEq
 
-//  implicit val propsReuse: Reusability[Props] = Reusability.by { props =>
-//    (props.flightsWithSplits, props.arrivalSources, props.passengerInfoSummaryByDay, props.redListUpdates, props.redListPorts, props.displayRedListInfo).hashCode()
-//  }
-
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
                     originMapper: PortCode => VdomNode = portCode => portCode.toString,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
@@ -130,7 +126,6 @@ object FlightsWithSplitsTable {
       else
         <.div("No flights to display")
     })
-//    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 

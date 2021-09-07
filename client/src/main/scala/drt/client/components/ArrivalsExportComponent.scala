@@ -33,11 +33,6 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
 
   case class State(showDialogue: Boolean = false)
 
-//  implicit val localDateReuse: Reusability[LocalDate] = Reusability.derive[LocalDate]
-//  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-//  implicit val terminalReuse: Reusability[Terminal] = Reusability.derive[Terminal]
-//  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.terminal, p.selectedDate.millisSinceEpoch))
-
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
     .initialStateFromProps(p => State(false))
     .renderPS((scope, props, state) => {
@@ -79,7 +74,6 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
             )
           )))
     })
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def exportLinks(exports: List[ExportType], date: SDateLike, terminal: Terminal, viewMode: ViewMode): html_<^.VdomElement =

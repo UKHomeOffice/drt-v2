@@ -34,12 +34,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
   val today: SDateLike = SDate.now()
 
-//  implicit val propsReuse: Reusability[Props] = Reusability.by(
-//    p => (p.terminalPageTab.viewMode.hashCode(), p.loadingState.isLoading, p.minuteTicker)
-//  )
-//
-//  implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())
-
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("DatePicker")
     .initialStateFromProps { p =>
       val viewMode = p.terminalPageTab.viewMode
@@ -145,7 +139,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
       )
 
     })
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)

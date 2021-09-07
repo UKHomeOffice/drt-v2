@@ -35,7 +35,7 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[List[Alert]]]) extends LoggingAct
       val effect = Effect(Future(GetAlerts(since))).after(alertsRequestFrequency)
       val pot = if (alerts.isEmpty) Empty else Ready(alerts)
       if (modelRW.value.isPending && since <= SDate.now().addMinutes(-1).millisSinceEpoch) {
-        noChange
+        effectOnly(effect)
       } else {
         updated(pot, effect)
       }

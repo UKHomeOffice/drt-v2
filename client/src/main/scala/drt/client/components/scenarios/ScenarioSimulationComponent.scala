@@ -14,9 +14,6 @@ import scalacss.ScalaCssReactImplicits
 
 object ScenarioSimulationComponent extends ScalaCssReactImplicits {
 
-//  implicit val stateReuse: Reusability[State] = Reusability.by_==[State]
-//  implicit val propsReuse: Reusability[Props] = Reusability.by_==[Props]
-
   val steps = List("Passenger numbers", "Processing Times", "Queue SLAs", "Configure Desk Availability")
 
   case class State(simulationParams: SimulationFormFields, panelStatus: Map[String, Boolean]) {
@@ -52,7 +49,6 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
           )
         )
     }
-//    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => Callback {
       GoogleEventTracker.sendPageView(s"Arrival Simulations Page")
     }).build

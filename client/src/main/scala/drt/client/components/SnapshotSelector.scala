@@ -40,9 +40,6 @@ object SnapshotSelector extends WithScalaCssImplicits {
       <.div(^.className := "col-sm-8", xs.toTagMod))
   }
 
-//  implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())
-//  implicit val propsReuse: Reusability[Props] = Reusability.by(p => p.loadingState.isLoading)
-
   val component = ScalaComponent.builder[Props]("SnapshotSelector")
     .initialStateFromProps(
       p =>
@@ -125,7 +122,6 @@ object SnapshotSelector extends WithScalaCssImplicits {
     }
 
     )
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(router: RouterCtl[Loc], page: TerminalPageTabLoc, loadingState: LoadingState): VdomElement = component(Props(router, page, loadingState))

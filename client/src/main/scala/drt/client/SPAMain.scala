@@ -248,18 +248,8 @@ object SPAMain {
 
   def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
-//    val x = SPACircuit.zoom(m => PortConfigPage.Props(m.redListUpdates, m.loggedInUserPot, m.airportConfig))
-//    val proxy = SPACircuit.connect(x)
-val proxy = SPACircuit.connect(m => PortConfigPage.Props(m.redListUpdates, m.loggedInUserPot, m.airportConfig))
+    val proxy = SPACircuit.connect(m => PortConfigPage.Props(m.redListUpdates, m.loggedInUserPot, m.airportConfig))
     staticRoute("#config", PortConfigLoc) ~> render(proxy(x => PortConfigPage(x())))
-    //    dynamicRoute("#config" / ""), PortConfigLoc) ~> renderR(_ => PortConfigPage())
-    //
-    //    dynamicRouteCT(
-    //      ("#config" ~ queryToMap).caseClass[PortConfigPageLoc]) ~>
-    //      dynRenderR((page: PortConfigPageLoc, router) => {
-    //        val props = TerminalComponent.Props(terminalPageTab = page, router)
-    //        TerminalComponent(props)
-    //      })
   }
 
   def dashboardRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {

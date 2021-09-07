@@ -117,7 +117,7 @@ object Actions {
 
   case class GetRedListPorts(localDate: LocalDate) extends Action
 
-  case class UpdateRedListPorts(codes: HashSet[PortCode]) extends Action
+  case class UpdateRedListPorts(codes: HashSet[PortCode], date: LocalDate) extends Action
 
   case class SetWalktimes(walkTimes: WalkTimes) extends Action
 

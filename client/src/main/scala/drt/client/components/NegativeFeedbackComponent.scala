@@ -27,8 +27,6 @@ object NegativeFeedbackComponent {
                    contactMe: Boolean,
                    showDialogue: Boolean) extends UseValueEq
 
-//  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-//  implicit val propsReuse: Reusability[Props] = Reusability.by(_.url)
   implicit val rw: RW[State] = macroRW
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FeedbackComponent")
@@ -129,7 +127,6 @@ object NegativeFeedbackComponent {
         negativeFeedbackDialog())
 
     })
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
 

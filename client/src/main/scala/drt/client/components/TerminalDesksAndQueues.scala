@@ -59,10 +59,6 @@ object TerminalDesksAndQueues {
 
   case class State(showActuals: Boolean, viewType: ViewType, showWaitColumn: Boolean)
 
-//  implicit val stateReuse: Reusability[State] = Reusability.by_==[State]
-//  implicit val propsReuse: Reusability[Props] = Reusability.by_==[Props]
-
-
   class Backend(backendScope: BackendScope[Props, State]) {
 
     def render(props: Props, state: State): VdomTagOf[Div] = {
@@ -251,7 +247,6 @@ object TerminalDesksAndQueues {
   val component = ScalaComponent.builder[Props]("Loader")
     .initialStateFromProps(p => State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType, showWaitColumn = !p.featureFlags.displayWaitTimesToggle))
     .renderBackend[Backend]
-//    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 

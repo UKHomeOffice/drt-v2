@@ -67,7 +67,6 @@ object BigSummaryBoxes {
     val newSplits = Map[PaxTypeAndQueue, Double]()
     val allSplits: Iterable[(PaxTypeAndQueue, Double)] = flights.flatMap(bestFlightSplits)
     val splitsExcludingTransfers = allSplits.filter(_._1.queueType != Queues.Transfer)
-    //    //todo import cats - it makes short, efficient work of this sort of aggregation.
     val aggSplits: Map[PaxTypeAndQueue, Double] = splitsExcludingTransfers.foldLeft(newSplits) {
       case (agg, (k, v)) =>
         val g = agg.getOrElse(k, 0d)

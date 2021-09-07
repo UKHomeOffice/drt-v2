@@ -46,8 +46,6 @@ object TimeRangeFilter {
                    minuteTicker: Int = 0
                   ) extends UseValueEq
 
-//  implicit val propsReuse: Reusability[Props] = Reusability.by(p => p.minuteTicker)
-
   val component = ScalaComponent.builder[Props]("TimeRangeFilter")
     .render_P((props) => {
 
@@ -113,7 +111,6 @@ object TimeRangeFilter {
         ))
 
     })
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)

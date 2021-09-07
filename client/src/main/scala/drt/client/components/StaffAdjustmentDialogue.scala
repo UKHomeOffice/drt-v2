@@ -90,8 +90,6 @@ object StaffAdjustmentDialogue {
     (x.toDouble / nearest).round.toInt * nearest
   }
 
-//  implicit val stateReuse: Reusability[StaffAdjustmentDialogueState] = Reusability.by(_.hashCode())
-
   def apply(state: StaffAdjustmentDialogueState): Component[Unit, StaffAdjustmentDialogueState, Unit, CtorType.Nullary] = ScalaComponent.builder[Unit]("staffMovementPopover")
     .initialState(state)
     .renderS { (scope, state) =>
@@ -237,7 +235,6 @@ object StaffAdjustmentDialogue {
         )
       )
     }
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def popoverFormRow(label: String, maybeClassName: Option[String], xs: TagMod*): VdomTagOf[Div] = {

@@ -2,7 +2,6 @@ package drt.client.components
 
 import scalacss.DevDefaults._
 import scalacss.internal.StyleLookup
-//import scalacss.internal.mutable
 import drt.client.components.Bootstrap.CommonStyle._
 
 object BootstrapStyles extends StyleSheet.Inline {

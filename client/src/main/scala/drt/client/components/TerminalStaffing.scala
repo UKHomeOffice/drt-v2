@@ -41,10 +41,6 @@ object TerminalStaffing {
                     viewMode: ViewMode
                   ) extends UseValueEq
 
-//  implicit val propsReuse: Reusability[Props] = Reusability.by(p => {
-//    (p.potShifts.getOrElse(ShiftAssignments.empty), p.potFixedPoints.getOrElse(FixedPointAssignments.empty), p.potStaffMovements.getOrElse(StaffMovements.empty)).hashCode()
-//  })
-
   class Backend() {
     def render(props: Props): VdomTagOf[Div] = <.div(
       props.potShifts.render { shifts =>
@@ -221,7 +217,6 @@ object TerminalStaffing {
 
   private val component = ScalaComponent.builder[Props]("TerminalStaffing")
     .renderBackend[Backend]
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   object MovementDisplay {

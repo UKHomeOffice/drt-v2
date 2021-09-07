@@ -43,10 +43,6 @@ object TerminalDesksAndQueuesRow {
                    showWaitColumn: Boolean
                   ) extends UseValueEq
 
-//  implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
-//    (p.queueMinutes.hashCode(), p.staffMinute.hashCode(), p.showActuals, p.viewType.hashCode(), p.viewMode.hashCode(), p.showWaitColumn)
-//  )
-
   val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
     .render_P(props => {
       val crunchMinutesByQueue = props.queueMinutes.filter(qm => props.airportConfig.queuesByTerminal(props.terminal).contains(qm.queue)).map(
@@ -142,7 +138,6 @@ object TerminalDesksAndQueuesRow {
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes) :: queueTds.toList ++ pcpTds).toTagMod)
     })
     .componentDidMount(_ => Callback.log("TerminalDesksAndQueuesRow did mount"))
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def slaRagStatus(waitTime: Double, sla: Int): String = waitTime / sla match {
