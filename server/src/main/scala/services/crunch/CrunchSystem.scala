@@ -149,7 +149,6 @@ object CrunchSystem {
       portStateActor = props.portStateActor,
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
       deploymentRequestActor = deploymentQueueActor,
-//      crunchRequestActor = crunchQueueActor,
       forecastMaxMillis = forecastMaxMillis,
       redListUpdatesSource = props.redListUpdatesSource,
     )

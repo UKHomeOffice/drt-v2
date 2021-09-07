@@ -96,8 +96,6 @@ class TestDrtActor extends Actor {
       val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
       val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
       val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal)))
-//      val persistentCrunchQueueActor = system.actorOf(Props(new CrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
-//      val persistentDeploymentQueueActor = system.actorOf(Props(new DeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
@@ -154,12 +152,7 @@ class TestDrtActor extends Actor {
 
         val deploymentGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)
         val (deploymentRequestActor, deploymentsKillSwitch) = RunnableOptimisation.createGraph(deploymentGraphSource, portStateActor, deploymentsProducer).run()
-//        maybeCrunchQueueActor = Option(crunchQueueActor)
-//        maybeDeploymentQueueActor = Option(deploymentQueueActor)
-//        crunchQueueActor ! SetCrunchRequestQueue(crunchRequestQueue)
-//        deploymentQueueActor ! SetCrunchRequestQueue(deploymentRequestQueue)
 
-//        redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
         flightsActor ! SetCrunchRequestQueue(crunchRequestActor)
         manifestsRouterActor ! SetCrunchRequestQueue(crunchRequestActor)
         queuesActor ! SetCrunchRequestQueue(deploymentRequestActor)

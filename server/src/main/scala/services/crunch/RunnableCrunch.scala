@@ -54,7 +54,6 @@ object RunnableCrunch {
                                            portStateActor: ActorRef,
                                            aggregatedArrivalsStateActor: ActorRef,
                                            deploymentRequestActor: ActorRef,
-//                                           crunchRequestActor: ActorRef,
 
                                            forecastMaxMillis: () => MillisSinceEpoch
                                           ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, SAD, RL, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {

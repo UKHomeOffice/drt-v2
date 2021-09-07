@@ -7,12 +7,6 @@ import drt.shared.{redlist, _}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedListUpdates}
 import services.{AirportToCountry, SDate}
 
-//object RedList {
-//  def ports(date: SDateLike): Iterable[PortCode] = AirportToCountry.airportInfoByIataPortCode.values.collect {
-//    case AirportInfo(_, _, country, portCode) if AirportToCountry.isRedListed(PortCode(portCode), date.millisSinceEpoch, ) =>
-//      PortCode(portCode)
-//  }
-//}
 
 trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {
   val terminal: Terminal

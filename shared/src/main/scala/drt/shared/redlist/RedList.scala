@@ -155,13 +155,6 @@ object RedList {
       "Montenegro" -> "MNE",
     ), List()),
   )
-
-//  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
-//    redListChanges
-//      .filterKeys(changeDate => changeDate <= date)
-//      .foldLeft(Map[String, String]()) {
-//        case (acc, (date, updates)) => (acc ++ updates.additions) -- updates.removals
-//      }
 }
 
 sealed trait DirectRedListFlight {
