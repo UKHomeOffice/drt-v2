@@ -9,7 +9,7 @@ import drt.shared.redlist.{DeleteRedListUpdates, RedListUpdates, SetRedListUpdat
 import play.api.mvc.{Action, AnyContent}
 import services.graphstages.Crunch
 import services.{AirportToCountry, SDate}
-import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
+import uk.gov.homeoffice.drt.auth.Roles.RedListsEdit
 import upickle.default._
 
 import scala.concurrent.Future
@@ -18,7 +18,7 @@ import scala.concurrent.Future
 trait WithRedLists {
   self: Application =>
 
-  def getRedListPorts(dateString: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+  def getRedListPorts(dateString: String): Action[AnyContent] =
     Action.async { _ =>
       ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map { redListUpdates =>
         val forDate = SDate(dateString, Crunch.europeLondonTimeZone).millisSinceEpoch
@@ -30,15 +30,13 @@ trait WithRedLists {
         Ok(write(redListPorts))
       }
     }
-  }
 
-  def getRedListUpdates: Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+  def getRedListUpdates: Action[AnyContent] =
     Action.async { _ =>
       ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(write(r)))
     }
-  }
 
-  def updateRedListUpdates(): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+  def updateRedListUpdates(): Action[AnyContent] = authByRole(RedListsEdit) {
     Action.async {
       implicit request =>
         request.body.asText match {
@@ -52,7 +50,7 @@ trait WithRedLists {
     }
   }
 
-  def deleteRedListUpdates(effectiveFrom: MillisSinceEpoch): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
+  def deleteRedListUpdates(effectiveFrom: MillisSinceEpoch): Action[AnyContent] = authByRole(RedListsEdit) {
     Action.async {
       ctrl.redListUpdatesActor.ask(DeleteRedListUpdates(effectiveFrom)).map(_ => Accepted)
     }
