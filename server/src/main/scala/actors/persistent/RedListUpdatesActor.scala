@@ -127,14 +127,6 @@ class RedListUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike wi
     case SaveSnapshotFailure(md, cause) =>
       log.error(s"Save snapshot failure: $md", cause)
 
-    case DeleteSnapshotsSuccess(_) =>
-
-    case DeleteMessagesSuccess(_) =>
-
-    case DeleteSnapshotsFailure(_, t) => log.error(s"Failed to delete updatess snapshots", t)
-
-    case DeleteMessagesFailure(_, t) => log.error(s"Failed to delete updatess messages", t)
-
     case StreamCompleted => log.warn("Received shutdown")
 
     case unexpected => log.error(s"Received unexpected message ${unexpected.getClass}")
