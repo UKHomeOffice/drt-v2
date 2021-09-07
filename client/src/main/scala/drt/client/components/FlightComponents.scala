@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import drt.shared.api.Arrival
@@ -76,7 +77,7 @@ object FlightComponents {
 
   object SplitsGraph {
 
-    case class Props(splitTotal: Int, splits: Iterable[(PaxTypeAndQueue, Int)])
+    case class Props(splitTotal: Int, splits: Iterable[(PaxTypeAndQueue, Int)]) extends UseValueEq
 
     def splitsGraphComponentColoured(props: Props): TagOf[Div] = {
       import props._

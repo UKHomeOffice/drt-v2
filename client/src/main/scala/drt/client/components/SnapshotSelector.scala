@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.components.styles.{DefaultFormFieldsStyle, WithScalaCssImplicits}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -11,7 +12,7 @@ import io.kinoplan.scalajs.react.material.ui.core.{MuiFormLabel, MuiGrid, MuiTex
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CallbackTo, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CallbackTo, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.Div
 
 object SnapshotSelector extends WithScalaCssImplicits {
@@ -23,7 +24,7 @@ object SnapshotSelector extends WithScalaCssImplicits {
   case class Props(router: RouterCtl[Loc],
                    terminalPageTab: TerminalPageTabLoc,
                    loadingState: LoadingState
-                  )
+                  ) extends UseValueEq
 
   case class State(dateTime: SDateLike) {
     def update(dt: SDateLike): State = copy(dateTime = dt)
@@ -39,8 +40,8 @@ object SnapshotSelector extends WithScalaCssImplicits {
       <.div(^.className := "col-sm-8", xs.toTagMod))
   }
 
-  implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => p.loadingState.isLoading)
+//  implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())
+//  implicit val propsReuse: Reusability[Props] = Reusability.by(p => p.loadingState.isLoading)
 
   val component = ScalaComponent.builder[Props]("SnapshotSelector")
     .initialStateFromProps(
@@ -124,7 +125,7 @@ object SnapshotSelector extends WithScalaCssImplicits {
     }
 
     )
-    .configure(Reusability.shouldComponentUpdate)
+//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(router: RouterCtl[Loc], page: TerminalPageTabLoc, loadingState: LoadingState): VdomElement = component(Props(router, page, loadingState))

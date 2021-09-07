@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.Pot
 import drt.client.actions.Actions._
 import drt.client.components.FixedPoints._
@@ -38,11 +39,11 @@ object TerminalStaffing {
                     airportConfig: AirportConfig,
                     loggedInUser: LoggedInUser,
                     viewMode: ViewMode
-                  )
+                  ) extends UseValueEq
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => {
-    (p.potShifts.getOrElse(ShiftAssignments.empty), p.potFixedPoints.getOrElse(FixedPointAssignments.empty), p.potStaffMovements.getOrElse(StaffMovements.empty)).hashCode()
-  })
+//  implicit val propsReuse: Reusability[Props] = Reusability.by(p => {
+//    (p.potShifts.getOrElse(ShiftAssignments.empty), p.potFixedPoints.getOrElse(FixedPointAssignments.empty), p.potStaffMovements.getOrElse(StaffMovements.empty)).hashCode()
+//  })
 
   class Backend() {
     def render(props: Props): VdomTagOf[Div] = <.div(
@@ -220,7 +221,7 @@ object TerminalStaffing {
 
   private val component = ScalaComponent.builder[Props]("TerminalStaffing")
     .renderBackend[Backend]
-    .configure(Reusability.shouldComponentUpdate)
+//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   object MovementDisplay {

@@ -26,7 +26,7 @@ object TerminalComponent {
 
   val log: Logger = LoggerFactory.getLogger("TerminalComponent")
 
-  case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc])
+  case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc]) extends UseValueEq
 
   case class TerminalModel(
                             portStatePot: Pot[PortState],

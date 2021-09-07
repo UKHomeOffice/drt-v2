@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.components.styles.DefaultToolTipsStyle
 import drt.client.logger.{Logger, LoggerFactory}
 import japgolly.scalajs.react.Ref.Simple
@@ -90,7 +91,7 @@ object Tippy extends ScalaCssReactImplicits {
     val focusAndHover = s"$hover $focus"
   }
 
-  case class Props(content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String)
+  case class Props(content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("FlightChart")
     .render_P(props => {

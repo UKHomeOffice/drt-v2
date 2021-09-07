@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.SPAMain.{Loc, PortDashboardLoc}
@@ -17,7 +18,7 @@ import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaCom
 
 object PortDashboardPage {
 
-  case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc)
+  case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc) extends UseValueEq
 
   case class DisplayPeriod(start: SDateLike, end: SDateLike)
 

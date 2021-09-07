@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
@@ -12,11 +13,11 @@ import drt.client.services._
 import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared.TimeUtil.millisToMinutes
-import drt.shared.{redlist, _}
 import drt.shared.api.{Arrival, PassengerInfoSummary}
 import drt.shared.dates.UtcDate
-import drt.shared.redlist.{ApiIndirectRedListPax, DirectRedListFlight, IndirectRedListPax, NeboIndirectRedListPax, NoIndirectRedListPax, RedListUpdates}
+import drt.shared.redlist._
 import drt.shared.splits.ApiSplitsToSplitRatio
+import drt.shared._
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
@@ -44,11 +45,11 @@ object FlightsWithSplitsTable {
                    redListPorts: HashSet[PortCode],
                    redListUpdates: RedListUpdates,
                    airportConfig: AirportConfig,
-                  )
+                  ) extends UseValueEq
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by { props =>
-    (props.flightsWithSplits, props.arrivalSources, props.passengerInfoSummaryByDay, props.redListUpdates, props.redListPorts, props.displayRedListInfo).hashCode()
-  }
+//  implicit val propsReuse: Reusability[Props] = Reusability.by { props =>
+//    (props.flightsWithSplits, props.arrivalSources, props.passengerInfoSummaryByDay, props.redListUpdates, props.redListPorts, props.displayRedListInfo).hashCode()
+//  }
 
   def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
                     originMapper: PortCode => VdomNode = portCode => portCode.toString,
@@ -99,6 +100,7 @@ object FlightsWithSplitsTable {
                     .get(SDate(flightWithSplits.apiFlight.Scheduled).toUtcDate)
                     .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
                   val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
+                  println(s"isRedListOrigin: ${flightWithSplits.apiFlight.flightCode} $isRedListOrigin")
                   val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch, props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
                   val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, props.portCode, flightWithSplits, maybePassengerInfo, props.redListUpdates)
                   FlightTableRow.component(FlightTableRow.Props(
@@ -128,7 +130,7 @@ object FlightsWithSplitsTable {
       else
         <.div("No flights to display")
     })
-    .configure(Reusability.shouldComponentUpdate)
+//    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 
@@ -230,7 +232,7 @@ object FlightTableRow {
                    directRedListFlight: DirectRedListFlight,
                    airportConfig: AirportConfig,
                    redListUpdates: RedListUpdates,
-                  )
+                  ) extends UseValueEq
 
   case class RowState(hasChanged: Boolean)
 

@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
@@ -20,7 +21,7 @@ object StaffMissingWarningComponent {
                     loggedInUser: LoggedInUser,
                     router: RouterCtl[Loc],
                     terminalPageTab: TerminalPageTabLoc
-                  )
+                  ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffMissingWarning")
     .render_P(p => {

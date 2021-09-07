@@ -1,12 +1,13 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.SPAMain._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
 
 sealed trait TimeRangeHours {
   def start: Int
@@ -43,9 +44,9 @@ object TimeRangeFilter {
                    defaultWindow: TimeRangeHours,
                    showNow: Boolean,
                    minuteTicker: Int = 0
-                  )
+                  ) extends UseValueEq
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => p.minuteTicker)
+//  implicit val propsReuse: Reusability[Props] = Reusability.by(p => p.minuteTicker)
 
   val component = ScalaComponent.builder[Props]("TimeRangeFilter")
     .render_P((props) => {
@@ -112,7 +113,7 @@ object TimeRangeFilter {
         ))
 
     })
-    .configure(Reusability.shouldComponentUpdate)
+//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)

@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.SPAMain.{Loc, PortDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
@@ -11,7 +12,7 @@ import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, CedatStaff, PortOpera
 
 object UserDashboardPage {
 
-  case class Props(router: RouterCtl[Loc])
+  case class Props(router: RouterCtl[Loc]) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("UserDashboard")
     .render_P(p => {

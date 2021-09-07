@@ -1,12 +1,13 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.actions.Actions.{DeleteRedListUpdate, SaveRedListUpdate}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiDialog, MuiDialogActions, MuiDialogContent, MuiDialogContentText, MuiDialogTitle, MuiGrid, MuiTextField}
+import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Add, Check, Delete, Edit}
 import japgolly.scalajs.react.component.Scala.Unmounted
@@ -14,7 +15,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CallbackTo, ReactEventFromInput, ScalaComponent}
 
 object RedListEditor {
-  case class Props(initialUpdates: RedListUpdates)
+  case class Props(initialUpdates: RedListUpdates) extends UseValueEq
 
   case class Editing(updates: RedListUpdate, addingAddition: Option[(String, String)], addingRemoval: Option[String], originalDate: MillisSinceEpoch) {
     def setAdditionName(name: String): Editing = {
@@ -40,7 +41,7 @@ object RedListEditor {
     def removeRemoval(isoCode: String): Editing = copy(updates = updates.copy(removals = updates.removals.filter(_ != isoCode)))
   }
 
-  case class State(updates: Iterable[RedListUpdate], editing: Option[Editing]) {
+  case class State(updates: Iterable[RedListUpdate], editing: Option[Editing]) extends UseValueEq {
     def addingAddition: State = copy(editing = editing.map(_.copy(addingAddition = Option(("", "")))))
 
     def updatingAdditionName(e: ReactEventFromInput): State = {

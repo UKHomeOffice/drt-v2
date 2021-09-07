@@ -1,12 +1,13 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.Ready
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.{DrtApi, SPACircuit}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomTagOf, ^, _}
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
 import upickle.default.{macroRW, write, ReadWriter => RW}
 
@@ -16,7 +17,7 @@ object NegativeFeedbackComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props(url: String,
-                   userEmail: String)
+                   userEmail: String) extends UseValueEq
 
   case class State(url: String,
                    feedbackUserEmail: String,
@@ -24,10 +25,10 @@ object NegativeFeedbackComponent {
                    whatWentWrong: String,
                    whatToImprove: String,
                    contactMe: Boolean,
-                   showDialogue: Boolean)
+                   showDialogue: Boolean) extends UseValueEq
 
-  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-  implicit val propsReuse: Reusability[Props] = Reusability.by(_.url)
+//  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
+//  implicit val propsReuse: Reusability[Props] = Reusability.by(_.url)
   implicit val rw: RW[State] = macroRW
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FeedbackComponent")
@@ -128,7 +129,7 @@ object NegativeFeedbackComponent {
         negativeFeedbackDialog())
 
     })
-    .configure(Reusability.shouldComponentUpdate)
+//    .configure(Reusability.shouldComponentUpdate)
     .build
 
 

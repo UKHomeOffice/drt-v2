@@ -1,6 +1,7 @@
 package drt.client.components
 
 
+import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
@@ -38,7 +39,7 @@ object TerminalDashboardComponent {
                     loggedInUser: LoggedInUser,
                     redListPorts: Pot[HashSet[PortCode]],
                     redListUpdates: RedListUpdates,
-                  )
+                  ) extends UseValueEq
 
   val defaultSlotSize = 120
 

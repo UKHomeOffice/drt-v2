@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.actions.Actions.UpdateStaffAdjustmentDialogueState
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -10,7 +11,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, ScalaComponent}
 import org.scalajs.dom.html
 import org.scalajs.dom.html.TableCell
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -40,11 +41,11 @@ object TerminalDesksAndQueuesRow {
                    loggedInUser: LoggedInUser,
                    slotMinutes: Int,
                    showWaitColumn: Boolean
-                  )
+                  ) extends UseValueEq
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
-    (p.queueMinutes.hashCode(), p.staffMinute.hashCode(), p.showActuals, p.viewType.hashCode(), p.viewMode.hashCode(), p.showWaitColumn)
-  )
+//  implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
+//    (p.queueMinutes.hashCode(), p.staffMinute.hashCode(), p.showActuals, p.viewType.hashCode(), p.viewMode.hashCode(), p.showWaitColumn)
+//  )
 
   val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
     .render_P(props => {
@@ -141,7 +142,7 @@ object TerminalDesksAndQueuesRow {
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes) :: queueTds.toList ++ pcpTds).toTagMod)
     })
     .componentDidMount(_ => Callback.log("TerminalDesksAndQueuesRow did mount"))
-    .configure(Reusability.shouldComponentUpdate)
+//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def slaRagStatus(waitTime: Double, sla: Int): String = waitTime / sla match {

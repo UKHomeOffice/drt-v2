@@ -1,12 +1,12 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.components.TerminalContentComponent.exportLink
 import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services._
 import drt.shared.Terminals.Terminal
-import drt.shared.dates.LocalDate
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import drt.shared.{PortCode, SDateLike}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
@@ -16,7 +16,7 @@ import io.kinoplan.scalajs.react.material.ui.icons._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 
@@ -29,14 +29,14 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
                    viewMode: ViewMode,
                    title: String,
                    exports: List[ExportType],
-                  )
+                  ) extends UseValueEq
 
   case class State(showDialogue: Boolean = false)
 
-  implicit val localDateReuse: Reusability[LocalDate] = Reusability.derive[LocalDate]
-  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-  implicit val terminalReuse: Reusability[Terminal] = Reusability.derive[Terminal]
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.terminal, p.selectedDate.millisSinceEpoch))
+//  implicit val localDateReuse: Reusability[LocalDate] = Reusability.derive[LocalDate]
+//  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
+//  implicit val terminalReuse: Reusability[Terminal] = Reusability.derive[Terminal]
+//  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.terminal, p.selectedDate.millisSinceEpoch))
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
     .initialStateFromProps(p => State(false))
@@ -79,7 +79,7 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
             )
           )))
     })
-    .configure(Reusability.shouldComponentUpdate)
+//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def exportLinks(exports: List[ExportType], date: SDateLike, terminal: Terminal, viewMode: ViewMode): html_<^.VdomElement =

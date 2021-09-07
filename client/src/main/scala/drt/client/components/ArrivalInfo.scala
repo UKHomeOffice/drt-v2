@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.{Pending, Pot, Ready}
 import drt.client.components.FlightTableComponents.localDateTimeWithPopup
 import drt.shared._
@@ -11,7 +12,7 @@ import org.scalajs.dom.html.TableSection
 
 object ArrivalInfo {
 
-  case class Props(arrivalSources: Pot[List[Option[FeedSourceArrival]]])
+  case class Props(arrivalSources: Pot[List[Option[FeedSourceArrival]]]) extends UseValueEq
 
   def SourcesTable: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalSourcesTable")
     .render_P(props => {
@@ -61,7 +62,7 @@ object ArrivalInfo {
 
 object FeedSourceRow {
 
-  case class Props(feedSourceArrival: FeedSourceArrival)
+  case class Props(feedSourceArrival: FeedSourceArrival) extends UseValueEq
 
   val component = ScalaComponent.builder[Props](displayName = "TableRow")
     .render_P(props => {

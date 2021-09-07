@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 
 object Layout {
 
-  case class Props(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc])
+  case class Props(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]) extends UseValueEq
 
   case class LayoutModelItems(user: Pot[LoggedInUser],
                               airportConfig: Pot[AirportConfig]
