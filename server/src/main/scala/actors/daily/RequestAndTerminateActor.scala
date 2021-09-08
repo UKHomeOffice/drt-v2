@@ -31,7 +31,7 @@ class RequestAndTerminateActor(implicit timeout: Timeout) extends Actor {
       }
 
     case ActorReplyToResponse(actor, replyTo, response) =>
-      deathWatchReplyToAndResponse = deathWatchReplyToAndResponse + (actor -> (replyTo, response))
+      deathWatchReplyToAndResponse = deathWatchReplyToAndResponse + (actor -> ((replyTo, response)))
       context.watch(actor)
       actor ! PoisonPill
 

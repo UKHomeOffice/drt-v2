@@ -1,5 +1,6 @@
 package drt.client.components.scenarios
 
+import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.actions.Actions.GetSimulation
 import drt.client.components.styles.DefaultFormFieldsStyle
@@ -23,9 +24,6 @@ import scala.util.Try
 
 object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
-  implicit val stateReuse: Reusability[State] = Reusability.by_==[State]
-  implicit val propsReuse: Reusability[Props] = Reusability.by_==[Props]
-
   val steps = List("Passenger numbers", "Processing Times", "Queue SLAs", "Configure Desk Availability")
 
   case class State(simulationFormFields: SimulationFormFields, panelStatus: Map[String, Boolean]) {
@@ -42,7 +40,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
     def closeEgatesAllDay: State = copy(simulationFormFields = simulationFormFields.closeEgatesAllDay)
   }
 
-  case class Props(date: LocalDate, terminal: Terminal, airportConfig: AirportConfig)
+  case class Props(date: LocalDate, terminal: Terminal, airportConfig: AirportConfig) extends UseValueEq
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SimulationFormComponent")
     .initialStateFromProps(p =>
@@ -315,7 +313,6 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
           )
         )
     }
-    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => Callback {
       GoogleEventTracker.sendPageView(s"Arrival Simulations Page")
     })

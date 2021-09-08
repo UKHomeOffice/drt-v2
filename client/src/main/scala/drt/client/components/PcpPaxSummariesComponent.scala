@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.Pot
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewMode
@@ -36,7 +37,7 @@ object PcpPaxSummary {
 
 object PcpPaxSummariesComponent {
 
-  case class Props(portStatePot: Pot[PortState], viewMode: ViewMode, terminalName: Terminal, minuteTicker: Int)
+  case class Props(portStatePot: Pot[PortState], viewMode: ViewMode, terminalName: Terminal, minuteTicker: Int) extends UseValueEq
 
   class Backend {
     def render(props: Props): TagOf[Div] = {

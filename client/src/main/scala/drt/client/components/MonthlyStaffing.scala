@@ -37,7 +37,7 @@ object MonthlyStaffing {
 
   case class Props(shifts: ShiftAssignments,
                    terminalPageTab: TerminalPageTabLoc,
-                   router: RouterCtl[Loc]) {
+                   router: RouterCtl[Loc]) extends UseValueEq {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
   }
 
@@ -131,9 +131,6 @@ object MonthlyStaffing {
 
   val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
-  implicit val stateReuse: Reusability[State] = Reusability.always[State]
-
   def getQuarterHourlySlotChanges(timeSlotMinutes: Int, changes: Map[(Int, Int), Int]): Map[(Int, Int), Int] =
     if (timeSlotMinutes == 60) hourlyToQuarterHourlySlots(changes) else changes
 
@@ -213,7 +210,6 @@ object MonthlyStaffing {
           )
         ))
     })
-    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}")
     })

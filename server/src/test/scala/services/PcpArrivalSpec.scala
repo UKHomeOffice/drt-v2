@@ -4,7 +4,7 @@ import controllers.ArrivalGenerator.arrival
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared.api.{Arrival, WalkTime}
 import drt.shared.coachTime.{CoachTransfer, DefaultCoachWalkTime, LhrCoachWalkTime}
-import drt.shared.redlist.LhrRedListDatesImpl
+import drt.shared.redlist.{LhrRedListDatesImpl, RedListUpdate, RedListUpdates}
 import drt.shared.{MilliDate, PortCode}
 import org.specs2.mutable.SpecificationLike
 
@@ -193,9 +193,9 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      def walkTimeForFlight(flight: Arrival): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight)
+      def walkTimeForFlight(flight: Arrival, redListUpdates: RedListUpdates): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight, redListUpdates)
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight, RedListUpdates.empty)
 
       val schMillis = 1483230000000L
       val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + defaultWalkTimeMillis)
@@ -214,9 +214,9 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      def walkTimeForFlight(flight: Arrival): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight)
+      def walkTimeForFlight(flight: Arrival, redListUpdates: RedListUpdates): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight, redListUpdates)
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight, RedListUpdates.empty)
 
       val actChoxMillis = 1483230000000L
       val expected = MilliDate(actChoxMillis + firstPaxOffMillis + defaultWalkTimeMillis)
@@ -239,9 +239,9 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      def walkTimeForFlight(flight: Arrival): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight)
+      def walkTimeForFlight(flight: Arrival, redListUpdates: RedListUpdates): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight, redListUpdates)
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight, RedListUpdates.empty)
 
       val actChoxMillis = 1483230000000L
       val expected = MilliDate(actChoxMillis + firstPaxOffMillis + gateWalkTimeMillis)
@@ -260,9 +260,9 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val wtp = walkTimeMillis(walkTimes) _
 
-      def walkTimeForFlight(flight: Arrival): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight)
+      def walkTimeForFlight(flight: Arrival, redListUpdates: RedListUpdates): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight, redListUpdates)
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight, RedListUpdates.empty)
 
       val schMillis = 1483230000000L
       val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + defaultWalkTimeMillis)
@@ -283,9 +283,9 @@ class PcpArrivalSpec extends SpecificationLike {
 
       val sWtp = walkTimeMillis(Map()) _
 
-      def walkTimeForFlight(flight: Arrival): Long = gateOrStandWalkTimeCalculator(gWtp, sWtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight)
+      def walkTimeForFlight(flight: Arrival, redListUpdates: RedListUpdates): Long = gateOrStandWalkTimeCalculator(gWtp, sWtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight, redListUpdates)
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight, RedListUpdates.empty)
 
       val schMillis = 1483230000000L
       val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + gateWalkTimeMillis)
@@ -305,9 +305,9 @@ class PcpArrivalSpec extends SpecificationLike {
       val gWtp = walkTimeMillis(Map()) _
       val sWtp = walkTimeMillis(Map(("2L", T1) -> standWalkTimeMillis)) _
 
-      def walkTimeForFlight(flight: Arrival): Long = gateOrStandWalkTimeCalculator(gWtp, sWtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight)
+      def walkTimeForFlight(flight: Arrival, redListUpdates: RedListUpdates): Long = gateOrStandWalkTimeCalculator(gWtp, sWtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight, redListUpdates)
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight, RedListUpdates.empty)
 
       val schMillis = 1483230000000L
       val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + standWalkTimeMillis)
@@ -329,9 +329,9 @@ class PcpArrivalSpec extends SpecificationLike {
       val standWalkTimeMillis = 600000L
       val sWtp = walkTimeMillis(Map(("2L", T1) -> standWalkTimeMillis)) _
 
-      def walkTimeForFlight(flight: Arrival): Long = gateOrStandWalkTimeCalculator(gWtp, sWtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight)
+      def walkTimeForFlight(flight: Arrival, redListUpdates: RedListUpdates): Long = gateOrStandWalkTimeCalculator(gWtp, sWtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight, redListUpdates)
 
-      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight, RedListUpdates.empty)
 
       val schMillis = 1483230000000L
       val expected = MilliDate(schMillis + timeToChoxMillis + firstPaxOffMillis + standWalkTimeMillis)
@@ -353,16 +353,17 @@ class PcpArrivalSpec extends SpecificationLike {
       val standWalkTimeMillis = 10 * oneMinuteMillis
       val sWtp = walkTimeMillis(Map(("2L", T2) -> standWalkTimeMillis)) _
 
-      def walkTimeForFlight(flight: Arrival): Long = {
+      def walkTimeForFlight(flight: Arrival, redListUpdates: RedListUpdates): Long = {
         val transfer = CoachTransfer(T2, paxLoadingTime, coachTransferTime, walkTimeFromCoach)
-        gateOrStandWalkTimeCalculator(gWtp, sWtp, defaultWalkTimeMillis, LhrCoachWalkTime(LhrRedListDatesImpl, List(transfer)))(flight)
+        gateOrStandWalkTimeCalculator(gWtp, sWtp, defaultWalkTimeMillis, LhrCoachWalkTime(LhrRedListDatesImpl, List(transfer)))(flight, redListUpdates)
       }
+      val redListedAfghanistan = RedListUpdates(Map(0L -> RedListUpdate(0L, Map("Afghanistan" -> "AFG"), List())))
 
       "when we ask for the pcpFrom time for a red list flight at T2 scheduled after T4 has opened as a red list terminal"  >> {
         val flight = arrival(schDt = "2021-07-01T00:20.00Z", terminal = T2, gate = Option("2"), stand = Option("2L"), origin = PortCode("KBL"))
 
         "then we should get scheduled + time to chox + first pax off + coach load + coach transfer + coach gate walk time" >> {
-          val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
+          val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight, redListedAfghanistan)
           val expected = MilliDate(flight.Scheduled + timeToChoxMillis + firstPaxOffMillis + paxLoadingTime + coachTransferTime + walkTimeFromCoach)
           result === expected
         }
@@ -372,7 +373,7 @@ class PcpArrivalSpec extends SpecificationLike {
         val flight = arrival(schDt = "2021-06-10T00:20.00Z", terminal = T2, gate = Option("2"), stand = Option("2L"), origin = PortCode("KBL"))
 
         "then we should get scheduled + time to chox + first pax off + coach load + coach transfer + coach gate walk time" >> {
-          val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
+          val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight, redListedAfghanistan)
           val expected = MilliDate(flight.Scheduled + timeToChoxMillis + firstPaxOffMillis + paxLoadingTime + coachTransferTime + walkTimeFromCoach)
           result === expected
         }
@@ -382,7 +383,7 @@ class PcpArrivalSpec extends SpecificationLike {
         val flight = arrival(schDt = "2021-05-10T00:20.00Z", terminal = T2, gate = Option("2"), stand = Option("2L"), origin = PortCode("KBL"))
 
         "then we should get scheduled + time to chox + first pax off + stand walk time" >> {
-          val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight)
+          val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight)(flight, redListedAfghanistan)
           val expected = MilliDate(flight.Scheduled + timeToChoxMillis + firstPaxOffMillis + standWalkTimeMillis)
           result === expected
         }

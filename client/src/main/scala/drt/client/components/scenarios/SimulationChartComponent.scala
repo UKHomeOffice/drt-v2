@@ -1,5 +1,6 @@
 package drt.client.components.scenarios
 
+import diode.UseValueEq
 import drt.client.components.ChartJSComponent._
 import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.components.styles.ScalaCssImplicits.StringExtended
@@ -24,7 +25,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
                     simulationParams: SimulationFormFields,
                     airportConfig: AirportConfig,
                     terminal: Terminal
-                  ) {
+                  ) extends UseValueEq {
     def queueOrder: List[Queue] = airportConfig.desksExportQueueOrder
   }
 

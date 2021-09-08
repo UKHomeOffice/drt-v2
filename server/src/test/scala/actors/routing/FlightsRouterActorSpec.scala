@@ -54,7 +54,6 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get that flight back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates
@@ -80,7 +79,6 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get all the flights back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates
@@ -106,7 +104,6 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should only get back flights within the requested range" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates
@@ -135,7 +132,6 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates
@@ -164,7 +160,6 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates
@@ -193,7 +188,6 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates
@@ -222,7 +216,6 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get back that flight" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates
@@ -250,7 +243,6 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Then I should get that flight back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new FlightsRouterActor(
-          TestProbe().ref,
           Seq(T1),
           mockLookup.lookup(flights),
           noopUpdates
@@ -267,7 +259,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
   "Concerning persistence of flights" >> {
     "Given a router, I should see updates sent to it are persisted" >> {
-      val lookups = FlightLookups(system, myNow, queuesByTerminal = Map(T1 -> Seq(EeaDesk, NonEeaDesk, EGate)), updatesSubscriber = TestProbe("").ref)
+      val lookups = FlightLookups(system, myNow, queuesByTerminal = Map(T1 -> Seq(EeaDesk, NonEeaDesk, EGate)))
       val router = lookups.flightsActor
 
       val scheduled = "2021-06-01T00:00"
@@ -315,7 +307,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Add red list pax to an existing arrival" in {
         val redListNow = SDate("2021-06-24T12:10:00")
-        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), updatesProbe.ref, None)
+        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None)
         val flightsRouter = lookups.flightsActor
         val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
         Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrival), Seq()), 1.second)
@@ -331,7 +323,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Add red list pax counts to the appropriate arrivals" in {
         val redListNow = SDate("2021-06-24T12:10:00")
-        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), updatesProbe.ref, None)
+        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None)
         val flightsRouter = lookups.flightsActor
         val scheduled2 = "2021-06-24T15:05"
         val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
@@ -352,7 +344,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Retain red list pax counts after updating an arrival" in {
         val redListNow = SDate("2021-06-24T12:10:00")
-        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), updatesProbe.ref, None)
+        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()))
         val flightsRouter = lookups.flightsActor
         val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
         val redListPax = 10

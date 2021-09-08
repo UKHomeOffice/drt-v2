@@ -1,0 +1,43 @@
+package actors.serializers
+
+import drt.shared.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
+import scalapb.GeneratedMessage
+import server.protobuf.messages.RedListUpdates._
+
+object RedListUpdatesMessageConversion {
+  def setUpdatesToMessage(updates: SetRedListUpdate): GeneratedMessage =
+    SetRedListUpdateMessage(Option(updates.originalDate), Option(updateToMessage(updates.redListUpdate)))
+
+  def updateToMessage(update: RedListUpdate): RedListUpdateMessage =
+    RedListUpdateMessage(Option(update.effectiveFrom), update.additions.map {
+      case (n, c) => AdditionMessage(Option(n), Option(c))
+    }.toSeq)
+
+  def additionsFromMessage(additions: Seq[AdditionMessage]): Map[String, String] =
+    additions.collect {
+      case AdditionMessage(Some(countryName), Some(countryCode)) => (countryName, countryCode)
+    }.toMap
+
+  def removalsFromMessage(removals: Seq[RemovalMessage]): List[String] =
+    removals.collect {
+      case RemovalMessage(Some(countryName)) => countryName
+    }.toList
+
+  def updateFromMessage(message: RedListUpdateMessage): Option[RedListUpdate] =
+    for {
+      effectiveFrom <- message.effectiveFrom
+    } yield RedListUpdate(effectiveFrom, additionsFromMessage(message.additions), removalsFromMessage(message.removals))
+
+  def setUpdatesFromMessage(msg: SetRedListUpdateMessage): Option[SetRedListUpdate] = {
+    for {
+      originalDate <- msg.originalDate
+      updates <- msg.update.flatMap(updateFromMessage)
+    } yield SetRedListUpdate(originalDate, updates)
+  }
+
+  def updatesFromMessage(msg: RedListUpdatesMessage): RedListUpdates =
+    RedListUpdates(msg.updates.map(u => updateFromMessage(u)).collect {
+      case Some(update) => (update.effectiveFrom, update)
+    }.toMap)
+
+}

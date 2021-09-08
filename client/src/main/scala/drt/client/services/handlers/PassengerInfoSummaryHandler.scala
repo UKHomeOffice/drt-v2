@@ -3,8 +3,8 @@ package drt.client.services.handlers
 import diode._
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
+import drt.client.services.DrtApi
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{DrtApi, PollDelay}
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
 import drt.shared.{ArrivalKey, PortState}
@@ -42,7 +42,7 @@ class PassengerInfoSummaryHandler[M](
         }))
 
     case SetPassengerInfoSummary(utcDate, passengerInfo) =>
-      val updates: Map[ArrivalKey, PassengerInfoSummary] = passengerInfo.map(pi => (pi.arrivalKey) -> pi).toMap
+      val updates: Map[ArrivalKey, PassengerInfoSummary] = passengerInfo.map(pi => pi.arrivalKey -> pi).toMap
       val existing = value.getOrElse(Map())
 
       updated(Ready(existing ++ Map(utcDate -> updates)))

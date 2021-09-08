@@ -70,12 +70,11 @@ trait MinuteLookupsLike {
 case class MinuteLookups(system: ActorSystem,
                          now: () => SDateLike,
                          expireAfterMillis: Int,
-                         queuesByTerminal: Map[Terminal, Seq[Queue]],
-                         deploymentsQueueActor: ActorRef)
+                         queuesByTerminal: Map[Terminal, Seq[Queue]])
                         (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "minutes-lookup-kill-actor")
 
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, deploymentsQueueActor)))
+  override val queueMinutesActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes)))
 
   override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes)))
 }

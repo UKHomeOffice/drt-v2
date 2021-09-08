@@ -8,7 +8,7 @@ import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.arrivals.FeedStateLike
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
-import actors.DateRange
+import actors.{DateRange, SetCrunchRequestQueue}
 import actors.persistent.staffing.{GetFeedStatuses, GetState}
 import akka.NotUsed
 import akka.actor.ActorRef
@@ -53,8 +53,7 @@ case class ApiFeedState(latestZipFilename: String, maybeSourceStatuses: Option[F
 }
 
 class ManifestRouterActor(manifestLookup: ManifestLookup,
-                          manifestsUpdate: ManifestsUpdate,
-                          updatesSubscriber: ActorRef) extends RecoveryActorLike {
+                          manifestsUpdate: ManifestsUpdate) extends RecoveryActorLike {
   override def persistenceId: String = "arrival-manifests"
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
@@ -70,6 +69,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   )
 
   var state: ApiFeedState = initialState
+  var maybeUpdatesSubscriber: Option[ActorRef] = None
 
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -108,6 +108,10 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   )
 
   override def receiveCommand: Receive = {
+    case SetCrunchRequestQueue(queueActor) =>
+      log.info("Received subscriber")
+      maybeUpdatesSubscriber = Option(queueActor)
+
     case ManifestsFeedSuccess(DqManifests(updatedLZF, newManifests), createdAt) =>
       updateRequestsQueue = (sender(), VoyageManifests(newManifests)) :: updateRequestsQueue
 
@@ -170,7 +174,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     processingRequest = true
     val eventualEffects = sendUpdates(updates)
     eventualEffects
-      .map(updatesSubscriber ! _)
+      .map(updatedMillis => maybeUpdatesSubscriber.foreach(_ ! updatedMillis))
       .onComplete { _ =>
         processingRequest = false
         replyTo ! Ack

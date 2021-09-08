@@ -11,7 +11,6 @@ import scalapb.GeneratedMessage
 import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
 import services.{PaxDeltas, SDate}
 
-import scala.language.postfixOps
 
 case class PointInTimeOriginTerminalDay(pointInTime: Long, origin: String, terminal: String, day: Long)
 

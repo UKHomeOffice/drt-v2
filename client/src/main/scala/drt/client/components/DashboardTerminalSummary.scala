@@ -1,11 +1,11 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi._
 import drt.shared.Queues.{InvalidQueue, Queue}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.Arrival
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
@@ -115,7 +115,7 @@ object DashboardTerminalSummary {
                    queues: Seq[Queue],
                    timeWindowStart: SDateLike,
                    timeWindowEnd: SDateLike
-                  )
+                  ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
     .render_P { props =>

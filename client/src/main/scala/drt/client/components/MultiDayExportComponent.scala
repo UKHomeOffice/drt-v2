@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.components.TerminalContentComponent.exportLink
 import drt.client.components.styles.{DefaultFormFieldsStyle, WithScalaCssImplicits}
@@ -11,24 +12,24 @@ import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
 import drt.shared.redlist.LhrRedListDatesImpl
 import drt.shared.{PortCode, SDateLike}
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiFormLabel, MuiGrid, MuiTextField}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CallbackTo, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{CallbackTo, CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 
 object MultiDayExportComponent extends WithScalaCssImplicits {
   val today: SDateLike = SDate.now()
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser)
+  case class Props(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser) extends UseValueEq
 
-  case class State(startDate: LocalDate, endDate: LocalDate, showDialogue: Boolean = false) {
+  case class State(startDate: LocalDate, endDate: LocalDate, showDialogue: Boolean = false) extends UseValueEq {
 
     def setStart(dateString: String): State = copy(startDate = LocalDate.parse(dateString).getOrElse(startDate))
 
@@ -38,11 +39,6 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
     def endMillis: MillisSinceEpoch = SDate(endDate).millisSinceEpoch
   }
-
-  implicit val localDateReuse: Reusability[LocalDate] = Reusability.derive[LocalDate]
-  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-  implicit val terminalReuse: Reusability[Terminal] = Reusability.derive[Terminal]
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.terminal, p.selectedDate.millisSinceEpoch))
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
     .initialStateFromProps { p =>
@@ -127,7 +123,6 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
             )
           )))
     })
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String, currentDate: LocalDate): html_<^.VdomElement = {

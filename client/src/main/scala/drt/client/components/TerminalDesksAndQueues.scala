@@ -13,7 +13,7 @@ import drt.shared.Queues.{EGate, Queue}
 import drt.shared._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
 import org.scalajs.dom.html.Div
 import org.scalajs.dom.raw.Node
@@ -58,10 +58,6 @@ object TerminalDesksAndQueues {
   }
 
   case class State(showActuals: Boolean, viewType: ViewType, showWaitColumn: Boolean)
-
-  implicit val stateReuse: Reusability[State] = Reusability.by_==[State]
-  implicit val propsReuse: Reusability[Props] = Reusability.by_==[Props]
-
 
   class Backend(backendScope: BackendScope[Props, State]) {
 
@@ -251,7 +247,6 @@ object TerminalDesksAndQueues {
   val component = ScalaComponent.builder[Props]("Loader")
     .initialStateFromProps(p => State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType, showWaitColumn = !p.featureFlags.displayWaitTimesToggle))
     .renderBackend[Backend]
-    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 

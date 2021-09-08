@@ -1,12 +1,10 @@
 package controllers.application
 
 import controllers.Application
-import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 import drt.shared._
-import drt.shared.redlist.RedList
 import play.api.mvc.{Action, AnyContent}
-import services.graphstages.Crunch
-import services.{AirportToCountry, SDate}
+import services.AirportToCountry
+import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 
 
 trait WithAirportInfo {
@@ -30,20 +28,6 @@ trait WithAirportInfo {
       }
 
       Ok(write(res))
-    }
-  }
-
-  def getRedListPorts(dateString: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
-    Action { _ =>
-      import upickle.default._
-
-      val forDate = SDate(dateString, Crunch.europeLondonTimeZone).millisSinceEpoch
-
-      val redListPorts = AirportToCountry.airportInfoByIataPortCode.values.collect {
-        case AirportInfo(_, _, country, portCode) if RedList.countryCodesByName(forDate).contains(country) => PortCode(portCode)
-      }
-
-      Ok(write(redListPorts))
     }
   }
 }

@@ -1,65 +1,76 @@
 package drt.client.components
 
+import diode.UseValueEq
+import diode.data.Pot
 import drt.client.components.ToolTips._
 import drt.client.modules.GoogleEventTracker
-import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Queues.Queue
 import drt.shared._
+import drt.shared.redlist.RedListUpdates
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.RedListsEdit
 
 object PortConfigPage {
 
-  case class Props()
+  case class Props(redListUpdates: Pot[RedListUpdates], user: Pot[LoggedInUser], airportConfig: Pot[AirportConfig]) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigPage")
-    .render_P(_ =>
-      <.div(^.className := "port-config", <.h3("Port Config"), PortConfigDetails())
-    )
+    .render_P { props =>
+      val mp = for {
+        redListUpdates <- props.redListUpdates
+        user <- props.user
+        airportConfig <- props.airportConfig
+      } yield
+        <.div(
+          ^.className := "port-config",
+          <.h3("Port Config"),
+          if (user.hasRole(RedListsEdit)) RedListEditor(redListUpdates) else EmptyVdom,
+          PortConfigDetails(airportConfig)
+        )
+      mp.render(identity)
+    }
     .componentDidMount(_ => Callback {
       GoogleEventTracker.sendPageView(s"port-config")
     })
     .build
 
-  def apply(): VdomElement = component(Props())
+  def apply(props: Props): VdomElement = component(props)
 }
 
 object PortConfigDetails {
 
-  case class Props()
+  case class Props(airportConfig: AirportConfig) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigDetails")
-    .render_P { _ =>
-      val airportConfigRCP = SPACircuit.connect(_.airportConfig)
+    .render_P { props =>
       <.div(
-        airportConfigRCP(airportConfigMP =>
-          <.div(airportConfigMP().renderReady(config => <.div(
-            config.terminals.map(tn =>
-              <.div(
-                <.h2(tn.toString),
-                <.div(^.className := "container config-container",
-                  <.h4("Min / Max Desks or eGate Banks by hour of day"),
-                  minMaxDesksTable(config.minMaxDesksByTerminalQueue24Hrs(tn))
-                ),
-                <.div(^.className := "container config-container",
-                  <.h4("Default Processing Times", " ", defaultProcessingTimesTooltip),
-                  defaultProcessingTimesTable(config.terminalProcessingTimes(tn))
-                ),
-                <.div(^.className := "container config-container",
-                  <.h4("Passenger Queue Allocation"),
-                  defaultPaxSplits(config.terminalPaxTypeQueueAllocation(tn))
-                ),
-                <.div(^.className := "container config-container",
-                  <.h4("Walktimes", " ", walkTimesTooltip),
-                  defaultWalktime(config.defaultWalkTimeMillis(tn))
-                )
-              )
-            ).toTagMod
-          )))
-        ))
+        props.airportConfig.terminals.map(tn =>
+          <.div(
+            <.h2(tn.toString),
+            <.div(^.className := "container config-container",
+              <.h4("Min / Max Desks or eGate Banks by hour of day"),
+              minMaxDesksTable(props.airportConfig.minMaxDesksByTerminalQueue24Hrs(tn))
+            ),
+            <.div(^.className := "container config-container",
+              <.h4("Default Processing Times", " ", defaultProcessingTimesTooltip),
+              defaultProcessingTimesTable(props.airportConfig.terminalProcessingTimes(tn))
+            ),
+            <.div(^.className := "container config-container",
+              <.h4("Passenger Queue Allocation"),
+              defaultPaxSplits(props.airportConfig.terminalPaxTypeQueueAllocation(tn))
+            ),
+            <.div(^.className := "container config-container",
+              <.h4("Walktimes", " ", walkTimesTooltip),
+              defaultWalktime(props.airportConfig.defaultWalkTimeMillis(tn))
+            )
+          )
+        ).toTagMod
+      )
     }
     .build
 
@@ -152,6 +163,6 @@ object PortConfigDetails {
     )
   )
 
-  def apply(): VdomElement = component(Props())
+  def apply(airportConfig: AirportConfig): VdomElement = component(Props(airportConfig))
 }
 

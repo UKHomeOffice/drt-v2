@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.Pot
 import drt.client.components.FlightComponents._
 import drt.client.services.JSDateConversions.SDate
@@ -7,7 +8,6 @@ import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.Arrival
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import org.scalajs.dom.raw.HTMLElement
@@ -67,7 +67,6 @@ object BigSummaryBoxes {
     val newSplits = Map[PaxTypeAndQueue, Double]()
     val allSplits: Iterable[(PaxTypeAndQueue, Double)] = flights.flatMap(bestFlightSplits)
     val splitsExcludingTransfers = allSplits.filter(_._1.queueType != Queues.Transfer)
-    //    //todo import cats - it makes short, efficient work of this sort of aggregation.
     val aggSplits: Map[PaxTypeAndQueue, Double] = splitsExcludingTransfers.foldLeft(newSplits) {
       case (agg, (k, v)) =>
         val g = agg.getOrElse(k, 0d)
@@ -86,7 +85,7 @@ object BigSummaryBoxes {
 
   def sumBestPax(bestFlightSplitPax: ApiFlightWithSplits => Double)(flights: Seq[ApiFlightWithSplits]): Double = flights.map(bestFlightSplitPax).sum
 
-  case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue])
+  case class Props(flightCount: Int, actPaxCount: Int, bestPaxCount: Int, aggSplits: Map[PaxTypeAndQueue, Int], paxQueueOrder: Seq[PaxTypeAndQueue]) extends UseValueEq
 
   def GraphComponent(splitTotal: Int, queuePax: Map[PaxTypeAndQueue, Int], paxQueueOrder: Iterable[PaxTypeAndQueue]): TagOf[HTMLElement] = {
     val value = Try {

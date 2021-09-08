@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -9,7 +10,7 @@ import japgolly.scalajs.react.{Callback, ScalaComponent}
 
 object PortExportDashboardPage {
 
-  case class Props(loggedInUser: LoggedInUser)
+  case class Props(loggedInUser: LoggedInUser) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("PortExportDashboard")
     .render_P(p => {

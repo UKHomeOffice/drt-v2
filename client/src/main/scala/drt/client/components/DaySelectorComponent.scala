@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.SPAMain._
 import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.logger.{Logger, LoggerFactory}
@@ -12,7 +13,7 @@ import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiTextField}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import scalacss.ScalaCssReactImplicits
 
 object DaySelectorComponent extends ScalaCssReactImplicits {
@@ -23,7 +24,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                    terminalPageTab: TerminalPageTabLoc,
                    loadingState: LoadingState,
                    minuteTicker: Int
-                  )
+                  ) extends UseValueEq
 
   case class State(date: LocalDate) {
     def selectedDate: SDateLike = SDate(date)
@@ -32,12 +33,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
   }
 
   val today: SDateLike = SDate.now()
-
-  implicit val propsReuse: Reusability[Props] = Reusability.by(
-    p => (p.terminalPageTab.viewMode.hashCode(), p.loadingState.isLoading, p.minuteTicker)
-  )
-
-  implicit val stateReuse: Reusability[State] = Reusability.by(_.hashCode())
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("DatePicker")
     .initialStateFromProps { p =>
@@ -144,7 +139,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
       )
 
     })
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)

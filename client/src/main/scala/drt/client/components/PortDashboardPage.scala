@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.SPAMain.{Loc, PortDashboardLoc}
@@ -8,16 +9,16 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.lab.MuiToggleButtonGroup
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.lab.MuiToggleButtonGroup
 
 object PortDashboardPage {
 
-  case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc)
+  case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc) extends UseValueEq
 
   case class DisplayPeriod(start: SDateLike, end: SDateLike)
 

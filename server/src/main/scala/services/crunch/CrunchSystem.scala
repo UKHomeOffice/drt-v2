@@ -7,7 +7,8 @@ import drt.chroma.ArrivalsDiffingStage
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.api.Arrival
-import drt.shared.{SDateLike, _}
+import drt.shared.redlist.{RedListUpdateCommand, RedListUpdates}
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
@@ -29,13 +30,16 @@ case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
                             liveArrivalsResponse: FR,
                             manifestsLiveResponse: SourceQueueWithComplete[ManifestsFeedResponse],
                             actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
+                            redListUpdates: SourceQueueWithComplete[List[RedListUpdateCommand]],
+                            crunchRequestActor: ActorRef,
+                            deploymentRequestActor: ActorRef,
                             killSwitches: List[UniqueKillSwitch]
                            )
 
 case class CrunchProps[FR](
                             logLabel: String = "",
                             airportConfig: AirportConfig,
-                            pcpArrival: Arrival => MilliDate,
+                            pcpArrival: (Arrival, RedListUpdates) => MilliDate,
                             portStateActor: ActorRef,
                             flightsActor: ActorRef,
                             maxDaysToCrunch: Int,
@@ -56,6 +60,7 @@ case class CrunchProps[FR](
                             arrivalsForecastBaseSource: Source[ArrivalsFeedResponse, FR], arrivalsForecastSource: Source[ArrivalsFeedResponse, FR],
                             arrivalsLiveBaseSource: Source[ArrivalsFeedResponse, FR],
                             arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
+                            redListUpdatesSource: Source[List[RedListUpdateCommand], SourceQueueWithComplete[List[RedListUpdateCommand]]],
                             passengersActorProvider: () => ActorRef,
                             initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
                             initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
@@ -65,7 +70,7 @@ case class CrunchProps[FR](
                             adjustEGateUseByUnder12s: Boolean,
                             optimiser: TryCrunch,
                             aclPaxAdjustmentDays: Int,
-                            startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch),
+                            startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch),
                             arrivalsAdjustments: ArrivalsAdjustmentsLike
                           )
 
@@ -89,6 +94,7 @@ object CrunchSystem {
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
+      initialRedListUpdates = RedListUpdates.empty,
       initialForecastBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastBaseArrivals,
       initialForecastArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals,
       initialLiveBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals,
@@ -102,7 +108,8 @@ object CrunchSystem {
       ),
       arrivalsAdjustments = props.arrivalsAdjustments,
       expireAfterMillis = props.expireAfterMillis,
-      now = props.now)
+      now = props.now,
+    )
 
     val forecastArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals, forecastMaxMillis)
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
@@ -115,6 +122,8 @@ object CrunchSystem {
       now = props.now,
       expireAfterMillis = props.expireAfterMillis,
       numberOfDays = props.maxDaysToCrunch)
+
+    val (crunchQueueActor, deploymentQueueActor, deskRecsKillSwitch, deploymentsKillSwitch) = props.startDeskRecs()
 
     val crunchSystem = RunnableCrunch(
       forecastBaseArrivalsSource = props.arrivalsForecastBaseSource,
@@ -139,13 +148,12 @@ object CrunchSystem {
       manifestsActor = props.voyageManifestsActor,
       portStateActor = props.portStateActor,
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
-      deploymentRequestActor = props.actors("deployment-request"),
-      forecastMaxMillis = forecastMaxMillis
+      deploymentRequestActor = deploymentQueueActor,
+      forecastMaxMillis = forecastMaxMillis,
+      redListUpdatesSource = props.redListUpdatesSource,
     )
 
-    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
-
-    val (deskRecsKillSwitch, deploymentsKillSwitch) = props.startDeskRecs()
+    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
 
     val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS, deskRecsKillSwitch, deploymentsKillSwitch)
 
@@ -159,6 +167,9 @@ object CrunchSystem {
       liveArrivalsResponse = liveIn,
       manifestsLiveResponse = manifestsLiveIn,
       actualDeskStats = actDesksIn,
+      redListUpdates = redListUpdatesIn,
+      crunchRequestActor = crunchQueueActor,
+      deploymentRequestActor = deploymentQueueActor,
       killSwitches
     )
   }

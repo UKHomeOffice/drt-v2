@@ -12,6 +12,7 @@ import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
+import drt.shared.redlist.RedListUpdates
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -25,7 +26,7 @@ object TerminalComponent {
 
   val log: Logger = LoggerFactory.getLogger("TerminalComponent")
 
-  case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc])
+  case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc]) extends UseValueEq
 
   case class TerminalModel(
                             portStatePot: Pot[PortState],
@@ -45,6 +46,7 @@ object TerminalComponent {
                             featureFlags: Pot[FeatureFlags],
                             arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                             redListPorts: Pot[HashSet[PortCode]],
+                            redListUpdates: Pot[RedListUpdates],
                           ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Terminal")
@@ -67,6 +69,7 @@ object TerminalComponent {
         model.featureFlags,
         model.arrivalSources,
         model.redListPorts,
+        model.redListUpdates,
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -100,137 +103,140 @@ object TerminalComponent {
             val terminalName = props.terminalPageTab.terminal.toString
 
             model.loggedInUserPot.render { loggedInUser =>
-
-              val terminalContentProps = TerminalContentComponent.Props(
-                portStatePot = model.portStatePot,
-                passengerInfoByDayPot = model.passengerInfoByDayPot,
-                potShifts = model.potShifts,
-                potFixedPoints = model.potFixedPoints,
-                potStaffMovements = model.potStaffMovements,
-                airportConfig = airportConfig,
-                terminalPageTab = props.terminalPageTab,
-                defaultTimeRangeHours = timeRangeHours,
-                router = props.router,
-                showActuals = model.showActuals,
-                viewMode = model.viewMode,
-                loggedInUser = loggedInUser,
-                minuteTicker = model.minuteTicker,
-                featureFlags = model.featureFlags,
-                arrivalSources = model.arrivalSources,
-                redListPorts = model.redListPorts,
-              )
-              <.div(
-                <.ul(^.className := "nav nav-tabs",
-                  <.li(^.className := terminalDashboardClass,
-                    <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", "Terminal Dashboard"), ^.onClick --> {
-                      GoogleEventTracker.sendEvent(terminalName, "click", "Terminal Dashboard")
-                      props.router.set(
-                        props.terminalPageTab.copy(
-                          mode = "dashboard",
-                          subMode = "summary",
-                          queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams)
-                      )
-                    }
-                  ),
-                  <.li(^.className := currentClass,
-                    <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current", " ", currentTooltip), ^.onClick --> {
-                      GoogleEventTracker.sendEvent(terminalName, "click", "Current")
-                      props.router.set(props.terminalPageTab.copy(
-                        mode = "current",
-                        subMode = subMode,
-                        queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
-                      ))
-                    }),
-                  <.li(^.className := snapshotDataClass,
-                    <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot", " ", snapshotTooltip),
-                    ^.onClick --> {
-                      GoogleEventTracker.sendEvent(terminalName, "click", "Snapshot")
-                      props.router.set(props.terminalPageTab.copy(
-                        mode = "snapshot",
-                        subMode = subMode,
-                        queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
-                      ))
-                    }
-                  ),
-                  <.li(^.className := planningClass,
-                    <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"),
-                    ^.onClick --> {
-                      GoogleEventTracker.sendEvent(terminalName, "click", "Planning")
-                      props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
-                    }
-                  ),
-                  if (loggedInUser.roles.contains(StaffEdit))
-                    <.li(^.className := staffingClass,
-                      <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip),
-                      ^.onClick --> {
-                        GoogleEventTracker.sendEvent(terminalName, "click", "Monthly Staffing")
-                        props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
-                      }
-                    ) else ""
-                ),
-                <.div(^.className := "tab-content",
-                  <.div(^.id := "dashboard", ^.className := s"tab-pane terminal-dashboard-container $dashboardContentClass",
-                    if (props.terminalPageTab.mode == "dashboard") {
-                      terminalContentProps.portStatePot.renderReady(ps =>
-                        terminalContentProps.passengerInfoByDayPot.renderReady(paxInfo => {
-                          TerminalDashboardComponent(
-                            terminalPageTabLoc = props.terminalPageTab,
-                            airportConfig = terminalContentProps.airportConfig,
-                            portState = ps,
-                            passengerInfoSummaryByDay = paxInfo,
-                            router = props.router,
-                            featureFlags = model.featureFlags,
-                            loggedInUser = loggedInUser,
-                            redListPorts = model.redListPorts,
-                          )
-                        }))
-                    } else ""
-                  ),
-                  <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
-                    if (props.terminalPageTab.mode == "current") <.div(
-                      <.h2(props.terminalPageTab.dateFromUrlOrNow match {
-                        case date: SDateLike if date.ddMMyyString == SDate.now().ddMMyyString => "Live View"
-                        case date: SDateLike if date.millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
-                        case date: SDateLike if date.millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
-                        case _ => "Live View"
-                      }),
-                      <.div(^.className := "content-head",
-                        PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
-                        DaySelectorComponent(DaySelectorComponent.Props(props.router,
-                          props.terminalPageTab,
-                          model.loadingState,
-                          model.minuteTicker
-                        ))
-                      ),
-                      TerminalContentComponent(terminalContentProps)
-                    ) else ""
-                  }),
-                  <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
-                    if (props.terminalPageTab.mode == "snapshot") <.div(
-                      <.h2("Snapshot View"),
-                      SnapshotSelector(props.router, props.terminalPageTab, model.loadingState),
-                      TerminalContentComponent(terminalContentProps)
-                    ) else ""
-                  }),
-                  <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
-                    if (props.terminalPageTab.mode == "planning") {
-                      <.div(
-                        <.div(model.forecastPeriodPot.render(fp => {
-                          TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
-                        }))
-                      )
-                    } else ""
-                  }),
-                  if (loggedInUser.roles.contains(StaffEdit))
-                    <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
-                      if (props.terminalPageTab.mode == "staffing") {
-                        model.potMonthOfShifts.render(ms => {
-                          MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
-                        })
-                      } else ""
-                    ) else ""
+              model.redListUpdates.render { redListUpdates =>
+                val terminalContentProps = TerminalContentComponent.Props(
+                  portStatePot = model.portStatePot,
+                  passengerInfoByDayPot = model.passengerInfoByDayPot,
+                  potShifts = model.potShifts,
+                  potFixedPoints = model.potFixedPoints,
+                  potStaffMovements = model.potStaffMovements,
+                  airportConfig = airportConfig,
+                  terminalPageTab = props.terminalPageTab,
+                  defaultTimeRangeHours = timeRangeHours,
+                  router = props.router,
+                  showActuals = model.showActuals,
+                  viewMode = model.viewMode,
+                  loggedInUser = loggedInUser,
+                  minuteTicker = model.minuteTicker,
+                  featureFlags = model.featureFlags,
+                  arrivalSources = model.arrivalSources,
+                  redListPorts = model.redListPorts,
+                  redListUpdates = model.redListUpdates,
                 )
-              )
+                <.div(
+                  <.ul(^.className := "nav nav-tabs",
+                    <.li(^.className := terminalDashboardClass,
+                      <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", "Terminal Dashboard"), ^.onClick --> {
+                        GoogleEventTracker.sendEvent(terminalName, "click", "Terminal Dashboard")
+                        props.router.set(
+                          props.terminalPageTab.copy(
+                            mode = "dashboard",
+                            subMode = "summary",
+                            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams)
+                        )
+                      }
+                    ),
+                    <.li(^.className := currentClass,
+                      <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current", " ", currentTooltip), ^.onClick --> {
+                        GoogleEventTracker.sendEvent(terminalName, "click", "Current")
+                        props.router.set(props.terminalPageTab.copy(
+                          mode = "current",
+                          subMode = subMode,
+                          queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
+                        ))
+                      }),
+                    <.li(^.className := snapshotDataClass,
+                      <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot", " ", snapshotTooltip),
+                      ^.onClick --> {
+                        GoogleEventTracker.sendEvent(terminalName, "click", "Snapshot")
+                        props.router.set(props.terminalPageTab.copy(
+                          mode = "snapshot",
+                          subMode = subMode,
+                          queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
+                        ))
+                      }
+                    ),
+                    <.li(^.className := planningClass,
+                      <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"),
+                      ^.onClick --> {
+                        GoogleEventTracker.sendEvent(terminalName, "click", "Planning")
+                        props.router.set(props.terminalPageTab.copy(mode = "planning", subMode = subMode, queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
+                      }
+                    ),
+                    if (loggedInUser.roles.contains(StaffEdit))
+                      <.li(^.className := staffingClass,
+                        <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip),
+                        ^.onClick --> {
+                          GoogleEventTracker.sendEvent(terminalName, "click", "Monthly Staffing")
+                          props.router.set(props.terminalPageTab.copy(mode = "staffing", subMode = "15", queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams))
+                        }
+                      ) else ""
+                  ),
+                  <.div(^.className := "tab-content",
+                    <.div(^.id := "dashboard", ^.className := s"tab-pane terminal-dashboard-container $dashboardContentClass",
+                      if (props.terminalPageTab.mode == "dashboard") {
+                        terminalContentProps.portStatePot.renderReady(ps =>
+                          terminalContentProps.passengerInfoByDayPot.renderReady(paxInfo => {
+                            TerminalDashboardComponent(
+                              terminalPageTabLoc = props.terminalPageTab,
+                              airportConfig = terminalContentProps.airportConfig,
+                              portState = ps,
+                              passengerInfoSummaryByDay = paxInfo,
+                              router = props.router,
+                              featureFlags = model.featureFlags,
+                              loggedInUser = loggedInUser,
+                              redListPorts = model.redListPorts,
+                              redListUpdates = redListUpdates,
+                            )
+                          }))
+                      } else ""
+                    ),
+                    <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
+                      if (props.terminalPageTab.mode == "current") <.div(
+                        <.h2(props.terminalPageTab.dateFromUrlOrNow match {
+                          case date: SDateLike if date.ddMMyyString == SDate.now().ddMMyyString => "Live View"
+                          case date: SDateLike if date.millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
+                          case date: SDateLike if date.millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
+                          case _ => "Live View"
+                        }),
+                        <.div(^.className := "content-head",
+                          PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
+                          DaySelectorComponent(DaySelectorComponent.Props(props.router,
+                            props.terminalPageTab,
+                            model.loadingState,
+                            model.minuteTicker
+                          ))
+                        ),
+                        TerminalContentComponent(terminalContentProps)
+                      ) else ""
+                    }),
+                    <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
+                      if (props.terminalPageTab.mode == "snapshot") <.div(
+                        <.h2("Snapshot View"),
+                        SnapshotSelector(props.router, props.terminalPageTab, model.loadingState),
+                        TerminalContentComponent(terminalContentProps)
+                      ) else ""
+                    }),
+                    <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
+                      if (props.terminalPageTab.mode == "planning") {
+                        <.div(
+                          <.div(model.forecastPeriodPot.render(fp => {
+                            TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
+                          }))
+                        )
+                      } else ""
+                    }),
+                    if (loggedInUser.roles.contains(StaffEdit))
+                      <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container $staffingContentClass",
+                        if (props.terminalPageTab.mode == "staffing") {
+                          model.potMonthOfShifts.render(ms => {
+                            MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
+                          })
+                        } else ""
+                      ) else ""
+                  )
+                )
+              }
             }
           }))
         })

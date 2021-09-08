@@ -1,6 +1,7 @@
 package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
+import actors.persistent.SortedActorRefSource
 import akka.actor.{Actor, Props}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
@@ -50,10 +51,12 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
       staffToDeskLimits,
       desksAndWaitsProvider.loadsToSimulations)
 
-    val (queue, _) = RunnableOptimisation.createGraph(sink, deskRecs).run()
-    queue.offer(request)
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 
-    probe.fishForMessage(1 second)(expectedQueuePax)
+    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, deskRecs).run()
+    queue ! request
+
+    probe.fishForMessage(1.second)(expectedQueuePax)
   }
 
   "Given a mock workload provider returning no workloads" >> {

@@ -1,12 +1,12 @@
 package drt.client.components.styles
 
-import japgolly.scalajs.react.vdom.{VdomElement, VdomNode}
+import japgolly.scalajs.react.vdom.VdomNode
+import scalacss.ScalaCssReactImplicits
 import scalacss.defaults.Exports
 import scalacss.internal.StyleA
 import scalacss.internal.mutable.Settings
-import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
-import scalacss.ScalaCssReactImplicits
 
+import scala.language.implicitConversions
 import scala.scalajs.js
 import scala.scalajs.js.Dictionary
 import scala.scalajs.js.JSConverters.JSRichOption
@@ -17,11 +17,11 @@ trait WithScalaCssImplicits extends ScalaCssReactImplicits{
   val CssSettings: Exports with Settings = scalacss.devOrProdDefaults
 
   implicit class StringExtended(value: String) {
-    val toVdom = VdomNode(value)
+    val toVdom: VdomNode = VdomNode(value)
   }
 
   implicit class DoubleExtended(value: Double) {
-    val toCcyFormat = value.toFixed(2)
+    val toCcyFormat: String = value.toFixed(2)
   }
 
   implicit class ExtendedStyle(css: StyleA) {

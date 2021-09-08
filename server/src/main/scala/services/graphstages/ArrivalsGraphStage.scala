@@ -5,6 +5,7 @@ import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.Terminals.{InvalidTerminal, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.{DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop, LiveArrivalsUtil}
@@ -41,18 +42,19 @@ object ArrivalsGraphStage {
 }
 
 class ArrivalsGraphStage(name: String = "",
+                         initialRedListUpdates: RedListUpdates,
                          initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival],
                          initialForecastArrivals: SortedMap[UniqueArrival, Arrival],
                          initialLiveBaseArrivals: SortedMap[UniqueArrival, Arrival],
                          initialLiveArrivals: SortedMap[UniqueArrival, Arrival],
                          initialMergedArrivals: SortedMap[UniqueArrival, Arrival],
-                         pcpArrivalTime: Arrival => MilliDate,
+                         pcpArrivalTime: (Arrival, RedListUpdates) => MilliDate,
                          validPortTerminals: Set[Terminal],
                          arrivalDataSanitiser: ArrivalDataSanitiser,
                          arrivalsAdjustments: ArrivalsAdjustmentsLike,
                          expireAfterMillis: Int,
                          now: () => SDateLike)
-  extends GraphStage[FanInShape4[List[Arrival], List[Arrival], List[Arrival], List[Arrival], ArrivalsDiff]] {
+  extends GraphStage[FanInShape5[List[Arrival], List[Arrival], List[Arrival], List[Arrival], List[RedListUpdateCommand], ArrivalsDiff]] {
 
   import ArrivalsGraphStage._
 
@@ -60,11 +62,13 @@ class ArrivalsGraphStage(name: String = "",
   val inForecastArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsForecast.in")
   val inLiveBaseArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsLiveBase.in")
   val inLiveArrivals: Inlet[List[Arrival]] = Inlet[List[Arrival]]("FlightsLive.in")
+  val inRedListUpdates: Inlet[List[RedListUpdateCommand]] = Inlet[List[RedListUpdateCommand]]("RedListUpdates.in")
   val outArrivalsDiff: Outlet[ArrivalsDiff] = Outlet[ArrivalsDiff]("ArrivalsDiff.out")
-  override val shape = new FanInShape4(inForecastBaseArrivals, inForecastArrivals, inLiveBaseArrivals, inLiveArrivals, outArrivalsDiff)
+  override val shape = new FanInShape5(inForecastBaseArrivals, inForecastArrivals, inLiveBaseArrivals, inLiveArrivals, inRedListUpdates, outArrivalsDiff)
   val stageName = "arrivals"
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
+    var redListUpdates: RedListUpdates = RedListUpdates.empty
     var aclArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap()
     var forecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap()
     var ciriumArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap()
@@ -86,6 +90,7 @@ class ArrivalsGraphStage(name: String = "",
       sources.map(s => (s, arrivalsForSource(s)))
 
     override def preStart(): Unit = {
+      redListUpdates = initialRedListUpdates
       log.info(s"Received ${initialForecastBaseArrivals.size} base initial arrivals")
       aclArrivals ++= relevantFlights(SortedMap[UniqueArrival, Arrival]() ++ initialForecastBaseArrivals)
       log.info(s"Received ${initialForecastArrivals.size} forecast initial arrivals")
@@ -100,7 +105,7 @@ class ArrivalsGraphStage(name: String = "",
         case ArrivalsAdjustmentsNoop =>
           (initialMergedArrivals, Iterable[Arrival]())
         case adjustments =>
-          val adjusted = adjustments(initialMergedArrivals.values)
+          val adjusted = adjustments(initialMergedArrivals.values, redListUpdates)
           val adjustedByUnique = SortedMap[UniqueArrival, Arrival]() ++ adjusted.map(a => (a.unique, a))
           (adjustedByUnique, terminalRemovals(adjusted, initialMergedArrivals.values))
       }
@@ -135,12 +140,29 @@ class ArrivalsGraphStage(name: String = "",
       override def onPush(): Unit = onPushArrivals(inLiveArrivals, LiveArrivals)
     })
 
+    setHandler(inRedListUpdates, new InHandler {
+      override def onPush(): Unit = {
+        val updates = grab(inRedListUpdates)
+        redListUpdates = updates.foldLeft(redListUpdates) {
+          case (acc, update: SetRedListUpdate) => acc.update(update)
+          case (acc, DeleteRedListUpdates(date)) => acc.remove(date)
+        }
+        log.info(s"Received ${updates.size} red list update commands")
+        if (arrivalsAdjustments != ArrivalsAdjustmentsNoop) {
+          log.info("Recalculating all arrivals due to red list change")
+          handleIncomingArrivals(BaseArrivals, arrivalsAdjustments.apply(aclArrivals.values, redListUpdates).toList)
+        }
+
+        if (!hasBeenPulled(inRedListUpdates)) pull(inRedListUpdates)
+      }
+    })
+
     setHandler(outArrivalsDiff, new OutHandler {
       override def onPull(): Unit = {
         val timer = StageTimer(stageName, outArrivalsDiff)
         pushIfAvailable(toPush, outArrivalsDiff)
 
-        List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals).foreach(inlet => if (!hasBeenPulled(inlet)) {
+        List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals, inRedListUpdates).foreach(inlet => if (!hasBeenPulled(inlet)) {
           log.debug(s"Pulling Inlet: ${inlet.toString()}")
           pull(inlet)
         })
@@ -151,7 +173,7 @@ class ArrivalsGraphStage(name: String = "",
     def onPushArrivals(arrivalsInlet: Inlet[List[Arrival]], sourceType: ArrivalsSourceType): Unit = {
       val timer = StageTimer(stageName, outArrivalsDiff)
 
-      val incoming = arrivalsAdjustments.apply(grab(arrivalsInlet)).toList
+      val incoming = arrivalsAdjustments.apply(grab(arrivalsInlet), redListUpdates).toList
 
       log.info(s"Grabbed ${incoming.length} arrivals from $arrivalsInlet of $sourceType")
       if (incoming.nonEmpty || sourceType == BaseArrivals) handleIncomingArrivals(sourceType, incoming)
@@ -354,7 +376,7 @@ class ArrivalsGraphStage(name: String = "",
         TranPax = transPax,
         Status = bestStatus(key),
         FeedSources = feedSources(key),
-        PcpTime = Option(pcpArrivalTime(bestArrival).millisSinceEpoch),
+        PcpTime = Option(pcpArrivalTime(bestArrival, redListUpdates).millisSinceEpoch),
         ScheduledDeparture = if (bestArrival.ScheduledDeparture.isEmpty) baseArrival.ScheduledDeparture else bestArrival.ScheduledDeparture
       )
     }

@@ -2,16 +2,16 @@ package actors
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
-import actors.persistent.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
+import actors.persistent.{ApiFeedState, ManifestRouterActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals._
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.coachTime.CoachWalkTime
@@ -20,7 +20,6 @@ import manifests.passengers.S3ManifestPoller
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
-import services._
 import services.crunch.CrunchSystem
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
@@ -28,6 +27,7 @@ import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 
 import scala.collection.immutable.SortedMap
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -61,20 +61,16 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
 
-  override val crunchQueueActor: ActorRef = restartOnStop.actorOf(Props(new CrunchQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "crunch-queue-actor")
-  override val deploymentQueueActor: ActorRef = restartOnStop.actorOf(Props(new DeploymentQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "staff-queue-actor")
-  override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)), name = "voyage-manifests-router-actor")
+  override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
   override val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
-  override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, deploymentQueueActor)
-
+  override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
   val flightLookups: FlightLookups = FlightLookups(
     system,
     now,
     airportConfig.queuesByTerminal,
-    crunchQueueActor,
     params.maybeRemovalCutOffSeconds
   )
   override val flightsActor: ActorRef = flightLookups.flightsActor
@@ -115,34 +111,52 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
     } else userRolesFromHeader(headers)
 
   def run(): Unit = {
-    val futurePortStates: Future[(Option[PortState], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]])] = {
+    val futurePortStates: Future[
+      (Option[PortState],
+        Option[SortedMap[UniqueArrival, Arrival]],
+        Option[SortedMap[UniqueArrival, Arrival]],
+        Option[SortedMap[UniqueArrival, Arrival]],
+        Option[mutable.SortedSet[CrunchRequest]],
+        Option[mutable.SortedSet[CrunchRequest]],
+        )] = {
       val maybeLivePortState = initialFlightsPortState(portStateActor, params.forecastMaxDays)
       val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
+      val maybeInitialCrunchQueue = initialStateFuture[mutable.SortedSet[CrunchRequest]](persistentCrunchQueueActor)
+      val maybeInitialDeploymentQueue = initialStateFuture[mutable.SortedSet[CrunchRequest]](persistentDeploymentQueueActor)
       for {
         lps <- maybeLivePortState
         ba <- maybeInitialBaseArrivals
         fa <- maybeInitialFcstArrivals
         la <- maybeInitialLiveArrivals
-      } yield (lps, ba, fa, la)
+        cq <- maybeInitialCrunchQueue
+        dq <- maybeInitialDeploymentQueue
+      } yield (lps, ba, fa, la, cq, dq)
     }
 
     futurePortStates.onComplete {
-      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals)) =>
+      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeCrunchQueue, maybeDeploymentQueue)) =>
         system.log.info(s"Successfully restored initial state for App")
 
         val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(
-          maybePortState,
-          maybeBaseArrivals,
-          maybeForecastArrivals,
-          Option(SortedMap[UniqueArrival, Arrival]()),
-          maybeLiveArrivals,
-          params.refreshArrivalsOnStart,
-          params.refreshManifestsOnStart,
-          startDeskRecs)
+          initialPortState = maybePortState,
+          initialForecastBaseArrivals = maybeBaseArrivals,
+          initialForecastArrivals = maybeForecastArrivals,
+          initialLiveBaseArrivals = Option(SortedMap[UniqueArrival, Arrival]()),
+          initialLiveArrivals = maybeLiveArrivals,
+          initialCrunchQueue = maybeCrunchQueue,
+          initialDeploymentQueue = maybeDeploymentQueue,
+          refreshArrivalsOnStart = params.refreshArrivalsOnStart,
+          refreshManifestsOnStart = params.refreshManifestsOnStart,
+          startDeskRecs = startDeskRecs)
 
         new S3ManifestPoller(crunchInputs.manifestsLiveResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
+
+        redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
+        flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
+        manifestsRouterActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
+        queuesActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
 
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)
@@ -174,7 +188,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
   }
 
   val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode)
-
 }
 
-case class SetCrunchRequestQueue(source: SourceQueueWithComplete[CrunchRequest])
+case class SetCrunchRequestQueue(source: ActorRef)

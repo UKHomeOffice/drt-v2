@@ -1,7 +1,5 @@
 package drt.users
 
-import java.util.UUID
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
@@ -14,6 +12,7 @@ import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import org.slf4j.{Logger, LoggerFactory}
 import spray.json.{DefaultJsonProtocol, JsObject, JsValue, RootJsonFormat}
 
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -110,7 +109,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
 trait KeyCloakUserParserProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   implicit object KeyCloakUserFormatParser extends RootJsonFormat[KeyCloakUser] {
-    override def write(obj: KeyCloakUser): JsValue = ???
+    override def write(obj: KeyCloakUser): JsValue = throw new Exception("KeyCloakUser writer not implemented")
 
     override def read(json: JsValue): KeyCloakUser = json match {
       case JsObject(fields) =>

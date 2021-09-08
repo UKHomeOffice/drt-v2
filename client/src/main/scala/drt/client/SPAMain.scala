@@ -68,6 +68,8 @@ object SPAMain {
     }
   }
 
+  case class PortConfigPageLoc()
+
   case class TerminalPageTabLoc(terminalName: String,
                                 mode: String = "dashboard",
                                 subMode: String = "summary",
@@ -154,6 +156,7 @@ object SPAMain {
       UpdateMinuteTicker,
       GetFeedSourceStatuses(),
       GetAlerts(0L),
+      GetRedListUpdates,
       GetShowAlertModalDialog,
       GetOohStatus,
       GetFeatureFlags,
@@ -176,7 +179,7 @@ object SPAMain {
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
 
-      rule.notFound(redirectToPage(PortDashboardLoc(None))(Redirect.Replace))
+      rule.notFound(redirectToPage(PortDashboardLoc(None))(SetRouteVia.HistoryReplace))
     }
     .renderWith(Layout(_, _))
     .onPostRender((maybePrevLoc, currentLoc) => {
@@ -242,10 +245,11 @@ object SPAMain {
     staticRoute("#forecastFileUpload", ForecastFileUploadLoc) ~> renderR(_ => ForecastFileUploadPage())
   }
 
+
   def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
-
-    staticRoute("#config", PortConfigLoc) ~> renderR(_ => PortConfigPage())
+    val proxy = SPACircuit.connect(m => PortConfigPage.Props(m.redListUpdates, m.loggedInUserPot, m.airportConfig))
+    staticRoute("#config", PortConfigLoc) ~> render(proxy(x => PortConfigPage(x())))
   }
 
   def dashboardRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {

@@ -52,14 +52,12 @@ trait FlightLookupsLike {
 case class FlightLookups(system: ActorSystem,
                          now: () => SDateLike,
                          queuesByTerminal: Map[Terminal, Seq[Queue]],
-                         updatesSubscriber: ActorRef,
                          removalMessageCutOff: Option[FiniteDuration] = None
                         ) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
 
   override val flightsActor: ActorRef = system.actorOf(
     Props(new FlightsRouterActor(
-      updatesSubscriber,
       queuesByTerminal.keys,
       flightsByDayLookup(removalMessageCutOff),
       updateFlights

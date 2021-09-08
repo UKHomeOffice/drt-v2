@@ -7,6 +7,7 @@ import drt.shared.Queues.{Closed, Open, Queue, QueueFallbacks}
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
@@ -20,7 +21,7 @@ trait WorkloadCalculatorLike {
 
   val defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]
 
-  def flightLoadMinutes(flights: FlightsWithSplits): SplitMinutes
+  def flightLoadMinutes(flights: FlightsWithSplits, redListUpdates: RedListUpdates): SplitMinutes
 
   def combineCodeShares(flights: Iterable[ApiFlightWithSplits]): Iterable[ApiFlightWithSplits] = {
     val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
@@ -33,8 +34,8 @@ trait WorkloadCalculatorLike {
 
   val flightHasWorkload: FlightFilter
 
-  def flightsWithPcpWorkload(flights: Iterable[ApiFlightWithSplits]): Iterable[ApiFlightWithSplits] =
-    flights.filter(flightHasWorkload.apply)
+  def flightsWithPcpWorkload(flights: Iterable[ApiFlightWithSplits], redListUpdates: RedListUpdates): Iterable[ApiFlightWithSplits] =
+    flights.filter(fws => flightHasWorkload.apply(fws, redListUpdates))
 
   def paxTypeAndQueueCountsFromSplits(splitsToUse: Splits): Set[ApiPaxTypeAndQueueCount] = {
     val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
@@ -61,10 +62,10 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override def flightLoadMinutes(flights: FlightsWithSplits): SplitMinutes = {
+  override def flightLoadMinutes(flights: FlightsWithSplits, redListUpdates: RedListUpdates): SplitMinutes = {
     val minutes = new SplitMinutes
 
-    flightsWithPcpWorkload(combineCodeShares(flights.flights.values))
+    flightsWithPcpWorkload(combineCodeShares(flights.flights.values), redListUpdates)
       .foreach(incoming => minutes ++= flightToFlightSplitMinutes(incoming))
 
     minutes

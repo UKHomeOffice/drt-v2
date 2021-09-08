@@ -4,17 +4,65 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{T2, T3, T5, Terminal}
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.{ApiFlightWithSplits, Nationality, PortCode}
+import upickle.default.{ReadWriter, macroRW}
 
 import scala.collection.immutable.{Map, SortedMap}
 
-case class RedListUpdate(additions: Map[String, String], removals: List[String])
+
+case class RedListUpdates(updates: Map[MillisSinceEpoch, RedListUpdate]) {
+  lazy val isEmpty: Boolean = updates.isEmpty
+
+  def remove(effectiveFrom: MillisSinceEpoch): RedListUpdates = copy(updates = updates.filterKeys(_ != effectiveFrom))
+
+  def update(setRedListUpdate: SetRedListUpdate): RedListUpdates =
+    copy(updates = updates
+      .filter {
+        case (effectiveFrom, update) => effectiveFrom != setRedListUpdate.originalDate
+      } + (setRedListUpdate.redListUpdate.effectiveFrom -> setRedListUpdate.redListUpdate)
+    )
+
+  def ++(other: RedListUpdates): RedListUpdates = copy(updates = updates ++ other.updates)
+
+  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
+    updates
+      .filterKeys(changeDate => changeDate <= date)
+      .toList.sortBy(_._1)
+      .foldLeft(Map[String, String]()) {
+        case (acc, (date, updates)) => (acc ++ updates.additions) -- updates.removals
+      }
+
+  def redListNats(date: MillisSinceEpoch): Iterable[Nationality] =
+    countryCodesByName(date).values.map(Nationality(_))
+}
+
+object RedListUpdates {
+  val empty: RedListUpdates = RedListUpdates(Map())
+
+  implicit val rw: ReadWriter[RedListUpdates] = macroRW
+}
+
+case class RedListUpdate(effectiveFrom: MillisSinceEpoch, additions: Map[String, String], removals: List[String])
+
+object RedListUpdate {
+  implicit val rw: ReadWriter[RedListUpdate] = macroRW
+}
+
+sealed trait RedListUpdateCommand
+
+case class SetRedListUpdate(originalDate: MillisSinceEpoch, redListUpdate: RedListUpdate) extends RedListUpdateCommand
+
+object SetRedListUpdate {
+  implicit val rw: ReadWriter[SetRedListUpdate] = macroRW
+}
+
+case class DeleteRedListUpdates(millis: MillisSinceEpoch) extends RedListUpdateCommand
 
 object RedList {
   def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =
     portCode == PortCode("LHR") && List(T2, T5).contains(terminal)
 
   val redListChanges: SortedMap[MillisSinceEpoch, RedListUpdate] = SortedMap(
-    1613347200000L -> RedListUpdate(Map( //15 feb
+    1613347200000L -> RedListUpdate(1613347200000L, Map( //15 feb
       "Angola" -> "AGO",
       "Argentina" -> "ARG",
       "Bolivia" -> "BOL",
@@ -49,26 +97,26 @@ object RedList {
       "Zambia" -> "ZMB",
       "Zimbabwe" -> "ZWE",
     ), List()),
-    1616112000000L -> RedListUpdate(Map( //19 march
+    1616112000000L -> RedListUpdate(1616112000000L, Map( //19 march
       "Ethiopia" -> "ETH",
       "Oman" -> "OMN",
       "Qatar" -> "QAT",
       "Somalia" -> "SOM",
     ), List("Portugal", "Mauritius")),
-    1617922800000L -> RedListUpdate(Map( // 9 april
+    1617922800000L -> RedListUpdate(1617922800000L, Map( // 9 april
       "Philippines" -> "PHL",
       "Pakistan" -> "PAK",
       "Kenya" -> "KEN",
       "Bangladesh" -> "BGD",
     ), List()),
-    1619132400000L -> RedListUpdate(Map( // 23 april
+    1619132400000L -> RedListUpdate(1619132400000L, Map( // 23 april
       "India" -> "IND"), List()),
-    1620774000000L -> RedListUpdate(Map( // 12 May
+    1620774000000L -> RedListUpdate(1620774000000L, Map( // 12 May
       "Turkey" -> "TUR",
       "Maldives" -> "MDV",
       "Nepal" -> "NPL",
     ), List()),
-    1623106800000L -> RedListUpdate(Map( // 8 June
+    1623106800000L -> RedListUpdate(1623106800000L, Map( // 8 June
       "Afghanistan" -> "AFG",
       "Bahrain" -> "BHR",
       "Costa Rica" -> "CRI",
@@ -77,7 +125,7 @@ object RedList {
       "Sudan" -> "SDN",
       "Trinidad and Tobago" -> "TTO",
     ), List()),
-    1625007600000L -> RedListUpdate(Map( // 30 June
+    1625007600000L -> RedListUpdate(1625007600000L, Map( // 30 June
       "Dominican Republic" -> "DOM",
       "Eritrea" -> "ERI",
       "Haiti" -> "HTI",
@@ -85,13 +133,13 @@ object RedList {
       "Tunisia" -> "TUN",
       "Uganda" -> "UGA",
     ), List()),
-    1626649200000L -> RedListUpdate(Map( // 19 July
+    1626649200000L -> RedListUpdate(1626649200000L, Map( // 19 July
       "Cuba" -> "CUB",
       "Indonesia" -> "IDN",
       "Myanmar" -> "MMR",
       "Sierra Leone" -> "SLE",
     ), List()),
-    1628377200000L -> RedListUpdate(Map( // 8 Aug
+    1628377200000L -> RedListUpdate(1628377200000L, Map( // 8 Aug
       "Georgia" -> "GEO",
       "Mayotte" -> "MYT",
       "Mexico" -> "MEX",
@@ -102,18 +150,11 @@ object RedList {
       "Qatar",
       "United Arab Emirates",
     )),
-    1630278000000L -> RedListUpdate(Map( // 30 Aug
+    1630278000000L -> RedListUpdate(1630278000000L, Map( // 30 Aug
       "Thailand" -> "THA",
       "Montenegro" -> "MNE",
     ), List()),
   )
-
-  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
-    redListChanges
-      .filterKeys(changeDate => changeDate <= date)
-      .foldLeft(Map[String, String]()) {
-        case (acc, (date, updates)) => (acc ++ updates.additions) -- updates.removals
-      }
 }
 
 sealed trait DirectRedListFlight {
@@ -157,20 +198,18 @@ object IndirectRedListPax {
   def apply(displayRedListInfo: Boolean,
             portCode: PortCode,
             flightWithSplits: ApiFlightWithSplits,
-            maybePassengerInfo: Option[PassengerInfoSummary]): IndirectRedListPax =
+            maybePassengerInfo: Option[PassengerInfoSummary],
+            redListUpdates: RedListUpdates): IndirectRedListPax =
     (displayRedListInfo, portCode) match {
       case (false, _) => NoIndirectRedListPax
       case (true, PortCode("LHR")) =>
         NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
       case (true, _) =>
         val maybeNats = maybePassengerInfo.map(_.nationalities.filter {
-          case (nat, _) => redListNats(flightWithSplits.apiFlight.Scheduled).toList.contains(nat)
+          case (nat, _) => redListUpdates.redListNats(flightWithSplits.apiFlight.Scheduled).toList.contains(nat)
         })
         ApiIndirectRedListPax(maybeNats)
     }
-
-  def redListNats(date: MillisSinceEpoch): Iterable[Nationality] =
-    RedList.countryCodesByName(date).values.map(Nationality(_))
 }
 
 sealed trait EnabledIndirectRedListPax extends IndirectRedListPax {

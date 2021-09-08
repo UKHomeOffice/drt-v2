@@ -18,6 +18,7 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import drt.shared.{AirportConfig, _}
 import drt.users.KeyCloakClient
 import org.joda.time.chrono.ISOChronology
@@ -56,7 +57,8 @@ object PaxFlow {
 
   def pcpArrivalTimeForFlight(timeToChoxMillis: MillisSinceEpoch, firstPaxOffMillis: MillisSinceEpoch)
                              (walkTimeProvider: FlightWalkTime)
-                             (flight: Arrival): MilliDate = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider)(flight)
+                             (flight: Arrival, redListUpdates: RedListUpdates): MilliDate =
+    pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider)(flight, redListUpdates)
 }
 
 trait AirportConfiguration {
@@ -129,6 +131,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with AirportConfProvider
     with WithAirportConfig
     with WithAirportInfo
+    with WithRedLists
     with WithAlerts
     with WithAuth
     with WithContactDetails

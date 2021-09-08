@@ -1,11 +1,12 @@
 package services.crunch.deskrecs
 
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import actors.persistent.SortedActorRefSource
 import akka.NotUsed
-import akka.actor.ActorRef
-import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
-import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink, Source, SourceQueueWithComplete}
-import akka.stream.{ClosedShape, KillSwitches, OverflowStrategy, UniqueKillSwitch}
+import akka.actor.{ActorRef, ActorSystem}
+import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
+import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink}
+import akka.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.dates.LocalDate
 import drt.shared.{PortStateQueueMinutes, SDateLike}
@@ -14,7 +15,6 @@ import services.graphstages.Crunch.europeLondonTimeZone
 import services.{SDate, StreamSupervision, TimeLogger}
 
 import scala.collection.immutable.NumericRange
-import scala.concurrent.ExecutionContext
 
 object RunnableOptimisation {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -31,6 +31,8 @@ object RunnableOptimisation {
       else 0
   }
 
+  case class RemoveCrunchRequest(crunchRequest: CrunchRequest)
+
   object CrunchRequest {
     def apply(millis: MillisSinceEpoch, offsetMinutes: Int, durationMinutes: Int): CrunchRequest = {
       val midnight = SDate(millis, europeLondonTimeZone)
@@ -43,18 +45,17 @@ object RunnableOptimisation {
     }
   }
 
-  def createGraph(deskRecsSinkActor: ActorRef,
-                  crunchRequestsToQueueMinutes: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed]
-                 ): RunnableGraph[(SourceQueueWithComplete[CrunchRequest], UniqueKillSwitch)] = {
-
-    val crunchRequestSource = Source.queue[CrunchRequest](1, OverflowStrategy.backpressure)
+  def createGraph(crunchRequestSource: SortedActorRefSource,
+                  deskRecsSinkActor: ActorRef,
+                  crunchRequestsToQueueMinutes: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed])
+                 (implicit system: ActorSystem): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     val deskRecsSink = Sink.actorRefWithAck(deskRecsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
     val ks = KillSwitches.single[PortStateQueueMinutes]
 
     val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {
       implicit builder =>
         (crunchRequests, killSwitch) =>
-          crunchRequests.out ~> crunchRequestsToQueueMinutes ~> killSwitch ~> deskRecsSink
+          crunchRequests ~> crunchRequestsToQueueMinutes ~> killSwitch ~> deskRecsSink
           ClosedShape
     }
 

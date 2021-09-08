@@ -6,7 +6,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.{DrtApi, SPACircuit}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
-import japgolly.scalajs.react.{Callback, CtorType, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import upickle.default.{macroRW, write, ReadWriter => RW}
 
 
@@ -16,8 +16,6 @@ object PositiveFeedbackComponent {
   case class Props(url: String, feedbackUserEmail: String)
 
   implicit val rw: RW[Props] = macroRW
-
-  implicit val propsReuse: Reusability[Props] = Reusability.by(_.url)
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("NegativeFeedbackComponent")
     .render_P(props => {
@@ -30,7 +28,6 @@ object PositiveFeedbackComponent {
         )
       )
     })
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(url: String, userEmail: String): VdomElement = component(Props(url, userEmail))

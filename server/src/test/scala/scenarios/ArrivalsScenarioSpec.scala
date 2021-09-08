@@ -13,6 +13,7 @@ import drt.shared.Terminals.{T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.dates.LocalDate
+import drt.shared.redlist.RedListUpdates
 import manifests.passengers.ManifestLike
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -63,14 +64,15 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
         ))))
 
     val futureResult: Future[CrunchApi.DeskRecMinutes] = Scenarios.simulationResult(
-      simulationParams,
-      simulationParams.applyToAirportConfig(defaultAirportConfig),
-      splitsCalculator,
-      flightsProvider,
-      manifestsProvider,
-      historicManifestsProvider,
-      system.actorOf(Props(new AkkingActor())),
-      portStateActor
+      simulationParams = simulationParams,
+      simulationAirportConfig = simulationParams.applyToAirportConfig(defaultAirportConfig),
+      splitsCalculator = splitsCalculator,
+      flightsProvider = flightsProvider,
+      liveManifestsProvider = manifestsProvider,
+      historicManifestsProvider = historicManifestsProvider,
+      flightsActor = system.actorOf(Props(new AkkingActor())),
+      portStateActor = portStateActor,
+      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty)
     )
 
     val result = Await.result(futureResult, 1 second)

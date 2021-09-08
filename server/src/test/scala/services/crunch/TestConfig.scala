@@ -4,9 +4,10 @@ import actors.DrtStaticParameters
 import akka.actor.{ActorRef, Props}
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
-import services.{TrySimulator, TryCrunch}
+import services.{TryCrunch, TrySimulator}
 
 import scala.collection.immutable.SortedMap
 
@@ -16,7 +17,7 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
                       initialPortState: Option[PortState] = None,
                       airportConfig: AirportConfig = TestDefaults.airportConfig,
-                      pcpArrivalTime: Arrival => MilliDate = TestDefaults.pcpForFlightFromSch,
+                      pcpArrivalTime: (Arrival, RedListUpdates) => MilliDate = TestDefaults.pcpForFlightFromSch,
                       expireAfterMillis: Int = DrtStaticParameters.expireAfterMillis,
                       now: () => SDateLike,
                       initialShifts: ShiftAssignments = ShiftAssignments.empty,

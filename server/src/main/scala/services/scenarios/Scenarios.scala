@@ -1,14 +1,16 @@
 package services.scenarios
 
+import actors.persistent.SortedActorRefSource
 import actors.persistent.staffing.GetState
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import drt.shared.{AirportConfig, SimulationParams}
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
@@ -31,7 +33,8 @@ object Scenarios {
                         liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
                         historicManifestsProvider: HistoricManifestsProvider,
                         flightsActor: ActorRef,
-                        portStateActor: ActorRef
+                        portStateActor: ActorRef,
+                        redListUpdatesProvider: () => Future[RedListUpdates],
                       )(implicit system: ActorSystem, timeout: Timeout): Future[DeskRecMinutes] = {
 
 
@@ -47,18 +50,28 @@ object Scenarios {
     val terminalDeskLimits = PortDeskLimits.fixed(simulationAirportConfig)
 
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-      flightsProvider,
-      liveManifestsProvider,
-      historicManifestsProvider,
-      splitsCalculator,
-      flightsActor,
-      portDesksAndWaitsProvider.flightsToLoads,
-      portDesksAndWaitsProvider.loadsToDesks,
-      terminalDeskLimits)
+      arrivalsProvider = flightsProvider,
+      liveManifestsProvider = liveManifestsProvider,
+      historicManifestsProvider = historicManifestsProvider,
+      splitsCalculator = splitsCalculator,
+      splitsSink = flightsActor,
+      flightsToLoads = portDesksAndWaitsProvider.flightsToLoads,
+      loadsToQueueMinutes = portDesksAndWaitsProvider.loadsToDesks,
+      maxDesksProviders = terminalDeskLimits,
+      redListUpdatesProvider = redListUpdatesProvider,
+    )
 
-    val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(portStateActor, deskRecsProducer).run()
+    class DummyPersistentActor extends Actor {
+      override def receive: Receive = {
+        case _ => Unit
+      }
+    }
+    val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
 
-    crunchRequestQueue.offer(CrunchRequest(SDate(simulationParams.date).millisSinceEpoch, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch))
+    val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
+    val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, deskRecsProducer).run()
+
+    crunchRequestQueue ! CrunchRequest(SDate(simulationParams.date).millisSinceEpoch, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
 
     val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
       case drm: DeskRecMinutes => DeskRecMinutes(drm.minutes.filter(_.terminal == simulationParams.terminal))

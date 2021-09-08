@@ -5,6 +5,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.{A1, A2}
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import drt.shared.{AirportConfigs, PortCode, PortState}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
@@ -14,7 +15,7 @@ import scala.concurrent.duration._
 
 class EdiFlightAdjustmentsStreamSpec extends CrunchTestLike {
   var portIsRedListed = false
-  val isRedListed: (PortCode, MillisSinceEpoch) => Boolean = (_, _) => portIsRedListed
+  val isRedListed: (PortCode, MillisSinceEpoch, RedListUpdates) => Boolean = (_, _, _) => portIsRedListed
   val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
     now = () => SDate("2019-01-01T01:00"),
     pcpArrivalTime = TestDefaults.pcpForFlightFromBest,
@@ -51,7 +52,7 @@ class EdiFlightAdjustmentsStreamSpec extends CrunchTestLike {
   }
 
   private def offerAndCheck(arrival: Arrival): PortState = {
-    val adjustedArrivals = EdiArrivalsTerminalAdjustments(isRedListed).apply(List(arrival))
+    val adjustedArrivals = EdiArrivalsTerminalAdjustments(isRedListed).apply(List(arrival), RedListUpdates.empty)
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(adjustedArrivals)))
 
     crunch.portStateTestProbe.fishForMessage(1.second) {

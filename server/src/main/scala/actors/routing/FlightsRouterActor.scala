@@ -95,8 +95,7 @@ object FlightsRouterActor {
     )
 }
 
-class FlightsRouterActor(val updatesSubscriber: ActorRef,
-                         allTerminals: Iterable[Terminal],
+class FlightsRouterActor(allTerminals: Iterable[Terminal],
                          flightsByDayLookup: FlightsLookup,
                          updateFlights: FlightsUpdate
                         ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate)] {

@@ -9,8 +9,9 @@ import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
-import drt.shared.api.{PassengerInfoSummary, WalkTimes}
+import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
+import drt.shared.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 
 import java.util.UUID
@@ -157,6 +158,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      passengerInfoSummariesByDayPot: Pot[Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]]] = Ready(Map()),
                      snackbarMessage: Pot[String] = Empty,
                      redListPorts: Pot[HashSet[PortCode]] = Empty,
+                     redListUpdates: Pot[RedListUpdates] = Empty,
                     )
 
 object PollDelay {
@@ -214,6 +216,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new MinuteTickerHandler(zoomRW(_.minuteTicker)((m, v) => m.copy(minuteTicker = v))),
       new FeedsStatusHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v))),
       new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v))),
+      new RedListUpdatesHandler(zoomRW(_.redListUpdates)((m, v) => m.copy(redListUpdates = v))),
       new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v))),
       new ForecastFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v))),
       new SimulationHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),

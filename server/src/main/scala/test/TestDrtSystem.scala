@@ -2,6 +2,7 @@ package test
 
 import actors._
 import actors.acking.AckingReceiver.Ack
+import actors.persistent.RedListUpdatesActor.AddSubscriber
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Status}
 import akka.pattern.ask
 import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
@@ -55,13 +56,11 @@ case class TestDrtSystem(airportConfig: AirportConfig)
   override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new TestFixedPointsActor(now)), "staff-fixed-points")
   override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()))
-  override val crunchQueueActor: ActorRef = restartOnStop.actorOf(Props(new TestCrunchQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "crunch-queue-actor")
-  override val deploymentQueueActor: ActorRef = restartOnStop.actorOf(Props(new TestDeploymentQueueActor(now, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)), name = "staff-queue-actor")
-  override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests, crunchQueueActor)), name = "voyage-manifests-router-actor")
+  override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
-  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, deploymentQueueActor)
-  val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal, crunchQueueActor)
+  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal)
   override val flightsActor: ActorRef = flightLookups.flightsActor
   override val queuesActor: ActorRef = minuteLookups.queueMinutesActor
   override val staffActor: ActorRef = minuteLookups.staffMinutesActor
@@ -120,8 +119,6 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     aggregatedArrivalsActor,
     testManifestsActor,
     testArrivalActor,
-    crunchQueueActor,
-    deploymentQueueActor
   )
 
   val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
@@ -157,22 +154,29 @@ case class TestDrtSystem(airportConfig: AirportConfig)
   }
 
   def startSystem: () => List[KillSwitch] = () => {
-    val cs = startCrunchSystem(
+    val crunchInputs = startCrunchSystem(
       initialPortState = None,
       initialForecastBaseArrivals = None,
       initialForecastArrivals = None,
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
+      initialCrunchQueue = None,
+      initialDeploymentQueue = None,
       refreshArrivalsOnStart = false,
       refreshManifestsOnStart = false,
       startDeskRecs = startDeskRecs)
 
-    subscribeStaffingActors(cs)
-    startScheduledFeedImports(cs)
+    redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
+    flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
+    manifestsRouterActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
+    queuesActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
 
-    testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)
+    testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponse)
 
-    cs.killSwitches
+    subscribeStaffingActors(crunchInputs)
+    startScheduledFeedImports(crunchInputs)
+
+    crunchInputs.killSwitches
   }
 
   val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode)

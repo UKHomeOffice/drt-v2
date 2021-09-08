@@ -1,6 +1,7 @@
 package services.crunch.deskrecs
 
 import actors.acking.AckingReceiver.{Ack, StreamInitialized}
+import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.Materializer
@@ -14,6 +15,7 @@ import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPe
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
@@ -126,19 +128,23 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
 
     val deskRecs = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-      mockFlightsProvider(List(arrival)),
-      mockLiveManifestsProvider(arrival, livePax),
-      mockHistoricManifestsProvider(Map(arrival -> historicPax)),
-      splitsCalculator,
-      mockSplitsSink,
-      desksAndWaitsProvider.flightsToLoads,
-      desksAndWaitsProvider.loadsToDesks,
-      maxDesksProvider)
+      arrivalsProvider = mockFlightsProvider(List(arrival)),
+      liveManifestsProvider = mockLiveManifestsProvider(arrival, livePax),
+      historicManifestsProvider = mockHistoricManifestsProvider(Map(arrival -> historicPax)),
+      splitsCalculator = splitsCalculator,
+      splitsSink = mockSplitsSink,
+      flightsToLoads = desksAndWaitsProvider.flightsToLoads,
+      loadsToQueueMinutes = desksAndWaitsProvider.loadsToDesks,
+      maxDesksProviders = maxDesksProvider,
+      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty)
+    )
 
-    val (queue, _) = RunnableOptimisation.createGraph(sink, deskRecs).run()
-    queue.offer(request)
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 
-    probe.fishForMessage(1 second) {
+    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, deskRecs).run()
+    queue ! request
+
+    probe.fishForMessage(1.second) {
       case DeskRecMinutes(drms) =>
         val tqPax = drms
           .groupBy(drm => (drm.terminal, drm.queue))

@@ -1,11 +1,12 @@
 package actors.queues
 
-import actors.persistent.CrunchQueueActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.{InMemoryStreamingJournal, SetCrunchRequestQueue}
-import akka.actor.{ActorRef, PoisonPill, Props, Terminated}
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Keep, Sink, Source, SourceQueueWithComplete}
+import actors.persistent.SortedActorRefSource
+import akka.actor.{ActorRef, PoisonPill, Terminated}
+import akka.stream.javadsl.RunnableGraph
+import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
+import akka.stream.scaladsl.{GraphDSL, Sink}
+import akka.stream.{ActorMaterializer, ClosedShape}
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
@@ -15,27 +16,20 @@ import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
 
-import scala.concurrent.duration._
-
-
-class TestCrunchQueueActor(now: () => SDateLike, offsetMinutes: Int, durationMinutes: Int)
-  extends CrunchQueueActor(now, offsetMinutes, durationMinutes) {
-  override val maybeSnapshotInterval: Option[Int] = Option(1)
-}
 
 class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
   val myNow: () => SDateLike = () => SDate("2020-05-06", Crunch.europeLondonTimeZone)
 
   val durationMinutes = 60
   def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int): ActorRef = {
-    val source: SourceQueueWithComplete[CrunchRequest] = Source
-      .queue[CrunchRequest](1, OverflowStrategy.backpressure)
-      .throttle(1, 1 second)
-      .toMat(Sink.foreach(probe.ref ! _))(Keep.left)
-      .run()
-    val actor = system.actorOf(Props(new TestCrunchQueueActor(myNow, crunchOffsetMinutes, durationMinutes)), "deployment-queue")
-    actor ! SetCrunchRequestQueue(source)
-    actor
+    val source = new SortedActorRefSource(TestProbe().ref, crunchOffsetMinutes, durationMinutes)
+    val graph = GraphDSL.create(source) {
+      implicit builder =>
+        crunchRequests =>
+          crunchRequests ~> Sink.actorRef(probe.ref, "complete")
+          ClosedShape
+    }
+    RunnableGraph.fromGraph(graph).run(ActorMaterializer.create(system))
   }
 
   val day: MillisSinceEpoch = myNow().millisSinceEpoch

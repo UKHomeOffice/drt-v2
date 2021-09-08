@@ -4,6 +4,7 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdates
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
 
@@ -13,12 +14,12 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
 
   val probe: TestProbe = TestProbe("arrivals")
 
-  val dayOfArrivals = SDate("2021-03-01T12:00Z")
+  val dayOfArrivals: SDateLike = SDate("2021-03-01T12:00Z")
 
-  def pcpTimeCalc(a: Arrival): MilliDate = PcpArrival.pcpFrom(0, 0, _ => 0)(a)
+  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0)(a, r)
 
   "Given an ACL feed with 2 arrivals, followed by another with only one of them, the other arrival should be removed" >> {
-    val (aclSource, _, _, _) = TestableArrivalsGraphStage(
+    val (aclSource, _, _, _, _) = TestableArrivalsGraphStage(
       probe,
       TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, dayOfArrivals)
     ).run
@@ -29,14 +30,14 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
     val firstAclFeed = List(arrivalThatIsRemoved, arrivalThatRemains)
     aclSource.offer(firstAclFeed)
 
-    probe.fishForMessage(1 second) {
+    probe.fishForMessage(1.second) {
       case ArrivalsDiff(_, removals) => removals.isEmpty
     }
 
     val secondAclFeed = List(arrivalThatRemains)
     aclSource.offer(secondAclFeed)
 
-    probe.fishForMessage(1 second) {
+    probe.fishForMessage(1.second) {
       case ArrivalsDiff(_, removals) => removals.exists(_.Scheduled == arrivalThatIsRemoved.Scheduled)
     }
 
@@ -44,7 +45,7 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
   }
 
   "Given an ACL feed with a flight removal on the day after that flight is scheduled, then we should ignore the removal" >> {
-    val (aclSource, _, _, _) = TestableArrivalsGraphStage(
+    val (aclSource, _, _, _, _) = TestableArrivalsGraphStage(
       probe,
       TestableArrivalsGraphStage.buildArrivalsGraphStage(
         pcpTimeCalc,
@@ -58,7 +59,7 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
     val firstAclFeed = List(arrivalThatIsRemoved, arrivalThatRemains)
     aclSource.offer(firstAclFeed)
 
-    probe.fishForMessage(1 second) {
+    probe.fishForMessage(1.second) {
       case ArrivalsDiff(updates, removals) =>
         removals.isEmpty
     }
@@ -66,7 +67,7 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
     val secondAclFeed = List(arrivalThatRemains, newArrival)
     aclSource.offer(secondAclFeed)
 
-    probe.fishForMessage(1 second) {
+    probe.fishForMessage(1.second) {
       case ArrivalsDiff(_, removals) => removals.isEmpty
     }
 

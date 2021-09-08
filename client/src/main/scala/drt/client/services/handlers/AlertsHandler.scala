@@ -28,14 +28,14 @@ class AlertsHandler[M](modelRW: ModelRW[M, Pot[List[Alert]]]) extends LoggingAct
       }).recoverWith {
         case _ =>
           log.info(s"Alerts request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-          Future(RetryActionAfter(GetLoggedInUser, PollDelay.recoveryDelay))
+          Future(RetryActionAfter(GetAlerts(since), PollDelay.recoveryDelay))
       }))
 
     case SetAlerts(alerts, since) =>
       val effect = Effect(Future(GetAlerts(since))).after(alertsRequestFrequency)
       val pot = if (alerts.isEmpty) Empty else Ready(alerts)
       if (modelRW.value.isPending && since <= SDate.now().addMinutes(-1).millisSinceEpoch) {
-        noChange
+        effectOnly(effect)
       } else {
         updated(pot, effect)
       }

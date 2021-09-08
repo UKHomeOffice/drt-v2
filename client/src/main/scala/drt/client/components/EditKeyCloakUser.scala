@@ -1,27 +1,25 @@
 package drt.client.components
 
-import java.util.UUID
-
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.actions.Actions.SaveUserGroups
 import drt.client.services._
 import drt.shared.AirportConfigs
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+
+import java.util.UUID
 
 
 object EditKeyCloakUser {
 
-  case class Props(user: KeyCloakUser, groups: Set[String])
+  case class Props(user: KeyCloakUser, groups: Set[String]) extends UseValueEq
 
-  case class State(groups: Set[String])
+  case class State(groups: Set[String]) extends UseValueEq
 
-  implicit val keycloakUser: Reusability[KeyCloakUser] = Reusability.derive[KeyCloakUser]
-  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-  implicit val propsReuse: Reusability[Props] = Reusability.derive[Props]
-  val component = ScalaComponent.builder[Props]("EditKeyCloakUser")
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("EditKeyCloakUser")
     .initialStateFromProps(p => State(p.groups))
     .renderPS((scope, props, state) => {
 
@@ -75,7 +73,6 @@ object EditKeyCloakUser {
         ))
     }
     )
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(user: KeyCloakUser, groups: Set[String]): VdomElement = component(Props(user, groups))
@@ -83,13 +80,11 @@ object EditKeyCloakUser {
 
 object EditKeyCloakUserPage {
 
-  case class Props(userId: UUID)
+  case class Props(userId: UUID) extends UseValueEq
 
   case class UsersAndGroups(usersPot: Pot[List[KeyCloakUser]], groupsPot: Pot[Set[KeyCloakGroup]]) extends UseValueEq
 
-  implicit val propsReuse: Reusability[Props] = Reusability.derive[Props]
-
-  val component = ScalaComponent.builder[Props]("EditKeyCloakUserPage")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("EditKeyCloakUserPage")
     .render_P(props => {
 
       val modelRCP = SPACircuit.connect(m => UsersAndGroups(m.keyCloakUsers, m.selectedUserGroups))
@@ -111,7 +106,6 @@ object EditKeyCloakUserPage {
       })
     }
     )
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(userId: UUID): VdomElement = component(Props(userId))

@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsOptions, ChartJsProps}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.shared.Nationality
@@ -44,6 +45,6 @@ object NationalityFinderChartComponent {
 
   def apply(props: Props): VdomElement = component(props)
 
-  case class Props(nationalities: Map[Nationality, Int], trigger: VdomTagOf[HTMLElement])
+  case class Props(nationalities: Map[Nationality, Int], trigger: VdomTagOf[HTMLElement]) extends UseValueEq
 
 }

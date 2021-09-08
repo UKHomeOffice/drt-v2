@@ -10,6 +10,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.redlist.RedListUpdateCommand
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
 import services.StreamSupervision
@@ -24,37 +25,38 @@ object RunnableCrunch {
 
   def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
 
-  def apply[FR, MS, SS, SFP, SMM, SAD](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                       forecastArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                       liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                       liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                       manifestsLiveSource: Source[ManifestsFeedResponse, MS],
-                                       shiftsSource: Source[ShiftAssignments, SS],
-                                       fixedPointsSource: Source[FixedPointAssignments, SFP],
-                                       staffMovementsSource: Source[Seq[StaffMovement], SMM],
-                                       actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+  def apply[FR, MS, SS, SFP, SMM, SAD, RL](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                                           forecastArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                                           liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                                           liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                                           manifestsLiveSource: Source[ManifestsFeedResponse, MS],
+                                           shiftsSource: Source[ShiftAssignments, SS],
+                                           fixedPointsSource: Source[FixedPointAssignments, SFP],
+                                           staffMovementsSource: Source[Seq[StaffMovement], SMM],
+                                           actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+                                           redListUpdatesSource: Source[List[RedListUpdateCommand], RL],
 
-                                       arrivalsGraphStage: ArrivalsGraphStage,
-                                       staffGraphStage: StaffGraphStage,
+                                           arrivalsGraphStage: ArrivalsGraphStage,
+                                           staffGraphStage: StaffGraphStage,
 
-                                       forecastArrivalsDiffStage: ArrivalsDiffingStage,
-                                       liveBaseArrivalsDiffStage: ArrivalsDiffingStage,
-                                       liveArrivalsDiffStage: ArrivalsDiffingStage,
+                                           forecastArrivalsDiffStage: ArrivalsDiffingStage,
+                                           liveBaseArrivalsDiffStage: ArrivalsDiffingStage,
+                                           liveArrivalsDiffStage: ArrivalsDiffingStage,
 
-                                       forecastBaseArrivalsActor: ActorRef,
-                                       forecastArrivalsActor: ActorRef,
-                                       liveBaseArrivalsActor: ActorRef,
-                                       liveArrivalsActor: ActorRef,
-                                       applyPaxDeltas: List[Arrival] => Future[List[Arrival]],
+                                           forecastBaseArrivalsActor: ActorRef,
+                                           forecastArrivalsActor: ActorRef,
+                                           liveBaseArrivalsActor: ActorRef,
+                                           liveArrivalsActor: ActorRef,
+                                           applyPaxDeltas: List[Arrival] => Future[List[Arrival]],
 
-                                       manifestsActor: ActorRef,
+                                           manifestsActor: ActorRef,
 
-                                       portStateActor: ActorRef,
-                                       aggregatedArrivalsStateActor: ActorRef,
-                                       deploymentRequestActor: ActorRef,
+                                           portStateActor: ActorRef,
+                                           aggregatedArrivalsStateActor: ActorRef,
+                                           deploymentRequestActor: ActorRef,
 
-                                       forecastMaxMillis: () => MillisSinceEpoch
-                                      ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, SAD, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                           forecastMaxMillis: () => MillisSinceEpoch
+                                          ): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, SAD, RL, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsFeedResponse]
     val manifestsLiveKillSwitch = KillSwitches.single[ManifestsFeedResponse]
@@ -74,12 +76,13 @@ object RunnableCrunch {
       fixedPointsSource,
       staffMovementsSource,
       actualDesksAndWaitTimesSource,
+      redListUpdatesSource.async,
       arrivalsKillSwitch,
       manifestsLiveKillSwitch,
       shiftsKillSwitch,
       fixedPointsKillSwitch,
       movementsKillSwitch
-      )((_, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
+    )((_, _, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
@@ -92,6 +95,7 @@ object RunnableCrunch {
           fixedPointsSourceAsync,
           staffMovementsSourceAsync,
           actualDesksAndWaitTimesSourceSync,
+          redListUpdatesSourceAsync,
           arrivalsKillSwitchSync,
           manifestsLiveKillSwitchSync,
           shiftsKillSwitchSync,
@@ -152,32 +156,37 @@ object RunnableCrunch {
           liveBaseArrivalsFanOut
             .collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty => as.toList }
             .conflate[List[Arrival]] { case (acc, incoming) =>
-                log.info(s"${acc.length + incoming.length} conflated live base arrivals")
-                acc ++ incoming } ~> arrivals.in2
+              log.info(s"${acc.length + incoming.length} conflated live base arrivals")
+              acc ++ incoming
+            } ~> arrivals.in2
           liveBaseArrivalsFanOut ~> liveBaseArrivalsSink
 
           liveArrivalsSourceSync ~> arrivalsKillSwitchSync ~> liveArrivalsDiffing ~> liveArrivalsFanOut
           liveArrivalsFanOut
             .collect { case ArrivalsFeedSuccess(Flights(as), _) => as.toList }
             .conflate[List[Arrival]] { case (acc, incoming) =>
-                log.info(s"${acc.length + incoming.length} conflated live arrivals")
-                acc ++ incoming } ~> arrivals.in3
+              log.info(s"${acc.length + incoming.length} conflated live arrivals")
+              acc ++ incoming
+            } ~> arrivals.in3
+
+          redListUpdatesSourceAsync ~> arrivals.in4
+
           liveArrivalsFanOut ~> liveArrivalsSink
 
           manifestsLiveSourceSync ~> manifestsLiveKillSwitchSync ~> manifestsSink
 
-          shiftsSourceAsync          ~> shiftsKillSwitchSync ~> staff.in0
-          fixedPointsSourceAsync     ~> fixedPointsKillSwitchSync ~> staff.in1
-          staffMovementsSourceAsync  ~> movementsKillSwitchSync ~> staff.in2
+          shiftsSourceAsync ~> shiftsKillSwitchSync ~> staff.in0
+          fixedPointsSourceAsync ~> fixedPointsKillSwitchSync ~> staff.in1
+          staffMovementsSourceAsync ~> movementsKillSwitchSync ~> staff.in2
 
           arrivals.out ~> arrivalsFanOut
-                          arrivalsFanOut ~> flightsSink
-                          arrivalsFanOut ~> aggregatedArrivalsSink
+          arrivalsFanOut ~> flightsSink
+          arrivalsFanOut ~> aggregatedArrivalsSink
 
           actualDesksAndWaitTimesSourceSync ~> deskStatsSink
 
           staff.out ~> staffFanOut ~> staffSink
-                       staffFanOut.map(staffMinutes => UpdatedMillis(staffMinutes.millis)) ~> deploymentRequestSink
+          staffFanOut.map(staffMinutes => UpdatedMillis(staffMinutes.millis)) ~> deploymentRequestSink
 
           // @formatter:on
 
