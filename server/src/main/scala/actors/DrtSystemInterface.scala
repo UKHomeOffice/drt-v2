@@ -26,6 +26,7 @@ import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.common.{ArrivalFeed, HttpClient}
+import drt.server.feeds.edi.{EdiClient, EdiFeed}
 import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
@@ -377,6 +378,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).tickingSource
       case "PIK" =>
         CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).tickingSource(30 seconds)
+      case "EDI" =>
+        new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"),config.get[String]("feeds.edi.subscriberId"),new HttpClient)).ediFeedPollingSource(5 minutes)
       case _ => arrivalsNoOp
     }
 
