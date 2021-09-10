@@ -1,6 +1,5 @@
 package drt.client.components
 
-import diode.UseValueEq
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.actions.Actions.UpdateShifts
 import drt.client.components.TerminalPlanningComponent.defaultStartDate
@@ -10,8 +9,8 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import japgolly.scalajs.react._
-import japgolly.scalajs.react.component.Scala.Unmounted
+import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
@@ -31,13 +30,13 @@ object MonthlyStaffing {
   case class State(timeSlots: Seq[Seq[Any]],
                    colHeadings: Seq[String],
                    rowHeadings: Seq[String],
-                   changes: Map[(Int, Int), Int]) extends UseValueEq
+                   changes: Map[(Int, Int), Int])
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props(shifts: ShiftAssignments,
                    terminalPageTab: TerminalPageTabLoc,
-                   router: RouterCtl[Loc]) extends UseValueEq {
+                   router: RouterCtl[Loc]) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
   }
 
@@ -74,10 +73,10 @@ object MonthlyStaffing {
 
   def handleUtcToBstDay(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] =
     slots.sliding(2).flatMap(dates =>
-      if (dates(0).getTimeZoneOffsetMillis < dates(1).getTimeZoneOffsetMillis)
-        Option(dates(0)) :: List.fill(slotsPerHour)(None)
+      if (dates.head.getTimeZoneOffsetMillis < dates(1).getTimeZoneOffsetMillis)
+        Option(dates.head) :: List.fill(slotsPerHour)(None)
       else
-        Option(dates(0)) :: Nil
+        Option(dates.head) :: Nil
     ).toSeq ++ Seq(Option(slots.last))
 
   def minutesInDay(date: SDateLike): Int = {
@@ -93,7 +92,7 @@ object MonthlyStaffing {
                   callback: ReactEventFromInput => Callback
                 ): TagOf[Select] = {
     val valueNames = values.zip(names)
-    <.select(^.className := "form-control", ^.defaultValue := defaultValue.toString,
+    <.select(^.className := "form-control", ^.defaultValue := defaultValue,
       ^.onChange ==> callback,
       valueNames.map {
         case (value, name) => <.option(^.value := value, s"$name")
@@ -134,12 +133,15 @@ object MonthlyStaffing {
   def getQuarterHourlySlotChanges(timeSlotMinutes: Int, changes: Map[(Int, Int), Int]): Map[(Int, Int), Int] =
     if (timeSlotMinutes == 60) hourlyToQuarterHourlySlots(changes) else changes
 
-  val component = ScalaComponent.builder[Props]("StaffingV2")
+  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
+  implicit val stateReuse: Reusability[State] = Reusability.always[State]
+
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
     .initialStateFromProps(props => {
       stateFromProps(props)
     })
     .renderPS((scope, props, state) => {
-      def confirmAndSave(startOfMonthMidnight: SDateLike) = (_: ReactEventFromInput) =>
+      def confirmAndSave(startOfMonthMidnight: SDateLike): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
         Callback {
 
           val initialTimeSlots: Seq[Seq[Any]] = stateFromProps(props).timeSlots
@@ -210,6 +212,7 @@ object MonthlyStaffing {
           )
         ))
     })
+    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}")
     })
@@ -270,7 +273,7 @@ object MonthlyStaffing {
     })
 
     val dayForRowLabels = if (viewingDate.getMonth() != 10)
-      viewingDate.startOfTheMonth
+      viewingDate.startOfTheMonth()
     else
       SDate.lastDayOfMonth(viewingDate).getLastSunday
 
