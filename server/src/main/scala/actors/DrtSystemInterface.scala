@@ -44,11 +44,12 @@ import drt.shared.coachTime.CoachWalkTime
 import drt.shared.redlist.{RedListUpdateCommand, RedListUpdates}
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
-import org.joda.time.DateTimeZone
+import org.joda.time.{DateTime, DateTimeZone}
 import play.api.Configuration
 import queueus.{AdjustmentsNoop, ChildEGateAdjustments, PaxTypeQueueAllocation, QueueAdjustments}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
+import services.SDate.JodaSDate
 import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
@@ -379,7 +380,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case "PIK" =>
         CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).tickingSource(30 seconds)
       case "EDI" =>
-        new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"),config.get[String]("feeds.edi.subscriberId"),new HttpClient)).ediFeedPollingSource(5 minutes)
+        val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
+        val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
+        new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediFeedPollingSource(5 minutes, currentDate, endDate, LiveFeedSource)
       case _ => arrivalsNoOp
     }
 
@@ -387,6 +390,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val feed = portCode match {
       case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => createArrivalFeed
       case PortCode("BHX") => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
+      case PortCode("EDI") =>
+        val startDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
+        val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusMonths(1)), DateTimeZone.UTC)
+        new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediFeedPollingSource(5 minutes, startDate, endDate, ForecastFeedSource)
       case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }

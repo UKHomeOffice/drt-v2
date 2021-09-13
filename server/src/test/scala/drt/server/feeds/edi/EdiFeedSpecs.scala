@@ -3,25 +3,18 @@ package drt.server.feeds.edi
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import drt.server.feeds.common.HttpClient
 import drt.shared.Terminals.Terminal
-import drt.shared.{ArrivalStatus, CarrierCode, LiveFeedSource, Operator, PortCode, VoyageNumber}
 import drt.shared.api.Arrival
+import drt.shared._
+import org.joda.time.{DateTime, DateTimeZone}
 import org.specs2.mock.Mockito.mock
+import services.SDate
+import services.SDate.JodaSDate
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class EdiFeedSpecs extends CrunchTestLike  {
-  //  "Get the Edi data" in {
-  //    val httpResponseF: Future[HttpResponse] = EdiFeed.ediClient.makeRequest("2021-09-08", "2021-09-09")
-  //    val httpResponse = Await.result(httpResponseF, 5 second)
-  //    val data = Await.result(EdiFeed.unMarshalResponseToEdiFlightDetails(httpResponse),2 second)
-  //    val arrival = EdiFeed.ediFlightDetailsToArrival(data)
-  ////    val data = EdiFeed.ediFeedPollingSource(1 minutes)
-  //    println(s".........................")
-  //    arrival.map(println(_))
-  //    arrival must not beNull
-  //  }
+class EdiFeedSpecs extends CrunchTestLike {
 
   val ediJsonData =
     """
@@ -46,6 +39,7 @@ class EdiFeedSpecs extends CrunchTestLike  {
       |        "Sector": "International",
       |        "FlightStatus": "A",
       |        "FlightCancelled": 0,
+      |        "Passengers": null,
       |        "EstimatedDateTime_Zulu": "2021-08-31T23:00:00",
       |        "ActualDateTime_Zulu": "2021-08-31T22:53:00",
       |        "ZoningDateTime_Zulu": "2021-08-31T22:43:00",
@@ -77,7 +71,7 @@ class EdiFeedSpecs extends CrunchTestLike  {
 
     val expectedResult = List(
       EdiFlightDetails("FR", "RYR", "FR", "2752", Option(189), "PSA", "I", "EEC", "2021-08-31T23:00:00",
-        "A", Option("A"), 0, Option("2021-08-31T23:00:00"), Option("2021-08-31T22:53:00"), Option("2021-08-31T22:43:00"),
+        "A", Option("A"), None, Option("2021-08-31T23:00:00"), Option("2021-08-31T22:53:00"), Option("2021-08-31T22:43:00"),
         Option("2021-08-31T22:58:00"), Option("14"), Option("15A"), Option("GATE 14"), Option("8"), "T1", Option("06"))
     )
 
@@ -90,18 +84,34 @@ class EdiFeedSpecs extends CrunchTestLike  {
     val ediFeed = new EdiFeed(EdiClient("", "", mock[HttpClient]))
 
     val ediFlightDetail: EdiFlightDetails = EdiFlightDetails("FR", "RYR", "FR", "2752", Option(189),
-      "PSA", "I", "EEC", "2021-08-31T23:00:00", "A", Option("A"), 0, Option("2021-08-31T23:00:00"),
+      "PSA", "I", "EEC", "2021-08-31T23:00:00", "A", Option("A"), None, Option("2021-08-31T23:00:00"),
       Option("2021-08-31T22:53:00"), Option("2021-08-31T22:43:00"), Option("2021-08-31T22:58:00"),
       Option("14"), Option("15A"), Option("GATE 14"), Option("8"), "T1", Option("06"))
 
     val expectedArrival: List[Arrival] = List(
-      Arrival(Some(Operator("FR")), CarrierCode("FR"), VoyageNumber(2752), None, ArrivalStatus("A"),
+      Arrival(Some(Operator("FR")), CarrierCode("FR"), VoyageNumber(2752), None, ArrivalStatus("Arrival is on block at a stand"),
         Some(1630450800000L), Some(1630450380000L), None, Some(1630450680000L),
-        None, Some("15A"), Some(189), None, None, Some("06"), Some("8"), PortCode("PSA"), Terminal("T1"), PortCode("PSA"),
-        1630450800000L, Some(1630451040000L), Set(LiveFeedSource), None, None, None, None))
+        Some("14"), Some("15A"), Some(189), None, None, Some("06"), Some("8"), PortCode("PSA"), Terminal("T1"), PortCode("PSA"),
+        1630450800000L, None, Set(LiveFeedSource), None, None, None, None))
 
-    val arrival = ediFeed.ediFlightDetailsToArrival(List(ediFlightDetail))
+    val arrival = ediFeed.ediFlightDetailsToArrival(List(ediFlightDetail), LiveFeedSource)
     arrival mustEqual expectedArrival
 
+  }
+
+  "Regex to strip char from flightNumber if exists" in {
+    val ediFeed = new EdiFeed(EdiClient("", "", mock[HttpClient]))
+    val stripFlightNumberChar = ediFeed.removeFlightNumberChar("1234F")
+    val flightNumber = ediFeed.removeFlightNumberChar("1234")
+    stripFlightNumberChar mustEqual "1234"
+    flightNumber mustEqual "1234"
+  }
+
+  "Check the dates" in {
+    val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
+    val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
+    println(s"currentDate $currentDate")
+    println(s"endDate $endDate")
+    currentDate must not beNull
   }
 }
