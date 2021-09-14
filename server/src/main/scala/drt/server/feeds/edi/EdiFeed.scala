@@ -32,26 +32,11 @@ trait EdiFeedJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
     httpResponse.entity.dataBytes.runReduce(_ ++ _)
       .flatMap(d => Unmarshal(d.utf8String).to[List[EdiFlightDetails]])
   }
-
 }
-
 
 class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
-
-  def getFeedDate(feedSource: FeedSource, days: Int) = feedSource match {
-    case LiveFeedSource =>
-      val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
-      val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
-      (currentDate, endDate, 0)
-
-    case ForecastFeedSource =>
-      val startDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
-      val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(days)), DateTimeZone.UTC)
-      (startDate, endDate, days)
-  }
-
 
   def makeRequestAndFeedResponseToArrivalSource(startData: String, endDate: String, feedSource: FeedSource)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Future[ArrivalsFeedResponse] = {
     log.info(s"$feedSource Edi feed api call at ${DateTime.now()} from $startData and $endDate ")
@@ -73,6 +58,7 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
   def ediFeedPollingSource(interval: FiniteDuration, feedSource: FeedSource)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
     var startForecastDays = 2
     var endForecastDays = 30
+
     Source.tick(1 seconds, interval, NotUsed)
       .mapAsync(1) { _ =>
         feedSource match {
@@ -93,10 +79,8 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
             }
             makeRequestAndFeedResponseToArrivalSource(startDate, endDate, feedSource)
         }
-
       }
   }
-
 
   def getStatusDescription(status: String): String = status match {
     case "A" => "Arrival is on block at a stand"
