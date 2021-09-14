@@ -3,12 +3,9 @@ package drt.server.feeds.edi
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import drt.server.feeds.common.HttpClient
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
 import drt.shared._
-import org.joda.time.{DateTime, DateTimeZone}
+import drt.shared.api.Arrival
 import org.specs2.mock.Mockito.mock
-import services.SDate
-import services.SDate.JodaSDate
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
@@ -26,7 +23,7 @@ class EdiFeedSpecs extends CrunchTestLike {
       |        "AircraftTypeCode_ICAO": "B738",
       |        "AircraftTypeCode_IATA": "73H",
       |        "AircraftTypeDescription": "BOEING 737-800 WINGLETS",
-      |        "FlightNumber": "2752",
+      |        "FlightNumber": "1234",
       |        "AircraftRegistration": "EIEBG",
       |        "MAXPAX_Aircraft": 189,
       |        "AirportCode_IATA": "PSA",
@@ -70,7 +67,7 @@ class EdiFeedSpecs extends CrunchTestLike {
     val data: Future[List[EdiFlightDetails]] = ediFeed.unMarshalResponseToEdiFlightDetails(httpResponse)
 
     val expectedResult = List(
-      EdiFlightDetails("FR", "RYR", "FR", "2752", Option(189), "PSA", "I", "EEC", "2021-08-31T23:00:00",
+      EdiFlightDetails("FR", "RYR", "FR", "1234", Option(189), "PSA", "I", "EEC", "2021-08-31T23:00:00",
         "A", Option("A"), None, Option("2021-08-31T23:00:00"), Option("2021-08-31T22:53:00"), Option("2021-08-31T22:43:00"),
         Option("2021-08-31T22:58:00"), Option("14"), Option("15A"), Option("GATE 14"), Option("8"), "T1", Option("06"))
     )
@@ -83,13 +80,13 @@ class EdiFeedSpecs extends CrunchTestLike {
   "Given EdiFlightDetails object , it gets transform to Arrival" in {
     val ediFeed = new EdiFeed(EdiClient("", "", mock[HttpClient]))
 
-    val ediFlightDetail: EdiFlightDetails = EdiFlightDetails("FR", "RYR", "FR", "2752", Option(189),
+    val ediFlightDetail: EdiFlightDetails = EdiFlightDetails("FR", "RYR", "FR", "1234", Option(189),
       "PSA", "I", "EEC", "2021-08-31T23:00:00", "A", Option("A"), None, Option("2021-08-31T23:00:00"),
       Option("2021-08-31T22:53:00"), Option("2021-08-31T22:43:00"), Option("2021-08-31T22:58:00"),
       Option("14"), Option("15A"), Option("GATE 14"), Option("8"), "T1", Option("06"))
 
     val expectedArrival: List[Arrival] = List(
-      Arrival(Some(Operator("FR")), CarrierCode("FR"), VoyageNumber(2752), None, ArrivalStatus("Arrival is on block at a stand"),
+      Arrival(Some(Operator("FR")), CarrierCode("FR"), VoyageNumber(1234), None, ArrivalStatus("Arrival is on block at a stand"),
         Some(1630450800000L), Some(1630450380000L), None, Some(1630450680000L),
         Some("14"), Some("15A"), Some(189), None, None, Some("06"), Some("8"), PortCode("PSA"), Terminal("T1"), PortCode("PSA"),
         1630450800000L, None, Set(LiveFeedSource), None, None, None, None))
@@ -107,11 +104,4 @@ class EdiFeedSpecs extends CrunchTestLike {
     flightNumber mustEqual "1234"
   }
 
-  "Check the dates" in {
-    val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
-    val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
-    println(s"currentDate $currentDate")
-    println(s"endDate $endDate")
-    currentDate must not beNull
-  }
 }
