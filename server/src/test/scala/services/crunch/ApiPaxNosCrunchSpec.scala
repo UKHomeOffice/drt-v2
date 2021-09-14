@@ -9,6 +9,7 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
+import uk.gov.homeoffice.drt.Nationality
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._

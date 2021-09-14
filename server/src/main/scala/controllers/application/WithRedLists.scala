@@ -5,11 +5,11 @@ import akka.pattern.ask
 import controllers.Application
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import drt.shared.redlist.{DeleteRedListUpdates, RedListUpdates, SetRedListUpdate}
 import play.api.mvc.{Action, AnyContent}
 import services.graphstages.Crunch
 import services.{AirportToCountry, SDate}
 import uk.gov.homeoffice.drt.auth.Roles.RedListsEdit
+import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdates, SetRedListUpdate}
 import upickle.default._
 
 import scala.concurrent.Future

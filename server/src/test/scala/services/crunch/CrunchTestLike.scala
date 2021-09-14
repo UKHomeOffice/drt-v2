@@ -16,7 +16,6 @@ import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
@@ -24,6 +23,7 @@ import org.specs2.specification.{AfterAll, AfterEach}
 import services._
 import slickdb.Tables
 import uk.gov.homeoffice.drt.auth.Roles.STN
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable
 import scala.collection.immutable.{Map, SortedMap}

@@ -5,13 +5,13 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.{Queue, QueueFallbacks, Transfer}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunch
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.Crunch.LoadMinute
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 

@@ -1,8 +1,8 @@
 package actors.serializers
 
-import drt.shared.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.RedListUpdates._
+import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
 
 object RedListUpdatesMessageConversion {
   def setUpdatesToMessage(updates: SetRedListUpdate): GeneratedMessage =

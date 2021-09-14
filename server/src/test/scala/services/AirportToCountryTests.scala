@@ -1,8 +1,8 @@
 package services
 
-import drt.shared.redlist.{RedListUpdate, RedListUpdates}
 import drt.shared.{AirportInfo, PortCode}
 import org.specs2.mutable.SpecificationLike
+import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
 object AirportToCountryTests extends SpecificationLike {
   "can load csv" >> {

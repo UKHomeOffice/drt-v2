@@ -13,7 +13,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import drt.shared.dates.{LocalDate, UtcDate}
 import ujson.Js.Value
-import uk.gov.homeoffice.drt.Urls
+import uk.gov.homeoffice.drt.{Nationality, Urls}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import upickle.default._
@@ -129,13 +129,6 @@ case object Ratio extends SplitStyle
 
 case object UndefinedSplitStyle extends SplitStyle
 
-case class Nationality(code: String) {
-  override def toString: String = code
-}
-
-object Nationality {
-  implicit val rw: ReadWriter[Nationality] = macroRW
-}
 
 case class PaxAge(years: Int) {
   def isUnder(age: Int): Boolean = years < age

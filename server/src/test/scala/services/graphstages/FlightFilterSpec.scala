@@ -3,9 +3,9 @@ package services.graphstages
 import controllers.ArrivalGenerator
 import drt.shared.Terminals._
 import drt.shared.airportconfig.Lhr
-import drt.shared.redlist.{RedListUpdate, RedListUpdates}
 import drt.shared.{ApiFlightWithSplits, ArrivalStatus, PortCode}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
 class FlightFilterSpec extends Specification {
   val redListedZimbabwe: RedListUpdates = RedListUpdates(Map(0L -> RedListUpdate(0L, Map("Zimbabwe" -> "ZWE"), List())))

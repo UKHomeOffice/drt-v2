@@ -14,7 +14,6 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.LocalDate
-import drt.shared.redlist.RedListUpdates
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
@@ -22,6 +21,7 @@ import services.exports.flights.ArrivalFeedExport
 import services.exports.flights.templates._
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, CedatStaff}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}

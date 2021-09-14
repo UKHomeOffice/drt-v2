@@ -4,9 +4,9 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.concurrent.duration._
 

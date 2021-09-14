@@ -4,6 +4,7 @@ import drt.shared.SDateLike
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.Map
 

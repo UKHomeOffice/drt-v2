@@ -4,10 +4,10 @@ import actors.DrtStaticParameters
 import akka.actor.{ActorRef, Props}
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
 import services.{TryCrunch, TrySimulator}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.SortedMap
 

@@ -10,11 +10,11 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdateCommand
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
 import services.StreamSupervision
 import services.graphstages._
+import uk.gov.homeoffice.drt.redlist.RedListUpdateCommand
 
 import scala.concurrent.Future
 

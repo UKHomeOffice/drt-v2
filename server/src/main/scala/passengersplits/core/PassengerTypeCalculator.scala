@@ -1,8 +1,9 @@
 package passengersplits.core
 
 import drt.shared.PaxTypes._
-import drt.shared.{Nationality, PaxType, PortCode}
+import drt.shared.{PaxType, PortCode}
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.Nationality
 
 object PassengerTypeCalculator {
   val log: Logger = LoggerFactory.getLogger(getClass)

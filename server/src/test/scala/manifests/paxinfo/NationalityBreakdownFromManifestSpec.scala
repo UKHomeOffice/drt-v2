@@ -1,9 +1,9 @@
 package manifests.paxinfo
 
-import drt.shared._
 import manifests.passengers.PassengerInfo
 import manifests.paxinfo.ManifestBuilder.{manifestForPassengers, manifestWithPassengerNationalities, passengerBuilderWithOptions}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.Nationality
 
 import scala.collection.immutable.List
 

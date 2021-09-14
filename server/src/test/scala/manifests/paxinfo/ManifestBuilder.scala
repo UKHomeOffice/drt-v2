@@ -3,6 +3,7 @@ package manifests.paxinfo
 import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
+import uk.gov.homeoffice.drt.Nationality
 
 import scala.collection.immutable.List
 

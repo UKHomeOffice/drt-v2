@@ -10,7 +10,6 @@ import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
 import drt.shared.{AirportConfig, SimulationParams}
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
@@ -20,6 +19,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs.{DynamicRunnableDeskRecs, PortDesksAndWaitsProvider, RunnableOptimisation}
 import services.graphstages.FlightFilter
 import services.{OptimiserWithFlexibleProcessors, SDate}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 

@@ -4,6 +4,7 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
+import uk.gov.homeoffice.drt.Nationality
 
 case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAllocator: QueueAllocator) {
   def toQueues(terminal: Terminal, manifest: ManifestLike): Map[Queue, Iterable[(Queue, PaxType, ManifestPassengerProfile, Double)]] = {

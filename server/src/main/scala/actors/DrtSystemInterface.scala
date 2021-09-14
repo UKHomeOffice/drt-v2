@@ -4,9 +4,9 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.GetFlights
 import actors.daily.PassengersActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
 import actors.persistent.staffing._
-import actors.persistent._
 import actors.routing.FlightsRouterActor
 import actors.supervised.RestartOnStop
 import akka.NotUsed
@@ -40,7 +40,6 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.coachTime.CoachWalkTime
-import drt.shared.redlist.{RedListUpdateCommand, RedListUpdates}
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
@@ -56,6 +55,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
+import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable

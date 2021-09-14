@@ -5,8 +5,9 @@ import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.Terminals.T1
 import drt.shared.api.{Arrival, FlightCodeSuffix}
-import drt.shared.{AclFeedSource, ApiFlightWithSplits, ApiPaxTypeAndQueueCount, LiveFeedSource, Nationality, Operator, PaxNumbers, PaxTypes, PortCode, Queues, Splits, _}
+import drt.shared._
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.Nationality
 
 class FlightMessageConversionSpec extends Specification {
 

@@ -1,7 +1,5 @@
 package serialization
 
-import uk.gov.homeoffice.drt.auth.Roles
-import uk.gov.homeoffice.drt.auth.Roles.Role
 import drt.shared.CrunchApi._
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.SplitSources.Historical
@@ -10,6 +8,9 @@ import drt.shared._
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 import services.AirportToCountry
+import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.auth.Roles
+import uk.gov.homeoffice.drt.auth.Roles.Role
 import upickle.default._
 
 import scala.collection.immutable.SortedMap

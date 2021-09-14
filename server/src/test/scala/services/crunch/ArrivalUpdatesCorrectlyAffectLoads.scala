@@ -6,11 +6,11 @@ import drt.shared.Queues.Queue
 import drt.shared.Terminals.{T1, T2}
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{List, Map, SortedMap}
 import scala.concurrent.duration._
