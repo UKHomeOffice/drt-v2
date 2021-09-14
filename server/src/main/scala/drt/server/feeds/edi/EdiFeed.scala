@@ -3,19 +3,20 @@ package drt.server.feeds.edi
 import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.model.StatusCodes.OK
-import akka.http.scaladsl.model.{HttpResponse, StatusCode}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
+import drt.shared.api.{Arrival, FlightCodeSuffix}
 import drt.shared.{FeedSource, _}
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
+import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 import scala.collection.immutable.Seq
@@ -39,23 +40,60 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def ediFeedPollingSource(interval: FiniteDuration, startData: String, endDate: String, feedSource: FeedSource)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
+  def getFeedDate(feedSource: FeedSource, days: Int) = feedSource match {
+    case LiveFeedSource =>
+      val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
+      val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
+      (currentDate, endDate, 0)
+
+    case ForecastFeedSource =>
+      val startDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
+      val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(days)), DateTimeZone.UTC)
+      (startDate, endDate, days)
+  }
+
+
+  def makeRequestAndFeedResponseToArrivalSource(startData: String, endDate: String, feedSource: FeedSource)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Future[ArrivalsFeedResponse] = {
+    log.info(s"$feedSource Edi feed api call at ${DateTime.now()} from $startData and $endDate ")
+    ediClient.makeRequest(startData, endDate).flatMap { response =>
+      response.status match {
+        case OK => unMarshalResponseToEdiFlightDetails(response).map { flights =>
+          log.info(s"Edi feed status ${response.status} with api call for ${flights.size} flights")
+          ArrivalsFeedSuccess(Flights(ediFlightDetailsToArrival(flights, feedSource)))
+        }
+        case _ => log.warn(s"Edi feed status ${response.status} while api call with response ${response.entity}")
+          Future.successful(ArrivalsFeedFailure(s"Response with status ${response.status} from edi ${response.entity}"))
+      }
+    }.recover { case t =>
+      log.error(s"Edi feed error while api call ${t.getMessage}")
+      ArrivalsFeedFailure(t.getMessage)
+    }
+  }
+
+  def ediFeedPollingSource(interval: FiniteDuration, feedSource: FeedSource)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
+    var startForecastDays = 2
+    var endForecastDays = 30
     Source.tick(1 seconds, interval, NotUsed)
       .mapAsync(1) { _ =>
-        log.info(s"$feedSource Edi feed api call at ${DateTime.now()} from $startData and $endDate ")
-        ediClient.makeRequest(startData, endDate).flatMap { response =>
-          response.status match {
-            case OK => unMarshalResponseToEdiFlightDetails(response).map { flights =>
-              log.info(s"Edi feed status ${response.status} with api call for ${flights.size} flights")
-              ArrivalsFeedSuccess(Flights(ediFlightDetailsToArrival(flights, feedSource)))
+        feedSource match {
+          case LiveFeedSource =>
+            val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
+            val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
+            makeRequestAndFeedResponseToArrivalSource(currentDate, endDate, feedSource)
+
+          case ForecastFeedSource =>
+            val startDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(startForecastDays)), DateTimeZone.UTC)
+            val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(endForecastDays)), DateTimeZone.UTC)
+            if (endForecastDays >= 180) {
+              startForecastDays = 2
+              endForecastDays = 30
+            } else {
+              startForecastDays = endForecastDays
+              endForecastDays = endForecastDays + 30
             }
-            case _ => log.warn(s"Edi feed status ${response.status} while api call with response ${response.entity}")
-              Future.successful(ArrivalsFeedFailure(s"Response with status ${response.status} from edi ${response.entity}"))
-          }
-        }.recover { case t =>
-          log.error(s"Edi feed error while api call ${t.getMessage}")
-          ArrivalsFeedFailure(t.getMessage)
+            makeRequestAndFeedResponseToArrivalSource(startDate, endDate, feedSource)
         }
+
       }
   }
 
@@ -77,10 +115,10 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
     case _ => status
   }
 
-  def removeFlightNumberChar(flightNumber: String) = {
-    if (flightNumber.matches("[0-9]+[a-zA-Z]"))
-      flightNumber.substring(0, flightNumber.length - 1)
-    else flightNumber
+  def flightNumberSplitToComponent(flightNumberStr: String): (VoyageNumber, Option[FlightCodeSuffix]) = {
+    if (flightNumberStr.matches("[0-9]+[a-zA-Z]"))
+      (VoyageNumber(flightNumberStr.substring(0, flightNumberStr.length - 1).toInt), Option(FlightCodeSuffix(flightNumberStr.substring(flightNumberStr.length - 1, flightNumberStr.length))))
+    else (VoyageNumber(flightNumberStr.toInt), None)
 
   }
 
@@ -91,11 +129,12 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
       val est = flight.EstimatedDateTime_Zulu.map(SDate(_).millisSinceEpoch).getOrElse(0L)
       val act = flight.ActualDateTime_Zulu.map(SDate(_).millisSinceEpoch).getOrElse(0L)
       val actChox = flight.ChocksDateTime_Zulu.map(SDate(_).millisSinceEpoch).getOrElse(0L)
+      val (voyageNumber, flightCodeSuffix) = flightNumberSplitToComponent(flight.FlightNumber)
       Arrival(
         Operator = Option(Operator(flight.TicketedOperator)),
         CarrierCode = CarrierCode(flight.AirlineCode_IATA),
-        VoyageNumber = VoyageNumber(removeFlightNumberChar(flight.FlightNumber).toInt),
-        FlightCodeSuffix = None,
+        VoyageNumber = voyageNumber,
+        FlightCodeSuffix = flightCodeSuffix,
         Status = flight.FlightStatus.map(s => ArrivalStatus(getStatusDescription(s))).getOrElse(ArrivalStatus("")),
         Estimated = if (est == 0) None else Option(est),
         Actual = if (act == 0) None else Option(act),

@@ -380,9 +380,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case "PIK" =>
         CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).tickingSource(30 seconds)
       case "EDI" =>
-        val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
-        val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
-        new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediFeedPollingSource(5 minutes, currentDate, endDate, LiveFeedSource)
+        new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediFeedPollingSource(1 minutes, LiveFeedSource)
       case _ => arrivalsNoOp
     }
 
@@ -391,9 +389,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => createArrivalFeed
       case PortCode("BHX") => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
       case PortCode("EDI") =>
-        val startDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
-        val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusMonths(1)), DateTimeZone.UTC)
-        new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediFeedPollingSource(5 minutes, startDate, endDate, ForecastFeedSource)
+        new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediFeedPollingSource(5 minutes, ForecastFeedSource)
       case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }
