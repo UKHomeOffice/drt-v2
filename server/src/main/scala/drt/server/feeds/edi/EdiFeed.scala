@@ -60,9 +60,8 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
   def ediForecastFeedPollingSource(interval: FiniteDuration)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
     Source.tick(1 seconds, interval, NotUsed)
       .mapConcat { _ =>
-        (0 to 150 by 30).map { days =>
-          val startDay = if (days == 0) 2 else days
-          val startDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(startDay)), DateTimeZone.UTC)
+        (2 to 150 by 30).map { days =>
+          val startDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(days)), DateTimeZone.UTC)
           val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(days + 30)), DateTimeZone.UTC)
           FeedDates(startDate, endDate)
         }
