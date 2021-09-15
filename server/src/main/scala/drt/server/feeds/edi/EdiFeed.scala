@@ -38,47 +38,46 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  case class FeedDates(startDate: String, endDate: String)
+
   def makeRequestAndFeedResponseToArrivalSource(startData: String, endDate: String, feedSource: FeedSource)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Future[ArrivalsFeedResponse] = {
     log.info(s"$feedSource Edi feed api call at ${DateTime.now()} from $startData and $endDate ")
     ediClient.makeRequest(startData, endDate).flatMap { response =>
       response.status match {
         case OK => unMarshalResponseToEdiFlightDetails(response).map { flights =>
-          log.info(s"Edi feed status ${response.status} with api call for ${flights.size} flights")
+          log.info(s"$feedSource Edi feed status ${response.status} with api call for ${flights.size} flights")
           ArrivalsFeedSuccess(Flights(ediFlightDetailsToArrival(flights, feedSource)))
         }
         case _ => log.warn(s"Edi feed status ${response.status} while api call with response ${response.entity}")
-          Future.successful(ArrivalsFeedFailure(s"Response with status ${response.status} from edi ${response.entity}"))
+          Future.successful(ArrivalsFeedFailure(s"$feedSource Response with status ${response.status} from edi ${response.entity}"))
       }
     }.recover { case t =>
-      log.error(s"Edi feed error while api call ${t.getMessage}")
+      log.error(s"$feedSource Edi feed error while api call ${t.getMessage}")
       ArrivalsFeedFailure(t.getMessage)
     }
   }
 
-  def ediFeedPollingSource(interval: FiniteDuration, feedSource: FeedSource)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
-    var startForecastDays = 2
-    var endForecastDays = 30
+  def ediForecastFeedPollingSource(interval: FiniteDuration)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
+    Source.tick(1 seconds, interval, NotUsed)
+      .mapConcat { _ =>
+        (0 to 150 by 30).map { days =>
+          val startDay = if (days == 0) 2 else days
+          val startDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(startDay)), DateTimeZone.UTC)
+          val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(days + 30)), DateTimeZone.UTC)
+          FeedDates(startDate, endDate)
+        }
+      }.throttle(1, 1 minutes).mapAsync(1) { fd =>
+        makeRequestAndFeedResponseToArrivalSource(fd.startDate, fd.endDate, ForecastFeedSource)
+      }
+  }
 
+
+  def ediLiveFeedPollingSource(interval: FiniteDuration)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
     Source.tick(1 seconds, interval, NotUsed)
       .mapAsync(1) { _ =>
-        feedSource match {
-          case LiveFeedSource =>
-            val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
-            val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
-            makeRequestAndFeedResponseToArrivalSource(currentDate, endDate, feedSource)
-
-          case ForecastFeedSource =>
-            val startDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(startForecastDays)), DateTimeZone.UTC)
-            val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(endForecastDays)), DateTimeZone.UTC)
-            if (endForecastDays >= 180) {
-              startForecastDays = 2
-              endForecastDays = 30
-            } else {
-              startForecastDays = endForecastDays
-              endForecastDays = endForecastDays + 30
-            }
-            makeRequestAndFeedResponseToArrivalSource(startDate, endDate, feedSource)
-        }
+        val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
+        val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
+        makeRequestAndFeedResponseToArrivalSource(currentDate, endDate, LiveFeedSource)
       }
   }
 
