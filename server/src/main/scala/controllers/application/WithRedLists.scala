@@ -39,6 +39,12 @@ trait WithRedLists {
       ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(r.toJson.compactPrint))
     }
 
+  def getRedListUpdatesLegacy: Action[AnyContent] =
+    Action.async { _ =>
+      implicit val rluFormat: RedListJsonFormats.redListUpdatesJsonFormat.type = RedListJsonFormats.redListUpdatesJsonFormat
+      ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(write(r)))
+    }
+
   def updateRedListUpdates(): Action[AnyContent] = authByRole(RedListsEdit) {
     Action.async {
       implicit request =>

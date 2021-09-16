@@ -7,7 +7,7 @@ import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 import upickle.default.{read, write}
 
 import scala.concurrent.Future
@@ -20,11 +20,11 @@ class RedListUpdatesHandler[M](modelRW: ModelRW[M, Pot[RedListUpdates]]) extends
 
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetRedListUpdates =>
-      effectOnly(Effect(DrtApi.get("red-list/updates").map(r => {
+      effectOnly(Effect(DrtApi.get("red-list/updates-legacy").map(r => {
         SetRedListUpdates(read[RedListUpdates](r.responseText))
       }).recoverWith {
-        case _ =>
-          log.info(s"Red List updates request failed. Re-requesting after ${PollDelay.recoveryDelay}")
+        case e: Throwable =>
+          log.warn(s"Red List updates request failed. Re-requesting after ${PollDelay.recoveryDelay}: ${e.getMessage}")
           Future(RetryActionAfter(GetRedListUpdates, PollDelay.recoveryDelay))
       }))
 
