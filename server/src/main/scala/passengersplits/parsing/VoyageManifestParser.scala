@@ -10,6 +10,7 @@ import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, Documen
 import services.SDate
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat}
+import uk.gov.homeoffice.drt.Nationality
 
 import scala.util.{Success, Try}
 

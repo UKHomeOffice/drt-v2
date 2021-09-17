@@ -4,13 +4,13 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Queues.QueueFallbacks
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import drt.shared.Terminals.{T1, T2, T3, T4, T5, Terminal}
+import drt.shared.Terminals._
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.redlist.{RedListUpdate, RedListUpdates}
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
+import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
 class WorkloadSpec extends Specification {
 

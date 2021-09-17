@@ -7,9 +7,9 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Headers, Session}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import java.util.UUID
 import scala.collection.immutable.Map

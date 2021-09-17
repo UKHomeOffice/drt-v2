@@ -6,6 +6,7 @@ import manifests.passengers.PassengerInfo
 import manifests.paxinfo.ManifestBuilder._
 import org.specs2.mutable.Specification
 import services.SDate
+import uk.gov.homeoffice.drt.Nationality
 
 import scala.collection.immutable.List
 

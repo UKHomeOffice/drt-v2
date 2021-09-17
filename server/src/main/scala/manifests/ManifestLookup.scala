@@ -11,6 +11,7 @@ import services.StreamSupervision
 import slick.jdbc.SQLActionBuilder
 import slick.sql.SqlStreamingAction
 import slickdb.VoyageManifestPassengerInfoTable
+import uk.gov.homeoffice.drt.Nationality
 
 import java.sql.Timestamp
 import scala.concurrent.ExecutionContext.Implicits.global

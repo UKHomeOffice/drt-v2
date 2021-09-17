@@ -1,10 +1,11 @@
 package actors.serializers
 
-import drt.shared.{CarrierCode, EventType, Nationality, PaxAge, PortCode, VoyageNumber}
+import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.protobuf.messages.VoyageManifest.{PassengerInfoJsonMessage, VoyageManifestMessage, VoyageManifestsMessage}
 import services.SDate
+import uk.gov.homeoffice.drt.Nationality
 
 import scala.util.Try
 

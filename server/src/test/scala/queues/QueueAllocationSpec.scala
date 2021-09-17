@@ -4,12 +4,13 @@ import drt.shared.PaxTypes._
 import drt.shared.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSources.Historical
 import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{PaxTypes, _}
+import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.specs2.mutable.Specification
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import queueus._
 import services.SDate
+import uk.gov.homeoffice.drt.Nationality
 
 class QueueAllocationSpec extends Specification {
   val terminalQueueAllocationMap: Map[Terminal, Map[PaxType, List[(Queue, Double)]]] = Map(T1 -> Map(

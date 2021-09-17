@@ -11,9 +11,9 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.{LocalDate, UtcDate}
-import drt.shared.redlist.{RedListUpdates, SetRedListUpdate}
 import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
 
 import java.util.UUID
 import scala.collection.immutable.HashSet

@@ -3,15 +3,16 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsOptions, ChartJsProps}
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.shared.Nationality
-import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.raw.HTMLElement
+import uk.gov.homeoffice.drt.Nationality
 
 object NationalityFinderChartComponent {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
-  val component = ScalaComponent.builder[Props]("FlightChart")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FlightChart")
     .render_P(p => {
       val sortedNats = p.nationalities
         .toList

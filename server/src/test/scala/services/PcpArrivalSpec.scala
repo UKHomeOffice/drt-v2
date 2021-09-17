@@ -4,9 +4,10 @@ import controllers.ArrivalGenerator.arrival
 import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared.api.{Arrival, WalkTime}
 import drt.shared.coachTime.{CoachTransfer, DefaultCoachWalkTime, LhrCoachWalkTime}
-import drt.shared.redlist.{LhrRedListDatesImpl, RedListUpdate, RedListUpdates}
+import drt.shared.redlist.LhrRedListDatesImpl
 import drt.shared.{MilliDate, PortCode}
 import org.specs2.mutable.SpecificationLike
+import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
 class PcpArrivalSpec extends SpecificationLike {
 

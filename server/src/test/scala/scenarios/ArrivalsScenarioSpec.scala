@@ -13,7 +13,6 @@ import drt.shared.Terminals.{T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.dates.LocalDate
-import drt.shared.redlist.RedListUpdates
 import manifests.passengers.ManifestLike
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -22,6 +21,7 @@ import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

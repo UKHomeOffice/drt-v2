@@ -5,11 +5,11 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.Terminals.{A1, A2}
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
 import drt.shared.{AirportConfigs, PortCode, PortState}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig, TestDefaults}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.concurrent.duration._
 

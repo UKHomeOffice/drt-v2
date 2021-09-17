@@ -1,6 +1,7 @@
 package drt.shared.api
 
-import drt.shared.{ArrivalKey, Nationality, PaxType}
+import drt.shared.{ArrivalKey, PaxType}
+import uk.gov.homeoffice.drt.Nationality
 import upickle.default.{macroRW, _}
 
 case class PassengerInfoSummary(

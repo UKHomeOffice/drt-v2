@@ -17,7 +17,6 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.UtcDate
-import drt.shared.redlist.RedListUpdates
 import manifests.queues.SplitsCalculator
 import play.api.mvc._
 import services.SDate
@@ -26,6 +25,7 @@ import services.exports.StreamingDesksExport
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios.simulationResult
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import upickle.default.write
 
 import scala.collection.immutable.SortedMap

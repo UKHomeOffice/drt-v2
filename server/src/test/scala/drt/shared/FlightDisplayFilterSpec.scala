@@ -2,9 +2,9 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals._
-import drt.shared.coachTime.CoachWalkTime
-import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes, RedListUpdates}
+import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.HashSet
 

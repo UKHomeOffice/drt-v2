@@ -5,6 +5,7 @@ import drt.shared.api.Arrival
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import services.SDate
+import uk.gov.homeoffice.drt.Nationality
 
 object MockManifest {
 

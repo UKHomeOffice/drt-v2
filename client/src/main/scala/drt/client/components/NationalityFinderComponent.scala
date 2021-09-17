@@ -2,10 +2,11 @@ package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.shared.SDateLike
-import drt.shared.redlist.{ApiIndirectRedListPax, RedListUpdates}
+import drt.shared.redlist.ApiIndirectRedListPax
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 object NationalityFinderComponent {
   def isRedListCountry(country: String, date: SDateLike, redListUpdates: RedListUpdates): Boolean =

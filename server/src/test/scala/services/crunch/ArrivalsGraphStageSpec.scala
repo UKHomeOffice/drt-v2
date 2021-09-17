@@ -13,6 +13,7 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds._
 import services.SDate
+import uk.gov.homeoffice.drt.Nationality
 
 import scala.collection.immutable.List
 import scala.concurrent.duration._

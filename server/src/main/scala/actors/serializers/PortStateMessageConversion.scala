@@ -8,6 +8,7 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
+import uk.gov.homeoffice.drt.Nationality
 
 object PortStateMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass)

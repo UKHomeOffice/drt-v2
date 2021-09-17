@@ -10,10 +10,11 @@ import drt.shared._
 import drt.shared.airportconfig.Bhx
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
-import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
+import passengersplits.parsing.VoyageManifestParser._
 import queueus._
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.Nationality
 
 class SplitsCalculatorSpec extends CrunchTestLike {
   val config: AirportConfig = Bhx.config
