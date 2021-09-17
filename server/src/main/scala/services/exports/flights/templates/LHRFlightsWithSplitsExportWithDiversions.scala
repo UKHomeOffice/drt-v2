@@ -3,8 +3,9 @@ package services.exports.flights.templates
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
 import drt.shared.Terminals._
 import drt.shared._
-import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedListUpdates}
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import services.AirportToCountry
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 
 trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {

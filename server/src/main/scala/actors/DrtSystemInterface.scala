@@ -4,9 +4,9 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.GetFlights
 import actors.daily.PassengersActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
 import actors.persistent.staffing._
-import actors.persistent._
 import actors.routing.FlightsRouterActor
 import actors.supervised.RestartOnStop
 import akka.NotUsed
@@ -26,6 +26,7 @@ import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.common.{ArrivalFeed, HttpClient}
+import drt.server.feeds.edi.{EdiClient, EdiFeed}
 import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
 import drt.server.feeds.legacy.bhx.{BHXForecastFeedLegacy, BHXLiveFeedLegacy}
@@ -40,14 +41,14 @@ import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.coachTime.CoachWalkTime
-import drt.shared.redlist.{RedListUpdateCommand, RedListUpdates}
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
-import org.joda.time.DateTimeZone
+import org.joda.time.{DateTime, DateTimeZone}
 import play.api.Configuration
 import queueus.{AdjustmentsNoop, ChildEGateAdjustments, PaxTypeQueueAllocation, QueueAdjustments}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
+import services.SDate.JodaSDate
 import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
@@ -56,6 +57,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
+import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable
@@ -377,6 +379,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).tickingSource
       case "PIK" =>
         CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).tickingSource(30 seconds)
+      case "EDI" =>
+        new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediLiveFeedPollingSource(1 minutes)
       case _ => arrivalsNoOp
     }
 
@@ -384,6 +388,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val feed = portCode match {
       case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => createArrivalFeed
       case PortCode("BHX") => BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")))
+      case PortCode("EDI") =>
+        new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediForecastFeedPollingSource(10 minutes)
       case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }

@@ -8,8 +8,8 @@ import drt.shared.Queues._
 import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
 import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
-import drt.shared.redlist.RedListUpdates
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 class DynamicWorkloadCalculatorSpec extends CrunchTestLike {
   def calcForConfig(config: AirportConfig): DynamicWorkloadCalculator = {

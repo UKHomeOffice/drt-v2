@@ -5,6 +5,7 @@ import org.specs2.mutable.Specification
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.protobuf.messages.VoyageManifest.PassengerInfoJsonMessage
+import uk.gov.homeoffice.drt.Nationality
 
 class ManifestMessageConversionSpec extends Specification {
 

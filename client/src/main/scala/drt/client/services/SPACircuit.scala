@@ -11,8 +11,8 @@ import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
-import drt.shared.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import java.util.UUID
 import scala.collection.immutable.{HashSet, Map}

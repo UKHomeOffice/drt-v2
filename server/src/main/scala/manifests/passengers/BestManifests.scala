@@ -6,6 +6,7 @@ import manifests.UniqueArrivalKey
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import services.SDate
+import uk.gov.homeoffice.drt.Nationality
 
 trait ManifestLike {
   val source: SplitSource

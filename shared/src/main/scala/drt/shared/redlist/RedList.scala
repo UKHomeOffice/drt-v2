@@ -8,54 +8,6 @@ import upickle.default.{ReadWriter, macroRW}
 import scala.collection.immutable.{Map, SortedMap}
 
 
-case class RedListUpdates(updates: Map[MillisSinceEpoch, RedListUpdate]) {
-  lazy val isEmpty: Boolean = updates.isEmpty
-
-  def remove(effectiveFrom: MillisSinceEpoch): RedListUpdates = copy(updates = updates.filterKeys(_ != effectiveFrom))
-
-  def update(setRedListUpdate: SetRedListUpdate): RedListUpdates =
-    copy(updates = updates
-      .filter {
-        case (effectiveFrom, update) => effectiveFrom != setRedListUpdate.originalDate
-      } + (setRedListUpdate.redListUpdate.effectiveFrom -> setRedListUpdate.redListUpdate)
-    )
-
-  def ++(other: RedListUpdates): RedListUpdates = copy(updates = updates ++ other.updates)
-
-  def countryCodesByName(date: MillisSinceEpoch): Map[String, String] =
-    updates
-      .filterKeys(changeDate => changeDate <= date)
-      .toList.sortBy(_._1)
-      .foldLeft(Map[String, String]()) {
-        case (acc, (date, updates)) => (acc ++ updates.additions) -- updates.removals
-      }
-
-  def redListNats(date: MillisSinceEpoch): Iterable[Nationality] =
-    countryCodesByName(date).values.map(Nationality(_))
-}
-
-object RedListUpdates {
-  val empty: RedListUpdates = RedListUpdates(Map())
-
-  implicit val rw: ReadWriter[RedListUpdates] = macroRW
-}
-
-case class RedListUpdate(effectiveFrom: MillisSinceEpoch, additions: Map[String, String], removals: List[String])
-
-object RedListUpdate {
-  implicit val rw: ReadWriter[RedListUpdate] = macroRW
-}
-
-sealed trait RedListUpdateCommand
-
-case class SetRedListUpdate(originalDate: MillisSinceEpoch, redListUpdate: RedListUpdate) extends RedListUpdateCommand
-
-object SetRedListUpdate {
-  implicit val rw: ReadWriter[SetRedListUpdate] = macroRW
-}
-
-case class DeleteRedListUpdates(millis: MillisSinceEpoch) extends RedListUpdateCommand
-
 object RedList {
   def redListOriginWorkloadExcluded(portCode: PortCode, terminal: Terminal): Boolean =
     portCode == PortCode("LHR") && List(T2, T5).contains(terminal)

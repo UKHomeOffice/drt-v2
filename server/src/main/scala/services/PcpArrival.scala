@@ -6,8 +6,8 @@ import drt.shared.MilliTimes.timeToNearestMinute
 import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, WalkTime}
 import drt.shared.coachTime.CoachWalkTime
-import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.util.{Success, Try}
 

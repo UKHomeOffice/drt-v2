@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.shared.Nationality
+import uk.gov.homeoffice.drt.Nationality
 import utest.{TestSuite, _}
 
 object FlghtChartComponentTests extends TestSuite {

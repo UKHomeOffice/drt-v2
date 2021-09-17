@@ -2,7 +2,8 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.Terminal
-import drt.shared.redlist.{LhrTerminalTypes, RedListUpdates}
+import drt.shared.redlist.LhrTerminalTypes
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 sealed trait FlightDisplayFilter {
   val forTerminalIncludingIncomingDiversions: (Iterable[ApiFlightWithSplits], Terminal) => Iterable[ApiFlightWithSplits] =

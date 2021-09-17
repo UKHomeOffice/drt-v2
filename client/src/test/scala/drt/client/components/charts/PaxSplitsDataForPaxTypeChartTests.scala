@@ -5,7 +5,8 @@ import drt.client.components.charts.DataFormat.jsonString
 import drt.client.services.charts.ChartData
 import drt.shared.PaxTypes._
 import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
-import drt.shared.{ApiPaxTypeAndQueueCount, Nationality, PaxTypes, Queues}
+import drt.shared.{ApiPaxTypeAndQueueCount, PaxTypes, Queues}
+import uk.gov.homeoffice.drt.Nationality
 import utest.{TestSuite, _}
 
 object PaxSplitsDataForPaxTypeChartTests extends TestSuite {

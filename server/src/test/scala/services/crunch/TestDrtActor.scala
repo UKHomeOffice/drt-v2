@@ -13,7 +13,6 @@ import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKil
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.shared.Terminals.Terminal
-import drt.shared.redlist.{RedListUpdateCommand, RedListUpdates}
 import drt.shared.{MilliTimes, PortCode, SDateLike, VoyageNumber}
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
@@ -27,6 +26,7 @@ import services.crunch.deskrecs._
 import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
+import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._

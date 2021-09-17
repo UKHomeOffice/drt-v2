@@ -18,14 +18,13 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
-import drt.shared.{AirportConfig, _}
+import drt.shared._
 import drt.users.KeyCloakClient
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.mvc.{Action, _}
+import play.api.mvc._
 import play.api.{Configuration, Environment}
-import services.PcpArrival.{pcpFrom, _}
+import services.PcpArrival._
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
@@ -33,6 +32,7 @@ import services.staffing.StaffTimeSlots
 import test.TestDrtSystem
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, ManageUsers, Role, StaffEdit}
 import uk.gov.homeoffice.drt.auth._
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import java.nio.ByteBuffer
 import java.util.{Calendar, TimeZone, UUID}

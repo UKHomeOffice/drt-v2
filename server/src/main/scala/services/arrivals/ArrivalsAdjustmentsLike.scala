@@ -2,9 +2,9 @@ package services.arrivals
 
 import drt.shared.PortCode
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
 import services.AirportToCountry
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 trait ArrivalsAdjustmentsLike {
   def apply(arrivals: Iterable[Arrival], redListUpdates: RedListUpdates): Iterable[Arrival]

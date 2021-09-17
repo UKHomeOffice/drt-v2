@@ -4,8 +4,8 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.PortCode
 import drt.shared.Terminals.{A1, A2}
 import drt.shared.api.Arrival
-import drt.shared.redlist.RedListUpdates
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 case class EdiArrivalsTerminalAdjustments(isRedListed: (PortCode, MillisSinceEpoch, RedListUpdates) => Boolean) extends ArrivalsAdjustmentsLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
