@@ -2,8 +2,8 @@ package drt.shared.redlist
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{T2, T3, T5, Terminal}
-import drt.shared.{ApiFlightWithSplits, Nationality, PortCode}
-import upickle.default.{ReadWriter, macroRW}
+import drt.shared.{ApiFlightWithSplits, PortCode}
+import uk.gov.homeoffice.drt.redlist.RedListUpdate
 
 import scala.collection.immutable.{Map, SortedMap}
 
