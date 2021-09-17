@@ -2,10 +2,8 @@ package drt.shared.redlist
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.Terminals.{T2, T3, T5, Terminal}
-import drt.shared.api.PassengerInfoSummary
 import drt.shared.{ApiFlightWithSplits, PortCode}
-import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
+import uk.gov.homeoffice.drt.redlist.RedListUpdate
 
 import scala.collection.immutable.{Map, SortedMap}
 
@@ -148,21 +146,8 @@ sealed trait IndirectRedListPax {
 }
 
 object IndirectRedListPax {
-  def apply(displayRedListInfo: Boolean,
-            portCode: PortCode,
-            flightWithSplits: ApiFlightWithSplits,
-            maybePassengerInfo: Option[PassengerInfoSummary],
-            redListUpdates: RedListUpdates): IndirectRedListPax =
-    (displayRedListInfo, portCode) match {
-      case (false, _) => NoIndirectRedListPax
-      case (true, PortCode("LHR")) =>
-        NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax)
-      case (true, _) =>
-        val maybeNats = maybePassengerInfo.map(_.nationalities.filter {
-          case (nat, _) => redListUpdates.redListNats(flightWithSplits.apiFlight.Scheduled).toList.contains(nat)
-        })
-        ApiIndirectRedListPax(maybeNats)
-    }
+  def apply(displayRedListInfo: Boolean, flightWithSplits: ApiFlightWithSplits): IndirectRedListPax =
+    if (displayRedListInfo) NeboIndirectRedListPax(flightWithSplits.apiFlight.RedListPax) else NoIndirectRedListPax
 }
 
 sealed trait EnabledIndirectRedListPax extends IndirectRedListPax {
@@ -172,10 +157,6 @@ sealed trait EnabledIndirectRedListPax extends IndirectRedListPax {
 
 case object NoIndirectRedListPax extends IndirectRedListPax {
   override val isEnabled: Boolean = false
-}
-
-case class ApiIndirectRedListPax(maybeNationalities: Option[Map[Nationality, Int]]) extends EnabledIndirectRedListPax {
-  override val maybeCount: Option[Int] = maybeNationalities.map(_.values.sum)
 }
 
 case class NeboIndirectRedListPax(maybeCount: Option[Int]) extends EnabledIndirectRedListPax

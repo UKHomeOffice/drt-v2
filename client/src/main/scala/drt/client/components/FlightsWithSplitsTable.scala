@@ -98,7 +98,7 @@ object FlightsWithSplitsTable {
                     .flatMap(_.get(ArrivalKey(flightWithSplits.apiFlight)))
                   val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
                   val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch, props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
-                  val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, props.portCode, flightWithSplits, maybePassengerInfo, props.redListUpdates)
+                  val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits = flightWithSplits,
                     maybePassengerInfoSummary = maybePassengerInfo,
@@ -130,31 +130,30 @@ object FlightsWithSplitsTable {
     .build
 
   def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue]): TagOf[TableSection] = {
-    val redListPassportHeading = props.portCode match {
-      case PortCode("LHR") => "Red List Pax"
-      case _ => "Red List Passports"
-    }
+    val redListHeading = "Red List Pax"
+    val estChoxHeading = "Est Chox"
+    
     val columns = List(
       ("Flight", Option("arrivals__table__flight-code")),
       ("Origin", None),
       ("Country", Option("country")),
-      (redListPassportHeading, None),
+      (redListHeading, None),
       ("Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
       ("Sch", None),
       ("Est", None),
       ("Act", None),
-      ("Est Chox", None),
+      (estChoxHeading, None),
       ("Act Chox", None),
       ("Est PCP", Option("arrivals__table__flight-est-pcp")),
       ("Est PCP Pax", Option("arrivals__table__flight__pcp-pax__header")))
 
     val portColumnThs = columns
       .filter {
-        case (label, _) => label != "Est Chox" || props.hasEstChox
+        case (label, _) => label != estChoxHeading || props.hasEstChox
       }
       .filter {
-        case (label, _) => label != redListPassportHeading || props.displayRedListInfo
+        case (label, _) => label != redListHeading || props.displayRedListInfo
       }
       .map {
         case (label, None) if label == "Flight" => <.th(
@@ -300,7 +299,7 @@ object FlightTableRow {
           <.span(
             proxy().renderEmpty(<.span()),
             proxy().render(ai => {
-              val style = if (props.indirectRedListPax.isEnabled && NationalityFinderComponent.isRedListCountry(ai.country, props.viewMode.dayEnd, props.redListUpdates)) {
+              val style = if (props.indirectRedListPax.isEnabled && isRedListCountry(ai.country, props.viewMode.dayEnd, props.redListUpdates)) {
                 ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField)
               } else EmptyVdom
 
@@ -313,7 +312,6 @@ object FlightTableRow {
         }),
         props.indirectRedListPax match {
           case NoIndirectRedListPax => EmptyVdom
-          case paxFromApi: ApiIndirectRedListPax => <.td(NationalityFinderComponent(paxFromApi))
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
@@ -394,6 +392,9 @@ object FlightTableRow {
     else ""
     offScheduleClass
   }
+
+  def isRedListCountry(country: String, date: SDateLike, redListUpdates: RedListUpdates): Boolean =
+    redListUpdates.countryCodesByName(date.millisSinceEpoch).keys.exists(_.toLowerCase == country.toLowerCase)
 
   def apply(props: Props): Unmounted[Props, RowState, Unit] = component(props)
 
