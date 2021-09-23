@@ -263,12 +263,13 @@ case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpda
     }
   }
 
-  def isWithinThreshold(apiSplits: Splits): Boolean = {
-    val apiPaxNo = apiSplits.totalExcludingTransferPax
-    val threshold: Double = 0.05
-    val portDirectPax: Double = apiFlight.ActPax.getOrElse(0) - apiFlight.TranPax.getOrElse(0)
-    apiPaxNo != 0 && Math.abs(apiPaxNo - portDirectPax) / apiPaxNo < threshold
-  }
+  def isWithinThreshold(apiSplits: Splits): Boolean =
+    apiFlight.ActPax.forall { actPax =>
+      val apiPaxNo = apiSplits.totalExcludingTransferPax
+      val threshold: Double = 0.05
+      val portDirectPax: Double = actPax - apiFlight.TranPax.getOrElse(0)
+      apiPaxNo != 0 && Math.abs(apiPaxNo - portDirectPax) / apiPaxNo < threshold
+    }
 
   def hasPcpPaxIn(start: SDateLike, end: SDateLike): Boolean = apiFlight.hasPcpDuring(start, end)
 
