@@ -13,9 +13,9 @@ import drt.shared.Terminals.Terminal
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import drt.shared.dates.{LocalDate, UtcDate}
 import ujson.Js.Value
-import uk.gov.homeoffice.drt.{Nationality, Urls}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.{Nationality, Urls}
 import upickle.default._
 
 import java.lang.Math.round
@@ -606,6 +606,7 @@ object MonthStrings {
 }
 
 trait SDateLike {
+
   import MonthStrings._
 
   def ddMMyyString: String = f"$getDate%02d/$getMonth%02d/${getFullYear - 2000}%02d"

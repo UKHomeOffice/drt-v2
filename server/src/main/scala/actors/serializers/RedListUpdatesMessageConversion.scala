@@ -5,13 +5,18 @@ import server.protobuf.messages.RedListUpdates._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
 
 object RedListUpdatesMessageConversion {
-  def setUpdatesToMessage(updates: SetRedListUpdate): GeneratedMessage =
+  def setUpdatesToMessage(updates: SetRedListUpdate): SetRedListUpdateMessage =
     SetRedListUpdateMessage(Option(updates.originalDate), Option(updateToMessage(updates.redListUpdate)))
 
-  def updateToMessage(update: RedListUpdate): RedListUpdateMessage =
-    RedListUpdateMessage(Option(update.effectiveFrom), update.additions.map {
+  def updateToMessage(update: RedListUpdate): RedListUpdateMessage = {
+    val additions = update.additions.map {
       case (n, c) => AdditionMessage(Option(n), Option(c))
-    }.toSeq)
+    }.toSeq
+
+    val removals = update.removals.map(n => RemovalMessage(Option(n)))
+
+    RedListUpdateMessage(Option(update.effectiveFrom), additions, removals)
+  }
 
   def additionsFromMessage(additions: Seq[AdditionMessage]): Map[String, String] =
     additions.collect {

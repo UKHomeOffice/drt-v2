@@ -43,7 +43,9 @@ class RedListUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike wi
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case updates: SetRedListUpdateMessage =>
-      RedListUpdatesMessageConversion.setUpdatesFromMessage(updates).map(u => state = state.update(u))
+      RedListUpdatesMessageConversion
+        .setUpdatesFromMessage(updates)
+        .foreach(update => state = state.update(update))
 
     case delete: RemoveUpdateMessage =>
       delete.date.map(effectiveFrom => state = state.remove(effectiveFrom))
