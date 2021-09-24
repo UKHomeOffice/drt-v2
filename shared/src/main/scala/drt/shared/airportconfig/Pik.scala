@@ -2,7 +2,7 @@ package drt.shared.airportconfig
 
 import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues.{EGate, EeaDesk}
+import drt.shared.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk, Transfer}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
@@ -17,14 +17,15 @@ object Pik extends AirportConfigLike {
   val config: AirportConfig = AirportConfig(
     portCode = PortCode("PIK"),
     queuesByTerminal = SortedMap(
-      T1 -> Seq(Queues.QueueDesk)
+      T1 -> Seq(Queues.NonEeaDesk, Queues.EeaDesk)
     ),
     divertedQueues = Map(
       Queues.NonEeaDesk -> Queues.QueueDesk,
       Queues.EeaDesk -> Queues.QueueDesk
     ),
-    slaByQueue = Map(
-      Queues.QueueDesk -> 20,
+    slaByQueue =  Map(
+      Queues.EeaDesk -> 25,
+      Queues.NonEeaDesk -> 45
     ),
     defaultWalkTimeMillis = Map(T1 -> 780000L),
     terminalPaxSplits = Map(T1 -> SplitRatios(
@@ -42,21 +43,17 @@ object Pik extends AirportConfigLike {
     )),
     minMaxDesksByTerminalQueue24Hrs = Map(
       T1 -> Map(
-        Queues.QueueDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5))
-      )
+        Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4)),
+        Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4))
+        )
     ),
     eGateBankSizes = Map(T1 -> Iterable()),
     role = PIK,
     terminalPaxTypeQueueAllocation = Map(
-      T1 -> Map(
-        EeaMachineReadable -> List(Queues.QueueDesk -> 1.0),
-        EeaBelowEGateAge -> List(Queues.QueueDesk -> 1.0),
-        EeaNonMachineReadable -> List(Queues.QueueDesk -> 1.0),
-        NonVisaNational -> List(Queues.QueueDesk -> 1.0),
-        VisaNational -> List(Queues.QueueDesk -> 1.0),
-        B5JPlusNational -> List(Queues.QueueDesk -> 1.0),
-        B5JPlusNationalBelowEGateAge -> List(Queues.QueueDesk -> 1.0)
-      )),
+      T1 -> (defaultQueueRatios + (
+        EeaMachineReadable -> List(EeaDesk -> 1.0),
+        B5JPlusNational -> List(Queues.EeaDesk -> 1.0)
+      ))),
     flexedQueues = Set(),
     desksByTerminal = Map(T1 -> 5),
     feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
