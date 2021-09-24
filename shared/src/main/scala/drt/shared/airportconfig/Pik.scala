@@ -1,12 +1,12 @@
 package drt.shared.airportconfig
 
-import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
+import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk, Transfer}
+import drt.shared.Queues.EeaDesk
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
-import uk.gov.homeoffice.drt.auth.Roles.{EMA, PIK}
+import uk.gov.homeoffice.drt.auth.Roles.PIK
 
 import scala.collection.immutable.SortedMap
 
@@ -23,7 +23,7 @@ object Pik extends AirportConfigLike {
       Queues.NonEeaDesk -> Queues.QueueDesk,
       Queues.EeaDesk -> Queues.QueueDesk
     ),
-    slaByQueue =  Map(
+    slaByQueue = Map(
       Queues.EeaDesk -> 25,
       Queues.NonEeaDesk -> 45
     ),
@@ -45,7 +45,7 @@ object Pik extends AirportConfigLike {
       T1 -> Map(
         Queues.EeaDesk -> (List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4)),
         Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4))
-        )
+      )
     ),
     eGateBankSizes = Map(T1 -> Iterable()),
     role = PIK,
