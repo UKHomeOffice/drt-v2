@@ -3,7 +3,7 @@ package drt.client.actions
 import diode.Action
 import diode.data.Pot
 import drt.client.components.scenarios.SimulationFormFields
-import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
+import drt.client.components.{EgateBanksUpdate, FileUploadState, SetEgateBanksUpdate, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
@@ -180,6 +180,14 @@ object Actions {
   case class DeleteRedListUpdate(effectiveFrom: MillisSinceEpoch) extends Action
 
   case class SetRedListUpdates(updates: RedListUpdates) extends Action
+
+  case object GetEgateBankUpdates extends Action
+
+  case class SaveEgateBankUpdate(setEgateBankUpdate: SetEgateBanksUpdate) extends Action
+
+  case class DeleteEgateBankUpdate(effectiveFrom: MillisSinceEpoch) extends Action
+
+//  case class SetEgateBankUpdate(update: EgateBanksUpdate) extends Action
 
   case class UpdateStaffAdjustmentDialogueState(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
 
