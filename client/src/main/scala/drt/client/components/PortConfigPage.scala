@@ -30,6 +30,7 @@ object PortConfigPage {
           ^.className := "port-config",
           <.h3("Port Config"),
           if (user.hasRole(RedListsEdit)) RedListEditor(redListUpdates) else EmptyVdom,
+          if (user.hasRole(RedListsEdit)) EgatesScheduleEditor(EgatesUpdates(Map())) else EmptyVdom,
           PortConfigDetails(airportConfig)
         )
       mp.render(identity)

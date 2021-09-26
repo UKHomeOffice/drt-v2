@@ -75,12 +75,12 @@ object EgatesScheduleEditor {
           <.h2("Egate Banks Schedule"),
           MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
             MuiIcons(Add)(fontSize = "small"),
-            "Add a new change set",
+            "Scheduled e-Gates change",
             ^.onClick --> scope.modState(_.copy(editing = Option(Editing(EgateBanksUpdate(today, List()), today))))),
           s.editing match {
             case Some(editing) =>
               MuiDialog(open = s.editing.isDefined, maxWidth = "xs")(
-                MuiDialogTitle()(s"Edit update ${SDate(editing.update.effectiveFrom).toISODateOnly}"),
+                MuiDialogTitle()(s"Change for ${SDate(editing.update.effectiveFrom).toISODateOnly}"),
                 MuiDialogContent()(
                   MuiTextField()(
                     ^.`type` := "date",
@@ -90,9 +90,20 @@ object EgatesScheduleEditor {
                   MuiGrid(direction = MuiGrid.Direction.row, container = true)(
                     editing.update.banks.zipWithIndex.map { case (egatesBank, idx) =>
                       MuiGrid(item = true, container = true)(
-                        MuiGrid(item = true, xs = 6)(s"Bank ${idx + 1}"),
+                        MuiGrid(item = true, xs = 3)(s"Bank ${idx + 1}"),
+                        MuiGrid(item = true, xs = 3)(
+                          MuiTextField()(
+                            ^.defaultValue := egatesBank.functional,
+                            ^.onChange ==> setDate
+                          ),
+                          "/",
+                          MuiTextField()(
+                            ^.defaultValue := egatesBank.capacity,
+                            ^.onChange ==> setDate
+                          )
+                        ),
                         MuiGrid(item = true, xs = 6)(
-                          MuiButton(color = Color.default, variant = "outlined", size = "small")(MuiIcons(Delete)(fontSize = "small"), ^.onClick --> removeRemoval(egatesBank))
+                          MuiButton(color = Color.default, variant = "outlined", size = "small")(MuiIcons(Delete)(fontSize = "small"))
                         )
                       )
                     }.toTagMod
@@ -110,10 +121,10 @@ object EgatesScheduleEditor {
               val date = SDate(updates.effectiveFrom)
               <.li(
                 <.span(^.className := "red-list-set",
-                  s"${date.toISODateOnly}: ${updates.additions.size} additions, ${updates.removals.size} removals",
+                  s"${date.toISODateOnly}: ${updates.banks.map(b => s"${b.functional} / ${b.capacity}").mkString(", ")}",
                   MuiButton(color = Color.default, variant = "outlined", size = "medium")(
                     MuiIcons(Edit)(fontSize = "small"),
-                    ^.onClick --> scope.modState(_.copy(editing = Option(Editing(updates, None, None, updates.effectiveFrom))))),
+                    ^.onClick --> scope.modState(_.copy(editing = Option(Editing(updates, updates.effectiveFrom))))),
                   MuiButton(color = Color.default, variant = "outlined", size = "medium")(
                     MuiIcons(Delete)(fontSize = "small"),
                     ^.onClick --> deleteUpdates(updates.effectiveFrom)),
