@@ -99,8 +99,8 @@ class ApiFlightWithSplitsSpec extends Specification {
         val flightWithSplits = flightWithPaxAndApiSplits(None, 0, 100, 0, Set(LiveFeedSource))
         flightWithSplits.hasValidApi mustEqual true
         flightWithSplits.pcpPaxEstimate mustEqual 100
-        val a: Option[Map[Queues.Queue, Int]] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits)
-        a must beSome(collection.Map(Queues.NonEeaDesk -> 100))
+        val paxPerQueue: Option[Map[Queues.Queue, Int]] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(flightWithSplits)
+        paxPerQueue must beSome(collection.Map(Queues.NonEeaDesk -> 100))
       }
     }
 
