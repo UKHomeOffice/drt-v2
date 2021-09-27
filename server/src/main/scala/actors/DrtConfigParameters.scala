@@ -31,7 +31,6 @@ case class DrtConfigParameters(config: Configuration) {
   val aclHost: Option[String] = config.getOptional[String]("acl.host")
   val aclUsername: Option[String] = config.getOptional[String]("acl.username")
   val aclKeyPath: Option[String] = config.getOptional[String]("acl.keypath")
-  val aclMinFileSizeInBytes: Long = config.getOptional[Long]("acl.min-file-size-in-bytes").getOrElse(10000L)
   val refreshArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.refresh-arrivals-on-start").getOrElse(false)
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
   val refreshManifestsOnStart: Boolean = if (refreshArrivalsOnStart) {

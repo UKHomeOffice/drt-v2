@@ -1,15 +1,14 @@
 package feeds.acl
 
-import com.typesafe.config.ConfigFactory
 import controllers.ArrivalGenerator
 import drt.server.feeds.acl.AclFeed
-import drt.server.feeds.acl.AclFeed.{arrivalsFromCsvContent, contentFromFileName, latestFileForPort, sftpClient}
+import drt.server.feeds.acl.AclFeed.{aclFileName, arrivalsFromCsvContent}
 import drt.shared
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Terminals._
+import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.{VoyageNumber, _}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
@@ -22,7 +21,7 @@ class AclFeedSpec extends CrunchTestLike {
   val regularTerminalMapping: Terminal => Terminal = (t: Terminal) => t
 
   "ACL feed failures" >> {
-    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", PortCode("BAD"), (_: Terminal) => T1, 1000L)
+    val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", PortCode("BAD"), (_: Terminal) => T1)
 
     val result = aclFeed.requestArrivals.getClass
 
@@ -328,36 +327,25 @@ class AclFeedSpec extends CrunchTestLike {
         portStateFlightLists.distinct === expected
       }
     }
+  }
 
-    "Looking at flights" >> {
-      skipped("Integration test for ACL - requires SSL certificate to run")
-      val ftpServer = ConfigFactory.load.getString("acl.host")
-      val username = ConfigFactory.load.getString("acl.username")
-      val path = ConfigFactory.load.getString("acl.keypath")
+  "I should be able to construct an ACL file name given the date, port code and season, regardless of case" >> {
+    val today = SDate("2021-09-27T12:00")
+    val portCode = PortCode("bhd")
+    val season = "w"
 
-      val sftp = sftpClient(AclFeed.sshClient(ftpServer, username, path))
-      val latestFile = latestFileForPort(sftp, PortCode("MAN"), 100000L)
-      println(s"latestFile: $latestFile")
-      val aclArrivals: List[Arrival] = arrivalsFromCsvContent(contentFromFileName(sftp, latestFile), regularTerminalMapping)
+    val file: String = aclFileName(today, portCode, season)
 
-      val todayArrivals = aclArrivals
-        .filter(_.Scheduled < SDate("2017-10-05T23:00").millisSinceEpoch)
-        .groupBy(_.Terminal)
+    file === "BHDW21_HOMEOFFICEROLL180_20210927.zip"
+  }
 
-      todayArrivals.foreach {
-        case (tn, _) =>
-          val tByUniqueId = todayArrivals(tn).groupBy(_.uniqueId)
-          println(s"uniques for $tn: ${tByUniqueId.keys.size} flights")
-          tByUniqueId.filter {
-            case (_, a) => a.length > 1
-          }.foreach {
-            case (uid, a) => println(s"non-unique: $uid -> $a")
-          }
-      }
+  "The list of latest possible acl file dates and seasons should be in reverse date order" >> {
+    skipped("integration test")
 
-      todayArrivals.keys.foreach(t => println(s"terminal $t has ${todayArrivals(t).size} flights"))
+    val todayMidnight = SDate.now().getUtcLastMidnight
+    val yesterdayMidnight = todayMidnight.addDays(-1)
+    val aclFeed = AclFeed("mock-server", "mock-username", "mock-path", PortCode("BHD"), t => t)
 
-      success
-    }
+    aclFeed.latestFileDateAndSeason(PortCode("BHD")) === List((todayMidnight, "S"),(todayMidnight, "W"),(yesterdayMidnight, "S"), (yesterdayMidnight, "W"))
   }
 }

@@ -133,7 +133,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         host <- params.aclHost
         username <- params.aclUsername
         keyPath <- params.aclKeyPath
-      } yield AclFeed(host, username, keyPath, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode), params.aclMinFileSizeInBytes)
+      } yield AclFeed(host, username, keyPath, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode))
 
   val maxDaysToConsider: Int = 14
   val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, now)), name = "passengers-actor")
