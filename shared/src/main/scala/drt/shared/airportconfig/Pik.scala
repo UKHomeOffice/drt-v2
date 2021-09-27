@@ -1,18 +1,17 @@
 package drt.shared.airportconfig
 
-import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, EeaNonMachineReadable, NonVisaNational, VisaNational}
+import drt.shared.AirportConfigDefaults.defaultQueueRatios
+import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EGate, EeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
-import uk.gov.homeoffice.drt.auth.Roles.{EMA, PIK}
+import uk.gov.homeoffice.drt.auth.Roles.PIK
 
 import scala.collection.immutable.SortedMap
 
 object Pik extends AirportConfigLike {
-
-  import AirportConfigDefaults._
 
   val config: AirportConfig = AirportConfig(
     portCode = PortCode("PIK"),
@@ -49,14 +48,15 @@ object Pik extends AirportConfigLike {
     role = PIK,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> Map(
-        EeaMachineReadable -> List(Queues.QueueDesk -> 1.0),
-        EeaBelowEGateAge -> List(Queues.QueueDesk -> 1.0),
-        EeaNonMachineReadable -> List(Queues.QueueDesk -> 1.0),
-        NonVisaNational -> List(Queues.QueueDesk -> 1.0),
-        VisaNational -> List(Queues.QueueDesk -> 1.0),
-        B5JPlusNational -> List(Queues.QueueDesk -> 1.0),
-        B5JPlusNationalBelowEGateAge -> List(Queues.QueueDesk -> 1.0)
-      )),
+        EeaMachineReadable -> List(Queues.EeaDesk -> 1.0),
+        EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
+        EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
+        NonVisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        VisaNational -> List(Queues.NonEeaDesk -> 1.0),
+        B5JPlusNational -> List(Queues.EeaDesk -> 1.0),
+        B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
+      )
+    ),
     flexedQueues = Set(),
     desksByTerminal = Map(T1 -> 5),
     feedSources = Seq(ApiFeedSource, LiveBaseFeedSource, LiveFeedSource, AclFeedSource)
