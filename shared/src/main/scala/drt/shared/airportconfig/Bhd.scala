@@ -1,12 +1,12 @@
 package drt.shared.airportconfig
 
-import uk.gov.homeoffice.drt.auth.Roles.{BFS, BHD}
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import drt.shared.Terminals.T1
 import drt.shared._
+import uk.gov.homeoffice.drt.auth.Roles.BHD
 
 import scala.collection.immutable.SortedMap
 
