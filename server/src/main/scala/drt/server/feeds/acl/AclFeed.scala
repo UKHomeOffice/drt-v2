@@ -34,7 +34,7 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
             sshClient <- Try(ssh)
             sftpClient <- Try(sshClient.newSFTPClient)
             responseTry = Try {
-              Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, aclFileName(date, portCode, season)), terminalMapping))
+              Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, "/180_Days/" + aclFileName(date, portCode, season)), terminalMapping))
             }
           } yield {
             sshClient.disconnect()
@@ -268,19 +268,8 @@ object AclFeed {
         ACLTER -> T1,
         MainApron -> T1,
       ).getOrElse(tIn, tIn)
-    case PortCode("BHX") =>
-      (tIn: Terminal) =>
-        Map[Terminal, Terminal](
-        ).getOrElse(tIn, tIn)
-    case PortCode("BRS") =>
-      (tIn: Terminal) =>
-        Map[Terminal, Terminal](
-        ).getOrElse(tIn, tIn)
     case PortCode("STN") =>
-      (tIn: Terminal) =>
-        Map[Terminal, Terminal](
-          CTA -> T1,
-        ).getOrElse(tIn, tIn)
+      (tIn: Terminal) => Map[Terminal, Terminal](CTA -> T1).getOrElse(tIn, tIn)
     case _ => (tIn: Terminal) => tIn
   }
 }

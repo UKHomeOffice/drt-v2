@@ -274,7 +274,9 @@ class ArrivalsGraphStage(name: String = "",
         case (_, f) if !isFlightRelevant(f) =>
           log.debug(s"Filtering out irrelevant arrival: ${f.flightCodeString}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
           true
-        case _ => false
+        case (_, f) =>
+          log.info(s"Relevant flight: ${f.flightCodeString}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
+          false
       }.keys
 
       val minusRemovals = arrivals -- toRemove

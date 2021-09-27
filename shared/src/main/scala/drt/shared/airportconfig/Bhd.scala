@@ -1,6 +1,6 @@
 package drt.shared.airportconfig
 
-import uk.gov.homeoffice.drt.auth.Roles.BFS
+import uk.gov.homeoffice.drt.auth.Roles.{BFS, BHD}
 import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.Queues.{EeaDesk, NonEeaDesk}
@@ -42,7 +42,7 @@ object Bhd extends AirportConfigLike {
       Queues.NonEeaDesk -> (List(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), List(4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4))
     )),
     eGateBankSizes = Map(),
-    role = BFS,
+    role = BHD,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> (defaultQueueRatios + (
         EeaMachineReadable -> List(EeaDesk -> 1.0),
