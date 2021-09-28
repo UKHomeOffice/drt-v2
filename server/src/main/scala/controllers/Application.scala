@@ -355,7 +355,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       val protocol = if (isSecure) "https://" else "http://"
       val fromPort = "?fromPort=" + airportConfig.portCode.toString.toLowerCase
       val redirectUrl = protocol + baseDomain + fromPort
-      log.info(s"Redirecting to $redirectUrl. Roles are: ${user.roles}")
+      log.info(s"User lacks ${airportConfig.role} role. Redirecting to $redirectUrl")
       Redirect(Call("get", redirectUrl))
     }
   }
