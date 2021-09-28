@@ -27,6 +27,7 @@ object Terminals {
     implicit val rw: ReadWriter[Terminal] = macroRW
 
     def apply(terminalName: String): Terminal = terminalName.toLowerCase match {
+      case "1" => T1
       case "t1" => T1
       case "t2" => T2
       case "t3" => T3
