@@ -10,8 +10,8 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewLive
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate

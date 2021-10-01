@@ -2,8 +2,8 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared.{Queues, TQM}
 import utest.{TestSuite, _}
 

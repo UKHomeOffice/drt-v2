@@ -2,9 +2,10 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.FlightUpdates
-import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
+import uk.gov.homeoffice.drt.ports.ApiFeedSource
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable.{Map => IMap}
 import scala.language.postfixOps
@@ -132,7 +133,7 @@ object FlightsApi {
         updateMinutes ++
         minutesFromExistingStateUpdatedFlights
 
-      (FlightsWithSplits(minusRemovals.toMap), updatedMinutesFromFlights)
+      (FlightsWithSplits(minusRemovals), updatedMinutesFromFlights)
     }
 
     lazy val terminals: Set[Terminal] = flightsToUpdate.map(_.apiFlight.Terminal).toSet ++

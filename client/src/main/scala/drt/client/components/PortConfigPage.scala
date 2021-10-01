@@ -5,7 +5,7 @@ import diode.data.Pot
 import drt.client.components.ToolTips._
 import drt.client.modules.GoogleEventTracker
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._

@@ -4,7 +4,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
-import drt.shared.Terminals.N
+import uk.gov.homeoffice.drt.ports.Terminals.N
 import drt.shared.api.Arrival
 import drt.shared.{LiveFeedSource, PortCode}
 import org.specs2.mock.Mockito

@@ -3,8 +3,8 @@ package services.graphstages
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.QueueStatusProviders.QueueStatusProvider
-import drt.shared.Queues.{Closed, Open, Queue, QueueFallbacks}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.{Closed, Open, Queue, QueueFallbacks}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}

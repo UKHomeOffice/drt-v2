@@ -6,7 +6,7 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared.{Queues, SDateLike}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.CrunchMinuteMessage

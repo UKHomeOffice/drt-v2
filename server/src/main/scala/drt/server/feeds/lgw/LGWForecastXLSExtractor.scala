@@ -3,7 +3,7 @@ package drt.server.feeds.lgw
 import java.util.TimeZone
 
 import drt.server.feeds.common.XlsExtractorUtil._
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, ForecastFeedSource, PortCode, SDateLike}
 import org.apache.poi.ss.usermodel.{Cell, DateUtil, Sheet}

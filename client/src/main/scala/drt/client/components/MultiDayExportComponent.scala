@@ -8,7 +8,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.dates.LocalDate
 import drt.shared.redlist.LhrRedListDatesImpl
 import drt.shared.{PortCode, SDateLike}

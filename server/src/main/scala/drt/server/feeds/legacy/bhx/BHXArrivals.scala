@@ -1,7 +1,7 @@
 package drt.server.feeds.legacy.bhx
 
 import drt.server.feeds.Implicits._
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{ForecastFeedSource, LiveFeedSource, PortCode}
 import javax.xml.datatype.XMLGregorianCalendar

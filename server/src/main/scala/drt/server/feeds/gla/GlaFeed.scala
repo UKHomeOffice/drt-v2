@@ -13,7 +13,7 @@ import drt.server.feeds.Implicits._
 import drt.server.feeds.gla.GlaFeed.GlaArrival
 import drt.shared.FlightsApi.Flights
 import drt.shared.LiveFeedSource
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}

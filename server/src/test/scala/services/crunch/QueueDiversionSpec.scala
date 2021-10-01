@@ -4,8 +4,8 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.QueueStatusProviders.{HourlyStatuses, QueuesAlwaysOpen}
-import drt.shared.Queues.{Closed, EGate, EeaDesk, NonEeaDesk, Open, Queue}
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Queues.{Closed, EGate, EeaDesk, NonEeaDesk, Open, Queue}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared.{PaxTypeAndQueue, PortCode, Queues, SDateLike}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate

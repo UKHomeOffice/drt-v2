@@ -3,7 +3,7 @@ package drt.client.components.scenarios
 import diode.UseValueEq
 import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.modules.GoogleEventTracker
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.LocalDate
 import io.kinoplan.scalajs.react.material.ui.core._

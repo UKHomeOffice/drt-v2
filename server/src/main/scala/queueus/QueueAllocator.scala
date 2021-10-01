@@ -1,8 +1,8 @@
 package queueus
 
 import drt.shared.PaxTypes._
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{PaxType, Queues}
 import manifests.passengers.{BestAvailableManifest, ManifestLike}
 import manifests.queues.FastTrackFromCSV

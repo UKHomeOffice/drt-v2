@@ -4,9 +4,9 @@ import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.Props
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import drt.shared.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import drt.shared.SDateLike
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import services.SDate
 import services.crunch.CrunchTestLike
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}

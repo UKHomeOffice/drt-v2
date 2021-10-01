@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.shared.Queues.{EGate, Queue}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue}
 import japgolly.scalajs.react.vdom.html_<^._
 
 object ToolTips {

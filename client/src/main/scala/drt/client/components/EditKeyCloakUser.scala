@@ -4,7 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.actions.Actions.SaveUserGroups
 import drt.client.services._
-import drt.shared.AirportConfigs
+import drt.shared.DrtPortConfigs
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
@@ -23,7 +23,7 @@ object EditKeyCloakUser {
     .initialStateFromProps(p => State(p.groups))
     .renderPS((scope, props, state) => {
 
-      val ports = AirportConfigs.portGroups
+      val ports = DrtPortConfigs.portGroups
 
       val otherGroups = List(
         "Staff Admin"

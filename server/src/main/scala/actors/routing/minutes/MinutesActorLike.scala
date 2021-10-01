@@ -11,7 +11,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.dates.UtcDate
 import drt.shared.{SDateLike, Terminals, WithTimeAccessor}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests

@@ -1,7 +1,7 @@
 package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.europeLondonTimeZone

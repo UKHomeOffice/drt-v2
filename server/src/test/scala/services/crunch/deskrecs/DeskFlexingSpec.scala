@@ -2,8 +2,8 @@ package services.crunch.deskrecs
 
 import drt.shared.AirportConfig
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues._
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Queues._
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimits
 import services.crunch.{CrunchTestLike, deskrecs}
 import services.{OptimiserConfig, OptimizerCrunchResult, SDate}

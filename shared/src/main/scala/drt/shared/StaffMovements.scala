@@ -3,7 +3,7 @@ package drt.shared
 import java.util.UUID
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 
 object StaffMovements {

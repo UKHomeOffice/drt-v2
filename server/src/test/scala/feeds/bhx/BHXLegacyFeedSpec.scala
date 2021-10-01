@@ -3,7 +3,7 @@ package feeds.bhx
 import java.util.{Calendar, GregorianCalendar, TimeZone}
 
 import drt.server.feeds.legacy.bhx.BHXFeed
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{ForecastFeedSource, LiveFeedSource, PortCode}
 import javax.xml.datatype.DatatypeFactory

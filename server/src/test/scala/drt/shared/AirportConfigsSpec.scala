@@ -1,7 +1,7 @@
 package drt.shared
 
 import uk.gov.homeoffice.drt.auth.Roles.LHR
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import org.specs2.mutable.Specification
 
 import scala.collection.immutable.SortedMap
@@ -12,7 +12,7 @@ class AirportConfigsSpec extends Specification {
 
     "have a list size of 24 of min and max desks by terminal and queue for all ports" in {
       for {
-        port <- AirportConfigs.allPortConfigs
+        port <- DrtPortConfigs.allPortConfigs
         terminalName <- port.minMaxDesksByTerminalQueue24Hrs.keySet
         queueName <- port.minMaxDesksByTerminalQueue24Hrs(terminalName).keySet
         (minDesks, maxDesks) = port.minMaxDesksByTerminalQueue24Hrs(terminalName)(queueName)
@@ -24,7 +24,7 @@ class AirportConfigsSpec extends Specification {
 
     "Queue names in min max desks by terminal and queues should be defined in Queues" in {
       for {
-        port <- AirportConfigs.allPortConfigs
+        port <- DrtPortConfigs.allPortConfigs
         terminalName <- port.minMaxDesksByTerminalQueue24Hrs.keySet
         queueName <- port.minMaxDesksByTerminalQueue24Hrs(terminalName).keySet
       } yield {
@@ -34,7 +34,7 @@ class AirportConfigsSpec extends Specification {
 
     "All Airport config queues must be defined in Queues" in {
       for {
-        port <- AirportConfigs.allPortConfigs
+        port <- DrtPortConfigs.allPortConfigs
         queueName <- port.queuesByTerminal.values.flatten
       } yield {
         Queues.displayName(queueName).aka(s"$queueName not found in Queues") mustNotEqual None
@@ -68,7 +68,7 @@ class AirportConfigsSpec extends Specification {
     }
 
     "All configurations should be valid with no missing queues or terminals" in {
-      AirportConfigs.allPortConfigs.foreach(_.assertValid())
+      DrtPortConfigs.allPortConfigs.foreach(_.assertValid())
 
       success
     }

@@ -8,7 +8,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import manifests.passengers.ManifestLike

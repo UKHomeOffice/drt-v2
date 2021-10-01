@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{PortCode, SDateLike}
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc.{ResponseHeader, Result}

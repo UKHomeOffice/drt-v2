@@ -4,7 +4,7 @@ import drt.client.components.ChartJSComponent.ChartJsData
 import drt.client.components.charts.DataFormat.jsonString
 import drt.client.services.charts.ChartData
 import drt.shared.PaxTypes._
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.{ApiPaxTypeAndQueueCount, PaxTypes, Queues}
 import uk.gov.homeoffice.drt.Nationality
 import utest.{TestSuite, _}

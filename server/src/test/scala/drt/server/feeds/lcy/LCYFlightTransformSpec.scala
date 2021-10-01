@@ -3,7 +3,7 @@ package drt.server.feeds.lcy
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, LiveFeedSource, Operator, PortCode}
 import services.SDate

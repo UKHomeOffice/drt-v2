@@ -1,7 +1,7 @@
 package services
 
 import actors.serializers.FlightMessageConversion._
-import drt.shared.Terminals.T2
+import uk.gov.homeoffice.drt.ports.Terminals.T2
 import drt.shared.api.Arrival
 import drt.shared.{ApiFeedSource, ArrivalStatus, Operator, PortCode}
 import org.specs2.mutable.Specification

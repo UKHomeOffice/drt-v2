@@ -1,31 +1,20 @@
 package drt.shared
 
 import drt.shared.CrunchApi._
-import drt.shared.DataUpdates.{FlightUpdates, MinuteUpdates}
 import drt.shared.EventTypes.{CI, DC, InvalidEventType}
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import drt.shared.MilliTimes.{oneDayMillis, oneMinuteMillis}
-import drt.shared.Queues.Queue
-import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import drt.shared.Terminals.Terminal
-import drt.shared.api.{Arrival, FlightCodeSuffix}
-import drt.shared.dates.{LocalDate, UtcDate}
-import ujson.Js.Value
+import uk.gov.homeoffice.drt.Urls
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
-import uk.gov.homeoffice.drt.{Nationality, Urls}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, ClassNameForToString, PortCode, Queues}
 import upickle.default._
 
-import java.lang.Math.round
 import java.util.UUID
-import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.matching.Regex
-import scala.util.{Failure, Success, Try}
 
 object DeskAndPaxTypeCombinations {
   val egate = "eGate"
@@ -59,20 +48,6 @@ case class PaxAge(years: Int) {
 
 object PaxAge {
   implicit val rw: ReadWriter[PaxAge] = macroRW
-}
-
-case class ApiPaxTypeAndQueueCount(
-                                    passengerType: PaxType,
-                                    queueType: Queue,
-                                    paxCount: Double,
-                                    nationalities: Option[IMap[Nationality, Double]],
-                                    ages: Option[IMap[PaxAge, Double]]
-                                  ) {
-  val paxTypeAndQueue: PaxTypeAndQueue = PaxTypeAndQueue(passengerType, queueType)
-}
-
-object ApiPaxTypeAndQueueCount {
-  implicit val rw: ReadWriter[ApiPaxTypeAndQueueCount] = macroRW
 }
 
 sealed trait EventType extends ClassNameForToString
@@ -191,7 +166,7 @@ object BuildVersion {
 case class ApplicationConfig(rootDomain: String, useHttps: Boolean) {
   val urls: Urls = Urls(rootDomain, useHttps)
 
-  def allPortsAccessible(roles: Set[Role]): Set[PortCode] = AirportConfigs.allPortConfigs
+  def allPortsAccessible(roles: Set[Role]): Set[PortCode] = DrtPortConfigs.allPortConfigs
     .filter(airportConfig => roles.contains(airportConfig.role)).map(_.portCode).toSet
 }
 

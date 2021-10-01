@@ -2,7 +2,7 @@ package services.`export`
 
 import controllers.application.exports.CsvFileStreaming
 import drt.shared.PortCode
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch

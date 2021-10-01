@@ -12,8 +12,8 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.EeaDesk
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import services.SDate

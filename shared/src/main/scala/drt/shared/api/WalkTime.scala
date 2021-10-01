@@ -1,6 +1,6 @@
 package drt.shared.api
 
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.TimeUtil._
 import drt.shared.{MinuteAsNoun, MinuteAsAdjective}
 import upickle.default.{macroRW, _}

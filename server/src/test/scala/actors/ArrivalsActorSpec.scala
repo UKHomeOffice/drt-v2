@@ -1,7 +1,7 @@
 package actors
 
 import controllers.ArrivalGenerator
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{PortCode, UniqueArrival}
 import org.specs2.mutable.Specification

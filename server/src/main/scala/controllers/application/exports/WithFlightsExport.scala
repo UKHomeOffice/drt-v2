@@ -11,7 +11,7 @@ import controllers.Application
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.LocalDate
 import play.api.http.{HttpChunk, HttpEntity, Writeable}

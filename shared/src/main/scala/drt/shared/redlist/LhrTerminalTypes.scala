@@ -1,7 +1,7 @@
 package drt.shared.redlist
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.{T2, T3, T4, T5, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T2, T3, T4, T5, Terminal}
 
 case class LhrTerminalTypes(lhrRedListDates: LhrRedListDates) {
 

@@ -6,8 +6,8 @@ import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
-import drt.shared.Queues.EeaDesk
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared.dates.UtcDate
 import drt.shared.{Queues, SDateLike, TQM}
 import services.SDate

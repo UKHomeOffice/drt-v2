@@ -37,7 +37,7 @@ import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.coachTime.CoachWalkTime

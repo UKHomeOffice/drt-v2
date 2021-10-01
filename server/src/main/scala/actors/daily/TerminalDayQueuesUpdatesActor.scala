@@ -6,7 +6,7 @@ import actors.serializers.PortStateMessageConversion
 import akka.persistence.query.EventEnvelope
 import akka.persistence.{SnapshotMetadata, SnapshotOffer}
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{SDateLike, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

@@ -5,7 +5,7 @@ import akka.pattern.pipe
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
-import drt.shared.Terminals.{T1, T4}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T4}
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, LiveFeedSource, Operator, PortCode}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}

@@ -4,7 +4,7 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import drt.server.feeds.cirium.CiriumFeed
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, LiveBaseFeedSource, Operator, PortCode}
 import org.specs2.mock.Mockito

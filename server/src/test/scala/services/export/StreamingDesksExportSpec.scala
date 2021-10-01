@@ -5,7 +5,7 @@ import actors.routing.minutes.MockMinutesLookup
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.{Queues, TM, TQM}
 import services.SDate
 import services.`export`.CsvTestHelper._

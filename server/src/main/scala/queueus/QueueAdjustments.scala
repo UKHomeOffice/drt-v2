@@ -1,7 +1,7 @@
 package queueus
 
 import drt.shared.PaxTypes._
-import drt.shared.Queues.{EGate, EeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
 import drt.shared.{ApiPaxTypeAndQueueCount, PaxType, Splits}
 
 trait QueueAdjustments {

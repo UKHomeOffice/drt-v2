@@ -5,7 +5,7 @@ import akka.actor.ActorRef
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{PortCode, SDateLike}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}

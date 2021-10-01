@@ -2,8 +2,8 @@ package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.{Queue, QueueFallbacks, Transfer}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueFallbacks, Transfer}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunch

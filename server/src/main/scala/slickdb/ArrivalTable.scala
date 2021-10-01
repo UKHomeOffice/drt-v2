@@ -5,7 +5,7 @@ import java.sql.Timestamp
 import drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.PortCode
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 

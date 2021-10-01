@@ -2,7 +2,7 @@ package drt.server.feeds.lgw
 
 import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.{InvalidTerminal, N, S}
+import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
 import drt.shared._
 import drt.shared.api.Arrival
 import org.apache.commons.lang3.StringUtils

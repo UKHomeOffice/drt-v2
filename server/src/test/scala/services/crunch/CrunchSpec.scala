@@ -2,7 +2,7 @@ package services.crunch
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes._
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import services.SDate

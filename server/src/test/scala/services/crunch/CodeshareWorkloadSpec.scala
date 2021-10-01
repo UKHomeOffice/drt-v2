@@ -2,7 +2,7 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.{PortCode, PortState, Queues, TQM}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate

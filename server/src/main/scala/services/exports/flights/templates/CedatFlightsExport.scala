@@ -2,9 +2,9 @@ package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSource
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{ApiFlightWithSplits, Queues, SDateLike}
 import services.exports.Exports

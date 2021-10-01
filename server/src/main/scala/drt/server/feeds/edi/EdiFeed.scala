@@ -9,7 +9,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import drt.shared.{FeedSource, _}
 import org.joda.time.{DateTime, DateTimeZone}

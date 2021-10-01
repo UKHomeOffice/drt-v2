@@ -6,7 +6,7 @@ import drt.server.feeds.acl.AclFeed.{aclFileName, arrivalsFromCsvContent}
 import drt.shared
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Terminals._
+import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared._
 import drt.shared.api.Arrival
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}

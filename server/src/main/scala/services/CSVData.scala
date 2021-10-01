@@ -1,7 +1,7 @@
 package services
 
 import drt.shared.CrunchApi._
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.europeLondonTimeZone

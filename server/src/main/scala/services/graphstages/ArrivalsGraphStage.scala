@@ -2,7 +2,7 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.Terminals.{InvalidTerminal, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}

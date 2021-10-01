@@ -7,7 +7,7 @@ import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, LiveFeedSource, PortCode}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}

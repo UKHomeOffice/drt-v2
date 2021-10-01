@@ -2,7 +2,7 @@ package services.arrivals
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.PortCode
-import drt.shared.Terminals.{A1, A2}
+import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2}
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates

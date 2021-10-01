@@ -1,7 +1,7 @@
 package services
 
 import controllers.ArrivalGenerator.arrival
-import drt.shared.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import drt.shared.api.{Arrival, WalkTime}
 import drt.shared.coachTime.{CoachTransfer, DefaultCoachWalkTime, LhrCoachWalkTime}
 import drt.shared.redlist.LhrRedListDatesImpl

@@ -1,7 +1,7 @@
 package services.crunch.desklimits
 
 import drt.shared.AirportConfig
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import services.crunch.desklimits.fixed.FixedTerminalDeskLimits
 import services.crunch.desklimits.flexed.{FlexedTerminalDeskLimits, FlexedTerminalDeskLimitsFromAvailableStaff}
 

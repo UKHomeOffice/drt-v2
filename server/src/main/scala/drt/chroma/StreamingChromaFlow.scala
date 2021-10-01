@@ -7,7 +7,7 @@ import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaFlightLike, ChromaForecastFlight, ChromaLiveFlight}
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{ForecastFeedSource, LiveFeedSource, Operator}
 import org.slf4j.{Logger, LoggerFactory}

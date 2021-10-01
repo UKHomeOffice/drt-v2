@@ -1,7 +1,7 @@
 package services
 
 import drt.shared.CrunchApi.{CrunchMinute, ForecastHeadlineFigures, QueueHeadline}
-import drt.shared.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import drt.shared.{PortState, Queues}
 import org.specs2.mutable.Specification
 import services.exports.Forecast

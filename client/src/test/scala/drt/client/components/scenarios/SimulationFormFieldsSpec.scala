@@ -1,6 +1,6 @@
 package drt.client.components.scenarios
 
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.dates.LocalDate
 import drt.shared.{PaxTypesAndQueues, Queues}
 import utest.{TestSuite, _}

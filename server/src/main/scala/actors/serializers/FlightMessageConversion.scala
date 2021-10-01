@@ -3,7 +3,7 @@ package actors.serializers
 import actors.persistent.arrivals.ArrivalsState
 import actors.serializers.PortStateMessageConversion.splitMessageToApiSplits
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}

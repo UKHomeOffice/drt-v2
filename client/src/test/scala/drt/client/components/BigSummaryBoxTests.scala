@@ -7,7 +7,7 @@ import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.SplitRatiosNs.SplitSources
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
 import utest.{TestSuite, _}
 

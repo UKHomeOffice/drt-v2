@@ -1,7 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals._
+import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.redlist.RedListUpdates

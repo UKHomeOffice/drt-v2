@@ -7,7 +7,7 @@ import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{FixedPointAssignments, MilliDate, SDateLike, StaffAssignment}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

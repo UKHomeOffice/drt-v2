@@ -2,7 +2,7 @@ package feeds.lgw
 
 import com.box.sdk.{BoxConfig, BoxDeveloperEditionAPIConnection}
 import drt.server.feeds.lgw.LGWForecastFeed
-import drt.shared.Terminals.S
+import uk.gov.homeoffice.drt.ports.Terminals.S
 import drt.shared.api.Arrival
 import drt.shared.{ForecastFeedSource, PortCode}
 import org.specs2.mock.Mockito

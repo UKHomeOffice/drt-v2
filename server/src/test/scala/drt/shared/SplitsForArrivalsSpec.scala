@@ -3,9 +3,9 @@ package drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
 import drt.shared.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable, VisaNational}
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import org.specs2.mutable.Specification
 
 class SplitsForArrivalsSpec extends Specification {

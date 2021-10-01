@@ -9,7 +9,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.{A1, InvalidTerminal, T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{A1, InvalidTerminal, T1, Terminal}
 import drt.shared.api.Arrival
 import drt.shared.{LiveBaseFeedSource, PortCode, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}

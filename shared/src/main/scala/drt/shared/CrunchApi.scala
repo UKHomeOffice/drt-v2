@@ -2,8 +2,8 @@ package drt.shared
 
 import drt.shared.DataUpdates.MinuteUpdates
 import drt.shared.MilliTimes.oneMinuteMillis
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default.{macroRW, _}
 
 import scala.collection.immutable.{Map => IMap}

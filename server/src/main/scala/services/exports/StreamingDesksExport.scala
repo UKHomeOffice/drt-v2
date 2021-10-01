@@ -5,8 +5,8 @@ import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.UtcDate
 import org.slf4j.{Logger, LoggerFactory}

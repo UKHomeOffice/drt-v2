@@ -8,7 +8,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, LiveFeedSource, Operator, PortCode}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}

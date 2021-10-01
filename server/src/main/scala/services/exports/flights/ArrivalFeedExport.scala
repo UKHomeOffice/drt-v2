@@ -8,7 +8,7 @@ import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{FeedSource, SDateLike, UniqueArrival}
 import services.SDate

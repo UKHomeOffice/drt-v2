@@ -2,7 +2,7 @@ package services
 
 import controllers.ArrivalGenerator.arrival
 import drt.shared.PortCode
-import drt.shared.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 

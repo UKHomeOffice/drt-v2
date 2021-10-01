@@ -15,7 +15,7 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits, SplitsForArrivals}
 import drt.shared.PaxTypes.{EeaMachineReadable, VisaNational}
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
 import drt.shared.SplitRatiosNs.SplitSources
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import manifests.queues.SplitsCalculator

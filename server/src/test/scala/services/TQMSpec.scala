@@ -1,6 +1,6 @@
 package services
 
-import drt.shared.Terminals.{T1, T2, T3}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, T3}
 import drt.shared.{Queues, TQM}
 import org.specs2.mutable.Specification
 

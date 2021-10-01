@@ -11,9 +11,9 @@ import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}

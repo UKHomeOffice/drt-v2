@@ -1,6 +1,6 @@
 package drt.staff
 
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment, Terminals}
 import org.joda.time.DateTime
 import play.api.libs.json._

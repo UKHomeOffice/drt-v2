@@ -1,8 +1,9 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default.{macroRW, _}
 
 sealed trait UniqueArrivalLike {

@@ -3,7 +3,7 @@ package services.crunch
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.api.Arrival
 import drt.shared.{PortCode, PortState, SDateLike}
 import server.feeds.ArrivalsFeedSuccess

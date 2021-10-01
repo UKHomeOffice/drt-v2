@@ -17,9 +17,9 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
 import drt.shared.PaxTypes.EeaNonMachineReadable
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import drt.shared.SplitRatiosNs.SplitSources.Historical
-import drt.shared.Terminals._
+import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared._
 import drt.shared.dates.UtcDate
 import services.SDate

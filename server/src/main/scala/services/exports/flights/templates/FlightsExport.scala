@@ -5,10 +5,10 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
 import drt.shared.{ApiFlightWithSplits, CodeShares, PaxTypesAndQueues, SDateLike}

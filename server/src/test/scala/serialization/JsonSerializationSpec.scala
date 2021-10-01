@@ -3,7 +3,7 @@ package serialization
 import drt.shared.CrunchApi._
 import drt.shared.PaxTypes._
 import drt.shared.SplitRatiosNs.SplitSources.Historical
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
@@ -32,7 +32,7 @@ class JsonSerializationSpec extends Specification {
 
     "AirportConfig" >> {
 
-      val lhrAirportConfig = AirportConfigs.confByPort(PortCode("LHR"))
+      val lhrAirportConfig = DrtPortConfigs.confByPort(PortCode("LHR"))
 
       val lhrAirportConfigAsJson: String = write(lhrAirportConfig)
 

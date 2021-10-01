@@ -6,8 +6,8 @@ import akka.pattern.after
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import server.feeds.ArrivalsFeedSuccess

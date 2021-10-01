@@ -2,7 +2,7 @@ package feeds.acl
 
 import drt.server.feeds.acl.AclFeed
 import drt.shared.PortCode
-import drt.shared.Terminals._
+import uk.gov.homeoffice.drt.ports.Terminals._
 import org.specs2.mutable.Specification
 
 class AclTerminalMappingSpec extends Specification {

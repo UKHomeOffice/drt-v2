@@ -8,7 +8,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions._
 import drt.client.services._
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}

@@ -2,7 +2,7 @@ package services.graphstages
 
 import controllers.ArrivalGenerator
 import drt.shared.PortCode
-import drt.shared.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import org.specs2.mutable.Specification
 
 class ArrivalsGraphStageSpec extends Specification {

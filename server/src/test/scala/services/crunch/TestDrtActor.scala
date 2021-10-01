@@ -12,7 +12,7 @@ import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.testkit.TestProbe
 import akka.util.Timeout
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{MilliTimes, PortCode, SDateLike, VoyageNumber}
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator

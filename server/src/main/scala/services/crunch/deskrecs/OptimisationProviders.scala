@@ -9,7 +9,7 @@ import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{MilliTimes, PortCode, TM, TQM}
 import manifests.ManifestLookupLike

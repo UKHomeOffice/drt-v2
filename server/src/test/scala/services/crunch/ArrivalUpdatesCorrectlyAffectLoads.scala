@@ -2,8 +2,8 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import drt.shared._
 import drt.shared.api.Arrival
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}

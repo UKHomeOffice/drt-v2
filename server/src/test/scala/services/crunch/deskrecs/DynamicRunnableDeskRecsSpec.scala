@@ -10,9 +10,9 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.PaxTypes.EeaMachineReadable
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import manifests.passengers.BestAvailableManifest

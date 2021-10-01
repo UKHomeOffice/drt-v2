@@ -4,9 +4,9 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues._
+import uk.gov.homeoffice.drt.ports.Queues._
 import drt.shared.SplitRatiosNs.SplitSources._
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate

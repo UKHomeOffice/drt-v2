@@ -2,7 +2,7 @@ package actors.daily
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
-import drt.shared.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import drt.shared.api.Arrival
 import drt.shared.{ApiFlightWithSplits, SDateLike}
 import org.specs2.mutable.Specification

@@ -4,8 +4,8 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate

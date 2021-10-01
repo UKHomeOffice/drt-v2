@@ -11,9 +11,9 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared.SDateLike
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.dates.UtcDate
 
 import scala.concurrent.ExecutionContext

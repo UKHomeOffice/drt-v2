@@ -6,7 +6,7 @@ import actors.persistent.staffing.{AddStaffMovements, AddStaffMovementsAck, GetS
 import java.util.UUID
 import akka.actor.{PoisonPill, Props}
 import akka.testkit.ImplicitSender
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.{MilliDate, SDateLike, StaffMovement, StaffMovements}
 import services.SDate
 import services.crunch.CrunchTestLike

@@ -1,6 +1,6 @@
 package drt.server.feeds.stn
 
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification

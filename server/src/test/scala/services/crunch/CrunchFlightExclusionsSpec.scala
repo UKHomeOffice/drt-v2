@@ -3,7 +3,7 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypesAndQueues._
-import drt.shared.Terminals.{InvalidTerminal, T1}
+import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate

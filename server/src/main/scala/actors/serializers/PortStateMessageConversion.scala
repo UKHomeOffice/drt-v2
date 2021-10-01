@@ -2,9 +2,9 @@ package actors.serializers
 
 import actors.serializers.FlightMessageConversion.flightWithSplitsFromMessage
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._

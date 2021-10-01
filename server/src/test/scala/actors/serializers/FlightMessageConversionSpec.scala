@@ -3,7 +3,7 @@ package actors.serializers
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared.SplitRatiosNs.SplitSources.Historical
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import drt.shared._
 import org.specs2.mutable.Specification

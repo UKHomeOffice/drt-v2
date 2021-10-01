@@ -13,7 +13,7 @@ import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate

@@ -5,7 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes.EeaMachineReadable
 import drt.shared.PaxTypesAndQueues._
 import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}

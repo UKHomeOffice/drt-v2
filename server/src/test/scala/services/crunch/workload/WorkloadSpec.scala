@@ -2,9 +2,9 @@ package services.crunch.workload
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.QueueFallbacks
+import uk.gov.homeoffice.drt.ports.Queues.QueueFallbacks
 import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import drt.shared.Terminals._
+import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared._
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
@@ -93,7 +93,7 @@ class WorkloadSpec extends Specification {
 
   "Concerning red list origins" >> {
     val redListOriginBulawayo = PortCode("BUQ")
-    def portConf(port: PortCode): AirportConfig = AirportConfigs.confByPort(port)
+    def portConf(port: PortCode): AirportConfig = DrtPortConfigs.confByPort(port)
     val paxCount = 6
 
     s"Given an arrival with 6 pax at STN $T1 from a red list country, I should see some workload" >> {

@@ -1,7 +1,7 @@
 package drt.server.feeds.lgw
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import org.specs2.mutable.Specification

@@ -3,7 +3,7 @@ package actors
 import actors.persistent.staffing.{FixedPointsActor, FixedPointsReadActor, GetState, SetFixedPoints, SetFixedPointsAck}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.testkit.ImplicitSender
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import services.SDate
 import services.crunch.CrunchTestLike

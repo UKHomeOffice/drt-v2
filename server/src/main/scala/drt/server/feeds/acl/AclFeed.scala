@@ -4,7 +4,7 @@ import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
 import drt.shared
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals._
+import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared.api.Arrival
 import drt.shared.{PortCode, SDateLike, Terminals}
 import net.schmizz.sshj.SSHClient

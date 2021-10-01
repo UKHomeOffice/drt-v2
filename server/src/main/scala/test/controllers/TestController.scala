@@ -6,7 +6,7 @@ import controllers.{AirportConfProvider, DrtActorSystem}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.Implicits._
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared.{LiveFeedSource, PortCode, SDateLike}
 import javax.inject.{Inject, Singleton}

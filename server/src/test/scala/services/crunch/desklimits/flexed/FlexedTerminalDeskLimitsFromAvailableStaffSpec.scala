@@ -2,7 +2,7 @@ package services.crunch.desklimits.flexed
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneHourMillis
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch

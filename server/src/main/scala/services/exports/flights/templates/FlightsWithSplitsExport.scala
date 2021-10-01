@@ -2,7 +2,7 @@ package services.exports.flights.templates
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.PaxTypes._
-import drt.shared.Queues._
+import uk.gov.homeoffice.drt.ports.Queues._
 import drt.shared.SplitRatiosNs.SplitSource
 import drt.shared.{ApiFlightWithSplits, PaxTypeAndQueue, Queues}
 

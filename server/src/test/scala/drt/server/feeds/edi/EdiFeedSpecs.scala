@@ -2,7 +2,7 @@ package drt.server.feeds.edi
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import drt.server.feeds.common.HttpClient
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import org.specs2.mock.Mockito.mock

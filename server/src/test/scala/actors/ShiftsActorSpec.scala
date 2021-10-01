@@ -3,7 +3,7 @@ package actors
 import actors.persistent.staffing.{GetState, ShiftsActor, ShiftsReadActor, UpdateShifts, UpdateShiftsAck}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.testkit.ImplicitSender
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
 import services.SDate
 import services.crunch.CrunchTestLike

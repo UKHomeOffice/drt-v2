@@ -12,7 +12,7 @@ import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared.LiveFeedSource
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}

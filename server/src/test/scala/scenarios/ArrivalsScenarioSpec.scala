@@ -8,8 +8,8 @@ import controllers.ArrivalGenerator
 import dispatch.Future
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable}
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.{T2, Terminal}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.dates.LocalDate

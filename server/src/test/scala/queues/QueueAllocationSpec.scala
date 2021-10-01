@@ -1,9 +1,9 @@
 package queues
 
 import drt.shared.PaxTypes._
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSources.Historical
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.specs2.mutable.Specification

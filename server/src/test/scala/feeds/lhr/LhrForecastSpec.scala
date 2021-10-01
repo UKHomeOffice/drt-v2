@@ -1,7 +1,7 @@
 package feeds.lhr
 
 import drt.server.feeds.lhr.forecast.{LhrForecastArrival, LhrForecastArrivals}
-import drt.shared.Terminals.T3
+import uk.gov.homeoffice.drt.ports.Terminals.T3
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, ForecastFeedSource, Operator, PortCode}
 import org.specs2.mutable.Specification

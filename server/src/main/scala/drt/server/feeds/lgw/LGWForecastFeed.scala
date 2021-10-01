@@ -11,7 +11,7 @@ import com.box.sdk.{BoxFile, BoxFolder, _}
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
 import drt.shared.ForecastFeedSource
-import drt.shared.Terminals.{N, S}
+import uk.gov.homeoffice.drt.ports.Terminals.{N, S}
 import drt.shared.api.Arrival
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}

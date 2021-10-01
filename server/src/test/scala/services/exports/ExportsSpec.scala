@@ -2,7 +2,7 @@ package services.exports
 
 import controllers.ArrivalGenerator
 import drt.shared.PaxTypes.{EeaMachineReadable, UndefinedPaxType}
-import drt.shared.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.{ApiFlightWithSplits, ApiPaxTypeAndQueueCount, PaxNumbers, Splits}
 import org.specs2.mutable.Specification

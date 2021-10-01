@@ -16,7 +16,7 @@ import controllers.application._
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared._
 import drt.users.KeyCloakClient
@@ -73,7 +73,7 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def oohPhone: Option[String] = config.getOptional[String]("ooh-phone")
 
-  def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
+  def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
 
   lazy val airportConfig: AirportConfig = {
     val configForPort = getPortConfFromEnvVar.copy(

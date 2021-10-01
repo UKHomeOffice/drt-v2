@@ -3,8 +3,9 @@ package drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
-import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default.{macroRW, _}
 
 import scala.collection.immutable.{SortedMap => ISortedMap}

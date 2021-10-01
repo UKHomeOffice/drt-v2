@@ -4,8 +4,8 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.PaxTypes._
 import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
-import drt.shared.Queues.EeaDesk
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}

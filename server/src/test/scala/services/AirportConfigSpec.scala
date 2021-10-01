@@ -1,8 +1,8 @@
 package services
 
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.{T1, T2, Terminal}
-import drt.shared.airportconfig.{Bhx, Ema, Lhr}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.ports.config.{Bhx, Ema, Lhr}
 import drt.shared.{AirportConfigLike, Queues}
 import org.specs2.mutable.Specification
 import org.specs2.specification.core.Fragment

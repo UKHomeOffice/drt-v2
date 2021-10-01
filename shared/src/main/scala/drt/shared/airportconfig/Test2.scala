@@ -1,18 +1,18 @@
 package drt.shared.airportconfig
 
 import uk.gov.homeoffice.drt.auth.Roles.TEST2
-import drt.shared.PaxTypes.EeaMachineReadable
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk}
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{T1, T2}
-import drt.shared._
+import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports._
 
 import scala.collection.immutable.SortedMap
 
 object Test2 extends AirportConfigLike {
 
-  import AirportConfigDefaults._
+  import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults._
 
   val config: AirportConfig = AirportConfig(
     portCode = PortCode("TEST2"),

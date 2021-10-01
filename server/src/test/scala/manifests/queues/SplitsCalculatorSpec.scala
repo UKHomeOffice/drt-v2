@@ -3,11 +3,11 @@ package manifests.queues
 import controllers.ArrivalGenerator.arrival
 import drt.shared.EventTypes.DC
 import drt.shared.PaxTypes._
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
-import drt.shared.Terminals.{T2, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
 import drt.shared._
-import drt.shared.airportconfig.Bhx
+import uk.gov.homeoffice.drt.ports.config.Bhx
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
 import passengersplits.parsing.VoyageManifestParser._

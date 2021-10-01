@@ -7,8 +7,8 @@ import drt.client.components.styles.ScalaCssImplicits.StringExtended
 import drt.client.components.{ChartJSComponent, potReactForwarder}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.Queues.{Queue, displayName}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.{Queue, displayName}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiCard, MuiLinearProgress}
 import japgolly.scalajs.react.ScalaComponent

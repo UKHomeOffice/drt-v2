@@ -1,6 +1,6 @@
 package controllers
 
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared.api.Arrival
 import drt.shared._
 import org.springframework.util.StringUtils

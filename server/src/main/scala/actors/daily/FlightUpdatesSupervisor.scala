@@ -10,7 +10,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate

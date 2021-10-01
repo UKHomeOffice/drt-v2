@@ -6,7 +6,7 @@ import drt.server.feeds.Implicits._
 import drt.server.feeds.common.FlightStatus
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.LiveFeedSource
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate

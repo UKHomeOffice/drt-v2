@@ -3,7 +3,7 @@ package drt.client.components
 import java.util.UUID
 
 import drt.client.services.JSDateConversions._
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.{StaffMovement, StaffMovements}
 import utest.{TestSuite, _}
 
