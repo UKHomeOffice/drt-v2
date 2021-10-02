@@ -3,6 +3,7 @@ package drt.shared
 import uk.gov.homeoffice.drt.auth.Roles.LHR
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports._
 
 import scala.collection.immutable.SortedMap
 
@@ -42,7 +43,7 @@ class AirportConfigsSpec extends Specification {
     }
 
     "A cloned Airport config should return the portcode of the port it is cloned from when calling feedPortCode" in {
-      import AirportConfigDefaults._
+      import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults._
 
       val clonedConfig = AirportConfig(
         portCode = PortCode("LHR_Clone"),

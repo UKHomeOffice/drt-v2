@@ -6,6 +6,7 @@ import akka.actor.{Actor, Props}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.ApiFeedSource
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}

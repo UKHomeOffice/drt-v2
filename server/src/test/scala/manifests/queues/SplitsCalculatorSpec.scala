@@ -2,12 +2,7 @@ package manifests.queues
 
 import controllers.ArrivalGenerator.arrival
 import drt.shared.EventTypes.DC
-import drt.shared.PaxTypes._
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
-import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
 import drt.shared._
-import uk.gov.homeoffice.drt.ports.config.Bhx
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
 import passengersplits.parsing.VoyageManifestParser._
@@ -15,6 +10,12 @@ import queueus._
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.PaxTypes._
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources._
+import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
+import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.ports.config.Bhx
 
 class SplitsCalculatorSpec extends CrunchTestLike {
   val config: AirportConfig = Bhx.config

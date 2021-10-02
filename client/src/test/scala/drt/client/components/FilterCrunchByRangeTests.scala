@@ -3,8 +3,9 @@ package drt.client.components
 import drt.client.components.ArrivalGenerator.apiFlight
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.{ApiFlightWithSplits, PortState}
+import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import drt.shared.{ApiFlightWithSplits, PortState, Queues}
 import utest.{TestSuite, _}
 
 object FilterCrunchByRangeTests extends TestSuite {

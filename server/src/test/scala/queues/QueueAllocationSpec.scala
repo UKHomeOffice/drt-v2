@@ -1,9 +1,5 @@
 package queues
 
-import drt.shared.PaxTypes._
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import drt.shared.SplitRatiosNs.SplitSources.Historical
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.specs2.mutable.Specification
@@ -11,6 +7,11 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import queueus._
 import services.SDate
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.PaxTypes._
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources._
+import uk.gov.homeoffice.drt.ports.Terminals._
+import uk.gov.homeoffice.drt.ports._
 
 class QueueAllocationSpec extends Specification {
   val terminalQueueAllocationMap: Map[Terminal, Map[PaxType, List[(Queue, Double)]]] = Map(T1 -> Map(

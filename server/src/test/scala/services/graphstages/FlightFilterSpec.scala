@@ -1,10 +1,11 @@
 package services.graphstages
 
 import controllers.ArrivalGenerator
+import drt.shared.{ApiFlightWithSplits, ArrivalStatus}
+import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.config.Lhr
-import drt.shared.{ApiFlightWithSplits, ArrivalStatus, PortCode}
-import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
 class FlightFilterSpec extends Specification {

@@ -2,14 +2,15 @@ package services.crunch.workload
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.ports.Queues.QueueFallbacks
-import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared._
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
+import uk.gov.homeoffice.drt.ports.Queues.QueueFallbacks
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
+import uk.gov.homeoffice.drt.ports.Terminals._
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
 class WorkloadSpec extends Specification {

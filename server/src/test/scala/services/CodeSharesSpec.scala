@@ -1,10 +1,10 @@
 package services
 
 import controllers.ArrivalGenerator.arrival
-import drt.shared.PortCode
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 
 
 class CodeSharesSpec extends Specification {

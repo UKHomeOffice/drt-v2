@@ -1,11 +1,12 @@
 package feeds.lhr.forecast
 
 import drt.server.feeds.lhr.forecast.{LHRForecastCSVExtractor, LHRForecastFlightRow}
-import uk.gov.homeoffice.drt.ports.Terminals.T2
+import drt.shared.ArrivalStatus
 import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, ForecastFeedSource, PortCode}
 import org.specs2.mutable.Specification
 import services.SDate
+import uk.gov.homeoffice.drt.ports.Terminals.T2
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
 class LHRForecastCSVSpec extends Specification {
   "Given a CSV containing a flight for T1 " +

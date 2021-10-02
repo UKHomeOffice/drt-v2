@@ -2,10 +2,11 @@ package actors.serializers
 
 import actors.serializers.PortStateMessageConversion._
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
-import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import org.specs2.mutable.Specification
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchStateSnapshotMessage, StaffMinuteMessage}
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import scala.collection.immutable.SortedMap
 

@@ -1,8 +1,9 @@
 package services.arrivals
 
 import controllers.ArrivalGenerator._
-import drt.shared.{AclFeedSource, LiveFeedSource, PcpUtils}
+import drt.shared.PcpUtils
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource}
 
 class PcpUtilsSpec extends Specification {
 

@@ -1,13 +1,12 @@
 package drt.shared
 
-import drt.shared.PaxTypes._
-import drt.shared.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
-import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
 import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
 import org.specs2.mutable.Specification
-
-import scala.collection
+import uk.gov.homeoffice.drt.ports.PaxTypes.{Transit, VisaNational}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
+import uk.gov.homeoffice.drt.ports._
 
 
 class ApiFlightWithSplitsSpec extends Specification {

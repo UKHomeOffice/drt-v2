@@ -1,11 +1,12 @@
 package services.crunch
 
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import org.specs2.mutable.Specification
 import services.SDate
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import scala.collection.immutable.SortedMap
 

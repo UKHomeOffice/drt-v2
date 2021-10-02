@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.HashSet

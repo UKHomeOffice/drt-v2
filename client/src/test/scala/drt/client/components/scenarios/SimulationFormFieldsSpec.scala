@@ -1,8 +1,8 @@
 package drt.client.components.scenarios
 
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.dates.LocalDate
-import drt.shared.{PaxTypesAndQueues, Queues}
+import uk.gov.homeoffice.drt.ports.{PaxTypesAndQueues, Queues}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import utest.{TestSuite, _}
 
 class SimulationFormFieldsSpec extends TestSuite {

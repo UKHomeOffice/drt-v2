@@ -6,12 +6,13 @@ import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
-import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared.dates.UtcDate
-import drt.shared.{Queues, SDateLike, TQM}
+import drt.shared.{SDateLike, TQM}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

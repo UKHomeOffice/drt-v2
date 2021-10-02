@@ -3,11 +3,12 @@ package drt.server.feeds.lcy
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
-import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, LiveFeedSource, Operator, PortCode}
+import drt.shared.{ArrivalStatus, Operator}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

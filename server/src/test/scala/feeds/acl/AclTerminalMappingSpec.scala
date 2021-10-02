@@ -1,9 +1,9 @@
 package feeds.acl
 
 import drt.server.feeds.acl.AclFeed
-import drt.shared.PortCode
-import uk.gov.homeoffice.drt.ports.Terminals._
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals._
 
 class AclTerminalMappingSpec extends Specification {
 
@@ -119,7 +119,6 @@ class AclTerminalMappingSpec extends Specification {
           case (portCode, terminalMap) =>
             terminalMap.map {
               case (mapFrom, mapTo) =>
-
                 s"$portCode ${AclFeed.aclToPortMapping(PortCode(portCode))(Terminal(mapFrom))}" === s"$portCode ${mapTo}"
             }
         }

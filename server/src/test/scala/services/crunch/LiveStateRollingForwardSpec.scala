@@ -3,11 +3,12 @@ package services.crunch
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.api.Arrival
-import drt.shared.{PortCode, PortState, SDateLike}
+import drt.shared.{PortState, SDateLike}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import scala.concurrent.duration._
 

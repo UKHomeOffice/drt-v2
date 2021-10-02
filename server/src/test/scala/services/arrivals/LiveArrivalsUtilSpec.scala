@@ -1,10 +1,11 @@
 package services.arrivals
 
-import uk.gov.homeoffice.drt.ports.Terminals.T1
+import drt.shared.ArrivalStatus
 import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, PortCode}
 import org.specs2.mutable.Specification
 import services.SDate
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 class LiveArrivalsUtilSpec extends Specification {
 

@@ -3,11 +3,10 @@ package actors.routing
 import actors.FlightLookups
 import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, PointInTimeQuery}
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.routing.FlightsRouterActor
 import actors.routing.FlightsRouterActor.runAndCombine
 import actors.routing.minutes.MockFlightsLookup
 import akka.NotUsed
-import akka.actor.{ActorRef, PoisonPill, Props, Terminated}
+import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
@@ -16,14 +15,15 @@ import controllers.model.{RedListCount, RedListCounts}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
-import drt.shared.PaxTypes.EeaNonMachineReadable
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
-import drt.shared.SplitRatiosNs.SplitSources.Historical
-import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared._
 import drt.shared.dates.UtcDate
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.PaxTypes.EeaNonMachineReadable
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PortCode}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
+import uk.gov.homeoffice.drt.ports.Terminals._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

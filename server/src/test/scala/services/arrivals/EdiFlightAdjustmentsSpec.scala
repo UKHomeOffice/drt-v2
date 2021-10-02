@@ -2,10 +2,11 @@ package services.arrivals
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Terminals.{A2, Terminal}
 import drt.shared.api.Arrival
-import drt.shared.{ArrivalsDiff, PortCode, UniqueArrival}
+import drt.shared.{ArrivalsDiff, UniqueArrival}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.{A2, Terminal}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.SortedMap

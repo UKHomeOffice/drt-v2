@@ -1,9 +1,10 @@
 package actors.serializers
 
-import uk.gov.homeoffice.drt.ports.Terminals.T1
-import drt.shared.api.{Arrival, FlightCodeSuffix}
 import drt.shared._
+import drt.shared.api.{Arrival, FlightCodeSuffix}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports._
 
 class FlightMessageConversionTest extends Specification {
   "FlightMessageConversionTest" should {

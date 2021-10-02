@@ -1,12 +1,12 @@
 package services.crunch.deskrecs
 
-import drt.shared.AirportConfig
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Queues._
-import uk.gov.homeoffice.drt.ports.Terminals.T1
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimits
 import services.crunch.{CrunchTestLike, deskrecs}
 import services.{OptimiserConfig, OptimizerCrunchResult, SDate}
+import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.Queues._
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import scala.collection.immutable.NumericRange
 import scala.util.{Success, Try}

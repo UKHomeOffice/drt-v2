@@ -1,10 +1,11 @@
 package drt.server.feeds.stn
 
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 import services.SDate
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
 class STNForecastXLSExtractorSpec extends Specification {
 

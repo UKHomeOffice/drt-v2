@@ -6,9 +6,10 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
-import drt.shared.SplitRatiosNs.SplitSources
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, PaxTypes, Queues}
 import utest.{TestSuite, _}
 
 

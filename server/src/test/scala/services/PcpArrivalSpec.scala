@@ -1,12 +1,13 @@
 package services
 
 import controllers.ArrivalGenerator.arrival
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
+import drt.shared.MilliDate
 import drt.shared.api.{Arrival, WalkTime}
 import drt.shared.coachTime.{CoachTransfer, DefaultCoachWalkTime, LhrCoachWalkTime}
 import drt.shared.redlist.LhrRedListDatesImpl
-import drt.shared.{MilliDate, PortCode}
 import org.specs2.mutable.SpecificationLike
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
 class PcpArrivalSpec extends SpecificationLike {

@@ -1,11 +1,11 @@
 package drt.server.feeds.lgw
 
-import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.{Arrival, FlightCodeSuffix}
+import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 import services.SDate
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
 class LGWForecastXLSExtractorSpec extends Specification {
 

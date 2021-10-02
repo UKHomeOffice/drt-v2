@@ -1,7 +1,7 @@
 package actors
 
-import drt.shared.PortCode
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.PortCode
 
 class PortsSpec extends Specification {
   "Given a port" >> {
