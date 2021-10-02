@@ -2,8 +2,6 @@ package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueFallbacks, Transfer}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunch
@@ -11,6 +9,9 @@ import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.Crunch.LoadMinute
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue}
+import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueFallbacks, Transfer}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}

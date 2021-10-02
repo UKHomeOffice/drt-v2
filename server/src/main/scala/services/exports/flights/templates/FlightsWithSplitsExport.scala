@@ -1,10 +1,11 @@
 package services.exports.flights.templates
 
+import drt.shared.ApiFlightWithSplits
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.PaxTypes._
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues._
-import drt.shared.SplitRatiosNs.SplitSource
-import drt.shared.{ApiFlightWithSplits, PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 
 
 trait FlightsWithSplitsExport extends FlightsExport {

@@ -1,7 +1,7 @@
 package drt.client.services.charts
 
 import drt.client.components.ChartJSComponent.ChartJsData
-import drt.shared.{ApiPaxTypeAndQueueCount, PaxTypes}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypes}
 
 case class ChartData(dataSets: Seq[ChartDataSet])
 

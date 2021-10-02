@@ -8,11 +8,12 @@ import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
-import drt.shared.{FeedSource, SDateLike, UniqueArrival}
+import drt.shared.{SDateLike, UniqueArrival}
 import services.SDate
 import services.exports.Exports
+import uk.gov.homeoffice.drt.ports.FeedSource
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import java.util.UUID
 import scala.collection.immutable.SortedMap
@@ -88,12 +89,11 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
     List(Option(ArrivalToCsv.arrivalHeadingsWithTransfer + lineEnding))
   )
 
-  def flightsDataSource(
-                         startDate: SDateLike,
-                         numberOfDays: Int,
-                         terminal: Terminal,
-                         fs: FeedSource,
-                         persistenceId: String
+  def flightsDataSource(startDate: SDateLike,
+                        numberOfDays: Int,
+                        terminal: Terminal,
+                        fs: FeedSource,
+                        persistenceId: String
                        ): Source[Option[String], NotUsed] =
     Source(0 until numberOfDays)
       .mapAsync(1)(day => {

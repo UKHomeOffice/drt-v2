@@ -1,22 +1,23 @@
 package actors.routing.minutes
 
 import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForDateRange, PointInTimeQuery, TerminalRequest}
-import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.persistent.QueueLikeActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.RouterActorLike
+import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import akka.NotUsed
 import akka.pattern.pipe
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.dates.UtcDate
-import drt.shared.{SDateLike, Terminals, WithTimeAccessor}
+import drt.shared.{SDateLike, WithTimeAccessor}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.ports.Terminals
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable
 import scala.concurrent.Future

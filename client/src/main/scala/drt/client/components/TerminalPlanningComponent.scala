@@ -16,6 +16,7 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.Select
+import uk.gov.homeoffice.drt.ports.Queues
 
 import scala.collection.immutable.Seq
 

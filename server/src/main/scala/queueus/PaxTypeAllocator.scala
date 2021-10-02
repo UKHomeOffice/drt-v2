@@ -1,10 +1,10 @@
 package queueus
 
-import drt.shared.PaxType
-import drt.shared.PaxTypes._
 import manifests.passengers.ManifestPassengerProfile
 import passengersplits.core.PassengerTypeCalculator.{isB5JPlus, isEea, isVisaNational}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import uk.gov.homeoffice.drt.ports.PaxType
+import uk.gov.homeoffice.drt.ports.PaxTypes._
 
 trait PaxTypeAllocator {
   val b5JPlus: PartialFunction[ManifestPassengerProfile, PaxType] = {

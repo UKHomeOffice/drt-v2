@@ -1,10 +1,10 @@
 package services.arrivals
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.PortCode
-import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2}
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 case class EdiArrivalsTerminalAdjustments(isRedListed: (PortCode, MillisSinceEpoch, RedListUpdates) => Boolean) extends ArrivalsAdjustmentsLike {

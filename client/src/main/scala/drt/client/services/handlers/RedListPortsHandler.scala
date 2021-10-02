@@ -5,7 +5,7 @@ import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions._
 import drt.client.services.{DrtApi, PollDelay}
-import drt.shared.PortCode
+import uk.gov.homeoffice.drt.ports.PortCode
 import upickle.default.read
 
 import scala.collection.immutable.HashSet

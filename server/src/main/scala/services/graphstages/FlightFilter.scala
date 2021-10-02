@@ -1,9 +1,10 @@
 package services.graphstages
 
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import drt.shared.ApiFlightWithSplits
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
-import drt.shared.{AirportConfig, ApiFlightWithSplits, PortCode}
 import services.AirportToCountry
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 case class FlightFilter(filters: List[(ApiFlightWithSplits, RedListUpdates) => Boolean]) {

@@ -1,8 +1,9 @@
 package queueus
 
-import drt.shared.PaxTypes._
+import drt.shared.Splits
+import uk.gov.homeoffice.drt.ports.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
-import drt.shared.{ApiPaxTypeAndQueueCount, PaxType, Splits}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
 
 trait QueueAdjustments {
 
@@ -29,7 +30,7 @@ case class ChildEGateAdjustments(assumedAdultsPerChild: Double) extends QueueAdj
     s.copy(splits = withB5JAdjustments)
   }
 
-  def paxOfTypeInQueue(s: Splits, paxType: PaxType, queue: Queue) = {
+  def paxOfTypeInQueue(s: Splits, paxType: PaxType, queue: Queue): Double = {
     s.splits
       .find(ptq => ptq.passengerType == paxType && ptq.queueType == queue)
       .map(_.paxCount)

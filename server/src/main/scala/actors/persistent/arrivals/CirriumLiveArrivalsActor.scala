@@ -1,8 +1,9 @@
 package actors.persistent.arrivals
 
-import drt.shared.{LiveBaseFeedSource, SDateLike}
+import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.FlightsDiffMessage
+import uk.gov.homeoffice.drt.ports.LiveBaseFeedSource
 
 object CirriumLiveArrivalsActor {
   val persistenceId = "actors.LiveBaseArrivalsActor-live-base"

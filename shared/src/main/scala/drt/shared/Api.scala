@@ -40,16 +40,6 @@ object MilliDate {
   def atTime: MillisSinceEpoch => MilliDate = (time: MillisSinceEpoch) => MilliDate(time)
 }
 
-case class PaxAge(years: Int) {
-  def isUnder(age: Int): Boolean = years < age
-
-  override def toString: String = s"$years"
-}
-
-object PaxAge {
-  implicit val rw: ReadWriter[PaxAge] = macroRW
-}
-
 sealed trait EventType extends ClassNameForToString
 
 object EventType {

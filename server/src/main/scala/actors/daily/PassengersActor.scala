@@ -4,12 +4,13 @@ import actors.persistent.{RecoveryActorLike, Sizes}
 import akka.actor.ActorRef
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{PortCode, SDateLike}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
 import services.{PaxDeltas, SDate}
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 
 case class PointInTimeOriginTerminalDay(pointInTime: Long, origin: String, terminal: String, day: Long)

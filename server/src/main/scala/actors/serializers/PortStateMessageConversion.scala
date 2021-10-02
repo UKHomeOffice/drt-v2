@@ -2,13 +2,14 @@ package actors.serializers
 
 import actors.serializers.FlightMessageConversion.flightWithSplitsFromMessage
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxAge, PaxType}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object PortStateMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass)

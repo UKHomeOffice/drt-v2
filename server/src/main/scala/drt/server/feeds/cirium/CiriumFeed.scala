@@ -8,15 +8,17 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
-import uk.gov.homeoffice.drt.ports.Terminals.{A1, InvalidTerminal, T1, Terminal}
+import drt.shared.SDateLike
 import drt.shared.api.Arrival
-import drt.shared.{LiveBaseFeedSource, PortCode, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.{CiriumDate, CiriumFlightDurations, CiriumFlightStatus}
+import uk.gov.homeoffice.drt.ports.Terminals.{A1, InvalidTerminal, T1, Terminal}
+import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -121,7 +123,7 @@ object CiriumFeed {
       taxiMinutes <- durations.scheduledTaxiInMinutes
     } yield SDate(runwayArrival.millis).addMinutes(taxiMinutes).millisSinceEpoch
 
-  private def extractEstRunwayArrival(f: CiriumFlightStatus) =
+  private def extractEstRunwayArrival(f: CiriumFlightStatus): Option[MillisSinceEpoch] =
     (f.operationalTimes, f.flightDurations) match {
       case (o, _) if o.estimatedRunwayArrival.isDefined => o.estimatedRunwayArrival.map(_.millis)
       case (o, Some(d)) if o.estimatedGateArrival.isDefined && d.scheduledTaxiInMinutes.isDefined =>

@@ -7,6 +7,7 @@ import drt.shared._
 import drt.shared.api.Arrival
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Terminals}
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -49,7 +50,7 @@ case class ResponseToArrivals(data: String) {
       BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption.filter(StringUtils.isNotBlank(_)),
       AirportID = "LGW",
       Terminal = parseTerminal(n),
-      CarrierCode = CarrierCode((n \\ "AirlineIATA" text)),
+      CarrierCode = CarrierCode(n \\ "AirlineIATA" text),
       VoyageNumber = VoyageNumber(parseFlightNumber(n)),
       FlightCodeSuffix = None,
       Origin = parseOrigin(n),

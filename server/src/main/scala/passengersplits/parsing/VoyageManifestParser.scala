@@ -11,7 +11,7 @@ import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import uk.gov.homeoffice.drt.ports.{PortCode, SplitRatiosNs}
+import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode, SplitRatiosNs}
 
 import scala.util.{Success, Try}
 
