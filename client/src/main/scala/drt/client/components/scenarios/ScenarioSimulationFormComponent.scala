@@ -19,6 +19,7 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.Div
 import scalacss.ScalaCssReactImplicits
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, PaxTypes, Queues}
 
 import scala.util.Try
 

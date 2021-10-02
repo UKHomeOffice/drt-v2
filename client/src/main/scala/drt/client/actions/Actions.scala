@@ -13,6 +13,7 @@ import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.{LocalDate, UtcDate}
 import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
 
 import java.util.UUID

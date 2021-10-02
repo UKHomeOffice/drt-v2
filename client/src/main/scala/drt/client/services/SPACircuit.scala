@@ -12,6 +12,7 @@ import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import java.util.UUID

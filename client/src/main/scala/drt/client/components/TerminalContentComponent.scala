@@ -31,6 +31,7 @@ import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
 import uk.gov.homeoffice.drt.auth._
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{HashSet, Map}

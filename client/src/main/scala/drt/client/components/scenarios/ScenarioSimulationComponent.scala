@@ -10,6 +10,7 @@ import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import scalacss.ScalaCssReactImplicits
+import uk.gov.homeoffice.drt.ports.AirportConfig
 
 
 object ScenarioSimulationComponent extends ScalaCssReactImplicits {

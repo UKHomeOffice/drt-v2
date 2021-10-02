@@ -5,6 +5,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared.SimulationParams.fullDay
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.dates.LocalDate
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, Queues}
 
 case class SimulationFormFields(terminal: Terminal,
                                 date: LocalDate,

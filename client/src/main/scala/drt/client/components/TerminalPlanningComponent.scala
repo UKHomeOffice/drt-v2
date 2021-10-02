@@ -6,7 +6,7 @@ import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
-import drt.shared.{Forecast, MilliDate, Queues, SDateLike}
+import drt.shared.{Forecast, MilliDate, SDateLike}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons

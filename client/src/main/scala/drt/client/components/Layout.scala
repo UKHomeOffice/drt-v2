@@ -4,7 +4,6 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain._
 import drt.client.services.SPACircuit
-import drt.shared.AirportConfig
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
@@ -13,6 +12,7 @@ import org.scalajs.dom
 import org.scalajs.dom.console
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.AirportConfig
 
 object Layout {
 

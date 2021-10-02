@@ -26,6 +26,7 @@ import org.scalajs.dom.html.{Div, Span, TableSection}
 import scalacss.ScalaCssReact
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{HashSet, Map}

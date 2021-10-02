@@ -1,10 +1,11 @@
 package services.exports
 
 import drt.shared.CrunchApi._
+import drt.shared.{PortState, SDateLike}
+import services.SDate
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import drt.shared.{AirportConfig, PortState, SDateLike}
-import services.SDate
 
 object Forecast {
   def headlineFigures(startOfForecast: SDateLike,

@@ -16,6 +16,7 @@ import org.scalajs.dom.html
 import org.scalajs.dom.html.TableCell
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffMovementsEdit
+import uk.gov.homeoffice.drt.ports.AirportConfig
 
 object TerminalDesksAndQueuesRow {
 

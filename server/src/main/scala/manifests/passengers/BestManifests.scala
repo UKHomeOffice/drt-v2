@@ -1,12 +1,13 @@
 package manifests.passengers
 
-import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import drt.shared.{SDateLike, _}
+import drt.shared._
 import manifests.UniqueArrivalKey
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import services.SDate
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 
 trait ManifestLike {
   val source: SplitSource

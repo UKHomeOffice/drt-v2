@@ -13,6 +13,7 @@ import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.RedListsEdit
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxType, PaxTypeAndQueue, PaxTypes, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 object PortConfigPage {

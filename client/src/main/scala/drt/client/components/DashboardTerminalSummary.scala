@@ -9,6 +9,7 @@ import drt.shared._
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 
 
 object DashboardTerminalSummary {

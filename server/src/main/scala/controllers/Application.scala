@@ -32,6 +32,7 @@ import services.staffing.StaffTimeSlots
 import test.TestDrtSystem
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, ManageUsers, Role, StaffEdit}
 import uk.gov.homeoffice.drt.auth._
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import java.nio.ByteBuffer

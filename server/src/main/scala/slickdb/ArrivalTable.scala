@@ -1,14 +1,13 @@
 package slickdb
 
-import java.sql.Timestamp
-
 import drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.PortCode
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
+import java.sql.Timestamp
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
