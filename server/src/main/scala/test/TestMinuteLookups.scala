@@ -5,9 +5,9 @@ import actors.daily.RequestAndTerminateActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared.SDateLike
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import services.SDate
 import test.TestActors.{ResetData, TestQueueMinutesActor, TestStaffMinutesActor, TestTerminalDayQueuesActor, TestTerminalDayStaffActor}
 

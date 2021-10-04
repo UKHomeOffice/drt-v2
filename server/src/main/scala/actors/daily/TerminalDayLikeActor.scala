@@ -5,7 +5,7 @@ import actors.persistent.staffing.GetState
 import actors.persistent.{RecoveryActorLike, Sizes}
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, MinuteLike, MinutesContainer}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{SDateLike, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

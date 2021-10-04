@@ -1,6 +1,6 @@
 package services.crunch.desklimits.flexed
 
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch
 

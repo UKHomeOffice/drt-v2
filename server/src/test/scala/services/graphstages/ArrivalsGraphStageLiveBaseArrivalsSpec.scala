@@ -6,13 +6,14 @@ import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneDayMillis
-import drt.shared.Terminals.T1
 import drt.shared._
 import drt.shared.api.Arrival
 import org.specs2.specification.AfterEach
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsNoop}
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 
 import scala.collection.immutable.SortedMap

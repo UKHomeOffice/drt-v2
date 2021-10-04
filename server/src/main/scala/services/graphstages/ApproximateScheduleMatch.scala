@@ -1,9 +1,10 @@
 package services.graphstages
 
 import drt.shared.api.Arrival
-import drt.shared.{MilliTimes, PortCode, UniqueArrival}
+import drt.shared.{MilliTimes, UniqueArrival}
 import org.slf4j.{Logger, LoggerFactory}
 import services.arrivals.LiveArrivalsUtil
+import uk.gov.homeoffice.drt.ports.PortCode
 
 
 object ApproximateScheduleMatch {

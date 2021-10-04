@@ -2,13 +2,14 @@ package services.graphstages
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.PaxTypes.{B5JPlusNational, EeaMachineReadable}
-import drt.shared.QueueStatusProviders.HourlyStatuses
-import drt.shared.Queues._
-import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
-import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.PaxTypes._
+import uk.gov.homeoffice.drt.ports.QueueStatusProviders.HourlyStatuses
+import uk.gov.homeoffice.drt.ports.Queues._
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 class DynamicWorkloadCalculatorSpec extends CrunchTestLike {

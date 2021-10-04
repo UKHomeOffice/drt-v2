@@ -6,13 +6,14 @@ import akka.http.scaladsl.model._
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
+import drt.shared.ArrivalStatus
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, LiveFeedSource, PortCode}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}

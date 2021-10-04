@@ -1,9 +1,6 @@
 package serialization
 
 import drt.shared.CrunchApi._
-import drt.shared.PaxTypes._
-import drt.shared.SplitRatiosNs.SplitSources.Historical
-import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
@@ -11,6 +8,10 @@ import services.AirportToCountry
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.ports.PaxTypes._
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports._
 import upickle.default._
 
 import scala.collection.immutable.SortedMap
@@ -32,7 +33,7 @@ class JsonSerializationSpec extends Specification {
 
     "AirportConfig" >> {
 
-      val lhrAirportConfig = AirportConfigs.confByPort(PortCode("LHR"))
+      val lhrAirportConfig = DrtPortConfigs.confByPort(PortCode("LHR"))
 
       val lhrAirportConfigAsJson: String = write(lhrAirportConfig)
 
@@ -42,7 +43,6 @@ class JsonSerializationSpec extends Specification {
     }
 
     "PaxTypes" >> {
-      import drt.shared.PaxType.paxTypeReaderWriter
 
       val allPaxTypes = Seq(
         EeaNonMachineReadable,

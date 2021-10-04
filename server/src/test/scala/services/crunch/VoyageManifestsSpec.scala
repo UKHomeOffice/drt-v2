@@ -3,11 +3,6 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.shared.EventTypes.CI
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypes.EeaMachineReadable
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues._
-import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import drt.shared.Terminals.T1
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
@@ -17,6 +12,12 @@ import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.PaxTypes._
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
+import uk.gov.homeoffice.drt.ports.Queues._
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports._
 
 import scala.collection.immutable.{List, Map, Seq, SortedMap}
 import scala.concurrent.duration._

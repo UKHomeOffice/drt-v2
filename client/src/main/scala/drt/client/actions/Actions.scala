@@ -7,12 +7,13 @@ import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.{LocalDate, UtcDate}
 import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
 
 import java.util.UUID

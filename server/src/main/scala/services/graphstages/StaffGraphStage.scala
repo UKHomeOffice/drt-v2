@@ -3,7 +3,7 @@ package services.graphstages
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute, StaffMinutes}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{SDateLike, _}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate

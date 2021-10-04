@@ -1,13 +1,14 @@
 package actors.serializers
 
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
-import drt.shared.SplitRatiosNs.SplitSources
-import drt.shared.SplitRatiosNs.SplitSources.Historical
-import drt.shared.Terminals.T1
-import drt.shared.api.{Arrival, FlightCodeSuffix}
 import drt.shared._
+import drt.shared.api.{Arrival, FlightCodeSuffix}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports._
 
 class FlightMessageConversionSpec extends Specification {
 

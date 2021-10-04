@@ -1,10 +1,10 @@
 package services.graphstages
 
 import controllers.ArrivalGenerator
-import drt.shared.PortCode
 import services.SDate
 import services.crunch.CrunchTestLike
 import services.graphstages.ApproximateScheduleMatch._
+import uk.gov.homeoffice.drt.ports.PortCode
 
 class ApproximateScheduleMatchSpec extends CrunchTestLike {
   "When I ask for a merged approx match with an arrival" >> {

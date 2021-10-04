@@ -2,7 +2,6 @@ package manifests
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.shared.SplitRatiosNs.SplitSources
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.slf4j.{Logger, LoggerFactory}
@@ -12,6 +11,8 @@ import slick.jdbc.SQLActionBuilder
 import slick.sql.SqlStreamingAction
 import slickdb.VoyageManifestPassengerInfoTable
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 
 import java.sql.Timestamp
 import scala.concurrent.ExecutionContext.Implicits.global

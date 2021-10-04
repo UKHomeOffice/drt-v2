@@ -1,11 +1,11 @@
 package drt.shared
 
-import java.util.UUID
-
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default.{ReadWriter, macroRW}
+
+import java.util.UUID
 
 trait HasExpireables[A] {
   def purgeExpired(expireBefore: () => SDateLike): A
@@ -26,8 +26,8 @@ case class StaffMovement(terminal: Terminal,
 }
 
 object StaffMovement {
-  implicit val terminalRw: ReadWriter[Terminal] = drt.shared.Terminals.Terminal.rw
-  implicit val queueRw: ReadWriter[Queue] = drt.shared.Queues.Queue.rw
+  implicit val terminalRw: ReadWriter[Terminal] = Terminal.rw
+  implicit val queueRw: ReadWriter[Queue] = Queue.rw
 
   implicit val rw: ReadWriter[StaffMovement] = macroRW
 }

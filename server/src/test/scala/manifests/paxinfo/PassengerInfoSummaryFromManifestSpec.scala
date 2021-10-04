@@ -7,6 +7,7 @@ import manifests.paxinfo.ManifestBuilder._
 import org.specs2.mutable.Specification
 import services.SDate
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.{PaxTypes, PortCode}
 
 import scala.collection.immutable.List
 

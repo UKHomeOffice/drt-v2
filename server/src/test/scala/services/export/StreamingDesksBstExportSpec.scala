@@ -4,12 +4,13 @@ import actors.routing.minutes.MockMinutesLookup
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
-import drt.shared.Terminals.T1
-import drt.shared.{Queues, SDateLike, TM, TQM}
+import drt.shared.{SDateLike, TM, TQM}
 import services.SDate
 import services.`export`.CsvTestHelper.{dropHeadings, resultStreamToCSV, takeCSVLines}
 import services.crunch.CrunchTestLike
 import services.exports.StreamingDesksExport
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 class StreamingDesksBstExportSpec extends CrunchTestLike {
 

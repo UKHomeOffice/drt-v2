@@ -1,7 +1,6 @@
 package passengersplits.parsing
 
 import drt.shared.EventTypes.InvalidEventType
-import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
 import org.joda.time.DateTime
@@ -11,6 +10,8 @@ import services.SDate
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat}
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
+import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode, SplitRatiosNs}
 
 import scala.util.{Success, Try}
 

@@ -1,7 +1,7 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
-import drt.shared.Terminals._
+import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared._
 
 trait BhxFlightsWithSplitsExportWithCombinedTerminals {

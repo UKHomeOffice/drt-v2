@@ -2,7 +2,7 @@ package actors.routing.minutes
 
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.UtcDate
 import services.SDate

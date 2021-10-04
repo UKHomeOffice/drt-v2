@@ -4,9 +4,8 @@ import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
 import drt.shared
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals._
+import drt.shared.SDateLike
 import drt.shared.api.Arrival
-import drt.shared.{PortCode, SDateLike, Terminals}
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
@@ -14,6 +13,8 @@ import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
+import uk.gov.homeoffice.drt.ports.Terminals._
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
@@ -227,7 +228,7 @@ object AclFeed {
         Origin = fields(AclColIndex.Origin),
         Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(shared.AclFeedSource)
+        FeedSources = Set(AclFeedSource)
       )
     }
   }

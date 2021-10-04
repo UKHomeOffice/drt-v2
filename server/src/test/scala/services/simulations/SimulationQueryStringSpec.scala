@@ -1,10 +1,11 @@
 package services.simulations
 
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.LocalDate
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
+import uk.gov.homeoffice.drt.ports.{PaxTypesAndQueues, Queues}
 
 import scala.util.{Failure, Success}
 

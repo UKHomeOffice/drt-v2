@@ -1,8 +1,9 @@
 package drt.shared.redlist
 
+import drt.shared.ApiFlightWithSplits
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.{T2, T3, T5, Terminal}
-import drt.shared.{ApiFlightWithSplits, PortCode}
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.{T2, T3, T5, Terminal}
 import uk.gov.homeoffice.drt.redlist.RedListUpdate
 
 import scala.collection.immutable.{Map, SortedMap}

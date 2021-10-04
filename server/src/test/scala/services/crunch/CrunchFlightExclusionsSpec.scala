@@ -2,11 +2,12 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Terminals.{InvalidTerminal, T1}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._

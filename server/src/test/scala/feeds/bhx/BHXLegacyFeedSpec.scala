@@ -1,13 +1,7 @@
 package feeds.bhx
 
-import java.util.{Calendar, GregorianCalendar, TimeZone}
-
 import drt.server.feeds.legacy.bhx.BHXFeed
-import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
-import drt.shared.{ForecastFeedSource, LiveFeedSource, PortCode}
-import javax.xml.datatype.DatatypeFactory
-import javax.xml.ws.BindingProvider
 import org.joda.time.DateTimeZone
 import org.mockito.Mockito.verify
 import org.specs2.matcher.Scope
@@ -15,6 +9,12 @@ import org.specs2.mock.Mockito
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.co.bhx.online.flightinformation._
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
+
+import java.util.{Calendar, GregorianCalendar, TimeZone}
+import javax.xml.datatype.DatatypeFactory
+import javax.xml.ws.BindingProvider
 
 class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
   sequential

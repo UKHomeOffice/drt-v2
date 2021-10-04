@@ -1,7 +1,7 @@
 package services.arrivals
 
-import drt.shared.PortCode
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.PortCode
 
 class ArrivalsAdjustmentsSpec extends Specification {
   "Given a non-EDI port code then I should get back an ArrivalsAdjustmentsNoop" >> {

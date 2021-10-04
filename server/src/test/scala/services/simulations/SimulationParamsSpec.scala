@@ -2,15 +2,16 @@ package services.simulations
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.dates.LocalDate
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports._
 
 class SimulationParamsSpec extends Specification {
 
-  val testConfig: AirportConfig = AirportConfigs.confByPort(PortCode("TEST"))
+  val testConfig: AirportConfig = DrtPortConfigs.confByPort(PortCode("TEST"))
 
   private val terminal: Terminal = Terminal("T1")
   val simulation: SimulationParams = SimulationParams(

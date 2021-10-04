@@ -3,10 +3,10 @@ package drt.server.feeds.lhr
 
 import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.forecast.LHRForecastFlightRow
-import drt.shared.ForecastFeedSource
-import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.ports.ForecastFeedSource
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.util.Try
 

@@ -1,10 +1,11 @@
 package services.crunch
 
 import drt.shared.CrunchApi.{CrunchMinute, ForecastTimeSlot, StaffMinute}
-import drt.shared.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import drt.shared._
 import services.SDate
 import services.exports.Forecast
+import uk.gov.homeoffice.drt.ports.Queues
 
 class PlanningActualStaffSpec() extends CrunchTestLike {
   sequential

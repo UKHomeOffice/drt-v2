@@ -1,9 +1,10 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SplitRatiosNs.SplitSources
-import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import drt.shared.api.Arrival
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, ScenarioSimulationSource}
 import upickle.default.{macroRW, _}
 
 case class ApiFlightWithSplits(apiFlight: Arrival, splits: Set[Splits], lastUpdated: Option[MillisSinceEpoch] = None)

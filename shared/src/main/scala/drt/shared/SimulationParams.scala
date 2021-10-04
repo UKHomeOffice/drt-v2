@@ -1,8 +1,9 @@
 package drt.shared
 
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports._
 import upickle.default.{ReadWriter, macroRW}
 
 import scala.util.{Success, Try}

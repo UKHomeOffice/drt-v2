@@ -5,8 +5,6 @@ import actors.persistent.SortedActorRefSource
 import akka.actor.{Actor, Props}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
@@ -16,6 +14,9 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
+import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._

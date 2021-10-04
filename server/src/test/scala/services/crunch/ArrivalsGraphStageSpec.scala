@@ -3,10 +3,6 @@ package services.crunch
 import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.arrival
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypes.EeaMachineReadable
-import drt.shared.Queues.EeaDesk
-import drt.shared.SplitRatiosNs.SplitSources.TerminalAverage
-import drt.shared.Terminals.{T1, T2}
 import drt.shared._
 import drt.shared.api.Arrival
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
@@ -14,6 +10,11 @@ import passengersplits.parsing.VoyageManifestParser._
 import server.feeds._
 import services.SDate
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports._
 
 import scala.collection.immutable.List
 import scala.concurrent.duration._

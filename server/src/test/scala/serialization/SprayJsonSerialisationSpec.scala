@@ -1,10 +1,8 @@
 package serialization
 
 import controllers.application.RedListJsonFormats
-import drt.shared.PortCode
 import org.specs2.mutable.Specification
-import spray.json._
-import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
+import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
 
 case class WithAMap(things: Map[String, String])

@@ -5,12 +5,13 @@ import akka.pattern.pipe
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
-import drt.shared.Terminals.{T1, T4}
 import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, LiveFeedSource, Operator, PortCode}
+import drt.shared.{ArrivalStatus, Operator}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T4}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq

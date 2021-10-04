@@ -3,7 +3,7 @@ package services
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliDate
 import drt.shared.MilliTimes.timeToNearestMinute
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.{Arrival, WalkTime}
 import drt.shared.coachTime.CoachWalkTime
 import org.slf4j.{Logger, LoggerFactory}

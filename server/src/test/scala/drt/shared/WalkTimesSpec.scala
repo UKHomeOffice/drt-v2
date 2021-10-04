@@ -1,6 +1,6 @@
 package drt.shared
 
-import drt.shared.Terminals._
+import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared.TimeUtil._
 import drt.shared.api.{TerminalWalkTimes, WalkTime, WalkTimes}
 import org.specs2.mutable.Specification

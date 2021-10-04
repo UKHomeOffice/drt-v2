@@ -5,6 +5,7 @@ import drt.shared._
 import play.api.mvc.{Action, AnyContent}
 import services.AirportToCountry
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
+import uk.gov.homeoffice.drt.ports.PortCode
 
 
 trait WithAirportInfo {

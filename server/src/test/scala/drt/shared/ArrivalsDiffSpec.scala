@@ -2,8 +2,8 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
-import drt.shared.SplitRatiosNs.SplitSources.Historical
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 
 class ArrivalsDiffSpec extends Specification {
   val now: MillisSinceEpoch = 10L

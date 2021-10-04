@@ -6,6 +6,7 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.protobuf.messages.VoyageManifest.PassengerInfoJsonMessage
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 
 class ManifestMessageConversionSpec extends Specification {
 

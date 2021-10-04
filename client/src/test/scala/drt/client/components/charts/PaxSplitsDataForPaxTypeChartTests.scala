@@ -3,10 +3,10 @@ package drt.client.components.charts
 import drt.client.components.ChartJSComponent.ChartJsData
 import drt.client.components.charts.DataFormat.jsonString
 import drt.client.services.charts.ChartData
-import drt.shared.PaxTypes._
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
-import drt.shared.{ApiPaxTypeAndQueueCount, PaxTypes, Queues}
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.PaxTypes._
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypes, Queues}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import utest.{TestSuite, _}
 
 object PaxSplitsDataForPaxTypeChartTests extends TestSuite {

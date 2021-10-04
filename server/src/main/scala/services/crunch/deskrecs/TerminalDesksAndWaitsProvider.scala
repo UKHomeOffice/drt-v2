@@ -1,8 +1,8 @@
 package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
-import drt.shared.Queues.{EGate, Queue}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services._

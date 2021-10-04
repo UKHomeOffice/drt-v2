@@ -2,13 +2,14 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues.EeaDesk
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{InvalidTerminal, T1}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PaxTypes, Queues}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._

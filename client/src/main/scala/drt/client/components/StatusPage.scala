@@ -10,6 +10,7 @@ import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource}
 
 
 object StatusPage {

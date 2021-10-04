@@ -1,21 +1,21 @@
 package controllers
 
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
-import java.util.TimeZone
-
-import javax.net.ssl._
 import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.{ActualDeskStats, DeskStat}
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import services.{OfferHandler, SDate}
 import services.graphstages.Crunch.europeLondonId
+import services.{OfferHandler, SDate}
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
+import java.util.TimeZone
+import javax.net.ssl._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
@@ -175,7 +175,7 @@ object Deskstats {
     line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)").toList.map(stripQuotes)
   }
 
-  def stripQuotes(cell: String) = {
+  def stripQuotes(cell: String): String = {
     val length = cell.length
     if (length > 0 && cell(0) == '"' && cell(cell.length - 1) == '"') {
       cell.drop(1).dropRight(1)

@@ -12,13 +12,14 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.server.feeds.Implicits._
 import drt.server.feeds.mag.MagFeed.MagArrival
 import drt.shared.FlightsApi.Flights
+import drt.shared.SDateLike
 import drt.shared.api.Arrival
-import drt.shared.{LiveFeedSource, PortCode, SDateLike, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Terminals}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}

@@ -16,6 +16,7 @@ import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, LI}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles._
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 
 object MainMenu {
   @inline private def bss: BootstrapStyles.type = GlobalStyles.bootstrapStyles

@@ -1,6 +1,6 @@
 package services.arrivals
 
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import org.specs2.mutable.Specification
 
 import scala.util.{Failure, Success}

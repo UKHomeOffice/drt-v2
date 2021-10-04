@@ -8,10 +8,9 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
+import drt.shared.SDateLike
 import drt.shared.dates.LocalDate
 import drt.shared.redlist.LhrRedListDatesImpl
-import drt.shared.{PortCode, SDateLike}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiFormLabel, MuiGrid, MuiTextField}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
@@ -22,6 +21,8 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CallbackTo, CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object MultiDayExportComponent extends WithScalaCssImplicits {
   val today: SDateLike = SDate.now()

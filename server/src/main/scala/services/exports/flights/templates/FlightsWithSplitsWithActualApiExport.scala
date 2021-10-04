@@ -1,8 +1,8 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
-import drt.shared.Queues.Queue
-import drt.shared.Terminals._
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared._
 
 

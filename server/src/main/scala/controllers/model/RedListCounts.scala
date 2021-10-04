@@ -7,6 +7,7 @@ import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol.PortCodeJsonFormat
 import services.SDate
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsValue, RootJsonFormat, enrichAny}
+import uk.gov.homeoffice.drt.ports.PortCode
 
 import scala.util.{Success, Try}
 

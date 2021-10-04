@@ -1,18 +1,17 @@
 package drt.shared.airportconfig
 
 import uk.gov.homeoffice.drt.auth.Roles.TEST
-import drt.shared.PaxTypes.EeaMachineReadable
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues.{EGate, EeaDesk, NonEeaDesk}
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.T1
-import drt.shared._
+import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults.defaultQueueRatios
+import uk.gov.homeoffice.drt.ports._
 
 import scala.collection.immutable.SortedMap
 
 object Test extends AirportConfigLike {
-
-  import AirportConfigDefaults._
 
   val config: AirportConfig = AirportConfig(
     portCode = PortCode("TEST"),
@@ -22,7 +21,7 @@ object Test extends AirportConfigLike {
     slaByQueue = Map(EeaDesk -> 25, EGate -> 5, NonEeaDesk -> 45),
     crunchOffsetMinutes = 240,
     defaultWalkTimeMillis = Map(T1 -> 600000L),
-    terminalPaxSplits = Map(T1 -> SplitRatios(
+    terminalPaxSplits = Map[Terminal, SplitRatios](T1 -> SplitRatios(
       SplitSources.TerminalAverage,
       SplitRatio(eeaMachineReadableToDesk, 0.7425),
       SplitRatio(eeaMachineReadableToEGate, 0.2475),

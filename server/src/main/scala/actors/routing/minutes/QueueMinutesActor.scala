@@ -4,7 +4,7 @@ import actors.routing.RouterActorLikeWithSubscriber
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
 import drt.shared.TQM
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.dates.UtcDate
 
 import scala.language.postfixOps

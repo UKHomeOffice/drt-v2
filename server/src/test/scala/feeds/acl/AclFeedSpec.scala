@@ -3,15 +3,15 @@ package feeds.acl
 import controllers.ArrivalGenerator
 import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.acl.AclFeed.{aclFileName, arrivalsFromCsvContent}
-import drt.shared
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Terminals._
 import drt.shared._
 import drt.shared.api.Arrival
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
+import uk.gov.homeoffice.drt.ports.Terminals._
+import uk.gov.homeoffice.drt.ports._
 
 import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
@@ -44,7 +44,7 @@ class AclFeedSpec extends CrunchTestLike {
       val expected = List(Arrival(Operator = Option(Operator("4U")), Status = ArrivalStatus("ACL Forecast"), Estimated = None, Actual = None,
         EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Option(180), ActPax = Option(149),
         TranPax = None, RunwayID = None, BaggageReclaimId = None, AirportID = PortCode("LHR"), Terminal = T2,
-        rawICAO = "4U0460", rawIATA = "4U0460", Origin = PortCode("CGN"), FeedSources = Set(shared.AclFeedSource),
+        rawICAO = "4U0460", rawIATA = "4U0460", Origin = PortCode("CGN"), FeedSources = Set(AclFeedSource),
         Scheduled = 1507878600000L, PcpTime = None))
 
       arrivals === expected
@@ -107,7 +107,7 @@ class AclFeedSpec extends CrunchTestLike {
           rawICAO = "4U0460",
           rawIATA = "4U0460",
           Origin = PortCode("CGN"),
-          FeedSources = Set(shared.AclFeedSource),
+          FeedSources = Set(AclFeedSource),
           Scheduled = 1507878600000L,
           PcpTime = None))
 
@@ -143,7 +143,7 @@ class AclFeedSpec extends CrunchTestLike {
           rawICAO = "4U0460",
           rawIATA = "4U0460",
           Origin = PortCode("CGN"),
-          FeedSources = Set(shared.AclFeedSource),
+          FeedSources = Set(AclFeedSource),
           Scheduled = 1507878600000L,
           PcpTime = None))
 

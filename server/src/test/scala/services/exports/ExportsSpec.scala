@@ -1,12 +1,13 @@
 package services.exports
 
 import controllers.ArrivalGenerator
-import drt.shared.PaxTypes.{EeaMachineReadable, UndefinedPaxType}
-import drt.shared.Queues.EeaDesk
-import drt.shared.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import drt.shared.{ApiFlightWithSplits, ApiPaxTypeAndQueueCount, PaxNumbers, Splits}
+import drt.shared.{ApiFlightWithSplits, PaxNumbers, Splits}
 import org.specs2.mutable.Specification
 import services.exports.Exports.actualAPISplitsAndHeadingsFromFlight
+import uk.gov.homeoffice.drt.ports.ApiPaxTypeAndQueueCount
+import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, UndefinedPaxType}
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 
 class ExportsSpec extends Specification {
   "Given a flight with one undefined pax type and one eea-mr pax type in the splits" >> {

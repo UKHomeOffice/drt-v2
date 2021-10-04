@@ -7,7 +7,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.{CtorType, _}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}

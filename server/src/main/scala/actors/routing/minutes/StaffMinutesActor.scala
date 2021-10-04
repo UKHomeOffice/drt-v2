@@ -2,7 +2,7 @@ package actors.routing.minutes
 
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import drt.shared.CrunchApi.StaffMinute
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{CrunchApi, TM}
 
 class StaffMinutesActor(terminals: Iterable[Terminal],

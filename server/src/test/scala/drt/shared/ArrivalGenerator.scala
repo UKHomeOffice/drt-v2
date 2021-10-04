@@ -1,8 +1,9 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.{T1, Terminal}
 import drt.shared.api.Arrival
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 
 object ArrivalGenerator {
   def arrival(

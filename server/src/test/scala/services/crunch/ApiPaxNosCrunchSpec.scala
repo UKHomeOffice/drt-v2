@@ -2,14 +2,15 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaChildToDesk
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.{PaxAge, PaxTypeAndQueue, PortCode, Queues}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._

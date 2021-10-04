@@ -8,8 +8,8 @@ import akka.testkit.{ImplicitSender, TestProbe}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PortStateUpdates, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.EeaDesk
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.{ApiFlightWithSplits, PortState, TM, TQM}
 import services.crunch.CrunchTestLike
 

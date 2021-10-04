@@ -15,7 +15,7 @@ import controllers.model.{RedListCount, RedListCounts}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi._
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.dates.UtcDate

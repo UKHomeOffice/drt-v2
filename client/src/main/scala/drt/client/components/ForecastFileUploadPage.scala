@@ -4,13 +4,13 @@ import diode.data.Pot
 import drt.client.actions.Actions.{FileUploadInProgress, ForecastFileUploadAction, ResetFileUpload}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.shared.AirportConfig
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent, _}
 import org.scalajs.dom
-import org.scalajs.dom.html.Div
+import org.scalajs.dom.html.{Div, Heading}
 import org.scalajs.dom.raw.{FormData, HTMLFormElement}
+import uk.gov.homeoffice.drt.ports.AirportConfig
 
 
 case class FileUploadState(state: String, message: String)
@@ -21,7 +21,7 @@ object ForecastFileUploadPage {
 
   case class Props()
 
-  val heading = <.h3("Forecast Feed File Upload")
+  val heading: VdomTagOf[Heading] = <.h3("Forecast Feed File Upload")
 
   val upload: String => VdomTagOf[Div] = (portCode: String) =>
     <.div(^.className := "fileUpload",

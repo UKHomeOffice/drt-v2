@@ -2,14 +2,15 @@ package services.graphstages
 
 import drt.shared.CrunchApi._
 import drt.shared.MilliTimes._
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.dates.{DateLikeOrdering, UtcDate}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
+import uk.gov.homeoffice.drt.ports.PaxType
 
 import scala.collection.immutable.{Map, SortedMap, SortedSet}
 import scala.collection.mutable

@@ -1,8 +1,9 @@
 package services
 
-import drt.shared.Terminals.{T1, T2}
 import drt.shared._
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
 
 import scala.collection.SortedSet
 

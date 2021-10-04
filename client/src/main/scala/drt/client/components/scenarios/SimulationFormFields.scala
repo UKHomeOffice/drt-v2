@@ -1,10 +1,11 @@
 package drt.client.components.scenarios
 
-import drt.shared.{AirportConfig, PaxTypeAndQueue, Queues, SimulationParams}
-import drt.shared.Queues.Queue
+import drt.shared.SimulationParams
 import drt.shared.SimulationParams.fullDay
-import drt.shared.Terminals.Terminal
 import drt.shared.dates.LocalDate
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, Queues}
 
 case class SimulationFormFields(terminal: Terminal,
                                 date: LocalDate,

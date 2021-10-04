@@ -1,10 +1,10 @@
 package manifests.passengers
 
-import drt.shared.PaxType
 import drt.shared.api._
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import queueus.B5JPlusWithTransitTypeAllocator
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.PaxType
 
 object PassengerInfo {
 

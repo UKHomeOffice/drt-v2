@@ -1,9 +1,10 @@
 package services.crunch
 
-import drt.shared.PaxTypes.EeaMachineReadable
-import drt.shared.Terminals.T1
 import drt.shared._
 import services.graphstages.Crunch._
+import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
 
 import scala.collection.immutable.List
 

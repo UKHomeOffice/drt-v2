@@ -1,8 +1,8 @@
 package drt.shared
 
 import drt.shared.CrunchApi._
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default.{readwriter, ReadWriter => RW}
 
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
