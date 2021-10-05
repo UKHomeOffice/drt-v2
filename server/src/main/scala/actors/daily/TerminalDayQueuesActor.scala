@@ -2,7 +2,7 @@ package actors.daily
 
 import akka.actor.Props
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.dates.UtcDate
 import drt.shared.{SDateLike, TQM}
 import scalapb.GeneratedMessage

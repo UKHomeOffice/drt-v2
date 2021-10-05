@@ -22,6 +22,7 @@ import test.TestActors.{TestStaffMovementsActor, _}
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}

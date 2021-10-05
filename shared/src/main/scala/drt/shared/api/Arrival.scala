@@ -2,8 +2,9 @@ package drt.shared.api
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneMinuteMillis
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import upickle.default.{ReadWriter, macroRW}
 
 import scala.collection.immutable.{List, NumericRange}

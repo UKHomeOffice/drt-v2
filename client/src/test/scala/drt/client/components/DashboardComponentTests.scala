@@ -2,9 +2,10 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import drt.shared.splits.ApiSplitsToSplitRatio
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PaxTypes, Queues}
 import utest._
 
 object DashboardComponentTests extends TestSuite {

@@ -1,10 +1,11 @@
 package test.feeds.test
 
+import drt.shared.ArrivalStatus
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, LiveFeedSource, PortCode, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Terminals}
 
 import scala.collection.immutable.Seq
 import scala.util.Try

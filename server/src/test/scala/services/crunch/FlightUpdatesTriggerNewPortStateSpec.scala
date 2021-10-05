@@ -2,14 +2,15 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypes._
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues._
-import drt.shared.SplitRatiosNs.SplitSources._
-import drt.shared.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
+import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
+import uk.gov.homeoffice.drt.ports.Queues._
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
+import uk.gov.homeoffice.drt.ports.Terminals._
+import uk.gov.homeoffice.drt.ports._
 
 import scala.collection.immutable.{Map, Seq, SortedMap}
 import scala.concurrent.duration._

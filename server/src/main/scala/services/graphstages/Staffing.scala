@@ -4,8 +4,8 @@ import java.util.UUID
 
 import drt.shared.CrunchApi._
 import drt.shared.MilliTimes.oneMinuteMillis
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate

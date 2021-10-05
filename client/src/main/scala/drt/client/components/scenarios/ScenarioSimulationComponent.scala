@@ -3,13 +3,14 @@ package drt.client.components.scenarios
 import diode.UseValueEq
 import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.modules.GoogleEventTracker
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.LocalDate
 import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import scalacss.ScalaCssReactImplicits
+import uk.gov.homeoffice.drt.ports.AirportConfig
 
 
 object ScenarioSimulationComponent extends ScalaCssReactImplicits {

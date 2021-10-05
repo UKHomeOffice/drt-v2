@@ -1,14 +1,15 @@
 package services
 
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import drt.shared.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
-import drt.shared.Queues.Queue
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
 import services.graphstages.StaffDeploymentCalculator._
 import services.graphstages.{StaffAssignmentService, StaffSources}
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 
 import scala.collection.immutable.List
 import scala.concurrent.duration.DurationInt

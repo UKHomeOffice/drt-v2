@@ -3,12 +3,13 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi._
-import drt.shared.Queues.{InvalidQueue, Queue}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.{InvalidQueue, Queue}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 
 
 object DashboardTerminalSummary {

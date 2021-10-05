@@ -4,7 +4,7 @@ import actors.persistent.staffing.GetState
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared.{SDateLike, TM}
 import services.SDate
 import services.crunch.CrunchTestLike

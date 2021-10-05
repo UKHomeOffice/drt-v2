@@ -3,7 +3,7 @@ package services
 import org.specs2.mutable.Specification
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftsMessage}
 import actors.persistent.staffing.ShiftsMessageParser._
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment}
 
 class ShiftsToProtoBufSpec extends Specification {

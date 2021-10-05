@@ -2,7 +2,7 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared.Terminals.{InvalidTerminal, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
@@ -10,6 +10,7 @@ import services.SDate
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop, LiveArrivalsUtil}
 import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone, mergeApproxIfFoundElseOriginal}
 import services.metrics.{Metrics, StageTimer}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate}
 
 import scala.collection.immutable.SortedMap
@@ -274,7 +275,9 @@ class ArrivalsGraphStage(name: String = "",
         case (_, f) if !isFlightRelevant(f) =>
           log.debug(s"Filtering out irrelevant arrival: ${f.flightCodeString}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
           true
-        case _ => false
+        case (_, f) =>
+          log.info(s"Relevant flight: ${f.flightCodeString}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
+          false
       }.keys
 
       val minusRemovals = arrivals -- toRemove

@@ -1,8 +1,10 @@
 package drt.client.components
 
-import drt.shared.SplitRatiosNs.SplitSources.{Historical, TerminalAverage}
 import drt.shared._
+import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypes, Queues}
 import utest.{TestSuite, _}
 
 
@@ -251,6 +253,29 @@ object PaxSplitsDisplayTests extends TestSuite {
           Queues.FastTrack -> 25
         ))
 
+        assert(result == expected)
+      }
+
+      "Given a flight with no pax number for live feed and splits ApiSplitsWithHistoricalEGateAndFTPercentages I should see the total broken down per queue" - {
+        val flight: Arrival = ArrivalGenerator.apiFlight(actPax = None, feedSources = Set(LiveFeedSource)).copy(ApiPax = Some(100))
+        val splits = Splits(Set(
+          ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 15, None, None),
+          ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 5, None, None)),
+          ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)
+
+        val apiFlightWithSplits = ApiFlightWithSplits(flight, Set(splits))
+        val bestSplits = apiFlightWithSplits.bestSplits
+        assert(bestSplits.contains(Splits(
+          Set(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 15, None, None),
+            ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 5, None, None)),
+          ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers))
+        )
+        val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(apiFlightWithSplits)
+
+        val expected: Option[Map[Queues.Queue, Int]] = Option(Map(
+          Queues.NonEeaDesk -> 15,
+          Queues.FastTrack -> 5
+        ))
         assert(result == expected)
       }
     }

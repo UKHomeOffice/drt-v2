@@ -1,14 +1,15 @@
 package manifests.queues
 
-import drt.shared.SplitRatiosNs.SplitSources.InvalidSource
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import manifests.passengers.ManifestLike
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, PaxTypeQueueAllocation, QueueAdjustments}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.InvalidSource
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue}
 
 object SplitsCalculator {
   type SplitsForArrival = (ManifestLike, Arrival) => Splits

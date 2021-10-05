@@ -1,11 +1,9 @@
 package controllers.model
 
-import drt.shared.PortCode
 import org.specs2.mutable.Specification
 import services.SDate
-import spray.json.DefaultJsonProtocol.StringJsonFormat
-import spray.json.enrichAny
 import spray.json._
+import uk.gov.homeoffice.drt.ports.PortCode
 
 class RedListCountsJsonFormatsSpec extends Specification {
   "Given a RedListCounts" >> {

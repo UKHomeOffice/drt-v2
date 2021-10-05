@@ -1,6 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
+import uk.gov.homeoffice.drt.ports.FeedSource
 import upickle.default.{macroRW, ReadWriter => RW}
 
 import scala.concurrent.duration.FiniteDuration

@@ -10,7 +10,7 @@ import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteri
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.UtcDate
 import org.slf4j.{Logger, LoggerFactory}

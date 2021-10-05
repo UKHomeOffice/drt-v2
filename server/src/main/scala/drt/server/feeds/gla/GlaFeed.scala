@@ -12,13 +12,13 @@ import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
 import drt.server.feeds.gla.GlaFeed.GlaArrival
 import drt.shared.FlightsApi.Flights
-import drt.shared.LiveFeedSource
-import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}

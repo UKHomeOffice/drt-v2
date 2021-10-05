@@ -25,6 +25,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.ports.AirportConfig
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable

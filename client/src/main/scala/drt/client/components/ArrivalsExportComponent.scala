@@ -6,9 +6,8 @@ import drt.client.components.TerminalContentComponent.exportLink
 import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services._
-import drt.shared.Terminals.Terminal
+import drt.shared.SDateLike
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
-import drt.shared.{PortCode, SDateLike}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
@@ -19,6 +18,8 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object ArrivalsExportComponent extends WithScalaCssImplicits {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)

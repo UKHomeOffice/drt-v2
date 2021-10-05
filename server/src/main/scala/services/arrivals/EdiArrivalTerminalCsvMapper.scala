@@ -2,7 +2,7 @@ package services.arrivals
 
 import java.net.URL
 
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{FlightCode, MonthStrings}
 import org.apache.commons.csv.{CSVFormat, CSVParser}
 

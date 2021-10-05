@@ -6,8 +6,6 @@ import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.shared.FlightsApi.Flights
-import drt.shared.LiveFeedSource
-import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
@@ -15,6 +13,8 @@ import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.JavaConverters._
 import scala.concurrent.duration._

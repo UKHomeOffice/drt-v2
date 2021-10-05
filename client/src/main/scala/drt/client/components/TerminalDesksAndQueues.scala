@@ -9,7 +9,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
-import drt.shared.Queues.{EGate, Queue}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue}
 import drt.shared._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -19,6 +19,7 @@ import org.scalajs.dom.html.Div
 import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 
 import scala.util.{Success, Try}
 

@@ -1,8 +1,8 @@
 package drt.shared
 
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default.{macroRW, ReadWriter}
 
 case class TQM(terminal: Terminal, queue: Queue, minute: MillisSinceEpoch)

@@ -12,10 +12,6 @@ import controllers.ArrivalGenerator
 import dispatch.Future
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, SplitsForArrivals}
-import drt.shared.PaxTypes.{EeaMachineReadable, VisaNational}
-import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
-import drt.shared.SplitRatiosNs.SplitSources
-import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import manifests.queues.SplitsCalculator
@@ -30,6 +26,11 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
+import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{Map, Seq, SortedMap}

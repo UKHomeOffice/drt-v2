@@ -1,6 +1,7 @@
 package services.crunch
 
 import drt.shared._
+import uk.gov.homeoffice.drt.ports.PortCode
 
 
 class CrunchMinuteSpec extends CrunchTestLike {
@@ -9,7 +10,7 @@ class CrunchMinuteSpec extends CrunchTestLike {
       "When grouping by their unique key " +
       "Then there should be just one value per group" >> {
       val days = 180
-      val airportConfig = AirportConfigs.confByPort(PortCode("LHR"))
+      val airportConfig = DrtPortConfigs.confByPort(PortCode("LHR"))
       val daysInMinutes = 60 * 60 * 24 * days
       val daysInMillis = 1000 * 60 * daysInMinutes
       val tqms = for {
@@ -31,7 +32,7 @@ class CrunchMinuteSpec extends CrunchTestLike {
       "When grouping by their unique key " +
       "Then there should be just one value per group" >> {
       val days = 180
-      val airportConfig = AirportConfigs.confByPort(PortCode("LHR"))
+      val airportConfig = DrtPortConfigs.confByPort(PortCode("LHR"))
       val daysInMinutes = 60 * 60 * 24 * days
       val daysInMillis = 1000 * 60 * daysInMinutes
       val tms = for {

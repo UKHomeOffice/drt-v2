@@ -1,6 +1,6 @@
 package data
 
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment}
 import org.specs2.mutable.SpecificationLike
 import services.SDate

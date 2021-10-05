@@ -1,10 +1,11 @@
 package services.arrivals
 
-import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, PortCode, SDateLike}
+import drt.shared.{ArrivalStatus, SDateLike}
 import org.specs2.mutable.Specification
 import services.SDate
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 class ArrivalDataSanitiserSpec extends Specification {
 

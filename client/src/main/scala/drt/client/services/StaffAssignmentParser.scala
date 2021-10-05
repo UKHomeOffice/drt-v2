@@ -1,6 +1,6 @@
 package drt.client.services
 
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 
 import scala.util.Try

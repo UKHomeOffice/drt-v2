@@ -3,7 +3,7 @@ package slickdb
 import java.sql.Timestamp
 
 import drt.shared
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.concurrent.Future
 

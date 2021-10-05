@@ -8,12 +8,13 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, LiveFeedSource, Operator, PortCode}
+import drt.shared.{ArrivalStatus, Operator}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
 import scala.collection.immutable
 import scala.concurrent.duration._

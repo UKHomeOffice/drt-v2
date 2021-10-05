@@ -1,8 +1,9 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.redlist.LhrTerminalTypes
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 sealed trait FlightDisplayFilter {

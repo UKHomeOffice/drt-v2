@@ -26,6 +26,7 @@ import server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.FeedStatusMessage
 import server.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
 import services.SDate
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}

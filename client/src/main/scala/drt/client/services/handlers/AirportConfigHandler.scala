@@ -5,7 +5,7 @@ import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.{GetAirportConfig, RetryActionAfter, UpdateAirportConfig}
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
-import drt.shared.AirportConfig
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import upickle.default.read
 
 import scala.concurrent.Future

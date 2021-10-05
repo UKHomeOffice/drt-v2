@@ -9,15 +9,16 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.Terminal
+import drt.shared._
 import drt.shared.api.{Arrival, FlightCodeSuffix}
-import drt.shared.{FeedSource, _}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSource, PortCode}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._

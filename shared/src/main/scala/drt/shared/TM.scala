@@ -1,7 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default.{macroRW, ReadWriter}
 
 case class TM(terminal: Terminal, minute: MillisSinceEpoch)

@@ -3,14 +3,15 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypesAndQueues.eeaMachineReadableToDesk
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch._
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 
 import scala.collection.immutable.List
 import scala.concurrent.duration._

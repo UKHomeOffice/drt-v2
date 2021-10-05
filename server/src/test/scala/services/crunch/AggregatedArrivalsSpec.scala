@@ -8,7 +8,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.api.Arrival
 import org.specs2.specification.BeforeEach
 import server.feeds.ArrivalsFeedSuccess

@@ -12,7 +12,7 @@ import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{ApiFlightWithSplits, ArrivalsRestorer, MilliTimes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

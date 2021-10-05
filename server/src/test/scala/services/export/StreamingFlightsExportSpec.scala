@@ -3,11 +3,12 @@ package services.`export`
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import services.SDate
 import services.crunch.CrunchTestLike
 import services.exports.flights.templates.{CedatFlightsExport, FlightsWithSplitsWithActualApiExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExport, FlightsWithSplitsWithoutActualApiExportImpl}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiPaxTypeAndQueueCount, FeedSource, LiveFeedSource, PaxTypes, PortCode, Queues, SplitRatiosNs}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -307,7 +308,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,,100,Y,7,15,32,46,12,23,30,35,,,,,0.0,0.0,0.0,1.0,2.0,3.0,0.0,6.0,7.0,4.0,5.0,0.0
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,28,28,,2,4,9,13,3,7,8,10,,,,,0.0,0.0,0.0,1.0,2.0,3.0,0.0,6.0,7.0,4.0,5.0,0.0
           |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0
           |SA0326,SA0326,JHD,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,,30,60,10,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0
           |""".stripMargin

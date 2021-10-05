@@ -13,12 +13,12 @@ import drt.server.feeds.Implicits._
 import drt.server.feeds.common.FlightStatus
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
-import drt.shared.LiveFeedSource
-import drt.shared.Terminals.Terminal
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global

@@ -16,7 +16,7 @@ import controllers.application._
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.api.Arrival
 import drt.shared._
 import drt.users.KeyCloakClient
@@ -32,6 +32,7 @@ import services.staffing.StaffTimeSlots
 import test.TestDrtSystem
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, ManageUsers, Role, StaffEdit}
 import uk.gov.homeoffice.drt.auth._
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import java.nio.ByteBuffer
@@ -73,7 +74,7 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def oohPhone: Option[String] = config.getOptional[String]("ooh-phone")
 
-  def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
+  def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
 
   lazy val airportConfig: AirportConfig = {
     val configForPort = getPortConfFromEnvVar.copy(
@@ -355,7 +356,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       val protocol = if (isSecure) "https://" else "http://"
       val fromPort = "?fromPort=" + airportConfig.portCode.toString.toLowerCase
       val redirectUrl = protocol + baseDomain + fromPort
-      log.info(s"Redirecting to $redirectUrl")
+      log.info(s"User lacks ${airportConfig.role} role. Redirecting to $redirectUrl")
       Redirect(Call("get", redirectUrl))
     }
   }

@@ -7,7 +7,7 @@ import controllers.Application
 import controllers.application.exports.{CsvFileStreaming, WithDesksExport, WithFlightsExport}
 import uk.gov.homeoffice.drt.auth.Roles.{ForecastView, ManageUsers}
 import drt.shared.CrunchApi._
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{PortState, SDateLike}
 import drt.users.KeyCloakGroups
 import play.api.http.HttpEntity

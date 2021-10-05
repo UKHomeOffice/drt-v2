@@ -15,6 +15,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 
 object PortDashboardPage {
 

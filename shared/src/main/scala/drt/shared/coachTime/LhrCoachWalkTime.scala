@@ -1,7 +1,7 @@
 package drt.shared.coachTime
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals._
+import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared.api.Arrival
 import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes}
 

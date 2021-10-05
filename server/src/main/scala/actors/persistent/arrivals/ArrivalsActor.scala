@@ -14,6 +14,7 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.ports.FeedSource
 
 import scala.collection.immutable.SortedMap
 

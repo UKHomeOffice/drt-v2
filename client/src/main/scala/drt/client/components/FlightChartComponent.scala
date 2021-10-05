@@ -2,11 +2,12 @@ package drt.client.components
 
 import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsOptions, ChartJsProps}
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.shared.ApiFlightWithSplits
 import drt.shared.api.PassengerInfoSummary
-import drt.shared.{ApiFlightWithSplits, PaxTypes}
 import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.PaxTypes
 
 object FlightChartComponent {
 

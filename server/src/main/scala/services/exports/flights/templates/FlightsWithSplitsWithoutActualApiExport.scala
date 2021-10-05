@@ -1,7 +1,7 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{ApiFlightWithSplits, SDateLike}
 
 trait FlightsWithSplitsWithoutActualApiExport extends FlightsWithSplitsExport {

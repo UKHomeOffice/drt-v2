@@ -5,8 +5,8 @@ import actors.persistent.staffing.GetState
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
-import drt.shared.Queues.{EeaDesk, Queue}
-import drt.shared.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared.{SDateLike, TQM}
 import services.SDate
 import services.crunch.CrunchTestLike

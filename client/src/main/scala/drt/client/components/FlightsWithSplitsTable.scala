@@ -10,8 +10,8 @@ import drt.client.components.ToolTips._
 import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.TimeUtil.millisToMinutes
 import drt.shared._
 import drt.shared.api.{Arrival, PassengerInfoSummary}
@@ -26,6 +26,7 @@ import org.scalajs.dom.html.{Div, Span, TableSection}
 import scalacss.ScalaCssReact
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{HashSet, Map}

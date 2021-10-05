@@ -2,7 +2,7 @@ package services.`export`
 
 import java.util.UUID
 
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{MilliDate, StaffMovement}
 import org.specs2.mutable.Specification
 import services.SDate

@@ -1,6 +1,6 @@
 package services.crunch.desklimits.fixed
 
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.DeskRecs
 

@@ -11,7 +11,7 @@ import controllers.Application
 import controllers.application.exports.CsvFileStreaming
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}

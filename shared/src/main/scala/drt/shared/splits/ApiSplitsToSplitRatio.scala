@@ -1,7 +1,8 @@
 package drt.shared.splits
 
-import drt.shared.Queues.Queue
 import drt.shared._
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, Queues}
 
 object ApiSplitsToSplitRatio {
 

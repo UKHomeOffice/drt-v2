@@ -4,13 +4,14 @@ import akka.actor.{Actor, Props}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.Flights
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import server.feeds.ArrivalsFeedSuccess
 import services.graphstages.CrunchMocks
 import services.{OptimiserWithFlexibleProcessors, SDate}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource, LiveFeedSource, Queues}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._

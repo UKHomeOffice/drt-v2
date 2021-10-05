@@ -1,7 +1,8 @@
 package services
 
-import drt.shared.{AirportInfo, PortCode}
+import drt.shared.AirportInfo
 import org.specs2.mutable.SpecificationLike
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
 object AirportToCountryTests extends SpecificationLike {

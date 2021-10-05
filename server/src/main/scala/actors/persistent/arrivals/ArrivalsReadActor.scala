@@ -3,9 +3,10 @@ package actors.persistent.arrivals
 import actors.persistent.Sizes
 import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
-import drt.shared.{FeedSource, SDateLike}
+import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.FlightsDiffMessage
+import uk.gov.homeoffice.drt.ports.FeedSource
 
 object ArrivalsReadActor {
   def props(pointInTime: SDateLike, persistenceId: String, feedSource: FeedSource): Props = Props(

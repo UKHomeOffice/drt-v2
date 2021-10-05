@@ -4,14 +4,15 @@ import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import drt.server.feeds.cirium.CiriumFeed
-import drt.shared.Terminals.T1
 import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, LiveBaseFeedSource, Operator, PortCode}
+import drt.shared.{ArrivalStatus, Operator}
 import org.specs2.mock.Mockito
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.cirium.services.entities._
+import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import scala.concurrent.Future
 import scala.concurrent.duration._

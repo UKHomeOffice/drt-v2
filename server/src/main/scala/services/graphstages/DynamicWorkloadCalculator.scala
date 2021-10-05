@@ -2,15 +2,16 @@ package services.graphstages
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.QueueStatusProviders.QueueStatusProvider
-import drt.shared.Queues.{Closed, Open, Queue, QueueFallbacks}
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
 import services.workloadcalculator.PaxLoadCalculator.Load
+import uk.gov.homeoffice.drt.ports.QueueStatusProviders.QueueStatusProvider
+import uk.gov.homeoffice.drt.ports.Queues.{Closed, Open, Queue, QueueFallbacks}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.Map

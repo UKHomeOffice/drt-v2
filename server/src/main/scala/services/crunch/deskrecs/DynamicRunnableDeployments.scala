@@ -2,7 +2,7 @@ package services.crunch.deskrecs
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.TimeLogger

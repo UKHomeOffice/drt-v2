@@ -5,11 +5,12 @@ import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.api.Arrival
-import drt.shared.{PortCode, SDateLike, VoyageNumber}
+import drt.shared.{SDateLike, VoyageNumber}
 import manifests.passengers.BestAvailableManifest
 import services.crunch.VoyageManifestGenerator.euPassport
 import services.crunch.deskrecs.OptimisationProviders
 import services.crunch.{CrunchTestLike, VoyageManifestGenerator}
+import uk.gov.homeoffice.drt.ports.PortCode
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

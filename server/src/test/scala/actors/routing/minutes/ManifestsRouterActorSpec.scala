@@ -20,6 +20,7 @@ import server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxAge, PortCode}
 
 import scala.collection.immutable.List
 import scala.concurrent.duration.DurationInt

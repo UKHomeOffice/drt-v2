@@ -6,13 +6,14 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{Queues, SDateLike}
+import drt.shared.SDateLike
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.CrunchMinuteMessage
 import services.SDate
 import services.crunch.CrunchTestLike
 import test.TestActors.TestTerminalDayQueuesActor
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}

@@ -9,11 +9,6 @@ import akka.stream.testkit.TestSubscriber.Probe
 import akka.stream.{ActorMaterializer, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
-import drt.shared.PaxTypes._
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues.Queue
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
@@ -23,6 +18,12 @@ import org.specs2.specification.{AfterAll, AfterEach}
 import services._
 import slickdb.Tables
 import uk.gov.homeoffice.drt.auth.Roles.STN
+import uk.gov.homeoffice.drt.ports.PaxTypes._
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable

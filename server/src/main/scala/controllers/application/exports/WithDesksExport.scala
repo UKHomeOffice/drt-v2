@@ -5,7 +5,7 @@ import akka.stream.scaladsl.Source
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.dates.LocalDate
 import drt.shared.{ErrorResponse, SDateLike}
 import play.api.mvc.{Action, AnyContent}

@@ -3,12 +3,13 @@ package services.arrivals
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.{A1, A2}
 import drt.shared.api.Arrival
-import drt.shared.{AirportConfigs, PortCode, PortState}
+import drt.shared.{DrtPortConfigs, PortState}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig, TestDefaults}
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.concurrent.duration._
@@ -19,7 +20,7 @@ class EdiFlightAdjustmentsStreamSpec extends CrunchTestLike {
   val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
     now = () => SDate("2019-01-01T01:00"),
     pcpArrivalTime = TestDefaults.pcpForFlightFromBest,
-    airportConfig = AirportConfigs.confByPort(PortCode("EDI")),
+    airportConfig = DrtPortConfigs.confByPort(PortCode("EDI")),
     arrivalsAdjustments = EdiArrivalsTerminalAdjustments(isRedListed)
   ))
   val arrivalOne: Arrival = ArrivalGenerator.arrival(iata = "TST001", terminal = A1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", actPax = Option(100))

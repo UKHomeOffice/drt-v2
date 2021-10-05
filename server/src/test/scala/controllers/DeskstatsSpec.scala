@@ -3,8 +3,8 @@ package controllers
 import com.typesafe.config.{Config, ConfigFactory}
 import controllers.Deskstats._
 import drt.shared.CrunchApi.DeskStat
-import drt.shared.Queues
-import drt.shared.Terminals.T2
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Terminals.T2
 import org.specs2.mutable.Specification
 import services.SDate
 

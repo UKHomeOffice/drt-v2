@@ -1,7 +1,7 @@
 package services.workloadcalculator
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared._
+import uk.gov.homeoffice.drt.ports.PaxTypeAndQueue
 
 import scala.collection.immutable._
 

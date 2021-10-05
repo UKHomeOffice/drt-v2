@@ -1,6 +1,7 @@
 package actors.persistent.arrivals
 
-import drt.shared.{FeedSource, FeedSourceStatuses, FeedStatus, FeedStatuses}
+import drt.shared.{FeedSourceStatuses, FeedStatus, FeedStatuses}
+import uk.gov.homeoffice.drt.ports.FeedSource
 
 trait FeedStateLike {
   def feedSource: FeedSource

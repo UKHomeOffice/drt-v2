@@ -6,8 +6,8 @@ import akka.pattern.ask
 import controllers.ArrivalGenerator.arrivalForDayAndTerminal
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.{EeaDesk, Queue}
-import drt.shared.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import drt.shared.dates.UtcDate
 import drt.shared.{ApiFlightWithSplits, ArrivalsDiff, SDateLike, TQM}
 import services.SDate

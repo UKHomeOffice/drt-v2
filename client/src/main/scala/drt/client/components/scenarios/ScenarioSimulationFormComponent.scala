@@ -7,7 +7,7 @@ import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.components.styles.ScalaCssImplicits._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.LocalDate
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
@@ -19,6 +19,7 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.Div
 import scalacss.ScalaCssReactImplicits
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, PaxTypes, Queues}
 
 import scala.util.Try
 

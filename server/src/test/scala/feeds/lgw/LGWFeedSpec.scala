@@ -1,19 +1,18 @@
 package feeds.lgw
 
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
-import drt.shared.Terminals.N
 import drt.shared.api.Arrival
-import drt.shared.{LiveFeedSource, PortCode}
 import org.specs2.mock.Mockito
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
-import scala.concurrent.duration._
+import uk.gov.homeoffice.drt.ports.Terminals.N
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
 import scala.collection.immutable.Seq
+import scala.concurrent.duration._
 import scala.io.Source
 
 class LGWFeedSpec extends CrunchTestLike with Mockito {
