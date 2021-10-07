@@ -64,7 +64,7 @@ case class S3ApiProvider(awsCredentials: AWSCredentials, bucketName: String)(imp
       Stream
         .continually(zipInputStream.getNextEntry)
         .takeWhile(_ != null)
-        .map { _ =>
+        .map { zipEntry =>
           val buffer = new Array[Byte](4096)
           val stringBuffer = new ArrayBuffer[Byte]()
           var len: Int = zipInputStream.read(buffer)
@@ -73,6 +73,7 @@ case class S3ApiProvider(awsCredentials: AWSCredentials, bucketName: String)(imp
             stringBuffer ++= buffer.take(len)
             len = zipInputStream.read(buffer)
           }
+          log.debug(s"$zipFileName: ${zipEntry.getName}")
           new String(stringBuffer.toArray, UTF_8)
         }
         .toList

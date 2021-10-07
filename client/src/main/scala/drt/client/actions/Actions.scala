@@ -3,16 +3,16 @@ package drt.client.actions
 import diode.Action
 import diode.data.Pot
 import drt.client.components.scenarios.SimulationFormFields
-import drt.client.components.{EgateBanksUpdate, FileUploadState, SetEgateBanksUpdate, StaffAdjustmentDialogueState}
+import drt.client.components.{FileUploadState, SetEgateBanksUpdate, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.{LocalDate, UtcDate}
 import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
 
