@@ -15,6 +15,8 @@ import japgolly.scalajs.react.{CallbackTo, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
+import scala.scalajs.js
+
 
 case class SetEgateBanksUpdate(originalDate: MillisSinceEpoch, update: EgateBanksUpdate)
 
@@ -93,8 +95,8 @@ object EgatesScheduleEditor {
                   MuiGrid(container = true, alignItems = "center")(
                     MuiGrid(item = true, xs = 3)(<.h3(s"Change for")),
                     MuiGrid(item = true, xs = 9)(
-                      MuiTextField()(
-                        ^.`type` := "date",
+                      MuiTextField(inputProps = js.Dynamic.literal(`class` = "mui-textfield-date-input"))(
+                        ^.`type` := "datetime-local",
                         ^.defaultValue := SDate(editing.update.effectiveFrom).toISODateOnly,
                         ^.onChange ==> setDate
                       )
