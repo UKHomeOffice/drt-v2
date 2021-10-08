@@ -7,17 +7,19 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
-import japgolly.scalajs.react.{CtorType, _}
+import io.kinoplan.scalajs.react.material.ui.core.MuiGrid
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.window.confirm
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.mutable
+import scala.scalajs.js
 import scala.util.Try
 
 
@@ -40,12 +42,11 @@ object MonthlyStaffing {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
   }
 
-  def slotsInDay(date: SDateLike, slotDuration: Int): Seq[SDateLike] = {
-
+  def slotsInDay(date: SDateLike, slotDurationMinutes: Int): Seq[SDateLike] = {
     val startOfDay = SDate.midnightOf(date)
-    val slots = minutesInDay(date) / slotDuration
+    val slots = minutesInDay(date) / slotDurationMinutes
     List.tabulate(slots)(i => {
-      val minsToAdd = i * slotDuration
+      val minsToAdd = i * slotDurationMinutes
       startOfDay.addMinutes(minsToAdd)
     })
   }
@@ -195,6 +196,17 @@ object MonthlyStaffing {
             ).toTagMod
           )
         ),
+        maybeClockChangeDate(viewingDate).map { clockChangeDate =>
+          val prettyDate = s"${clockChangeDate.getDate()} ${clockChangeDate.getMonthString()}"
+          MuiGrid(container = true, direction = "column", spacing = 8)(
+            MuiGrid(item = true)(<.span(s"BST is changing to GMT on $prettyDate", ^.style := js.Dictionary("font-weight" -> "bold"))),
+            MuiGrid(item = true)(<.span("Please ensure no staff are entered in the cells with a dash '-'. They are there to enable you to " +
+              s"allocate staff in the additional hour on $prettyDate.")),
+            MuiGrid(item = true)(<.span("If pasting from TAMS, " +
+              "one solution is to first paste into a separate spreadsheet, then copy and paste the first 2 hours, and " +
+              "then the rest of the hours in 2 separate steps", ^.style := js.Dictionary("margin-bottom" -> "15px", "display" -> "block")))
+          )
+        },
         HotTable.component(HotTable.props(
           state.timeSlots,
           colHeadings = state.colHeadings,
@@ -202,7 +214,8 @@ object MonthlyStaffing {
           changeCallback = (row, col, value) => {
             scope.modState(state => state.copy(changes = state.changes.updated(TimeSlotDay(row, col).key, value))).runNow()
           }
-        )),
+        ))
+        ,
         <.div(^.className := "row",
           <.div(^.className := "col-sm-1 no-gutters",
             <.input.button(^.value := "Save Changes",
@@ -210,7 +223,8 @@ object MonthlyStaffing {
               ^.onClick ==> confirmAndSave(viewingDate)
             )
           )
-        ))
+        )
+      )
     })
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(p => Callback {
@@ -256,6 +270,11 @@ object MonthlyStaffing {
         timeSlotMinutes
       ))
       .transpose
+
+  def maybeClockChangeDate(viewingDate: SDateLike): Option[SDateLike] = {
+    val lastDay = SDate.lastDayOfMonth(viewingDate)
+    (0 to 10).map(offset => lastDay.addDays(-1 * offset)).find(date => slotsInDay(date, 60).length == 25)
+  }
 
   def stateFromProps(props: Props): State = {
     import drt.client.services.JSDateConversions._
