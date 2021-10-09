@@ -133,6 +133,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithAirportConfig
     with WithAirportInfo
     with WithRedLists
+    with WithEgateBanks
     with WithAlerts
     with WithAuth
     with WithContactDetails

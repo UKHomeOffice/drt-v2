@@ -20,19 +20,6 @@ import scala.concurrent.Future
 trait WithEgateBanks {
   self: Application =>
 
-  def getEgateBanksPorts(dateString: String): Action[AnyContent] =
-    Action.async { _ =>
-      ctrl.redListUpdatesActor.ask(GetState).mapTo[EgateBanksUpdates].map { redListUpdates =>
-        val forDate = SDate(dateString, Crunch.europeLondonTimeZone).millisSinceEpoch
-        val redListPorts = AirportToCountry.airportInfoByIataPortCode.values.collect {
-          case AirportInfo(_, _, country, portCode) if redListUpdates.countryCodesByName(forDate).contains(country) =>
-            PortCode(portCode)
-        }
-
-        Ok(write(redListPorts))
-      }
-    }
-
   def getEgateBanksUpdates: Action[AnyContent] =
     Action.async { _ =>
       implicit val rluFormat: EgateBanksJsonFormats.redListUpdatesJsonFormat.type = EgateBanksJsonFormats.redListUpdatesJsonFormat
