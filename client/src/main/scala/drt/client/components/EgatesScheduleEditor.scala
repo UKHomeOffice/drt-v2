@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
-import drt.client.actions.Actions.{DeleteEgateBankUpdate, SaveEgateBankUpdate}
+import drt.client.actions.Actions.{DeleteEgateBanksUpdate, SaveEgateBanksUpdate}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -64,7 +64,7 @@ object EgatesScheduleEditor {
           scope.modState { state =>
             val updatedChangeSets = state.editing match {
               case Some(editSet) =>
-                SPACircuit.dispatch(SaveEgateBankUpdate(SetEgateBanksUpdate(editSet.originalDate, editSet.update)))
+                SPACircuit.dispatch(SaveEgateBanksUpdate(SetEgateBanksUpdate(editSet.originalDate, editSet.update)))
                 val withoutOriginal = state.updates
                   .filter(cs => cs.effectiveFrom != editSet.update.effectiveFrom && cs.effectiveFrom != editSet.originalDate)
                 withoutOriginal ++ Iterable(editSet.update)
@@ -75,7 +75,7 @@ object EgatesScheduleEditor {
           }
 
         def deleteUpdates(effectiveFrom: MillisSinceEpoch): CallbackTo[Unit] = scope.modState { state =>
-          SPACircuit.dispatch(DeleteEgateBankUpdate(effectiveFrom))
+          SPACircuit.dispatch(DeleteEgateBanksUpdate(effectiveFrom))
           state.copy(updates = state.updates.filter(_.effectiveFrom != effectiveFrom))
         }
 

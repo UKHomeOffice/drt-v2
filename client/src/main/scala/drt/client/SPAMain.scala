@@ -157,6 +157,7 @@ object SPAMain {
       GetFeedSourceStatuses(),
       GetAlerts(0L),
       GetRedListUpdates,
+      GetEgateBanksUpdates,
       GetShowAlertModalDialog,
       GetOohStatus,
       GetFeatureFlags,

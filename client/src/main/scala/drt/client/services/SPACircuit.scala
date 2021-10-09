@@ -12,6 +12,7 @@ import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
@@ -160,6 +161,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      snackbarMessage: Pot[String] = Empty,
                      redListPorts: Pot[HashSet[PortCode]] = Empty,
                      redListUpdates: Pot[RedListUpdates] = Empty,
+                     egateBanksUpdates: Pot[EgateBanksUpdates] = Empty,
                     )
 
 object PollDelay {
@@ -218,6 +220,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new FeedsStatusHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v))),
       new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v))),
       new RedListUpdatesHandler(zoomRW(_.redListUpdates)((m, v) => m.copy(redListUpdates = v))),
+      new EgateBanksUpdatesHandler(zoomRW(_.egateBanksUpdates)((m, v) => m.copy(egateBanksUpdates = v))),
       new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v))),
       new ForecastFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v))),
       new SimulationHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
