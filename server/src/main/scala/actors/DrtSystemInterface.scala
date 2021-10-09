@@ -295,7 +295,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       }
   }
 
-
   def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
     val today = now()
     val millisToCrunchStart = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes) _

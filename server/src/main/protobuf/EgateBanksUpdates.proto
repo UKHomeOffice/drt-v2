@@ -1,0 +1,25 @@
+syntax = "proto2";
+
+package server.protobuf.messages;
+
+message EgateBanksUpdateMessage {
+    optional int64 effectiveFrom = 1;
+    repeated EgateBankMessage banks = 2;
+}
+
+message EgateBankMessage {
+    repeated bool gates = 1;
+}
+
+message EgateBanksUpdatesMessage {
+    repeated EgateBanksUpdateMessage updates = 1;
+}
+
+message SetEgateBanksUpdateMessage {
+    optional int64 originalDate = 1;
+    optional EgateBanksUpdateMessage update = 2;
+}
+
+message RemoveEgateBanksUpdateMessage {
+    optional int64 date = 1;
+}

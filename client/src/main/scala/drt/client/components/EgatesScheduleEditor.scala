@@ -12,13 +12,12 @@ import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Add, Delete, 
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CallbackTo, ReactEventFromInput, ScalaComponent}
-import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates}
+import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, SetEgateBanksUpdate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.scalajs.js
 
 
-case class SetEgateBanksUpdate(originalDate: MillisSinceEpoch, update: EgateBanksUpdate)
 
 object EgatesScheduleEditor {
   case class Props(initialUpdates: EgateBanksUpdates) extends UseValueEq
