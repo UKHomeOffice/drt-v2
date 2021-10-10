@@ -8,6 +8,8 @@ import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 case class WithAMap(things: Map[String, String])
 
 class SprayJsonSerialisationSpec extends Specification {
+  skipped("experimental")
+
   "Stuff" >> {
     import spray.json._
 
@@ -15,14 +17,13 @@ class SprayJsonSerialisationSpec extends Specification {
     implicit val rds = RedListJsonFormats.redListUpdatesJsonFormat
 
     val update = RedListUpdate(1613347200000L, Map("France" -> "FRA"), List("Germany"))
-    val updateJson = update.toJson
 
     val updates: RedListUpdates = RedListUpdates(
       Map(1613347200000L -> update)
     )
-    val jsonStr = updates.toJson
+    val serialised = updates.toJson
+    val deserialised = serialised.convertTo[RedListUpdates]
 
-    println(jsonStr)
-    success
+    deserialised === updates
   }
 }
