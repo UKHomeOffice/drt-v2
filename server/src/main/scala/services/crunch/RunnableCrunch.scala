@@ -14,6 +14,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
 import services.StreamSupervision
 import services.graphstages._
+import services.metrics.Metrics
 import uk.gov.homeoffice.drt.redlist.RedListUpdateCommand
 
 import scala.concurrent.Future
@@ -86,21 +87,21 @@ object RunnableCrunch {
 
       implicit builder =>
         (
-          forecastBaseArrivalsSourceSync,
-          forecastArrivalsSourceSync,
-          liveBaseArrivalsSourceSync,
-          liveArrivalsSourceSync,
-          manifestsLiveSourceSync,
-          shiftsSourceAsync,
-          fixedPointsSourceAsync,
-          staffMovementsSourceAsync,
-          actualDesksAndWaitTimesSourceSync,
-          redListUpdatesSourceAsync,
-          arrivalsKillSwitchSync,
-          manifestsLiveKillSwitchSync,
-          shiftsKillSwitchSync,
-          fixedPointsKillSwitchSync,
-          movementsKillSwitchSync
+        forecastBaseArrivalsSourceSync,
+        forecastArrivalsSourceSync,
+        liveBaseArrivalsSourceSync,
+        liveArrivalsSourceSync,
+        manifestsLiveSourceSync,
+        shiftsSourceAsync,
+        fixedPointsSourceAsync,
+        staffMovementsSourceAsync,
+        actualDesksAndWaitTimesSourceSync,
+        redListUpdatesSourceAsync,
+        arrivalsKillSwitchSync,
+        manifestsLiveKillSwitchSync,
+        shiftsKillSwitchSync,
+        fixedPointsKillSwitchSync,
+        movementsKillSwitchSync
         ) =>
           def ackingActorSink(actorRef: ActorRef): SinkShape[Any] =
             builder.add(Sink.actorRefWithAck(actorRef, StreamInitialized, Ack, StreamCompleted, StreamFailure).async)
@@ -143,18 +144,27 @@ object RunnableCrunch {
           } ~> forecastBaseArrivalsFanOut
 
           forecastBaseArrivalsFanOut
-            .collect { case ArrivalsFeedSuccess(Flights(as), _) => as.toList }
+            .collect { case ArrivalsFeedSuccess(Flights(as), _) =>
+              Metrics.successCounter("forecastBase.arrival", as.size)
+              as.toList
+            }
             .mapAsync(1)(applyPaxDeltas) ~> arrivals.in0
           forecastBaseArrivalsFanOut ~> baseArrivalsSink
 
           forecastArrivalsSourceSync ~> fcstArrivalsDiffing ~> forecastArrivalsFanOut
 
-          forecastArrivalsFanOut.collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty => as.toList } ~> arrivals.in1
+          forecastArrivalsFanOut.collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty =>
+            Metrics.successCounter("forecast.arrival", as.size)
+            as.toList
+          } ~> arrivals.in1
           forecastArrivalsFanOut ~> fcstArrivalsSink
 
           liveBaseArrivalsSourceSync ~> liveBaseArrivalsDiffing ~> liveBaseArrivalsFanOut
           liveBaseArrivalsFanOut
-            .collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty => as.toList }
+            .collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty =>
+              Metrics.successCounter("liveBase.arrival", as.size)
+              as.toList
+            }
             .conflate[List[Arrival]] { case (acc, incoming) =>
               log.info(s"${acc.length + incoming.length} conflated live base arrivals")
               acc ++ incoming
@@ -163,7 +173,10 @@ object RunnableCrunch {
 
           liveArrivalsSourceSync ~> arrivalsKillSwitchSync ~> liveArrivalsDiffing ~> liveArrivalsFanOut
           liveArrivalsFanOut
-            .collect { case ArrivalsFeedSuccess(Flights(as), _) => as.toList }
+            .collect { case ArrivalsFeedSuccess(Flights(as), _) =>
+              Metrics.successCounter("live.arrival", as.size)
+              as.toList
+            }
             .conflate[List[Arrival]] { case (acc, incoming) =>
               log.info(s"${acc.length + incoming.length} conflated live arrivals")
               acc ++ incoming
@@ -173,7 +186,11 @@ object RunnableCrunch {
 
           liveArrivalsFanOut ~> liveArrivalsSink
 
-          manifestsLiveSourceSync ~> manifestsLiveKillSwitchSync ~> manifestsSink
+          manifestsLiveSourceSync.out.collect {
+            case ManifestsFeedSuccess(manifests, createdAt) =>
+              Metrics.successCounter("manifestsLive.arrival", manifests.length)
+              ManifestsFeedSuccess(manifests, createdAt)
+          } ~> manifestsLiveKillSwitchSync ~> manifestsSink
 
           shiftsSourceAsync ~> shiftsKillSwitchSync ~> staff.in0
           fixedPointsSourceAsync ~> fixedPointsKillSwitchSync ~> staff.in1
