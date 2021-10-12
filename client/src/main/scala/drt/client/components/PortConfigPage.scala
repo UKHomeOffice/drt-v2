@@ -4,7 +4,6 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.components.ToolTips._
 import drt.client.modules.GoogleEventTracker
-import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
@@ -12,32 +11,38 @@ import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.RedListsEdit
-import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates}
+import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 object PortConfigPage {
 
-  case class Props(redListUpdates: Pot[RedListUpdates], user: Pot[LoggedInUser], airportConfig: Pot[AirportConfig]) extends UseValueEq
+  case class Props(redListUpdates: Pot[RedListUpdates], portEgateBanksUpdates: Pot[PortEgateBanksUpdates], user: Pot[LoggedInUser], airportConfig: Pot[AirportConfig]) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigPage")
     .render_P { props =>
       val mp = for {
         redListUpdates <- props.redListUpdates
+        portEgateBanksUpdates <- props.portEgateBanksUpdates
         user <- props.user
         airportConfig <- props.airportConfig
       } yield
         <.div(
           ^.className := "port-config",
           <.h3("Port Config"),
-          if (user.hasRole(RedListsEdit)) RedListEditor(redListUpdates) else EmptyVdom,
           if (user.hasRole(RedListsEdit)) {
-            airportConfig.eGateBankSizes.map {
-              case (terminal, banks) =>
-                val initialBanks = banks.to[IndexedSeq].map { size => EgateBank(IndexedSeq.fill(size)(true))}
-                EgatesScheduleEditor(terminal, EgateBanksUpdates(List(EgateBanksUpdate(SDate("2021-10-06T12:00").millisSinceEpoch, initialBanks))))
-            }.toTagMod
+            RedListEditor(redListUpdates)
+          } else EmptyVdom,
+          if (user.hasRole(RedListsEdit)) {
+            <.div(
+              <.h2("E-gates"),
+              airportConfig.eGateBankSizes.map {
+                case (terminal, banks) =>
+                  val updates = portEgateBanksUpdates.updatesByTerminal.getOrElse(terminal, EgateBanksUpdates.empty)
+                  EgatesScheduleEditor(terminal, updates, EgateBank.fromAirportConfig(banks))
+              }.toTagMod
+            )
           } else EmptyVdom,
           PortConfigDetails(airportConfig)
         )

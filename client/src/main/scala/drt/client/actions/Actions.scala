@@ -12,7 +12,7 @@ import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.{LocalDate, UtcDate}
 import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.egates.{EgateBanksUpdate, EgateBanksUpdates, SetEgateBanksUpdate}
+import uk.gov.homeoffice.drt.egates.{EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates, SetEgateBanksUpdate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
@@ -183,13 +183,13 @@ object Actions {
 
   case class SetRedListUpdates(updates: RedListUpdates) extends Action
 
-  case object GetEgateBanksUpdates extends Action
+  case object GetPortEgateBanksUpdates extends Action
 
   case class SaveEgateBanksUpdate(setEgateBankUpdate: SetEgateBanksUpdate) extends Action
 
-  case class DeleteEgateBanksUpdate(effectiveFrom: MillisSinceEpoch) extends Action
+  case class DeleteEgateBanksUpdate(terminal: Terminal, effectiveFrom: MillisSinceEpoch) extends Action
 
-  case class SetEgateBanksUpdates(updates: EgateBanksUpdates) extends Action
+  case class SetEgateBanksUpdates(updates: PortEgateBanksUpdates) extends Action
 
   case class UpdateStaffAdjustmentDialogueState(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
 

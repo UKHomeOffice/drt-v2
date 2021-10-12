@@ -18,6 +18,7 @@ import services.TimeLogger
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -44,13 +45,15 @@ object DynamicRunnableDeskRecs {
                                    flightsToLoads: FlightsToLoads,
                                    loadsToQueueMinutes: LoadsToQueueMinutes,
                                    maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
-                                   redListUpdatesProvider: () => Future[RedListUpdates])
+                                   redListUpdatesProvider: () => Future[RedListUpdates],
+                                   egateBanksProvider: () => Future[PortEgateBanksUpdates],
+                                  )
                                   (implicit ec: ExecutionContext, timeout: Timeout): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
     Flow[CrunchRequest]
       .via(addArrivals(arrivalsProvider))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
       .via(updateSplits(splitsSink))
-      .via(toDeskRecs(maxDesksProviders, flightsToLoads, loadsToQueueMinutes, redListUpdatesProvider))
+      .via(toDeskRecs(maxDesksProviders, flightsToLoads, loadsToQueueMinutes, redListUpdatesProvider, egateBanksProvider))
 
   private def updateSplits(splitsSink: ActorRef)
                           (implicit ec: ExecutionContext, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
@@ -66,12 +69,16 @@ object DynamicRunnableDeskRecs {
                          flightsToLoads: FlightsToLoads,
                          loadsToQueueMinutes: LoadsToQueueMinutes,
                          redListUpdatesProvider: () => Future[RedListUpdates],
+                         egateBanksProvider: () => Future[PortEgateBanksUpdates],
                         )
                         (implicit ec: ExecutionContext): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), PortStateQueueMinutes, NotUsed] = {
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchDay, flights) =>
-          redListUpdatesProvider().map { redListUpdates =>
+          for {
+            redListUpdates <- redListUpdatesProvider()
+            egateBanks <- egateBanksProvider()
+          } yield {
             log.info(s"Crunching ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
             timeLogger.time({
               val loadsFromFlights: Map[TQM, Crunch.LoadMinute] = flightsToLoads(FlightsWithSplits(flights), redListUpdates)

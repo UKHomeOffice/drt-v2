@@ -18,7 +18,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import scala.scalajs.js
 
 
-
 object EgatesScheduleEditor {
   case class Props(initialUpdates: EgateBanksUpdates) extends UseValueEq
 
@@ -32,7 +31,7 @@ object EgatesScheduleEditor {
 
   case class State(updates: Iterable[EgateBanksUpdate], editing: Option[Editing]) extends UseValueEq
 
-  def apply(terminal: Terminal, egatesUpdates: EgateBanksUpdates): Unmounted[Props, State, Unit] = {
+  def apply(terminal: Terminal, egatesUpdates: EgateBanksUpdates, newUpdatesTemplate: IndexedSeq[EgateBank]): Unmounted[Props, State, Unit] = {
     val comp = ScalaComponent
       .builder[Props]("EgatesScheduleEditor")
       .initialStateFromProps(p => State(p.initialUpdates.updates, None))
@@ -64,7 +63,7 @@ object EgatesScheduleEditor {
           scope.modState { state =>
             val updatedChangeSets = state.editing match {
               case Some(editSet) =>
-                SPACircuit.dispatch(SaveEgateBanksUpdate(SetEgateBanksUpdate(editSet.originalDate, editSet.update)))
+                SPACircuit.dispatch(SaveEgateBanksUpdate(SetEgateBanksUpdate(terminal, editSet.originalDate, editSet.update)))
                 val withoutOriginal = state.updates
                   .filter(cs => cs.effectiveFrom != editSet.update.effectiveFrom && cs.effectiveFrom != editSet.originalDate)
                 withoutOriginal ++ Iterable(editSet.update)
@@ -75,18 +74,14 @@ object EgatesScheduleEditor {
           }
 
         def deleteUpdates(effectiveFrom: MillisSinceEpoch): CallbackTo[Unit] = scope.modState { state =>
-          SPACircuit.dispatch(DeleteEgateBanksUpdate(effectiveFrom))
+          SPACircuit.dispatch(DeleteEgateBanksUpdate(terminal, effectiveFrom))
           state.copy(updates = state.updates.filter(_.effectiveFrom != effectiveFrom))
         }
 
         val today = SDate.now().getLocalLastMidnight.millisSinceEpoch
 
         <.div(
-          <.h2(s"Egate Banks Schedule - $terminal"),
-          MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-            MuiIcons(Add)(fontSize = "small"),
-            "Scheduled e-Gates change",
-            ^.onClick --> scope.modState(_.copy(editing = Option(Editing(EgateBanksUpdate(today, IndexedSeq()), today))))),
+          <.h3(s"$terminal schedule"),
           s.editing match {
             case Some(editing) =>
               MuiDialog(open = s.editing.isDefined, maxWidth = "sm")(
@@ -134,21 +129,32 @@ object EgatesScheduleEditor {
               )
             case None => EmptyVdom
           },
-          <.ul(
-            s.updates.toList.sortBy(_.effectiveFrom).reverseMap { updates =>
-              val date = SDate(updates.effectiveFrom)
-              <.li(
-                <.span(^.className := "red-list-set",
-                  s"${date.toISODateOnly}: ${updates.banks.map(b => s"${b.gates.count(_ == true)} / ${b.gates.length}").mkString(", ")}",
-                  MuiButton(color = Color.default, variant = "outlined", size = "medium")(
-                    MuiIcons(Edit)(fontSize = "small"),
-                    ^.onClick --> scope.modState(_.copy(editing = Option(Editing(updates, updates.effectiveFrom))))),
-                  MuiButton(color = Color.default, variant = "outlined", size = "medium")(
-                    MuiIcons(Delete)(fontSize = "small"),
-                    ^.onClick --> deleteUpdates(updates.effectiveFrom)),
+          MuiGrid(container = true)(
+            MuiGrid(item = true, xs = 6)(
+              MuiGrid(container = true, item = true, spacing = 8)(
+                MuiGrid(item = true, xs = 4)(<.span(^.fontSize := "20px", ^.color := "#666", "Effective from")),
+                MuiGrid(item = true, xs = 4)(<.span(^.fontSize := "20px", ^.color := "#666", "Open gates per bank")),
+                MuiGrid(item = true, xs = 4, justify = "flex-end", container = true)(
+                  MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
+                    MuiIcons(Add)(fontSize = "small"),
+                    "Add e-Gates change",
+                    ^.onClick --> scope.modState(_.copy(editing = Option(Editing(EgateBanksUpdate(today, newUpdatesTemplate), today)))))),
+              ),
+              s.updates.toList.sortBy(_.effectiveFrom).reverseMap { updates =>
+                val date = SDate(updates.effectiveFrom)
+                MuiGrid(container = true, item = true, spacing = 8)(
+                  MuiGrid(item = true, xs = 4)(s"${date.toLocalDateTimeString()}"),
+                  MuiGrid(item = true, xs = 4)(s"${updates.banks.map(b => s"${b.gates.count(_ == true)} / ${b.gates.length}").mkString(", ")}"),
+                  MuiGrid(item = true, container = true, xs = 4, justify = "flex-end")(
+                    MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+                      MuiIcons(Edit)(fontSize = "small"),
+                      ^.onClick --> scope.modState(_.copy(editing = Option(Editing(updates, updates.effectiveFrom))))),
+                    MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+                      MuiIcons(Delete)(fontSize = "small"),
+                      ^.onClick --> deleteUpdates(updates.effectiveFrom))),
                 )
-              )
-            }.toTagMod
+              }.toTagMod
+            )
           )
         )
       }

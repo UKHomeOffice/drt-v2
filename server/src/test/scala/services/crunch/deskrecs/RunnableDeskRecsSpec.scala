@@ -26,6 +26,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
+import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
@@ -114,7 +115,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       flightsToLoads = desksAndWaitsProvider.flightsToLoads,
       loadsToQueueMinutes = desksAndWaitsProvider.loadsToDesks,
       maxDesksProviders = PortDeskLimits.flexed(airportConfig),
-      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty))
+      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
+      egateBanksProvider = () => Future.successful(PortEgateBanksUpdates(defaultAirportConfig.eGateBankSizes.map {
+        case (terminal, banks) => (terminal, EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))
+      }))
+    )
 
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 

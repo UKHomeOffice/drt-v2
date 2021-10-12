@@ -35,7 +35,7 @@ DELETE        /red-list/updates/:effectiveFrom                                  
 GET           /red-list/updates-legacy                                                controllers.Application.getRedListUpdatesLegacy
 POST          /egate-banks/updates                                                    controllers.Application.updateEgateBanksUpdates()
 GET           /egate-banks/updates                                                    controllers.Application.getEgateBanksUpdates
-DELETE        /egate-banks/updates/:effectiveFrom                                     controllers.Application.deleteEgateBanksUpdates(effectiveFrom: Long)
+DELETE        /egate-banks/updates/:terminal/:effectiveFrom                           controllers.Application.deleteEgateBanksUpdates(terminal: String, effectiveFrom: Long)
 GET           /egate-banks/updates-legacy                                             controllers.Application.getEgateBanksUpdatesLegacy
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn

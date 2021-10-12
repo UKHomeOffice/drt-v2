@@ -157,7 +157,7 @@ object SPAMain {
       GetFeedSourceStatuses(),
       GetAlerts(0L),
       GetRedListUpdates,
-      GetEgateBanksUpdates,
+      GetPortEgateBanksUpdates,
       GetShowAlertModalDialog,
       GetOohStatus,
       GetFeatureFlags,
@@ -246,10 +246,9 @@ object SPAMain {
     staticRoute("#forecastFileUpload", ForecastFileUploadLoc) ~> renderR(_ => ForecastFileUploadPage())
   }
 
-
   def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
-    val proxy = SPACircuit.connect(m => PortConfigPage.Props(m.redListUpdates, m.loggedInUserPot, m.airportConfig))
+    val proxy = SPACircuit.connect(m => PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.loggedInUserPot, m.airportConfig))
     staticRoute("#config", PortConfigLoc) ~> render(proxy(x => PortConfigPage(x())))
   }
 

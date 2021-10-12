@@ -6,8 +6,7 @@ import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
-import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
+import uk.gov.homeoffice.drt.egates.{DeleteEgateBanksUpdates, PortEgateBanksUpdates}
 import upickle.default.{read, write}
 
 import scala.concurrent.Future
@@ -15,21 +14,21 @@ import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class EgateBanksUpdatesHandler[M](modelRW: ModelRW[M, Pot[EgateBanksUpdates]]) extends LoggingActionHandler(modelRW) {
+class EgateBanksUpdatesHandler[M](modelRW: ModelRW[M, Pot[PortEgateBanksUpdates]]) extends LoggingActionHandler(modelRW) {
   val requestFrequency: FiniteDuration = 60 seconds
 
   override def handle: PartialFunction[Any, ActionResult[M]] = {
-    case GetEgateBanksUpdates =>
-      effectOnly(Effect(DrtApi.get("red-list/updates-legacy").map(r => {
-        SetEgateBanksUpdates(read[EgateBanksUpdates](r.responseText))
+    case GetPortEgateBanksUpdates =>
+      effectOnly(Effect(DrtApi.get("egate-banks/updates-legacy").map(r => {
+        SetEgateBanksUpdates(read[PortEgateBanksUpdates](r.responseText))
       }).recoverWith {
         case e: Throwable =>
-          log.warn(s"Red List updates request failed. Re-requesting after ${PollDelay.recoveryDelay}: ${e.getMessage}")
-          Future(RetryActionAfter(GetEgateBanksUpdates, PollDelay.recoveryDelay))
+          log.warn(s"Egates banks request failed. Re-requesting after ${PollDelay.recoveryDelay}: ${e.getMessage}")
+          Future(RetryActionAfter(GetPortEgateBanksUpdates, PollDelay.recoveryDelay))
       }))
 
     case SetEgateBanksUpdates(updates) =>
-      val effect = Effect(Future(GetEgateBanksUpdates)).after(requestFrequency)
+      val effect = Effect(Future(GetPortEgateBanksUpdates)).after(requestFrequency)
       val pot = Ready(updates)
       if (modelRW.value.headOption == Option(updates)) {
         effectOnly(effect)
@@ -46,20 +45,20 @@ class EgateBanksUpdatesHandler[M](modelRW: ModelRW[M, Pot[EgateBanksUpdates]]) e
             Future(RetryActionAfter(SaveEgateBanksUpdate(updateToSave), PollDelay.recoveryDelay))
         }
 
-      val updatedPot: Pot[EgateBanksUpdates] = value.map(updates => updates.update(updateToSave))
+      val updatedPot = value.map(updates => updates.update(updateToSave))
 
       updated(updatedPot, Effect(responseFuture))
 
-    case DeleteEgateBanksUpdate(effectiveFrom: MillisSinceEpoch) =>
-      val responseFuture = DrtApi.delete(s"red-list/updates/$effectiveFrom")
+    case DeleteEgateBanksUpdate(terminal, effectiveFrom) =>
+      val responseFuture = DrtApi.delete(s"egate-banks/updates/${terminal.toString}/$effectiveFrom")
         .map(_ => DoNothing())
         .recoverWith {
           case _ =>
             log.error(s"Failed to delete red list update. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(DeleteEgateBanksUpdate(effectiveFrom), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(DeleteEgateBanksUpdate(terminal, effectiveFrom), PollDelay.recoveryDelay))
         }
 
-      val updatedPot: Pot[EgateBanksUpdates] = value.map(updates => updates.remove(effectiveFrom))
+      val updatedPot = value.map(updates => updates.remove(DeleteEgateBanksUpdates(terminal, effectiveFrom)))
 
       updated(updatedPot, Effect(responseFuture))
   }

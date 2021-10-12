@@ -15,8 +15,8 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.EgateBanksUpdates.{EgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
-import uk.gov.homeoffice.drt.egates.{DeleteEgateBanksUpdates, EgateBanksUpdateCommand, EgateBanksUpdates, SetEgateBanksUpdate}
+import server.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
+import uk.gov.homeoffice.drt.egates.{DeleteEgateBanksUpdates, EgateBanksUpdateCommand, PortEgateBanksUpdates, SetEgateBanksUpdate}
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
@@ -31,7 +31,7 @@ object EgateBanksUpdatesActor {
   case object ReceivedSubscriberAck
 }
 
-class EgateBanksUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[EgateBanksUpdates] {
+class EgateBanksUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[PortEgateBanksUpdates] {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId: String = "egate-banks-updates"
@@ -44,22 +44,24 @@ class EgateBanksUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case updates: SetEgateBanksUpdateMessage =>
       EgateBanksUpdatesMessageConversion
-        .setUpdatesFromMessage(updates)
+        .setEgateBanksUpdateFromMessage(updates)
         .foreach(update => state = state.update(update))
 
     case delete: RemoveEgateBanksUpdateMessage =>
-      delete.date.map(effectiveFrom => state = state.remove(effectiveFrom))
+      EgateBanksUpdatesMessageConversion
+        .removeEgateBanksUpdateFromMessage(delete)
+        .foreach(d => state = state.remove(d))
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case smm: EgateBanksUpdatesMessage =>
-      state = EgateBanksUpdatesMessageConversion.updatesFromMessage(smm)
+    case smm: PortEgateBanksUpdatesMessage =>
+      state = EgateBanksUpdatesMessageConversion.portUpdatesFromMessage(smm)
   }
 
   override def stateToMessage: GeneratedMessage =
-    EgateBanksUpdatesMessage(state.updates.map(EgateBanksUpdatesMessageConversion.banksUpdateToMessage))
+    EgateBanksUpdatesMessageConversion.portUpdatesToMessage(state)
 
-  var state: EgateBanksUpdates = initialState
+  var state: PortEgateBanksUpdates = initialState
 
   var maybeSubscriber: Option[SourceQueueWithComplete[List[EgateBanksUpdateCommand]]] = None
   var subscriberMessageQueue: List[EgateBanksUpdateCommand] = List()
@@ -71,7 +73,7 @@ class EgateBanksUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val timeout: Timeout = new Timeout(60.seconds)
 
-  override def initialState: EgateBanksUpdates = EgateBanksUpdates(List())
+  override def initialState: PortEgateBanksUpdates = PortEgateBanksUpdates(Map())
 
   override def receiveCommand: Receive = {
     case SetCrunchRequestQueue(crunchRequestQueue) =>
@@ -114,12 +116,12 @@ class EgateBanksUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike
       sender() ! updates
 
     case GetState =>
-      log.debug(s"Received GetState request. Sending EgateBanksUpdates with ${state.updates.size} update sets")
+      log.debug(s"Received GetState request. Sending PortEgateBanksUpdates with ${state.size} update sets")
       sender() ! state
 
     case delete: DeleteEgateBanksUpdates =>
-      state = state.remove(delete.millis)
-      persistAndMaybeSnapshot(RemoveEgateBanksUpdateMessage(Option(delete.millis)))
+      state = state.remove(delete)
+      persistAndMaybeSnapshot(RemoveEgateBanksUpdateMessage(Option(delete.terminal.toString), Option(delete.millis)))
       subscriberMessageQueue = delete :: subscriberMessageQueue
       self ! SendToSubscriber
       sender() ! delete

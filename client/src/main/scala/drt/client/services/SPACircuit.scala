@@ -12,7 +12,7 @@ import drt.shared._
 import drt.shared.api.PassengerInfoSummary
 import drt.shared.dates.UtcDate
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
+import uk.gov.homeoffice.drt.egates.{EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
@@ -161,7 +161,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      snackbarMessage: Pot[String] = Empty,
                      redListPorts: Pot[HashSet[PortCode]] = Empty,
                      redListUpdates: Pot[RedListUpdates] = Empty,
-                     egateBanksUpdates: Pot[EgateBanksUpdates] = Empty,
+                     egateBanksUpdates: Pot[PortEgateBanksUpdates] = Empty,
                     )
 
 object PollDelay {

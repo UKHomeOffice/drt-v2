@@ -1,11 +1,37 @@
 package actors.serializers
 
+import scalapb.GeneratedMessage
 import server.protobuf.messages.EgateBanksUpdates._
-import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, SetEgateBanksUpdate}
+import uk.gov.homeoffice.drt.egates._
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object EgateBanksUpdatesMessageConversion {
+
+  def egateBanksUpdateToMessage(egateBanksUpdate: EgateBanksUpdate): EgateBanksUpdateMessage =
+    EgateBanksUpdateMessage(
+      effectiveFrom = Option(egateBanksUpdate.effectiveFrom),
+      banks = egateBanksUpdate.banks.map(bank => EgateBankMessage(bank.gates))
+    )
+
+  def egateBanksUpdatesToMessage(terminal: Terminal, egateBanksUpdates: EgateBanksUpdates): EgateBanksUpdatesMessage =
+    EgateBanksUpdatesMessage(
+      terminal = Option(terminal.toString),
+      updates = egateBanksUpdates.updates.map(u => egateBanksUpdateToMessage(u))
+    )
+
+  def portUpdatesToMessage(state: PortEgateBanksUpdates): GeneratedMessage =
+    PortEgateBanksUpdatesMessage(
+      state.updatesByTerminal.map { case (terminal, egateBanksUpdates) =>
+        egateBanksUpdatesToMessage(terminal, egateBanksUpdates)
+      }.toSeq
+    )
+
   def setUpdatesToMessage(updates: SetEgateBanksUpdate): SetEgateBanksUpdateMessage =
-    SetEgateBanksUpdateMessage(Option(updates.originalDate), Option(banksUpdateToMessage(updates.egateBanksUpdate)))
+    SetEgateBanksUpdateMessage(
+      Option(updates.terminal.toString),
+      Option(updates.originalDate),
+      Option(banksUpdateToMessage(updates.egateBanksUpdate))
+    )
 
   def banksUpdateToMessage(update: EgateBanksUpdate): EgateBanksUpdateMessage = {
     val banks = update.banks.map(b => EgateBankMessage(b.gates))
@@ -13,7 +39,7 @@ object EgateBanksUpdatesMessageConversion {
     EgateBanksUpdateMessage(Option(update.effectiveFrom), banks)
   }
 
-  def updateFromMessage(message: EgateBanksUpdateMessage): Option[EgateBanksUpdate] =
+  def egateBanksUpdateFromMessage(message: EgateBanksUpdateMessage): Option[EgateBanksUpdate] =
     for {
       effectiveFrom <- message.effectiveFrom
     } yield {
@@ -21,16 +47,45 @@ object EgateBanksUpdatesMessageConversion {
       EgateBanksUpdate(effectiveFrom, banks.toIndexedSeq)
     }
 
-  def setUpdatesFromMessage(msg: SetEgateBanksUpdateMessage): Option[SetEgateBanksUpdate] = {
+  def setEgateBanksUpdateFromMessage(msg: SetEgateBanksUpdateMessage): Option[SetEgateBanksUpdate] = {
     for {
+      terminal <- msg.terminal
       originalDate <- msg.originalDate
-      updates <- msg.update.flatMap(updateFromMessage)
-    } yield SetEgateBanksUpdate(originalDate, updates)
+      updates <- msg.update.flatMap(egateBanksUpdateFromMessage)
+    } yield SetEgateBanksUpdate(Terminal(terminal), originalDate, updates)
   }
 
-  def updatesFromMessage(msg: EgateBanksUpdatesMessage): EgateBanksUpdates =
-    EgateBanksUpdates(msg.updates.map(u => updateFromMessage(u)).collect {
+  def removeEgateBanksUpdateFromMessage(msg: RemoveEgateBanksUpdateMessage): Option[DeleteEgateBanksUpdates] = {
+    for {
+      terminal <- msg.terminal
+      originalDate <- msg.date
+    } yield DeleteEgateBanksUpdates(Terminal(terminal), originalDate)
+  }
+
+  def egateBanksUpdatesFromMessage(msg: EgateBanksUpdatesMessage): EgateBanksUpdates =
+    EgateBanksUpdates(msg.updates.map(u => egateBanksUpdateFromMessage(u)).collect {
       case Some(update) => update
     }.toList)
+
+  def portUpdatesFromMessage(msg: PortEgateBanksUpdatesMessage): PortEgateBanksUpdates =
+    PortEgateBanksUpdates(
+      msg.updates
+        .map { u =>
+          for {
+            terminal <- u.terminal
+          } yield {
+            val updates = u.updates
+              .map(egateBanksUpdateFromMessage)
+              .collect {
+                case Some(update) => update
+              }
+            (terminal, EgateBanksUpdates(updates.toList))
+          }
+        }
+        .collect {
+          case Some((t, u)) => (Terminal(t), u)
+        }
+        .toMap
+    )
 
 }

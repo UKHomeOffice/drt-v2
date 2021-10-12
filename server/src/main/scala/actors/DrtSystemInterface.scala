@@ -57,6 +57,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, ApiFeedSource, FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 
@@ -190,7 +191,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       flightsToLoads = portDeskRecs.flightsToLoads,
       loadsToQueueMinutes = portDeskRecs.loadsToDesks,
       maxDesksProviders = deskLimitsProviders,
-      redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates]
+      redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+      egateBanksProvider = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
     )
 
     val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor)

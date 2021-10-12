@@ -19,6 +19,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs.{DynamicRunnableDeskRecs, PortDesksAndWaitsProvider, RunnableOptimisation}
 import services.graphstages.FlightFilter
 import services.{OptimiserWithFlexibleProcessors, SDate}
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
@@ -36,6 +37,7 @@ object Scenarios {
                         flightsActor: ActorRef,
                         portStateActor: ActorRef,
                         redListUpdatesProvider: () => Future[RedListUpdates],
+                        egateBanksProvider: () => Future[PortEgateBanksUpdates],
                       )(implicit system: ActorSystem, timeout: Timeout): Future[DeskRecMinutes] = {
 
 
@@ -60,6 +62,7 @@ object Scenarios {
       loadsToQueueMinutes = portDesksAndWaitsProvider.loadsToDesks,
       maxDesksProviders = terminalDeskLimits,
       redListUpdatesProvider = redListUpdatesProvider,
+      egateBanksProvider = egateBanksProvider,
     )
 
     class DummyPersistentActor extends Actor {

@@ -20,11 +20,13 @@ import org.slf4j.{Logger, LoggerFactory}
 import queueus.AdjustmentsNoop
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
+import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
+import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
@@ -136,6 +138,9 @@ class TestDrtActor extends Actor {
           loadsToQueueMinutes = portDeskRecs.loadsToDesks,
           maxDesksProviders = deskLimitsProviders,
           redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
+          egateBanksProvider = () => Future.successful(PortEgateBanksUpdates(airportConfig.eGateBankSizes.map {
+            case (terminal, banks) => (terminal, EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))
+          }))
         )
 
         val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)
