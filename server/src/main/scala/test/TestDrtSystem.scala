@@ -161,8 +161,6 @@ case class TestDrtSystem(airportConfig: AirportConfig)
       initialForecastArrivals = None,
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
-      initialCrunchQueue = None,
-      initialDeploymentQueue = None,
       refreshArrivalsOnStart = false,
       refreshManifestsOnStart = false,
       startDeskRecs = startDeskRecs)

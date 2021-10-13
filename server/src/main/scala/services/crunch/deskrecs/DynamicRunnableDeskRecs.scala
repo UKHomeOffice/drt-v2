@@ -3,6 +3,7 @@ package services.crunch.deskrecs
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -33,7 +34,7 @@ object DynamicRunnableDeskRecs {
 
   type HistoricManifestsProvider = Iterable[Arrival] => Future[Source[ManifestLike, NotUsed]]
 
-  type LoadsToQueueMinutes = (NumericRange[MillisSinceEpoch], Map[TQM, Crunch.LoadMinute], Map[Terminal, TerminalDeskLimitsLike]) => PortStateQueueMinutes
+  type LoadsToQueueMinutes = (NumericRange[MillisSinceEpoch], Map[TQM, Crunch.LoadMinute], Map[Terminal, TerminalDeskLimitsLike]) => Future[PortStateQueueMinutes]
 
   type FlightsToLoads = (FlightsWithSplits, RedListUpdates) => Map[TQM, Crunch.LoadMinute]
 
@@ -42,18 +43,17 @@ object DynamicRunnableDeskRecs {
                                    historicManifestsProvider: HistoricManifestsProvider,
                                    splitsCalculator: SplitsCalculator,
                                    splitsSink: ActorRef,
-                                   flightsToLoads: FlightsToLoads,
-                                   loadsToQueueMinutes: LoadsToQueueMinutes,
+                                   portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,
                                    maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
                                    redListUpdatesProvider: () => Future[RedListUpdates],
                                    egateBanksProvider: () => Future[PortEgateBanksUpdates],
                                   )
-                                  (implicit ec: ExecutionContext, timeout: Timeout): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
+                                  (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
     Flow[CrunchRequest]
       .via(addArrivals(arrivalsProvider))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
       .via(updateSplits(splitsSink))
-      .via(toDeskRecs(maxDesksProviders, flightsToLoads, loadsToQueueMinutes, redListUpdatesProvider, egateBanksProvider))
+      .via(toDeskRecs(maxDesksProviders, portDesksAndWaitsProvider, redListUpdatesProvider, egateBanksProvider))
 
   private def updateSplits(splitsSink: ActorRef)
                           (implicit ec: ExecutionContext, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
@@ -66,24 +66,22 @@ object DynamicRunnableDeskRecs {
       }
 
   private def toDeskRecs(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
-                         flightsToLoads: FlightsToLoads,
-                         loadsToQueueMinutes: LoadsToQueueMinutes,
+                         portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,
                          redListUpdatesProvider: () => Future[RedListUpdates],
                          egateBanksProvider: () => Future[PortEgateBanksUpdates],
                         )
-                        (implicit ec: ExecutionContext): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), PortStateQueueMinutes, NotUsed] = {
+                        (implicit ec: ExecutionContext, mat: Materializer): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), PortStateQueueMinutes, NotUsed] = {
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchDay, flights) =>
+          log.info(s"Crunch starting: ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
           for {
             redListUpdates <- redListUpdatesProvider()
             egateBanks <- egateBanksProvider()
+            deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, portDesksAndWaitsProvider.flightsToLoads(FlightsWithSplits(flights), redListUpdates), maxDesksProviders)
           } yield {
-            log.info(s"Crunching ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
-            timeLogger.time({
-              val loadsFromFlights: Map[TQM, Crunch.LoadMinute] = flightsToLoads(FlightsWithSplits(flights), redListUpdates)
-              loadsToQueueMinutes(crunchDay.minutesInMillis, loadsFromFlights, maxDesksProviders)
-            })
+            log.info(s"Crunch finished: (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
+            deskRecs
           }
       }
   }

@@ -146,8 +146,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           initialForecastArrivals = maybeForecastArrivals,
           initialLiveBaseArrivals = Option(SortedMap[UniqueArrival, Arrival]()),
           initialLiveArrivals = maybeLiveArrivals,
-          initialCrunchQueue = maybeCrunchQueue,
-          initialDeploymentQueue = maybeDeploymentQueue,
           refreshArrivalsOnStart = params.refreshArrivalsOnStart,
           refreshManifestsOnStart = params.refreshManifestsOnStart,
           startDeskRecs = startDeskRecs)

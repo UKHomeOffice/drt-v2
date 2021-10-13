@@ -188,8 +188,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
       splitsCalculator = splitsCalculator,
       splitsSink = portStateActor,
-      flightsToLoads = portDeskRecs.flightsToLoads,
-      loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+      portDesksAndWaitsProvider = portDeskRecs,
       maxDesksProviders = deskLimitsProviders,
       redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
       egateBanksProvider = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
@@ -227,8 +226,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         initialForecastArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
-                        initialCrunchQueue: Option[mutable.SortedSet[CrunchRequest]],
-                        initialDeploymentQueue: Option[mutable.SortedSet[CrunchRequest]],
                         refreshArrivalsOnStart: Boolean,
                         refreshManifestsOnStart: Boolean,
                         startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {

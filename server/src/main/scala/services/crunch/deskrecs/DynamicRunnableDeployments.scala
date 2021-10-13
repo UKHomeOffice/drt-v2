@@ -31,10 +31,10 @@ object DynamicRunnableDeployments {
       .mapAsync(1) { case (request, loads) =>
         staffProvider(request).map(staff => (request, loads, staffToDeskLimits(staff)))
       }
-      .map {
+      .mapAsync(1) {
         case (request, loads, deskLimitsByTerminal) =>
           log.info(s"Simulating ${request.durationMinutes} minutes (${request.start.toISOString()} to ${request.end.toISOString()})")
-          timeLogger.time(loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal))
+          loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal)
       }
   }
 }

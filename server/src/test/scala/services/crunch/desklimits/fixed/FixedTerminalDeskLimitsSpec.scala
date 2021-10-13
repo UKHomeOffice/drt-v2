@@ -1,13 +1,16 @@
 package services.crunch.desklimits.fixed
 
+import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneHourMillis
-import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 
 import scala.collection.immutable.NumericRange
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 class FixedTerminalDeskLimitsSpec extends Specification {
   val minDesks: IndexedSeq[Int] = IndexedSeq.fill(24)(1)
@@ -29,7 +32,7 @@ class FixedTerminalDeskLimitsSpec extends Specification {
     val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
     val expected = List.fill(24)(10)
 
-    result === expected
+    Await.result(result, 1.second) === expected
   }
 
   "Given a fixed desk limits provider with one queue with max desks matching the hour (0 to 23) " +
@@ -40,6 +43,6 @@ class FixedTerminalDeskLimitsSpec extends Specification {
     val result = limits.maxDesksForMinutes(nonBstMidnightToMidnightByHour, EeaDesk, Map())
     val expected = maxDesks.toList
 
-    result === expected
+    Await.result(result, 1.second) === expected
   }
 }

@@ -112,8 +112,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       historicManifestsProvider = historicManifests,
       splitsCalculator = splitsCalc,
       splitsSink = mockSplitsSink,
-      flightsToLoads = desksAndWaitsProvider.flightsToLoads,
-      loadsToQueueMinutes = desksAndWaitsProvider.loadsToDesks,
+      portDesksAndWaitsProvider = desksAndWaitsProvider,
       maxDesksProviders = PortDeskLimits.flexed(airportConfig),
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
       egateBanksProvider = () => Future.successful(PortEgateBanksUpdates(defaultAirportConfig.eGateBankSizes.map {

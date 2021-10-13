@@ -135,8 +135,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       historicManifestsProvider = mockHistoricManifestsProvider(Map(arrival -> historicPax)),
       splitsCalculator = splitsCalculator,
       splitsSink = mockSplitsSink,
-      flightsToLoads = desksAndWaitsProvider.flightsToLoads,
-      loadsToQueueMinutes = desksAndWaitsProvider.loadsToDesks,
+      portDesksAndWaitsProvider = desksAndWaitsProvider,
       maxDesksProviders = maxDesksProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
       egateBanksProvider = () => Future.successful(PortEgateBanksUpdates(defaultAirportConfig.eGateBankSizes.map {

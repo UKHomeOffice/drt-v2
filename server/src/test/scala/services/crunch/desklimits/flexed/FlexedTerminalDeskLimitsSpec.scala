@@ -1,13 +1,16 @@
 package services.crunch.desklimits.flexed
 
+import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneHourMillis
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 
 import scala.collection.immutable.NumericRange
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 class FlexedTerminalDeskLimitsSpec extends Specification {
   val minDesks: IndexedSeq[Int] = IndexedSeq.fill(24)(1)
@@ -35,7 +38,7 @@ class FlexedTerminalDeskLimitsSpec extends Specification {
         val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
         val expected = List.fill(24)(10)
 
-        result === expected
+        Await.result(result, 1.second) === expected
       }
     }
   }
@@ -48,7 +51,7 @@ class FlexedTerminalDeskLimitsSpec extends Specification {
         val result = limits.maxDesksForMinutes(nonBstMidnightToMidnightByHour, EeaDesk, Map())
         val expected = terminalDesks
 
-        result === expected
+        Await.result(result, 1.second) === expected
       }
     }
   }
@@ -62,7 +65,7 @@ class FlexedTerminalDeskLimitsSpec extends Specification {
         val result = limits.maxDesksForMinutes(nonBstMidnightToMidnightByHour, EeaDesk, noExistingAllocations)
         val expected = List.fill(24)(9)
 
-        result === expected
+        Await.result(result, 1.second) === expected
       }
     }
   }
@@ -76,7 +79,7 @@ class FlexedTerminalDeskLimitsSpec extends Specification {
         val result = limits.maxDesksForMinutes(nonBstMidnightToMidnightByHour, EeaDesk, existingNonEeaAllocations)
         val expected = List.fill(24)(6)
 
-        result === expected
+        Await.result(result, 1.second) === expected
       }
     }
   }
@@ -93,7 +96,7 @@ class FlexedTerminalDeskLimitsSpec extends Specification {
         val result = limits.maxDesksForMinutes(nonBstMidnightToMidnightByHour, EGate, existingFlexedAllocations)
         val expected = List.fill(24)(3)
 
-        result === expected
+        Await.result(result, 1.second) === expected
       }
     }
   }

@@ -134,8 +134,7 @@ class TestDrtActor extends Actor {
           historicManifestsProvider = OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups),
           splitsCalculator = splitsCalculator,
           splitsSink = portStateActor,
-          flightsToLoads = portDeskRecs.flightsToLoads,
-          loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+          portDesksAndWaitsProvider = portDeskRecs,
           maxDesksProviders = deskLimitsProviders,
           redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
           egateBanksProvider = () => Future.successful(PortEgateBanksUpdates(airportConfig.eGateBankSizes.map {

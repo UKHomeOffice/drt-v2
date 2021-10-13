@@ -6,6 +6,7 @@ import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch.reduceIterables
 
 import scala.collection.immutable.{Map, NumericRange}
+import scala.concurrent.Future
 
 trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
   val terminalDesksByMinute: List[Int]
@@ -32,7 +33,7 @@ case class FlexedTerminalDeskLimits(terminalDesksByMinute: List[Int],
                                     maxDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]]) extends FlexedTerminalDeskLimitsLike {
   def maxDesksForMinutes(minuteMillis: NumericRange[Long],
                          queue: Queue,
-                         allocatedDesks: Map[Queue, List[Int]]): Iterable[Int] =
-    maxDesks(minuteMillis, queue, allocatedDesks)
+                         allocatedDesks: Map[Queue, List[Int]]): Future[Iterable[Int]] =
+    Future.successful(maxDesks(minuteMillis, queue, allocatedDesks))
 
 }
