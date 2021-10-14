@@ -1,9 +1,6 @@
 package services.crunch.desklimits
 
-import drt.shared.SDateLike
-import services.SDate
 import services.crunch.deskrecs.DeskRecs
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 
@@ -11,24 +8,34 @@ import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait QueueCapacityProvider {
-  def capacityAt(time: SDateLike): Future[Int]
+  def capacityAt(timeRange: NumericRange[Long]): Future[IndexedSeq[Int]]
 }
 
-case class DeskCapacityProvider(maxPerHour: IndexedSeq[Int]) extends QueueCapacityProvider {
+object EmptyCapacityProvider extends QueueCapacityProvider {
+  override def capacityAt(timeRange: NumericRange[Long]): Future[IndexedSeq[Int]] =
+    Future.successful(timeRange.map(_ => 0))
+}
+
+case class DeskCapacityProvider(maxPerHour: IndexedSeq[Int])
+                               (implicit ec: ExecutionContext) extends QueueCapacityProvider {
   assert(maxPerHour.length == 24)
 
-  override def capacityAt(time: SDateLike): Future[Int] = {
-    Future.successful(maxPerHour(SDate(time.millisSinceEpoch, Crunch.europeLondonTimeZone).getHours()))
+  override def capacityAt(timeRange: NumericRange[Long]): Future[IndexedSeq[Int]] = {
+    Future.successful(DeskRecs.desksForMillis(timeRange, maxPerHour))
   }
 }
 
-case class EgatesCapacityProvider(egatesProvider: () => Future[EgateBanksUpdates], defaultEgates: IndexedSeq[EgateBank]) extends QueueCapacityProvider {
-  override def capacityAt(time: SDateLike)(implicit ec: ExecutionContext): Future[Int] = {
-    egatesProvider().map {
-      _
-        .applyForDate(time.millisSinceEpoch, defaultEgates)
-        .map(_.gates.count(_ == true))
-        .sum
+case class EgatesCapacityProvider(egatesProvider: () => Future[EgateBanksUpdates],
+                                  defaultEgates: IndexedSeq[EgateBank])
+                                 (implicit ec: ExecutionContext) extends QueueCapacityProvider {
+  override def capacityAt(timeRange: NumericRange[Long]): Future[IndexedSeq[Int]] = {
+    egatesProvider().map { egates =>
+      timeRange.map { time =>
+        egates
+          .applyForDate(time, defaultEgates)
+          .map(_.gates.count(_ == true))
+          .sum
+      }
     }
   }
 }

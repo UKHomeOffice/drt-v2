@@ -1,22 +1,26 @@
 package services.crunch.desklimits.flexed
 
+import services.crunch.desklimits.QueueCapacityProvider
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch
 
 import scala.collection.immutable.{Map, NumericRange}
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[Int],
                                                       terminalDesksByMinute: List[Int],
                                                       flexedQueues: Set[Queue],
                                                       minDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]],
-                                                      maxDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]]) extends FlexedTerminalDeskLimitsLike {
+                                                      maxDesksByQueue24Hrs: Map[Queue, QueueCapacityProvider])
+                                                     (implicit ec: ExecutionContext) extends FlexedTerminalDeskLimitsLike {
   def maxDesksForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, List[Int]]): Future[Iterable[Int]] = {
-    val availableDesksByMinute = maxDesks(minuteMillis, queue, allocatedDesks)
+    val eventualAvailableDesksByMinute = maxDesks(minuteMillis, queue, allocatedDesks)
     val availableStaffByMinute = availableStaffForMinutes(minuteMillis, queue, allocatedDesks)
 
-    Future.successful(Crunch.reduceIterables[Int](List(availableDesksByMinute, availableStaffByMinute))(Math.min))
+    eventualAvailableDesksByMinute.map { availableDesksByMinute =>
+      Crunch.reduceIterables[Int](List(availableDesksByMinute, availableStaffByMinute))(Math.min)
+    }
   }
 
   def availableStaffForMinutes(minuteMillis: NumericRange[Long],
