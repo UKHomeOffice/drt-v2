@@ -4,6 +4,8 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneDayMillis
 import drt.shared.dates.{LocalDate, UtcDate}
 
+import scala.concurrent.duration.FiniteDuration
+
 trait SDateLike {
 
   import MonthStrings._
@@ -13,6 +15,8 @@ trait SDateLike {
   def <(other: SDateLike): Boolean = millisSinceEpoch < other.millisSinceEpoch
 
   def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
+
+  def -(duration: FiniteDuration): SDateLike = addMillis(duration.toMillis)
 
   /**
    * Days of the week 1 to 7 (Monday is 1)
