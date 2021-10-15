@@ -7,7 +7,6 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FeedSourceStatuses, FeedStatuses, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.ports.FeedSource

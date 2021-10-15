@@ -16,7 +16,7 @@ trait SDateLike {
 
   def >(other: SDateLike): Boolean = millisSinceEpoch > other.millisSinceEpoch
 
-  def -(duration: FiniteDuration): SDateLike = addMillis(duration.toMillis)
+  def -(duration: FiniteDuration): SDateLike = addMillis(-1 * duration.toMillis)
 
   /**
    * Days of the week 1 to 7 (Monday is 1)
