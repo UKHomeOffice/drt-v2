@@ -34,12 +34,12 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
           val feedResponseTry = (for {
             sshClient <- Try(ssh)
             sftpClient <- Try(sshClient.newSFTPClient)
-            responseTry = Try {
+          } yield {
+            val responseTry = Try {
               Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, "/180_Days/" + aclFileName(date, portCode, season)), terminalMapping))
             }
-          } yield {
-            sshClient.disconnect()
             sftpClient.close()
+            sshClient.disconnect()
             responseTry
           }).flatten
 
