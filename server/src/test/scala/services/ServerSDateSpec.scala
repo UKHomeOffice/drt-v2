@@ -5,7 +5,14 @@ import org.specs2.mutable.Specification
 import services.graphstages.Crunch
 import services.graphstages.Crunch.europeLondonTimeZone
 
+import scala.concurrent.duration.DurationInt
+
 class ServerSDateSpec extends Specification {
+  "When removing a 15 minute finite duration from 2021-10-15 10:00" >> {
+    "I should get 15 minutes earlier (2021-10-15 09:45)" >> {
+      SDate("2021-10-15T10:00") - 15.minutes === SDate("2021-10-15T09:45")
+    }
+  }
   "When calling getDayOfWeek" >> {
     "On a Monday we should get back 1" >> {
       val d = SDate("2017-10-23T18:00:00")

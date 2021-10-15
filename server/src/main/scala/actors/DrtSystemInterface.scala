@@ -37,18 +37,16 @@ import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.DateTimeZone
 import play.api.Configuration
 import queueus.{AdjustmentsNoop, ChildEGateAdjustments, PaxTypeQueueAllocation, QueueAdjustments}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
-import services.SDate.JodaSDate
 import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
@@ -57,7 +55,8 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, ApiFeedSource, FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 
 import scala.collection.immutable.SortedMap
@@ -289,12 +288,17 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def baseArrivalsSource(maybeAclFeed: Option[AclFeed]): Source[ArrivalsFeedResponse, Cancellable] = maybeAclFeed match {
     case None => arrivalsNoOp
     case Some(aclFeed) =>
-      Source.tick(1 second, 10 minutes, NotUsed).map { _ =>
+      val initialDelay =
+        if (config.get[Boolean]("acl.check-on-startup")) 0.minutes
+        else AclFeed.delayUntilNextAclCheck(now(), 18) + (Math.random() * 60).minutes
+
+      log.info(s"Daily ACL check. Initial delay: ${initialDelay.toMinutes} minutes")
+
+      Source.tick(initialDelay, 1.day, NotUsed).map { _ =>
         system.log.info(s"Requesting ACL feed")
         aclFeed.requestArrivals
       }
   }
-
 
   def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
     val today = now()
