@@ -10,6 +10,7 @@ import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
+import akka.util.Timeout
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
@@ -42,7 +43,8 @@ case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsF
 case class ProdDrtSystem(airportConfig: AirportConfig)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
-                         val system: ActorSystem) extends DrtSystemInterface {
+                         val system: ActorSystem,
+                         val timeout: Timeout) extends DrtSystemInterface {
 
   import DrtStaticParameters._
 

@@ -1,10 +1,10 @@
 package services.crunch.desklimits.fixed
 
-import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneHourMillis
-import org.specs2.mutable.Specification
 import services.SDate
+import services.crunch.CrunchTestLike
+import services.crunch.desklimits.DeskCapacityProvider
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 
@@ -12,7 +12,7 @@ import scala.collection.immutable.NumericRange
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-class FixedTerminalDeskLimitsSpec extends Specification {
+class FixedTerminalDeskLimitsSpec extends CrunchTestLike {
   val minDesks: IndexedSeq[Int] = IndexedSeq.fill(24)(1)
 
   val nonBst20200101: MillisSinceEpoch = SDate("2020-01-01T00:00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
@@ -28,7 +28,7 @@ class FixedTerminalDeskLimitsSpec extends Specification {
     "When I ask for max desks at each hour from midnight to midnight outside BST " +
     "Then I should get 10 for every hour" >> {
     val maxDesks = IndexedSeq.fill(24)(10)
-    val limits = FixedTerminalDeskLimits(Map(EeaDesk -> minDesks), Map(EeaDesk -> maxDesks))
+    val limits = FixedTerminalDeskLimits(Map(EeaDesk -> minDesks), Map(EeaDesk -> DeskCapacityProvider(maxDesks)))
     val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
     val expected = List.fill(24)(10)
 
@@ -39,7 +39,7 @@ class FixedTerminalDeskLimitsSpec extends Specification {
     "When I ask for max desks at each hour from midnight to midnight inside BST " +
     "Then I should get 0 through 23, ie not offset by an hour" >> {
     val maxDesks = 0 to 23
-    val limits = FixedTerminalDeskLimits(Map(EeaDesk -> minDesks), Map(EeaDesk -> maxDesks))
+    val limits = FixedTerminalDeskLimits(Map(EeaDesk -> minDesks), Map(EeaDesk -> DeskCapacityProvider(maxDesks)))
     val result = limits.maxDesksForMinutes(nonBstMidnightToMidnightByHour, EeaDesk, Map())
     val expected = maxDesks.toList
 

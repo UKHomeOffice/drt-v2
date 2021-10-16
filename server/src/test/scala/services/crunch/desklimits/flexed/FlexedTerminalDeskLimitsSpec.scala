@@ -1,10 +1,10 @@
 package services.crunch.desklimits.flexed
 
-import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneHourMillis
-import org.specs2.mutable.Specification
 import services.SDate
+import services.crunch.CrunchTestLike
+import services.crunch.desklimits.DeskCapacityProvider
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 
@@ -12,7 +12,7 @@ import scala.collection.immutable.NumericRange
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-class FlexedTerminalDeskLimitsSpec extends Specification {
+class FlexedTerminalDeskLimitsSpec extends CrunchTestLike {
   val minDesks: IndexedSeq[Int] = IndexedSeq.fill(24)(1)
 
   val nonBst20200101: MillisSinceEpoch = SDate("2020-01-01T00:00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
@@ -88,7 +88,7 @@ class FlexedTerminalDeskLimitsSpec extends Specification {
     "When I ask for max desks for EGates for 24 hours, with existing allocations for the flexed desks " >> {
       "Then I should get 3 for every hour - the max for EGates regardless of the existing allocations" >> {
         val terminalDesks = List.fill(24)(10)
-        val limits = FlexedTerminalDeskLimits(terminalDesks, Set(EeaDesk, NonEeaDesk), minDesksByQueue, Map(EGate -> IndexedSeq.fill(24)(3)))
+        val limits = FlexedTerminalDeskLimits(terminalDesks, Set(EeaDesk, NonEeaDesk), minDesksByQueue, Map(EGate -> DeskCapacityProvider(IndexedSeq.fill(24)(3))))
         val existingFlexedAllocations = Map[Queue, List[Int]](
           EeaDesk -> List.fill(24)(5),
           NonEeaDesk -> List.fill(24)(5)

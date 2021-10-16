@@ -55,14 +55,12 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
-import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, ApiFeedSource, FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.egates.{EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 
 import scala.collection.immutable.SortedMap
-import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
@@ -71,6 +69,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
+  implicit val timeout: Timeout
 
   val now: () => SDateLike = () => SDate.now()
   val purgeOldLiveSnapshots = false
@@ -149,10 +148,13 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig))
 
-  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
-    PortDeskLimits.flexed(airportConfig)
+  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
+
+  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks")) {
+    PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
+  }
   else
-    PortDeskLimits.fixed(airportConfig)
+    PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
 
   val paxTypeQueueAllocation: PaxTypeQueueAllocation = paxTypeQueueAllocator(airportConfig)
 
@@ -176,7 +178,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
   val startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch) = () => {
-    val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig) _
+    val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
 
     implicit val timeout: Timeout = new Timeout(1 second)
 

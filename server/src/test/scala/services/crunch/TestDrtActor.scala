@@ -27,8 +27,8 @@ import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 
 import scala.collection.immutable.Map
@@ -44,7 +44,15 @@ case object MockManifestLookupService extends ManifestLookupLike {
                                           voyageNumber: VoyageNumber,
                                           scheduled: SDateLike)
                                          (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
-    Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+}
+
+object MockEgatesProvider {
+  def forAirportConfig(airportConfig: AirportConfig): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) => {
+    val banks = EgateBank.fromAirportConfig(airportConfig.eGateBankSizes.getOrElse(terminal, throw new Exception(s"egates for $terminal not found")))
+    val update = EgateBanksUpdate(0L, banks)
+    Future.successful(EgateBanksUpdates(List(update)))
+  }
 }
 
 class TestDrtActor extends Actor {
@@ -102,12 +110,14 @@ class TestDrtActor extends Actor {
 
       val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig))
 
-      val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
-        PortDeskLimits.flexed(tc.airportConfig)
-      else
-        PortDeskLimits.fixed(tc.airportConfig)
+      val egatesProvider = MockEgatesProvider.forAirportConfig(airportConfig)
 
-      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig) _
+      val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
+        PortDeskLimits.flexed(tc.airportConfig, egatesProvider)
+      else
+        PortDeskLimits.fixed(tc.airportConfig, egatesProvider)
+
+      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig, egatesProvider) _
 
       def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
         val today = tc.now()

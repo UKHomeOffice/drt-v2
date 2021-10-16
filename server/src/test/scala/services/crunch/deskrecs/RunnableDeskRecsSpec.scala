@@ -23,7 +23,7 @@ import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.OptimiserMocks.{mockHistoricManifestsProvider, mockHistoricManifestsProviderNoop, mockLiveManifestsProviderNoop}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
-import services.crunch.{CrunchTestLike, TestConfig, TestDefaults}
+import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
@@ -113,7 +113,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       splitsCalculator = splitsCalc,
       splitsSink = mockSplitsSink,
       portDesksAndWaitsProvider = desksAndWaitsProvider,
-      maxDesksProviders = PortDeskLimits.flexed(airportConfig),
+      maxDesksProviders = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.forAirportConfig(airportConfig)),
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
       egateBanksProvider = () => Future.successful(PortEgateBanksUpdates(defaultAirportConfig.eGateBankSizes.map {
         case (terminal, banks) => (terminal, EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))

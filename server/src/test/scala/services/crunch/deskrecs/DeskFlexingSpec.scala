@@ -1,6 +1,7 @@
 package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.MillisSinceEpoch
+import services.crunch.desklimits.DeskCapacityProvider
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimits
 import services.crunch.{CrunchTestLike, deskrecs}
 import services.{OptimiserConfig, OptimizerCrunchResult, SDate}
@@ -79,7 +80,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
         val queues = List(EeaDesk, NonEeaDesk)
 
-        val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk), minDesks, maxDesks)
+        val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
 
         deskrecs.TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, Iterable.fill(egateMaxDesks)(10))
           .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
@@ -103,7 +104,7 @@ class DeskFlexingSpec extends CrunchTestLike {
       val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
       val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
 
-      val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks)
+      val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
 
       deskrecs.TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, Iterable.fill(egateMaxDesks)(10))
         .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
@@ -131,7 +132,7 @@ class DeskFlexingSpec extends CrunchTestLike {
       val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
       val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
 
-      val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks)
+      val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
 
       deskrecs.TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, Iterable.fill(egateMaxDesks)(10))
         .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)

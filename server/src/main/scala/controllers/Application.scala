@@ -112,6 +112,7 @@ object DrtActorSystem extends AirportConfProvider {
   implicit val actorSystem: ActorSystem = ActorSystem("DRT")
   implicit val mat: Materializer = ActorMaterializer.create(actorSystem)
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+  implicit val timeout: Timeout =  new Timeout(5.seconds)
   val config: Configuration = new Configuration(ConfigFactory.load)
   val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
 

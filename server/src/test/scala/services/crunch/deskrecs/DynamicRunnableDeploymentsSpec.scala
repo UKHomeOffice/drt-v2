@@ -11,7 +11,7 @@ import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.OptimiserMocks.MockSinkActor
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
-import services.crunch.{CrunchTestLike, TestDefaults}
+import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -31,11 +31,13 @@ class MockProviderActor(minutes: MinutesContainer[CrunchMinute, TQM]) extends Ac
 class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
   val airportConfig: AirportConfig = TestDefaults.airportConfigWithEgates
 
-  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig)
+  val egatesProvider = MockEgatesProvider.forAirportConfig(airportConfig)
+
+  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, egatesProvider)
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
   val pcpPaxCalcFn: Arrival => Int = PcpUtils.bestPcpPaxEstimate
 
-  val staffToDeskLimits: StaffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig)
+  val staffToDeskLimits: StaffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, egatesProvider)
   val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig))
 
   def setupGraphAndCheckQueuePax(minutes: MinutesContainer[CrunchMinute, TQM],

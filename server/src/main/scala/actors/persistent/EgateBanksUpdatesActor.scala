@@ -7,6 +7,7 @@ import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.staffing.GetState
 import actors.serializers.EgateBanksUpdatesMessageConversion
 import akka.actor.ActorRef
+import akka.pattern.ask
 import akka.persistence._
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.SourceQueueWithComplete
@@ -16,9 +17,10 @@ import drt.shared.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
-import uk.gov.homeoffice.drt.egates.{DeleteEgateBanksUpdates, EgateBanksUpdateCommand, PortEgateBanksUpdates, SetEgateBanksUpdate}
+import uk.gov.homeoffice.drt.egates.{DeleteEgateBanksUpdates, EgateBanksUpdateCommand, EgateBanksUpdates, PortEgateBanksUpdates, SetEgateBanksUpdate}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success}
 
@@ -29,6 +31,12 @@ object EgateBanksUpdatesActor {
   case object SendToSubscriber
 
   case object ReceivedSubscriberAck
+
+  def terminalEgatesProvider(egateBanksUpdatesActor: ActorRef)
+                            (implicit timeout: Timeout, ec: ExecutionContext): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) => egateBanksUpdatesActor
+    .ask(GetState)
+    .mapTo[PortEgateBanksUpdates]
+    .map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
 }
 
 class EgateBanksUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[PortEgateBanksUpdates] {
