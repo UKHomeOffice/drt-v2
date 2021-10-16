@@ -32,7 +32,7 @@ import services.staffing.StaffTimeSlots
 import test.TestDrtSystem
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, ManageUsers, Role, StaffEdit}
 import uk.gov.homeoffice.drt.auth._
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import java.nio.ByteBuffer
@@ -364,14 +364,17 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   lazy val healthChecker: HealthChecker = if (!config.get[Boolean]("health-check.disable-feed-monitoring")) {
     val healthyResponseTimeSeconds = config.get[Int]("health-check.max-response-time-seconds")
-    val lastFeedCheckThresholdMinutes = config.get[Int]("health-check.max-last-feed-check-minutes")
+    val defaultLastCheckThreshold = config.get[Int]("health-check.max-last-feed-check-minutes").minutes
+    val feedLastCheckThresholds: Map[FeedSource, FiniteDuration] = Map(
+      AclFeedSource -> 26.hours
+    )
 
     val feedsToMonitor = ctrl.feedActorsForPort
       .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
       .values.toList
 
     HealthChecker(Seq(
-      FeedsHealthCheck(feedsToMonitor, lastFeedCheckThresholdMinutes, now),
+      FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now),
       ActorResponseTimeHealthCheck(ctrl.portStateActor, healthyResponseTimeSeconds * MilliTimes.oneSecondMillis))
     )
   } else HealthChecker(Seq())

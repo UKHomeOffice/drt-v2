@@ -2,13 +2,14 @@ package feeds.acl
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.acl.AclFeed
-import drt.server.feeds.acl.AclFeed.{aclFileName, arrivalsFromCsvContent}
+import drt.server.feeds.acl.AclFeed.{aclFileName, arrivalsFromCsvContent, delayUntilNextAclCheck, nextAclCheck}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import drt.shared.api.Arrival
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
+import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
@@ -19,6 +20,32 @@ import scala.concurrent.duration._
 
 class AclFeedSpec extends CrunchTestLike {
   val regularTerminalMapping: Terminal => Terminal = (t: Terminal) => t
+
+  "Given ACL updates are available at 18:00 UK time" >> {
+    val updateHour = 18
+
+    "When the current date time is 2021-10-15 10:00" >> {
+      val now = SDate("2021-10-15T10:00", Crunch.europeLondonTimeZone)
+      "The next check should be 2021-10-15 18:00" >> {
+        nextAclCheck(now, updateHour).toISOString() === "2021-10-15T18:00:00+01:00"
+      }
+      "The delay until the next check should be 8 hours" >> {
+        val delay = delayUntilNextAclCheck(now, updateHour)
+        delay === 8.hours
+      }
+    }
+
+    "When the current date time is 2021-10-15 20:00" >> {
+      val now = SDate("2021-10-15T20:00", Crunch.europeLondonTimeZone)
+      "The next check should be 2021-10-16 18:00" >> {
+        nextAclCheck(now, updateHour).toISOString() === "2021-10-16T18:00:00+01:00"
+      }
+      "The delay until the next check should be 22 hours" >> {
+        val delay = delayUntilNextAclCheck(now, updateHour)
+        delay === 22.hours
+      }
+    }
+  }
 
   "ACL feed failures" >> {
     val aclFeed = AclFeed("nowhere.nowhere", "badusername", "badpath", PortCode("BAD"), (_: Terminal) => T1)

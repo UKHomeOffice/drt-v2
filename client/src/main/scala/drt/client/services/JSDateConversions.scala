@@ -6,6 +6,7 @@ import drt.shared.dates.{LocalDate, UtcDate}
 import drt.shared.{MilliDate, SDateLike}
 import moment._
 
+import scala.concurrent.duration.FiniteDuration
 import scala.language.implicitConversions
 import scala.scalajs.js.Date
 

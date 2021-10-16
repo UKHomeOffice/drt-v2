@@ -13,6 +13,7 @@ import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
+import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
 
@@ -20,6 +21,7 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.util.{Failure, Success, Try}
 
 case class AclFeed(ftpServer: String, username: String, path: String, portCode: PortCode, terminalMapping: Terminal => Terminal) {
@@ -36,12 +38,12 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
           val feedResponseTry = (for {
             sshClient <- Try(ssh)
             sftpClient <- Try(sshClient.newSFTPClient)
-            responseTry = Try {
+          } yield {
+            val responseTry = Try {
               Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, aclFilePath), terminalMapping))
             }
-          } yield {
-            sshClient.disconnect()
             sftpClient.close()
+            sshClient.disconnect()
             responseTry
           }).flatten
 
@@ -87,6 +89,16 @@ object AclFeed {
 
   def sftpClient(sshClient: SSHClient): SFTPClient = {
     sshClient.newSFTPClient
+  }
+
+  def nextAclCheck(now: SDateLike, updateHour: Int): SDateLike = {
+    val todaysCheck = SDate(now.getFullYear(), now.getMonth(), now.getDate(), updateHour, 0, Crunch.europeLondonTimeZone)
+    if (todaysCheck > now) todaysCheck else todaysCheck.addDays(1)
+  }
+
+  def delayUntilNextAclCheck(now: SDateLike, updateHour: Int): FiniteDuration = {
+    val nextCheck = nextAclCheck(now, updateHour)
+    (nextCheck.millisSinceEpoch - now.millisSinceEpoch).millis
   }
 
   private def latestPossibleFileDatesAndSeasons: List[(SDateLike, String)] = {

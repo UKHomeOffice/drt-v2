@@ -7,10 +7,11 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FeedSourceStatuses, FeedStatuses, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.ports.FeedSource
 
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -19,7 +20,8 @@ trait HealthCheck {
 }
 
 case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
-                            lastFeedCheckThresholdMinutes: Int,
+                            defaultLastCheckThreshold: FiniteDuration,
+                            feedLastCheckThresholds: Map[FeedSource, FiniteDuration],
                             now: () => SDateLike)
                            (implicit timeout: Timeout, mat: Materializer, ec: ExecutionContext) extends HealthCheck {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -30,18 +32,20 @@ case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
         _.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
       }
       .collect {
-        case Some(FeedSourceStatuses(feedSource, FeedStatuses(_, Some(lastSuccessAt), _, _)))
-          if lastSuccessAt < minutesAgoInMillis(lastFeedCheckThresholdMinutes) =>
-          val minutesSinceLastCheck = ((now().millisSinceEpoch - lastSuccessAt) / 60000).toInt
-          log.warn(s"${feedSource.name} has not been checked for $minutesSinceLastCheck minutes")
-          feedSource
+        case Some(FeedSourceStatuses(feedSource, FeedStatuses(_, Some(lastSuccessAt), _, _))) =>
+          val threshold = feedLastCheckThresholds.getOrElse(feedSource, defaultLastCheckThreshold)
+          if (lastSuccessAt < (now() - threshold).millisSinceEpoch) {
+            val minutesSinceLastCheck = ((now().millisSinceEpoch - lastSuccessAt) / 60000).toInt
+            log.warn(s"${feedSource.name} has not been checked for $minutesSinceLastCheck minutes")
+            Some(feedSource)
+          } else None
+      }
+      .collect {
+        case Some(feedSource) => feedSource
       }
       .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .runWith(Sink.seq)
       .map(_.isEmpty)
-
-  def minutesAgoInMillis(minutesAgo: Int): MillisSinceEpoch =
-    now().addMinutes(-1 * minutesAgo).millisSinceEpoch
 }
 
 case class ActorResponseTimeHealthCheck(portStateActor: ActorRef,
