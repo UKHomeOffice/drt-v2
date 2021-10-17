@@ -18,7 +18,7 @@ object EmptyCapacityProvider extends QueueCapacityProvider {
 
 case class DeskCapacityProvider(maxPerHour: IndexedSeq[Int])
                                (implicit ec: ExecutionContext) extends QueueCapacityProvider {
-  assert(maxPerHour.length == 24)
+  assert(maxPerHour.length == 24, s"There must be 24 hours worth of max desks defined. ${maxPerHour.length} found")
 
   override def capacityAt(timeRange: NumericRange[Long]): Future[IndexedSeq[Int]] = {
     Future.successful(DeskRecs.desksForMillis(timeRange, maxPerHour))
