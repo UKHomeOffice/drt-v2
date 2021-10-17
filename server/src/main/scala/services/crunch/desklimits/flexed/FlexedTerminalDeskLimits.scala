@@ -23,8 +23,10 @@ trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
       val processedQueues = allocatedDesks.keys.toSet
       val remainingFlexedQueues = flexedQueues -- (processedQueues + queue)
       val remainingMinDesks = DeskRecs.desksByMinuteForQueues(minDesksByQueue24Hrs, minuteMillis, remainingFlexedQueues).values.toList
+      println(s"queue: $queue")
       Future.successful(reduceIterables[Int](terminalDesksByMinute :: totalDeployed :: remainingMinDesks)(_ - _))
     } else {
+      println(s"not found queue: $queue")
       maxDesksByQueue24Hrs.getOrElse(queue, EmptyCapacityProvider).capacityAt(minuteMillis)
     }
 }

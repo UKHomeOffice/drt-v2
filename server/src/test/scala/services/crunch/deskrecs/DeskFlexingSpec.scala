@@ -61,16 +61,16 @@ class DeskFlexingSpec extends CrunchTestLike {
     slaByQueue = slas
     )
 
-  s"Given $totalDesks desks, and a set of minimums for RoW ($roWMinDesks) " >> {
-    "When I ask for max desks for EEA " >> {
-      s"I should see $totalDesks minus the RoW min desks passed in" >> {
-        val eeaMaxDesks = totalDesks24.zip(roWMinDesks24).map { case (a, b) => a - b }
-        val expectedEeaMaxDesks = List.fill(minutesToCrunch)(totalDesks - roWMinDesks)
-
-        eeaMaxDesks === expectedEeaMaxDesks
-      }
-    }
-  }
+//  s"Given $totalDesks desks, and a set of minimums for RoW ($roWMinDesks) " >> {
+//    "When I ask for max desks for EEA " >> {
+//      s"I should see $totalDesks minus the RoW min desks passed in" >> {
+//        val eeaMaxDesks = totalDesks24.zip(roWMinDesks24).map { case (a, b) => a - b }
+//        val expectedEeaMaxDesks = List.fill(minutesToCrunch)(totalDesks - roWMinDesks)
+//
+//        eeaMaxDesks === expectedEeaMaxDesks
+//      }
+//    }
+//  }
 
   s"Given workload for EEA & RoW, their minimum desks ($eeaMinDesks & $roWMinDesks), SLAs, and $totalDesks terminal's total desks " >> {
     "When I ask for desk recommendations using a mock optimiser " >> {
@@ -95,60 +95,60 @@ class DeskFlexingSpec extends CrunchTestLike {
     }
   }
 
-  s"Given workload for EEA & RoW, FastTrack & EGates " >> {
-    "When I ask for desk recommendations using a mock optimiser " >> {
-      val observer = new MockWithObserver
-
-      val queues = List(FastTrack, NonEeaDesk, EeaDesk)
-      val eeaMaxDesks = totalDesks - roWMinDesks - ftMinDesks
-      val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
-      val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
-
-      val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
-
-      deskrecs.TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, Iterable.fill(egateMaxDesks)(10))
-        .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
-
-      s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks" >> {
-        val expectedMaxEea = List.fill(minutesToCrunch)(eeaMaxDesks)
-        val expectedMaxRoW = List.fill(minutesToCrunch)(roWMaxDesks)
-        val expectedMaxFt = List.fill(minutesToCrunch)(ftMaxDesks)
-        val expectedObservedMaxDesks = List(expectedMaxEea, expectedMaxRoW, expectedMaxFt)
-
-        observer.observedMaxDesks === expectedObservedMaxDesks
-      }
-    }
-  }
-
-  s"Given workload for EGates, EEA & RoW, FastTrack & EGates " >> {
-    "When I ask for desk recommendations using a mock optimiser " >> {
-      val observer = new MockWithObserver
-
-      val queues = List(EGate, FastTrack, NonEeaDesk, EeaDesk)
-
-      val egateMaxDesks = 15
-      val egateMaxDesks24 = List.fill(minutesToCrunch)(egateMaxDesks)
-      val eeaMaxDesks = totalDesks - roWMinDesks - ftMinDesks
-      val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
-      val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
-
-      val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
-
-      deskrecs.TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, Iterable.fill(egateMaxDesks)(10))
-        .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
-
-      s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks, EGate: $egateMaxDesks" >> {
-        val expectedMaxEea = List.fill(minutesToCrunch)(eeaMaxDesks)
-        val expectedMaxRoW = List.fill(minutesToCrunch)(roWMaxDesks)
-        val expectedMaxFt = List.fill(minutesToCrunch)(ftMaxDesks)
-        val expectedMaxEGate = egateMaxDesks24
-
-        val expectedObservedMaxDesks = List(expectedMaxEea, expectedMaxRoW, expectedMaxFt, expectedMaxEGate)
-
-        observer.observedMaxDesks === expectedObservedMaxDesks
-      }
-    }
-  }
+//  s"Given workload for EEA & RoW, FastTrack & EGates " >> {
+//    "When I ask for desk recommendations using a mock optimiser " >> {
+//      val observer = new MockWithObserver
+//
+//      val queues = List(FastTrack, NonEeaDesk, EeaDesk)
+//      val eeaMaxDesks = totalDesks - roWMinDesks - ftMinDesks
+//      val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
+//      val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
+//
+//      val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
+//
+//      deskrecs.TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, Iterable.fill(egateMaxDesks)(10))
+//        .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
+//
+//      s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks" >> {
+//        val expectedMaxEea = List.fill(minutesToCrunch)(eeaMaxDesks)
+//        val expectedMaxRoW = List.fill(minutesToCrunch)(roWMaxDesks)
+//        val expectedMaxFt = List.fill(minutesToCrunch)(ftMaxDesks)
+//        val expectedObservedMaxDesks = List(expectedMaxEea, expectedMaxRoW, expectedMaxFt)
+//
+//        observer.observedMaxDesks === expectedObservedMaxDesks
+//      }
+//    }
+//  }
+//
+//  s"Given workload for EGates, EEA & RoW, FastTrack & EGates " >> {
+//    "When I ask for desk recommendations using a mock optimiser " >> {
+//      val observer = new MockWithObserver
+//
+//      val queues = List(EGate, FastTrack, NonEeaDesk, EeaDesk)
+//
+//      val egateMaxDesks = 15
+//      val egateMaxDesks24 = List.fill(minutesToCrunch)(egateMaxDesks)
+//      val eeaMaxDesks = totalDesks - roWMinDesks - ftMinDesks
+//      val roWMaxDesks = totalDesks - ftMinDesks - eeaMinDesks
+//      val ftMaxDesks = totalDesks - eeaMinDesks - roWMinDesks
+//
+//      val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks24, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
+//
+//      deskrecs.TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, Iterable.fill(egateMaxDesks)(10))
+//        .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
+//
+//      s"I should observe the max desks as EEA: $eeaMaxDesks, RoW: $roWMaxDesks, FT: $ftMaxDesks, EGate: $egateMaxDesks" >> {
+//        val expectedMaxEea = List.fill(minutesToCrunch)(eeaMaxDesks)
+//        val expectedMaxRoW = List.fill(minutesToCrunch)(roWMaxDesks)
+//        val expectedMaxFt = List.fill(minutesToCrunch)(ftMaxDesks)
+//        val expectedMaxEGate = egateMaxDesks24
+//
+//        val expectedObservedMaxDesks = List(expectedMaxEea, expectedMaxRoW, expectedMaxFt, expectedMaxEGate)
+//
+//        observer.observedMaxDesks === expectedObservedMaxDesks
+//      }
+//    }
+//  }
 
   private def mockLoads(queues: List[Queue]): Map[Queue, Seq[Double]] = queues.map(q => (q, List.fill(minutesToCrunch)(10d))).toMap
 }
