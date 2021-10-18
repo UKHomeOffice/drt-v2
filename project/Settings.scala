@@ -40,7 +40,7 @@ object Settings {
     val uTest = "0.7.4"
     val h2 = "1.4.197"
 
-    val akka = "2.5.23"
+    val akka = "2.6.8"
     val akkaStreamContrib = "0.9"
 
     val specs2 = "4.6.0"
@@ -78,7 +78,7 @@ object Settings {
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "1.2.0"
-    val akkaHttp = "10.1.9"
+    val akkaHttp = "10.2.6"
     val slick = "3.3.2"
     val censorinus = "2.1.13"
     val janinoVersion = "3.1.6"
@@ -160,17 +160,17 @@ object Settings {
     "com.h2database" % "h2" % h2 % Test,
 
     "com.typesafe" % "config" % typesafeConfig,
-    "com.typesafe.akka" %% "akka-testkit" % akka % "test",
-    "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
-    "com.typesafe.akka" %% "akka-persistence" % akka,
-    "com.typesafe.akka" %% "akka-persistence-query" % akka,
-    "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib,
-    "com.typesafe.akka" %% "akka-slf4j" % akka,
-    "com.typesafe.akka" %% "akka-http" % akkaHttp,
-    "com.typesafe.akka" %% "akka-http-caching" % akkaHttp,
-    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttp,
-    "com.typesafe.akka" %% "akka-http-xml" % akkaHttp,
-    "com.typesafe.akka" %% "akka-stream" % akka,
+    "com.typesafe.akka" %% "akka-testkit" % akka % "test" force(),
+    "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test" force(),
+    "com.typesafe.akka" %% "akka-persistence" % akka force(),
+    "com.typesafe.akka" %% "akka-persistence-query" % akka force(),
+    "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib ,
+    "com.typesafe.akka" %% "akka-slf4j" % akka force(),
+    "com.typesafe.akka" %% "akka-http" % akkaHttp force(),
+    "com.typesafe.akka" %% "akka-http-caching" % akkaHttp force(),
+    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttp force(),
+    "com.typesafe.akka" %% "akka-http-xml" % akkaHttp force(),
+    "com.typesafe.akka" %% "akka-stream" % akka force(),
 
     "com.typesafe.play" %% "play-json" % playJson,
     "com.typesafe.play" %% "play-iteratees" % playIteratees,
