@@ -46,14 +46,13 @@ object DynamicRunnableDeskRecs {
                                    portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,
                                    maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
                                    redListUpdatesProvider: () => Future[RedListUpdates],
-                                   egateBanksProvider: () => Future[PortEgateBanksUpdates],
                                   )
                                   (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
     Flow[CrunchRequest]
       .via(addArrivals(arrivalsProvider))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
       .via(updateSplits(splitsSink))
-      .via(toDeskRecs(maxDesksProviders, portDesksAndWaitsProvider, redListUpdatesProvider, egateBanksProvider))
+      .via(toDeskRecs(maxDesksProviders, portDesksAndWaitsProvider, redListUpdatesProvider))
 
   private def updateSplits(splitsSink: ActorRef)
                           (implicit ec: ExecutionContext, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
@@ -68,7 +67,6 @@ object DynamicRunnableDeskRecs {
   private def toDeskRecs(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
                          portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,
                          redListUpdatesProvider: () => Future[RedListUpdates],
-                         egateBanksProvider: () => Future[PortEgateBanksUpdates],
                         )
                         (implicit ec: ExecutionContext, mat: Materializer): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), PortStateQueueMinutes, NotUsed] = {
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
@@ -77,7 +75,6 @@ object DynamicRunnableDeskRecs {
           log.info(s"Crunch starting: ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
           for {
             redListUpdates <- redListUpdatesProvider()
-            egateBanks <- egateBanksProvider()
             deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, portDesksAndWaitsProvider.flightsToLoads(FlightsWithSplits(flights), redListUpdates), maxDesksProviders)
           } yield {
             log.info(s"Crunch finished: (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")

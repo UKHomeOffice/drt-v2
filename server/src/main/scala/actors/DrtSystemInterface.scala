@@ -55,7 +55,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
-import uk.gov.homeoffice.drt.egates.{EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
@@ -90,9 +90,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   private val maxBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.maximum-seconds")
   val restartOnStop: RestartOnStop = RestartOnStop(minBackoffSeconds seconds, maxBackoffSeconds seconds)
 
+  val defaultEgates: Map[Terminal, EgateBanksUpdates] = airportConfig.eGateBankSizes.mapValues { banks =>
+    val effectiveFrom = SDate("2020-01-01T00:00").millisSinceEpoch
+    EgateBanksUpdates(List(EgateBanksUpdate(effectiveFrom, EgateBank.fromAirportConfig(banks))))
+  }
+
   val alertsActor: ActorRef = restartOnStop.actorOf(Props(new AlertsActor(now)), "alerts-actor")
   val redListUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new RedListUpdatesActor(now)), "red-list-updates-actor")
-  val egateBanksUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new EgateBanksUpdatesActor(now)), "egate-banks-updates-actor")
+  val egateBanksUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new EgateBanksUpdatesActor(now, defaultEgates, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, params.forecastMaxDays)), "egate-banks-updates-actor")
   val liveBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new CirriumLiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
@@ -193,7 +198,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       portDesksAndWaitsProvider = portDeskRecs,
       maxDesksProviders = deskLimitsProviders,
       redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-      egateBanksProvider = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
     )
 
     val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor)
@@ -208,6 +212,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor)
 
     redListUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
+    egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor)
 

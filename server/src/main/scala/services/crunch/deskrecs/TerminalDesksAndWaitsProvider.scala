@@ -65,6 +65,10 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int],
                       log.error(s"Crunch failed for $queue", t)
                       queueRecsSoFar
                   }
+                  if (queue == EGate) {
+                    println(s"Crunching ${SDate(minuteMillis.min).toISOString()}. Max egates: ${maxDesks}")
+                  }
+
                   log.info(s"$queue crunch for ${SDate(minuteMillis.min).toISOString()} took: ${System.currentTimeMillis() - start}ms")
                   optimisedDesks
               }

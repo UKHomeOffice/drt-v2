@@ -59,40 +59,40 @@ trait WithEgateBanks {
 }
 
 object EgateBanksJsonFormats extends DefaultJsonProtocol {
-    implicit object egateBanksUpdateJsonFormat extends RootJsonFormat[EgateBanksUpdate] {
-      override def write(obj: EgateBanksUpdate): JsValue = {
-        val banks = obj.banks.map { bank =>
-          JsArray(bank.gates.map(_.toJson).toVector)
-        }
-        JsObject(Map(
-          "effectiveFrom" -> JsNumber(obj.effectiveFrom),
-          "banks" -> JsArray(banks.toVector),
-        ))
+  implicit object egateBanksUpdateJsonFormat extends RootJsonFormat[EgateBanksUpdate] {
+    override def write(obj: EgateBanksUpdate): JsValue = {
+      val banks = obj.banks.map { bank =>
+        JsArray(bank.gates.map(_.toJson).toVector)
       }
-
-      override def read(json: JsValue): EgateBanksUpdate = json match {
-        case JsObject(fields) =>
-          val maybeStuff = for {
-            effectiveFrom <- fields.get("effectiveFrom").collect { case JsNumber(value) => value.toLong }
-            banks <- fields.get("banks").collect {
-              case JsArray(jsBanks) =>
-                jsBanks.collect {
-                  case JsObject(bankObj) =>
-                    bankObj.getOrElse("gates", throw new Exception(s"Expected gates field")) match {
-                      case JsArray(bank) =>
-                        EgateBank(bank.map {
-                          case JsBoolean(gateIsOpen) => gateIsOpen
-                        })
-                      case unexpected => throw new Exception(s"Expected to find JsArray, but got ${unexpected.getClass}")
-                    }
-                  case unexpected => throw new Exception(s"Expected to find JsObject, but got ${unexpected.getClass}")
-                }
-              case unexpected => throw new Exception(s"Expected to find JsArray, but got ${unexpected.getClass}")
-            }
-          } yield EgateBanksUpdate(effectiveFrom, banks)
-          maybeStuff.getOrElse(throw new Exception("Failed to deserialise EgateBanksUpdate json"))
-      }
+      JsObject(Map(
+        "effectiveFrom" -> JsNumber(obj.effectiveFrom),
+        "banks" -> JsArray(banks.toVector),
+      ))
     }
+
+    override def read(json: JsValue): EgateBanksUpdate = json match {
+      case JsObject(fields) =>
+        val maybeStuff = for {
+          effectiveFrom <- fields.get("effectiveFrom").collect { case JsNumber(value) => value.toLong }
+          banks <- fields.get("banks").collect {
+            case JsArray(jsBanks) =>
+              jsBanks.collect {
+                case JsObject(bankObj) =>
+                  bankObj.getOrElse("gates", throw new Exception(s"Expected gates field")) match {
+                    case JsArray(bank) =>
+                      EgateBank(bank.map {
+                        case JsBoolean(gateIsOpen) => gateIsOpen
+                      })
+                    case unexpected => throw new Exception(s"Expected to find JsArray, but got ${unexpected.getClass}")
+                  }
+                case unexpected => throw new Exception(s"Expected to find JsObject, but got ${unexpected.getClass}")
+              }
+            case unexpected => throw new Exception(s"Expected to find JsArray, but got ${unexpected.getClass}")
+          }
+        } yield EgateBanksUpdate(effectiveFrom, banks)
+        maybeStuff.getOrElse(throw new Exception("Failed to deserialise EgateBanksUpdate json"))
+    }
+  }
 
   implicit object egateBanksUpdatesJsonFormat extends RootJsonFormat[EgateBanksUpdates] {
     override def write(obj: EgateBanksUpdates): JsValue = JsArray(obj.updates.map(_.toJson).toVector)
@@ -137,7 +137,12 @@ object EgateBanksJsonFormats extends DefaultJsonProtocol {
     }
   }
 
-  implicit val setEgateBanksUpdatesJsonFormat: RootJsonFormat[SetEgateBanksUpdate] = jsonFormat3(SetEgateBanksUpdate.apply)
+  implicit val setEgateBanksUpdatesJsonFormat: RootJsonFormat[SetEgateBanksUpdate] = jsonFormat(
+    SetEgateBanksUpdate.apply,
+    "terminal",
+    "originalDate",
+    "egateBanksUpdate"
+  )
 
   implicit val portCodeJsonFormat: RootJsonFormat[PortCode] = jsonFormat(PortCode.apply, "iata")
 }

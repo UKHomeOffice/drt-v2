@@ -13,15 +13,17 @@ import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
+import drt.shared.{MilliTimes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
-import uk.gov.homeoffice.drt.egates.{DeleteEgateBanksUpdates, EgateBanksUpdateCommand, EgateBanksUpdates, PortEgateBanksUpdates, SetEgateBanksUpdate}
+import services.SDate
+import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import uk.gov.homeoffice.drt.egates._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
 
@@ -39,7 +41,11 @@ object EgateBanksUpdatesActor {
     .map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
 }
 
-class EgateBanksUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[PortEgateBanksUpdates] {
+class EgateBanksUpdatesActor(val now: () => SDateLike,
+                             defaults: Map[Terminal, EgateBanksUpdates],
+                             offsetMinutes: Int,
+                             durationMinutes: Int,
+                             maxForecastDays: Int) extends RecoveryActorLike with PersistentDrtActor[PortEgateBanksUpdates] {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId: String = "egate-banks-updates"
@@ -75,16 +81,18 @@ class EgateBanksUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike
   var subscriberMessageQueue: List[EgateBanksUpdateCommand] = List()
   var awaitingSubscriberAck = false
 
-  var maybeCrunchRequestQueueSource: Option[ActorRef] = None
+  var maybeCrunchRequestQueueActor: Option[ActorRef] = None
   var readyToEmit: Boolean = false
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val timeout: Timeout = new Timeout(60.seconds)
 
-  override def initialState: PortEgateBanksUpdates = PortEgateBanksUpdates(Map())
+  override def initialState: PortEgateBanksUpdates = PortEgateBanksUpdates(defaults)
 
   override def receiveCommand: Receive = {
     case SetCrunchRequestQueue(crunchRequestQueue) =>
+      log.info("Received crunch request actor")
+      maybeCrunchRequestQueueActor = Option(crunchRequestQueue)
 
     case AddSubscriber(subscriber) =>
       log.info(s"Received subscriber")
@@ -95,8 +103,8 @@ class EgateBanksUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike
         log.info("Check if we have something to send")
         if (!awaitingSubscriberAck) {
           if (subscriberMessageQueue.nonEmpty) {
-            log.info("Sending red list updates to subscriber")
-            sub.offer(subscriberMessageQueue).onComplete{
+            log.info("Sending egate updates to subscriber")
+            sub.offer(subscriberMessageQueue).onComplete {
               case Success(result) =>
                 if (result != Enqueued) log.error(s"Failed to enqueue red list updates")
                 self ! ReceivedSubscriberAck
@@ -117,6 +125,13 @@ class EgateBanksUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike
 
     case updates: SetEgateBanksUpdate =>
       log.info(s"Saving EgateBanksUpdates $updates")
+
+      maybeCrunchRequestQueueActor.foreach { requestActor =>
+        (updates.firstMinuteAffected to SDate.now().addDays(maxForecastDays).millisSinceEpoch by MilliTimes.oneHourMillis).map { millis =>
+          requestActor ! CrunchRequest(SDate(millis).toLocalDate, offsetMinutes, durationMinutes)
+        }
+      }
+
       state = state.update(updates)
       persistAndMaybeSnapshot(EgateBanksUpdatesMessageConversion.setUpdatesToMessage(updates))
       subscriberMessageQueue = updates :: subscriberMessageQueue

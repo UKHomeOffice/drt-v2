@@ -63,7 +63,6 @@ object Scenarios {
       portDesksAndWaitsProvider = portDesksAndWaitsProvider,
       maxDesksProviders = terminalDeskLimits,
       redListUpdatesProvider = redListUpdatesProvider,
-      egateBanksProvider = egateBanksProvider,
     )
 
     class DummyPersistentActor extends Actor {

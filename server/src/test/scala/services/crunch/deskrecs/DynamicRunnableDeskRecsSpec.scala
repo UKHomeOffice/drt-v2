@@ -140,9 +140,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       portDesksAndWaitsProvider = desksAndWaitsProvider,
       maxDesksProviders = maxDesksProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-      egateBanksProvider = () => Future.successful(PortEgateBanksUpdates(defaultAirportConfig.eGateBankSizes.map {
-        case (terminal, banks) => (terminal, EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))
-      }))
     )
 
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)

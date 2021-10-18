@@ -27,7 +27,7 @@ trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
       Future.successful(reduceIterables[Int](terminalDesksByMinute :: totalDeployed :: remainingMinDesks)(_ - _))
     } else {
       println(s"not found queue: $queue")
-      maxDesksByQueue24Hrs.getOrElse(queue, EmptyCapacityProvider).capacityAt(minuteMillis)
+      maxDesksByQueue24Hrs.getOrElse(queue, EmptyCapacityProvider).capacityForPeriod(minuteMillis)
     }
 }
 

@@ -65,7 +65,6 @@ class RedListUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike wi
   var subscriberMessageQueue: List[RedListUpdateCommand] = List()
   var awaitingSubscriberAck = false
 
-  var maybeCrunchRequestQueueSource: Option[ActorRef] = None
   var readyToEmit: Boolean = false
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
@@ -74,8 +73,6 @@ class RedListUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike wi
   override def initialState: RedListUpdates = RedListUpdates(RedList.redListChanges)
 
   override def receiveCommand: Receive = {
-    case SetCrunchRequestQueue(crunchRequestQueue) =>
-
     case AddSubscriber(subscriber) =>
       log.info(s"Received subscriber")
       maybeSubscriber = Option(subscriber)

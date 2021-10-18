@@ -147,9 +147,6 @@ class TestDrtActor extends Actor {
           portDesksAndWaitsProvider = portDeskRecs,
           maxDesksProviders = deskLimitsProviders,
           redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-          egateBanksProvider = () => Future.successful(PortEgateBanksUpdates(airportConfig.eGateBankSizes.map {
-            case (terminal, banks) => (terminal, EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))
-          }))
         )
 
         val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)

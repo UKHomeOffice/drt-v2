@@ -12,6 +12,6 @@ case class FixedTerminalDeskLimits(minDesksByQueue24Hrs: Map[Queue, IndexedSeq[I
   override def maxDesksForMinutes(minuteMillis: NumericRange[Long],
                                   queue: Queue,
                                   allocatedDesks: Map[Queue, List[Int]]): Future[IndexedSeq[Int]] = {
-    maxDesksByQueue24Hrs.getOrElse(queue, EmptyCapacityProvider).capacityAt(minuteMillis)
+    maxDesksByQueue24Hrs.getOrElse(queue, EmptyCapacityProvider).capacityForPeriod(minuteMillis)
   }
 }
