@@ -5,7 +5,6 @@ import actors.acking.AckingReceiver.Ack
 import actors.persistent.RedListUpdatesActor.AddSubscriber
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Status}
 import akka.pattern.ask
-import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
 import akka.stream.scaladsl.Source
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
@@ -195,8 +194,6 @@ class RestartActor(startSystem: () => List[KillSwitch],
     case ResetData =>
       val replyTo = sender()
 
-      resetInMemoryData()
-
       log.info(s"About to shut down everything. Pressing kill switches")
 
       currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
@@ -222,10 +219,6 @@ class RestartActor(startSystem: () => List[KillSwitch],
 
   def startTestSystem(): Unit = currentKillSwitches = startSystem()
 
-  def resetInMemoryData(): Unit = {
-    StorageExtension(context.system).journalStorage ! InMemoryJournalStorage.ClearJournal
-    StorageExtension(context.system).snapshotStorage ! InMemorySnapshotStorage.ClearSnapshots
-  }
 }
 
 case object StartTestSystem

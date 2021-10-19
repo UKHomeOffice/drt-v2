@@ -40,7 +40,7 @@ object Settings {
     val uTest = "0.7.4"
     val h2 = "1.4.197"
 
-    val akka = "2.6.8"
+    val akka = "2.6.17"
     val akkaStreamContrib = "0.9"
 
     val specs2 = "4.6.0"
@@ -58,7 +58,6 @@ object Settings {
     val csvCommons = "1.4"
     val pprint = "0.5.6"
     val scalaCheck = "1.13.4"
-    val akkaPersistenceInMemory = "2.5.15.2"
     val akkaPersistenceJdbc = "3.5.0"
     val bluebus = "0.3.3-DRT"
     val postgres = "42.2.2"
@@ -141,7 +140,6 @@ object Settings {
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
-    "com.github.dnvriend" %% "akka-persistence-inmemory" % akkaPersistenceInMemory,
     "com.github.gphat" % "censorinus_2.12" % censorinus,
     "com.pauldijou" %% "jwt-core" % "4.0.0",
     "com.hierynomus" % "sshj" % sshJ,
@@ -158,8 +156,8 @@ object Settings {
     "net.databinder.dispatch" %% "dispatch-core" % "0.13.4",
 
     "com.h2database" % "h2" % h2 % Test,
-
     "com.typesafe" % "config" % typesafeConfig,
+    "com.typesafe.akka" %% "akka-persistence-testkit" % akka force(),
     "com.typesafe.akka" %% "akka-testkit" % akka % "test" force(),
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test" force(),
     "com.typesafe.akka" %% "akka-persistence" % akka force(),

@@ -38,7 +38,7 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
         inheritedAttributes.get[Attributes.Name].map(_.n).getOrElse(super.stageActorName)
 
 
-      val ref: ActorRef = getEagerStageActor(eagerMaterializer, poisonPillCompatibility = true) {
+      val ref: ActorRef = getEagerStageActor(eagerMaterializer) {
         case (_, m: CrunchRequest @unchecked) =>
           buffer += m
           persistentActor ! m

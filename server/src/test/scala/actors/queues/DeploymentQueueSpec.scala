@@ -67,9 +67,6 @@ class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
         watch(actor)
         actor ! UpdatedMillis(Iterable(today, tomorrow))
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 5), 120, durationMinutes))
-        Thread.sleep(200)
-        actor ! PoisonPill
-        expectMsgAllClassOf(classOf[Terminated])
 
         startQueueActor(daysSourceProbe, defaultAirportConfig.crunchOffsetMinutes)
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 6), 120, durationMinutes))
