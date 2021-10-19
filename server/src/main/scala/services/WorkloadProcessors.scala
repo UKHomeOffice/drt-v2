@@ -1,6 +1,8 @@
 package services
 
-sealed trait WorkloadProcessorsLike {
+case class WorkloadProcessorsByMinute(processors: IndexedSeq[WorkloadProcessors])
+
+sealed trait WorkloadProcessors {
   val averageServerSize: Int
 
   def capacityForServers(servers: Int): Int
@@ -8,7 +10,7 @@ sealed trait WorkloadProcessorsLike {
   val forWorkload: PartialFunction[Double, Int]
 }
 
-case object DeskWorkloadProcessors extends WorkloadProcessorsLike {
+case object DeskWorkloadProcessors extends WorkloadProcessors {
   override val averageServerSize: Int = 1
 
   override def capacityForServers(servers: Int): Int = servers
@@ -18,7 +20,7 @@ case object DeskWorkloadProcessors extends WorkloadProcessorsLike {
   }
 }
 
-case class EGateWorkloadProcessors(processors: Iterable[Int]) extends WorkloadProcessorsLike {
+case class EGateWorkloadProcessors(processors: Iterable[Int]) extends WorkloadProcessors {
   override val averageServerSize: Int = processors.size match {
     case 0 => 0
     case numberOfProcessors =>
