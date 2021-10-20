@@ -3,12 +3,12 @@ package services.crunch.deskrecs
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
+import org.slf4j.{Logger, LoggerFactory}
+import services._
+import services.crunch.desklimits.TerminalDeskLimitsLike
+import uk.gov.homeoffice.drt.egates.{EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import org.slf4j.{Logger, LoggerFactory}
-import services.crunch.desklimits.TerminalDeskLimitsLike
-import services._
-import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdates, PortEgateBanksUpdates}
 
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
@@ -46,39 +46,41 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int],
 
     val queues = Source(queuePriority.filter(queuesToProcess.contains))
 
-    queues
-      .runFoldAsync(Map[Queue, (Iterable[Int], Iterable[Int])]()) {
-        case (queueRecsSoFar, queue) =>
-          log.debug(s"Optimising $queue")
-          val queueWork = loadsByQueue(queue)
-          val queueDeskAllocations = queueRecsSoFar.mapValues { case (desks, _) => desks.toList }
+    egateBanksProvider().map { egateBanksUpdates =>
+      queues
+        .runFoldAsync(Map[Queue, (Iterable[Int], Iterable[Int])]()) {
+          case (queueRecsSoFar, queue) =>
+            log.debug(s"Optimising $queue")
+            val queueWork = loadsByQueue(queue)
+            val queueDeskAllocations = queueRecsSoFar.mapValues { case (desks, _) => desks.toList }
 
-          for {
-            (minDesks, maxDesks) <- deskLimitsProvider.deskLimitsForMinutes(minuteMillis, queue, queueDeskAllocations)
-            egateBanksUpdates <- egateBanksProvider()
-          } yield {
-            queueWork match {
-              case noWork if noWork.isEmpty || noWork.max == 0 =>
-                log.info(s"No workload to crunch for $queue on ${SDate(minuteMillis.min).toISOString()}. Filling with min desks and zero wait times")
-                queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0))))
-              case someWork =>
-                val start = System.currentTimeMillis()
-                val processors = if (queue == EGate) EgateWorkloadProcessorsProvider(egateBanksUpdates.forPeriod(minuteMillis)) else DeskWorkloadProcessorsProvider
+            for {
+              (minDesks, maxDesks) <- deskLimitsProvider.deskLimitsForMinutes(minuteMillis, queue, queueDeskAllocations)
+            } yield {
+              queueWork match {
+                case noWork if noWork.isEmpty || noWork.max == 0 =>
+                  log.info(s"No workload to crunch for $queue on ${SDate(minuteMillis.min).toISOString()}. Filling with min desks and zero wait times")
+                  queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0))))
+                case someWork =>
+                  val start = System.currentTimeMillis()
+                  val processors = if (queue == EGate) {
+                    val endMinute = minuteMillis.min + 60000 * (1440 + 240)
+                    EgateWorkloadProcessorsProvider(egateBanksUpdates.forPeriod(minuteMillis.min to endMinute by 60000))
+                  } else DeskWorkloadProcessorsProvider
+                  val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks.toSeq, OptimiserConfig(slas(queue), processors)) match {
+                    case Success(OptimizerCrunchResult(desks, waits)) =>
+                      queueRecsSoFar + (queue -> ((desks.toList, waits.toList)))
+                    case Failure(t) =>
+                      log.error(s"Crunch failed for $queue", t)
+                      queueRecsSoFar
+                  }
 
-                val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks.toSeq, OptimiserConfig(slas(queue), processors)) match {
-                  case Success(OptimizerCrunchResult(desks, waits)) => queueRecsSoFar + (queue -> ((desks.toList, waits.toList)))
-                  case Failure(t) =>
-                    log.error(s"Crunch failed for $queue", t)
-                    queueRecsSoFar
-                }
-                if (queue == EGate) {
-                  println(s"Crunching ${SDate(minuteMillis.min).toISOString()}. Max egates: ${maxDesks}")
-                }
-
-                log.info(s"$queue crunch for ${SDate(minuteMillis.min).toISOString()} took: ${System.currentTimeMillis() - start}ms")
-                optimisedDesks
+                  log.info(s"$queue crunch for ${SDate(minuteMillis.min).toISOString()} took: ${System.currentTimeMillis() - start}ms")
+                  optimisedDesks
+              }
             }
-          }
-      }
+
+        }
+    }.flatten
   }
 }

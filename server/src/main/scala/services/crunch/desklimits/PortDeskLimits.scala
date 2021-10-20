@@ -41,11 +41,12 @@ object PortDeskLimits {
         minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
         maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
       } yield {
+        val capProviders = capacityProviders(maxDesksByQueue24Hrs, () => egatesProvider(terminal))
         val limits = FlexedTerminalDeskLimits(
           terminalDesksByMinute,
           airportConfig.flexedQueues,
           minDesksByQueue24Hrs,
-          capacityProviders(maxDesksByQueue24Hrs, () => egatesProvider(terminal)))
+          capProviders)
         (terminal, limits)
       }
     }

@@ -49,9 +49,16 @@ case object MockManifestLookupService extends ManifestLookupLike {
 
 object MockEgatesProvider {
   def terminalProvider(airportConfig: AirportConfig): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) => {
-    val banks = EgateBank.fromAirportConfig(airportConfig.eGateBankSizes.getOrElse(terminal, throw new Exception(s"egates for $terminal not found")))
-    val update = EgateBanksUpdate(0L, banks)
-    Future.successful(EgateBanksUpdates(List(update)))
+    airportConfig.eGateBankSizes.get(terminal) match {
+      case Some(sizes) =>
+        val banks = EgateBank.fromAirportConfig(sizes)
+        val update = EgateBanksUpdate(0L, banks)
+        val updates = EgateBanksUpdates(List(update))
+        println(s"mock updates: $updates")
+        Future.successful(updates)
+      case None =>
+        Future.failed(new Exception(s"No egates config found for terminal $terminal"))
+    }
   }
 
   def portProvider(airportConfig: AirportConfig): () => Future[PortEgateBanksUpdates] = () =>

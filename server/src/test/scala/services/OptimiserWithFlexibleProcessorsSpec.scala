@@ -150,7 +150,8 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           val bankSizes = Iterable(1, 1, 1, 1, 1, 1, 1, 1)
           val workPerMinute = 3.5
           val workloadFor60Minutes = IndexedSeq.fill(60)(workPerMinute)
-          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, egateProcessorsProvider(workloadFor60Minutes.size, bankSizes))
+          val provider = egateProcessorsProvider(workloadFor60Minutes.size * 3, bankSizes)
+          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, provider)
 
           val threeBanksFor60Minutes = Seq.fill(60)(3)
 
@@ -165,7 +166,8 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           val bankSizes = Iterable(1, 1, 1, 1, 1, 1, 1, 1)
           val workPerMinute = 3.6
           val workloadFor60Minutes = IndexedSeq.fill(60)(workPerMinute)
-          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, egateProcessorsProvider(workloadFor60Minutes.size, bankSizes))
+          val provider = egateProcessorsProvider(workloadFor60Minutes.size * 3, bankSizes)
+          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, provider)
 
           val fourBanksFor60Minutes = Seq.fill(60)(4)
 
@@ -180,7 +182,8 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           val bankSizes = Iterable(3, 5, 5)
           val workPerMinute = 3d
           val workloadFor60Minutes = IndexedSeq.fill(60)(workPerMinute)
-          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, egateProcessorsProvider(workloadFor60Minutes.size, bankSizes))
+          val provider = egateProcessorsProvider(workloadFor60Minutes.size * 3, bankSizes)
+          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, provider)
 
           val oneBankFor60Minutes = Seq.fill(60)(1)
 
@@ -195,7 +198,8 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           val bankSizes = Iterable(3, 5, 5)
           val workPerMinute = 6d
           val workloadFor60Minutes = IndexedSeq.fill(60)(workPerMinute)
-          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, egateProcessorsProvider(workloadFor60Minutes.size, bankSizes))
+          val provider = egateProcessorsProvider(workloadFor60Minutes.size * 3, bankSizes)
+          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, provider)
 
           val twoBanksFor60Minutes = Seq.fill(60)(2)
 
