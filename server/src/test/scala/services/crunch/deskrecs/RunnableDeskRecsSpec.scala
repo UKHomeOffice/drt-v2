@@ -26,7 +26,6 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
-import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
@@ -103,7 +102,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
 
     val splitsCalc = SplitsCalculator(paxAllocation, airportConfig.terminalPaxSplits, AdjustmentsNoop)
-    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig))
+    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig))
 
     implicit val timeout: Timeout = new Timeout(50.milliseconds)
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
@@ -113,7 +112,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       splitsCalculator = splitsCalc,
       splitsSink = mockSplitsSink,
       portDesksAndWaitsProvider = desksAndWaitsProvider,
-      maxDesksProviders = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.forAirportConfig(airportConfig)),
+      maxDesksProviders = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.terminalProvider(airportConfig)),
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
     )
 

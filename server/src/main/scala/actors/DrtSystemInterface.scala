@@ -151,9 +151,12 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val optimiser: TryCrunch = OptimiserWithFlexibleProcessors.crunch
 
-  val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig))
+  private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
+  val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), egatesProvider)
+
+  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] =
+    terminal => egatesProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
 
   val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks")) {
     PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)

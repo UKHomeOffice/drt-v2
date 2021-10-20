@@ -48,7 +48,9 @@ object Scenarios {
       PortDesksAndWaitsProvider(
         simulationAirportConfig,
         OptimiserWithFlexibleProcessors.crunch,
-        FlightFilter.forPortConfig(simulationAirportConfig))
+        FlightFilter.forPortConfig(simulationAirportConfig),
+        egateBanksProvider,
+      )
 
     val provider = (terminal: Terminal) => egateBanksProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
 

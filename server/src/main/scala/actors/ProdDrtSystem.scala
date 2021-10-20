@@ -102,7 +102,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
   val s3ApiProvider: S3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
   val initialManifestsState: Option[ApiFeedState] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor)
-  log.info(s"Providing latest API Zip Filename from storage: ${initialManifestsState.map(_.latestZipFilename).getOrElse("None")}")
+  system.log.info(s"Providing latest API Zip Filename from storage: ${initialManifestsState.map(_.latestZipFilename).getOrElse("None")}")
   val latestZipFileName: String = S3ApiProvider.latestUnexpiredDqZipFilename(initialManifestsState.map(_.latestZipFilename), now, expireAfterMillis)
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")

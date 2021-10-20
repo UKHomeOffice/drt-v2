@@ -48,11 +48,14 @@ case object MockManifestLookupService extends ManifestLookupLike {
 }
 
 object MockEgatesProvider {
-  def forAirportConfig(airportConfig: AirportConfig): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) => {
+  def terminalProvider(airportConfig: AirportConfig): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) => {
     val banks = EgateBank.fromAirportConfig(airportConfig.eGateBankSizes.getOrElse(terminal, throw new Exception(s"egates for $terminal not found")))
     val update = EgateBanksUpdate(0L, banks)
     Future.successful(EgateBanksUpdates(List(update)))
   }
+
+  def portProvider(airportConfig: AirportConfig): () => Future[PortEgateBanksUpdates] = () =>
+    Future.successful(PortEgateBanksUpdates(airportConfig.eGateBankSizes.mapValues(banks => EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))))
 }
 
 class TestDrtActor extends Actor {
@@ -108,9 +111,9 @@ class TestDrtActor extends Actor {
 
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
-      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig))
+      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), MockEgatesProvider.portProvider(tc.airportConfig))
 
-      val egatesProvider = MockEgatesProvider.forAirportConfig(airportConfig)
+      val egatesProvider = MockEgatesProvider.terminalProvider(airportConfig)
 
       val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
         PortDeskLimits.flexed(tc.airportConfig, egatesProvider)

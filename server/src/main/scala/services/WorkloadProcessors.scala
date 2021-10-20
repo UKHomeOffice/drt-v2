@@ -1,6 +1,23 @@
 package services
 
-case class WorkloadProcessorsByMinute(processors: IndexedSeq[WorkloadProcessors])
+import uk.gov.homeoffice.drt.egates.EgateBank
+
+trait WorkloadProcessorsProvider {
+  def forMinute(minute: Int): WorkloadProcessors
+}
+
+case class EgateWorkloadProcessorsProvider(processors: IndexedSeq[WorkloadProcessors]) extends WorkloadProcessorsProvider {
+  override def forMinute(minute: Int): WorkloadProcessors = processors(minute)
+}
+
+object EgateWorkloadProcessorsProvider {
+  def apply(banksOverTime: Iterable[Seq[EgateBank]]): EgateWorkloadProcessorsProvider =
+    EgateWorkloadProcessorsProvider(banksOverTime.map(banks => EGateWorkloadProcessors(banks.map(_.gates.count(_ == true)))).toIndexedSeq)
+}
+
+case object DeskWorkloadProcessorsProvider extends WorkloadProcessorsProvider {
+  override def forMinute(minute: Int): WorkloadProcessors = DeskWorkloadProcessors
+}
 
 sealed trait WorkloadProcessors {
   val averageServerSize: Int

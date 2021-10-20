@@ -10,6 +10,7 @@ import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.Crunch.LoadMinute
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueFallbacks, Transfer}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue}
@@ -26,7 +27,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                                      minutesToCrunch: Int,
                                      crunchOffsetMinutes: Int,
-                                     eGateBankSizes: Map[Terminal, Iterable[Int]],
+                                     egatesProvider: () => Future[PortEgateBanksUpdates],
                                      tryCrunch: TryCrunch,
                                      workloadCalculator: WorkloadCalculatorLike
                                     ) extends PortDesksAndWaitsProviderLike {
@@ -47,7 +48,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }.toMap
 
   def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
-    deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch, eGateBankSizes.getOrElse(terminal, Iterable()))
+    deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch, egatesProvider)
 
   override def flightsToLoads(flights: FlightsWithSplits, redListUpdates: RedListUpdates): Map[TQM, LoadMinute] = workloadCalculator
     .flightLoadMinutes(flights, redListUpdates).minutes
@@ -100,7 +101,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 }
 
 object PortDesksAndWaitsProvider {
-  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, flightFilter: FlightFilter): PortDesksAndWaitsProvider = {
+  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, flightFilter: FlightFilter, egatesProvider: () => Future[PortEgateBanksUpdates]): PortDesksAndWaitsProvider = {
     val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,
       airportConfig.queueStatusProvider,
@@ -117,7 +118,7 @@ object PortDesksAndWaitsProvider {
       terminalProcessingTimes = airportConfig.terminalProcessingTimes,
       minutesToCrunch = airportConfig.minutesToCrunch,
       crunchOffsetMinutes = airportConfig.crunchOffsetMinutes,
-      eGateBankSizes = airportConfig.eGateBankSizes,
+      egatesProvider = egatesProvider,
       tryCrunch = tryCrunch,
       workloadCalculator = calculator
     )

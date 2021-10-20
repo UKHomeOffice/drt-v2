@@ -28,16 +28,10 @@ case class DeskCapacityProvider(maxPerHour: IndexedSeq[Int])
 case class EgatesCapacityProvider(egatesProvider: () => Future[EgateBanksUpdates],
                                   defaultEgates: IndexedSeq[EgateBank])
                                  (implicit ec: ExecutionContext) extends QueueCapacityProvider {
-  override def capacityForPeriod(timeRange: NumericRange[Long]): Future[IndexedSeq[Int]] = {
-    egatesProvider().map { egates =>
-      timeRange.map { time =>
-        egates
-          .applyForDate(time, defaultEgates)
-          .map(_.gates.count(_ == true))
-          .sum
-      }
-    }
-  }
+  override def capacityForPeriod(timeRange: NumericRange[Long]): Future[IndexedSeq[Int]] =
+    egatesProvider().map(_.forPeriod(timeRange).map {
+      _.count(_.gates.count(_ == true) > 0)
+    })
 }
 
 trait TerminalDeskLimitsLike {

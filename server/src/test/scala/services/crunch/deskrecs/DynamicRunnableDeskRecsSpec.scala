@@ -25,7 +25,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
-import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
@@ -108,9 +108,7 @@ case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKe
 class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   val airportConfig: AirportConfig = TestDefaults.airportConfigWithEgates
 
-  val mockEgatesProvider: Terminal => Future[EgateBanksUpdates] = MockEgatesProvider.forAirportConfig(airportConfig)
-
-  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, mockEgatesProvider)
+  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.terminalProvider(airportConfig))
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
   val pcpPaxCalcFn: Arrival => Int = PcpUtils.bestPcpPaxEstimate
 
@@ -119,7 +117,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
   val splitsCalculator: SplitsCalculator = manifests.queues.SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, AdjustmentsNoop)
 
-  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig))
+  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig))
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   def setupGraphAndCheckQueuePax(arrival: Arrival,
