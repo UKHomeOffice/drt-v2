@@ -19,7 +19,6 @@ trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
                allocatedDesks: Map[Queue, List[Int]])
               (implicit ec: ExecutionContext): Future[Iterable[Int]] =
     if (flexedQueues.contains(queue)) {
-      println(s"flexing max desks $queue")
       val deployedByQueue = allocatedDesks.values.toList
       val totalDeployed = if (deployedByQueue.nonEmpty) reduceIterables[Int](deployedByQueue)(_ + _) else List()
       val processedQueues = allocatedDesks.keys.toSet
@@ -27,13 +26,7 @@ trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
       val remainingMinDesks = DeskRecs.desksByMinuteForQueues(minDesksByQueue24Hrs, minuteMillis, remainingFlexedQueues).values.toList
       Future.successful(reduceIterables[Int](terminalDesksByMinute :: totalDeployed :: remainingMinDesks)(_ - _))
     } else {
-      println(s"not flexing max desks $queue")
-      val provider = maxDesksByQueue24Hrs.getOrElse(queue, EmptyCapacityProvider)
-      println(s"provider: $provider")
-      provider.capacityForPeriod(minuteMillis).map { cap =>
-        println(s"got cap $cap")
-        cap
-      }
+      maxDesksByQueue24Hrs.getOrElse(queue, EmptyCapacityProvider).capacityForPeriod(minuteMillis)
     }
 }
 

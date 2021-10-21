@@ -54,7 +54,6 @@ object MockEgatesProvider {
         val banks = EgateBank.fromAirportConfig(sizes)
         val update = EgateBanksUpdate(0L, banks)
         val updates = EgateBanksUpdates(List(update))
-        println(s"mock updates: $updates")
         Future.successful(updates)
       case None =>
         Future.failed(new Exception(s"No egates config found for terminal $terminal"))
