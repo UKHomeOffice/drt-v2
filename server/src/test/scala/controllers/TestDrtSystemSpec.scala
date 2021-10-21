@@ -1,7 +1,12 @@
 package controllers
 
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince}
+import akka.actor.ActorSystem
 import akka.pattern.ask
+import akka.persistence.testkit.PersistenceTestKitPlugin
+import akka.persistence.testkit.scaladsl.PersistenceTestKit
+import com.typesafe.config.ConfigFactory
+import controllers.DrtActorSystem.actorSystem
 import drt.shared.CrunchApi._
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -19,7 +24,8 @@ class TestDrtSystemSpec extends CrunchTestLike {
   isolated
 
   "Given a test drt system" >> {
-    val drtSystem = TestDrtSystem(defaultAirportConfig)
+    val actorSystem = ActorSystem("DRT", PersistenceTestKitPlugin.config.withFallback(ConfigFactory.load()))
+    val drtSystem = TestDrtSystem(defaultAirportConfig, PersistenceTestKit(actorSystem), actorSystem)
 
     "When I send its port state actor an arrival" >> {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly)

@@ -39,7 +39,7 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
       val eventualAcks = Future.sequence(Seq(
         queuesActor.ask(MinutesContainer(Iterable(crunchMinute))),
         queuesActor.ask(MinutesContainer(Iterable(crunchMinute.copy(minute = minute2))))))
-      Await.ready(eventualAcks, 1 second)
+      Await.ready(eventualAcks, 5 second)
 
       "I should see it received as an update" >> {
         val expected = List(
@@ -47,7 +47,7 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
           crunchMinute.copy(minute = minute2, lastUpdated = Option(day.millisSinceEpoch)))
           .map(cm => (cm.key, cm)).toMap
 
-        probe.fishForMessage(1 seconds) {
+        probe.fishForMessage(5 seconds) {
           case updates => updates == expected
         }
 
