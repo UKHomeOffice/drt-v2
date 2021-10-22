@@ -133,7 +133,7 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
       }
 
       state = state.update(updates)
-      persistAndMaybeSnapshot(EgateBanksUpdatesMessageConversion.setUpdatesToMessage(updates))
+      persistAndMaybeSnapshot(EgateBanksUpdatesMessageConversion.setEgateBanksUpdatesToMessage(updates))
       subscriberMessageQueue = updates :: subscriberMessageQueue
       self ! SendToSubscriber
       sender() ! updates
@@ -144,7 +144,7 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
 
     case delete: DeleteEgateBanksUpdates =>
       state = state.remove(delete)
-      persistAndMaybeSnapshot(RemoveEgateBanksUpdateMessage(Option(delete.terminal.toString), Option(delete.millis)))
+      persistAndMaybeSnapshot(EgateBanksUpdatesMessageConversion.removeEgateBanksUpdateToMessage(delete))
       subscriberMessageQueue = delete :: subscriberMessageQueue
       self ! SendToSubscriber
       sender() ! delete

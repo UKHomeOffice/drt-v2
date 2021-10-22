@@ -6,6 +6,8 @@ import uk.gov.homeoffice.drt.egates._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object EgateBanksUpdatesMessageConversion {
+  def removeEgateBanksUpdateToMessage(delete: DeleteEgateBanksUpdates): RemoveEgateBanksUpdateMessage =
+    RemoveEgateBanksUpdateMessage(Option(delete.terminal.toString), Option(delete.millis))
 
   def egateBanksUpdateToMessage(egateBanksUpdate: EgateBanksUpdate): EgateBanksUpdateMessage =
     EgateBanksUpdateMessage(
@@ -19,14 +21,14 @@ object EgateBanksUpdatesMessageConversion {
       updates = egateBanksUpdates.updates.map(u => egateBanksUpdateToMessage(u))
     )
 
-  def portUpdatesToMessage(state: PortEgateBanksUpdates): GeneratedMessage =
+  def portUpdatesToMessage(state: PortEgateBanksUpdates): PortEgateBanksUpdatesMessage =
     PortEgateBanksUpdatesMessage(
       state.updatesByTerminal.map { case (terminal, egateBanksUpdates) =>
         egateBanksUpdatesToMessage(terminal, egateBanksUpdates)
       }.toSeq
     )
 
-  def setUpdatesToMessage(updates: SetEgateBanksUpdate): SetEgateBanksUpdateMessage =
+  def setEgateBanksUpdatesToMessage(updates: SetEgateBanksUpdate): SetEgateBanksUpdateMessage =
     SetEgateBanksUpdateMessage(
       Option(updates.terminal.toString),
       Option(updates.originalDate),
