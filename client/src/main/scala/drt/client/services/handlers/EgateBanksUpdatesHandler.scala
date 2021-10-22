@@ -41,7 +41,7 @@ class EgateBanksUpdatesHandler[M](modelRW: ModelRW[M, Pot[PortEgateBanksUpdates]
         .map(_ => DoNothing())
         .recoverWith {
           case _ =>
-            log.error(s"Failed to save Alert. Re-requesting after ${PollDelay.recoveryDelay}")
+            log.error(s"Failed to save egate banks update. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(RetryActionAfter(SaveEgateBanksUpdate(updateToSave), PollDelay.recoveryDelay))
         }
 
@@ -54,7 +54,7 @@ class EgateBanksUpdatesHandler[M](modelRW: ModelRW[M, Pot[PortEgateBanksUpdates]
         .map(_ => DoNothing())
         .recoverWith {
           case _ =>
-            log.error(s"Failed to delete red list update. Re-requesting after ${PollDelay.recoveryDelay}")
+            log.error(s"Failed to delete egate banks update. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(RetryActionAfter(DeleteEgateBanksUpdate(terminal, effectiveFrom), PollDelay.recoveryDelay))
         }
 
