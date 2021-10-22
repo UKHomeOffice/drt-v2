@@ -58,7 +58,7 @@ object Settings {
     val csvCommons = "1.4"
     val pprint = "0.5.6"
     val scalaCheck = "1.13.4"
-    val akkaPersistenceJdbc = "3.5.0"
+    val akkaPersistenceJdbc = "5.0.4"
     val bluebus = "0.3.3-DRT"
     val postgres = "42.2.2"
     val sshJ = "0.24.0"
@@ -157,6 +157,7 @@ object Settings {
 
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
+    "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
     "com.typesafe.akka" %% "akka-persistence-testkit" % akka force(),
     "com.typesafe.akka" %% "akka-testkit" % akka % "test" force(),
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test" force(),
@@ -194,7 +195,6 @@ object Settings {
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
-    "com.github.dnvriend" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
     "org.postgresql" % "postgresql" % postgres,
 
     "org.renjin" % "renjin-script-engine" % renjin,

@@ -7,16 +7,16 @@ import actors.daily._
 import akka.NotUsed
 import akka.actor.{Actor, ActorContext, ActorRef, Props}
 import akka.pattern.{ask, pipe}
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -86,7 +86,7 @@ object PartitionedPortStateActor {
     }
 
   def replyWithPortStateFn(flights: FlightsRequester, queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
-                          (implicit ec: ExecutionContext, mat: ActorMaterializer): PortStateRequester = (replyTo: ActorRef, request: PortStateRequest) =>
+                          (implicit ec: ExecutionContext, mat: Materializer): PortStateRequester = (replyTo: ActorRef, request: PortStateRequest) =>
     combineToPortState(
       flights(request),
       queueMins(request),
@@ -94,7 +94,7 @@ object PartitionedPortStateActor {
     ).pipeTo(replyTo)
 
   def replyWithMinutesAsPortStateFn(queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
-                                   (implicit ec: ExecutionContext, mat: ActorMaterializer): PortStateRequester =
+                                   (implicit ec: ExecutionContext, mat: Materializer): PortStateRequester =
     replyWithPortStateFn(_ => Future(Source(List[FlightsWithSplits]())), queueMins, staffMins)
 
   def forwardRequestAndKillActor(killActor: ActorRef)
@@ -140,7 +140,7 @@ object PartitionedPortStateActor {
   def combineToPortState(flightsStream: Future[Source[FlightsWithSplits, NotUsed]],
                          eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
                          eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
-                        (implicit ec: ExecutionContext, mat: ActorMaterializer): Future[PortState] = {
+                        (implicit ec: ExecutionContext, mat: Materializer): Future[PortState] = {
     val eventualFlights = flightsStream
       .flatMap(source => source
         .log(getClass.getName)
@@ -211,7 +211,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   import PartitionedPortStateActor._
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val mat: Materializer = Materializer.createMaterializer(context)
   implicit val timeout: Timeout = new Timeout(60 seconds)
 
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))

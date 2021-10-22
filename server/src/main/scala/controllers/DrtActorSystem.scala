@@ -4,7 +4,7 @@ import actors.{DrtSystemInterface, ProdDrtSystem}
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.Materializer
 import com.typesafe.config.ConfigFactory
 import play.api.Configuration
 import test.TestDrtSystem

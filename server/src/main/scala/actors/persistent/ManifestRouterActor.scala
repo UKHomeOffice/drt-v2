@@ -3,18 +3,18 @@ package actors.persistent
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.Ack
-import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.arrivals.FeedStateLike
+import actors.persistent.staffing.{GetFeedStatuses, GetState}
+import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
 import actors.{DateRange, SetCrunchRequestQueue}
-import actors.persistent.staffing.{GetFeedStatuses, GetState}
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import akka.stream.{ActorMaterializer, Materializer}
 import akka.util.Timeout
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -58,7 +58,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   override def persistenceId: String = "arrival-manifests"
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val mat: Materializer = Materializer.createMaterializer(context)
   implicit val timeout: Timeout = new Timeout(60 seconds)
 
   var updateRequestsQueue: List[(ActorRef, VoyageManifests)] = List()
