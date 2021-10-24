@@ -119,7 +119,11 @@ class TestDrtActor extends Actor {
 
       val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), MockEgatesProvider.portProvider(tc.airportConfig))
 
-      val egatesProvider = MockEgatesProvider.terminalProvider(airportConfig)
+      val egatesProvider = tc.maybeEgatesProvider match {
+        case None => MockEgatesProvider.terminalProvider(airportConfig)
+        case Some(provider) =>
+          (terminal: Terminal) => provider().map(p => p.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for $terminal")))
+      }
 
       val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
         PortDeskLimits.flexed(tc.airportConfig, egatesProvider)
