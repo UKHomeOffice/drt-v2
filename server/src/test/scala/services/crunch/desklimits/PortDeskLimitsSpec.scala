@@ -17,8 +17,8 @@ class PortDeskLimitsSpec extends CrunchTestLike {
         val eventualUpdates = Future.successful(EgateBanksUpdates(List(EgateBanksUpdate(0L, threeBanks), EgateBanksUpdate(10L, oneBankUpdate))))
         val portDeskLimits = PortDeskLimits.flexed(defaultAirportConfig, Terminal => eventualUpdates)
 
-        val x = Await.result(portDeskLimits(T1).maxDesks(9L to 10L, Queues.EGate, Map()), 1.second)
-        x === List(3, 1)
+        val maxDesks = Await.result(portDeskLimits(T1).maxDesks(9L to 10L, Queues.EGate, Map()), 1.second)
+        maxDesks === List(3, 1)
       }
     }
   }

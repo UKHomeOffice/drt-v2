@@ -3,6 +3,7 @@ package services.crunch.deskrecs
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
+import drt.shared.MilliTimes
 import org.slf4j.{Logger, LoggerFactory}
 import services._
 import services.crunch.desklimits.TerminalDeskLimitsLike
@@ -11,6 +12,7 @@ import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable.{Map, NumericRange}
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -64,8 +66,9 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int],
                 case someWork =>
                   val start = System.currentTimeMillis()
                   val processors = if (queue == EGate) {
-                    val endMinute = minuteMillis.min + 60000 * (1440 + 240)
-                    EgateWorkloadProcessorsProvider(egateBanksUpdates.forPeriod(minuteMillis.min to endMinute by 60000))
+                    val workloadLengthPlus4Hours = (minuteMillis.length + 240).minute.toMillis
+                    val endMinuteWithOverrun = minuteMillis.min + workloadLengthPlus4Hours
+                    EgateWorkloadProcessorsProvider(egateBanksUpdates.forPeriod(minuteMillis.min to endMinuteWithOverrun by MilliTimes.oneMinuteMillis))
                   } else DeskWorkloadProcessorsProvider
                   val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks.toSeq, OptimiserConfig(slas(queue), processors)) match {
                     case Success(OptimizerCrunchResult(desks, waits)) =>
