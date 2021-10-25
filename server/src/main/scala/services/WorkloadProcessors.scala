@@ -1,62 +1,36 @@
 package services
 
-import uk.gov.homeoffice.drt.egates.EgateBank
+import uk.gov.homeoffice.drt.egates.WorkloadProcessor
 
-trait WorkloadProcessorsProvider {
-  def forMinute(minute: Int): WorkloadProcessors
+
+object WorkloadProcessorsProvider {
+  def apply(processorsOverTime: Iterable[Seq[WorkloadProcessor]]): WorkloadProcessorsProvider =
+    WorkloadProcessorsProvider(processorsOverTime.map(processor => WorkloadProcessors(processor)).toIndexedSeq)
 }
 
-case class EgateWorkloadProcessorsProvider(processors: IndexedSeq[WorkloadProcessors]) extends WorkloadProcessorsProvider {
-  override def forMinute(minute: Int): WorkloadProcessors = processors(minute)
+case class WorkloadProcessorsProvider(processorsByMinute: IndexedSeq[WorkloadProcessors]) {
+  def forMinute(minute: Int): WorkloadProcessors = processorsByMinute(minute)
 }
 
-object EgateWorkloadProcessorsProvider {
-  def apply(banksOverTime: Iterable[Seq[EgateBank]]): EgateWorkloadProcessorsProvider =
-    EgateWorkloadProcessorsProvider(banksOverTime.map(banks => EGateWorkloadProcessors(banks.map(_.gates.count(_ == true)))).toIndexedSeq)
-}
-
-case object DeskWorkloadProcessorsProvider extends WorkloadProcessorsProvider {
-  override def forMinute(minute: Int): WorkloadProcessors = DeskWorkloadProcessors
-}
-
-sealed trait WorkloadProcessors {
-  def capacityForServers(servers: Int): Int
-
-  val forWorkload: PartialFunction[Double, Int]
-}
-
-case object DeskWorkloadProcessors extends WorkloadProcessors {
-  override def capacityForServers(servers: Int): Int = servers
-
-  override val forWorkload: PartialFunction[Double, Int] = {
-    case workload => capacityForServers(workload.ceil.toInt)
-  }
-}
-
-case class EGateWorkloadProcessors(processors: Iterable[Int]) extends WorkloadProcessors {
-  val processorsIncludingZero: Iterable[Int] = processors.headOption match {
-    case None => Iterable(0)
-    case Some(zero) if zero == 0 => processors
-    case Some(_) => Iterable(0) ++ processors
-  }
-
-  val cumulativeCapacity: List[Int] = processorsIncludingZero
-    .foldLeft(List[Int]()) {
-      case (acc, processors) => acc.headOption.getOrElse(0) + processors :: acc
+case class WorkloadProcessors(processors: Iterable[WorkloadProcessor]) {
+  val cumulativeCapacity: List[Int] = processors
+    .foldLeft(List[Int](0)) {
+      case (acc, processors) => acc.headOption.getOrElse(0) + processors.maxCapacity :: acc
     }
     .reverse
 
-  val capacityByWorkload: Map[Int, Int] = cumulativeCapacity
+  private val capacityByWorkload: Map[Int, Int] = cumulativeCapacity
     .sliding(2).toList.zipWithIndex
     .flatMap {
       case (capacities, idx) => ((capacities.min + 1) to capacities.max).map(c => (c, idx + 1))
     }.toMap + (0 -> 0)
 
-  val maxCapacity: Int = capacityByWorkload.values.max
+  private val maxCapacity: Int = capacityByWorkload.values.max
 
-  override def capacityForServers(servers: Int): Int = cumulativeCapacity.indices.zip(cumulativeCapacity).toMap.getOrElse(servers, 0)
+  def capacityForServers(servers: Int): Int =
+    cumulativeCapacity.indices.zip(cumulativeCapacity).toMap.getOrElse(servers, 0)
 
-  override val forWorkload: PartialFunction[Double, Int] = {
+  val forWorkload: PartialFunction[Double, Int] = {
     case noWorkload if noWorkload <= 0 => 0
     case someWorkload => capacityByWorkload.getOrElse(someWorkload.ceil.toInt, maxCapacity)
   }

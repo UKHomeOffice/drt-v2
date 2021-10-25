@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import org.renjin.sexp.{DoubleVector, IntVector}
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.egates.{Desk, EgateBank}
 
 import java.io.InputStream
 import javax.script.{ScriptEngine, ScriptEngineManager}
@@ -34,13 +35,15 @@ class OptimiserSpec extends Specification {
     engine.eval("results <- leftward.desks(workload, xmin=minDesks, xmax=maxDesks, block.size=5, backlog=0)$desks")
     val rResult = engine.eval("results").asInstanceOf[DoubleVector].toDoubleArray.map(_.toInt).toList
 
-    val egateProcessorsProvider: EgateWorkloadProcessorsProvider =
-      EgateWorkloadProcessorsProvider(IndexedSeq.fill(workloads.size)(EGateWorkloadProcessors(Iterable.fill(10)(1))))
+    val egateProcessorsProvider: WorkloadProcessorsProvider =
+      WorkloadProcessorsProvider(IndexedSeq.fill(workloads.size)(WorkloadProcessors(IndexedSeq(EgateBank(IndexedSeq.fill(10)(true))))))
 
     val newResult = OptimiserWithFlexibleProcessors.leftwardDesks(workloads, minDesks.toIndexedSeq, maxDesks.toIndexedSeq, 5, 0, egateProcessorsProvider)
 
     rResult === newResult
   }
+
+  private val desksWorkloadsProvider: WorkloadProcessorsProvider = WorkloadProcessorsProvider(IndexedSeq(WorkloadProcessors(Iterable(Desk))))
 
   "process.work comparison" >> {
     loadOptimiserScript
@@ -53,7 +56,7 @@ class OptimiserSpec extends Specification {
     engine.eval("results <- process.work(work, desks, 18, 0)$wait")
     val rResult = engine.eval("results").asInstanceOf[IntVector].toIntArray.toList
 
-    val newResult = OptimiserWithFlexibleProcessors.tryProcessWork(work, desks.toIndexedSeq, 18, IndexedSeq(0), DeskWorkloadProcessorsProvider).map(_.waits).get
+    val newResult = OptimiserWithFlexibleProcessors.tryProcessWork(work, desks.toIndexedSeq, 18, IndexedSeq(0), desksWorkloadsProvider).map(_.waits).get
 
     rResult === newResult
   }
@@ -68,7 +71,7 @@ class OptimiserSpec extends Specification {
       val blockSize = 5
 
       val rDesks = OptimiserRInterface.leftwardDesksR(winWork, winXmin, winXmax, blockSize, backlog = 0d)
-      val sDesks = OptimiserWithFlexibleProcessors.leftwardDesks(winWork, winXmin, winXmax, blockSize, backlog = 0d, DeskWorkloadProcessorsProvider)
+      val sDesks = OptimiserWithFlexibleProcessors.leftwardDesks(winWork, winXmin, winXmax, blockSize, backlog = 0d, desksWorkloadsProvider)
 
       rDesks === sDesks
     }
@@ -95,7 +98,7 @@ class OptimiserSpec extends Specification {
       engine.eval("result <- rolling.fair.xmax(work, xmin=xmin, block.size=5, sla=sla, target.width=60, rolling.buffer=120)")
       val fairXmax = engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.map(_.toInt).toList
 
-      val newResult = OptimiserWithFlexibleProcessors.rollingFairXmax(workloads, minDesks, 5, sla, 60, 120, DeskWorkloadProcessorsProvider)
+      val newResult = OptimiserWithFlexibleProcessors.rollingFairXmax(workloads, minDesks, 5, sla, 60, 120, desksWorkloadsProvider)
 
       newResult == fairXmax.toIndexedSeq === true
     }
@@ -157,7 +160,7 @@ class OptimiserSpec extends Specification {
     engine.eval("result <- optimise.win(work=work, xmin=xmin, xmax=xmax, sla=sla, weight.churn=w_churn, weight.pax=w_pax, weight.staff=w_staff, weight.sla=w_sla)")
     val rResult = engine.eval("result").asInstanceOf[DoubleVector].toDoubleArray.map(_.toInt).toSeq
 
-    val newResult = OptimiserWithFlexibleProcessors.tryOptimiseWin(workloads, minDesks, maxDesks, adjustedSla, weightChurn, weightPax, weightStaff, weightSla, DeskWorkloadProcessorsProvider)
+    val newResult = OptimiserWithFlexibleProcessors.tryOptimiseWin(workloads, minDesks, maxDesks, adjustedSla, weightChurn, weightPax, weightStaff, weightSla, desksWorkloadsProvider)
 
     newResult === rResult
   }
@@ -188,11 +191,11 @@ class OptimiserSpec extends Specification {
     engine.put("w_sla", weightSla)
 
     val rTimer = new Timer
-    val rResult = TryRenjin.crunch(workloads, minDesks.toList, maxDesks.toList, OptimiserConfig(sla, DeskWorkloadProcessorsProvider)).get.recommendedDesks
+    val rResult = TryRenjin.crunch(workloads, minDesks.toList, maxDesks.toList, OptimiserConfig(sla, desksWorkloadsProvider)).get.recommendedDesks
     rTimer.report("renjin crunch")
 
     val sTimer = new Timer
-    val sResult = OptimiserWithFlexibleProcessors.crunch(workloads, minDesks.toList, maxDesks.toList, OptimiserConfig(sla, DeskWorkloadProcessorsProvider)).get.recommendedDesks
+    val sResult = OptimiserWithFlexibleProcessors.crunch(workloads, minDesks.toList, maxDesks.toList, OptimiserConfig(sla, desksWorkloadsProvider)).get.recommendedDesks
     sTimer.report("scala crunch")
 
     val diffs = sResult.zip(rResult).zipWithIndex.grouped(15).map(_.head).collect {
@@ -209,7 +212,7 @@ class OptimiserSpec extends Specification {
       "I should get a failed result" >> {
         val work = List.fill(10)(1d)
         val capacity = List.fill(15)(10)
-        val result = OptimiserWithFlexibleProcessors.crunch(work, capacity, capacity, OptimiserConfig(25, DeskWorkloadProcessorsProvider))
+        val result = OptimiserWithFlexibleProcessors.crunch(work, capacity, capacity, OptimiserConfig(25, desksWorkloadsProvider))
 
         result must haveClass[Failure[Exception]]
       }
@@ -221,7 +224,7 @@ class OptimiserSpec extends Specification {
       "I should get a failed result" >> {
         val work = List.fill(10)(1d)
         val desks = List.fill(15)(10)
-        val result = OptimiserWithFlexibleProcessors.runSimulationOfWork(work, desks, OptimiserConfig(25, DeskWorkloadProcessorsProvider))
+        val result = OptimiserWithFlexibleProcessors.runSimulationOfWork(work, desks, OptimiserConfig(25, desksWorkloadsProvider))
 
         result must haveClass[Failure[Exception]]
       }

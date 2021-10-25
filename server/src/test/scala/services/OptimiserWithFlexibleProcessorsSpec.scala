@@ -1,6 +1,7 @@
 package services
 
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.egates.{Desk, EgateBank}
 
 import scala.util.Try
 
@@ -19,7 +20,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           workloads = oneMinuteWorkloadFor30Minutes,
           minDesks = oneDesk,
           maxDesks = oneDesk,
-          config = OptimiserConfig(20, DeskWorkloadProcessorsProvider))
+          config = OptimiserConfig(20, WorkloadProcessorsProvider(IndexedSeq(WorkloadProcessors(Seq.fill(10)(Desk))))))
 
         result.get.waitTimes === zeroWaitFor30Minutes
       }
@@ -32,7 +33,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           workloads = twoMinuteWorkloadFor30Minutes,
           minDesks = oneDesk,
           maxDesks = oneDesk,
-          config = OptimiserConfig(20, DeskWorkloadProcessorsProvider))
+          config = OptimiserConfig(20, WorkloadProcessorsProvider(IndexedSeq(WorkloadProcessors(Seq.fill(10)(Desk))))))
 
         val increasingWaitTimes = Seq(1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15)
 
@@ -41,8 +42,8 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
     }
   }
 
-  def egateProcessorsProvider(minutes: Int, bankSizes: Iterable[Int]): EgateWorkloadProcessorsProvider =
-    EgateWorkloadProcessorsProvider(IndexedSeq.fill(minutes)(EGateWorkloadProcessors(bankSizes)))
+  def egateProcessorsProvider(minutes: Int, bankSizes: Iterable[Int]): WorkloadProcessorsProvider =
+    WorkloadProcessorsProvider(IndexedSeq.fill(minutes)(WorkloadProcessors(bankSizes.map(g => EgateBank(IndexedSeq.fill(g)(true))))))
 
   "Crunch with egate workload processors" >> {
     val tenMinutesWorkloadFor30Minutes = List.fill(30)(10d)
@@ -228,7 +229,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
       val workload = IndexedSeq.fill(60)(5d)
       val capacity = IndexedSeq.fill(30)(5) ++ IndexedSeq.fill(30)(0)
       "When I ask for the ProcessedWork" >> {
-        val processed = OptimiserWithFlexibleProcessors.tryProcessWork(workload, capacity, 25, IndexedSeq(), DeskWorkloadProcessorsProvider)
+        val processed = OptimiserWithFlexibleProcessors.tryProcessWork(workload, capacity, 25, IndexedSeq(), WorkloadProcessorsProvider(IndexedSeq(WorkloadProcessors(Seq.fill(10)(Desk)))))
         "I should not find any NaNs" >> {
           processed.get.util.exists(_.isNaN) === false
         }

@@ -7,7 +7,7 @@ import drt.shared.MilliTimes
 import org.slf4j.{Logger, LoggerFactory}
 import services._
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import uk.gov.homeoffice.drt.egates.{EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.egates.{Desk, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -65,12 +65,12 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int],
                   queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0))))
                 case someWork =>
                   val start = System.currentTimeMillis()
-                  val processors = if (queue == EGate) {
+                  val processors: WorkloadProcessorsProvider = if (queue == EGate) {
                     val workloadLengthPlus4Hours = (minuteMillis.length + 240).minute.toMillis
                     val endMinuteWithOverrun = minuteMillis.min + workloadLengthPlus4Hours
-                    EgateWorkloadProcessorsProvider(egateBanksUpdates.forPeriod(minuteMillis.min to endMinuteWithOverrun by MilliTimes.oneMinuteMillis))
-                  } else DeskWorkloadProcessorsProvider
-                  val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks.toSeq, OptimiserConfig(slas(queue), processors)) match {
+                    WorkloadProcessorsProvider(egateBanksUpdates.forPeriod(minuteMillis.min to endMinuteWithOverrun by MilliTimes.oneMinuteMillis))
+                  } else maxDesks
+                  val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks.processorsByMinute.map(_.processors.size).take(minuteMillis.length), OptimiserConfig(slas(queue), processors)) match {
                     case Success(OptimizerCrunchResult(desks, waits)) =>
                       queueRecsSoFar + (queue -> ((desks.toList, waits.toList)))
                     case Failure(t) =>

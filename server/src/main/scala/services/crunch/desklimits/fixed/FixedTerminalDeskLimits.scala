@@ -1,5 +1,6 @@
 package services.crunch.desklimits.fixed
 
+import services.WorkloadProcessorsProvider
 import services.crunch.desklimits.{EmptyCapacityProvider, QueueCapacityProvider, TerminalDeskLimitsLike}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 
@@ -11,7 +12,7 @@ case class FixedTerminalDeskLimits(minDesksByQueue24Hrs: Map[Queue, IndexedSeq[I
                                   ) extends TerminalDeskLimitsLike {
   override def maxDesksForMinutes(minuteMillis: NumericRange[Long],
                                   queue: Queue,
-                                  allocatedDesks: Map[Queue, List[Int]]): Future[IndexedSeq[Int]] = {
+                                  allocatedDesks: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] = {
     maxDesksByQueue24Hrs.getOrElse(queue, EmptyCapacityProvider).capacityForPeriod(minuteMillis)
   }
 }
