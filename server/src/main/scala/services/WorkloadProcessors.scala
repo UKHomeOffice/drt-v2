@@ -20,16 +20,12 @@ case object DeskWorkloadProcessorsProvider extends WorkloadProcessorsProvider {
 }
 
 sealed trait WorkloadProcessors {
-  val averageServerSize: Int
-
   def capacityForServers(servers: Int): Int
 
   val forWorkload: PartialFunction[Double, Int]
 }
 
 case object DeskWorkloadProcessors extends WorkloadProcessors {
-  override val averageServerSize: Int = 1
-
   override def capacityForServers(servers: Int): Int = servers
 
   override val forWorkload: PartialFunction[Double, Int] = {
@@ -38,12 +34,6 @@ case object DeskWorkloadProcessors extends WorkloadProcessors {
 }
 
 case class EGateWorkloadProcessors(processors: Iterable[Int]) extends WorkloadProcessors {
-  override val averageServerSize: Int = processors.size match {
-    case 0 => 0
-    case numberOfProcessors =>
-      (processors.sum.toDouble / numberOfProcessors).round.toInt
-  }
-
   val processorsIncludingZero: Iterable[Int] = processors.headOption match {
     case None => Iterable(0)
     case Some(zero) if zero == 0 => processors
@@ -62,12 +52,12 @@ case class EGateWorkloadProcessors(processors: Iterable[Int]) extends WorkloadPr
       case (capacities, idx) => ((capacities.min + 1) to capacities.max).map(c => (c, idx + 1))
     }.toMap + (0 -> 0)
 
-  val maxServers: Int = capacityByWorkload.values.max
+  val maxCapacity: Int = capacityByWorkload.values.max
 
   override def capacityForServers(servers: Int): Int = cumulativeCapacity.indices.zip(cumulativeCapacity).toMap.getOrElse(servers, 0)
 
   override val forWorkload: PartialFunction[Double, Int] = {
     case noWorkload if noWorkload <= 0 => 0
-    case someWorkload => capacityByWorkload.getOrElse(someWorkload.ceil.toInt, maxServers)
+    case someWorkload => capacityByWorkload.getOrElse(someWorkload.ceil.toInt, maxCapacity)
   }
 }
