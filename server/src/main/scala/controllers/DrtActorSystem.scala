@@ -3,7 +3,6 @@ package controllers
 import actors.{DrtSystemInterface, ProdDrtSystem}
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
-import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.Materializer
 import com.typesafe.config.ConfigFactory
 import play.api.Configuration
@@ -17,13 +16,11 @@ object DrtActorSystem extends AirportConfProvider {
   implicit val actorSystem: ActorSystem = if (isTestEnvironment) ActorSystem("DRT", PersistenceTestKitPlugin.config.withFallback(ConfigFactory.load())) else ActorSystem("DRT")
   implicit val mat: Materializer = Materializer.createMaterializer(actorSystem)
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  lazy val persistenceTestKit: PersistenceTestKit = PersistenceTestKit(actorSystem)
-
   val drtSystem: DrtSystemInterface =
     if (isTestEnvironment) drtTestSystem
     else drtProdSystem
 
-  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(getPortConfFromEnvVar, persistenceTestKit, actorSystem)
+  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(getPortConfFromEnvVar)
   lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(getPortConfFromEnvVar)
 
 }

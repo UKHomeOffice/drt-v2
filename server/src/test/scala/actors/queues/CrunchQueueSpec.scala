@@ -67,7 +67,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
         watch(actor)
         actor ! UpdatedMillis(Iterable(today, tomorrow))
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 5), twoHourOffset, durationMinutes))
-
+        Thread.sleep(200)
         startQueueActor(daysSourceProbe, defaultAirportConfig.crunchOffsetMinutes)
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 6), twoHourOffset, durationMinutes))
         success

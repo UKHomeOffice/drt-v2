@@ -5,7 +5,7 @@ import actors.acking.AckingReceiver.Ack
 import actors.persistent.RedListUpdatesActor.AddSubscriber
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Status}
 import akka.pattern.ask
-import akka.persistence.testkit.scaladsl.{PersistenceInit, PersistenceTestKit}
+import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.scaladsl.Source
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
@@ -38,9 +38,10 @@ case class MockManifestLookupService(implicit ec: ExecutionContext) extends Mani
     Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
 }
 
-case class TestDrtSystem(airportConfig: AirportConfig, persistenceTestKit: PersistenceTestKit,implicit val system: ActorSystem)
+case class TestDrtSystem(airportConfig: AirportConfig)
                         (implicit val materializer: Materializer,
-                         val ec: ExecutionContext) extends DrtSystemInterface {
+                         val ec: ExecutionContext,
+                         val system: ActorSystem) extends DrtSystemInterface {
 
   import DrtStaticParameters._
 
@@ -122,7 +123,7 @@ case class TestDrtSystem(airportConfig: AirportConfig, persistenceTestKit: Persi
   )
 
 
-  val restartActor: ActorRef = system.actorOf(Props(new RestartActor(persistenceTestKit, startSystem, testActors)), name = "TestActor-ResetData")
+  val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
@@ -184,8 +185,10 @@ case class TestDrtSystem(airportConfig: AirportConfig, persistenceTestKit: Persi
 }
 
 
-class RestartActor(persistenceTestKit: PersistenceTestKit, startSystem: () => List[KillSwitch],
+class RestartActor(startSystem: () => List[KillSwitch],
                    testActors: List[ActorRef]) extends Actor with ActorLogging {
+
+  lazy val persistenceTestKit: PersistenceTestKit = PersistenceTestKit(context.system)
 
   var currentKillSwitches: List[KillSwitch] = List()
 
