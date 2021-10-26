@@ -7,7 +7,7 @@ import akka.actor.PoisonPill
 import akka.persistence.query.PersistenceQuery
 import akka.persistence.{PersistentActor, RecoveryCompleted}
 import akka.stream.scaladsl.{Keep, Sink}
-import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
+import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import drt.shared.{MilliTimes, SDateLike, WithTimeAccessor}
 import org.slf4j.Logger
@@ -23,7 +23,7 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
   val log: Logger
   val now: () => SDateLike
 
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val mat: Materializer = Materializer.createMaterializer(context)
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
   var updates: Map[B, MinuteLike[A, B]] = Map[B, MinuteLike[A, B]]()

@@ -2,13 +2,15 @@ package services.crunch
 
 import akka.actor.{ActorRef, ActorSystem, Props, Terminated}
 import akka.pattern.ask
+import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.stream.testkit.TestSubscriber.Probe
-import akka.stream.{ActorMaterializer, QueueOfferResult}
+import akka.stream.{Materializer, QueueOfferResult}
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
+import com.typesafe.config.ConfigFactory
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
@@ -159,7 +161,7 @@ object TestDefaults {
     )
     val minMax = (List.fill[Int](24)(1), List.fill[Int](24)(20))
     val paxTypeQueues: Map[PaxType, List[(Queue, Double)]] = splits.groupBy(_._1.passengerType).map {
-      case (pt, queueRatios) => (pt, queueRatios.map{ case (PaxTypeAndQueue(_, q), r) => (q, r)}.toList)
+      case (pt, queueRatios) => (pt, queueRatios.map { case (PaxTypeAndQueue(_, q), r) => (q, r) }.toList)
     }
 
     AirportConfig(
@@ -197,7 +199,7 @@ object TestDefaults {
 }
 
 class CrunchTestLike
-  extends TestKit(ActorSystem("DRT-TEST"))
+  extends TestKit(ActorSystem("DRT-TEST", PersistenceTestKitPlugin.config.withFallback(ConfigFactory.load())))
     with SpecificationLike
     with AfterAll
     with AfterEach {
@@ -217,7 +219,7 @@ class CrunchTestLike
     TestKit.shutdownActorSystem(system)
   }
 
-  implicit val materializer: ActorMaterializer = ActorMaterializer.create(system)
+  implicit val materializer: Materializer = Materializer.createMaterializer(system)
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(5 seconds)
 

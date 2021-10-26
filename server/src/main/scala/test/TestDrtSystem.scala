@@ -5,7 +5,7 @@ import actors.acking.AckingReceiver.Ack
 import actors.persistent.RedListUpdatesActor.AddSubscriber
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Status}
 import akka.pattern.ask
-import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
+import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.scaladsl.Source
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
@@ -122,6 +122,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     testArrivalActor,
   )
 
+
   val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
@@ -187,6 +188,8 @@ case class TestDrtSystem(airportConfig: AirportConfig)
 class RestartActor(startSystem: () => List[KillSwitch],
                    testActors: List[ActorRef]) extends Actor with ActorLogging {
 
+  lazy val persistenceTestKit: PersistenceTestKit = PersistenceTestKit(context.system)
+
   var currentKillSwitches: List[KillSwitch] = List()
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
@@ -194,10 +197,8 @@ class RestartActor(startSystem: () => List[KillSwitch],
   override def receive: Receive = {
     case ResetData =>
       val replyTo = sender()
-
-      resetInMemoryData()
-
       log.info(s"About to shut down everything. Pressing kill switches")
+      resetInMemoryData()
 
       currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
         log.info(s"Kill switch ${idx + 1}")
@@ -223,9 +224,9 @@ class RestartActor(startSystem: () => List[KillSwitch],
   def startTestSystem(): Unit = currentKillSwitches = startSystem()
 
   def resetInMemoryData(): Unit = {
-    StorageExtension(context.system).journalStorage ! InMemoryJournalStorage.ClearJournal
-    StorageExtension(context.system).snapshotStorage ! InMemorySnapshotStorage.ClearSnapshots
+    persistenceTestKit.clearAll()
   }
+
 }
 
 case object StartTestSystem

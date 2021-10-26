@@ -9,7 +9,7 @@ import actors.persistent.{ManifestRouterActor, SortedActorRefSource}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, Materializer, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.shared.{MilliTimes, SDateLike, VoyageNumber}
@@ -49,7 +49,7 @@ class TestDrtActor extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
   implicit val system: ActorSystem = context.system
   implicit val ec: ExecutionContextExecutor = context.dispatcher
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val mat: Materializer = Materializer.createMaterializer(context)
 
   import TestDefaults.testProbe
 

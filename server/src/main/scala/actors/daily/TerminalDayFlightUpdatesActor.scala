@@ -9,15 +9,15 @@ import akka.actor.PoisonPill
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer}
 import akka.stream.scaladsl.{Keep, Sink}
-import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
+import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.{ApiFlightWithSplits, ArrivalsRestorer, MilliTimes, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import services.{SDate, StreamSupervision}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 
 class TerminalDayFlightUpdatesActor(
@@ -30,7 +30,7 @@ class TerminalDayFlightUpdatesActor(
                                    ) extends PersistentActor {
 
 
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val mat: Materializer = Materializer.createMaterializer(context)
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
 

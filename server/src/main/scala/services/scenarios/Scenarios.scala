@@ -5,7 +5,7 @@ import actors.persistent.staffing.GetState
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.DeskRecMinutes
@@ -40,7 +40,7 @@ object Scenarios {
 
 
     implicit val ec: ExecutionContextExecutor = system.dispatcher
-    implicit val mat: ActorMaterializer = ActorMaterializer.create(system)
+    implicit val mat: Materializer = Materializer.createMaterializer(system)
 
     val portDesksAndWaitsProvider: PortDesksAndWaitsProvider =
       PortDesksAndWaitsProvider(

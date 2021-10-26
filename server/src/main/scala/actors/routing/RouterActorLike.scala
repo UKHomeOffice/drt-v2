@@ -2,11 +2,11 @@ package actors.routing
 
 import actors.SetCrunchRequestQueue
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
-import actors.routing.minutes.MinutesActorLike.ProcessNextUpdateRequest
 import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.routing.minutes.MinutesActorLike.ProcessNextUpdateRequest
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef}
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.DataUpdates.Updates
@@ -36,7 +36,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
   var processingRequest: Boolean = false
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val mat: Materializer = Materializer.createMaterializer(context)
   implicit val timeout: Timeout = new Timeout(60 seconds)
 
   var updateRequestsQueue: List[(ActorRef, U)] = List()

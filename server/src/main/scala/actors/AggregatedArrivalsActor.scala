@@ -2,7 +2,7 @@ package actors
 
 import akka.Done
 import akka.actor.Actor
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared._
 import drt.shared.api.Arrival
@@ -17,7 +17,7 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 class AggregatedArrivalsActor(arrivalTable: ArrivalTableLike) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
   implicit val executionContext: ExecutionContextExecutor = ExecutionContext.global
-  implicit val materializer: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val materializer: Materializer = Materializer.createMaterializer(context)
 
   override def receive: Receive = {
     case ArrivalsDiff(toUpdate, toRemove) =>
