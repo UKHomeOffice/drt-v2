@@ -2,10 +2,12 @@ package services.crunch.desklimits.fixed
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneHourMillis
-import services.SDate
+import services.{SDate, WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.DeskCapacityProvider
+import services.crunch.desklimits.flexed.WorkloadProcessorsHelper.uniformDesksForHours
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.egates.Desk
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 
 import scala.collection.immutable.NumericRange
@@ -30,7 +32,7 @@ class FixedTerminalDeskLimitsSpec extends CrunchTestLike {
     val maxDesks = IndexedSeq.fill(24)(10)
     val limits = FixedTerminalDeskLimits(Map(EeaDesk -> minDesks), Map(EeaDesk -> DeskCapacityProvider(maxDesks)))
     val result = limits.maxDesksForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
-    val expected = List.fill(24)(10)
+    val expected = uniformDesksForHours(10, 24)
 
     Await.result(result, 1.second) === expected
   }
@@ -41,7 +43,7 @@ class FixedTerminalDeskLimitsSpec extends CrunchTestLike {
     val maxDesks = 0 to 23
     val limits = FixedTerminalDeskLimits(Map(EeaDesk -> minDesks), Map(EeaDesk -> DeskCapacityProvider(maxDesks)))
     val result = limits.maxDesksForMinutes(nonBstMidnightToMidnightByHour, EeaDesk, Map())
-    val expected = maxDesks.toList
+    val expected = WorkloadProcessorsProvider((0 to 23).map(d => WorkloadProcessors(Seq.fill(d)(Desk))))
 
     Await.result(result, 1.second) === expected
   }

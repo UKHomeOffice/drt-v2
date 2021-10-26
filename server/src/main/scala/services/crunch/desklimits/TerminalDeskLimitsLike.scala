@@ -1,6 +1,7 @@
 package services.crunch.desklimits
 
-import services.{WorkloadProcessors, WorkloadProcessorsProvider}
+import drt.shared.MilliTimes
+import services.{OptimiserWithFlexibleProcessors, WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.deskrecs.DeskRecs
 import uk.gov.homeoffice.drt.egates.{Desk, EgateBank, EgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -56,10 +57,12 @@ trait TerminalDeskLimitsLike_ {
 
 trait TerminalDeskLimitsLike {
   val minDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]]
+  val overrunMinutes: Int = OptimiserWithFlexibleProcessors.targetWidth + OptimiserWithFlexibleProcessors.rollingBuffer
 
   def deskLimitsForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, List[Int]])
                           (implicit ec: ExecutionContext): Future[(Iterable[Int], WorkloadProcessorsProvider)] = {
-    maxDesksForMinutes(minuteMillis, queue, allocatedDesks).map { processorProvider =>
+    val maxDesksPeriod = minuteMillis.min to (minuteMillis.max + overrunMinutes * minuteMillis.step) by minuteMillis.step
+    maxDesksForMinutes(maxDesksPeriod, queue, allocatedDesks).map { processorProvider =>
       val minDesks = DeskRecs
         .desksForMillis(minuteMillis, minDesksByQueue24Hrs(queue))
         .toList.zip(processorProvider.processorsByMinute)

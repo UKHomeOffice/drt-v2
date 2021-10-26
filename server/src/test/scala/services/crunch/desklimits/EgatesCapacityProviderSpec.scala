@@ -1,5 +1,6 @@
 package services.crunch.desklimits
 
+import services.{WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates}
 
@@ -12,8 +13,8 @@ class EgatesCapacityProviderSpec extends CrunchTestLike {
     val oneBank = IndexedSeq(EgateBank(IndexedSeq(true, true)))
     val eventualUpdates = Future.successful(EgateBanksUpdates(List(EgateBanksUpdate(0L, threeBanks), EgateBanksUpdate(10L, oneBank))))
     val provider = EgatesCapacityProvider(() => eventualUpdates, IndexedSeq(EgateBank(IndexedSeq(true))))
-    val capacities = Await.result(provider.capacityForPeriod(9L to 10L), 1.second)
+    val capacities: WorkloadProcessorsProvider = Await.result(provider.capacityForPeriod(9L to 10L), 1.second)
 
-    capacities === List(3, 1)
+    capacities === WorkloadProcessorsProvider(IndexedSeq(WorkloadProcessors(threeBanks), WorkloadProcessors(oneBank)))
   }
 }

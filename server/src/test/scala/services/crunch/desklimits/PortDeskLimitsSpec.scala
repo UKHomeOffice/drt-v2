@@ -1,5 +1,6 @@
 package services.crunch.desklimits
 
+import services.{WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues
@@ -18,7 +19,7 @@ class PortDeskLimitsSpec extends CrunchTestLike {
         val portDeskLimits = PortDeskLimits.flexed(defaultAirportConfig, Terminal => eventualUpdates)
 
         val maxDesks = Await.result(portDeskLimits(T1).maxProcessors(9L to 10L, Queues.EGate, Map()), 1.second)
-        maxDesks === List(3, 1)
+        maxDesks === WorkloadProcessorsProvider(IndexedSeq(WorkloadProcessors(threeBanks), WorkloadProcessors(oneBankUpdate)))
       }
     }
   }
