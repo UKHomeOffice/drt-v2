@@ -30,6 +30,8 @@ object OptimiserWithFlexibleProcessors {
              minDesks: Iterable[Int],
              maxDesks: Iterable[Int],
              config: OptimiserConfig): Try[OptimizerCrunchResult] = {
+    val processorsCount = config.processors.processorsByMinute.length
+    assert(processorsCount == workloads.size, s"processors by minute ($processorsCount) needs to match workload length (${workloads.size})")
     val indexedWork = workloads.toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 

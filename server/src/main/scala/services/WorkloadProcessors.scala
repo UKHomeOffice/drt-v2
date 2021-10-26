@@ -9,10 +9,18 @@ object WorkloadProcessorsProvider {
 }
 
 case class WorkloadProcessorsProvider(processorsByMinute: IndexedSeq[WorkloadProcessors]) {
-  def forMinute(minute: Int): WorkloadProcessors = processorsByMinute(minute)
+  val minutes: Int = processorsByMinute.size
+
+  def maxProcessors(length: Int): Seq[Int] = processorsByMinute.map(_.processors.size).take(length)
+
+  def forMinute(minute: Int): WorkloadProcessors = {
+    val index = if (minute < minutes) minute else minutes - 1
+    processorsByMinute(index)
+  }
 }
 
 case class WorkloadProcessors(processors: Iterable[WorkloadProcessor]) {
+
   val cumulativeCapacity: List[Int] = processors
     .foldLeft(List[Int](0)) {
       case (acc, processors) => acc.headOption.getOrElse(0) + processors.maxCapacity :: acc

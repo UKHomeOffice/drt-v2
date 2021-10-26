@@ -2,7 +2,7 @@ package services.crunch.desklimits
 
 import services.crunch.desklimits.fixed.FixedTerminalDeskLimits
 import services.crunch.desklimits.flexed.{FlexedTerminalDeskLimits, FlexedTerminalDeskLimitsFromAvailableStaff}
-import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdates}
+import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues.EGate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
@@ -29,24 +29,22 @@ object PortDeskLimits {
   private def capacityProviders(maxDesks: Map[Queues.Queue, IndexedSeq[Int]], egatesProvider: () => Future[EgateBanksUpdates])
                                (implicit ec: ExecutionContext): Map[Queues.Queue, QueueCapacityProvider] =
     maxDesks.map {
-      case (EGate, max) => (EGate, EgatesCapacityProvider(egatesProvider, EgateBank.fromAirportConfig(max)))
+      case (EGate, _) => (EGate, EgatesCapacityProvider(egatesProvider))
       case (nonEgateQueue, max) => (nonEgateQueue, DeskCapacityProvider(max))
     }
 
   def flexed(airportConfig: AirportConfig, egatesProvider: Terminal => Future[EgateBanksUpdates])
             (implicit ec: ExecutionContext): Map[Terminal, FlexedTerminalDeskLimits] = airportConfig.desksByTerminal
-    .mapValues(desks => List.fill(airportConfig.minutesToCrunch)(desks))
-    .map { case (terminal, terminalDesksByMinute) =>
+    .map { case (terminal, terminalDesks) =>
       for {
         minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
         maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
       } yield {
-        val capProviders = capacityProviders(maxDesksByQueue24Hrs, () => egatesProvider(terminal))
         val limits = FlexedTerminalDeskLimits(
-          terminalDesksByMinute,
+          terminalDesks,
           airportConfig.flexedQueues,
           minDesksByQueue24Hrs,
-          capProviders)
+          capacityProviders(maxDesksByQueue24Hrs, () => egatesProvider(terminal)))
         (terminal, limits)
       }
     }
@@ -56,14 +54,12 @@ object PortDeskLimits {
   def flexedByAvailableStaff(airportConfig: AirportConfig, egatesProvider: Terminal => Future[EgateBanksUpdates])
                             (availableStaffByMinute: Map[Terminal, List[Int]])
                             (implicit ec: ExecutionContext): Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff] = {
-    val desksByTerminalByMinute = airportConfig.desksByTerminal.mapValues(d => List.fill(airportConfig.minutesToCrunch)(d))
-
     availableStaffByMinute
       .map { case (terminal, terminalStaffByMinute) =>
         for {
           minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
           maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
-          terminalDesksByMinute <- desksByTerminalByMinute.get(terminal)
+          terminalDesksByMinute <- airportConfig.desksByTerminal.get(terminal)
         } yield {
           val limitsFromStaff = FlexedTerminalDeskLimitsFromAvailableStaff(
             terminalStaffByMinute,

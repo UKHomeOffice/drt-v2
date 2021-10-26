@@ -27,8 +27,7 @@ case class DeskCapacityProvider(maxPerHour: IndexedSeq[Int])
   }
 }
 
-case class EgatesCapacityProvider(egatesProvider: () => Future[EgateBanksUpdates],
-                                  defaultEgates: IndexedSeq[EgateBank])
+case class EgatesCapacityProvider(egatesProvider: () => Future[EgateBanksUpdates])
                                  (implicit ec: ExecutionContext) extends QueueCapacityProvider {
   override def capacityForPeriod(timeRange: NumericRange[Long]): Future[WorkloadProcessorsProvider] =
     egatesProvider().map(updates => WorkloadProcessorsProvider(updates.forPeriod(timeRange).map(WorkloadProcessors(_))))
@@ -57,12 +56,10 @@ trait TerminalDeskLimitsLike_ {
 
 trait TerminalDeskLimitsLike {
   val minDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]]
-  val overrunMinutes: Int = OptimiserWithFlexibleProcessors.targetWidth + OptimiserWithFlexibleProcessors.rollingBuffer
 
   def deskLimitsForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, List[Int]])
                           (implicit ec: ExecutionContext): Future[(Iterable[Int], WorkloadProcessorsProvider)] = {
-    val maxDesksPeriod = minuteMillis.min to (minuteMillis.max + overrunMinutes * minuteMillis.step) by minuteMillis.step
-    maxDesksForMinutes(maxDesksPeriod, queue, allocatedDesks).map { processorProvider =>
+    maxDesksForMinutes(minuteMillis, queue, allocatedDesks).map { processorProvider =>
       val minDesks = DeskRecs
         .desksForMillis(minuteMillis, minDesksByQueue24Hrs(queue))
         .toList.zip(processorProvider.processorsByMinute)
