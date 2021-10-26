@@ -5,9 +5,10 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneHourMillis
 import services.{SDate, WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.CrunchTestLike
+import services.crunch.desklimits.EgatesCapacityProvider
 import services.crunch.desklimits.flexed.WorkloadProcessorsHelper.uniformDesksForHours
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.egates.Desk
+import uk.gov.homeoffice.drt.egates.{Desk, EgateBank, EgateBanksUpdate, EgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 
 import scala.collection.immutable.NumericRange
@@ -185,6 +186,22 @@ class FlexedTerminalDeskLimitsFromAvailableStaffSpec extends CrunchTestLike {
           val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(EeaDesk), minDesksForEea, Map())
           val result = limits.deskLimitsForMinutes(bstMidnightToMidnightByHour, EeaDesk, Map())
           val expected = (List.fill(24)(0), uniformDesksForHours(0, 24))
+
+          Await.result(result, 1.second) === expected
+        }
+      }
+    }
+
+    "Given a staffing flexed desk limits provider with an egates queue with min 1 egate and 2 available staff" >> {
+      "When I ask for max egates at each hour from midnight to midnight outside BST with no already utilised staff" >> {
+        "Then I should get 2 banks due to the available staff being higher than the min egates" >> {
+          val terminalDesks = 10
+          val availableStaff = List.fill(24)(2)
+          val minDesksForEea: Map[Queue, IndexedSeq[Int]] = Map(EGate -> minDesks)
+          val egatesCapProvider = EgatesCapacityProvider(() => Future.successful(EgateBanksUpdates(List(EgateBanksUpdate(0L, IndexedSeq.fill(3)(EgateBank(IndexedSeq())))))))
+          val limits = FlexedTerminalDeskLimitsFromAvailableStaff(availableStaff, terminalDesks, Set(), minDesksForEea, Map(EGate -> egatesCapProvider))
+          val result = limits.deskLimitsForMinutes(bstMidnightToMidnightByHour, EGate, Map())
+          val expected = (List.fill(24)(0), WorkloadProcessorsProvider(IndexedSeq.fill(24)(WorkloadProcessors(Seq.fill(2)(EgateBank(IndexedSeq()))))))
 
           Await.result(result, 1.second) === expected
         }
