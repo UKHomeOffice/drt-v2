@@ -76,9 +76,6 @@ class DeskFlexingSpec extends CrunchTestLike {
     }
   }
 
-  val egatesProvider: () => Future[PortEgateBanksUpdates] =
-    () => Future.successful(PortEgateBanksUpdates(Map(T1 -> EgateBanksUpdates(List(EgateBanksUpdate(0L, IndexedSeq(EgateBank(IndexedSeq.fill(egateMaxDesks)(true)))))))))
-
   s"Given workload for EEA & RoW, their minimum desks ($eeaMinDesks & $roWMinDesks), SLAs, and $totalDesks terminal's total desks " >> {
     "When I ask for desk recommendations using a mock optimiser " >> {
       s"I should observe the max desks as EEA: ${totalDesks - roWMinDesks}, RoW: ${totalDesks - eeaMinDesks}" >> {
@@ -90,8 +87,8 @@ class DeskFlexingSpec extends CrunchTestLike {
         val maxDeskProvider = FlexedTerminalDeskLimits(totalDesksByMinute, Set(EeaDesk, NonEeaDesk), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
 
         val eventualDesksAndWaits = deskrecs
-          .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, egatesProvider)
-          .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider, () => egatesProvider().map(_.updatesByTerminal(T1)))
+          .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs)
+          .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
         Await.result(eventualDesksAndWaits, 1.second)
 
@@ -118,8 +115,8 @@ class DeskFlexingSpec extends CrunchTestLike {
         val maxDeskProvider = FlexedTerminalDeskLimits(totalDesksByMinute, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
 
         val eventualDesksAndWaits = deskrecs
-          .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, egatesProvider)
-          .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider, () => egatesProvider().map(_.updatesByTerminal(T1)))
+          .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs)
+          .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
         Await.result(eventualDesksAndWaits, 1.second)
 
@@ -150,8 +147,8 @@ class DeskFlexingSpec extends CrunchTestLike {
         val maxDeskProvider = FlexedTerminalDeskLimits(totalDesksByMinute, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
 
         val eventualDesksAndWaits = deskrecs
-          .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs, egatesProvider)
-          .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider, () => egatesProvider().map(_.updatesByTerminal(T1)))
+          .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs)
+          .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
         Await.result(eventualDesksAndWaits, 1.second)
 

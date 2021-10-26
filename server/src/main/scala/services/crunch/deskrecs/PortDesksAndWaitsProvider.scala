@@ -27,7 +27,6 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                                      minutesToCrunch: Int,
                                      crunchOffsetMinutes: Int,
-                                     egatesProvider: () => Future[PortEgateBanksUpdates],
                                      tryCrunch: TryCrunch,
                                      workloadCalculator: WorkloadCalculatorLike
                                     ) extends PortDesksAndWaitsProviderLike {
@@ -48,7 +47,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }.toMap
 
   def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
-    deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch, egatesProvider)
+    deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch)
 
   override def flightsToLoads(flights: FlightsWithSplits, redListUpdates: RedListUpdates): Map[TQM, LoadMinute] = workloadCalculator
     .flightLoadMinutes(flights, redListUpdates).minutes
@@ -100,7 +99,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 }
 
 object PortDesksAndWaitsProvider {
-  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, flightFilter: FlightFilter, egatesProvider: () => Future[PortEgateBanksUpdates]): PortDesksAndWaitsProvider = {
+  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, flightFilter: FlightFilter): PortDesksAndWaitsProvider = {
     val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,
       airportConfig.queueStatusProvider,
@@ -117,7 +116,6 @@ object PortDesksAndWaitsProvider {
       terminalProcessingTimes = airportConfig.terminalProcessingTimes,
       minutesToCrunch = airportConfig.minutesToCrunch,
       crunchOffsetMinutes = airportConfig.crunchOffsetMinutes,
-      egatesProvider = egatesProvider,
       tryCrunch = tryCrunch,
       workloadCalculator = calculator
     )

@@ -117,7 +117,7 @@ class TestDrtActor extends Actor {
 
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
-      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), MockEgatesProvider.portProvider(tc.airportConfig))
+      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig))
 
       val egatesProvider = tc.maybeEgatesProvider match {
         case None => MockEgatesProvider.terminalProvider(airportConfig)
