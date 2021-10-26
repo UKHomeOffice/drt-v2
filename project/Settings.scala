@@ -40,7 +40,7 @@ object Settings {
     val uTest = "0.7.4"
     val h2 = "1.4.197"
 
-    val akka = "2.5.23"
+    val akka = "2.6.17"
     val akkaStreamContrib = "0.9"
 
     val specs2 = "4.6.0"
@@ -58,8 +58,7 @@ object Settings {
     val csvCommons = "1.4"
     val pprint = "0.5.6"
     val scalaCheck = "1.13.4"
-    val akkaPersistenceInMemory = "2.5.15.2"
-    val akkaPersistenceJdbc = "3.5.0"
+    val akkaPersistenceJdbc = "5.0.4"
     val bluebus = "0.3.3-DRT"
     val postgres = "42.2.2"
     val sshJ = "0.24.0"
@@ -78,7 +77,7 @@ object Settings {
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "1.2.0"
-    val akkaHttp = "10.1.9"
+    val akkaHttp = "10.2.6"
     val slick = "3.3.2"
     val censorinus = "2.1.13"
     val janinoVersion = "3.1.6"
@@ -145,7 +144,6 @@ object Settings {
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
-    "com.github.dnvriend" %% "akka-persistence-inmemory" % akkaPersistenceInMemory,
     "com.github.gphat" % "censorinus_2.12" % censorinus,
     "com.pauldijou" %% "jwt-core" % "4.0.0",
     "com.hierynomus" % "sshj" % sshJ,
@@ -162,19 +160,20 @@ object Settings {
     "net.databinder.dispatch" %% "dispatch-core" % "0.13.4",
 
     "com.h2database" % "h2" % h2 % Test,
-
     "com.typesafe" % "config" % typesafeConfig,
-    "com.typesafe.akka" %% "akka-testkit" % akka % "test",
-    "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
-    "com.typesafe.akka" %% "akka-persistence" % akka,
-    "com.typesafe.akka" %% "akka-persistence-query" % akka,
-    "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib,
-    "com.typesafe.akka" %% "akka-slf4j" % akka,
-    "com.typesafe.akka" %% "akka-http" % akkaHttp,
-    "com.typesafe.akka" %% "akka-http-caching" % akkaHttp,
-    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttp,
-    "com.typesafe.akka" %% "akka-http-xml" % akkaHttp,
-    "com.typesafe.akka" %% "akka-stream" % akka,
+    "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
+    "com.typesafe.akka" %% "akka-persistence-testkit" % akka force(),
+    "com.typesafe.akka" %% "akka-testkit" % akka % "test" force(),
+    "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test" force(),
+    "com.typesafe.akka" %% "akka-persistence" % akka force(),
+    "com.typesafe.akka" %% "akka-persistence-query" % akka force(),
+    "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib ,
+    "com.typesafe.akka" %% "akka-slf4j" % akka force(),
+    "com.typesafe.akka" %% "akka-http" % akkaHttp force(),
+    "com.typesafe.akka" %% "akka-http-caching" % akkaHttp force(),
+    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttp force(),
+    "com.typesafe.akka" %% "akka-http-xml" % akkaHttp force(),
+    "com.typesafe.akka" %% "akka-stream" % akka force(),
 
     "com.typesafe.play" %% "play-json" % playJson,
     "com.typesafe.play" %% "play-iteratees" % playIteratees,
@@ -200,7 +199,6 @@ object Settings {
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
-    "com.github.dnvriend" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
     "org.postgresql" % "postgresql" % postgres,
 
     "org.renjin" % "renjin-script-engine" % renjin,

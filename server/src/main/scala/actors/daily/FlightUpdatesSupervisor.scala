@@ -5,15 +5,15 @@ import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.pattern.{AskTimeoutException, ask, pipe}
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import java.util.UUID
 import scala.concurrent.duration._
@@ -35,10 +35,10 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
   import FlightUpdatesSupervisor._
 
   implicit val ex: ExecutionContextExecutor = context.dispatcher
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val mat: Materializer = Materializer.createMaterializer(context)
   implicit val timeout: Timeout = new Timeout(30 seconds)
 
-  val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 10 seconds, self, PurgeExpired)
+  val cancellableTick: Cancellable = context.system.scheduler.scheduleWithFixedDelay(10 seconds, 10 seconds, self, PurgeExpired)
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), s"flight-updates-supervisor-kill-actor-flight")
 
   var streamingUpdateActors: Map[(Terminal, MillisSinceEpoch), ActorRef] = Map[(Terminal, MillisSinceEpoch), ActorRef]()

@@ -2,11 +2,11 @@ package actors.queues
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.SortedActorRefSource
-import akka.actor.{ActorRef, PoisonPill, Terminated, actorRef2Scala}
+import akka.actor.ActorRef
 import akka.stream.javadsl.RunnableGraph
 import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
 import akka.stream.scaladsl.{GraphDSL, Sink}
-import akka.stream.{ActorMaterializer, ClosedShape}
+import akka.stream.{ClosedShape, Materializer}
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.SDateLike
@@ -29,7 +29,7 @@ class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
           crunchRequests ~> Sink.actorRef(probe.ref, "complete")
           ClosedShape
     }
-    RunnableGraph.fromGraph(graph).run(ActorMaterializer.create(system))
+    RunnableGraph.fromGraph(graph).run(Materializer.createMaterializer(system))
   }
 
   val day: MillisSinceEpoch = myNow().millisSinceEpoch
@@ -68,9 +68,6 @@ class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
         actor ! UpdatedMillis(Iterable(today, tomorrow))
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 5), 120, durationMinutes))
         Thread.sleep(200)
-        actor ! PoisonPill
-        expectMsgAllClassOf(classOf[Terminated])
-
         startQueueActor(daysSourceProbe, defaultAirportConfig.crunchOffsetMinutes)
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 6), 120, durationMinutes))
         success

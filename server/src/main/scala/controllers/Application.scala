@@ -16,9 +16,8 @@ import controllers.application._
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import drt.shared.api.Arrival
 import drt.shared._
+import drt.shared.api.Arrival
 import drt.users.KeyCloakClient
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
@@ -29,9 +28,9 @@ import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
 import services.staffing.StaffTimeSlots
-import test.TestDrtSystem
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, ManageUsers, Role, StaffEdit}
 import uk.gov.homeoffice.drt.auth._
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
@@ -39,7 +38,7 @@ import java.nio.ByteBuffer
 import java.util.{Calendar, TimeZone, UUID}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
@@ -107,26 +106,6 @@ trait UserRoleProviderLike {
     )
   }
 }
-
-object DrtActorSystem extends AirportConfProvider {
-  implicit val actorSystem: ActorSystem = ActorSystem("DRT")
-  implicit val mat: Materializer = ActorMaterializer.create(actorSystem)
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val timeout: Timeout =  new Timeout(5.seconds)
-  val config: Configuration = new Configuration(ConfigFactory.load)
-  val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
-
-  val drtSystem: DrtSystemInterface =
-    if (isTestEnvironment) drtTestSystem
-    else drtProdSystem
-
-  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(getPortConfFromEnvVar)
-  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(getPortConfFromEnvVar)
-
-}
-
-trait WithDrtSystemInterface
-
 @Singleton
 class Application @Inject()(implicit val config: Configuration, env: Environment)
   extends InjectedController

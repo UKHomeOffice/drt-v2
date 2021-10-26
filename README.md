@@ -91,3 +91,8 @@ To reset the value, first delete the deployment for the port in question to make
 ```SELECT setval('journal_ordering_seq', COALESCE((SELECT MAX(ordering)+1 FROM journal), 1), false);```
 
 This gets the values back in sync and resolves the duplicate key insertion errors. The mystery is how we ended up having them out of sync in the first place...
+
+#Updating the akka version and akka persistent jdbc 
+With upgrade for akka version (2.6.17) and akka persistent jdbc (5.0.4) there is change in schema for journal and snapshot . At moment there are no tools to migration from legacy to new schema.
+But there is option provided to continue using legacy schema with some configure update for dao which is document by lightbend  https://doc.akka.io/docs/akka-persistence-jdbc/current/migration.html.
+At some point once the migration tool is available we can migrate to new schema which is beneficial. 
