@@ -12,7 +12,7 @@ class EgatesCapacityProviderSpec extends CrunchTestLike {
     val threeBanks = IndexedSeq(EgateBank(IndexedSeq(true, true)), EgateBank(IndexedSeq(true, true)), EgateBank(IndexedSeq(true)))
     val oneBank = IndexedSeq(EgateBank(IndexedSeq(true, true)))
     val eventualUpdates = Future.successful(EgateBanksUpdates(List(EgateBanksUpdate(0L, threeBanks), EgateBanksUpdate(10L, oneBank))))
-    val provider = EgatesCapacityProvider(() => eventualUpdates, IndexedSeq(EgateBank(IndexedSeq(true))))
+    val provider = EgatesCapacityProvider(() => eventualUpdates)
     val capacities: WorkloadProcessorsProvider = Await.result(provider.capacityForPeriod(9L to 10L), 1.second)
 
     capacities === WorkloadProcessorsProvider(IndexedSeq(WorkloadProcessors(threeBanks), WorkloadProcessors(oneBank)))

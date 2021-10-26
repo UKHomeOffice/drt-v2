@@ -1,12 +1,10 @@
 package services.crunch.deskrecs
 
-import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.crunch.desklimits.DeskCapacityProvider
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimits
 import services.crunch.{CrunchTestLike, deskrecs}
 import services.{OptimiserConfig, OptimizerCrunchResult, SDate}
-import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -84,7 +82,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
         val queues = List(EeaDesk, NonEeaDesk)
 
-        val maxDeskProvider = FlexedTerminalDeskLimits(totalDesksByMinute, Set(EeaDesk, NonEeaDesk), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
+        val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks, Set(EeaDesk, NonEeaDesk), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
 
         val eventualDesksAndWaits = deskrecs
           .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs)
@@ -112,7 +110,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
         val queues = List(FastTrack, NonEeaDesk, EeaDesk)
 
-        val maxDeskProvider = FlexedTerminalDeskLimits(totalDesksByMinute, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
+        val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
 
         val eventualDesksAndWaits = deskrecs
           .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs)
@@ -144,7 +142,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
         val queues = List(EGate, FastTrack, NonEeaDesk, EeaDesk)
 
-        val maxDeskProvider = FlexedTerminalDeskLimits(totalDesksByMinute, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
+        val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.mapValues(d => DeskCapacityProvider(d)))
 
         val eventualDesksAndWaits = deskrecs
           .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs)
