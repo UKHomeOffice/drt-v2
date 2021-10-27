@@ -22,7 +22,7 @@ import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsProvider, addManifests}
 import services.crunch.deskrecs.OptimiserMocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
-import services.crunch.{CrunchTestLike, TestDefaults, VoyageManifestGenerator}
+import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
@@ -107,7 +107,7 @@ case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKe
 class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   val airportConfig: AirportConfig = TestDefaults.airportConfigWithEgates
 
-  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig)
+  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.terminalProvider(airportConfig))
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
   val pcpPaxCalcFn: Arrival => Int = PcpUtils.bestPcpPaxEstimate
 
@@ -134,10 +134,9 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       historicManifestsProvider = mockHistoricManifestsProvider(Map(arrival -> historicPax)),
       splitsCalculator = splitsCalculator,
       splitsSink = mockSplitsSink,
-      flightsToLoads = desksAndWaitsProvider.flightsToLoads,
-      loadsToQueueMinutes = desksAndWaitsProvider.loadsToDesks,
+      portDesksAndWaitsProvider = desksAndWaitsProvider,
       maxDesksProviders = maxDesksProvider,
-      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty)
+      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
     )
 
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)

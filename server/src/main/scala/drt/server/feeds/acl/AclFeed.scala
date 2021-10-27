@@ -33,12 +33,14 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
     latestFileDateAndSeason(portCode)
       .map {
         case (date, season) =>
+          val aclFilePath = "/180_Days/" + aclFileName(date, portCode, season)
+          log.info(s"Latest ACL file: $aclFilePath")
           val feedResponseTry = (for {
             sshClient <- Try(ssh)
             sftpClient <- Try(sshClient.newSFTPClient)
           } yield {
             val responseTry = Try {
-              Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, "/180_Days/" + aclFileName(date, portCode, season)), terminalMapping))
+              Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, aclFilePath), terminalMapping))
             }
             sftpClient.close()
             sshClient.disconnect()

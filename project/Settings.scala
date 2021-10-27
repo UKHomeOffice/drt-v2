@@ -73,7 +73,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "48"
-    val drtLib = "v73"
+    val drtLib = "v92"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "1.2.0"
@@ -81,6 +81,8 @@ object Settings {
     val slick = "3.3.2"
     val censorinus = "2.1.13"
     val janinoVersion = "3.1.6"
+    val scalaJsReactMaterialUi = "0.2.1"
+    val sprayJsonScalaJs = "1.3.5-7"
   }
 
   import versions._
@@ -119,9 +121,11 @@ object Settings {
     "com.lihaoyi" %% "pprint" % pprint,
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs,
 
-    "io.kinoplan" %%% "scalajs-react-material-ui-core" % "0.2.1",
-    "io.kinoplan" %%% "scalajs-react-material-ui-icons" % "0.2.1",
-    "io.kinoplan" %%% "scalajs-react-material-ui-lab" % "0.2.1"
+    "io.kinoplan" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
+    "io.kinoplan" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
+    "io.kinoplan" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
+
+    "io.crashbox" %% "spray-json" % sprayJsonScalaJs
   ))
 
   val clientNpmDevDependencies = "expose-loader" -> exposeLoader

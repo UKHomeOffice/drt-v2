@@ -18,6 +18,7 @@ import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
+import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
@@ -73,7 +74,10 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
       historicManifestsProvider = historicManifestsProvider,
       flightsActor = system.actorOf(Props(new AkkingActor())),
       portStateActor = portStateActor,
-      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty)
+      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
+      egateBanksProvider = () => Future.successful(PortEgateBanksUpdates(defaultAirportConfig.eGateBankSizes.map {
+        case (terminal, banks) => (terminal, EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))
+      })),
     )
 
     val result = Await.result(futureResult, 1 second)

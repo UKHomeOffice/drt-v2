@@ -10,6 +10,7 @@ import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
+import akka.util.Timeout
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
@@ -42,7 +43,8 @@ case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsF
 case class ProdDrtSystem(airportConfig: AirportConfig)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
-                         val system: ActorSystem) extends DrtSystemInterface {
+                         val system: ActorSystem,
+                         val timeout: Timeout) extends DrtSystemInterface {
 
   import DrtStaticParameters._
 
@@ -100,7 +102,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
   val s3ApiProvider: S3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
   val initialManifestsState: Option[ApiFeedState] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor)
-  log.info(s"Providing latest API Zip Filename from storage: ${initialManifestsState.map(_.latestZipFilename).getOrElse("None")}")
+  system.log.info(s"Providing latest API Zip Filename from storage: ${initialManifestsState.map(_.latestZipFilename).getOrElse("None")}")
   val latestZipFileName: String = S3ApiProvider.latestUnexpiredDqZipFilename(initialManifestsState.map(_.latestZipFilename), now, expireAfterMillis)
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
@@ -146,8 +148,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           initialForecastArrivals = maybeForecastArrivals,
           initialLiveBaseArrivals = Option(SortedMap[UniqueArrival, Arrival]()),
           initialLiveArrivals = maybeLiveArrivals,
-          initialCrunchQueue = maybeCrunchQueue,
-          initialDeploymentQueue = maybeDeploymentQueue,
           refreshArrivalsOnStart = params.refreshArrivalsOnStart,
           refreshManifestsOnStart = params.refreshManifestsOnStart,
           startDeskRecs = startDeskRecs)

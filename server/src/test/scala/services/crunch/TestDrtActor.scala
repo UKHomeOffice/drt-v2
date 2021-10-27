@@ -20,13 +20,15 @@ import org.slf4j.{Logger, LoggerFactory}
 import queueus.AdjustmentsNoop
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
+import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 
 import scala.collection.immutable.Map
@@ -42,7 +44,24 @@ case object MockManifestLookupService extends ManifestLookupLike {
                                           voyageNumber: VoyageNumber,
                                           scheduled: SDateLike)
                                          (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
-    Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+}
+
+object MockEgatesProvider {
+  def terminalProvider(airportConfig: AirportConfig): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) => {
+    airportConfig.eGateBankSizes.get(terminal) match {
+      case Some(sizes) =>
+        val banks = EgateBank.fromAirportConfig(sizes)
+        val update = EgateBanksUpdate(0L, banks)
+        val updates = EgateBanksUpdates(List(update))
+        Future.successful(updates)
+      case None =>
+        Future.failed(new Exception(s"No egates config found for terminal $terminal"))
+    }
+  }
+
+  def portProvider(airportConfig: AirportConfig): () => Future[PortEgateBanksUpdates] = () =>
+    Future.successful(PortEgateBanksUpdates(airportConfig.eGateBankSizes.mapValues(banks => EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))))
 }
 
 class TestDrtActor extends Actor {
@@ -100,12 +119,18 @@ class TestDrtActor extends Actor {
 
       val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig))
 
-      val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
-        PortDeskLimits.flexed(tc.airportConfig)
-      else
-        PortDeskLimits.fixed(tc.airportConfig)
+      val egatesProvider = tc.maybeEgatesProvider match {
+        case None => MockEgatesProvider.terminalProvider(airportConfig)
+        case Some(provider) =>
+          (terminal: Terminal) => provider().map(p => p.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for $terminal")))
+      }
 
-      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig) _
+      val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
+        PortDeskLimits.flexed(tc.airportConfig, egatesProvider)
+      else
+        PortDeskLimits.fixed(tc.airportConfig, egatesProvider)
+
+      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig, egatesProvider) _
 
       def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
         val today = tc.now()
@@ -132,8 +157,7 @@ class TestDrtActor extends Actor {
           historicManifestsProvider = OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups),
           splitsCalculator = splitsCalculator,
           splitsSink = portStateActor,
-          flightsToLoads = portDeskRecs.flightsToLoads,
-          loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+          portDesksAndWaitsProvider = portDeskRecs,
           maxDesksProviders = deskLimitsProviders,
           redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
         )

@@ -55,12 +55,12 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
+import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 
 import scala.collection.immutable.SortedMap
-import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
@@ -69,6 +69,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
+  implicit val timeout: Timeout
 
   val now: () => SDateLike = () => SDate.now()
   val purgeOldLiveSnapshots = false
@@ -89,8 +90,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   private val maxBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.maximum-seconds")
   val restartOnStop: RestartOnStop = RestartOnStop(minBackoffSeconds seconds, maxBackoffSeconds seconds)
 
+  val defaultEgates: Map[Terminal, EgateBanksUpdates] = airportConfig.eGateBankSizes.mapValues { banks =>
+    val effectiveFrom = SDate("2020-01-01T00:00").millisSinceEpoch
+    EgateBanksUpdates(List(EgateBanksUpdate(effectiveFrom, EgateBank.fromAirportConfig(banks))))
+  }
+
   val alertsActor: ActorRef = restartOnStop.actorOf(Props(new AlertsActor(now)), "alerts-actor")
   val redListUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new RedListUpdatesActor(now)), "red-list-updates-actor")
+  val egateBanksUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new EgateBanksUpdatesActor(now, defaultEgates, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, params.forecastMaxDays)), "egate-banks-updates-actor")
   val liveBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new CirriumLiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
@@ -144,12 +151,18 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val optimiser: TryCrunch = OptimiserWithFlexibleProcessors.crunch
 
+  private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
+
   val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig))
 
-  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
-    PortDeskLimits.flexed(airportConfig)
+  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] =
+    terminal => egatesProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
+
+  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks")) {
+    PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
+  }
   else
-    PortDeskLimits.fixed(airportConfig)
+    PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
 
   val paxTypeQueueAllocation: PaxTypeQueueAllocation = paxTypeQueueAllocator(airportConfig)
 
@@ -173,7 +186,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
   val startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch) = () => {
-    val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig) _
+    val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
 
     implicit val timeout: Timeout = new Timeout(1 second)
 
@@ -185,10 +198,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
       splitsCalculator = splitsCalculator,
       splitsSink = portStateActor,
-      flightsToLoads = portDeskRecs.flightsToLoads,
-      loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+      portDesksAndWaitsProvider = portDeskRecs,
       maxDesksProviders = deskLimitsProviders,
-      redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates]
+      redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
     )
 
     val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor)
@@ -203,6 +215,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor)
 
     redListUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
+    egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor)
 
@@ -223,8 +236,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         initialForecastArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
-                        initialCrunchQueue: Option[mutable.SortedSet[CrunchRequest]],
-                        initialDeploymentQueue: Option[mutable.SortedSet[CrunchRequest]],
                         refreshArrivalsOnStart: Boolean,
                         refreshManifestsOnStart: Boolean,
                         startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[Cancellable] = {

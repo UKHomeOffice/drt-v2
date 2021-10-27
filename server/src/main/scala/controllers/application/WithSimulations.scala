@@ -24,6 +24,7 @@ import services.exports.StreamingDesksExport
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios.simulationResult
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -69,6 +70,7 @@ trait WithSimulations {
                 ctrl.flightsActor,
                 portStateActor,
                 () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+                () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
               )
             }.flatten
 
@@ -110,6 +112,7 @@ trait WithSimulations {
                 flightsActor = ctrl.flightsActor,
                 portStateActor = portStateActor,
                 redListUpdatesProvider = () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+                egateBanksProvider = () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
               )
             }
             }.flatten

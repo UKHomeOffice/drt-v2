@@ -41,7 +41,8 @@ case class MockManifestLookupService(implicit ec: ExecutionContext) extends Mani
 case class TestDrtSystem(airportConfig: AirportConfig)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
-                         val system: ActorSystem) extends DrtSystemInterface {
+                         val system: ActorSystem,
+                         val timeout: Timeout) extends DrtSystemInterface {
 
   import DrtStaticParameters._
 
@@ -162,8 +163,6 @@ case class TestDrtSystem(airportConfig: AirportConfig)
       initialForecastArrivals = None,
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
-      initialCrunchQueue = None,
-      initialDeploymentQueue = None,
       refreshArrivalsOnStart = false,
       refreshManifestsOnStart = false,
       startDeskRecs = startDeskRecs)

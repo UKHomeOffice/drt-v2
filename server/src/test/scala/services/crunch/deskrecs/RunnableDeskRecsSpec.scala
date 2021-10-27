@@ -23,7 +23,7 @@ import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.OptimiserMocks.{mockHistoricManifestsProvider, mockHistoricManifestsProviderNoop, mockLiveManifestsProviderNoop}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
-import services.crunch.{CrunchTestLike, TestConfig, TestDefaults}
+import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
@@ -111,10 +111,10 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       historicManifestsProvider = historicManifests,
       splitsCalculator = splitsCalc,
       splitsSink = mockSplitsSink,
-      flightsToLoads = desksAndWaitsProvider.flightsToLoads,
-      loadsToQueueMinutes = desksAndWaitsProvider.loadsToDesks,
-      maxDesksProviders = PortDeskLimits.flexed(airportConfig),
-      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty))
+      portDesksAndWaitsProvider = desksAndWaitsProvider,
+      maxDesksProviders = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.terminalProvider(airportConfig)),
+      redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
+    )
 
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 

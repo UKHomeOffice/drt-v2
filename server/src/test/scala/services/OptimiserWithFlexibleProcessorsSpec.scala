@@ -1,6 +1,7 @@
 package services
 
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.egates.{Desk, EgateBank}
 
 import scala.util.Try
 
@@ -19,7 +20,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           workloads = oneMinuteWorkloadFor30Minutes,
           minDesks = oneDesk,
           maxDesks = oneDesk,
-          config = OptimiserConfig(20, DeskWorkloadProcessors))
+          config = OptimiserConfig(20, WorkloadProcessorsProvider(IndexedSeq.fill(30)(WorkloadProcessors(Seq.fill(10)(Desk))))))
 
         result.get.waitTimes === zeroWaitFor30Minutes
       }
@@ -32,7 +33,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           workloads = twoMinuteWorkloadFor30Minutes,
           minDesks = oneDesk,
           maxDesks = oneDesk,
-          config = OptimiserConfig(20, DeskWorkloadProcessors))
+          config = OptimiserConfig(20, WorkloadProcessorsProvider(IndexedSeq.fill(30)(WorkloadProcessors(Seq.fill(10)(Desk))))))
 
         val increasingWaitTimes = Seq(1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15)
 
@@ -40,6 +41,9 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
       }
     }
   }
+
+  def egateProcessorsProvider(minutes: Int, bankSizes: Iterable[Int]): WorkloadProcessorsProvider =
+    WorkloadProcessorsProvider(IndexedSeq.fill(minutes)(WorkloadProcessors(bankSizes.map(g => EgateBank(IndexedSeq.fill(g)(true))))))
 
   "Crunch with egate workload processors" >> {
     val tenMinutesWorkloadFor30Minutes = List.fill(30)(10d)
@@ -50,7 +54,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           workloads = tenMinutesWorkloadFor30Minutes,
           minDesks = oneBank,
           maxDesks = oneBank,
-          config = OptimiserConfig(20, EGateWorkloadProcessors(bankSizes)))
+          config = OptimiserConfig(20, egateProcessorsProvider(tenMinutesWorkloadFor30Minutes.size, bankSizes)))
 
         result.get.waitTimes === zeroWaitFor30Minutes
       }
@@ -63,7 +67,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           workloads = tenMinutesWorkloadFor30Minutes,
           minDesks = oneBank,
           maxDesks = oneBank,
-          config = OptimiserConfig(20, EGateWorkloadProcessors(bankSizes)))
+          config = OptimiserConfig(20, egateProcessorsProvider(tenMinutesWorkloadFor30Minutes.size, bankSizes)))
 
         val increasingWaitTimes = Seq(1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15)
 
@@ -74,12 +78,12 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
     "Given 20 minutes incoming workload per minute, and egate banks of size 15 gates fixed at 1 bank per minute" >> {
       "I should see wait times creeping up by a minute every 4 minutes" >> {
         val twentyMinutesWorkloadFor30Minutes = List.fill(30)(20d)
-        val banksSizes = Iterable(15)
+        val bankSizes = Iterable(15)
         val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunch(
           workloads = twentyMinutesWorkloadFor30Minutes,
           minDesks = oneBank,
           maxDesks = oneBank,
-          config = OptimiserConfig(20, EGateWorkloadProcessors(banksSizes)))
+          config = OptimiserConfig(20, egateProcessorsProvider(twentyMinutesWorkloadFor30Minutes.size, bankSizes)))
 
         val increasingWaitTimes = Seq(1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8)
 
@@ -96,7 +100,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           tenMinutesWorkloadFor30Minutes,
           oneBankFor15Minutes ++ twoBanksFor15Minutes,
           oneBankFor15Minutes ++ twoBanksFor15Minutes,
-          OptimiserConfig(20, EGateWorkloadProcessors(bankSizes)))
+          OptimiserConfig(20, egateProcessorsProvider(tenMinutesWorkloadFor30Minutes.size, bankSizes)))
 
         val increasingWaitTimes = Seq(1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8)
 
@@ -111,7 +115,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           tenMinutesWorkloadFor30Minutes,
           oneBankFor15Minutes ++ twoBanksFor15Minutes,
           oneBankFor15Minutes ++ twoBanksFor15Minutes,
-          OptimiserConfig(20, EGateWorkloadProcessors(bankSizes)))
+          OptimiserConfig(20, egateProcessorsProvider(tenMinutesWorkloadFor30Minutes.size, bankSizes)))
 
         val increasingWaitTimes = Seq(1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0)
 
@@ -127,7 +131,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           tenMinutesWorkloadFor30Minutes,
           oneBank,
           threeDesksOrGates,
-          OptimiserConfig(5, EGateWorkloadProcessors(bankSizes)))
+          OptimiserConfig(5, egateProcessorsProvider(tenMinutesWorkloadFor30Minutes.size, bankSizes)))
 
         val expected = OptimizerCrunchResult(
           Vector(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3),
@@ -147,7 +151,8 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           val bankSizes = Iterable(1, 1, 1, 1, 1, 1, 1, 1)
           val workPerMinute = 3.5
           val workloadFor60Minutes = IndexedSeq.fill(60)(workPerMinute)
-          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, EGateWorkloadProcessors(bankSizes))
+          val provider = egateProcessorsProvider(workloadFor60Minutes.size * 3, bankSizes)
+          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, provider)
 
           val threeBanksFor60Minutes = Seq.fill(60)(3)
 
@@ -162,7 +167,8 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           val bankSizes = Iterable(1, 1, 1, 1, 1, 1, 1, 1)
           val workPerMinute = 3.6
           val workloadFor60Minutes = IndexedSeq.fill(60)(workPerMinute)
-          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, EGateWorkloadProcessors(bankSizes))
+          val provider = egateProcessorsProvider(workloadFor60Minutes.size * 3, bankSizes)
+          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, provider)
 
           val fourBanksFor60Minutes = Seq.fill(60)(4)
 
@@ -177,7 +183,8 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           val bankSizes = Iterable(3, 5, 5)
           val workPerMinute = 3d
           val workloadFor60Minutes = IndexedSeq.fill(60)(workPerMinute)
-          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, EGateWorkloadProcessors(bankSizes))
+          val provider = egateProcessorsProvider(workloadFor60Minutes.size * 3, bankSizes)
+          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, provider)
 
           val oneBankFor60Minutes = Seq.fill(60)(1)
 
@@ -192,7 +199,8 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
           val bankSizes = Iterable(3, 5, 5)
           val workPerMinute = 6d
           val workloadFor60Minutes = IndexedSeq.fill(60)(workPerMinute)
-          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, EGateWorkloadProcessors(bankSizes))
+          val provider = egateProcessorsProvider(workloadFor60Minutes.size * 3, bankSizes)
+          val result: IndexedSeq[Int] = OptimiserWithFlexibleProcessors.rollingFairXmax(workloadFor60Minutes, oneGateFor60Minutes, 5, 15, 60, 120, provider)
 
           val twoBanksFor60Minutes = Seq.fill(60)(2)
 
@@ -221,7 +229,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
       val workload = IndexedSeq.fill(60)(5d)
       val capacity = IndexedSeq.fill(30)(5) ++ IndexedSeq.fill(30)(0)
       "When I ask for the ProcessedWork" >> {
-        val processed = OptimiserWithFlexibleProcessors.tryProcessWork(workload, capacity, 25, IndexedSeq(), DeskWorkloadProcessors)
+        val processed = OptimiserWithFlexibleProcessors.tryProcessWork(workload, capacity, 25, IndexedSeq(), WorkloadProcessorsProvider(IndexedSeq.fill(60)(WorkloadProcessors(Seq.fill(10)(Desk)))))
         "I should not find any NaNs" >> {
           processed.get.util.exists(_.isNaN) === false
         }

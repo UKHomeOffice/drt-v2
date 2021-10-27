@@ -19,25 +19,26 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs.{DynamicRunnableDeskRecs, PortDesksAndWaitsProvider, RunnableOptimisation}
 import services.graphstages.FlightFilter
 import services.{OptimiserWithFlexibleProcessors, SDate}
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object Scenarios {
 
-  def simulationResult(
-                        simulationParams: SimulationParams,
-                        simulationAirportConfig: AirportConfig,
-                        splitsCalculator: SplitsCalculator,
-                        flightsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]],
-                        liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
-                        historicManifestsProvider: HistoricManifestsProvider,
-                        flightsActor: ActorRef,
-                        portStateActor: ActorRef,
-                        redListUpdatesProvider: () => Future[RedListUpdates],
-                      )(implicit system: ActorSystem, timeout: Timeout): Future[DeskRecMinutes] = {
-
+  def simulationResult(simulationParams: SimulationParams,
+                       simulationAirportConfig: AirportConfig,
+                       splitsCalculator: SplitsCalculator,
+                       flightsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]],
+                       liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
+                       historicManifestsProvider: HistoricManifestsProvider,
+                       flightsActor: ActorRef,
+                       portStateActor: ActorRef,
+                       redListUpdatesProvider: () => Future[RedListUpdates],
+                       egateBanksProvider: () => Future[PortEgateBanksUpdates])
+                      (implicit system: ActorSystem, timeout: Timeout): Future[DeskRecMinutes] = {
 
     implicit val ec: ExecutionContextExecutor = system.dispatcher
     implicit val mat: Materializer = Materializer.createMaterializer(system)
@@ -46,9 +47,12 @@ object Scenarios {
       PortDesksAndWaitsProvider(
         simulationAirportConfig,
         OptimiserWithFlexibleProcessors.crunch,
-        FlightFilter.forPortConfig(simulationAirportConfig))
+        FlightFilter.forPortConfig(simulationAirportConfig),
+      )
 
-    val terminalDeskLimits = PortDeskLimits.fixed(simulationAirportConfig)
+    val terminalEgatesProvider = (terminal: Terminal) => egateBanksProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
+
+    val terminalDeskLimits = PortDeskLimits.fixed(simulationAirportConfig, terminalEgatesProvider)
 
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
       arrivalsProvider = flightsProvider,
@@ -56,8 +60,7 @@ object Scenarios {
       historicManifestsProvider = historicManifestsProvider,
       splitsCalculator = splitsCalculator,
       splitsSink = flightsActor,
-      flightsToLoads = portDesksAndWaitsProvider.flightsToLoads,
-      loadsToQueueMinutes = portDesksAndWaitsProvider.loadsToDesks,
+      portDesksAndWaitsProvider = portDesksAndWaitsProvider,
       maxDesksProviders = terminalDeskLimits,
       redListUpdatesProvider = redListUpdatesProvider,
     )

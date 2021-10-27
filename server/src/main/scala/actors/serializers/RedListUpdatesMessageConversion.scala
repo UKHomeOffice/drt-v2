@@ -1,6 +1,5 @@
 package actors.serializers
 
-import scalapb.GeneratedMessage
 import server.protobuf.messages.RedListUpdates._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
 

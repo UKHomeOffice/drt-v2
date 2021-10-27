@@ -7,10 +7,12 @@ import drt.shared.api.Arrival
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
 import services.{TryCrunch, TrySimulator}
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.SortedMap
+import scala.concurrent.Future
 
 case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
                       initialForecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
@@ -36,5 +38,6 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       flexDesks: Boolean = false,
                       maybePassengersActorProps: Option[Props] = None,
                       pcpPaxFn: Arrival => Int = TestDefaults.pcpPaxFn,
-                      arrivalsAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustmentsNoop
+                      arrivalsAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustmentsNoop,
+                      maybeEgatesProvider: Option[() => Future[PortEgateBanksUpdates]] = None,
                      )
