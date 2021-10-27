@@ -43,7 +43,7 @@ class OptimiserSpec extends Specification {
     rResult === newResult
   }
 
-  private def desksWorkloadsProvider(minutes: Int): WorkloadProcessorsProvider = WorkloadProcessorsProvider(IndexedSeq.fill(minutes + 180)(WorkloadProcessors(Iterable.fill(20)(Desk))))
+  private def desksWorkloadsProvider(minutes: Int): WorkloadProcessorsProvider = WorkloadProcessorsProvider(IndexedSeq.fill(minutes)(WorkloadProcessors(Iterable.fill(20)(Desk))))
 
   "process.work comparison" >> {
     loadOptimiserScript

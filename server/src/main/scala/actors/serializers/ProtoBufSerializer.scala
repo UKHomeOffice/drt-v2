@@ -4,6 +4,7 @@ import akka.serialization.SerializerWithStringManifest
 import scalapb.GeneratedMessage
 import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
 import server.protobuf.messages.CrunchState._
+import server.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
@@ -66,6 +67,9 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val Addition: String = classOf[AdditionMessage].getName
   final val Removal: String = classOf[RemovalMessage].getName
   final val RemoveUpdate: String = classOf[RemoveUpdateMessage].getName
+  final val SetEgateBanksUpdate: String = classOf[SetEgateBanksUpdateMessage].getName
+  final val RemoveEgateBanksUpdate: String = classOf[RemoveEgateBanksUpdateMessage].getName
+  final val PortEgateBanksUpdates: String = classOf[PortEgateBanksUpdatesMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = objectToSerialize match {
     case m: GeneratedMessage => m.toByteArray
@@ -119,6 +123,9 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case Addition => AdditionMessage.parseFrom(bytes)
       case Removal => RemovalMessage.parseFrom(bytes)
       case RemoveUpdate => RemoveUpdateMessage.parseFrom(bytes)
+      case SetEgateBanksUpdate => SetEgateBanksUpdateMessage.parseFrom(bytes)
+      case RemoveEgateBanksUpdate => RemoveEgateBanksUpdateMessage.parseFrom(bytes)
+      case PortEgateBanksUpdates => PortEgateBanksUpdatesMessage.parseFrom(bytes)
     }
   }
 }

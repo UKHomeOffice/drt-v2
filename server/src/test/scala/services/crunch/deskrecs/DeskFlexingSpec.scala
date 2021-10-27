@@ -162,5 +162,5 @@ class DeskFlexingSpec extends CrunchTestLike {
     }
   }
 
-  private def mockLoads(queues: List[Queue]): Map[Queue, Seq[Double]] = queues.map(q => (q, List.fill(24)(10d))).toMap
+  private def mockLoads(queues: List[Queue]): Map[Queue, Seq[Double]] = queues.map(q => (q, List.fill(30)(10d))).toMap
 }
