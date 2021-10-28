@@ -10,7 +10,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.RedListsEdit
+import uk.gov.homeoffice.drt.auth.Roles.{EgateBanksEdit, RedListsEdit}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports._
@@ -34,7 +34,7 @@ object PortConfigPage {
           if (user.hasRole(RedListsEdit)) {
             RedListEditor(redListUpdates)
           } else EmptyVdom,
-          if (user.hasRole(RedListsEdit)) {
+          if (user.hasRole(EgateBanksEdit)) {
             <.div(
               <.h2("E-gates"),
               airportConfig.eGateBankSizes.map {
