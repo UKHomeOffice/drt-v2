@@ -38,4 +38,10 @@ class LGWForecastXLSExtractorSpec extends Specification {
     result === expected
   }
 
+  "Given an excel file for LGW forecast , start row is at line where Header `Date` is mentioned" >> {
+    val path = getClass.getClassLoader.getResource("LGW_Forecast_Fixture.xlsx").getPath
+    val sheet = LGWForecastXLSExtractor.getSheet(path)
+    val startRow = LGWForecastXLSExtractor.getStartRow(sheet)
+    startRow === 3
+  }
 }

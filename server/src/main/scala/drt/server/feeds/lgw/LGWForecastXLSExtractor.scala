@@ -10,6 +10,7 @@ import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import java.util.TimeZone
+import scala.jdk.CollectionConverters.asScalaIteratorConverter
 import scala.util.{Failure, Success, Try}
 
 
@@ -33,20 +34,19 @@ object LGWForecastXLSExtractor {
       case Success(arrival) => arrival
     }
 
+
   def rows(xlsFilePath: String): List[LGWForecastFlightRow] = {
 
     log.info(s"Extracting LGW forecast flights from XLS Workbook located at $xlsFilePath")
 
-    val lgwWorkSheet = workbook(xlsFilePath)
-
-    val sheet: Sheet = sheetMapByIndex(0, lgwWorkSheet)
+    val sheet: Sheet = getSheet(xlsFilePath)
 
     val startRow = getStartRow(sheet)
 
-    val headingIndexByNameMap: Map[String, Int] = headingIndexByName(sheet.getRow(startRow - 1))
+    val headingIndexByNameMap: Map[String, Int] = headingIndexByName(sheet.getRow(startRow))
 
     val arrivalRowsTry: Seq[Try[LGWForecastFlightRow]] = for {
-      rowNumber <- startRow to sheet.getLastRowNum
+      rowNumber <- startRow + 1 to sheet.getLastRowNum
       row = sheet.getRow(rowNumber)
       if row.getCell(0) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
     } yield {
@@ -83,23 +83,13 @@ object LGWForecastXLSExtractor {
 
   }
 
-  def getStartRow(sheet: Sheet): Int = {
-    val rowIterator = sheet.iterator()
-    var isHeaderRowFound = false
-    var startRow = 0
-    while (rowIterator.hasNext && !isHeaderRowFound) {
-      val row = rowIterator.next
-      val columnarIterator = row.cellIterator()
-      while (columnarIterator.hasNext && !isHeaderRowFound) {
-        val cell = columnarIterator.next
-        if (cell.getStringCellValue == "Date") {
-          isHeaderRowFound = true
-        }
-      }
-      startRow = startRow + 1
-    }
-    startRow
+  def getSheet(xlsFilePath: String): Sheet = {
+    val lgwWorkSheet = workbook(xlsFilePath)
+    sheetMapByIndex(0, lgwWorkSheet)
   }
+
+  def getStartRow(sheet: Sheet): Int =
+    sheet.iterator().asScala.indexWhere(_.cellIterator().asScala.exists(_.getStringCellValue == "Date"))
 
   def lgwFieldsToArrival(flightRow: LGWForecastFlightRow): Try[Arrival] = {
     Try {
