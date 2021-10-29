@@ -3,11 +3,11 @@ package drt.server.feeds.lgw
 import drt.server.feeds.common.XlsExtractorUtil._
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, SDateLike}
-import org.apache.poi.ss.usermodel.{Cell, DateUtil, Header, Sheet}
+import org.apache.poi.ss.usermodel.{Cell, DateUtil, Sheet}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
 import java.util.TimeZone
 import scala.jdk.CollectionConverters.asScalaIteratorConverter
@@ -89,7 +89,9 @@ object LGWForecastXLSExtractor {
   }
 
   def getStartRow(sheet: Sheet): Int =
-    sheet.iterator().asScala.indexWhere(_.cellIterator().asScala.exists(_.getStringCellValue == "Date"))
+    sheet.iterator().asScala
+      .indexWhere(_.cellIterator().asScala
+        .exists(_.getStringCellValue == "Date"))
 
   def lgwFieldsToArrival(flightRow: LGWForecastFlightRow): Try[Arrival] = {
     Try {
