@@ -60,7 +60,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1.second)
 
         result === flights
       }
@@ -85,7 +85,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1.second)
 
         result === flights
       }
@@ -110,7 +110,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1.second)
 
         val expected = FlightsWithSplits(List(fws2))
         result === expected
@@ -138,7 +138,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1.second)
 
         val expected = FlightsWithSplits(List(fws1))
         result === expected
@@ -166,7 +166,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1.second)
 
         val expected = FlightsWithSplits(List(fws1))
         result === expected
@@ -194,7 +194,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1.second)
 
         val expected = FlightsWithSplits(List(fws1))
         result === expected
@@ -222,7 +222,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         )))
         val eventualResult = cmActor.ask(GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1))
           .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1.second)
 
         val expected = FlightsWithSplits(List(fws1))
         result === expected
@@ -250,7 +250,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val request = GetFlightsForTerminalDateRange(from.millisSinceEpoch, to.millisSinceEpoch, T1)
         val pitQuery = PointInTimeQuery(SDate("2020-09-22").millisSinceEpoch, request)
         val eventualResult = cmActor.ask(pitQuery).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1 second)
+        val result: FlightsWithSplits = Await.result(FlightsRouterActor.runAndCombine(eventualResult), 1.second)
 
         result === flights
       }
@@ -275,7 +275,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
               .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
             .map(_.flights.values.headOption))
 
-        val result = Await.result(eventualFlights, 1 second)
+        val result = Await.result(eventualFlights, 1.second)
 
         result === Option(ApiFlightWithSplits(arrival, Set(), lastUpdated = Option(myNow().millisSinceEpoch)))
       }
@@ -292,13 +292,11 @@ class FlightsRouterActorSpec extends CrunchTestLike {
                 .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
               .map(_.flights.values.headOption)))
 
-        val result = Await.result(eventualFlights, 1 second)
+        val result = Await.result(eventualFlights, 1.second)
 
         result === Option(ApiFlightWithSplits(arrival, Set(splits), lastUpdated = Option(myNow().millisSinceEpoch)))
       }
     }
-
-    val updatesProbe: TestProbe = TestProbe("updates")
 
     "A flights router actor" should {
       val scheduled = "2021-06-24T10:25"

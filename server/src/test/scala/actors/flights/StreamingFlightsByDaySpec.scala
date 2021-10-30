@@ -7,10 +7,10 @@ import controllers.ArrivalGenerator
 import drt.shared.ApiFlightWithSplits
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared.dates.UtcDate
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
