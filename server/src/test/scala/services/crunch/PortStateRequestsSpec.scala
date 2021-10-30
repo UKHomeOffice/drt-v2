@@ -13,6 +13,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.dates.UtcDate
 import services.SDate
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -218,11 +219,11 @@ class PortStateRequestsSpec extends CrunchTestLike {
           Await.result(ps.ask(GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)), 1 second) === PortState.empty
         }
         "GetFlights(nonLegacyDate, nonLegacyDate) results in FlightsWithSplits.empty" >> {
-          val streamResponse = ps.ask(GetFlights(nonLegacyDate, nonLegacyDate)).mapTo[Source[FlightsWithSplits, NotUsed]]
+          val streamResponse = ps.ask(GetFlights(nonLegacyDate, nonLegacyDate)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
           Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
         }
         "GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1) results in FlightsWithSplits.empty" >> {
-          val streamResponse = ps.ask(GetFlightsForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
+          val streamResponse = ps.ask(GetFlightsForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
           Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
         }
       }
@@ -238,11 +239,11 @@ class PortStateRequestsSpec extends CrunchTestLike {
           Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1))), 1 second) === PortState.empty
         }
         "PointInTimeQuery(nonLegacyDate, GetFlights(nonLegacyDate, nonLegacyDate)) results in FlightsWithSplits.empty" >> {
-          val streamResponse = ps.ask(PointInTimeQuery(nonLegacyDate, GetFlights(nonLegacyDate, nonLegacyDate))).mapTo[Source[FlightsWithSplits, NotUsed]]
+          val streamResponse = ps.ask(PointInTimeQuery(nonLegacyDate, GetFlights(nonLegacyDate, nonLegacyDate))).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
           Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
         }
         "PointInTimeQuery(nonLegacyDate, GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1)) results in FlightsWithSplits.empty" >> {
-          val streamResponse = ps.ask(PointInTimeQuery(nonLegacyDate, GetFlightsForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1))).mapTo[Source[FlightsWithSplits, NotUsed]]
+          val streamResponse = ps.ask(PointInTimeQuery(nonLegacyDate, GetFlightsForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1))).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
           Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
         }
       }
@@ -260,11 +261,11 @@ class PortStateRequestsSpec extends CrunchTestLike {
           Await.result(ps.ask(GetMinutesForTerminalDateRange(legacyDate, legacyDate, T1)), 1 second) === PortState.empty
         }
         "GetFlights(legacyDate, legacyDate) results in FlightsWithSplits.empty" >> {
-          val streamResponse = ps.ask(GetFlights(legacyDate, legacyDate)).mapTo[Source[FlightsWithSplits, NotUsed]]
+          val streamResponse = ps.ask(GetFlights(legacyDate, legacyDate)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
           Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
         }
         "GetFlightsForTerminal(legacyDate, legacyDate, T1) results in FlightsWithSplits.empty" >> {
-          val streamResponse = ps.ask(GetFlightsForTerminalDateRange(legacyDate, legacyDate, T1)).mapTo[Source[FlightsWithSplits, NotUsed]]
+          val streamResponse = ps.ask(GetFlightsForTerminalDateRange(legacyDate, legacyDate, T1)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
           Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
         }
       }
@@ -285,7 +286,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
                       ps: ActorRef): Future[FlightsWithSplits] = eventualAck.flatMap { _ =>
     val startMillis = now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = now().getLocalNextMidnight.millisSinceEpoch
-    FlightsRouterActor.runAndCombine(ps.ask(GetFlights(startMillis, endMillis)).mapTo[Source[FlightsWithSplits, NotUsed]])
+    FlightsRouterActor.runAndCombine(ps.ask(GetFlights(startMillis, endMillis)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
   }
 
   def eventualPortState(eventualAck: Future[Any],

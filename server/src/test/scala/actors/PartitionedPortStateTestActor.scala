@@ -13,6 +13,7 @@ import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsFo
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
+import drt.shared.dates.UtcDate
 
 
 class PartitionedPortStateTestActor(probe: ActorRef,
@@ -51,7 +52,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
       message match {
         case splits: SplitsForArrivals if splits.updatedMillis.nonEmpty =>
           val query = GetStateForDateRange(splits.updatedMillis.min, splits.updatedMillis.max)
-          val eventualSource = actor.ask(query).mapTo[Source[FlightsWithSplits, NotUsed]]
+          val eventualSource = actor.ask(query).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
           FlightsRouterActor
             .runAndCombine(eventualSource)
             .foreach {
@@ -63,7 +64,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
 
         case flightsWithSplitsDiff@ArrivalsDiff(_, _) if flightsWithSplitsDiff.updateMinutes.nonEmpty =>
           val query = GetStateForDateRange(flightsWithSplitsDiff.updateMinutes.min, flightsWithSplitsDiff.updateMinutes.max)
-          val eventualSource = actor.ask(query).mapTo[Source[FlightsWithSplits, NotUsed]]
+          val eventualSource = actor.ask(query).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
           FlightsRouterActor
             .runAndCombine(eventualSource)
             .foreach {
