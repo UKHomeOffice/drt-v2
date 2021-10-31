@@ -66,7 +66,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
   "Given a flights requester with a mock flights actor" >> {
     "When the mock is set to return an empty FlightsWithSplits" >> {
-      val requestQueueMinutes: FlightsRequester = PartitionedPortStateActor.requestFlightsFn(mockResponseActor(Source(List(emptyFlights))))
+      val requestQueueMinutes: FlightsRequester = PartitionedPortStateActor.requestFlightsFn(mockResponseActor(Source(List((UtcDate(2021, 8, 8), emptyFlights)))))
       "Then I should see the empty container in the future" >> {
         val eventualResult: Future[FlightsWithSplits] = FlightsRouterActor.runAndCombine(requestQueueMinutes(GetStateForDateRange(0L, 0L)))
         val result = Await.result(eventualResult, 1 second)
