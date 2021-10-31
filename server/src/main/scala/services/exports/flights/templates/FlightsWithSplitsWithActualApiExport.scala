@@ -4,6 +4,7 @@ import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDa
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared._
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 
 
 trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
@@ -13,7 +14,7 @@ trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
 
   override val headings: String = flightWithSplitsHeadingsPlusActualApi(queueNames)
 
-  override def rowValues(fws: ApiFlightWithSplits): Seq[String] = (flightWithSplitsToCsvRow(fws) :::
+  override def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Seq[String] = (flightWithSplitsToCsvRow(fws) :::
     actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList).map(s => s"$s")
 }
 

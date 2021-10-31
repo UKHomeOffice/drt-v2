@@ -4,6 +4,7 @@ import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDa
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.Arrival
 import drt.shared.{ApiFlightWithSplits, SDateLike}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.exports.Exports
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -70,7 +71,7 @@ case class CedatFlightsExport(start: SDateLike, end: SDateLike, terminal: Termin
     ) ++ List(fws.apiFlight.bestPcpPaxEstimate.toString) ++ splitsForSources
   }
 
-  override def rowValues(fws: ApiFlightWithSplits): Seq[String] = (flightWithSplitsToCsvRow(fws) :::
+  override def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Seq[String] = (flightWithSplitsToCsvRow(fws) :::
     actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList).map(s => s"$s")
 
   override def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Seq[String]): Seq[Double] =

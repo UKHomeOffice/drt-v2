@@ -1,6 +1,6 @@
 package controllers.application.exports
 
-import actors.PartitionedPortStateActor.PointInTimeQuery
+import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.GetState
 import akka.NotUsed
@@ -13,7 +13,8 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
-import drt.shared.dates.LocalDate
+import drt.shared.dates.{LocalDate, UtcDate}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.SDate
@@ -94,9 +95,16 @@ trait WithFlightsExport {
 
   private def flightsRequestToCsv(pointInTime: MillisSinceEpoch, export: FlightsExport): Future[Result] = {
     val pitRequest = PointInTimeQuery(pointInTime, export.request)
-    ctrl.flightsActor.ask(pitRequest).mapTo[Source[FlightsWithSplits, NotUsed]].map {
+    ctrl.flightsActor.ask(pitRequest).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]].flatMap {
       flightsStream =>
-        val csvStream = export.csvStream(flightsStream)
+        val flightsAndManifestsStream = flightsStream.mapAsync(1) { case (d, fws) =>
+          ctrl.manifestsRouterActor
+            .ask(GetStateForDateRange(SDate(d).millisSinceEpoch, SDate(d).addDays(1).addMinutes(-1).millisSinceEpoch))
+            .mapTo[Source[VoyageManifests, NotUsed]]
+            .flatMap(_.runFold(VoyageManifests.empty)(_ ++ _))
+            .map(manifests => (fws, manifests))
+        }
+        val csvStream = export.csvStream(flightsAndManifestsStream)
         val fileName = makeFileName("flights", export.terminal, export.start, export.end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
