@@ -14,6 +14,7 @@ import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, SplitsForArrivals}
 import drt.shared._
 import drt.shared.api.Arrival
+import drt.shared.dates.UtcDate
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
@@ -58,7 +59,7 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long) extends Ac
       implicit val ec: ExecutionContextExecutor = context.dispatcher
       val replyTo = sender()
       context.system.scheduler.scheduleOnce(responseDelayMillis.milliseconds) {
-        replyTo ! Source(List(FlightsWithSplits(flightsToReturn)))
+        replyTo ! Source(List((UtcDate(2021, 8, 8), FlightsWithSplits(flightsToReturn))))
         probe.ref ! getFlights
       }
 
