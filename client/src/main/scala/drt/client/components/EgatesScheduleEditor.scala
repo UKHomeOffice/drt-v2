@@ -43,6 +43,27 @@ object EgatesScheduleEditor {
             currentState.copy(editing = updatedEditing)
           }
         }
+        val addBank: () => ReactEventFromInput => CallbackTo[Unit] = () => e => {
+          e.persist()
+          scope.modState { currentState =>
+            val maybeUpdatedEditing = currentState.editing.map { editing =>
+              editing.copy(update = editing.update.copy(banks = editing.update.banks :+ EgateBank(IndexedSeq.fill(10)(true))))
+            }
+            currentState.copy(editing = maybeUpdatedEditing)
+          }
+        }
+        val removeBank: (Int) => ReactEventFromInput => CallbackTo[Unit] = (bankIdx) => e => {
+          e.persist()
+          scope.modState { currentState =>
+            val maybeUpdatedEditing = currentState.editing.map { editing =>
+              val updatedBanks = editing.update.banks.zipWithIndex.collect {
+                case (bank, idx) if idx != bankIdx => bank
+              }
+              editing.copy(update = editing.update.copy(banks = updatedBanks))
+            }
+            currentState.copy(editing = maybeUpdatedEditing)
+          }
+        }
         val setGate: (Int, Int, Boolean) => ReactEventFromInput => CallbackTo[Unit] = (bankIdx, gateIdx, gateIsOn) => e => {
           e.persist()
           scope.modState { currentState =>
@@ -50,6 +71,18 @@ object EgatesScheduleEditor {
               val bankToUpdate: EgateBank = editing.update.banks(bankIdx)
               val updatedGates = bankToUpdate.gates.updated(gateIdx, gateIsOn)
               val updatedBank = bankToUpdate.copy(gates = updatedGates)
+              val updatedBanks = editing.update.banks.updated(bankIdx, updatedBank)
+              editing.copy(update = editing.update.copy(banks = updatedBanks))
+            }
+            currentState.copy(editing = maybeUpdatedEditing)
+          }
+        }
+        val setGates: (Int, Boolean) => ReactEventFromInput => CallbackTo[Unit] = (bankIdx, gateIsOn) => e => {
+          e.persist()
+          scope.modState { currentState =>
+            val maybeUpdatedEditing = currentState.editing.map { editing =>
+              val bankToUpdate: EgateBank = editing.update.banks(bankIdx)
+              val updatedBank = bankToUpdate.copy(gates = IndexedSeq.fill(bankToUpdate.maxCapacity)(gateIsOn))
               val updatedBanks = editing.update.banks.updated(bankIdx, updatedBank)
               editing.copy(update = editing.update.copy(banks = updatedBanks))
             }
@@ -91,23 +124,33 @@ object EgatesScheduleEditor {
                     MuiGrid(item = true, xs = 9)(
                       MuiTextField(inputProps = js.Dynamic.literal(`class` = "mui-textfield-date-input"))(
                         ^.`type` := "datetime-local",
-                        ^.defaultValue := SDate(editing.update.effectiveFrom).toISODateOnly,
+                        ^.defaultValue := SDate(editing.update.effectiveFrom).toISOString().split("\\.").dropRight(1).mkString(""),
                         ^.onChange ==> setDate
                       )
                     )
                   )
                 ),
                 MuiDialogContent()(
-                  MuiGrid(container = true, spacing = 8)(
+                  MuiGrid(container = true, spacing = 16)(
+                    MuiGrid(item = true, container = true, spacing = 8)(
+                      MuiButton(color = Color.default, variant = "outlined", size = "small")(MuiIcons(Add)(fontSize = "small"), "Add bank", ^.onClick ==> addBank())
+                    ),
                     editing.update.banks.zipWithIndex.map { case (egateBank, bankIdx) =>
                       MuiGrid(item = true, container = true, spacing = 8)(
                         MuiGrid(item = true, container = true, justify = "space-between")(
                           MuiGrid(item = true)(s"Bank ${bankIdx + 1}"),
                           MuiGrid(item = true)(
-                            MuiButton(color = Color.default, variant = "outlined", size = "small")(MuiIcons(Delete)(fontSize = "small"))
+                            MuiButton(color = Color.default, variant = "outlined", size = "small")(MuiIcons(Delete)(fontSize = "small"), ^.onClick ==> removeBank(bankIdx))
                           )
                         ),
                         MuiGrid(item = true, container = true, xs = 12, justify = "flex-start")(
+                          MuiGrid(item = true, direction = "column", justify = "center", alignContent = "center")(
+                            MuiGrid(item = true, justify = "center", alignContent = "left")(<.span("All", ^.textAlign := "center", ^.display := "block")),
+                            MuiGrid(item = true)(
+                              MuiCheckbox(indeterminate = !egateBank.isFullyOpen && !egateBank.isClosed)(
+                                ^.checked := egateBank.isFullyOpen,
+                                ^.onChange ==> setGates(bankIdx, !egateBank.isFullyOpen))
+                              )),
                           egateBank.gates.zipWithIndex.map { case (gateIsOn, gateIdx) =>
                             MuiGrid(item = true, direction = "column", justify = "center", alignContent = "center")(
                               MuiGrid(item = true, justify = "center", alignContent = "left")(<.span(gateIdx + 1, ^.textAlign := "center", ^.display := "block")),

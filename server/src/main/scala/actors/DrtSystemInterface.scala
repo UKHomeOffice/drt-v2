@@ -300,7 +300,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     case None => arrivalsNoOp
     case Some(aclFeed) =>
       val initialDelay =
-        if (config.get[Boolean]("acl.check-on-startup")) 0.minutes
+        if (config.get[Boolean]("acl.check-on-startup")) 10.seconds
         else AclFeed.delayUntilNextAclCheck(now(), 18) + (Math.random() * 60).minutes
 
       log.info(s"Daily ACL check. Initial delay: ${initialDelay.toMinutes} minutes")
@@ -381,11 +381,18 @@ trait DrtSystemInterface extends UserRoleProviderLike {
           createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(30 seconds)
         } else {
           log.info(s"Using new MAG live feed")
-          val privateKey: String = config.get[String]("feeds.mag.private-key")
-          val claimIss: String = config.get[String]("feeds.mag.claim.iss")
-          val claimRole: String = config.get[String]("feeds.mag.claim.role")
-          val claimSub: String = config.get[String]("feeds.mag.claim.sub")
-          MagFeed(privateKey, claimIss, claimRole, claimSub, now, airportConfig.portCode, ProdFeedRequester).tickingSource
+          val maybeFeed = for {
+            privateKey <- config.getOptional[String]("feeds.mag.private-key")
+            claimIss <- config.getOptional[String]("feeds.mag.claim.iss")
+            claimRole <- config.getOptional[String]("feeds.mag.claim.role")
+            claimSub <- config.getOptional[String]("feeds.mag.claim.sub")
+          } yield {
+            MagFeed(privateKey, claimIss, claimRole, claimSub, now, airportConfig.portCode, ProdFeedRequester).tickingSource
+          }
+          maybeFeed.getOrElse({
+            log.error(s"No feed credentials supplied. Live feed can't be set up")
+            arrivalsNoOp
+          })
         }
       case "GLA" =>
         val liveUrl = params.maybeGlaLiveUrl.getOrElse(throw new Exception("Missing GLA Live Feed Url"))

@@ -64,7 +64,7 @@ trait TerminalDeskLimitsLike {
         .desksForMillis(minuteMillis, minDesksByQueue24Hrs(queue))
         .toList.zip(processorProvider.processorsByMinute)
         .map { case (min, max) =>
-          Math.min(min, max.processors.map(_.maxCapacity).sum)
+          Math.min(min, max.maxCapacity)
         }
       (minDesks, processorProvider)
     }
