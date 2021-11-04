@@ -124,10 +124,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
   def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
     val startOfWeekMidnight = SDate(startDay).getLocalLastMidnight
     val endOfForecast = startOfWeekMidnight.addDays(numberOfDays)
-    val now = SDate.now()
 
-    val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) now.getLocalNextMidnight else startOfWeekMidnight
-
-    (startOfForecast, endOfForecast)
+    (startOfWeekMidnight, endOfForecast)
   }
 }
