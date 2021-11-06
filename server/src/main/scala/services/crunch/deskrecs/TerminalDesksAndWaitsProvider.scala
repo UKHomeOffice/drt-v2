@@ -6,7 +6,7 @@ import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.{NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable.{Map, NumericRange}
@@ -56,7 +56,14 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
                 queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0))))
               case someWork =>
                 val start = System.currentTimeMillis()
-                val optimisedDesks = cruncher(someWork, minDesks.toSeq, processorsProvider.maxProcessors(someWork.size), OptimiserConfig(slas(queue), processorsProvider)) match {
+                val maxDesks = processorsProvider.maxProcessors(someWork.size)
+
+                if (queue == NonEeaDesk && SDate(minuteMillis.min).millisSinceEpoch == SDate("2021-11-09T02:00:00").millisSinceEpoch) {
+                  println(s"\n\n** $queue ${SDate(minuteMillis.min).toISOString()}:\n${maxDesks.grouped(360).map(_.mkString(", ")).mkString("\n")}")
+                  println(s"max caps: ${processorsProvider.processorsByMinute.map(_.maxCapacity).mkString(",")}")
+                  println(s"processors: ${processorsProvider.processorsByMinute.map(_.processors.size).mkString(",")}")
+                }
+                val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks, OptimiserConfig(slas(queue), processorsProvider)) match {
                   case Success(OptimizerCrunchResult(desks, waits)) =>
                     queueRecsSoFar + (queue -> ((desks.toList, waits.toList)))
                   case Failure(t) =>
