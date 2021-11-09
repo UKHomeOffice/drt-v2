@@ -400,7 +400,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         val liveToken = params.maybeGlaLiveToken.getOrElse(throw new Exception("Missing GLA Live Feed Token"))
         val liveUsername = params.maybeGlaLiveUsername.getOrElse(throw new Exception("Missing GLA Live Feed Username"))
         GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).tickingSource
-      case "PIK" =>
+      case "PIK" | "HUY" =>
         CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).tickingSource(30 seconds)
       case "EDI" =>
         new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediLiveFeedPollingSource(1 minutes)
