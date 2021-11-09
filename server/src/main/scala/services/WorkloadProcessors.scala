@@ -17,6 +17,8 @@ case class WorkloadProcessorsProvider(processorsByMinute: IndexedSeq[WorkloadPro
     val index = if (minute < minutes) minute else minutes - 1
     processorsByMinute(index)
   }
+
+  def forWindow(start: Int, end: Int): WorkloadProcessorsProvider = WorkloadProcessorsProvider(processorsByMinute.slice(start, end))
 }
 
 case class WorkloadProcessors(processors: Iterable[WorkloadProcessor]) {

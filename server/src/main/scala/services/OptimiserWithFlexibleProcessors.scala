@@ -35,11 +35,10 @@ object OptimiserWithFlexibleProcessors {
     val indexedWork = workloads.toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
-    val bestMaxDesks = maxDesks.toIndexedSeq
-//    if (workloads.size >= 60 && false) {
-//      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processors)
-//      fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
-//    } else maxDesks.toIndexedSeq
+    val bestMaxDesks = if (workloads.size >= 60) {
+      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processors)
+      fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
+    } else maxDesks.toIndexedSeq
 
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
@@ -159,13 +158,14 @@ object OptimiserWithFlexibleProcessors {
       val winStop: Int = List(i, i1).min
       val winWork = workWithOverrun.slice(winStart, winStop)
       val winXmin = xminWithOverrun.slice(winStart, winStop)
+      val winProcessors = processors.forWindow(winStart, winStop)
 
       if (winStart == 0) backlog = 0
 
-      val runAv = runningAverage(winWork, List(blockSize, sla).min, processors, startSlot)
+      val runAv = runningAverage(winWork, List(blockSize, sla).min, winProcessors, startSlot)
       val guessMax: Int = runAv.max.ceil.toInt
 
-      val capacity = capacityWithMinimumLimit(processors.forMinute(startSlot), 1)
+      val capacity = capacityWithMinimumLimit(winProcessors.forMinute(startSlot), 1)
       val lowerLimit = List(winXmin.max, (winWork.sum / (winWork.size * capacity)).ceil.toInt).max
       var winXmax = guessMax
       var hasExcessWait = false
@@ -175,8 +175,8 @@ object OptimiserWithFlexibleProcessors {
         winXmax = lowerLimit
       else {
         do {
-          val trialDesks = leftwardDesks(winWork, winXmin, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog, processors)
-          val trialProcessExcessWait = tryProcessWork(winWork, trialDesks, sla, IndexedSeq(0), processors) match {
+          val trialDesks = leftwardDesks(winWork, winXmin, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog, winProcessors)
+          val trialProcessExcessWait = tryProcessWork(winWork, trialDesks, sla, IndexedSeq(0), winProcessors) match {
             case Success(pw) => pw.excessWait
             case Failure(t) => throw t
           }
@@ -373,20 +373,21 @@ object OptimiserWithFlexibleProcessors {
           case (d, min) => List(d, min).max
         }.to[mutable.IndexedSeq]
 
-      def myCost(costWork: IndexedSeq[Double], costQStart: IndexedSeq[Double], previousDesksOpen: Int)
+      def myCost(costWork: IndexedSeq[Double], costQStart: IndexedSeq[Double], previousDesksOpen: Int, windowProcessors: WorkloadProcessorsProvider)
                 (capacity: IndexedSeq[Int]): Cost =
-        cost(costWork, sla, weightChurn, weightPax, weightStaff, weightSla, costQStart, previousDesksOpen, processors)(capacity.flatMap(c => IndexedSeq.fill(blockWidth)(c)))
+        cost(costWork, sla, weightChurn, weightPax, weightStaff, weightSla, costQStart, previousDesksOpen, windowProcessors)(capacity.flatMap(c => IndexedSeq.fill(blockWidth)(c)))
 
       var shouldStop = false
 
       do {
         val currentWork = work.slice(winStart, winStop)
+        val currentProcessors = processors.forWindow(winStart, winStop)
         val blockGuess = desks.slice(winStart, winStop).grouped(blockWidth).map(_.head).toIndexedSeq
         val xminCondensed = minDesks.slice(winStart, winStop).grouped(blockWidth).map(_.head).toIndexedSeq
         val xmaxCondensed = maxDesks.slice(winStart, winStop).grouped(blockWidth).map(_.head).toIndexedSeq
 
         val windowIndices = winStart until winStop
-        branchBound(blockGuess, myCost(currentWork, qStart, lastDesksOpen), xminCondensed, xmaxCondensed, concavityLimit)
+        branchBound(blockGuess, myCost(currentWork, qStart, lastDesksOpen, currentProcessors), xminCondensed, xmaxCondensed, concavityLimit)
           .flatMap(o => List.fill(blockWidth)(o))
           .zip(windowIndices)
           .foreach {
@@ -399,7 +400,7 @@ object OptimiserWithFlexibleProcessors {
           val stop = winStart + winStep
           val workToProcess = work.slice(winStart, stop)
           val desksToProcess = desks.slice(winStart, stop)
-          qStart = tryProcessWork(workToProcess.toIndexedSeq, desksToProcess.toIndexedSeq, sla, qStart.toIndexedSeq, processors) match {
+          qStart = tryProcessWork(workToProcess.toIndexedSeq, desksToProcess.toIndexedSeq, sla, qStart.toIndexedSeq, processors.forWindow(winStart, stop)) match {
             case Success(pw) => pw.residual
             case Failure(t) => throw t
           }
