@@ -8,6 +8,7 @@ import akka.testkit.{ImplicitSender, TestProbe}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PortStateUpdates, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.dates.UtcDate
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.{ApiFlightWithSplits, PortState, TM, TQM}
@@ -65,7 +66,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
   "Given a flights requester with a mock flights actor" >> {
     "When the mock is set to return an empty FlightsWithSplits" >> {
-      val requestQueueMinutes: FlightsRequester = PartitionedPortStateActor.requestFlightsFn(mockResponseActor(Source(List(emptyFlights))))
+      val requestQueueMinutes: FlightsRequester = PartitionedPortStateActor.requestFlightsFn(mockResponseActor(Source(List((UtcDate(2021, 8, 8), emptyFlights)))))
       "Then I should see the empty container in the future" >> {
         val eventualResult: Future[FlightsWithSplits] = FlightsRouterActor.runAndCombine(requestQueueMinutes(GetStateForDateRange(0L, 0L)))
         val result = Await.result(eventualResult, 1 second)
@@ -197,7 +198,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
   private def makeReplyWithPortState(flights: FlightsWithSplits,
                                      queues: MinutesContainer[CrunchMinute, TQM],
                                      staff: MinutesContainer[StaffMinute, TM]): PortStateRequester = {
-    val mockFlightsRequester = (_: PortStateRequest) => Future(Source(List(flights)))
+    val mockFlightsRequester = (_: PortStateRequest) => Future(Source(List((UtcDate(2020, 1, 1), flights))))
     val mockQueuesRequester = (_: PortStateRequest) => Future(queues)
     val mockStaffRequester = (_: PortStateRequest) => Future(staff)
     PartitionedPortStateActor.replyWithPortStateFn(mockFlightsRequester, mockQueuesRequester, mockStaffRequester)
