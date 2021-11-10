@@ -11,7 +11,6 @@ object Settings {
 
   /** The version of your application */
   val version = sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "dev"))
-
   /** Options for the scala compiler */
   val scalacOptions = Seq(
     "-Xlint",
@@ -73,7 +72,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "48"
-    val drtLib = "v92"
+    val drtLib = "v104"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "1.2.0"
