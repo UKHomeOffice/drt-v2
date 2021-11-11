@@ -8,6 +8,7 @@ import akka.pattern.pipe
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.FlightsApi.FlightsWithSplits
+import services.SDate
 
 import scala.concurrent.{ExecutionContextExecutor, Promise}
 import scala.util.Try
@@ -18,8 +19,13 @@ class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor with Ac
   var promisedResult: Promise[DeskRecMinutes] = Promise[DeskRecMinutes]
 
   override def receive: Receive = {
-    case GetFlights(_, _) =>
-      sender() ! Source(List(fws))
+    case GetFlights(from, to) =>
+      val groupedByDay = fws.flights.values
+        .groupBy(f => SDate(f.apiFlight.Scheduled).toUtcDate)
+        .map {
+          case (utcDate, flights) => (utcDate, FlightsWithSplits(flights))
+        }
+      sender() ! Source(groupedByDay)
 
     case GetState =>
       val replyTo = sender()
