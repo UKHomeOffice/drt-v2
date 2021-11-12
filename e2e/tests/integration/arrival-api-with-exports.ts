@@ -38,7 +38,7 @@ describe('Arrival API with exports', () => {
       "API Actual - EEA Machine Readable to e-Gates,API Actual - EEA Non-Machine Readable to EEA," +
       "API Actual - EEA Child to EEA,API Actual - Non-Visa National to Fast Track," +
       "API Actual - Visa National to Fast Track,API Actual - Non-Visa National to Non-EEA," +
-      "API Actual - Visa National to Non-EEA,API Actual - Transit to Tx"
+      "API Actual - Visa National to Non-EEA,API Actual - Transit to Tx,Nationalities"
 
     const headersWithActApi = headersWithoutActApi + "," + actApiHeaders;
 
@@ -88,7 +88,7 @@ describe('Arrival API with exports', () => {
 
     it('Allows you to view API splits in the flights export for users with api:view permission', () => {
         const dataWithoutActApi = csvRow("51", eGatePax);
-        const actApiData = "4.0,6.0,0.0,5.0,19.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0";
+        const actApiData = "4.0,6.0,0.0,5.0,19.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0,\"GBR:24,AUS:10,ZWE:10,MRU:7\"";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
@@ -121,7 +121,7 @@ describe('Arrival API with exports', () => {
 
     it('uses API splits for passenger numbers if they are within 5% of the port feed', () => {
         const dataWithoutActApi = csvRow("50", "24", "12");
-        const actApiData = "4.0,6.0,0.0,5.0,18.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0";
+        const actApiData = "4.0,6.0,0.0,5.0,18.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0,\"GBR:23,AUS:10,ZWE:10,MRU:7\"";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";

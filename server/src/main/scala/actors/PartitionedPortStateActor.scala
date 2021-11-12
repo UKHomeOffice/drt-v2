@@ -14,6 +14,7 @@ import drt.shared.CrunchApi._
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
+import drt.shared.dates.UtcDate
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -42,7 +43,7 @@ object PartitionedPortStateActor {
 
   type StaffMinutesRequester = PortStateRequest => Future[MinutesContainer[StaffMinute, TM]]
 
-  type FlightsRequester = PortStateRequest => Future[Source[FlightsWithSplits, NotUsed]]
+  type FlightsRequester = PortStateRequest => Future[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
   type FlightUpdatesRequester = PortStateRequest => Future[FlightsWithSplits]
 
@@ -64,7 +65,7 @@ object PartitionedPortStateActor {
 
   def requestFlightsFn(actor: ActorRef)
                       (implicit timeout: Timeout, ec: ExecutionContext): FlightsRequester =
-    request => actor.ask(request).mapTo[Source[FlightsWithSplits, NotUsed]].recoverWith {
+    request => actor.ask(request).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]].recoverWith {
       case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
     }
 
@@ -95,7 +96,7 @@ object PartitionedPortStateActor {
 
   def replyWithMinutesAsPortStateFn(queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
                                    (implicit ec: ExecutionContext, mat: Materializer): PortStateRequester =
-    replyWithPortStateFn(_ => Future(Source(List[FlightsWithSplits]())), queueMins, staffMins)
+    replyWithPortStateFn(_ => Future(Source(List[(UtcDate, FlightsWithSplits)]())), queueMins, staffMins)
 
   def forwardRequestAndKillActor(killActor: ActorRef)
                                 (implicit timeout: Timeout, ec: ExecutionContext): (ActorRef, ActorRef, DateRangeLike) => Future[Any] =
@@ -137,14 +138,15 @@ object PartitionedPortStateActor {
         }
     }
 
-  def combineToPortState(flightsStream: Future[Source[FlightsWithSplits, NotUsed]],
+  def combineToPortState(flightsStream: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]],
                          eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
                          eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
                         (implicit ec: ExecutionContext, mat: Materializer): Future[PortState] = {
     val eventualFlights = flightsStream
       .flatMap(source => source
         .log(getClass.getName)
-        .runWith(Sink.seq).map(_.fold(FlightsWithSplits.empty)(_ ++ _)))
+        .runWith(Sink.seq)
+        .map(x => x.foldLeft(FlightsWithSplits.empty)(_ ++ _._2)))
 
     stateAsTuple(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).map {
       case (fs, cms, sms) => PortState(fs, cms, sms)

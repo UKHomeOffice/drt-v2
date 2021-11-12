@@ -10,6 +10,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.api.Arrival
+import drt.shared.dates.UtcDate
 import drt.shared.{MilliTimes, TM, TQM}
 import manifests.ManifestLookupLike
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -40,8 +41,8 @@ object OptimisationProviders {
                       (implicit timeout: Timeout, ec: ExecutionContext): Future[Source[List[Arrival], NotUsed]] =
     arrivalsActor
       .ask(GetFlights(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
-      .mapTo[Source[FlightsWithSplits, NotUsed]]
-      .map(_.map(_.flights.map(_._2.apiFlight).toList))
+      .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
+      .map(_.map(_._2.flights.map(_._2.apiFlight).toList))
 
   def liveManifestsProvider(manifestsActor: ActorRef)
                            (crunchRequest: CrunchRequest)

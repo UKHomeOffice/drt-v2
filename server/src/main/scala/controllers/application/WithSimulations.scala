@@ -52,11 +52,11 @@ trait WithSimulations {
             val date = SDate(simulationParams.date)
             val start = date.getLocalLastMidnight
             val end = date.getLocalNextMidnight
-            val eventualFlightsWithSplitsStream: Future[Source[FlightsWithSplits, NotUsed]] = (ctrl.portStateActor ? GetFlightsForTerminalDateRange(
+            val eventualFlightsWithSplitsStream: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]] = (ctrl.portStateActor ? GetFlightsForTerminalDateRange(
               start.millisSinceEpoch,
               end.millisSinceEpoch,
               simulationParams.terminal
-            )).mapTo[Source[FlightsWithSplits, NotUsed]]
+            )).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
               val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
@@ -94,11 +94,11 @@ trait WithSimulations {
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
 
             val date = SDate(simulationParams.date)
-            val eventualFlightsWithSplitsStream: Future[Source[FlightsWithSplits, NotUsed]] = (ctrl.portStateActor ? GetFlightsForTerminalDateRange(
+            val eventualFlightsWithSplitsStream: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]] = (ctrl.portStateActor ? GetFlightsForTerminalDateRange(
               date.getLocalLastMidnight.millisSinceEpoch,
               date.getLocalNextMidnight.millisSinceEpoch,
               simulationParams.terminal
-            )).mapTo[Source[FlightsWithSplits, NotUsed]]
+            )).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws => {
               val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))

@@ -235,6 +235,18 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
         }
       }
     }
+
+    "Given a constant workload of 5, 1 max processor for the first 30 mins, followed by 5" >> {
+      val workload = IndexedSeq.fill(120)(5d)
+      val minDesks = IndexedSeq.fill(120)(0)
+      val maxDesks = IndexedSeq.fill(120)(5)
+      "When I ask for the recommended desks" >> {
+        val provider1then10 = WorkloadProcessorsProvider(IndexedSeq.fill(30)(WorkloadProcessors(Seq.fill(1)(Desk))) ++ IndexedSeq.fill(120 - 30)(WorkloadProcessors(Seq.fill(10)(Desk))))
+        val processed = OptimiserWithFlexibleProcessors.crunch(workload, minDesks, maxDesks, OptimiserConfig(25, provider1then10))
+        "I should see 1 for the first 30 minutes, followed by 5 for the last 90 (to keep the wait time from creeping up)" >> {
+          processed.get.recommendedDesks === IndexedSeq.fill(30)(1) ++ IndexedSeq.fill(90)(5)
+        }
+      }
+    }
   }
 }
-

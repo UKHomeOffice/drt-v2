@@ -40,6 +40,7 @@ import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.coachTime.CoachWalkTime
+import drt.shared.dates.UtcDate
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
@@ -400,7 +401,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         val liveToken = params.maybeGlaLiveToken.getOrElse(throw new Exception("Missing GLA Live Feed Token"))
         val liveUsername = params.maybeGlaLiveUsername.getOrElse(throw new Exception("Missing GLA Live Feed Username"))
         GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).tickingSource
-      case "PIK" =>
+      case "PIK" | "HUY" =>
         CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).tickingSource(30 seconds)
       case "EDI" =>
         new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediLiveFeedPollingSource(1 minutes)
@@ -442,7 +443,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val to = from.addDays(forecastMaxDays)
     val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
     FlightsRouterActor.runAndCombine(actor
-      .ask(request)(new Timeout(15 seconds)).mapTo[Source[FlightsWithSplits, NotUsed]])
+      .ask(request)(new Timeout(15 seconds)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
       .map { fws =>
         Option(PortState(fws.flights.values, Iterable(), Iterable()))
       }

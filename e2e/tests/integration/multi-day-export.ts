@@ -49,7 +49,7 @@ describe('Multi day export', () => {
     cy
       .addFlight({
         "SchDT": todayAtUtcString(0, 55),
-        "ActChoxDT": todayAtUtcString(1, 2),
+        "ActChoxDT": todayAtUtcString(3, 2),
         "ActPax": 51
       })
       .asABorderForceOfficer()

@@ -7,8 +7,9 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
-import drt.shared.{ApiFlightWithSplits, CodeShares, SDateLike}
+import drt.shared.{ApiFlightWithSplits, ArrivalKey, CodeShares, SDateLike}
 import org.joda.time.DateTimeZone
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.SDate
 import services.exports.Exports
 import services.graphstages.Crunch
@@ -24,7 +25,7 @@ trait FlightsExport {
 
   def headings: String
 
-  def rowValues(fws: ApiFlightWithSplits): Seq[String]
+  def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Seq[String]
 
   def start: SDateLike
 
@@ -40,7 +41,7 @@ trait FlightsExport {
 
   val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
 
-  def flightToCsvRow(fws: ApiFlightWithSplits): String = rowValues(fws).mkString(",")
+  def flightToCsvRow(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): String = rowValues(fws, maybeManifest).mkString(",")
 
   def millisToDateStringFn: MillisSinceEpoch => String = SDate.millisToLocalIsoDateOnly(timeZone)
 
@@ -64,19 +65,25 @@ trait FlightsExport {
     headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
       .map(n => Math.round(n).toDouble)
 
-  def csvStream(flightsStream: Source[FlightsWithSplits, NotUsed]): Source[String, NotUsed] =
+  def csvStream(flightsStream: Source[(FlightsWithSplits, VoyageManifests), NotUsed]): Source[String, NotUsed] =
     filterAndSort(flightsStream)
-      .map(fws => flightToCsvRow(fws) + "\n")
+      .map { case (fws, maybeManifest) =>
+        flightToCsvRow(fws, maybeManifest) + "\n"
+      }
       .prepend(Source(List(headings + "\n")))
 
-  def filterAndSort(flightsStream: Source[FlightsWithSplits, NotUsed]): Source[ApiFlightWithSplits, NotUsed] =
-    flightsStream.mapConcat { flights =>
+  def filterAndSort(flightsStream: Source[(FlightsWithSplits, VoyageManifests), NotUsed]): Source[(ApiFlightWithSplits, Option[VoyageManifest]), NotUsed] =
+    flightsStream.mapConcat { case (flights, manifests) =>
       uniqueArrivalsWithCodeShares(flights.flights.values.toSeq)
         .map(_._1)
         .filter(fws => flightsFilter(fws, terminal))
         .sortBy { fws =>
           val arrival = fws.apiFlight
           (arrival.PcpTime, arrival.VoyageNumber.numeric, arrival.Origin.iata)
+        }
+        .map { fws =>
+          val maybeManifest = manifests.manifests.find(_.maybeKey.exists(_ == ArrivalKey(fws.apiFlight)))
+          (fws, maybeManifest)
         }
     }
 

@@ -4,7 +4,7 @@ import actors.DateRange
 import actors.PartitionedPortStateActor._
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
+import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate, ManifestLookup}
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.pattern.{ask, pipe}
@@ -15,11 +15,12 @@ import controllers.model.{RedListCount, RedListCounts}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi._
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.dates.UtcDate
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.{SDate, SourceUtils}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.{ExecutionContext, Future}
@@ -55,16 +56,41 @@ object FlightsRouterActor {
                                       end: SDateLike,
                                       terminals: Iterable[Terminal],
                                       maybePit: Option[MillisSinceEpoch])
-                                     (implicit ec: ExecutionContext): Source[FlightsWithSplits, NotUsed] = {
+                                     (implicit ec: ExecutionContext): Source[(UtcDate, FlightsWithSplits), NotUsed] = {
     val dates: Seq[UtcDate] = DateRange.utcDateRangeWithBuffer(2, 1)(start, end)
 
     val reduceAndSort = SourceUtils.reduceFutureIterables(terminals, reduceAndSortFlightsWithSplits)
     val flightsLookupByDay = flightsLookupByDayAndTerminal(maybePit)
 
     Source(dates.toList)
-      .mapAsync(1)(d => reduceAndSort(flightsLookupByDay(d)))
-      .map(_.scheduledOrPcpWindow(start, end))
-      .filter(_.nonEmpty)
+      .mapAsync(1)(d => reduceAndSort(flightsLookupByDay(d)).map(f => (d, f)))
+      .map { case (d, flights) => (d, flights.scheduledOrPcpWindow(start, end)) }
+      .filter { case (_, flights) => flights.nonEmpty }
+  }
+
+  def flightsAndManifestsByDaySource(flightsLookupByDayAndTerminal: FlightsLookup, manifestLookup: ManifestLookup)
+                                    (start: SDateLike,
+                                     end: SDateLike,
+                                     terminals: Iterable[Terminal],
+                                     maybePit: Option[MillisSinceEpoch])
+                                    (implicit ec: ExecutionContext): Source[(FlightsWithSplits, VoyageManifests), NotUsed] = {
+    val dates: Seq[UtcDate] = DateRange.utcDateRangeWithBuffer(2, 1)(start, end)
+
+    val reduceAndSort = SourceUtils.reduceFutureIterables(terminals, reduceAndSortFlightsWithSplits)
+    val flightsLookupByDay = flightsLookupByDayAndTerminal(maybePit)
+
+    Source(dates.toList)
+      .mapAsync(1) { d =>
+        reduceAndSort(flightsLookupByDay(d)).flatMap { f =>
+          manifestLookup(d, maybePit).map { m => (f, m) }
+        }
+      }
+      .map { case (flights, manifests) =>
+        (flights.scheduledOrPcpWindow(start, end), manifests)
+      }
+      .filter { case (flights, _) =>
+        flights.nonEmpty
+      }
   }
 
   val reduceAndSortFlightsWithSplits: Iterable[FlightsWithSplits] => FlightsWithSplits = (allFlightsWithSplits: Iterable[FlightsWithSplits]) => {
@@ -87,11 +113,11 @@ object FlightsRouterActor {
         .pipeTo(replyTo)
     }
 
-  def runAndCombine(eventualSource: Future[Source[FlightsWithSplits, NotUsed]])
+  def runAndCombine(eventualSource: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]])
                    (implicit mat: Materializer, ec: ExecutionContext): Future[FlightsWithSplits] = eventualSource
     .flatMap(source => source
       .log(getClass.getName)
-      .runWith(Sink.fold(FlightsWithSplits.empty)(_ ++ _))
+      .runWith(Sink.fold(FlightsWithSplits.empty)(_ ++ _._2))
     )
 }
 
@@ -129,7 +155,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
       sender() ! flightsLookupService(SDate(request.from), SDate(request.to), Seq(request.terminal), None)
   }
 
-  val flightsLookupService: (SDateLike, SDateLike, Iterable[Terminal], Option[MillisSinceEpoch]) => Source[FlightsWithSplits, NotUsed] =
+  val flightsLookupService: (SDateLike, SDateLike, Iterable[Terminal], Option[MillisSinceEpoch]) => Source[(UtcDate, FlightsWithSplits), NotUsed] =
     FlightsRouterActor.multiTerminalFlightsByDaySource(flightsByDayLookup)
 
   override def partitionUpdates: PartialFunction[FlightUpdates, Map[(Terminal, UtcDate), FlightUpdates]] = {

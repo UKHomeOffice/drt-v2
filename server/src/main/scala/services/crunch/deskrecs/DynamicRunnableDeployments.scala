@@ -2,7 +2,6 @@ package services.crunch.deskrecs
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.TimeLogger
@@ -10,6 +9,7 @@ import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.LoadsToQueueMinutes
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch.LoadMinute
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable.Map
 import scala.concurrent.{ExecutionContext, Future}
