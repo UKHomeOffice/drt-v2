@@ -36,7 +36,7 @@ object TerminalPlanningComponent {
     }.hashCode
   }
 
-  val forecastWeeks: Seq[SDateLike] = (0 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
+  val forecastWeeks: Seq[SDateLike] = (-4 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TerminalForecast")
     .renderP((_, props) => {
@@ -44,12 +44,12 @@ object TerminalPlanningComponent {
       val byTimeSlot: Seq[List[Option[ForecastTimeSlot]]] = Forecast.periodByTimeSlotAcrossDays(props.forecastPeriod.forecast)
 
       def drawSelect(names: Seq[String], values: List[String], value: String): VdomTagOf[Select] = {
-        <.select(^.className := "form-control", ^.value := value.toString,
+        <.select(^.className := "form-control", ^.value := value,
           ^.onChange ==> ((e: ReactEventFromInput) => {
             props.router.set(props.page.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toLocalDateTimeString()))))
           }),
           values.zip(names).map {
-            case (value, name) => <.option(^.value := value.toString, name)
+            case (value, name) => <.option(^.value := value, name)
           }.toTagMod)
       }
 

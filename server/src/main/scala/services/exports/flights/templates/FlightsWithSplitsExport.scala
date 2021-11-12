@@ -58,8 +58,9 @@ trait FlightsWithSplitsExport extends FlightsExport {
   protected def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
     val apiIsInvalid = fws.hasApi && !fws.hasValidApi
     val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
+    val pcpPax = if (fws.apiFlight.Origin.isDomesticOrCta) "-" else fws.pcpPaxEstimate.toString
     flightWithSplitsToCsvFields(fws, millisToDateStringFn, millisToTimeStringFn) ++
-      List(fws.pcpPaxEstimate.toString, if (apiIsInvalid) "Y" else "") ++ splitsForSources
+      List(pcpPax, if (apiIsInvalid) "Y" else "") ++ splitsForSources
   }
 
   override val headings: String = arrivalWithSplitsHeadings(queueNames)
