@@ -74,7 +74,8 @@ object DynamicRunnableDeskRecs {
           log.info(s"Crunch starting: ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
           for {
             redListUpdates <- redListUpdatesProvider()
-            deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, portDesksAndWaitsProvider.flightsToLoads(FlightsWithSplits(flights), redListUpdates), maxDesksProviders)
+            loads <- portDesksAndWaitsProvider.flightsToLoads(FlightsWithSplits(flights), redListUpdates)
+            deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, loads, maxDesksProviders)
           } yield {
             log.info(s"Crunch finished: (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
             deskRecs

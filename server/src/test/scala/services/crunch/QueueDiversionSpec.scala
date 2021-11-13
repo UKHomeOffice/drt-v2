@@ -7,10 +7,10 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.TestDefaults.airportConfigForSplits
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
-import uk.gov.homeoffice.drt.ports.QueueStatusProviders.{HourlyStatuses, QueuesAlwaysOpen}
+//import uk.gov.homeoffice.drt.ports.QueueStatusProviders.QueuesAlwaysOpen
 import uk.gov.homeoffice.drt.ports.Queues._
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode}
 
 import scala.collection.immutable.List
 
@@ -26,15 +26,10 @@ class QueueDiversionSpec extends CrunchTestLike {
     val splits = Map(PaxTypeAndQueue(EeaMachineReadable, EeaDesk) -> deskRatios(EeaDesk), PaxTypeAndQueue(EeaMachineReadable, EGate) -> deskRatios(EGate))
 
     val config = airportConfigForSplits(splits)
-    val egatesClosed: Map[Terminal, Map[Queue, IndexedSeq[Queues.QueueStatus]]] = Map(T1 -> Map(
-      EGate -> IndexedSeq.fill(24)(Closed),
-      EeaDesk -> IndexedSeq.fill(24)(Open),
-      NonEeaDesk -> IndexedSeq.fill(24)(Open),
-    ))
 
     "Given an arrival, I should see pax headed to all queues in the default splits" >> {
       implicit val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
-        airportConfig = config.copy(queueStatusProvider = QueuesAlwaysOpen),
+        airportConfig = config,//.copy(queueStatusProvider = QueuesAlwaysOpen),
         now = () => dateNow))
 
       val pax = 100
@@ -42,20 +37,6 @@ class QueueDiversionSpec extends CrunchTestLike {
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
       expectPaxByQueue(Map(EeaDesk -> 75, EGate -> 25))
-
-      success
-    }
-
-    "Given an arrival, and zero max egates, I should see pax headed only to the desks" >> {
-      implicit val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
-        airportConfig = config.copy(queueStatusProvider = HourlyStatuses(egatesClosed)),
-        now = () => dateNow))
-
-      val pax = 100
-      val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), actPax = Option(pax))
-
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
-      expectPaxByQueue(Map(EeaDesk -> 100, EGate -> 0))
 
       success
     }

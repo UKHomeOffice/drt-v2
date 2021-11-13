@@ -4,16 +4,19 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import drt.shared.api.Arrival
-import org.specs2.mutable.Specification
 import services.SDate
-import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
+import services.crunch.CrunchTestLike
+import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, QueueStatusProviders}
 import uk.gov.homeoffice.drt.ports.Queues.QueueFallbacks
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
-class WorkloadSpec extends Specification {
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+
+class WorkloadSpec extends CrunchTestLike {
 
   private def generateSplits(paxCount: Int, splitSource: SplitSource, eventType: Option[EventType]): Set[Splits] =
     Set(
@@ -37,9 +40,10 @@ class WorkloadSpec extends Specification {
 
   private def workloadForFlight(arrival: Arrival, splits: Set[Splits], filter: FlightFilter): Double = {
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> procTime)
-    workloadCalculator(procTimes, filter)
+    val load = workloadCalculator(procTimes, filter)
       .flightLoadMinutes(FlightsWithSplits(Iterable(ApiFlightWithSplits(arrival, splits, None))), redListedZimbabwe)
-      .minutes.values.map(_.workLoad).sum
+      .map(_.minutes.values.map(_.workLoad).sum)
+    Await.result(load, 1.second)
   }
 
   "Given an arrival with 1 pax and 1 split containing 1 pax with no nationality data " +
@@ -61,9 +65,9 @@ class WorkloadSpec extends Specification {
     val splits = generateSplits(1, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> procTime)
 
-    val workloads = workloadCalculator(procTimes, FlightFilter.regular(List(T1)))
+    val eventualLoads = workloadCalculator(procTimes, FlightFilter.regular(List(T1)))
       .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None))
-      .toList
+    val workloads = Await.result(eventualLoads, 1.second).toList
 
     val startTime = SDate(workloads.head.minute).toISOString()
 
@@ -94,7 +98,9 @@ class WorkloadSpec extends Specification {
 
   "Concerning red list origins" >> {
     val redListOriginBulawayo = PortCode("BUQ")
+
     def portConf(port: PortCode): AirportConfig = DrtPortConfigs.confByPort(port)
+
     val paxCount = 6
 
     s"Given an arrival with 6 pax at STN $T1 from a red list country, I should see some workload" >> {
@@ -118,7 +124,7 @@ class WorkloadSpec extends Specification {
     }
   }
 
-   def workloadForFlightFromTo(origin: PortCode, config: AirportConfig, terminal: Terminal, paxCount: Int): Double = {
+  def workloadForFlightFromTo(origin: PortCode, config: AirportConfig, terminal: Terminal, paxCount: Int): Double = {
     val arrival = ArrivalGenerator.arrival(schDt = "2021-06-01T12:00", actPax = Option(paxCount), terminal = terminal, origin = origin)
     val splits = generateSplits(paxCount, SplitSources.Historical, None)
     workloadForFlight(arrival, splits, FlightFilter.forPortConfig(config))
