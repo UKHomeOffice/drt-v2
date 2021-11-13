@@ -117,20 +117,25 @@ class TestDrtActor extends Actor {
 
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
-      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig))
+      val portEgatesProvider = tc.maybeEgatesProvider match {
+        case None => MockEgatesProvider.portProvider(airportConfig)
+        case Some(provider) => provider
+      }
 
-      val egatesProvider = tc.maybeEgatesProvider match {
+      val terminalEgatesProvider = tc.maybeEgatesProvider match {
         case None => MockEgatesProvider.terminalProvider(airportConfig)
         case Some(provider) =>
           (terminal: Terminal) => provider().map(p => p.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for $terminal")))
       }
 
-      val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
-        PortDeskLimits.flexed(tc.airportConfig, egatesProvider)
-      else
-        PortDeskLimits.fixed(tc.airportConfig, egatesProvider)
+      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), portEgatesProvider)
 
-      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig, egatesProvider) _
+      val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
+        PortDeskLimits.flexed(tc.airportConfig, terminalEgatesProvider)
+      else
+        PortDeskLimits.fixed(tc.airportConfig, terminalEgatesProvider)
+
+      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig, terminalEgatesProvider) _
 
       def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
         val today = tc.now()
