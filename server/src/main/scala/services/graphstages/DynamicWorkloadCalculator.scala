@@ -29,13 +29,13 @@ object QueueStatusProviders {
     override def statusAt(terminal: Terminal, queue: Queue, time: SDateLike): Future[QueueStatus] = Future.successful(Open)
   }
 
-  case class DynamicStatusProvider(maxDesks: (Terminal, Queue, SDateLike) => Future[QueueStatus],
-                                   maxEgates: (Terminal, SDateLike) => Future[QueueStatus])
+  case class DynamicStatusProvider(desksStatus: (Terminal, Queue, SDateLike) => Future[QueueStatus],
+                                   egatesStatus: (Terminal, SDateLike) => Future[QueueStatus])
                                   (implicit ec: ExecutionContext) extends QueueStatusProvider {
     override def statusAt(terminal: Terminal, queue: Queue, time: SDateLike): Future[QueueStatus] =
       queue match {
-        case EGate => maxEgates(terminal, time)
-        case deskQueue => maxDesks(terminal, deskQueue, time)
+        case EGate => egatesStatus(terminal, time)
+        case deskQueue => desksStatus(terminal, deskQueue, time)
       }
   }
 
@@ -96,15 +96,6 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  //  override def flightLoadMinutes_old(flights: FlightsWithSplits, redListUpdates: RedListUpdates): SplitMinutes = {
-  //    val minutes = new SplitMinutes
-  //
-  //    flightsWithPcpWorkload(combineCodeShares(flights.flights.values), redListUpdates)
-  //      .foreach(incoming => minutes ++= flightToFlightSplitMinutes(incoming))
-  //
-  //    minutes
-  //  }
-
   override def flightLoadMinutes(flights: FlightsWithSplits, redListUpdates: RedListUpdates)
                                 (implicit ex: ExecutionContext, mat: Materializer): Future[SplitMinutes] = {
     Source(flightsWithPcpWorkload(combineCodeShares(flights.flights.values), redListUpdates).toList)
@@ -112,46 +103,6 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
         case (acc, fws) => flightToFlightSplitMinutes(fws).map(fsm => acc ++ fsm)
       }
   }
-
-  //  def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits): Iterable[FlightSplitMinute] =
-  //    defaultProcTimes.get(flightWithSplits.apiFlight.Terminal) match {
-  //      case None => Iterable()
-  //      case Some(procTimes) =>
-  //        val flight = flightWithSplits.apiFlight
-  //
-  //        flightWithSplits.bestSplits.map { splitsToUse =>
-  //          val paxTypeAndQueueCounts = paxTypeAndQueueCountsFromSplits(splitsToUse)
-  //
-  //          val paxTypesAndQueuesMinusTransit = paxTypeAndQueueCounts.filterNot(_.queueType == Queues.Transfer)
-  //
-  //          flight.paxDeparturesByMinute(20)
-  //            .flatMap {
-  //              case (minuteMillis, flightPaxInMinute) =>
-  //                paxTypesAndQueuesMinusTransit
-  //                  .map { case ptqc@ApiPaxTypeAndQueueCount(pt, queue, _, _, _) =>
-  //                    def findAlternativeQueue(originalQueue: Queue, queuesToTry: Iterable[Queue]): Queue = {
-  //                      queuesToTry.find(queueStatusProvider.statusAt(flight.Terminal, _, SDate(minuteMillis).getHours()) == Open) match {
-  //                        case Some(queue) => queue
-  //                        case None =>
-  //                          log.error(s"Failed to find alternative queue for $pt ($queuesToTry). Reverting to $originalQueue")
-  //                          originalQueue
-  //                      }
-  //                    }
-  //
-  //                    val finalPtqc = queueStatusProvider.statusAt(flight.Terminal, queue, SDate(minuteMillis).getHours()) match {
-  //                      case Closed =>
-  //                        val fallbacks = fallbacksProvider.availableFallbacks(flight.Terminal, queue, pt)
-  //                        val newQueue = findAlternativeQueue(queue, fallbacks)
-  //                        ptqc.copy(queueType = newQueue)
-  //                      case Open =>
-  //                        ptqc
-  //                    }
-  //
-  //                    flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, finalPtqc)
-  //                  }
-  //            }
-  //        }.getOrElse(Seq())
-  //    }
 
   def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits)
                                 (implicit ec: ExecutionContext): Future[Iterable[FlightSplitMinute]] = {
@@ -170,24 +121,27 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
               case (minuteMillis, flightPaxInMinute) =>
                 paxTypesAndQueuesMinusTransit
                   .map { case ptqc@ApiPaxTypeAndQueueCount(pt, queue, _, _, _) =>
-                    def findAlternativeQueue(originalQueue: Queue, queuesToTry: Iterable[Queue]): Queue = {
-                      queuesToTry.find(queueStatusProvider.statusAt(flight.Terminal, _, SDate(minuteMillis)) == Open) match {
-                        case Some(queue) => queue
-                        case None =>
-                          log.error(s"Failed to find alternative queue for $pt ($queuesToTry). Reverting to $originalQueue")
-                          originalQueue
-                      }
+                    def findAlternativeQueue(originalQueue: Queue, queuesToTry: Iterable[Queue]): Future[Queue] = {
+                      Future
+                        .find(queuesToTry.map { q =>
+                          queueStatusProvider.statusAt(flight.Terminal, q, SDate(minuteMillis)).map(s => (q, s))
+                        }.toList)(_._2 == Open)
+                        .map {
+                          case None => originalQueue
+                          case Some((q, _)) => q
+                        }
                     }
 
                     queueStatusProvider
                       .statusAt(flight.Terminal, queue, SDate(minuteMillis))
-                      .map {
+                      .flatMap {
                         case Closed =>
                           val fallbacks = fallbacksProvider.availableFallbacks(flight.Terminal, queue, pt)
-                          val newQueue = findAlternativeQueue(queue, fallbacks)
-                          ptqc.copy(queueType = newQueue)
-                        case Open =>
-                          ptqc
+                          findAlternativeQueue(queue, fallbacks).map {newQueue =>
+                            println(s"closed at ${SDate(minuteMillis).toISOString()}: fallbacks: $fallbacks, new queue: $newQueue")
+                            ptqc.copy(queueType = newQueue)
+                          }
+                        case Open => Future.successful(ptqc)
                       }
                       .map(flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, _))
                   }
