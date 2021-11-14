@@ -1,7 +1,6 @@
 package services.graphstages
 
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
@@ -9,14 +8,16 @@ import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
-import services.graphstages.QueueStatusProviders.QueueStatusProvider
+import services.graphstages.QueueStatusProviders.{DynamicQueueStatusProvider, QueueStatusProvider}
 import services.workloadcalculator.PaxLoadCalculator.Load
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiPaxTypeAndQueueCount, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
-import scala.collection.immutable.Map
+import scala.collection.immutable
+import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 
 object QueueStatusProviders {
@@ -29,15 +30,79 @@ object QueueStatusProviders {
     override def statusAt(terminal: Terminal, queue: Queue, time: SDateLike): Future[QueueStatus] = Future.successful(Open)
   }
 
-  case class DynamicStatusProvider(desksStatus: (Terminal, Queue, SDateLike) => Future[QueueStatus],
-                                   egatesStatus: (Terminal, SDateLike) => Future[QueueStatus])
-                                  (implicit ec: ExecutionContext) extends QueueStatusProvider {
-    override def statusAt(terminal: Terminal, queue: Queue, time: SDateLike): Future[QueueStatus] =
-      queue match {
-        case EGate => egatesStatus(terminal, time)
-        case deskQueue => desksStatus(terminal, deskQueue, time)
+  //  case class DynamicStatusProvider(desksStatus: (Terminal, Queue, NumericRange[MillisSinceEpoch]) => Future[Map[MillisSinceEpoch, QueueStatus]],
+  //                                   egatesStatus: (Terminal, NumericRange[MillisSinceEpoch]) => Future[Map[MillisSinceEpoch, QueueStatus]])
+  //                                  (implicit ec: ExecutionContext) extends QueueStatusProvider {
+  //    override def statusAt(terminal: Terminal, queue: Queue, time: SDateLike): Future[QueueStatus] =
+  //      queue match {
+  //        case EGate => egatesStatus(terminal, time)
+  //        case deskQueue => desksStatus(terminal, deskQueue, time)
+  //      }
+  //  }
+
+  //  case class QueuesStatusProvider()
+
+  case class DynamicQueueStatusProvider(airportConfig: AirportConfig, egatesProvider: () => Future[PortEgateBanksUpdates])
+                                       (implicit ec: ExecutionContext) {
+    val desksStatusForPeriod: (Terminal, Queue, NumericRange[MillisSinceEpoch]) => Future[Map[MillisSinceEpoch, QueueStatus]] =
+      (terminal: Terminal, queue: Queue, period: NumericRange[MillisSinceEpoch]) => {
+        val statusByHour = airportConfig
+          .maxDesksByTerminalAndQueue24Hrs
+          .get(terminal)
+          .flatMap(_.get(queue).map { maxByHour =>
+            val maxByHourLifted = maxByHour.lift
+            period.map { minute =>
+              val status = maxByHourLifted(SDate(minute).getHours()) match {
+                case None => Closed
+                case Some(0) => Closed
+                case Some(_) => Open
+              }
+              (minute, status)
+            }
+          })
+          .getOrElse(period.map(m => (m, Closed)))
+        Future.successful(statusByHour.toMap)
+      }
+
+    val egatesStatusForPeriod: (Terminal, NumericRange[MillisSinceEpoch]) => Future[Map[MillisSinceEpoch, QueueStatus]] =
+      (terminal: Terminal, period: NumericRange[MillisSinceEpoch]) => {
+        egatesProvider().map { portUpdates =>
+          portUpdates.updatesByTerminal
+            .get(terminal)
+            .map { updates =>
+              val statuses = updates
+                .forPeriod(period)
+                .map(b => if (b.exists(!_.isClosed)) Open else Closed)
+              val statusesByMinute: immutable.Seq[(MillisSinceEpoch, QueueStatus)] = period.zip(statuses)
+              statusesByMinute.toMap
+            }
+            .getOrElse(period.map(m => (m, Closed)))
+        }
+      }
+
+    def allStatusesForPeriod: NumericRange[MillisSinceEpoch] => Future[Map[Terminal, Map[Queue, Map[MillisSinceEpoch, QueueStatus]]]] =
+      period => {
+        egatesProvider().map { portUpdates =>
+          airportConfig.queuesByTerminal.map { case (terminal, queues) =>
+            portUpdates.updatesByTerminal
+              .get(terminal)
+              .map { updates =>
+                updates.forPeriod(period).map(b => if (b.exists(!_.isClosed)) Open else Closed)
+              }
+          }
+        }
+
+      }
+
+    def statusesForPeriod: (Terminal, Queue, NumericRange[MillisSinceEpoch]) => Future[Map[MillisSinceEpoch, QueueStatus]] =
+      (terminal: Terminal, queue: Queue, period: NumericRange[MillisSinceEpoch]) => {
+        queue match {
+          case EGate => egatesStatusForPeriod(terminal, period)
+          case deskQueue => desksStatusForPeriod(terminal, deskQueue, period)
+        }
       }
   }
+
 
   case class FlexibleEGatesForSimulation(eGateOpenHours: Seq[Int]) extends QueueStatusProvider {
     override def statusAt(t: Terminal, queue: Queue, time: SDateLike): Future[QueueStatus] =
@@ -89,7 +154,7 @@ trait WorkloadCalculatorLike {
 }
 
 case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
-                                     queueStatusProvider: QueueStatusProvider,
+                                     dynamicQueueStatusProvider: DynamicQueueStatusProvider,
                                      fallbacksProvider: QueueFallbacks,
                                      flightHasWorkload: FlightFilter)
   extends WorkloadCalculatorLike {
@@ -98,7 +163,9 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
 
   override def flightLoadMinutes(flights: FlightsWithSplits, redListUpdates: RedListUpdates)
                                 (implicit ex: ExecutionContext, mat: Materializer): Future[SplitMinutes] = {
-    Source(flightsWithPcpWorkload(combineCodeShares(flights.flights.values), redListUpdates).toList)
+    val pcpFlights: immutable.Seq[ApiFlightWithSplits] = flightsWithPcpWorkload(combineCodeShares(flights.flights.values), redListUpdates).toList
+    dynamicQueueStatusProvider.
+      Source(pcpFlights)
       .runFoldAsync(SplitMinutes(Map())) {
         case (acc, fws) => flightToFlightSplitMinutes(fws).map(fsm => acc ++ fsm)
       }
@@ -137,7 +204,7 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                       .flatMap {
                         case Closed =>
                           val fallbacks = fallbacksProvider.availableFallbacks(flight.Terminal, queue, pt)
-                          findAlternativeQueue(queue, fallbacks).map {newQueue =>
+                          findAlternativeQueue(queue, fallbacks).map { newQueue =>
                             println(s"closed at ${SDate(minuteMillis).toISOString()}: fallbacks: $fallbacks, new queue: $newQueue")
                             ptqc.copy(queueType = newQueue)
                           }

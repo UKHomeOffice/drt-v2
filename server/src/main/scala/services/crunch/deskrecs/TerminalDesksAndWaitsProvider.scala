@@ -6,7 +6,7 @@ import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable.{Map, NumericRange}
@@ -16,7 +16,7 @@ import scala.util.{Failure, Success}
 case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: List[Queue], cruncher: TryCrunch) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def workToDeskRecs(terminal: Terminal,
+  def workToDeskRecs_old(terminal: Terminal,
                      minuteMillis: NumericRange[MillisSinceEpoch],
                      terminalPax: Map[Queue, Seq[Double]],
                      terminalWork: Map[Queue, Seq[Double]],
@@ -29,6 +29,25 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
             case ((minute, (pax, work)), (desk, wait)) => DeskRecMinute(terminal, queue, minute, pax, work, desk, wait)
           }
       }
+    }
+  }
+
+  def workToDeskRecs(terminal: Terminal,
+                     minuteMillis: NumericRange[MillisSinceEpoch],
+                     terminalPax: Map[Queue, Seq[Double]],
+                     terminalWork: Map[Queue, Seq[Double]],
+                     deskLimitsProvider: TerminalDeskLimitsLike,
+                     queueStatuses: Queue => Future[Map[MillisSinceEpoch, QueueStatus]])
+                    (implicit ec: ExecutionContext, mat: Materializer): Future[Iterable[DeskRecMinute]] = {
+    desksAndWaits(minuteMillis, terminalWork, deskLimitsProvider).flatMap { queueDesksAndWaits =>
+      Future.sequence(queueDesksAndWaits.map {
+        case (queue, (desks, waits)) =>
+          queueStatuses(queue).map { statuses =>
+            minuteMillis.zip(terminalPax(queue).zip(terminalWork(queue))).zip(desks.zip(waits)).map {
+              case ((minute, (pax, work)), (desk, wait)) => DeskRecMinute(terminal, queue, minute, pax, work, desk, wait)
+            }
+          }
+      }).map(_.flatten)
     }
   }
 

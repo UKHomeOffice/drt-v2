@@ -55,6 +55,7 @@ import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
+import services.graphstages.QueueStatusProviders.DynamicQueueStatusProvider
 import services.graphstages.{Crunch, FlightFilter}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -202,6 +203,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       portDesksAndWaitsProvider = portDeskRecs,
       maxDesksProviders = deskLimitsProviders,
       redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+      DynamicQueueStatusProvider(airportConfig, egatesProvider)
     )
 
     val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor)

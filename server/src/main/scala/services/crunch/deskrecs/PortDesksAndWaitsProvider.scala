@@ -5,18 +5,19 @@ import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.TryCrunch
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.Crunch.LoadMinute
-import services.graphstages.QueueStatusProviders.DynamicStatusProvider
+import services.graphstages.QueueStatusProviders.DynamicQueueStatusProvider
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
+import services.{SDate, TryCrunch}
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
+import scala.collection.immutable
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,7 +30,8 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      minutesToCrunch: Int,
                                      crunchOffsetMinutes: Int,
                                      tryCrunch: TryCrunch,
-                                     workloadCalculator: WorkloadCalculatorLike
+                                     workloadCalculator: WorkloadCalculatorLike,
+                                     dynamicQueueStatusProvider: DynamicQueueStatusProvider,
                                     ) extends PortDesksAndWaitsProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -37,7 +39,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                   loadsByQueue: Map[TQM, LoadMinute],
                                   deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike])
                                  (implicit ec: ExecutionContext, mat: Materializer): Future[SimulationMinutes] = {
-    loadsToDesks(minuteMillis, loadsByQueue, deskLimitProviders).map(deskRecMinutes =>
+    loadsToDesks(minuteMillis, loadsByQueue, deskLimitProviders, dynamicQueueStatusProvider).map(deskRecMinutes =>
       SimulationMinutes(deskRecsToSimulations(deskRecMinutes.minutes).values)
     )
   }
@@ -49,18 +51,6 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 
   def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
     deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch)
-
-//  override def flightsToLoads_old(flights: FlightsWithSplits, redListUpdates: RedListUpdates): Map[TQM, LoadMinute] = workloadCalculator
-//    .flightLoadMinutes(flights, redListUpdates).minutes
-//    .groupBy {
-//      case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
-//        TQM(t, finalQueueName, m)
-//    }
-//    .map {
-//      case (tqm, minutes) =>
-//        val loads = minutes.values
-//        (tqm, LoadMinute(tqm.terminal, tqm.queue, loads.map(_.paxLoad).sum, loads.map(_.workLoad).sum, tqm.minute))
-//    }
 
   override def flightsToLoads(flights: FlightsWithSplits, redListUpdates: RedListUpdates)
                              (implicit ec: ExecutionContext, mat: Materializer): Future[Map[TQM, LoadMinute]] = workloadCalculator
@@ -98,14 +88,17 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 
   override def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
                             loads: Map[TQM, LoadMinute],
-                            deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike])
+                            deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike],
+                            dynamicQueueStatusProvider: DynamicQueueStatusProvider,
+                           )
                            (implicit ec: ExecutionContext, mat: Materializer): Future[DeskRecMinutes] = {
     val terminalQueueDeskRecs = deskLimitProviders.map {
       case (terminal, maxDesksProvider) =>
         val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loads)
         val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)
+        val statuses: Queue => Future[Map[MillisSinceEpoch, QueueStatus]] = (queue: Queue) => dynamicQueueStatusProvider.statusesForPeriod(terminal, queue, minuteMillis)
         log.debug(s"Optimising $terminal")
-        terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPax, terminalWork, maxDesksProvider)
+        terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPax, terminalWork, maxDesksProvider, statuses)
     }
 
     Future.sequence(terminalQueueDeskRecs).map { deskRecs =>
@@ -117,33 +110,69 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 object PortDesksAndWaitsProvider {
   def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, flightFilter: FlightFilter, egatesProvider: () => Future[PortEgateBanksUpdates])
            (implicit ec: ExecutionContext): PortDesksAndWaitsProvider = {
-    val maxDeskProvider: (Terminal, Queue, SDateLike) => Future[Queues.QueueStatus] = (terminal: Terminal, queue: Queue, time: SDateLike) => {
-      val maxDesks = airportConfig
-        .maxDesksByTerminalAndQueue24Hrs
-        .get(terminal)
-        .flatMap(_.get(queue).flatMap(_.lift(time.getHours())))
-        .map(maxDesks => if (maxDesks > 0) Open else Closed)
-        .getOrElse(Closed)
+    //    val maxDeskProvider: (Terminal, Queue, SDateLike) => Future[Queues.QueueStatus] = (terminal: Terminal, queue: Queue, time: SDateLike) => {
+    //      val maxDesks = airportConfig
+    //        .maxDesksByTerminalAndQueue24Hrs
+    //        .get(terminal)
+    //        .flatMap(_.get(queue).flatMap(_.lift(time.getHours())))
+    //        .map(maxDesks => if (maxDesks > 0) Open else Closed)
+    //        .getOrElse(Closed)
+    //
+    //      Future.successful(maxDesks)
+    //    }
 
-      Future.successful(maxDesks)
-    }
-
-    val maxEgatesProvider: (Terminal, SDateLike) => Future[Queues.QueueStatus] = (terminal: Terminal, time: SDateLike) => {
-      egatesProvider().map { portUpdates =>
-        portUpdates.updatesByTerminal
+    val desksStatusForPeriod: (Terminal, Queue, NumericRange[MillisSinceEpoch]) => Future[Map[MillisSinceEpoch, QueueStatus]] =
+      (terminal: Terminal, queue: Queue, period: NumericRange[MillisSinceEpoch]) => {
+        val statusByHour = airportConfig
+          .maxDesksByTerminalAndQueue24Hrs
           .get(terminal)
-          .flatMap { updates =>
-            updates
-              .forPeriod(time.millisSinceEpoch to time.millisSinceEpoch).headOption
-              .map(banks => if (banks.exists(!_.isClosed)) Open else Closed)
-          }
-          .getOrElse(Closed)
+          .flatMap(_.get(queue).map { maxByHour =>
+            val maxByHourLifted = maxByHour.lift
+            period.map { minute =>
+              val status = maxByHourLifted(SDate(minute).getHours()) match {
+                case None => Closed
+                case Some(0) => Closed
+                case Some(_) => Open
+              }
+              (minute, status)
+            }
+          })
+          .getOrElse(period.map(m => (m, Closed)))
+        Future.successful(statusByHour.toMap)
       }
-    }
+
+    //    val maxEgatesProvider: (Terminal, SDateLike) => Future[Queues.QueueStatus] = (terminal: Terminal, time: SDateLike) => {
+    //      egatesProvider().map { portUpdates =>
+    //        portUpdates.updatesByTerminal
+    //          .get(terminal)
+    //          .flatMap { updates =>
+    //            updates
+    //              .forPeriod(time.millisSinceEpoch to time.millisSinceEpoch).headOption
+    //              .map(banks => if (banks.exists(!_.isClosed)) Open else Closed)
+    //          }
+    //          .getOrElse(Closed)
+    //      }
+    //    }
+
+    val egatesStatusForPeriod: (Terminal, NumericRange[MillisSinceEpoch]) => Future[Map[MillisSinceEpoch, QueueStatus]] =
+      (terminal: Terminal, period: NumericRange[MillisSinceEpoch]) => {
+        egatesProvider().map { portUpdates =>
+          portUpdates.updatesByTerminal
+            .get(terminal)
+            .map { updates =>
+              val statuses = updates
+                .forPeriod(period)
+                .map(b => if (b.exists(!_.isClosed)) Open else Closed)
+              val statusesByMinute: immutable.Seq[(MillisSinceEpoch, QueueStatus)] = period.zip(statuses)
+              statusesByMinute.toMap
+            }
+            .getOrElse(period.map(m => (m, Closed)))
+        }
+      }
 
     val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,
-      DynamicStatusProvider(maxDeskProvider, maxEgatesProvider),
+      DynamicStatusProvider(desksStatusForPeriod, egatesStatusForPeriod),
       QueueFallbacks(airportConfig.queuesByTerminal),
       flightFilter,
     )

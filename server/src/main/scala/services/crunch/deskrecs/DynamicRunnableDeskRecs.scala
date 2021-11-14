@@ -19,6 +19,7 @@ import services.TimeLogger
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
+import services.graphstages.QueueStatusProviders.DynamicQueueStatusProvider
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -45,13 +46,14 @@ object DynamicRunnableDeskRecs {
                                    portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,
                                    maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
                                    redListUpdatesProvider: () => Future[RedListUpdates],
+                                   dynamicQueueStatusProvider: DynamicQueueStatusProvider,
                                   )
                                   (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
     Flow[CrunchRequest]
       .via(addArrivals(arrivalsProvider))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
       .via(updateSplits(splitsSink))
-      .via(toDeskRecs(maxDesksProviders, portDesksAndWaitsProvider, redListUpdatesProvider))
+      .via(toDeskRecs(maxDesksProviders, portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider))
 
   private def updateSplits(splitsSink: ActorRef)
                           (implicit ec: ExecutionContext, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
@@ -66,6 +68,7 @@ object DynamicRunnableDeskRecs {
   private def toDeskRecs(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
                          portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,
                          redListUpdatesProvider: () => Future[RedListUpdates],
+                         dynamicQueueStatusProvider: DynamicQueueStatusProvider,
                         )
                         (implicit ec: ExecutionContext, mat: Materializer): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), PortStateQueueMinutes, NotUsed] = {
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
@@ -74,8 +77,8 @@ object DynamicRunnableDeskRecs {
           log.info(s"Crunch starting: ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
           for {
             redListUpdates <- redListUpdatesProvider()
-            loads <- portDesksAndWaitsProvider.flightsToLoads(FlightsWithSplits(flights), redListUpdates)
-            deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, loads, maxDesksProviders)
+            loads <- portDesksAndWaitsProvider.flightsToLoads(FlightsWithSplits(flights), redListUpdates, dynamicQueueStatusProvider)
+            deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, loads, maxDesksProviders, dynamicQueueStatusProvider)
           } yield {
             log.info(s"Crunch finished: (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
             deskRecs
