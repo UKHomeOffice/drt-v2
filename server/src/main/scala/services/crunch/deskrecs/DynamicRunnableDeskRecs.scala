@@ -20,6 +20,7 @@ import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
 import services.graphstages.QueueStatusProviders.DynamicQueueStatusProvider
+import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -77,14 +78,26 @@ object DynamicRunnableDeskRecs {
           log.info(s"Crunch starting: ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
           for {
             redListUpdates <- redListUpdatesProvider()
-            loads <- portDesksAndWaitsProvider.flightsToLoads(FlightsWithSplits(flights), redListUpdates, dynamicQueueStatusProvider)
-            deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, loads, maxDesksProviders, dynamicQueueStatusProvider)
+            statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(crunchDay.minutesInMillis)
+            deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, portDesksAndWaitsProvider.flightsToLoads(FlightsWithSplits(flights), redListUpdates, queueStatusesProvider(statuses)), maxDesksProviders)
           } yield {
             log.info(s"Crunch finished: (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
             deskRecs
           }
       }
   }
+
+  def queueStatusesProvider(statuses: Map[Terminal, Map[Queue, Map[MillisSinceEpoch, QueueStatus]]]): Terminal => (Queue, MillisSinceEpoch) => QueueStatus =
+    (terminal: Terminal) => (queue: Queue, time: MillisSinceEpoch) => statuses.getOrElse(terminal, {
+      log.error(s"terminal $terminal not found")
+      Map[Queue, Map[MillisSinceEpoch, QueueStatus]]()
+    }).getOrElse(queue, {
+      log.error(s"queue $queue not found")
+      Map[MillisSinceEpoch, QueueStatus]()
+    }).getOrElse(time, {
+      log.error(s"time $time not found")
+      Closed
+    })
 
   private def addArrivals(flightsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]])
                          (implicit ec: ExecutionContext): Flow[CrunchRequest, (CrunchRequest, List[Arrival]), NotUsed] =

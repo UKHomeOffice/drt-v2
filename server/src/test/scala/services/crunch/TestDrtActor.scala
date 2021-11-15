@@ -20,9 +20,9 @@ import org.slf4j.{Logger, LoggerFactory}
 import queueus.AdjustmentsNoop
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
-import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
+import services.graphstages.QueueStatusProviders.DynamicQueueStatusProvider
 import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
@@ -60,8 +60,10 @@ object MockEgatesProvider {
     }
   }
 
-  def portProvider(airportConfig: AirportConfig): () => Future[PortEgateBanksUpdates] = () =>
-    Future.successful(PortEgateBanksUpdates(airportConfig.eGateBankSizes.mapValues(banks => EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))))
+  def portProvider(airportConfig: AirportConfig): () => Future[PortEgateBanksUpdates] = () => {
+    val portUpdates = PortEgateBanksUpdates(airportConfig.eGateBankSizes.mapValues(banks => EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks))))))
+    Future.successful(portUpdates)
+  }
 }
 
 class TestDrtActor extends Actor {
@@ -118,12 +120,12 @@ class TestDrtActor extends Actor {
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
       val portEgatesProvider = tc.maybeEgatesProvider match {
-        case None => MockEgatesProvider.portProvider(airportConfig)
+        case None => MockEgatesProvider.portProvider(tc.airportConfig)
         case Some(provider) => provider
       }
 
       val terminalEgatesProvider = tc.maybeEgatesProvider match {
-        case None => MockEgatesProvider.terminalProvider(airportConfig)
+        case None => MockEgatesProvider.terminalProvider(tc.airportConfig)
         case Some(provider) =>
           (terminal: Terminal) => provider().map(p => p.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for $terminal")))
       }
@@ -165,6 +167,7 @@ class TestDrtActor extends Actor {
           portDesksAndWaitsProvider = portDeskRecs,
           maxDesksProviders = deskLimitsProviders,
           redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
+          DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
         )
 
         val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)

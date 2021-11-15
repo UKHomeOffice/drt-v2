@@ -1,20 +1,18 @@
 package services.crunch.workload
 
 import controllers.ArrivalGenerator
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import drt.shared.api.Arrival
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, QueueStatusProviders}
-import uk.gov.homeoffice.drt.ports.Queues.QueueFallbacks
+import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
+import uk.gov.homeoffice.drt.ports.Queues.{Open, Queue, QueueFallbacks}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
-
-import scala.concurrent.Await
-import scala.concurrent.duration.DurationInt
 
 class WorkloadSpec extends CrunchTestLike {
 
@@ -29,7 +27,6 @@ class WorkloadSpec extends CrunchTestLike {
   private def workloadCalculator(procTimes: Map[PaxTypeAndQueue, Double], filter: FlightFilter) = {
     DynamicWorkloadCalculator(
       Map(T1 -> procTimes, T2 -> procTimes, T3 -> procTimes, T4 -> procTimes, T5 -> procTimes),
-      QueueStatusProviders.QueuesAlwaysOpen,
       QueueFallbacks(Map()),
       filter)
   }
@@ -40,10 +37,9 @@ class WorkloadSpec extends CrunchTestLike {
 
   private def workloadForFlight(arrival: Arrival, splits: Set[Splits], filter: FlightFilter): Double = {
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> procTime)
-    val load = workloadCalculator(procTimes, filter)
-      .flightLoadMinutes(FlightsWithSplits(Iterable(ApiFlightWithSplits(arrival, splits, None))), redListedZimbabwe)
-      .map(_.minutes.values.map(_.workLoad).sum)
-    Await.result(load, 1.second)
+    workloadCalculator(procTimes, filter)
+      .flightLoadMinutes(FlightsWithSplits(Iterable(ApiFlightWithSplits(arrival, splits, None))), redListedZimbabwe, (t: Terminal) => (q: Queue, m: MillisSinceEpoch) => Open)
+      .minutes.values.map(_.workLoad).sum
   }
 
   "Given an arrival with 1 pax and 1 split containing 1 pax with no nationality data " +
@@ -65,9 +61,8 @@ class WorkloadSpec extends CrunchTestLike {
     val splits = generateSplits(1, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> procTime)
 
-    val eventualLoads = workloadCalculator(procTimes, FlightFilter.regular(List(T1)))
-      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None))
-    val workloads = Await.result(eventualLoads, 1.second).toList
+    val workloads = workloadCalculator(procTimes, FlightFilter.regular(List(T1)))
+      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), (q: Queue, m: MillisSinceEpoch) => Open)
 
     val startTime = SDate(workloads.head.minute).toISOString()
 
