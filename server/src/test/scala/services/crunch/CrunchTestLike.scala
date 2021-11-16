@@ -32,6 +32,7 @@ import scala.collection.immutable
 import scala.collection.immutable.{Map, SortedMap}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
+import scala.language.implicitConversions
 
 
 object H2Tables extends {
@@ -146,8 +147,7 @@ object TestDefaults {
   )
 
   def airportConfigForSplits(splits: Map[PaxTypeAndQueue, Double]): AirportConfig = {
-    val queues = splits.map(_._1.queueType).toSet
-    val queueOrder = Seq(Queues.EGate, Queues.EeaDesk, Queues.NonEeaDesk)
+    val queues = Seq(Queues.EGate, Queues.EeaDesk, Queues.NonEeaDesk)
     val slas = Map[Queue, Int](Queues.EGate -> 25, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45).filterKeys(queues.contains)
     val ratios: immutable.Iterable[SplitRatio] = splits.map {
       case (pt, q) => SplitRatio(pt, q)
@@ -167,7 +167,7 @@ object TestDefaults {
     AirportConfig(
       portCode = PortCode("STN"),
       queuesByTerminal = SortedMap(
-        T1 -> queueOrder.filter(queues.contains)
+        T1 -> queues
       ),
       slaByQueue = slas,
       minutesToCrunch = 30,
@@ -221,7 +221,7 @@ class CrunchTestLike
 
   implicit val materializer: Materializer = Materializer.createMaterializer(system)
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val timeout: Timeout = new Timeout(5 seconds)
+  implicit val timeout: Timeout = new Timeout(5.seconds)
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -235,7 +235,7 @@ class CrunchTestLike
     maybeDrtActor.foreach(shutDownDrtActor)
     val testDrtActor = system.actorOf(Props(new TestDrtActor()))
     maybeDrtActor = Option(testDrtActor)
-    Await.result(testDrtActor.ask(config).mapTo[CrunchGraphInputsAndProbes], 1 seconds)
+    Await.result(testDrtActor.ask(config).mapTo[CrunchGraphInputsAndProbes], 1.seconds)
   }
 
   def shutDownDrtActor(drtActor: ActorRef): Terminated = {
@@ -246,37 +246,37 @@ class CrunchTestLike
   }
 
   def expectArrivals(arrivalsToExpect: Iterable[Arrival])(implicit crunch: CrunchGraphInputsAndProbes): Unit =
-    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+    crunch.portStateTestProbe.fishForMessage(1.seconds) {
       case ps: PortState =>
         ps.flights.values.map(_.apiFlight) == arrivalsToExpect
     }
 
   def expectUniqueArrival(uniqueArrival: UniqueArrival)(implicit crunch: CrunchGraphInputsAndProbes): Unit =
-    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+    crunch.portStateTestProbe.fishForMessage(1.seconds) {
       case ps: PortState =>
         ps.flights.contains(uniqueArrival)
     }
 
   def expectNoUniqueArrival(uniqueArrival: UniqueArrival)(implicit crunch: CrunchGraphInputsAndProbes): Unit =
-    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+    crunch.portStateTestProbe.fishForMessage(1.seconds) {
       case ps: PortState =>
         !ps.flights.contains(uniqueArrival)
     }
 
   def expectFeedSources(sourcesToExpect: Set[FeedSource])(implicit crunch: CrunchGraphInputsAndProbes): Unit =
-    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+    crunch.portStateTestProbe.fishForMessage(1.seconds) {
       case ps: PortState =>
         ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet == sourcesToExpect
     }
 
   def expectPaxNos(totalPaxToExpect: Double)(implicit crunch: CrunchGraphInputsAndProbes): Unit =
-    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+    crunch.portStateTestProbe.fishForMessage(1.seconds) {
       case ps: PortState =>
         ps.crunchMinutes.values.map(_.paxLoad).sum == totalPaxToExpect
     }
 
   def expectPaxByQueue(paxByQueueToExpect: Map[Queue, Double])(implicit crunch: CrunchGraphInputsAndProbes): Unit =
-    crunch.portStateTestProbe.fishForMessage(1 seconds) {
+    crunch.portStateTestProbe.fishForMessage(1.seconds) {
       case ps: PortState =>
         val paxByQueue = ps.crunchMinutes.values
           .groupBy(_.queue)
@@ -399,7 +399,7 @@ class CrunchTestLike
     }
 
   def offerAndWait[T](sourceQueue: SourceQueueWithComplete[T], offering: T): QueueOfferResult = {
-    Await.result(sourceQueue.offer(offering), 3 seconds) match {
+    Await.result(sourceQueue.offer(offering), 3.seconds) match {
       case offerResult if offerResult != Enqueued =>
         throw new Exception(s"Queue offering (${offering.getClass}) was not enqueued: ${offerResult.getClass}")
       case offerResult =>

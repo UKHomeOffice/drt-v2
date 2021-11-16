@@ -105,6 +105,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 object PortDesksAndWaitsProvider {
   def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, flightFilter: FlightFilter, egatesProvider: () => Future[PortEgateBanksUpdates])
            (implicit ec: ExecutionContext): PortDesksAndWaitsProvider = {
+
     val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,
       QueueFallbacks(airportConfig.queuesByTerminal),
