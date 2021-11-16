@@ -43,9 +43,7 @@ case class SimulationParams(
             .map(s => s.toDouble / 60)
             .getOrElse(defaultValue)
       }),
-      queueStatusProvider = QueueStatusProviders.FlexibleEGatesForSimulation(eGateOpenHours)
     )
-
   }
 
   def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits): FlightsWithSplits =

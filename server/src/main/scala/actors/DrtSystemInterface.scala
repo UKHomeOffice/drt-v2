@@ -45,7 +45,7 @@ import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
 import play.api.Configuration
-import queueus.{AdjustmentsNoop, ChildEGateAdjustments, PaxTypeQueueAllocation, QueueAdjustments}
+import queueus.{AdjustmentsNoop, ChildEGateAdjustments, DynamicQueueStatusProvider, PaxTypeQueueAllocation, QueueAdjustments}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services._
@@ -154,7 +154,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig))
+  val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), egatesProvider)
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] =
     terminal => egatesProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
@@ -202,6 +202,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       portDesksAndWaitsProvider = portDeskRecs,
       maxDesksProviders = deskLimitsProviders,
       redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+      DynamicQueueStatusProvider(airportConfig, egatesProvider)
     )
 
     val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor)

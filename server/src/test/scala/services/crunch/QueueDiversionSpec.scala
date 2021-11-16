@@ -5,14 +5,15 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.SDateLike
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
-import services.crunch.TestDefaults.airportConfigForSplits
+import services.crunch.TestDefaults.{airportConfig, airportConfigForSplits}
+import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
-import uk.gov.homeoffice.drt.ports.QueueStatusProviders.{HourlyStatuses, QueuesAlwaysOpen}
 import uk.gov.homeoffice.drt.ports.Queues._
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode}
 
 import scala.collection.immutable.List
+import scala.concurrent.Future
 
 class QueueDiversionSpec extends CrunchTestLike {
   private val date = "2017-01-01"
@@ -26,38 +27,55 @@ class QueueDiversionSpec extends CrunchTestLike {
     val splits = Map(PaxTypeAndQueue(EeaMachineReadable, EeaDesk) -> deskRatios(EeaDesk), PaxTypeAndQueue(EeaMachineReadable, EGate) -> deskRatios(EGate))
 
     val config = airportConfigForSplits(splits)
-    val egatesClosed: Map[Terminal, Map[Queue, IndexedSeq[Queues.QueueStatus]]] = Map(T1 -> Map(
-      EGate -> IndexedSeq.fill(24)(Closed),
-      EeaDesk -> IndexedSeq.fill(24)(Open),
-      NonEeaDesk -> IndexedSeq.fill(24)(Open),
-    ))
+    val allGatesClosed = PortEgateBanksUpdates(Map(T1 -> EgateBanksUpdates(List(EgateBanksUpdate(0L, IndexedSeq(EgateBank(IndexedSeq(false, false, false, false, false))))))))
 
-    "Given an arrival, I should see pax headed to all queues in the default splits" >> {
-      implicit val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
-        airportConfig = config.copy(queueStatusProvider = QueuesAlwaysOpen),
-        now = () => dateNow))
-
+    "Given an arrival" >> {
       val pax = 100
       val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), actPax = Option(pax))
 
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
-      expectPaxByQueue(Map(EeaDesk -> 75, EGate -> 25))
+      "When all queues are open I should see pax headed to all queues in the default splits" >> {
+        implicit val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
+          airportConfig = config,
+          now = () => dateNow))
 
-      success
-    }
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
+        expectPaxByQueue(Map(EeaDesk -> 75, EGate -> 25))
+        crunch.shutdown()
 
-    "Given an arrival, and zero max egates, I should see pax headed only to the desks" >> {
-      implicit val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
-        airportConfig = config.copy(queueStatusProvider = HourlyStatuses(egatesClosed)),
-        now = () => dateNow))
+        success
+      }
 
-      val pax = 100
-      val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), actPax = Option(pax))
+      "When the egates are closed I should see all pax in the Eea queue" >> {
+        implicit val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
+          airportConfig = config,
+          now = () => dateNow,
+          maybeEgatesProvider = Option(() => Future.successful(allGatesClosed))
+        ))
 
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
-      expectPaxByQueue(Map(EeaDesk -> 100, EGate -> 0))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
+        expectPaxByQueue(Map(EeaDesk -> 100))
+        crunch.shutdown()
 
-      success
+        success
+      }
+
+      "When the Egates and Eea desks are closed I should see all pax in the Non-Eea queue" >> {
+        implicit val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
+          airportConfig = config.copy(minMaxDesksByTerminalQueue24Hrs = config.minMaxDesksByTerminalQueue24Hrs.updated(T1, Map(
+            EeaDesk -> (List.fill(24)(0), List.fill(24)(0)),
+            NonEeaDesk -> (List.fill(24)(0), List.fill(24)(5)),
+            EGate -> (List.fill(24)(0), List.fill(24)(0)),
+          ))),
+          now = () => dateNow,
+          maybeEgatesProvider = Option(() => Future.successful(allGatesClosed))
+        ))
+
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
+        expectPaxByQueue(Map(NonEeaDesk -> 100))
+        crunch.shutdown()
+
+        success
+      }
     }
   }
 }

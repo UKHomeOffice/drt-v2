@@ -1,28 +1,29 @@
 package services.graphstages
 
+import akka.stream.Materializer
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
 import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
 import services.workloadcalculator.PaxLoadCalculator.Load
-import uk.gov.homeoffice.drt.ports.QueueStatusProviders.QueueStatusProvider
-import uk.gov.homeoffice.drt.ports.Queues.{Closed, Open, Queue, QueueFallbacks}
+import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.Map
+import scala.concurrent.ExecutionContext
 
 
 trait WorkloadCalculatorLike {
-  val queueStatusProvider: QueueStatusProvider
-
   val defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]
 
-  def flightLoadMinutes(flights: FlightsWithSplits, redListUpdates: RedListUpdates): SplitMinutes
+  def flightLoadMinutes(flights: FlightsWithSplits,
+                        redListUpdates: RedListUpdates,
+                        terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
+                       (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes
 
   def combineCodeShares(flights: Iterable[ApiFlightWithSplits]): Iterable[ApiFlightWithSplits] = {
     val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
@@ -56,29 +57,32 @@ trait WorkloadCalculatorLike {
 }
 
 case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
-                                     queueStatusProvider: QueueStatusProvider,
                                      fallbacksProvider: QueueFallbacks,
                                      flightHasWorkload: FlightFilter)
   extends WorkloadCalculatorLike {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override def flightLoadMinutes(flights: FlightsWithSplits, redListUpdates: RedListUpdates): SplitMinutes = {
-    val minutes = new SplitMinutes
+  override def flightLoadMinutes(flights: FlightsWithSplits,
+                                 redListUpdates: RedListUpdates,
+                                 terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
+                                (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes =
+    flightsWithPcpWorkload(combineCodeShares(flights.flights.values), redListUpdates).toList
+      .foldLeft(SplitMinutes(Map())) {
+        case (acc, fws) =>
+          acc ++ flightToFlightSplitMinutes(fws, terminalQueueStatuses(fws.apiFlight.Terminal))
+      }
 
-    flightsWithPcpWorkload(combineCodeShares(flights.flights.values), redListUpdates)
-      .foreach(incoming => minutes ++= flightToFlightSplitMinutes(incoming))
+  def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits,
+                                 statusAt: (Queue, MillisSinceEpoch) => QueueStatus)
+                                (implicit ec: ExecutionContext): Iterable[FlightSplitMinute] = {
 
-    minutes
-  }
-
-  def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits): Iterable[FlightSplitMinute] =
     defaultProcTimes.get(flightWithSplits.apiFlight.Terminal) match {
       case None => Iterable()
       case Some(procTimes) =>
         val flight = flightWithSplits.apiFlight
 
-        flightWithSplits.bestSplits.map(splitsToUse => {
+        flightWithSplits.bestSplits.map { splitsToUse =>
           val paxTypeAndQueueCounts = paxTypeAndQueueCountsFromSplits(splitsToUse)
 
           val paxTypesAndQueuesMinusTransit = paxTypeAndQueueCounts.filterNot(_.queueType == Queues.Transfer)
@@ -89,7 +93,7 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                 paxTypesAndQueuesMinusTransit
                   .map { case ptqc@ApiPaxTypeAndQueueCount(pt, queue, _, _, _) =>
                     def findAlternativeQueue(originalQueue: Queue, queuesToTry: Iterable[Queue]): Queue = {
-                      queuesToTry.find(queueStatusProvider.statusAt(flight.Terminal, _, SDate(minuteMillis).getHours()) == Open) match {
+                      queuesToTry.find(statusAt(_, minuteMillis) == Open) match {
                         case Some(queue) => queue
                         case None =>
                           log.error(s"Failed to find alternative queue for $pt ($queuesToTry). Reverting to $originalQueue")
@@ -97,21 +101,21 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                       }
                     }
 
-                    val finalPtqc = queueStatusProvider.statusAt(flight.Terminal, queue, SDate(minuteMillis).getHours()) match {
+                    val finalPtqc = statusAt(queue, minuteMillis) match {
                       case Closed =>
                         val fallbacks = fallbacksProvider.availableFallbacks(flight.Terminal, queue, pt)
                         val newQueue = findAlternativeQueue(queue, fallbacks)
+                        log.info(s"$queue is closed. Redirecting to $newQueue")
                         ptqc.copy(queueType = newQueue)
-                      case Open =>
-                        ptqc
+                      case Open => ptqc
                     }
 
                     flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, finalPtqc)
                   }
             }
-        }).getOrElse(Seq())
+        }.getOrElse(Seq())
     }
-
+  }
 
   def flightSplitMinute(arrival: Arrival,
                         procTimes: Map[PaxTypeAndQueue, Load],

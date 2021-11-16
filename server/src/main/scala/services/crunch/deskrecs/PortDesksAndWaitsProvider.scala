@@ -11,9 +11,9 @@ import services.crunch.deskrecs
 import services.graphstages.Crunch.LoadMinute
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
-import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueFallbacks, Transfer}
+import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
@@ -28,7 +28,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      minutesToCrunch: Int,
                                      crunchOffsetMinutes: Int,
                                      tryCrunch: TryCrunch,
-                                     workloadCalculator: WorkloadCalculatorLike
+                                     workloadCalculator: WorkloadCalculatorLike,
                                     ) extends PortDesksAndWaitsProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -49,8 +49,11 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
   def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
     deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch)
 
-  override def flightsToLoads(flights: FlightsWithSplits, redListUpdates: RedListUpdates): Map[TQM, LoadMinute] = workloadCalculator
-    .flightLoadMinutes(flights, redListUpdates).minutes
+  override def flightsToLoads(flights: FlightsWithSplits,
+                              redListUpdates: RedListUpdates,
+                              terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
+                             (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, LoadMinute] = workloadCalculator
+    .flightLoadMinutes(flights, redListUpdates, terminalQueueStatuses).minutes
     .groupBy {
       case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
         TQM(t, finalQueueName, m)
@@ -99,10 +102,11 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 }
 
 object PortDesksAndWaitsProvider {
-  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, flightFilter: FlightFilter): PortDesksAndWaitsProvider = {
+  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunch, flightFilter: FlightFilter, egatesProvider: () => Future[PortEgateBanksUpdates])
+           (implicit ec: ExecutionContext): PortDesksAndWaitsProvider = {
+
     val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,
-      airportConfig.queueStatusProvider,
       QueueFallbacks(airportConfig.queuesByTerminal),
       flightFilter,
     )

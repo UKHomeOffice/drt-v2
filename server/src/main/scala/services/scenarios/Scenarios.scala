@@ -13,6 +13,7 @@ import drt.shared.SimulationParams
 import drt.shared.api.Arrival
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
+import queueus.DynamicQueueStatusProvider
 import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
@@ -48,6 +49,7 @@ object Scenarios {
         simulationAirportConfig,
         OptimiserWithFlexibleProcessors.crunch,
         FlightFilter.forPortConfig(simulationAirportConfig),
+        egateBanksProvider
       )
 
     val terminalEgatesProvider = (terminal: Terminal) => egateBanksProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
@@ -63,6 +65,7 @@ object Scenarios {
       portDesksAndWaitsProvider = portDesksAndWaitsProvider,
       maxDesksProviders = terminalDeskLimits,
       redListUpdatesProvider = redListUpdatesProvider,
+      DynamicQueueStatusProvider(simulationAirportConfig, egateBanksProvider)
     )
 
     class DummyPersistentActor extends Actor {

@@ -16,7 +16,7 @@ import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
-import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
+import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, DynamicQueueStatusProvider, PaxTypeQueueAllocation, TerminalQueueAllocator}
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsProvider, addManifests}
@@ -116,7 +116,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
   val splitsCalculator: SplitsCalculator = manifests.queues.SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, AdjustmentsNoop)
 
-  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig))
+  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig))
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   def setupGraphAndCheckQueuePax(arrival: Arrival,
@@ -137,6 +137,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       portDesksAndWaitsProvider = desksAndWaitsProvider,
       maxDesksProviders = maxDesksProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
+      DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
     )
 
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)

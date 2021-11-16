@@ -17,10 +17,9 @@ import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
-import queueus.AdjustmentsNoop
+import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
-import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.graphstages.{Crunch, FlightFilter}
@@ -60,8 +59,10 @@ object MockEgatesProvider {
     }
   }
 
-  def portProvider(airportConfig: AirportConfig): () => Future[PortEgateBanksUpdates] = () =>
-    Future.successful(PortEgateBanksUpdates(airportConfig.eGateBankSizes.mapValues(banks => EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))))
+  def portProvider(airportConfig: AirportConfig): () => Future[PortEgateBanksUpdates] = () => {
+    val portUpdates = PortEgateBanksUpdates(airportConfig.eGateBankSizes.mapValues(banks => EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks))))))
+    Future.successful(portUpdates)
+  }
 }
 
 class TestDrtActor extends Actor {
@@ -117,20 +118,25 @@ class TestDrtActor extends Actor {
 
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
-      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig))
+      val portEgatesProvider = tc.maybeEgatesProvider match {
+        case None => MockEgatesProvider.portProvider(tc.airportConfig)
+        case Some(provider) => provider
+      }
 
-      val egatesProvider = tc.maybeEgatesProvider match {
-        case None => MockEgatesProvider.terminalProvider(airportConfig)
+      val terminalEgatesProvider = tc.maybeEgatesProvider match {
+        case None => MockEgatesProvider.terminalProvider(tc.airportConfig)
         case Some(provider) =>
           (terminal: Terminal) => provider().map(p => p.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for $terminal")))
       }
 
-      val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
-        PortDeskLimits.flexed(tc.airportConfig, egatesProvider)
-      else
-        PortDeskLimits.fixed(tc.airportConfig, egatesProvider)
+      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), portEgatesProvider)
 
-      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig, egatesProvider) _
+      val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
+        PortDeskLimits.flexed(tc.airportConfig, terminalEgatesProvider)
+      else
+        PortDeskLimits.fixed(tc.airportConfig, terminalEgatesProvider)
+
+      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig, terminalEgatesProvider) _
 
       def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
         val today = tc.now()
@@ -160,6 +166,7 @@ class TestDrtActor extends Actor {
           portDesksAndWaitsProvider = portDeskRecs,
           maxDesksProviders = deskLimitsProviders,
           redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
+          DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
         )
 
         val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)

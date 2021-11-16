@@ -6,6 +6,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{SimulationMinutes, TQM}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.graphstages.Crunch.LoadMinute
+import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
@@ -16,7 +17,10 @@ trait PortDesksAndWaitsProviderLike {
   val minutesToCrunch: Int
   val crunchOffsetMinutes: Int
 
-  def flightsToLoads(flights: FlightsWithSplits, redListUpdates: RedListUpdates): Map[TQM, LoadMinute]
+  def flightsToLoads(flights: FlightsWithSplits,
+                     redListUpdates: RedListUpdates,
+                     terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
+                    (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, LoadMinute]
 
   def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
                    loads: Map[TQM, LoadMinute],

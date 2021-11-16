@@ -17,7 +17,7 @@ import drt.shared.api.Arrival
 import drt.shared.dates.UtcDate
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
-import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
+import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, DynamicQueueStatusProvider, PaxTypeQueueAllocation, TerminalQueueAllocator}
 import server.feeds.ArrivalsFeedSuccess
 import services.crunch.VoyageManifestGenerator.{euPassport, visa}
 import services.crunch.desklimits.PortDeskLimits
@@ -103,7 +103,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
 
     val splitsCalc = SplitsCalculator(paxAllocation, airportConfig.terminalPaxSplits, AdjustmentsNoop)
-    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig))
+    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig))
 
     implicit val timeout: Timeout = new Timeout(50.milliseconds)
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
@@ -115,6 +115,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       portDesksAndWaitsProvider = desksAndWaitsProvider,
       maxDesksProviders = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.terminalProvider(airportConfig)),
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
+      DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
     )
 
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)

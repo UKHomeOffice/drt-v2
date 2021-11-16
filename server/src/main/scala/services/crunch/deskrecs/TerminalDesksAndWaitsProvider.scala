@@ -6,7 +6,7 @@ import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable.{Map, NumericRange}
