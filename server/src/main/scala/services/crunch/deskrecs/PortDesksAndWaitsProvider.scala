@@ -64,7 +64,6 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
         (tqm, LoadMinute(tqm.terminal, tqm.queue, loads.map(_.paxLoad).sum, loads.map(_.workLoad).sum, tqm.minute))
     }
 
-
   def terminalWorkLoadsByQueue(terminal: Terminal,
                                minuteMillis: NumericRange[MillisSinceEpoch],
                                loadMinutes: Map[TQM, LoadMinute]): Map[Queue, Seq[Double]] = queuesByTerminal(terminal)

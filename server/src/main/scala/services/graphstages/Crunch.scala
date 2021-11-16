@@ -19,25 +19,7 @@ object Crunch {
   val paxOffPerMinute: Int = 20
 
   val log: Logger = LoggerFactory.getLogger(getClass)
-
-//  class SplitMinutes_mutable {
-//    val minutes: mutable.Map[TQM, LoadMinute] = mutable.Map()
-//
-//    def ++=(incoming: Iterable[FlightSplitMinute]): Unit = {
-//      incoming.foreach(fsm => +=(LoadMinute(fsm.terminalName, fsm.queueName, fsm.paxLoad, fsm.workLoad, fsm.minute)))
-//    }
-//
-//    def +=(incoming: LoadMinute): Unit = {
-//      val key = incoming.uniqueId
-//      minutes.get(key) match {
-//        case None => minutes += (key -> incoming)
-//        case Some(existingFsm) => minutes += (key -> (existingFsm + incoming))
-//      }
-//    }
-//
-//    def toLoads: Loads = Loads(SortedMap[TQM, LoadMinute]() ++ minutes)
-//  }
-
+  
   case class SplitMinutes(minutes: Map[TQM, LoadMinute]) {
     def ++(incoming: Iterable[FlightSplitMinute]): SplitMinutes = {
       incoming.foldLeft(this) {
