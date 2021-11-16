@@ -17,12 +17,11 @@ import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
-import queueus.AdjustmentsNoop
+import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
-import services.graphstages.QueueStatusProviders.DynamicQueueStatusProvider
 import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups

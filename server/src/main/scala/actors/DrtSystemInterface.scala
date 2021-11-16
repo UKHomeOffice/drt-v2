@@ -45,7 +45,7 @@ import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
 import play.api.Configuration
-import queueus.{AdjustmentsNoop, ChildEGateAdjustments, PaxTypeQueueAllocation, QueueAdjustments}
+import queueus.{AdjustmentsNoop, ChildEGateAdjustments, DynamicQueueStatusProvider, PaxTypeQueueAllocation, QueueAdjustments}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services._
@@ -55,7 +55,6 @@ import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
-import services.graphstages.QueueStatusProviders.DynamicQueueStatusProvider
 import services.graphstages.{Crunch, FlightFilter}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

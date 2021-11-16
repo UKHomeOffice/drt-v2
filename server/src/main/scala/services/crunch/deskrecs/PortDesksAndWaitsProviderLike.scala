@@ -6,8 +6,6 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{SimulationMinutes, TQM}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.graphstages.Crunch.LoadMinute
-import services.graphstages.QueueStatusProviders.DynamicQueueStatusProvider
-import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates

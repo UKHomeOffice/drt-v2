@@ -17,7 +17,7 @@ import drt.shared.api.Arrival
 import drt.shared.dates.UtcDate
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
-import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
+import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, DynamicQueueStatusProvider, PaxTypeQueueAllocation, TerminalQueueAllocator}
 import server.feeds.ArrivalsFeedSuccess
 import services.crunch.VoyageManifestGenerator.{euPassport, visa}
 import services.crunch.desklimits.PortDeskLimits
@@ -25,7 +25,6 @@ import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvide
 import services.crunch.deskrecs.OptimiserMocks.{mockHistoricManifestsProvider, mockHistoricManifestsProviderNoop, mockLiveManifestsProviderNoop}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
-import services.graphstages.QueueStatusProviders.DynamicQueueStatusProvider
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}

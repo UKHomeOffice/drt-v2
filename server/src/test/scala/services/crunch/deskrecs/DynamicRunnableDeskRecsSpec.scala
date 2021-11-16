@@ -16,14 +16,13 @@ import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
-import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, PaxTypeQueueAllocation, TerminalQueueAllocator}
+import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, DynamicQueueStatusProvider, PaxTypeQueueAllocation, TerminalQueueAllocator}
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsProvider, addManifests}
 import services.crunch.deskrecs.OptimiserMocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
-import services.graphstages.QueueStatusProviders.DynamicQueueStatusProvider
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
