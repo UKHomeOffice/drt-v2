@@ -6,6 +6,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import services.SDate
 import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
 import services.workloadcalculator.PaxLoadCalculator.Load
 import uk.gov.homeoffice.drt.ports.Queues._
@@ -113,7 +114,10 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                     flightSplitMinute(flight, procTimes, minuteMillis, flightPaxInMinute, finalPtqc)
                   }
             }
-        }.getOrElse(Seq())
+        }.getOrElse {
+          log.error(s"Missing splits for ${flight.flightCode}::${SDate(flight.Scheduled).toISOString()}")
+          Seq()
+        }
     }
   }
 

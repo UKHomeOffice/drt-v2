@@ -5,7 +5,7 @@ import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.DeskRecMinutes
@@ -16,7 +16,7 @@ import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
-import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, DynamicQueueStatusProvider, PaxTypeQueueAllocation, TerminalQueueAllocator}
+import queueus._
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsProvider, addManifests}
@@ -27,14 +27,15 @@ import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiPaxTypeAndQueueCount, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
 
 object OptimiserMocks {
@@ -161,26 +162,61 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   }
 
   "Given a flight and a mock splits calculator" >> {
-    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
     val flights = Seq(ApiFlightWithSplits(arrival, Set()))
     val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
     val mockSplits: SplitsForArrival = (_, _) => splits
 
-    "When I have a manifest matching the arrival I should get the mock splits added to the arrival" >> {
-      val manifest = VoyageManifestGenerator.manifestForArrival(arrival, List(euIdCard))
-      val manifestsForArrival = manifestsByKey(manifest)
-      val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
+    "addManifests" >> {
+      "When I have a manifest matching the arrival I should get the mock splits added to the arrival" >> {
+        val manifest = VoyageManifestGenerator.manifestForArrival(arrival, List(euIdCard))
+        val manifestsForArrival = manifestsByKey(manifest)
+        val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
 
-      withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1)), Set(splits)))
+        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1)), Set(splits)))
+      }
+
+      "When I have no manifests matching the arrival I should get no splits added to the arrival" >> {
+        val manifest = VoyageManifestGenerator.voyageManifest(portCode = PortCode("AAA"))
+        val manifestsForDifferentArrival = manifestsByKey(manifest)
+        val withLiveManifests = addManifests(flights, manifestsForDifferentArrival, mockSplits)
+
+        withLiveManifests === Seq(ApiFlightWithSplits(arrival, Set()))
+      }
     }
 
-    "When I have no manifests matching the arrival I should get no splits added to the arrival" >> {
-      val manifest = VoyageManifestGenerator.voyageManifest(portCode = PortCode("AAA"))
-      val manifestsForDifferentArrival = manifestsByKey(manifest)
-      val withLiveManifests = addManifests(flights, manifestsForDifferentArrival, mockSplits)
+    "addSplits" >> {
+      "When I have live manifests matching the arrival where the live manifest is within the trust threshold I should get the live splits" >> {
+        checkSplitsSource(arrival, Option(xOfPaxType(100, visa)), Map(), ApiSplitsWithHistoricalEGateAndFTPercentages)
+      }
 
-      withLiveManifests === Seq(ApiFlightWithSplits(arrival, Set()))
+      "When I have live and historic manifests matching the arrival where the live manifest isn't within the trust threshold I should get the fallback historic splits" >> {
+        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(arrival -> Option(xOfPaxType(10, visa))), Historical)
+      }
+
+      "When I have live manifests matching the arrival where the live manifest isn't within the trust threshold, and no historical manifest, I should get the fallback terminal average splits" >> {
+        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(), TerminalAverage)
+      }
+
+      "When I have live manifests matching the arrival where the live manifest isn't within the trust threshold, and no historical manifest, I should get the fallback terminal average splits" >> {
+        checkSplitsSource(arrival, None, Map(), TerminalAverage)
+      }
     }
+  }
+
+  private def checkSplitsSource(arrival: Arrival,
+                                maybeLiveManifestPax: Option[List[PassengerInfoJson]],
+                                maybeHistoricArrivalManifestPax: Map[Arrival, Option[List[PassengerInfoJson]]],
+                                expectedSplitsSource: SplitSource) = {
+    val flow = DynamicRunnableDeskRecs.addSplits(
+      mockLiveManifestsProvider(arrival, maybeLiveManifestPax),
+      mockHistoricManifestsProvider(maybeHistoricArrivalManifestPax),
+      splitsCalculator)
+
+    val value1 = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(arrival))))
+    val result = Await.result(value1.via(flow).runWith(Sink.seq), 1.second)
+
+    result.head._2.exists(_.bestSplits.nonEmpty) && result.head._2.exists(_.splits.exists(_.source == expectedSplitsSource))
   }
 
   def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =
