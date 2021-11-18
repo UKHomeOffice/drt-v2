@@ -109,10 +109,10 @@ object DynamicRunnableDeskRecs {
         flights.fold(List[Arrival]())(_ ++ _).map(flights => (crunchRequest, flights))
       }
 
-  private def addSplits(liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
-                        historicManifestsProvider: Iterable[Arrival] => Future[Source[ManifestLike, NotUsed]],
-                        splitsCalculator: SplitsCalculator)
-                       (implicit ec: ExecutionContext): Flow[(CrunchRequest, List[Arrival]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+  def addSplits(liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
+                historicManifestsProvider: Iterable[Arrival] => Future[Source[ManifestLike, NotUsed]],
+                splitsCalculator: SplitsCalculator)
+               (implicit ec: ExecutionContext): Flow[(CrunchRequest, List[Arrival]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(CrunchRequest, List[Arrival])]
       .mapAsync(1) { case (crunchRequest, flightsSource) =>
         liveManifestsProvider(crunchRequest).map(manifestsStream => (crunchRequest, flightsSource, manifestsStream))
@@ -127,7 +127,7 @@ object DynamicRunnableDeskRecs {
         (crunchRequest, addManifests(arrivals.map(ApiFlightWithSplits.fromArrival), manifestsByKey, splitsCalculator.splitsForArrival))
       }
       .mapAsync(1) { case (crunchRequest, flights) =>
-        val arrivalsToLookup = flights.filter(_.splits.isEmpty).map(_.apiFlight)
+        val arrivalsToLookup = flights.filter(_.bestSplits.isEmpty).map(_.apiFlight)
         historicManifestsProvider(arrivalsToLookup).map { manifests =>
           log.info(f"Looking up ${arrivalsToLookup.size} arrivals' historic manifests")
           (crunchRequest, flights, manifests)
@@ -145,7 +145,7 @@ object DynamicRunnableDeskRecs {
       .map {
         case (crunchRequest, flights) =>
           val allFlightsWithSplits = flights.map {
-            case flightWithNoSplits if flightWithNoSplits.splits.isEmpty =>
+            case flightWithNoSplits if flightWithNoSplits.bestSplits.isEmpty =>
               val terminalDefault = splitsCalculator.terminalDefaultSplits(flightWithNoSplits.apiFlight.Terminal)
               flightWithNoSplits.copy(splits = Set(terminalDefault))
             case flightWithSplits => flightWithSplits
@@ -166,7 +166,7 @@ object DynamicRunnableDeskRecs {
                    manifests: Map[ArrivalKey, ManifestLike],
                    splitsForArrival: SplitsForArrival): Iterable[ApiFlightWithSplits] =
     flights.map { flight =>
-      if (flight.splits.nonEmpty) flight
+      if (flight.bestSplits.nonEmpty) flight
       else {
         val maybeSplits = manifests
           .get(ArrivalKey(flight.apiFlight))
