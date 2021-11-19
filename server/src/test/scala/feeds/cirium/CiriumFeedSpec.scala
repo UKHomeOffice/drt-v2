@@ -1,6 +1,8 @@
 package feeds.cirium
 
+import actors.Feed
 import actors.acking.AckingReceiver.StreamCompleted
+import actors.persistent.QueueLikeActor.Tick
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import drt.server.feeds.cirium.CiriumFeed
@@ -232,12 +234,14 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
     val probe = TestProbe()
 
-    ciriumFeed.tickingSource(250 milliseconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val actorSource = ciriumFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis, actorSource, Tick)
 
     probe.fishForMessage(2 seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
       case _ => false
     }
+    timer.cancel()
 
     success
   }
@@ -248,12 +252,14 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
     val probe = TestProbe()
 
-    ciriumFeed.tickingSource(100 milliseconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val actorSource = ciriumFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis, actorSource, Tick)
 
     probe.fishForMessage(2 seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.nonEmpty && s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
       case _ => false
     }
+    timer.cancel()
 
     success
   }

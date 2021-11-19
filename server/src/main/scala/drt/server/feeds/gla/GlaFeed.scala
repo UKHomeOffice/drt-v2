@@ -1,7 +1,6 @@
 package drt.server.feeds.gla
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
@@ -20,9 +19,7 @@ import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 
 trait GlaFeedRequesterLike {
 
@@ -45,9 +42,8 @@ case class GlaFeed(uri: String,
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source
-    .tick(initialDelay = 1 milliseconds, interval = 60 seconds, tick = NotUsed)
-    .mapAsync(1)(_ => {
+  def source(source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] =
+    source.mapAsync(1)(_ => {
       log.info(s"Requesting live feed.")
       requestArrivals()
     })

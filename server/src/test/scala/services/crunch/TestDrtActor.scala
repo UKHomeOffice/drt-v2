@@ -193,10 +193,10 @@ class TestDrtActor extends Actor {
       }
 
       val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
-      val liveArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
-      val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
-      val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
-      val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
+      val liveArrivals: Source[ArrivalsFeedResponse, ActorRef] = Feed.actorRefSource
+      val liveBaseArrivals: Source[ArrivalsFeedResponse, ActorRef] = Feed.actorRefSource
+      val forecastArrivals: Source[ArrivalsFeedResponse, ActorRef] = Feed.actorRefSource
+      val forecastBaseArrivals: Source[ArrivalsFeedResponse, ActorRef] = Feed.actorRefSource
       val redListUpdatesSource: Source[List[RedListUpdateCommand], SourceQueueWithComplete[List[RedListUpdateCommand]]] = Source.queue[List[RedListUpdateCommand]](0, OverflowStrategy.backpressure)
 
       val aclPaxAdjustmentDays = 7
@@ -241,10 +241,10 @@ class TestDrtActor extends Actor {
         initialForecastArrivals = tc.initialForecastArrivals,
         initialLiveBaseArrivals = tc.initialLiveBaseArrivals,
         initialLiveArrivals = tc.initialLiveArrivals,
-        arrivalsForecastBaseSource = forecastBaseArrivals,
-        arrivalsForecastSource = forecastArrivals,
-        arrivalsLiveBaseSource = liveBaseArrivals,
-        arrivalsLiveSource = liveArrivals,
+        arrivalsForecastBaseFeed = Feed(forecastBaseArrivals, 5.second),
+        arrivalsForecastFeed = Feed(forecastArrivals, 5.second),
+        arrivalsLiveBaseFeed = Feed(liveBaseArrivals, 1.second),
+        arrivalsLiveFeed = Feed(liveArrivals, 500.millis),
         passengersActorProvider = passengersActorProvider,
         initialShifts = tc.initialShifts,
         initialFixedPoints = tc.initialFixedPoints,

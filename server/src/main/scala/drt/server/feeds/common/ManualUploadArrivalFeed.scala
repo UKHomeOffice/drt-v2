@@ -11,7 +11,7 @@ import services.SDate
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-case class ArrivalFeed(arrivalsActor: ActorRef)(implicit timeout: Timeout) {
+case class ManualUploadArrivalFeed(arrivalsActor: ActorRef)(implicit timeout: Timeout) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def requestFeed: Future[ArrivalsFeedResponse] =

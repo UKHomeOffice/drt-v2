@@ -1,12 +1,11 @@
 package services.graphstages
 
-import akka.stream.QueueOfferResult
-import akka.stream.scaladsl.SourceQueueWithComplete
+import akka.actor.ActorRef
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.specs2.execute.Success
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
 
@@ -18,7 +17,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(nowString)))
 
     def fishForArrivalWithActPax(actPax: Option[Int], status: String = ""): Success = {
-      crunch.portStateTestProbe.fishForMessage(1 second) {
+      crunch.portStateTestProbe.fishForMessage(1.second) {
         case PortState(flights, _, _) =>
           flights.values.toList.exists(fws => fws.apiFlight.flightCodeString == "BA0001" && fws.apiFlight.ActPax == actPax && fws.apiFlight.Status == ArrivalStatus(status))
       }
@@ -159,14 +158,14 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     }
   }
 
-  def offerArrivalAndWait(input: SourceQueueWithComplete[ArrivalsFeedResponse],
+  def offerArrivalAndWait(input: ActorRef,
                           scheduled: String,
                           actPax: Option[Int],
                           tranPax: Option[Int],
                           maxPax: Option[Int],
                           status: String = "",
-                          actChoxDt: String = ""): QueueOfferResult = {
+                          actChoxDt: String = ""): Unit = {
     val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, actPax = actPax, tranPax = tranPax, maxPax = maxPax, status = ArrivalStatus(status), actChoxDt = actChoxDt)
-    offerAndWait(input, ArrivalsFeedSuccess(Flights(Seq(arrivalLive))))
+    input ! ArrivalsFeedSuccess(Flights(Seq(arrivalLive)))
   }
 }

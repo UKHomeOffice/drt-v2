@@ -1,10 +1,15 @@
 package drt.server.feeds.lcy
 
-import akka.actor.{ActorSystem, Cancellable}
+import actors.Feed
+import actors.persistent.QueueLikeActor.Tick
+import akka.NotUsed
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
+import akka.testkit.TestProbe
 import drt.server.feeds.common.HttpClient
+import drt.server.feeds.lcy.FeedTestHelper.expectMessageCount
 import drt.shared.FlightsApi.Flights
 import org.mockito.Mockito.{times, verify}
 import org.specs2.mock.Mockito
@@ -13,6 +18,28 @@ import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+
+object FeedTestHelper {
+  def expectMessageCount(feed: Source[ArrivalsFeedResponse, ActorRef], messageCount: Int)
+                        (implicit system: ActorSystem): Seq[AnyRef] = {
+    val probe = TestProbe()
+    val actorSource = feed.take(2).to(Sink.actorRef(probe.ref, NotUsed)).run
+
+    Source(List.fill(messageCount)(Tick)).throttle(1, 100.millis).map(actorSource ! _).run()
+
+    probe.receiveN(messageCount, 1.second)
+  }
+
+  def expectProbeResult(feed: Source[ArrivalsFeedResponse, ActorRef], messageCount: Int, probeFn: TestProbe => Any)
+                        (implicit system: ActorSystem): Unit = {
+    val probe = TestProbe()
+    val actorSource = feed.take(2).to(Sink.actorRef(probe.ref, NotUsed)).run
+
+    Source(List.fill(messageCount)(Tick)).throttle(1, 100.millis).map(actorSource ! _).run()
+
+    probeFn(probe)
+  }
+}
 
 class LCYFeedSpec extends CrunchTestLike with Mockito {
 
@@ -25,47 +52,50 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
 
     val lcyClient = LCYClient(httpClient, "user", "someSoapEndPoint", "someUsername", "somePassword")
 
-    val feed: Source[ArrivalsFeedResponse, Cancellable] = LCYFeed(lcyClient, 1 millisecond, 1 millisecond)
-
-    val result = Await.result(feed.take(2).runWith(Sink.seq), 1 second)
+    val feed = LCYFeed(lcyClient, Feed.actorRefSource)
 
     verify(httpClient, times(2)).sendRequest(anyObject[HttpRequest])(anyObject[ActorSystem])
 
-    result.size mustEqual 2
+    expectMessageCount(feed, 2)
+
+    success
   }
 
 
   "Given a request for a full refresh of all flights success , it keeps polling for update" >> {
     val lcyClient = mock[LCYClient]
 
-    val success = ArrivalsFeedSuccess(Flights(List()))
+    val arrivalsSuccess = ArrivalsFeedSuccess(Flights(List()))
 
-    lcyClient.initialFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(success)
-    lcyClient.updateFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(success)
+    lcyClient.initialFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)
+    lcyClient.updateFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)
 
-    val feed: Source[ArrivalsFeedResponse, Cancellable] = LCYFeed(lcyClient, 1 millisecond, 1 millisecond)
+    val feed = LCYFeed(lcyClient, Feed.actorRefSource)
 
-    val result = Await.result(feed.take(4).runWith(Sink.seq), 1 second)
     verify(lcyClient, times(1)).initialFlights(anyObject[ActorSystem], anyObject[Materializer])
     verify(lcyClient, times(3)).updateFlights(anyObject[ActorSystem], anyObject[Materializer])
-    result.toList.size mustEqual 4
+    expectMessageCount(feed, 4)
+
+    success
   }
 
   "Given a request for a full refresh of all flights fails , it keeps polling for initials" >> {
     val lcyClient = mock[LCYClient]
 
-    val success = ArrivalsFeedSuccess(Flights(List()))
+    val arrivalsSuccess = ArrivalsFeedSuccess(Flights(List()))
     val failure = ArrivalsFeedFailure("Failure")
 
     lcyClient.initialFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(failure)
-    lcyClient.updateFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(success)
+    lcyClient.updateFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)
 
-    val feed: Source[ArrivalsFeedResponse, Cancellable] = LCYFeed(lcyClient, 1 millisecond, 1 millisecond)
+    val feed = LCYFeed(lcyClient, Feed.actorRefSource)
 
     val result = Await.result(feed.take(4).runWith(Sink.seq), 1 second)
     verify(lcyClient, times(4)).initialFlights(anyObject[ActorSystem], anyObject[Materializer])
     verify(lcyClient, times(0)).updateFlights(anyObject[ActorSystem], anyObject[Materializer])
-    result.toList.size mustEqual 4
+    expectMessageCount(feed, 4)
+
+    success
   }
 
   val fullRefresh =

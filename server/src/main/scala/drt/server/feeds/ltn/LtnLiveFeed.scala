@@ -1,7 +1,6 @@
 package drt.server.feeds.ltn
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpEntity.Strict
 import akka.http.scaladsl.model._
@@ -23,7 +22,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 trait LtnFeedRequestLike {
@@ -39,9 +37,9 @@ case class LtnFeedRequester(endPoint: String, token: String, username: String, p
       RawHeader("token", token),
       RawHeader("username", username),
       RawHeader("password", password)
-      ),
+    ),
     entity = HttpEntity.Empty
-    )
+  )
 
   val getResponse: () => Future[HttpResponse] = () => Http().singleRequest(request)
 }
@@ -49,9 +47,8 @@ case class LtnFeedRequester(endPoint: String, token: String, username: String, p
 case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone)(implicit materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def tickingSource(interval: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = Source
-    .tick(0 millis, interval, NotUsed)
-    .mapAsync(1) { _ =>
+  def source(source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] =
+    source.mapAsync(1) { _ =>
       log.info(s"Requesting feed")
       requestFeed()
     }
@@ -75,7 +72,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
     import LtnLiveFlightProtocol._
     import spray.json._
 
-    entity.toStrict(10 seconds).map {
+    entity.toStrict(10.seconds).map {
       case Strict(_, data) =>
         Try(data.utf8String.parseJson.convertTo[Seq[LtnLiveFlight]].filter(_.DepartureArrivalType == Option("A"))) match {
           case Success(flights) => ArrivalsFeedSuccess(Flights(flights.map(toArrival)))
@@ -112,7 +109,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       Scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
       PcpTime = None,
       FeedSources = Set(LiveFeedSource)
-      )
+    )
   }
 
   def sdateWithTimeZoneApplied(dt: String): MillisSinceEpoch = {

@@ -1,7 +1,6 @@
 package drt.server.feeds.cirium
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
@@ -22,18 +21,15 @@ import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.language.postfixOps
 
 case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem: ActorSystem, materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import CiriumFeed._
 
-  def tickingSource(interval: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
-    val source: Source[ArrivalsFeedResponse, Cancellable] = Source
-      .tick(0 millis, interval, NotUsed)
-      .mapAsync(1)(_ => {
+  def source(source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] = {
+    source
+      .mapAsync(1){_ =>
         makeRequest()
           .map(fs => {
             log.debug(s"Got ${fs.size} arrivals from Cirium")
@@ -45,9 +41,7 @@ case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem
               log.error("Failed to connect to Cirium", throwable)
               ArrivalsFeedFailure("Failed to connect to Cirium.")
           }
-      })
-
-    source
+      }
   }
 
   def makeRequest(): Future[List[CiriumFlightStatus]] = requestFeed(s"$endpoint/statuses/$portCode")

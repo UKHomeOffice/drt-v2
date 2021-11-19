@@ -142,7 +142,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
       case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeCrunchQueue, maybeDeploymentQueue)) =>
         system.log.info(s"Successfully restored initial state for App")
 
-        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(
+        val crunchInputs: CrunchSystem = startCrunchSystem(
           initialPortState = maybePortState,
           initialForecastBaseArrivals = maybeBaseArrivals,
           initialForecastArrivals = maybeForecastArrivals,

@@ -1,7 +1,6 @@
 package drt.server.feeds.edi
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.model.StatusCodes.OK
@@ -58,28 +57,28 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
     }
   }
 
-  def ediForecastFeedPollingSource(interval: FiniteDuration)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
-    Source.tick(1 seconds, interval, NotUsed)
+  def ediForecastFeedSource(source: Source[Nothing, ActorRef])
+                           (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, ActorRef] =
+    source
       .mapConcat { _ =>
         (2 to 152 by 30).map { days =>
           val startDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(days)), DateTimeZone.UTC)
           val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(days + 30)), DateTimeZone.UTC)
           FeedDates(startDate, endDate)
         }
-      }.throttle(1, 1 minutes).mapAsync(1) { fd =>
+      }
+      .throttle(1, 1.minute)
+      .mapAsync(1) { fd =>
         makeRequestAndFeedResponseToArrivalSource(fd.startDate, fd.endDate, ForecastFeedSource)
       }
-  }
 
-
-  def ediLiveFeedPollingSource(interval: FiniteDuration)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
-    Source.tick(1 seconds, interval, NotUsed)
-      .mapAsync(1) { _ =>
-        val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
-        val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
-        makeRequestAndFeedResponseToArrivalSource(currentDate, endDate, LiveFeedSource)
-      }
-  }
+  def ediLiveFeedSource(source: Source[Nothing, ActorRef])
+                       (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, ActorRef] =
+    source.mapAsync(1) { _ =>
+      val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
+      val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)
+      makeRequestAndFeedResponseToArrivalSource(currentDate, endDate, LiveFeedSource)
+    }
 
   def getStatusDescription(status: String): String = status match {
     case "A" => "Arrival is on block at a stand"

@@ -1,5 +1,7 @@
 package drt.chroma
 
+import actors.Feed
+import akka.Done
 import akka.http.scaladsl.model._
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
@@ -8,6 +10,7 @@ import drt.chroma.chromafetcher.ChromaFetcher.{ChromaLiveFlight, ChromaToken}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.http.WithSendAndReceive
 import drt.server.feeds.chroma.ChromaLiveFeed
+import drt.server.feeds.lcy.FeedTestHelper.{expectMessageCount, expectProbeResult}
 import org.specs2.matcher.MatchResult
 import server.feeds.ArrivalsFeedFailure
 import services.crunch.CrunchTestLike
@@ -60,13 +63,11 @@ class MockChromaConnectorSpec extends CrunchTestLike {
         HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`,"""bad json here""".stripMargin))
       }
     }
-    val testProbe = TestProbe("chroma-test")
+
     val liveFeed = ChromaLiveFeed(fetcher)
-    val cancellable = liveFeed.chromaVanillaFlights(1 second).to(Sink.actorRef(testProbe.ref, "done")).run()
+    val feed = liveFeed.chromaVanillaFlights(Feed.actorRefSource)
 
-    testProbe.expectMsgAllClassOf(1 second, classOf[ArrivalsFeedFailure])
-
-    cancellable.cancel()
+    expectProbeResult(feed, 1, p => p.expectMsgAllClassOf(1 second, classOf[ArrivalsFeedFailure]))
 
     success
   }

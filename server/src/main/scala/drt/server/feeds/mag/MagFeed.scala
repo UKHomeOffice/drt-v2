@@ -1,7 +1,6 @@
 package drt.server.feeds.mag
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
@@ -21,9 +20,7 @@ import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Terminals}
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
@@ -36,10 +33,7 @@ trait FeedRequesterLike {
 }
 
 object ProdFeedRequester extends FeedRequesterLike {
-  override def sendTokenRequest(header: String,
-                                claim: String,
-                                key: String,
-                                algorithm: JwtAlgorithm): String =
+  override def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String =
     Try(Jwt.encode(header: String, claim: String, key: String, algorithm: JwtAlgorithm)).getOrElse("")
 
   override def send(request: HttpRequest)
@@ -80,9 +74,8 @@ case class MagFeed(key: String,
               from: Int,
               size: Int) = s"https://$claimSub/v1/flight/$portCode/arrival?startDate=${start.toISOString()}&endDate=${end.toISOString()}&from=$from&size=$size"
 
-  def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source
-    .tick(initialDelay = 0 milliseconds, interval = 30 seconds, tick = NotUsed)
-    .mapAsync(parallelism = 1)(_ => requestArrivals(now().addHours(hoursToAdd = -12)))
+  def source(source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] =
+    source.mapAsync(parallelism = 1)(_ => requestArrivals(now().addHours(hoursToAdd = -12)))
 
   def requestArrivals(start: SDateLike): Future[ArrivalsFeedResponse] =
     Source(0 to 1000 by 100)

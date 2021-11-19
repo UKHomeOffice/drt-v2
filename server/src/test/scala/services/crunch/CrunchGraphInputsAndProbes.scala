@@ -1,16 +1,16 @@
 package services.crunch
 
-import akka.actor.ActorRef
+import akka.actor.{ActorRef, PoisonPill}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.ActualDeskStats
 import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovement}
-import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
+import server.feeds.ManifestsFeedResponse
 
-case class CrunchGraphInputsAndProbes(aclArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
-                                      forecastArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
-                                      liveArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
-                                      ciriumArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
+case class CrunchGraphInputsAndProbes(aclArrivalsInput: ActorRef,
+                                      forecastArrivalsInput: ActorRef,
+                                      liveArrivalsInput: ActorRef,
+                                      ciriumArrivalsInput: ActorRef,
                                       manifestsLiveInput: SourceQueueWithComplete[ManifestsFeedResponse],
                                       shiftsInput: SourceQueueWithComplete[ShiftAssignments],
                                       fixedPointsInput: SourceQueueWithComplete[FixedPointAssignments],
@@ -24,10 +24,10 @@ case class CrunchGraphInputsAndProbes(aclArrivalsInput: SourceQueueWithComplete[
                                       aggregatedArrivalsActor: ActorRef,
                                       portStateActor: ActorRef) {
   def shutdown(): Unit = {
-    aclArrivalsInput.complete()
-    forecastArrivalsInput.complete()
-    liveArrivalsInput.complete()
-    ciriumArrivalsInput.complete()
+    aclArrivalsInput ! PoisonPill
+    forecastArrivalsInput ! PoisonPill
+    liveArrivalsInput ! PoisonPill
+    ciriumArrivalsInput ! PoisonPill
     manifestsLiveInput.complete()
     shiftsInput.complete()
     fixedPointsInput.complete()

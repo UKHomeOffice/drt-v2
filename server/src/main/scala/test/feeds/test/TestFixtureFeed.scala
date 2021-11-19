@@ -1,8 +1,7 @@
 package test.feeds.test
 
 import actors.acking.AckingReceiver.Ack
-import akka.NotUsed
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
@@ -21,16 +20,12 @@ object TestFixtureFeed {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(actorSystem: ActorSystem, testArrivalActor: ActorRef): Source[ArrivalsFeedResponse, Cancellable] = {
-
+  def apply(actorSystem: ActorSystem, testArrivalActor: ActorRef, source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] = {
     log.info(s"About to create test Arrival")
 
     implicit val timeout: Timeout = Timeout(1 seconds)
 
-    val pollFrequency = 2 seconds
-    val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource = Source
-      .tick(initialDelayImmediately, pollFrequency, NotUsed)
+    source
       .mapAsync(1) { _ =>
         testArrivalActor
           .ask(GetArrivals)
@@ -40,8 +35,6 @@ object TestFixtureFeed {
       .collect {
         case arrivals if arrivals.nonEmpty => ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
       }
-
-    tickingSource
   }
 }
 

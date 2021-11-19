@@ -405,4 +405,8 @@ class CrunchTestLike
         offerResult
     }
   }
+
+  def offerAndWait[T](source: ActorRef, offering: T): Unit = {
+    source ! offering
+  }
 }
