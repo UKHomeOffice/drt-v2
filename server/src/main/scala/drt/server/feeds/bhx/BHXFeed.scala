@@ -29,8 +29,8 @@ import scala.xml.{Node, NodeSeq}
 object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(client: BHXClientLike, source: Source[FeedTick, typed.ActorRef[FeedTick]])
-           (implicit actorSystem: ActorSystem, materializer: Materializer): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
+  def apply[FT](client: BHXClientLike, source: Source[FeedTick, FT])
+               (implicit actorSystem: ActorSystem, materializer: Materializer): Source[ArrivalsFeedResponse, FT] = {
     var initialRequest = true
     source.mapAsync(1) { _ =>
       log.info(s"Requesting BHX Feed")
@@ -46,6 +46,23 @@ object BHXFeed {
         client.updateFlights
     }
   }
+  //  def apply(client: BHXClientLike, source: Source[FeedTick, typed.ActorRef[FeedTick]])
+  //           (implicit actorSystem: ActorSystem, materializer: Materializer): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
+  //    var initialRequest = true
+  //    source.mapAsync(1) { _ =>
+  //      log.info(s"Requesting BHX Feed")
+  //      if (initialRequest)
+  //        client.initialFlights.map {
+  //          case s: ArrivalsFeedSuccess =>
+  //            initialRequest = false
+  //            s
+  //          case f: ArrivalsFeedFailure =>
+  //            f
+  //        }
+  //      else
+  //        client.updateFlights
+  //    }
+  //  }
 }
 
 case class BHXFlight(

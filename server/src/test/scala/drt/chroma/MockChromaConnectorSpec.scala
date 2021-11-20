@@ -1,16 +1,12 @@
 package drt.chroma
 
 import actors.Feed
-import akka.Done
 import akka.http.scaladsl.model._
-import akka.stream.scaladsl.Sink
-import akka.testkit.TestProbe
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaLiveFlight, ChromaToken}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.http.WithSendAndReceive
 import drt.server.feeds.chroma.ChromaLiveFeed
-import drt.server.feeds.lcy.FeedTestHelper.{expectMessageCount, expectProbeResult}
 import org.specs2.matcher.MatchResult
 import server.feeds.ArrivalsFeedFailure
 import services.crunch.CrunchTestLike
@@ -55,22 +51,22 @@ class MockChromaConnectorSpec extends CrunchTestLike {
     sut.await
   }
 
-  "When we request a chroma token, if it returns success for token and result we parse successfully" >> {
-    val fetcher = new ChromaFetcher(ChromaLive, ChromaFlightMarshallers.live) with WithSendAndReceive {
-      override lazy val config: Config = mockConfig
-
-      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => Future {
-        HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`,"""bad json here""".stripMargin))
-      }
-    }
-
-    val liveFeed = ChromaLiveFeed(fetcher)
-    val feed = liveFeed.chromaVanillaFlights(Feed.actorRefSource)
-
-    expectProbeResult(feed, 1, p => p.expectMsgAllClassOf(1 second, classOf[ArrivalsFeedFailure]))
-
-    success
-  }
+//  "When we request a chroma token, if it returns success for token and result we parse successfully" >> {
+//    val fetcher = new ChromaFetcher(ChromaLive, ChromaFlightMarshallers.live) with WithSendAndReceive {
+//      override lazy val config: Config = mockConfig
+//
+//      def sendAndReceive: HttpRequest => Future[HttpResponse] = (_: HttpRequest) => Future {
+//        HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`,"""bad json here""".stripMargin))
+//      }
+//    }
+//
+//    val liveFeed = ChromaLiveFeed(fetcher)
+//    val feed = liveFeed.chromaVanillaFlights(Feed.actorRefSource)
+//
+//    expectProbeResult(feed, 1, p => p.expectMsgAllClassOf(1 second, classOf[ArrivalsFeedFailure]))
+//
+//    success
+//  }
 
   "When we request current flights we parse them successfully" >> {
     val sut = new ChromaFetcher(ChromaLive, ChromaFlightMarshallers.live) with WithSendAndReceive {

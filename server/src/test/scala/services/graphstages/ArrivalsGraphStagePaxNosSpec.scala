@@ -1,11 +1,12 @@
 package services.graphstages
 
-import akka.actor.ActorRef
+import akka.stream.QueueOfferResult
+import akka.stream.scaladsl.SourceQueueWithComplete
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.specs2.execute.Success
-import server.feeds.ArrivalsFeedSuccess
+import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
 
@@ -158,14 +159,13 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     }
   }
 
-  def offerArrivalAndWait(input: ActorRef,
+  def offerArrivalAndWait(input: SourceQueueWithComplete[ArrivalsFeedResponse],
                           scheduled: String,
                           actPax: Option[Int],
                           tranPax: Option[Int],
                           maxPax: Option[Int],
                           status: String = "",
-                          actChoxDt: String = ""): Unit = {
+                          actChoxDt: String = ""): QueueOfferResult = {
     val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, actPax = actPax, tranPax = tranPax, maxPax = maxPax, status = ArrivalStatus(status), actChoxDt = actChoxDt)
-    input ! ArrivalsFeedSuccess(Flights(Seq(arrivalLive)))
-  }
-}
+    offerAndWait(input, ArrivalsFeedSuccess(Flights(Seq(arrivalLive))))
+  }}

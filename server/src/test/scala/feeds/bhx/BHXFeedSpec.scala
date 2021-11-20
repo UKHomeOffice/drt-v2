@@ -1,10 +1,8 @@
 package feeds.bhx
 
 import actors.Feed
-import actors.persistent.QueueLikeActor.Tick
 import akka.NotUsed
-import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
-import akka.actor.{ActorRef, ActorSystem, typed}
+import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
@@ -247,11 +245,9 @@ class BHXFeedSpec extends CrunchTestLike {
     val probe = TestProbe()
     val expected = Seq(firstFailure, secondFailure, finallySuccess, finallySuccess)
     val actorSource = feed.take(4).to(Sink.actorRef(probe.ref, NotUsed)).run
-    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
+    Source(1 to 4).map(_ => actorSource ! Feed.Tick).run()
 
-    probe.fishForMessage(1.second) { case result => result == expected }
-    timer.cancel()
-    success
+    probe.receiveN(4, 1.second) === expected
   }
 
   "Given a successful initial request, followed by a failed update, we should continue to poll for updates" >> {
@@ -270,11 +266,9 @@ class BHXFeedSpec extends CrunchTestLike {
     val expected = Seq(finallySuccess, failure, finallySuccess)
     val probe = TestProbe()
     val actorSource = feed.take(3).to(Sink.actorRef(probe.ref, NotUsed)).run
-    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
+    Source(1 to 3).map(_ => actorSource ! Feed.Tick).run()
 
-    probe.fishForMessage(1.second) { case result => result == expected }
-    timer.cancel()
-    success
+    probe.receiveN(3, 1.second) === expected
   }
 
   "Given a list of operation times I should be able to extract the scheduled time" >> {
