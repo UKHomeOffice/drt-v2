@@ -1,6 +1,7 @@
 package drt.server.feeds.edi
 
-import akka.actor.{ActorRef, ActorSystem}
+import actors.Feed.FeedTick
+import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.model.StatusCodes.OK
@@ -57,8 +58,8 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
     }
   }
 
-  def ediForecastFeedSource(source: Source[Nothing, ActorRef])
-                           (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, ActorRef] =
+  def ediForecastFeedSource(source: Source[FeedTick, typed.ActorRef[FeedTick]])
+                           (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
     source
       .mapConcat { _ =>
         (2 to 152 by 30).map { days =>
@@ -72,8 +73,8 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
         makeRequestAndFeedResponseToArrivalSource(fd.startDate, fd.endDate, ForecastFeedSource)
       }
 
-  def ediLiveFeedSource(source: Source[Nothing, ActorRef])
-                       (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, ActorRef] =
+  def ediLiveFeedSource(source: Source[FeedTick, typed.ActorRef[FeedTick]])
+                       (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
     source.mapAsync(1) { _ =>
       val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
       val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)

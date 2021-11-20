@@ -1,6 +1,7 @@
 package drt.server.feeds.cirium
 
-import akka.actor.{ActorRef, ActorSystem}
+import actors.Feed.FeedTick
+import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
@@ -27,7 +28,7 @@ case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem
 
   import CiriumFeed._
 
-  def source(source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] = {
+  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
     source
       .mapAsync(1){_ =>
         makeRequest()

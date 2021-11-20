@@ -1,16 +1,18 @@
 package services.crunch
 
-import akka.actor.{ActorRef, PoisonPill}
+import actors.Feed
+import actors.Feed.FeedTick
+import akka.actor.{ActorRef, PoisonPill, typed}
 import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.ActualDeskStats
 import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovement}
-import server.feeds.ManifestsFeedResponse
+import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 
-case class CrunchGraphInputsAndProbes(aclArrivalsInput: ActorRef,
-                                      forecastArrivalsInput: ActorRef,
-                                      liveArrivalsInput: ActorRef,
-                                      ciriumArrivalsInput: ActorRef,
+case class CrunchGraphInputsAndProbes(aclArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
+                                      forecastArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
+                                      liveArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
+                                      ciriumArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       manifestsLiveInput: SourceQueueWithComplete[ManifestsFeedResponse],
                                       shiftsInput: SourceQueueWithComplete[ShiftAssignments],
                                       fixedPointsInput: SourceQueueWithComplete[FixedPointAssignments],
@@ -24,10 +26,10 @@ case class CrunchGraphInputsAndProbes(aclArrivalsInput: ActorRef,
                                       aggregatedArrivalsActor: ActorRef,
                                       portStateActor: ActorRef) {
   def shutdown(): Unit = {
-    aclArrivalsInput ! PoisonPill
-    forecastArrivalsInput ! PoisonPill
-    liveArrivalsInput ! PoisonPill
-    ciriumArrivalsInput ! PoisonPill
+    aclArrivalsInput.complete()
+    forecastArrivalsInput.complete()
+    liveArrivalsInput.complete()
+    ciriumArrivalsInput.complete()
     manifestsLiveInput.complete()
     shiftsInput.complete()
     fixedPointsInput.complete()

@@ -1,6 +1,7 @@
 package drt.server.feeds.legacy.bhx
 
-import akka.actor.ActorRef
+import actors.Feed.FeedTick
+import akka.actor.typed
 import akka.stream.scaladsl.Source
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
@@ -12,7 +13,7 @@ import scala.util.{Failure, Success, Try}
 object BHXForecastFeedLegacy extends BHXFeedConfig {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(endPointUrl: String, source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] = {
+  def apply(endPointUrl: String, source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
     val feed = BHXFeed(serviceSoap(endPointUrl))
     source.map(_ => {
       Try {

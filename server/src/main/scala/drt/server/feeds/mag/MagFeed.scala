@@ -1,6 +1,7 @@
 package drt.server.feeds.mag
 
-import akka.actor.{ActorRef, ActorSystem}
+import actors.Feed.FeedTick
+import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
@@ -74,7 +75,7 @@ case class MagFeed(key: String,
               from: Int,
               size: Int) = s"https://$claimSub/v1/flight/$portCode/arrival?startDate=${start.toISOString()}&endDate=${end.toISOString()}&from=$from&size=$size"
 
-  def source(source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] =
+  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
     source.mapAsync(parallelism = 1)(_ => requestArrivals(now().addHours(hoursToAdd = -12)))
 
   def requestArrivals(start: SDateLike): Future[ArrivalsFeedResponse] =

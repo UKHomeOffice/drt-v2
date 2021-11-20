@@ -1,7 +1,8 @@
 package test.feeds.test
 
+import actors.Feed.FeedTick
 import actors.acking.AckingReceiver.Ack
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, typed}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
@@ -13,14 +14,14 @@ import services.SDate
 import test.TestActors.ResetData
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration._
 import scala.language.postfixOps
 
 object TestFixtureFeed {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(actorSystem: ActorSystem, testArrivalActor: ActorRef, source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] = {
+  def apply(actorSystem: ActorSystem, testArrivalActor: ActorRef, source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedSuccess, typed.ActorRef[FeedTick]] = {
     log.info(s"About to create test Arrival")
 
     implicit val timeout: Timeout = Timeout(1 seconds)

@@ -235,7 +235,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val probe = TestProbe()
 
     val actorSource = ciriumFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
-    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis, actorSource, Tick)
+    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
     probe.fishForMessage(2 seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
@@ -253,7 +253,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val probe = TestProbe()
 
     val actorSource = ciriumFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
-    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis, actorSource, Tick)
+    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
     probe.fishForMessage(2 seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.nonEmpty && s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true

@@ -1,6 +1,7 @@
 package drt.server.feeds.ltn
 
-import akka.actor.{ActorRef, ActorSystem}
+import actors.Feed.FeedTick
+import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpEntity.Strict
 import akka.http.scaladsl.model._
@@ -47,7 +48,7 @@ case class LtnFeedRequester(endPoint: String, token: String, username: String, p
 case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone)(implicit materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def source(source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] =
+  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
     source.mapAsync(1) { _ =>
       log.info(s"Requesting feed")
       requestFeed()

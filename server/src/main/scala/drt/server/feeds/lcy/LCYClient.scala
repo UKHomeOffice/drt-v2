@@ -53,13 +53,11 @@ trait LcyClientSupport extends ScalaXmlSupport {
   def password: String
 
   def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
-
     log.info(s"Making initial Live Feed Request")
     sendXMLRequest(fullRefreshXml(lcyLiveFeedUser))
   }
 
   def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
-
     log.info(s"Making update Feed Request")
     sendXMLRequest(updateXml()(lcyLiveFeedUser))
   }

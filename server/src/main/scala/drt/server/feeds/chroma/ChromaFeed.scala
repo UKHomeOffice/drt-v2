@@ -1,6 +1,7 @@
 package drt.server.feeds.chroma
 
-import akka.actor.ActorRef
+import actors.Feed.FeedTick
+import akka.actor.typed
 import akka.stream.scaladsl.Source
 import drt.chroma.StreamingChromaFlow
 import drt.chroma.chromafetcher.ChromaFetcher
@@ -16,23 +17,11 @@ import scala.concurrent.ExecutionContext
 case class ChromaLiveFeed(chromaFetcher: ChromaFetcher[ChromaLiveFlight]) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def chromaEdiFlights(source: Source[Nothing, ActorRef])
-                      (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, ActorRef] = {
-    val chromaFlow = StreamingChromaFlow.chromaPollingSource(
-      chromaFetcher, StreamingChromaFlow.liveChromaToArrival, source
-    )
-
-    chromaFlow.map {
-      case aff: ArrivalsFeedFailure => aff
-      case afs: ArrivalsFeedSuccess => afs.copy(arrivals = Flights(correctEdiTerminals(afs)))
-    }
-  }
-
   def correctEdiTerminals(afs: ArrivalsFeedSuccess): Iterable[Arrival] = afs.arrivals.flights
     .map(csf => csf.copy(Terminal = A1))
 
-  def chromaVanillaFlights(source: Source[Nothing, ActorRef])
-                          (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, ActorRef] = {
+  def chromaVanillaFlights(source: Source[FeedTick, typed.ActorRef[FeedTick]])
+                          (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
     StreamingChromaFlow.chromaPollingSource(chromaFetcher, StreamingChromaFlow.liveChromaToArrival, source)
   }
 }
@@ -40,8 +29,8 @@ case class ChromaLiveFeed(chromaFetcher: ChromaFetcher[ChromaLiveFlight]) {
 case class ChromaForecastFeed(chromaFetcher: ChromaFetcher[ChromaForecastFlight]) {
   flightFeed =>
 
-  def chromaVanillaFlights(source: Source[Nothing, ActorRef])
-                          (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, ActorRef] = {
+  def chromaVanillaFlights(source: Source[FeedTick, typed.ActorRef[FeedTick]])
+                          (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
     StreamingChromaFlow.chromaPollingSource(chromaFetcher, StreamingChromaFlow.forecastChromaToArrival, source)
   }
 }

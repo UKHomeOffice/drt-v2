@@ -1,6 +1,7 @@
 package drt.server.feeds.lhr
 
-import akka.actor.ActorRef
+import actors.Feed.FeedTick
+import akka.actor.typed
 import akka.stream.scaladsl.Source
 import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
@@ -136,7 +137,7 @@ object LHRFlightFeed {
 
   def parseDateTime(dateString: String): DateTime = pattern.parseDateTime(dateString)
 
-  def apply(csvContentsProvider: () => Try[String], source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] =
+  def apply(csvContentsProvider: () => Try[String], source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
     source.map(_ => {
       log.info(s"Requesting CSV")
       csvContentsProvider() match {

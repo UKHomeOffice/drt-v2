@@ -1,7 +1,7 @@
 package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
-import actors.Feed.actorRefSource
+import actors.Feed.{FeedTick, Tick, actorRefSource}
 import actors.PartitionedPortStateActor.GetFlights
 import actors.daily.PassengersActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
@@ -10,12 +10,15 @@ import actors.persistent.arrivals.CirriumLiveArrivalsActor
 import actors.persistent.staffing._
 import actors.routing.FlightsRouterActor
 import actors.supervised.RestartOnStop
-import akka.actor.{ActorRef, ActorSystem, Props, Scheduler}
+import akka.NotUsed
+import akka.actor.typed.Behavior
+import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.{ActorRef, ActorSystem, Props, Scheduler, typed}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
-import akka.stream.{CompletionStrategy, Materializer, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.typed.scaladsl.ActorSource
+import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
-import akka.{Done, NotUsed}
 import com.typesafe.config.ConfigFactory
 import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
@@ -45,6 +48,7 @@ import drt.shared.dates.UtcDate
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
+import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import queueus._
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse}
@@ -67,17 +71,56 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 
-case class Feed(source: Source[ArrivalsFeedResponse, ActorRef], interval: FiniteDuration)
+//case class Feed(source: Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]], interval: FiniteDuration)
+case class Feed[T](source: Source[ArrivalsFeedResponse, T], interval: FiniteDuration)
 
 object Feed {
-  def actorRefSource: Source[Nothing, ActorRef] = Source.actorRef(
+  sealed trait FeedTick
+
+  case object Tick extends FeedTick
+
+  case object Stop extends FeedTick
+
+  case class Fail(ex: Exception) extends FeedTick
+
+  def actorRefSource: Source[FeedTick, typed.ActorRef[FeedTick]] = ActorSource.actorRef[FeedTick](
     completionMatcher = {
-      case Done => CompletionStrategy.immediately
+      case Stop =>
     },
-    failureMatcher = PartialFunction.empty,
-    bufferSize = 100,
-    overflowStrategy = OverflowStrategy.dropHead
+    failureMatcher = {
+      case Fail(ex) =>
+        println(s"Failed $ex")
+        ex
+    },
+    bufferSize = 8, overflowStrategy = OverflowStrategy.fail
   )
+}
+
+object Feeds {
+  private val log: Logger = LoggerFactory.getLogger(getClass)
+
+  sealed trait Command
+
+  object ScheduledCheck extends Command
+
+  object AdhocCheck extends Command
+
+  def apply(feedActorSource: typed.ActorRef[FeedTick], checkFrequency: FiniteDuration): Behavior[Command] = {
+    Behaviors.setup[Command] { context =>
+      Behaviors.withTimers { timer =>
+        Behaviors.receiveMessage[Command] {
+          case ScheduledCheck =>
+            log.debug("Scheduled check")
+            feedActorSource ! Tick
+            Behaviors.same
+          case AdhocCheck =>
+            log.info("Adhoc check")
+            feedActorSource ! Tick
+            Behaviors.same
+        }
+      }
+    }
+  }
 }
 
 trait DrtSystemInterface extends UserRoleProviderLike {
@@ -254,7 +297,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         refreshArrivalsOnStart: Boolean,
                         refreshManifestsOnStart: Boolean,
-                        startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem = {
+                        startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[typed.ActorRef[FeedTick]] = {
 
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
 
@@ -310,13 +353,15 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     crunchInputs
   }
 
-  def arrivalsNoOp: Feed = Feed(actorRefSource
-    .map { case _ =>
-      system.log.info(s"No op arrivals feed")
-      ArrivalsFeedSuccess(Flights(Seq()), SDate.now())
-    }, 100.days)
+  def arrivalsNoOp: Feed[typed.ActorRef[FeedTick]] = {
+    Feed(actorRefSource
+      .map { _ =>
+        system.log.info(s"No op arrivals feed")
+        ArrivalsFeedSuccess(Flights(Seq()), SDate.now())
+      }, 100.days)
+  }
 
-  def baseArrivalsSource(maybeAclFeed: Option[AclFeed]): Feed = maybeAclFeed match {
+  def baseArrivalsSource(maybeAclFeed: Option[AclFeed]): Feed[typed.ActorRef[FeedTick]] = maybeAclFeed match {
     case None => arrivalsNoOp
     case Some(aclFeed) =>
       val initialDelay =
@@ -324,14 +369,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         else AclFeed.delayUntilNextAclCheck(now(), 18) + (Math.random() * 60).minutes
 
       log.info(s"Daily ACL check. Initial delay: ${initialDelay.toMinutes} minutes")
-      Feed(actorRefSource.map { case _ =>
+      Feed(actorRefSource.map { _ =>
         system.log.info(s"Requesting ACL feed")
         aclFeed.requestArrivals
       }, 1.day)
-    //      Source.tick(initialDelay, 1.day, NotUsed).map { _ =>
-    //        system.log.info(s"Requesting ACL feed")
-    //        aclFeed.requestArrivals
-    //      }
   }
 
   def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
@@ -343,20 +384,20 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     crunchQueueActor ! UpdatedMillis(daysToReCrunch)
   }
 
-  def startScheduledFeedImports(crunchInputs: CrunchSystem): Unit = {
+  def startScheduledFeedImports(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
     if (airportConfig.feedPortCode == PortCode("LHR")) params.maybeBlackJackUrl.map(csvUrl => {
       val requestIntervalMillis = 5 * MilliTimes.oneMinuteMillis
       Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, () => SDate.now().addDays(-1))
     })
   }
 
-  def subscribeStaffingActors(crunchInputs: CrunchSystem): Unit = {
+  def subscribeStaffingActors(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
     shiftsActor ! AddShiftSubscribers(List(crunchInputs.shifts))
     fixedPointsActor ! AddFixedPointSubscribers(List(crunchInputs.fixedPoints))
     staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
   }
 
-  def liveBaseArrivalsSource(portCode: PortCode): Feed = {
+  def liveBaseArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] = {
     if (config.get[Boolean]("feature-flags.use-cirium-feed")) {
       log.info(s"Using Cirium Live Base Feed")
       Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(actorRefSource), 30.seconds)
@@ -367,7 +408,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     }
   }
 
-  def liveArrivalsSource(portCode: PortCode): Feed =
+  def liveArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] =
     portCode.iata match {
       case "LHR" =>
         val host = config.get[String]("feeds.lhr.sftp.live.host")
@@ -430,7 +471,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case _ => arrivalsNoOp
     }
 
-  def forecastArrivalsSource(portCode: PortCode): Feed =
+  def forecastArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] =
     portCode match {
       case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => Feed(createArrivalFeed(actorRefSource), 5.seconds)
       case PortCode("BHX") => Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), actorRefSource), 30.seconds)
@@ -448,7 +489,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     ChromaForecastFeed(new ChromaFetcher[ChromaForecastFlight](feedType, ChromaFlightMarshallers.forecast) with ProdSendAndReceive)
   }
 
-  def createArrivalFeed(source: Source[Nothing, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] = {
+  def createArrivalFeed(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
     implicit val timeout: Timeout = new Timeout(10 seconds)
     val arrivalFeed = ManualUploadArrivalFeed(arrivalsImportActor)
     source.mapAsync(1)(_ => arrivalFeed.requestFeed)

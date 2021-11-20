@@ -1,6 +1,7 @@
 package drt.chroma
 
-import akka.actor.ActorRef
+import actors.Feed.FeedTick
+import akka.actor.typed
 import akka.stream.scaladsl.Source
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaFlightLike, ChromaForecastFlight, ChromaLiveFlight}
@@ -24,8 +25,8 @@ object StreamingChromaFlow {
 
   def chromaPollingSource[X <: ChromaFlightLike](chromaFetcher: ChromaFetcher[X],
                                                  toDrtArrival: Seq[X] => List[Arrival],
-                                                 source: Source[Nothing, ActorRef])
-                                                (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, ActorRef] = {
+                                                 source: Source[FeedTick, typed.ActorRef[FeedTick]])
+                                                (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
     source.mapAsync(1) { _ =>
       chromaFetcher.currentFlights
         .map {

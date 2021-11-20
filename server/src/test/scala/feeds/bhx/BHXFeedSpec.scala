@@ -3,7 +3,8 @@ package feeds.bhx
 import actors.Feed
 import actors.persistent.QueueLikeActor.Tick
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
+import akka.actor.{ActorRef, ActorSystem, typed}
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
@@ -238,7 +239,7 @@ class BHXFeedSpec extends CrunchTestLike {
     val initialResponses = List(firstFailure, secondFailure, finallySuccess)
     val updateResponses = List(finallySuccess)
 
-    val feed: Source[ArrivalsFeedResponse, ActorRef] = BHXFeed(
+    val feed = BHXFeed(
       BHXMockClientWithUpdates(initialResponses, updateResponses),
       Feed.actorRefSource
     )
@@ -246,7 +247,7 @@ class BHXFeedSpec extends CrunchTestLike {
     val probe = TestProbe()
     val expected = Seq(firstFailure, secondFailure, finallySuccess, finallySuccess)
     val actorSource = feed.take(4).to(Sink.actorRef(probe.ref, NotUsed)).run
-    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis, actorSource, Tick)
+    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
     probe.fishForMessage(1.second) { case result => result == expected }
     timer.cancel()
@@ -261,7 +262,7 @@ class BHXFeedSpec extends CrunchTestLike {
     val initialResponses = List(finallySuccess)
     val updateResponses = List(failure, finallySuccess)
 
-    val feed: Source[ArrivalsFeedResponse, ActorRef] = BHXFeed(
+    val feed = BHXFeed(
       BHXMockClientWithUpdates(initialResponses, updateResponses),
       Feed.actorRefSource
     )
@@ -269,7 +270,7 @@ class BHXFeedSpec extends CrunchTestLike {
     val expected = Seq(finallySuccess, failure, finallySuccess)
     val probe = TestProbe()
     val actorSource = feed.take(3).to(Sink.actorRef(probe.ref, NotUsed)).run
-    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis, actorSource, Tick)
+    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
     probe.fishForMessage(1.second) { case result => result == expected }
     timer.cancel()

@@ -3,7 +3,7 @@ package test
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.persistent.RedListUpdatesActor.AddSubscriber
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
 import akka.pattern.ask
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.{KillSwitch, Materializer}
@@ -104,7 +104,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
 
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
   val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
-  val testFeed: Feed = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 2.seconds)
+  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 2.seconds)
 
   val testActors = List(
     baseArrivalsActor,
@@ -120,7 +120,6 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     testManifestsActor,
     testArrivalActor,
   )
-
 
   val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
 
@@ -144,7 +143,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     })
   }
 
-  override def liveArrivalsSource(portCode: PortCode): Feed = testFeed
+  override def liveArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[Feed.FeedTick]] = testFeed
 
   override def getRoles(config: Configuration,
                         headers: Headers,

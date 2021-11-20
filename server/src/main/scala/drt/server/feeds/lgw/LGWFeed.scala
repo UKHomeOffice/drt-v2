@@ -1,6 +1,7 @@
 package drt.server.feeds.lgw
 
-import akka.actor.{ActorRef, ActorSystem}
+import actors.Feed.FeedTick
+import akka.actor.{ActorSystem, typed}
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorAttributes, Supervision}
 import bluebus.client.ServiceBusClient
@@ -38,7 +39,7 @@ case class LGWFeed(lGWAzureClient: LGWAzureClient)(val system: ActorSystem) {
       List()
   })
 
-  def source(source: Source[ArrivalsFeedResponse, ActorRef]): Source[ArrivalsFeedResponse, ActorRef] =
+  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
     source
       .withAttributes(ActorAttributes.supervisionStrategy(Supervision.restartingDecider))
       .mapAsync(1)(_ => requestArrivals().recover { case t =>

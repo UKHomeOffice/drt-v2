@@ -1,6 +1,7 @@
 package services.crunch
 
-import akka.actor.{ActorRef, ActorSystem, Props, Terminated}
+import actors.Feed.FeedTick
+import akka.actor.{ActorRef, ActorSystem, Props, Terminated, typed}
 import akka.pattern.ask
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.stream.QueueOfferResult.Enqueued
@@ -17,6 +18,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.{AfterAll, AfterEach}
+import server.feeds.ArrivalsFeedResponse
 import services._
 import slickdb.Tables
 import uk.gov.homeoffice.drt.auth.Roles.STN
@@ -404,6 +406,10 @@ class CrunchTestLike
       case offerResult =>
         offerResult
     }
+  }
+
+  def offerAndWait[T](source: typed.ActorRef[T], offering: T): Unit = {
+    source ! offering
   }
 
   def offerAndWait[T](source: ActorRef, offering: T): Unit = {

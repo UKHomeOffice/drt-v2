@@ -7,7 +7,7 @@ import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, Port
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ApiFeedState, ManifestRouterActor}
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
+import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
 import akka.util.Timeout
@@ -142,7 +142,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
       case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeCrunchQueue, maybeDeploymentQueue)) =>
         system.log.info(s"Successfully restored initial state for App")
 
-        val crunchInputs: CrunchSystem = startCrunchSystem(
+        val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
           initialPortState = maybePortState,
           initialForecastBaseArrivals = maybeBaseArrivals,
           initialForecastArrivals = maybeForecastArrivals,

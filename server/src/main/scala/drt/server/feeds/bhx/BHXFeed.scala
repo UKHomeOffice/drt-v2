@@ -1,6 +1,7 @@
 package drt.server.feeds.bhx
 
-import akka.actor.{ActorRef, ActorSystem}
+import actors.Feed.FeedTick
+import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.model._
@@ -28,8 +29,8 @@ import scala.xml.{Node, NodeSeq}
 object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(client: BHXClientLike, source: Source[Nothing, ActorRef])
-           (implicit actorSystem: ActorSystem, materializer: Materializer): Source[ArrivalsFeedResponse, ActorRef] = {
+  def apply(client: BHXClientLike, source: Source[FeedTick, typed.ActorRef[FeedTick]])
+           (implicit actorSystem: ActorSystem, materializer: Materializer): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
     var initialRequest = true
     source.mapAsync(1) { _ =>
       log.info(s"Requesting BHX Feed")
