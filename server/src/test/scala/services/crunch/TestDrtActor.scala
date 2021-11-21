@@ -260,10 +260,10 @@ class TestDrtActor extends Actor {
       ))
 
       replyTo ! CrunchGraphInputsAndProbes(
-        aclArrivalsInput = crunchInputs.aclArrivalsResponse,
-        forecastArrivalsInput = crunchInputs.forecastArrivalsResponse,
-        liveArrivalsInput = crunchInputs.liveArrivalsResponse,
-        ciriumArrivalsInput = crunchInputs.ciriumArrivalsResponse,
+        aclArrivalsInput = crunchInputs.forecastBaseArrivalsResponse.feedSource,
+        forecastArrivalsInput = crunchInputs.forecastArrivalsResponse.feedSource,
+        liveArrivalsInput = crunchInputs.liveArrivalsResponse.feedSource,
+        ciriumArrivalsInput = crunchInputs.liveBaseArrivalsResponse.feedSource,
         manifestsLiveInput = crunchInputs.manifestsLiveResponse,
         shiftsInput = crunchInputs.shifts,
         fixedPointsInput = crunchInputs.fixedPoints,

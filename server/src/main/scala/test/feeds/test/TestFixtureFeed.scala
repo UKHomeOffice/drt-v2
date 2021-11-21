@@ -28,6 +28,7 @@ object TestFixtureFeed {
 
     source
       .mapAsync(1) { _ =>
+        println(s"\n\n Checking test live feed\n\n")
         testArrivalActor
           .ask(GetArrivals)
           .map { case Arrivals(arrivals) => arrivals }

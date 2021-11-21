@@ -1,5 +1,6 @@
 package test.controllers
 
+import actors.Feeds.AdhocCheck
 import akka.pattern.ask
 import akka.util.Timeout
 import controllers.{AirportConfProvider, DrtActorSystem}
@@ -44,7 +45,9 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
 
   def saveArrival(arrival: Arrival): Future[Any] = {
     log.info(s"Incoming test arrival")
-    ctrl.testArrivalActor.ask(arrival)
+    ctrl.testArrivalActor.ask(arrival).map {_ =>
+      ctrl.liveActor ! AdhocCheck
+    }
   }
 
   def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {

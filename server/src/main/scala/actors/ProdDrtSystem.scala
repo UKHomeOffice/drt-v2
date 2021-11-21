@@ -1,5 +1,6 @@
 package actors
 
+import actors.Feeds.Enable
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.RedListUpdatesActor.AddSubscriber
@@ -151,6 +152,11 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           refreshArrivalsOnStart = params.refreshArrivalsOnStart,
           refreshManifestsOnStart = params.refreshManifestsOnStart,
           startDeskRecs = startDeskRecs)
+
+        fcstBaseActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)
+        fcstActor ! Enable(crunchInputs.forecastArrivalsResponse)
+        liveBaseActor ! Enable(crunchInputs.liveBaseArrivalsResponse)
+        liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
         new S3ManifestPoller(crunchInputs.manifestsLiveResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
 

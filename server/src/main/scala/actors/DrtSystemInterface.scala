@@ -13,6 +13,7 @@ import actors.supervised.RestartOnStop
 import akka.NotUsed
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
 import akka.actor.{ActorRef, ActorSystem, Props, Scheduler, typed}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
@@ -29,7 +30,7 @@ import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.cirium.CiriumFeed
-import drt.server.feeds.common.{ProdHttpClient, ManualUploadArrivalFeed}
+import drt.server.feeds.common.{ManualUploadArrivalFeed, ProdHttpClient}
 import drt.server.feeds.edi.{EdiClient, EdiFeed}
 import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
@@ -73,6 +74,12 @@ import scala.language.postfixOps
 
 case class Feed[T](source: Source[ArrivalsFeedResponse, T], interval: FiniteDuration)
 
+sealed trait FeedWithFrequency[T] {
+  val feedSource: T
+  val interval: FiniteDuration
+}
+case class EnabledFeedWithFrequency[T](feedSource: T, interval: FiniteDuration) extends FeedWithFrequency[T]
+
 object Feed {
   sealed trait FeedTick
 
@@ -104,22 +111,41 @@ object Feeds {
 
   object AdhocCheck extends Command
 
-  def apply(feedActorSource: typed.ActorRef[FeedTick], checkFrequency: FiniteDuration): Behavior[Command] = {
-    Behaviors.setup[Command] { context =>
-      Behaviors.withTimers { timer =>
-        Behaviors.receiveMessage[Command] {
-          case ScheduledCheck =>
-            log.debug("Scheduled check")
-            feedActorSource ! Tick
-            Behaviors.same
-          case AdhocCheck =>
-            log.info("Adhoc check")
-            feedActorSource ! Tick
-            Behaviors.same
-        }
+  case class Enable(feed: EnabledFeedWithFrequency[typed.ActorRef[FeedTick]]) extends Command
+
+  def apply(): Behavior[Command] = preEnabled()
+
+  private def preEnabled(): Behavior[Command] = {
+    Behaviors.withTimers { timer =>
+      Behaviors.receiveMessage {
+        case Enable(feed) =>
+          log.info(s"Received feed. Starting polling at ${feed.interval.toSeconds}s")
+          timer.startTimerAtFixedRate(ScheduledCheck, 1.second, feed.interval)
+          enabled(feed)
+
+        case unexpected =>
+          log.warn(s"Received $unexpected, but still in pre-enabled state")
+          Behaviors.same
       }
     }
   }
+
+  private def enabled(feed: EnabledFeedWithFrequency[typed.ActorRef[FeedTick]]): Behavior[Command] =
+    Behaviors.receiveMessage[Command] {
+      case ScheduledCheck =>
+        log.debug("Scheduled check")
+        feed.feedSource ! Tick
+        Behaviors.same
+
+      case AdhocCheck =>
+        log.info("Adhoc check")
+        feed.feedSource ! Tick
+        Behaviors.same
+
+      case unexpected =>
+        log.warn(s"Received $unexpected, whilst in enabled state")
+        Behaviors.same
+    }
 }
 
 trait DrtSystemInterface extends UserRoleProviderLike {
@@ -161,6 +187,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
   val minuteLookups: MinuteLookupsLike
+
+  val fcstBaseActor: typed.ActorRef[Feeds.Command] = system.spawn(Feeds(), "arrival-feed-forecast-base")
+  val fcstActor: typed.ActorRef[Feeds.Command] = system.spawn(Feeds(), "arrival-feed-forecast")
+  val liveBaseActor: typed.ActorRef[Feeds.Command] = system.spawn(Feeds(), "arrival-feed-live-base")
+  val liveActor: typed.ActorRef[Feeds.Command] = system.spawn(Feeds(), "arrival-feed-live")
 
   val portStateActor: ActorRef
   val shiftsActor: ActorRef
@@ -306,7 +337,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val simulator: TrySimulator = OptimiserWithFlexibleProcessors.runSimulationOfWork
 
-    val crunchInputs = CrunchSystem(CrunchProps(
+    CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTimeCalculator,
       portStateActor = portStateActor,
@@ -349,7 +380,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       arrivalsAdjustments = arrivalAdjustments,
       redListUpdatesSource = redListUpdatesSource,
     ))
-    crunchInputs
   }
 
   def arrivalsNoOp: Feed[typed.ActorRef[FeedTick]] = {
@@ -467,7 +497,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(actorRefSource), 30 seconds)
       case "EDI" =>
         Feed(new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new ProdHttpClient)).ediLiveFeedSource(actorRefSource), 1.minute)
-      case _ => arrivalsNoOp
+      case _ =>
+        println(s"\n\n*** NOOOOOOOOO!!!\n\n")
+        arrivalsNoOp
     }
 
   def forecastArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] =

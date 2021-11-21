@@ -1,8 +1,6 @@
 package services.crunch
 
-import actors.Feed
-import actors.Feed.FeedTick
-import akka.actor.{ActorRef, PoisonPill, typed}
+import akka.actor.ActorRef
 import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.ActualDeskStats

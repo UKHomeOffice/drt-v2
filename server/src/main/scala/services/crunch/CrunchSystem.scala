@@ -1,6 +1,6 @@
 package services.crunch
 
-import actors.Feed
+import actors.{Feed, EnabledFeedWithFrequency}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
@@ -26,10 +26,10 @@ import scala.concurrent.ExecutionContext
 case class CrunchSystem[FT](shifts: SourceQueueWithComplete[ShiftAssignments],
                             fixedPoints: SourceQueueWithComplete[FixedPointAssignments],
                             staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
-                            aclArrivalsResponse: FT,
-                            forecastArrivalsResponse: FT,
-                            ciriumArrivalsResponse: FT,
-                            liveArrivalsResponse: FT,
+                            forecastBaseArrivalsResponse: EnabledFeedWithFrequency[FT],
+                            forecastArrivalsResponse: EnabledFeedWithFrequency[FT],
+                            liveBaseArrivalsResponse: EnabledFeedWithFrequency[FT],
+                            liveArrivalsResponse: EnabledFeedWithFrequency[FT],
                             manifestsLiveResponse: SourceQueueWithComplete[ManifestsFeedResponse],
                             actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
                             redListUpdates: SourceQueueWithComplete[List[RedListUpdateCommand]],
@@ -158,26 +158,16 @@ object CrunchSystem {
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
 
-    //    val fcstBaseActor = system.spawn(Feeds(forecastBaseIn, props.arrivalsForecastBaseFeed.interval), "arrival-feed-forecast-base")
-    //    val fcstActor = system.spawn(Feeds(forecastIn, props.arrivalsForecastFeed.interval), "arrival-feed-forecast")
-    //    val liveBaseActor = system.spawn(Feeds(liveBaseIn, props.arrivalsLiveBaseFeed.interval), "arrival-feed-live-base")
-    //    val liveActor = system.spawn(Feeds(liveIn, props.arrivalsLiveFeed.interval), "arrival-feed-live")
-    //
-    //    fcstBaseActor ! AdhocCheck
-    //    fcstActor ! AdhocCheck
-    //    liveBaseActor ! AdhocCheck
-    //    liveActor ! AdhocCheck
-
     val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS, deskRecsKillSwitch, deploymentsKillSwitch)
 
     CrunchSystem(
       shifts = shiftsIn,
       fixedPoints = fixedPointsIn,
       staffMovements = movementsIn,
-      aclArrivalsResponse = forecastBaseIn,
-      forecastArrivalsResponse = forecastIn,
-      ciriumArrivalsResponse = liveBaseIn,
-      liveArrivalsResponse = liveIn,
+      forecastBaseArrivalsResponse = EnabledFeedWithFrequency(forecastBaseIn, props.arrivalsForecastBaseFeed.interval),
+      forecastArrivalsResponse = EnabledFeedWithFrequency(forecastIn, props.arrivalsForecastFeed.interval),
+      liveBaseArrivalsResponse = EnabledFeedWithFrequency(liveBaseIn, props.arrivalsLiveBaseFeed.interval),
+      liveArrivalsResponse = EnabledFeedWithFrequency(liveIn, props.arrivalsLiveFeed.interval),
       manifestsLiveResponse = manifestsLiveIn,
       actualDeskStats = actDesksIn,
       redListUpdates = redListUpdatesIn,

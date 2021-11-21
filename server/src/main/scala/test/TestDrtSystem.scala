@@ -1,5 +1,6 @@
 package test
 
+import actors.Feeds.Enable
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.persistent.RedListUpdatesActor.AddSubscriber
@@ -104,7 +105,10 @@ case class TestDrtSystem(airportConfig: AirportConfig)
 
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
   val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
-  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 2.seconds)
+  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = {
+    println(s"\n\n*** YES!!!\n\n")
+    Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 2.seconds)
+  }
 
   val testActors = List(
     baseArrivalsActor,
@@ -163,6 +167,9 @@ case class TestDrtSystem(airportConfig: AirportConfig)
       refreshArrivalsOnStart = false,
       refreshManifestsOnStart = false,
       startDeskRecs = startDeskRecs)
+
+    println(s"\n\n** Starting live feed with ${crunchInputs.liveArrivalsResponse.interval.toSeconds}s interval")
+    liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
     redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
     flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
