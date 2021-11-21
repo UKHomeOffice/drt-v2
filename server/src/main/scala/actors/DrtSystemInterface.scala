@@ -29,7 +29,7 @@ import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
 import drt.server.feeds.cirium.CiriumFeed
-import drt.server.feeds.common.{HttpClient, ManualUploadArrivalFeed}
+import drt.server.feeds.common.{ProdHttpClient, ManualUploadArrivalFeed}
 import drt.server.feeds.edi.{EdiClient, EdiFeed}
 import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
@@ -425,7 +425,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case "BHX" if params.bhxIataEndPointUrl.nonEmpty =>
         Feed(BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), actorRefSource), 80.seconds)
       case "LCY" if params.lcyLiveEndPointUrl.nonEmpty =>
-        Feed(LCYFeed(LCYClient(new HttpClient, params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), actorRefSource), 80.seconds)
+        Feed(LCYFeed(LCYClient(new ProdHttpClient, params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), actorRefSource), 80.seconds)
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
         val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
@@ -467,7 +467,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case "PIK" | "HUY" | "INV" =>
         Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(actorRefSource), 30 seconds)
       case "EDI" =>
-        Feed(new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediLiveFeedSource(actorRefSource), 1.minute)
+        Feed(new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new ProdHttpClient)).ediLiveFeedSource(actorRefSource), 1.minute)
       case _ => arrivalsNoOp
     }
 
@@ -476,7 +476,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => Feed(createArrivalFeed(actorRefSource), 5.seconds)
       case PortCode("BHX") => Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), actorRefSource), 30.seconds)
       case PortCode("EDI") =>
-        Feed(new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new HttpClient)).ediForecastFeedSource(actorRefSource), 10.minutes)
+        Feed(new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new ProdHttpClient)).ediForecastFeedSource(actorRefSource), 10.minutes)
       case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }

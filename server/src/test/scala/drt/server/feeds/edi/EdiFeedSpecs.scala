@@ -1,7 +1,7 @@
 package drt.server.feeds.edi
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
-import drt.server.feeds.common.HttpClient
+import drt.server.feeds.common.ProdHttpClient
 import drt.shared._
 import drt.shared.api.{Arrival, FlightCodeSuffix}
 import org.specs2.mock.Mockito.mock
@@ -63,7 +63,7 @@ class EdiFeedSpecs extends CrunchTestLike {
       |""".stripMargin
 
   "When HttpResponse with json entity from edi is given it can be unmarshall to EdiFlightDetails object" in {
-    val ediFeed = new EdiFeed(EdiClient("", "", mock[HttpClient]))
+    val ediFeed = new EdiFeed(EdiClient("", "", mock[ProdHttpClient]))
     val httpResponse = HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`, ediJsonData))
     val data: Future[List[EdiFlightDetails]] = ediFeed.unMarshalResponseToEdiFlightDetails(httpResponse)
 
@@ -79,7 +79,7 @@ class EdiFeedSpecs extends CrunchTestLike {
   }
 
   "Given EdiFlightDetails object , it gets transform to Arrival" in {
-    val ediFeed = new EdiFeed(EdiClient("", "", mock[HttpClient]))
+    val ediFeed = new EdiFeed(EdiClient("", "", mock[ProdHttpClient]))
 
     val ediFlightDetail: EdiFlightDetails = EdiFlightDetails("FR", "RYR", "FR", "1234", Option(189),
       "PSA", "I", "EEC", "2021-08-31T23:00:00", "A", Option("A"), None, Option("2021-08-31T23:00:00"),
@@ -98,7 +98,7 @@ class EdiFeedSpecs extends CrunchTestLike {
   }
 
   "Regex to strip char from flightNumber if exists" in {
-    val ediFeed = new EdiFeed(EdiClient("", "", mock[HttpClient]))
+    val ediFeed = new EdiFeed(EdiClient("", "", mock[ProdHttpClient]))
     val (voyageNumber1, flightCodeSuffix1) = ediFeed.flightNumberSplitToComponent("1234F")
     val (voyageNumber2, flightCodeSuffix2) = ediFeed.flightNumberSplitToComponent("1234")
     voyageNumber1 mustEqual VoyageNumber("1234")

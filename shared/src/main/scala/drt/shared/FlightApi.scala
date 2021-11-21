@@ -14,6 +14,10 @@ object FlightsApi {
 
   case class Flights(flights: Iterable[Arrival])
 
+  object Flights {
+    val empty: Flights = Flights(Seq())
+  }
+
   case class FlightsWithSplits(flights: Map[UniqueArrival, ApiFlightWithSplits]) {
     val isEmpty: Boolean = flights.isEmpty
     val nonEmpty: Boolean = !isEmpty

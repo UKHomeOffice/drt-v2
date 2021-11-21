@@ -2,7 +2,7 @@ package drt.server.feeds.lcy
 
 import actors.Feed
 import akka.NotUsed
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem, typed}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
@@ -11,34 +11,39 @@ import drt.server.feeds.common.HttpClient
 import drt.shared.FlightsApi.Flights
 import org.mockito.Mockito.{times, verify}
 import org.specs2.mock.Mockito
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
+import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.crunch.CrunchTestLike
 
-import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+
+class MockHttpClient(probeActor: ActorRef) extends HttpClient {
+  def sendRequest(httpRequest: HttpRequest)
+                 (implicit system: ActorSystem): Future[HttpResponse] = {
+    probeActor ! httpRequest
+    Future.successful(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, "")))
+  }
+}
 
 class LCYFeedSpec extends CrunchTestLike with Mockito {
-
-  val httpClient: HttpClient = mock[HttpClient]
-
+  def createMockHttpClient(probeActor: ActorRef): HttpClient = new MockHttpClient(probeActor)
 
   "Given a request for a full refresh of all flights success, match result according to polling count" in {
-
-    httpClient.sendRequest(anyObject[HttpRequest])(anyObject[ActorSystem]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseSuccessXml)))
-
-    val lcyClient = LCYClient(httpClient, "user", "someSoapEndPoint", "someUsername", "somePassword")
+    val callProbe = TestProbe()
+    val mockHttpClient = createMockHttpClient(callProbe.ref)
+    val lcyClient = LCYClient(mockHttpClient, "user", "someSoapEndPoint", "someUsername", "somePassword")
 
     val feed = LCYFeed(lcyClient, Feed.actorRefSource)
 
-    val probe = TestProbe()
-    val actorSource = feed.take(2).to(Sink.actorRef(probe.ref, NotUsed)).run
+    val feedProbe = TestProbe()
+    val actorSource = feed.take(2).to(Sink.actorRef(feedProbe.ref, NotUsed)).run
     Source(1 to 2).map(_ => actorSource ! Feed.Tick).run()
 
-    verify(httpClient, times(2)).sendRequest(anyObject[HttpRequest])(anyObject[ActorSystem])
+    callProbe.receiveN(2)
+    feedProbe.receiveN(2)
 
-    probe.receiveN(2).size === 2
+    success
   }
-
 
   "Given a request for a full refresh of all flights success , it keeps polling for update" >> {
     val lcyClient = mock[LCYClient]
@@ -59,25 +64,31 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
     probe.receiveN(4).size === 4
   }
 
+  case class LycClientMock(probeActor: ActorRef, responses: Seq[ArrivalsFeedResponse]) extends LcyClientSupport {
+    var responseQueue: Seq[ArrivalsFeedResponse] = responses
+
+    override def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
+      probeActor ! "initialFlights"
+      Future.successful(responseQueue.head)
+    }
+
+    override def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
+      probeActor ! "updateFlights"
+      Future.successful(responseQueue.head)
+    }
+  }
+
   "Given a request for a full refresh of all flights fails , it keeps polling for initials" >> {
-    val lcyClient = mock[LCYClient]
+    val clientProbe = TestProbe()
+    val lcyClientMock = LycClientMock(clientProbe.ref, Seq.fill(4)(ArrivalsFeedFailure("Failure")))
 
-    val arrivalsSuccess = ArrivalsFeedSuccess(Flights(List()))
-    val failure = ArrivalsFeedFailure("Failure")
-
-    lcyClient.initialFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(failure)
-    lcyClient.updateFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)
-
-    val feed = LCYFeed(lcyClient, Feed.actorRefSource)
+    val feed: Source[ArrivalsFeedResponse, typed.ActorRef[Feed.FeedTick]] = LCYFeed(lcyClientMock, Feed.actorRefSource)
 
     val probe = TestProbe()
-    val actorSource = feed.take(4).to(Sink.actorRef(probe.ref, NotUsed)).run
-    Source(1 to 4).map(_ => actorSource ! Feed.Tick).run()
+    val actorSource = feed.take(4).to(Sink.actorRef(probe.ref, NotUsed)).run()
+    Await.ready(Source(1 to 4).map(_ => actorSource ! Feed.Tick).run(), 1.second)
 
-    verify(lcyClient, times(4)).initialFlights(anyObject[ActorSystem], anyObject[Materializer])
-    verify(lcyClient, times(0)).updateFlights(anyObject[ActorSystem], anyObject[Materializer])
-
-    probe.receiveN(4).size === 4
+    clientProbe.receiveN(4) === Seq.fill(4)("initialFlights")
   }
 
   def fullRefresh: String =

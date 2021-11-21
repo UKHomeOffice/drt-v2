@@ -2,7 +2,7 @@ package drt.server.feeds.lcy
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
-import drt.server.feeds.common.HttpClient
+import drt.server.feeds.common.ProdHttpClient
 import drt.shared.FlightsApi.Flights
 import org.specs2.mock.Mockito
 import org.specs2.specification.Scope
@@ -14,7 +14,7 @@ import scala.concurrent.{Await, Future}
 
 class LCYClientSpec extends CrunchTestLike with Mockito {
 
-  val httpClient = mock[HttpClient]
+  val httpClient = mock[ProdHttpClient]
 
   trait Context extends Scope {
     val lcyClient = LCYClient(httpClient, "someUser", "someSoapEndPoint", "someUsername", "somePassword")
