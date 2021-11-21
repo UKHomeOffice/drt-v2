@@ -71,7 +71,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 
-//case class Feed(source: Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]], interval: FiniteDuration)
 case class Feed[T](source: Source[ArrivalsFeedResponse, T], interval: FiniteDuration)
 
 object Feed {
