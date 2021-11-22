@@ -168,7 +168,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           aclStatus <- maybeAclStatus
           lastSuccess <- aclStatus.feedStatuses.lastSuccessAt
         } yield {
-          val twelveHoursAgo = SDate.now().addMinutes(-12).millisSinceEpoch
+          val twelveHoursAgo = SDate.now().addHours(-12).millisSinceEpoch
           if (lastSuccess < twelveHoursAgo) {
             log.info(s"Last ACL check was more than 12 hours ago. Will check now")
             fcstBaseActor ! AdhocCheck
