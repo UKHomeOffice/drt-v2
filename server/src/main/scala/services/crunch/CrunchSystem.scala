@@ -1,10 +1,11 @@
 package services.crunch
 
-import actors.{Feed, EnabledFeedWithFrequency}
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
+import drt.server.feeds.Feed
+import drt.server.feeds.Feed.EnabledFeedWithFrequency
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared._

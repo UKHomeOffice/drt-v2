@@ -1,11 +1,11 @@
 package test.controllers
 
-import actors.Feeds.AdhocCheck
 import akka.pattern.ask
 import akka.util.Timeout
 import controllers.{AirportConfProvider, DrtActorSystem}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
+import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.server.feeds.Implicits._
 import drt.shared.SDateLike
 import drt.shared.api.Arrival
@@ -22,8 +22,8 @@ import test.TestDrtSystem
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
@@ -45,7 +45,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
 
   def saveArrival(arrival: Arrival): Future[Any] = {
     log.info(s"Incoming test arrival")
-    ctrl.testArrivalActor.ask(arrival).map {_ =>
+    ctrl.testArrivalActor.ask(arrival).map { _ =>
       ctrl.liveActor ! AdhocCheck
     }
   }
@@ -89,7 +89,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
             PcpTime = Some(pcpTime),
             FeedSources = Set(LiveFeedSource),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
-            )
+          )
           saveArrival(arrival).map(_ => Created)
         case None =>
           Future(BadRequest(s"Unable to parse JSON: ${request.body.asText}"))

@@ -5,12 +5,17 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
+import drt.client.services.handlers.CheckFeed
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
+import io.kinoplan.scalajs.react.material.ui.core._
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, FeedSource, LiveFeedSource}
 
 
 object StatusPage {
@@ -23,6 +28,10 @@ object StatusPage {
     .render_P { _ =>
 
       val feedStatusesRCP = SPACircuit.connect(_.feedStatuses)
+
+      def checkFeed(feedSource: FeedSource): Callback = Callback {
+        SPACircuit.dispatch(CheckFeed(feedSource))
+      }
 
       feedStatusesRCP { feedStatusesMP =>
         val feedStatusesPot = feedStatusesMP()
@@ -37,42 +46,42 @@ object StatusPage {
             allFeedStatusesSeq.map(feed => {
               val ragStatus = FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, feed.feedSource.maybeLastUpdateThreshold, feed.feedStatuses)
 
-              <.div(^.className := s"feed-status $ragStatus",
-              if (feed.feedSource.name == "API")
-                <.h3(feed.feedSource.name, " ", apiDataTooltip)
-              else
-                <.h3(feed.feedSource.name)
+              val manualCheckAllowed = feed.feedSource == AclFeedSource
 
-              ,
+              <.div(^.className := s"feed-status $ragStatus",
+                if (feed.feedSource.name == "API")
+                  <.h3(feed.feedSource.name, " ", apiDataTooltip)
+                else if (manualCheckAllowed)
+                  <.h3(feed.feedSource.name, " ", MuiButton(variant = "outlined", size="medium", color = Color.default)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
+                else
+                  <.h3(feed.feedSource.name)
+                ,
                 <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isLiveFeedAvailable))),
-              {
-                val times = Seq(
-                  (("Updated", "When we last received new data"), feed.feedStatuses.lastUpdatesAt),
-                  (("Checked", "When we last checked for new data"), feed.feedStatuses.lastSuccessAt),
-                  (("Failed", "When we last experienced a failure with the feed"), feed.feedStatuses.lastFailureAt)
+                {
+                  val times = Seq(
+                    (("Updated", "When we last received new data"), feed.feedStatuses.lastUpdatesAt),
+                    (("Checked", "When we last checked for new data"), feed.feedStatuses.lastSuccessAt),
+                    (("Failed", "When we last experienced a failure with the feed"), feed.feedStatuses.lastFailureAt)
+                  )
+                  <.ul(^.className := "times-summary", times.zipWithIndex.map {
+                    case (((label, description), maybeSDate), idx) =>
+                      val className = if (idx == times.length - 1) "last" else ""
+                      <.li(
+                        ^.className := className,
+                        <.div(^.className := "vert-align",
+                          <.div(<.div(Tippy.describe(<.span(description), <.h4(label))), <.div(s"${
+                            maybeSDate.map(lu => s"${timeAgo(lu)}").getOrElse("n/a")
+                          }"))))
+                  }.toVdomArray)
+                },
+                <.div(^.className := "clear"),
+                <.h4("Recent connections"),
+                <.ul(
+                  feed.feedStatuses.statuses.sortBy(_.date).reverseMap {
+                    case FeedStatusSuccess(date, updates) => <.li(s"${displayTime(date)}: $updates updates")
+                    case FeedStatusFailure(date, _) => <.li(s"${displayTime(date)}: Connection failed")
+                  }.toVdomArray
                 )
-                <.ul(^.className := "times-summary", times.zipWithIndex.map {
-                  case (((label, description), maybeSDate), idx) =>
-                    val className = if (idx == times.length - 1) "last" else ""
-                    <.li(
-                      ^.className := className,
-                      <.div(^.className := "vert-align",
-                      <.div(<.div(Tippy.describe(<.span(description), <.h4(label))), <.div(s"${
-                      maybeSDate.map(lu => s"${timeAgo(lu)}").getOrElse("n/a")
-                    }"))))
-                }.toVdomArray)
-              }
-              ,
-              <.div(^.className := "clear")
-              ,
-              <.h4("Recent connections")
-              ,
-              <.ul(
-                feed.feedStatuses.statuses.sortBy(_.date).reverseMap {
-                  case FeedStatusSuccess(date, updates) => <.li(s"${displayTime(date)}: $updates updates")
-                  case FeedStatusFailure(date, _) => <.li(s"${displayTime(date)}: Connection failed")
-                }.toVdomArray
-              )
               )
             }).toVdomArray
           })

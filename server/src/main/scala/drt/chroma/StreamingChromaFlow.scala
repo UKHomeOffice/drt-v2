@@ -1,10 +1,10 @@
 package drt.chroma
 
-import actors.Feed.FeedTick
 import akka.actor.typed
 import akka.stream.scaladsl.Source
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaFlightLike, ChromaForecastFlight, ChromaLiveFlight}
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
 import drt.shared.Operator

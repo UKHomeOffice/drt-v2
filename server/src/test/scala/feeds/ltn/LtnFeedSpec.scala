@@ -1,10 +1,10 @@
 package feeds.ltn
 
-import actors.Feed
 import akka.actor.typed.ActorRef
 import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
+import drt.server.feeds.Feed
 import drt.server.feeds.ltn.{LtnFeedRequestLike, LtnLiveFeed}
 import org.joda.time.DateTimeZone
 import server.feeds.ArrivalsFeedFailure
@@ -28,7 +28,7 @@ class LtnFeedSpec extends CrunchTestLike {
       .run()
     actorSource ! Feed.Tick
 
-    probe.expectMsgClass(5 seconds, classOf[ArrivalsFeedFailure])
+    probe.expectMsgClass(5.seconds, classOf[ArrivalsFeedFailure])
 
     success
   }

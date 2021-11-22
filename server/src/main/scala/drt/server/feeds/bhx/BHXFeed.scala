@@ -1,7 +1,6 @@
 package drt.server.feeds.bhx
 
-import actors.Feed.FeedTick
-import akka.actor.{ActorSystem, typed}
+import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.model._
@@ -9,6 +8,7 @@ import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal, Unmarshaller}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.server.feeds.common.FlightStatus
 import drt.shared.CrunchApi.MillisSinceEpoch

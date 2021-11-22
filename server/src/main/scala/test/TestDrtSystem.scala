@@ -1,6 +1,5 @@
 package test
 
-import actors.Feeds.Enable
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.persistent.RedListUpdatesActor.AddSubscriber
@@ -9,6 +8,8 @@ import akka.pattern.ask
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
+import drt.server.feeds.Feed
+import drt.server.feeds.FeedPoller.Enable
 import drt.shared._
 import drt.shared.coachTime.CoachWalkTime
 import manifests.passengers.BestAvailableManifest
@@ -47,7 +48,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
 
   log.warn("Using test System")
 
-  override val baseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
+  override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
   override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestPortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
   override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestPortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
 
@@ -105,13 +106,10 @@ case class TestDrtSystem(airportConfig: AirportConfig)
 
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
   val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
-  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = {
-    println(s"\n\n*** YES!!!\n\n")
-    Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 2.seconds)
-  }
+  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 2.seconds)
 
   val testActors = List(
-    baseArrivalsActor,
+    forecastBaseArrivalsActor,
     forecastArrivalsActor,
     liveArrivalsActor,
     forecastArrivalsActor,
@@ -168,7 +166,6 @@ case class TestDrtSystem(airportConfig: AirportConfig)
       refreshManifestsOnStart = false,
       startDeskRecs = startDeskRecs)
 
-    println(s"\n\n** Starting live feed with ${crunchInputs.liveArrivalsResponse.interval.toSeconds}s interval")
     liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
     redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)

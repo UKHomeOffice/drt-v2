@@ -1,15 +1,15 @@
 package test.feeds.test
 
-import actors.Feed.FeedTick
 import actors.acking.AckingReceiver.Ack
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, typed}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
+import drt.server.feeds.Feed.FeedTick
 import drt.shared.FlightsApi.Flights
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import test.TestActors.ResetData
 
@@ -28,7 +28,6 @@ object TestFixtureFeed {
 
     source
       .mapAsync(1) { _ =>
-        println(s"\n\n Checking test live feed\n\n")
         testArrivalActor
           .ask(GetArrivals)
           .map { case Arrivals(arrivals) => arrivals }

@@ -1,15 +1,14 @@
 package drt.server.feeds.chroma
 
-import actors.Feed.FeedTick
 import akka.actor.typed
 import akka.stream.scaladsl.Source
 import drt.chroma.StreamingChromaFlow
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
-import drt.shared.FlightsApi.Flights
+import drt.server.feeds.Feed.FeedTick
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import uk.gov.homeoffice.drt.ports.Terminals._
 
 import scala.concurrent.ExecutionContext

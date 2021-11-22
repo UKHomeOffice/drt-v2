@@ -1,12 +1,12 @@
 package drt.server.feeds.lcy
 
-import actors.Feed
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, typed}
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
+import drt.server.feeds.Feed
 import drt.server.feeds.common.HttpClient
 import drt.shared.FlightsApi.Flights
 import org.mockito.Mockito.{times, verify}

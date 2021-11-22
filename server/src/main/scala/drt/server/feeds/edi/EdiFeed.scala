@@ -1,6 +1,5 @@
 package drt.server.feeds.edi
 
-import actors.Feed.FeedTick
 import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.HttpResponse
@@ -8,6 +7,7 @@ import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Feed.FeedTick
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import drt.shared.api.{Arrival, FlightCodeSuffix}

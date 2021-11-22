@@ -1,9 +1,9 @@
 package drt.server.feeds.lcy
 
-import actors.Feed.FeedTick
 import akka.actor.{ActorSystem, typed}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Feed.FeedTick
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 

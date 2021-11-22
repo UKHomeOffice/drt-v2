@@ -9,7 +9,8 @@ import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
 import drt.shared._
-import upickle.default.read
+import uk.gov.homeoffice.drt.ports.FeedSource
+import upickle.default.{read, write}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -20,12 +21,18 @@ case class GetFeedSourceStatuses() extends Action
 
 case class SetFeedSourceStatuses(statuses: Seq[FeedSourceStatuses]) extends Action
 
-class FeedsStatusHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedSourceStatuses]]]) extends LoggingActionHandler(modelRW) {
+case class CheckFeed(feedSource: FeedSource) extends Action
+
+class FeedsHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedSourceStatuses]]]) extends LoggingActionHandler(modelRW) {
   implicit val pickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
     addConcreteType[FeedStatusSuccess].
     addConcreteType[FeedStatusFailure]
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case CheckFeed(feedSource) =>
+      DrtApi.post("feeds/check", write(feedSource))
+      noChange
+
     case SetFeedSourceStatuses(statuses) =>
       val scheduledRequest = Effect(Future(GetFeedSourceStatuses())).after(15 seconds)
       updated(Ready(statuses), scheduledRequest)
@@ -33,7 +40,7 @@ class FeedsStatusHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedSourceStatuses]]]) e
     case GetFeedSourceStatuses() =>
       log.info(s"Calling getFeedStatuses")
 
-      val apiCallEffect = Effect(DrtApi.get("feed-statuses")
+      val apiCallEffect = Effect(DrtApi.get("feeds/statuses")
         .map(r => SetFeedSourceStatuses(read[Seq[FeedSourceStatuses]](r.responseText)))
         .recoverWith {
           case _ =>

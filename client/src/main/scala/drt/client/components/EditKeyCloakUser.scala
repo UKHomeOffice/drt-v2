@@ -44,8 +44,7 @@ object EditKeyCloakUser {
           })), s" $g"))
       ).toTagMod
 
-      def updateGroups = {
-
+      def updateGroups(): Callback = {
         val groupsToAdd = scope.state.groups -- props.groups
         val groupsToRemove = props.groups -- scope.state.groups
 
@@ -67,7 +66,7 @@ object EditKeyCloakUser {
             <.button(
               ^.className := "btn btn-primary",
               "Save",
-              ^.onClick --> updateGroups)
+              ^.onClick --> updateGroups())
             )
           )
         ))

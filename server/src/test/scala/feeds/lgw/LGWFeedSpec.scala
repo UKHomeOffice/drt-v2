@@ -1,9 +1,9 @@
 package feeds.lgw
 
-import actors.Feed
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
+import drt.server.feeds.Feed
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
 import drt.shared.api.Arrival
 import org.specs2.mock.Mockito
@@ -120,7 +120,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
     }.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
     actorSource ! Feed.Tick
 
-    probe.fishForMessage(5 minutes){
+    probe.fishForMessage(5.seconds){
       case x => println(x)
         false
     }

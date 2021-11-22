@@ -1,6 +1,5 @@
 package drt.server.feeds.mag
 
-import actors.Feed.FeedTick
 import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
@@ -9,6 +8,7 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.server.feeds.mag.MagFeed.MagArrival
 import drt.shared.FlightsApi.Flights

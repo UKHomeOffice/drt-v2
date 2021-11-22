@@ -1,11 +1,11 @@
 package drt.server.feeds.lgw
 
-import actors.Feed.FeedTick
 import akka.actor.{ActorSystem, typed}
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorAttributes, Supervision}
 import bluebus.client.ServiceBusClient
 import bluebus.configuration.SBusConfig
+import drt.server.feeds.Feed.FeedTick
 import drt.shared.FlightsApi.Flights
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}

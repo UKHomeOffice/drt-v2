@@ -1,6 +1,5 @@
 package services.crunch
 
-import actors.Feed.FeedTick
 import akka.actor.{ActorRef, ActorSystem, Props, Terminated, typed}
 import akka.pattern.ask
 import akka.persistence.testkit.PersistenceTestKitPlugin
@@ -18,7 +17,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.{AfterAll, AfterEach}
-import server.feeds.ArrivalsFeedResponse
 import services._
 import slickdb.Tables
 import uk.gov.homeoffice.drt.auth.Roles.STN

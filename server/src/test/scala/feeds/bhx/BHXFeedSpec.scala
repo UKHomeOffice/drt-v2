@@ -1,6 +1,5 @@
 package feeds.bhx
 
-import actors.Feed
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
@@ -9,6 +8,7 @@ import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
+import drt.server.feeds.Feed
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
 import drt.shared.api.Arrival

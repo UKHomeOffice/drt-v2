@@ -1,8 +1,8 @@
 package drt.server.feeds.lhr
 
-import actors.Feed.FeedTick
 import akka.actor.typed
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.shared.FlightsApi.Flights

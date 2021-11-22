@@ -1,8 +1,8 @@
 package drt.server.feeds.legacy.bhx
 
-import actors.Feed.FeedTick
 import akka.actor.typed
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Feed.FeedTick
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}

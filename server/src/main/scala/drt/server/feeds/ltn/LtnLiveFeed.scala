@@ -1,6 +1,5 @@
 package drt.server.feeds.ltn
 
-import actors.Feed.FeedTick
 import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpEntity.Strict
@@ -8,6 +7,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
