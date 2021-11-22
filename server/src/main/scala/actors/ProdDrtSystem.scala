@@ -34,6 +34,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -170,8 +171,8 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         } yield {
           val twelveHoursAgo = SDate.now().addHours(-12).millisSinceEpoch
           if (lastSuccess < twelveHoursAgo) {
-            log.info(s"Last ACL check was more than 12 hours ago. Will check now")
-            fcstBaseActor ! AdhocCheck
+            log.info(s"Last ACL check was more than 12 hours ago. Will check in the next 60 seconds")
+            system.scheduler.scheduleOnce((Math.random() * 60).toInt.seconds, () => fcstBaseActor ! AdhocCheck)
           }
         }
 
