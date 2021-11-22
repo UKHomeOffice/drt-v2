@@ -309,7 +309,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       .map { _ =>
         system.log.info(s"No op arrivals feed")
         ArrivalsFeedSuccess(Flights(Seq()), SDate.now())
-      }, 100.days)
+      }, 100.days, 100.days)
   }
 
   def baseArrivalsSource(maybeAclFeed: Option[AclFeed]): Feed[typed.ActorRef[FeedTick]] = maybeAclFeed match {
@@ -323,7 +323,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       Feed(Feed.actorRefSource.map { _ =>
         system.log.info(s"Requesting ACL feed")
         aclFeed.requestArrivals
-      }, 1.day)
+      }, initialDelay, 1.day)
   }
 
   def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
@@ -351,7 +351,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def liveBaseArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] = {
     if (config.get[Boolean]("feature-flags.use-cirium-feed")) {
       log.info(s"Using Cirium Live Base Feed")
-      Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 30.seconds)
+      Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30.seconds)
     }
     else {
       log.info(s"Using Noop Base Live Feed")
@@ -366,17 +366,17 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         val username = config.get[String]("feeds.lhr.sftp.live.username")
         val password = config.get[String]("feeds.lhr.sftp.live.password")
         val contentProvider = () => LhrSftpLiveContentProvider(host, username, password).latestContent
-        Feed(LHRFlightFeed(contentProvider, Feed.actorRefSource), 1.minute)
+        Feed(LHRFlightFeed(contentProvider, Feed.actorRefSource), 5.seconds, 1.minute)
       case "LGW" =>
         val lgwNamespace = params.maybeLGWNamespace.getOrElse(throw new Exception("Missing LGW Azure Namespace parameter"))
         val lgwSasToKey = params.maybeLGWSASToKey.getOrElse(throw new Exception("Missing LGW SAS Key for To Queue"))
         val lgwServiceBusUri = params.maybeLGWServiceBusUri.getOrElse(throw new Exception("Missing LGW Service Bus Uri"))
         val azureClient = LGWAzureClient(LGWFeed.serviceBusClient(lgwNamespace, lgwSasToKey, lgwServiceBusUri))
-        Feed(LGWFeed(azureClient)(system).source(Feed.actorRefSource), 100.milliseconds)
+        Feed(LGWFeed(azureClient)(system).source(Feed.actorRefSource), 5.seconds, 100.milliseconds)
       case "BHX" if params.bhxIataEndPointUrl.nonEmpty =>
-        Feed(BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), Feed.actorRefSource), 80.seconds)
+        Feed(BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), Feed.actorRefSource), 5.seconds, 80.seconds)
       case "LCY" if params.lcyLiveEndPointUrl.nonEmpty =>
-        Feed(LCYFeed(LCYClient(new ProdHttpClient, params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), Feed.actorRefSource), 80.seconds)
+        Feed(LCYFeed(LCYClient(new ProdHttpClient, params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), Feed.actorRefSource), 5.seconds, 80.seconds)
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
         val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
@@ -387,11 +387,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
           case None => DateTimeZone.UTC
         }
         val requester = LtnFeedRequester(url, token, username, password)
-        Feed(LtnLiveFeed(requester, timeZone).source(Feed.actorRefSource), 30 seconds)
+        Feed(LtnLiveFeed(requester, timeZone).source(Feed.actorRefSource), 5.seconds, 30 seconds)
       case "MAN" | "STN" | "EMA" =>
         if (config.get[Boolean]("feeds.mag.use-legacy")) {
           log.info(s"Using legacy MAG live feed")
-          Feed(createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(Feed.actorRefSource), 30 seconds)
+          Feed(createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(Feed.actorRefSource), 5.seconds, 30 seconds)
         } else {
           log.info(s"Using new MAG live feed")
           val maybeFeed = for {
@@ -403,7 +403,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
             MagFeed(privateKey, claimIss, claimRole, claimSub, now, airportConfig.portCode, ProdFeedRequester).source(Feed.actorRefSource)
           }
           maybeFeed
-            .map(f => Feed(f, 30.seconds))
+            .map(f => Feed(f, 5.seconds, 30.seconds))
             .getOrElse({
               log.error(s"No feed credentials supplied. Live feed can't be set up")
               arrivalsNoOp
@@ -414,21 +414,21 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         val livePassword = params.maybeGlaLivePassword.getOrElse(throw new Exception("Missing GLA Live Feed Password"))
         val liveToken = params.maybeGlaLiveToken.getOrElse(throw new Exception("Missing GLA Live Feed Token"))
         val liveUsername = params.maybeGlaLiveUsername.getOrElse(throw new Exception("Missing GLA Live Feed Username"))
-        Feed(GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).source(Feed.actorRefSource), 60.seconds)
+        Feed(GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).source(Feed.actorRefSource), 5.seconds, 60.seconds)
       case "PIK" | "HUY" | "INV" =>
-        Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 30 seconds)
+        Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30 seconds)
       case "EDI" =>
-        Feed(new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new ProdHttpClient)).ediLiveFeedSource(Feed.actorRefSource), 1.minute)
+        Feed(new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new ProdHttpClient)).ediLiveFeedSource(Feed.actorRefSource), 5.seconds, 1.minute)
       case _ =>
         arrivalsNoOp
     }
 
   def forecastArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] =
     portCode match {
-      case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds)
-      case PortCode("BHX") => Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 30.seconds)
+      case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
+      case PortCode("BHX") => Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 5.seconds, 30.seconds)
       case PortCode("EDI") =>
-        Feed(new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new ProdHttpClient)).ediForecastFeedSource(Feed.actorRefSource), 10.minutes)
+        Feed(new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new ProdHttpClient)).ediForecastFeedSource(Feed.actorRefSource), 5.seconds, 10.minutes)
       case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }

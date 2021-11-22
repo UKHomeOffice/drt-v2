@@ -8,7 +8,7 @@ import server.feeds.ArrivalsFeedResponse
 
 import scala.concurrent.duration.FiniteDuration
 
-case class Feed[T](source: Source[ArrivalsFeedResponse, T], interval: FiniteDuration)
+case class Feed[T](source: Source[ArrivalsFeedResponse, T], initialDelay: FiniteDuration, interval: FiniteDuration)
 
 object Feed {
   sealed trait FeedWithFrequency[T] {
@@ -16,7 +16,7 @@ object Feed {
     val interval: FiniteDuration
   }
 
-  case class EnabledFeedWithFrequency[T](feedSource: T, interval: FiniteDuration) extends FeedWithFrequency[T]
+  case class EnabledFeedWithFrequency[T](feedSource: T, initialDelay: FiniteDuration, interval: FiniteDuration) extends FeedWithFrequency[T]
 
   sealed trait FeedTick
 
