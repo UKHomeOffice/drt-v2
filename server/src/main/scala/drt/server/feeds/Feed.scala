@@ -33,6 +33,6 @@ object Feed {
     failureMatcher = {
       case Fail(ex) => ex
     },
-    bufferSize = 8, overflowStrategy = OverflowStrategy.fail
+    bufferSize = 8, overflowStrategy = OverflowStrategy.dropHead
   )
 }
