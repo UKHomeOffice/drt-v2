@@ -48,8 +48,4 @@ case class LGWFeed(lGWAzureClient: LGWAzureClient)(val system: ActorSystem) {
       })
       .filter(_.nonEmpty)
       .map(arrivals => ArrivalsFeedSuccess(Flights(arrivals)))
-      .conflate[ArrivalsFeedResponse] {
-        case (ArrivalsFeedSuccess(Flights(existingFlights), _), ArrivalsFeedSuccess(Flights(newFlights), createdAt)) =>
-          ArrivalsFeedSuccess(Flights(existingFlights ++ newFlights), createdAt)
-      }
 }

@@ -42,11 +42,11 @@ object FeedPoller {
     Behaviors.receiveMessage[Command] {
       case Enable(newFeed) =>
         log.info(s"Received new feed. Replacing polling at ${newFeed.interval.toSeconds}s")
-        timers.startTimerAtFixedRate("polling", ScheduledCheck, 1.second, newFeed.interval)
+        timers.startTimerAtFixedRate("polling", ScheduledCheck, newFeed.initialDelay, newFeed.interval)
         enabled(newFeed, timers)
 
       case ScheduledCheck =>
-        log.debug("Scheduled check")
+        log.info("Scheduled check")
         feed.feedSource ! Tick
         Behaviors.same
 
