@@ -1,36 +1,32 @@
 package test.feeds.test
 
 import actors.acking.AckingReceiver.Ack
-import akka.NotUsed
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, typed}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
+import drt.server.feeds.Feed.FeedTick
 import drt.shared.FlightsApi.Flights
 import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import test.TestActors.ResetData
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.duration._
 import scala.language.postfixOps
 
 object TestFixtureFeed {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(actorSystem: ActorSystem, testArrivalActor: ActorRef): Source[ArrivalsFeedResponse, Cancellable] = {
-
+  def apply(actorSystem: ActorSystem, testArrivalActor: ActorRef, source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedSuccess, typed.ActorRef[FeedTick]] = {
     log.info(s"About to create test Arrival")
 
     implicit val timeout: Timeout = Timeout(1 seconds)
 
-    val pollFrequency = 2 seconds
-    val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource = Source
-      .tick(initialDelayImmediately, pollFrequency, NotUsed)
+    source
       .mapAsync(1) { _ =>
         testArrivalActor
           .ask(GetArrivals)
@@ -40,8 +36,6 @@ object TestFixtureFeed {
       .collect {
         case arrivals if arrivals.nonEmpty => ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
       }
-
-    tickingSource
   }
 }
 

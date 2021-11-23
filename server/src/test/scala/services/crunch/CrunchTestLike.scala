@@ -1,6 +1,6 @@
 package services.crunch
 
-import akka.actor.{ActorRef, ActorSystem, Props, Terminated}
+import akka.actor.{ActorRef, ActorSystem, Props, Terminated, typed}
 import akka.pattern.ask
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.stream.QueueOfferResult.Enqueued
@@ -404,5 +404,13 @@ class CrunchTestLike
       case offerResult =>
         offerResult
     }
+  }
+
+  def offerAndWait[T](source: typed.ActorRef[T], offering: T): Unit = {
+    source ! offering
+  }
+
+  def offerAndWait[T](source: ActorRef, offering: T): Unit = {
+    source ! offering
   }
 }

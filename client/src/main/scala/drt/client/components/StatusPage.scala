@@ -1,16 +1,24 @@
 package drt.client.components
 
+import diode.data.Pot
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
+import drt.client.services.handlers.CheckFeed
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
+import io.kinoplan.scalajs.react.material.ui.core._
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.PortFeedUpload
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, FeedSource, LiveFeedSource}
 
 
 object StatusPage {
@@ -18,33 +26,43 @@ object StatusPage {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props()
+  case class Model(statuses: Pot[Seq[FeedSourceStatuses]], user: Pot[LoggedInUser])
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StatusPage")
     .render_P { _ =>
 
-      val feedStatusesRCP = SPACircuit.connect(_.feedStatuses)
+      val modelRcp = SPACircuit.connect(rm => Model(rm.feedStatuses, rm.loggedInUserPot))
 
-      feedStatusesRCP { feedStatusesMP =>
-        val feedStatusesPot = feedStatusesMP()
+      def checkFeed(feedSource: FeedSource): Callback = Callback {
+        SPACircuit.dispatch(CheckFeed(feedSource))
+      }
 
-        <.div(
-          <.h2("Feeds status"),
-          feedStatusesPot.render((allFeedStatuses: Seq[FeedSourceStatuses]) => {
-            val isLiveFeedAvailable = allFeedStatuses.count(_.feedSource == LiveFeedSource) > 0
+      modelRcp { proxy =>
 
-            val allFeedStatusesSeq = allFeedStatuses.filter(_.feedSource == ApiFeedSource) ++ allFeedStatuses.filterNot(_.feedSource == ApiFeedSource)
+        val model = proxy()
 
-            allFeedStatusesSeq.map(feed => {
-              val ragStatus = FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, feed.feedSource.maybeLastUpdateThreshold, feed.feedStatuses)
+        val statusContentPot = for {
+          allFeedStatuses <- model.statuses
+          user <- model.user
+        } yield {
+          val isLiveFeedAvailable = allFeedStatuses.count(_.feedSource == LiveFeedSource) > 0
 
-              <.div(^.className := s"feed-status $ragStatus",
+          val allFeedStatusesSeq = allFeedStatuses.filter(_.feedSource == ApiFeedSource) ++ allFeedStatuses.filterNot(_.feedSource == ApiFeedSource)
+
+          allFeedStatusesSeq.map(feed => {
+            val ragStatus = FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, feed.feedSource.maybeLastUpdateThreshold, feed.feedStatuses)
+
+            val manualCheckAllowed = feed.feedSource == AclFeedSource && user.hasRole(PortFeedUpload)
+
+            <.div(^.className := s"feed-status $ragStatus",
               if (feed.feedSource.name == "API")
                 <.h3(feed.feedSource.name, " ", apiDataTooltip)
+              else if (manualCheckAllowed)
+                <.h3(feed.feedSource.name, " ", MuiButton(variant = "outlined", size = "medium", color = Color.default)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
               else
                 <.h3(feed.feedSource.name)
-
               ,
-                <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isLiveFeedAvailable))),
+              <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isLiveFeedAvailable))),
               {
                 val times = Seq(
                   (("Updated", "When we last received new data"), feed.feedStatuses.lastUpdatesAt),
@@ -57,25 +75,26 @@ object StatusPage {
                     <.li(
                       ^.className := className,
                       <.div(^.className := "vert-align",
-                      <.div(<.div(Tippy.describe(<.span(description), <.h4(label))), <.div(s"${
-                      maybeSDate.map(lu => s"${timeAgo(lu)}").getOrElse("n/a")
-                    }"))))
+                        <.div(<.div(Tippy.describe(<.span(description), <.h4(label))), <.div(s"${
+                          maybeSDate.map(lu => s"${timeAgo(lu)}").getOrElse("n/a")
+                        }"))))
                 }.toVdomArray)
-              }
-              ,
-              <.div(^.className := "clear")
-              ,
-              <.h4("Recent connections")
-              ,
+              },
+              <.div(^.className := "clear"),
+              <.h4("Recent connections"),
               <.ul(
                 feed.feedStatuses.statuses.sortBy(_.date).reverseMap {
                   case FeedStatusSuccess(date, updates) => <.li(s"${displayTime(date)}: $updates updates")
                   case FeedStatusFailure(date, _) => <.li(s"${displayTime(date)}: Connection failed")
                 }.toVdomArray
               )
-              )
-            }).toVdomArray
-          })
+            )
+          }).toVdomArray
+        }
+
+        <.div(
+          <.h2("Feeds status"),
+          statusContentPot.getOrElse(EmptyVdom)
         )
       }
     }

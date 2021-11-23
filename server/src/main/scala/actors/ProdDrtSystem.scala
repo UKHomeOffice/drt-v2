@@ -4,13 +4,16 @@ import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, 
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
+import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ApiFeedState, ManifestRouterActor}
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
+import akka.actor.{ActorRef, ActorSystem, Props, typed}
+import akka.pattern.ask
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
 import akka.util.Timeout
+import drt.server.feeds.Feed
+import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
@@ -21,6 +24,7 @@ import manifests.passengers.S3ManifestPoller
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
+import services.SDate
 import services.crunch.CrunchSystem
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
@@ -30,6 +34,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 
 import scala.collection.immutable.SortedMap
 import scala.collection.mutable
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -56,7 +61,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
-  override val baseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AclForecastArrivalsActor(params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis)), name = "base-arrivals-actor")
+  override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AclForecastArrivalsActor(params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis)), name = "base-arrivals-actor")
   override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortForecastArrivalsActor(params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis)), name = "forecast-arrivals-actor")
   override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortLiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-arrivals-actor")
 
@@ -121,13 +126,15 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         Option[SortedMap[UniqueArrival, Arrival]],
         Option[mutable.SortedSet[CrunchRequest]],
         Option[mutable.SortedSet[CrunchRequest]],
+        Option[FeedSourceStatuses],
         )] = {
       val maybeLivePortState = initialFlightsPortState(portStateActor, params.forecastMaxDays)
-      val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
+      val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](forecastBaseArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
       val maybeInitialCrunchQueue = initialStateFuture[mutable.SortedSet[CrunchRequest]](persistentCrunchQueueActor)
       val maybeInitialDeploymentQueue = initialStateFuture[mutable.SortedSet[CrunchRequest]](persistentDeploymentQueueActor)
+      val aclFeedStatus = forecastBaseArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
       for {
         lps <- maybeLivePortState
         ba <- maybeInitialBaseArrivals
@@ -135,14 +142,15 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         la <- maybeInitialLiveArrivals
         cq <- maybeInitialCrunchQueue
         dq <- maybeInitialDeploymentQueue
-      } yield (lps, ba, fa, la, cq, dq)
+        aclStatus <- aclFeedStatus
+      } yield (lps, ba, fa, la, cq, dq, aclStatus)
     }
 
     futurePortStates.onComplete {
-      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeCrunchQueue, maybeDeploymentQueue)) =>
+      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeCrunchQueue, maybeDeploymentQueue, maybeAclStatus)) =>
         system.log.info(s"Successfully restored initial state for App")
 
-        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(
+        val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
           initialPortState = maybePortState,
           initialForecastBaseArrivals = maybeBaseArrivals,
           initialForecastArrivals = maybeForecastArrivals,
@@ -151,6 +159,22 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           refreshArrivalsOnStart = params.refreshArrivalsOnStart,
           refreshManifestsOnStart = params.refreshManifestsOnStart,
           startDeskRecs = startDeskRecs)
+
+        fcstBaseActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)
+        fcstActor ! Enable(crunchInputs.forecastArrivalsResponse)
+        liveBaseActor ! Enable(crunchInputs.liveBaseArrivalsResponse)
+        liveActor ! Enable(crunchInputs.liveArrivalsResponse)
+
+        for {
+          aclStatus <- maybeAclStatus
+          lastSuccess <- aclStatus.feedStatuses.lastSuccessAt
+        } yield {
+          val twelveHoursAgo = SDate.now().addHours(-12).millisSinceEpoch
+          if (lastSuccess < twelveHoursAgo) {
+            log.info(s"Last ACL check was more than 12 hours ago. Will check in the next 60 seconds")
+            system.scheduler.scheduleOnce((Math.random() * 60).toInt.seconds, () => fcstBaseActor ! AdhocCheck)
+          }
+        }
 
         new S3ManifestPoller(crunchInputs.manifestsLiveResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
 

@@ -1,17 +1,18 @@
 package services.crunch
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
-import actors._
 import actors.daily.{FlightUpdatesSupervisor, PassengersActor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ManifestRouterActor, SortedActorRefSource}
+import actors._
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.testkit.TestProbe
 import akka.util.Timeout
+import drt.server.feeds.Feed
 import drt.shared.{MilliTimes, SDateLike, VoyageNumber}
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
@@ -241,10 +242,10 @@ class TestDrtActor extends Actor {
         initialForecastArrivals = tc.initialForecastArrivals,
         initialLiveBaseArrivals = tc.initialLiveBaseArrivals,
         initialLiveArrivals = tc.initialLiveArrivals,
-        arrivalsForecastBaseSource = forecastBaseArrivals,
-        arrivalsForecastSource = forecastArrivals,
-        arrivalsLiveBaseSource = liveBaseArrivals,
-        arrivalsLiveSource = liveArrivals,
+        arrivalsForecastBaseFeed = Feed(forecastBaseArrivals, 1.second, 5.second),
+        arrivalsForecastFeed = Feed(forecastArrivals, 1.second, 5.second),
+        arrivalsLiveBaseFeed = Feed(liveBaseArrivals, 1.second, 1.second),
+        arrivalsLiveFeed = Feed(liveArrivals, 1.second, 500.millis),
         passengersActorProvider = passengersActorProvider,
         initialShifts = tc.initialShifts,
         initialFixedPoints = tc.initialFixedPoints,
@@ -260,10 +261,10 @@ class TestDrtActor extends Actor {
       ))
 
       replyTo ! CrunchGraphInputsAndProbes(
-        aclArrivalsInput = crunchInputs.aclArrivalsResponse,
-        forecastArrivalsInput = crunchInputs.forecastArrivalsResponse,
-        liveArrivalsInput = crunchInputs.liveArrivalsResponse,
-        ciriumArrivalsInput = crunchInputs.ciriumArrivalsResponse,
+        aclArrivalsInput = crunchInputs.forecastBaseArrivalsResponse.feedSource,
+        forecastArrivalsInput = crunchInputs.forecastArrivalsResponse.feedSource,
+        liveArrivalsInput = crunchInputs.liveArrivalsResponse.feedSource,
+        ciriumArrivalsInput = crunchInputs.liveBaseArrivalsResponse.feedSource,
         manifestsLiveInput = crunchInputs.manifestsLiveResponse,
         shiftsInput = crunchInputs.shifts,
         fixedPointsInput = crunchInputs.fixedPoints,

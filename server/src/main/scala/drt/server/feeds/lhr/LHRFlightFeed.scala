@@ -1,8 +1,8 @@
 package drt.server.feeds.lhr
 
-import akka.NotUsed
-import akka.actor.Cancellable
+import akka.actor.typed
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.shared.FlightsApi.Flights
@@ -17,8 +17,6 @@ import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.JavaConverters._
-import scala.concurrent.duration._
-import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 case class LHRLiveFlight(
@@ -139,23 +137,17 @@ object LHRFlightFeed {
 
   def parseDateTime(dateString: String): DateTime = pattern.parseDateTime(dateString)
 
-  def apply(csvContentsProvider: () => Try[String]): Source[ArrivalsFeedResponse, Cancellable] = {
-    val pollFrequency = 1 minute
-    val initialDelayImmediately: FiniteDuration = 1 milliseconds
-    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelayImmediately, pollFrequency, NotUsed)
-      .map(_ => {
-        log.info(s"Requesting CSV")
-        csvContentsProvider() match {
-          case Success(csvContents) =>
-            log.info(s"Got CSV content")
-            val feedArrivals = LHRFlightFeed(csvParserAsIteratorOfColumnGetter(csvContents)).copiedToApiFlights
-            ArrivalsFeedSuccess(Flights(feedArrivals), SDate.now())
-          case Failure(exception) =>
-            log.info(s"Failed to get data from LHR live", exception)
-            ArrivalsFeedFailure(exception.toString, SDate.now())
-        }
-      })
-
-    tickingSource
-  }
+  def apply(csvContentsProvider: () => Try[String], source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
+    source.map(_ => {
+      log.info(s"Requesting CSV")
+      csvContentsProvider() match {
+        case Success(csvContents) =>
+          log.info(s"Got CSV content")
+          val feedArrivals = LHRFlightFeed(csvParserAsIteratorOfColumnGetter(csvContents)).copiedToApiFlights
+          ArrivalsFeedSuccess(Flights(feedArrivals), SDate.now())
+        case Failure(exception) =>
+          log.info(s"Failed to get data from LHR live", exception)
+          ArrivalsFeedFailure(exception.toString, SDate.now())
+      }
+    })
 }

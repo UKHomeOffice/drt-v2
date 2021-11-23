@@ -1,7 +1,6 @@
 package drt.server.feeds.bhx
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.model._
@@ -9,6 +8,7 @@ import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal, Unmarshaller}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.server.feeds.common.FlightStatus
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -23,34 +23,29 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import scala.util.Try
 import scala.xml.{Node, NodeSeq}
 
 object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(client: BHXClientLike, pollFrequency: FiniteDuration, initialDelay: FiniteDuration)
-           (implicit actorSystem: ActorSystem, materializer: Materializer): Source[ArrivalsFeedResponse, Cancellable] = {
+  def apply[FT](client: BHXClientLike, source: Source[FeedTick, FT])
+               (implicit actorSystem: ActorSystem, materializer: Materializer): Source[ArrivalsFeedResponse, FT] = {
     var initialRequest = true
-    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelay, pollFrequency, NotUsed)
-      .mapAsync(1)(_ => {
-        log.info(s"Requesting BHX Feed")
-        if (initialRequest)
-          client.initialFlights.map {
-            case s: ArrivalsFeedSuccess =>
-              initialRequest = false
-              s
-            case f: ArrivalsFeedFailure =>
-              f
-          }
-        else
-          client.updateFlights
-      })
-
-    tickingSource
+    source.mapAsync(1) { _ =>
+      log.info(s"Requesting BHX Feed")
+      if (initialRequest)
+        client.initialFlights.map {
+          case s: ArrivalsFeedSuccess =>
+            initialRequest = false
+            s
+          case f: ArrivalsFeedFailure =>
+            f
+        }
+      else
+        client.updateFlights
+    }
   }
-
 }
 
 case class BHXFlight(
@@ -268,11 +263,12 @@ object BHXFlight extends NodeSeqUnmarshaller {
       val seats: immutable.Seq[Option[Int]] = cpn.flatMap(p => {
         (p \ seatingField).map(seatingNode =>
 
-        if (seatingNode.text.length == 0)
-          None
-        else
-          maybeNodeText(seatingNode).map(_.toInt)
-        )})
+          if (seatingNode.text.isEmpty)
+            None
+          else
+            maybeNodeText(seatingNode).map(_.toInt)
+        )
+      })
       if (seats.count(_.isDefined) > 0)
         Option(seats.flatten.sum)
       else

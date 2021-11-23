@@ -1,11 +1,14 @@
 package feeds.bhx
 
-import akka.actor.{ActorSystem, Cancellable}
+import akka.NotUsed
+import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
+import akka.testkit.TestProbe
+import drt.server.feeds.Feed
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
 import drt.shared.api.Arrival
@@ -36,7 +39,7 @@ class BHXFeedSpec extends CrunchTestLike {
     val username = sys.env("BHX_IATA_USERNAME")
 
     val bhxClient = BHXClient(username, endpoint)
-    Await.result(bhxClient.initialFlights, 30 seconds)
+    Await.result(bhxClient.initialFlights, 30.seconds)
 
     false
   }
@@ -50,7 +53,7 @@ class BHXFeedSpec extends CrunchTestLike {
       )
     )
 
-    val result = Await.result(Unmarshal[HttpResponse](resp).to[BHXFlightsResponse], 5 seconds)
+    val result = Await.result(Unmarshal[HttpResponse](resp).to[BHXFlightsResponse], 5.seconds)
       .asInstanceOf[BHXFlightsResponseSuccess]
       .flights
     val expected = List(
@@ -78,7 +81,7 @@ class BHXFeedSpec extends CrunchTestLike {
     result === expected
   }
 
-  val flight1 = BHXFlight(
+  val flight1: BHXFlight = BHXFlight(
     "TOM",
     "7623",
     "PFO",
@@ -97,7 +100,7 @@ class BHXFeedSpec extends CrunchTestLike {
     Option(189)
   )
 
-  val flight2 = BHXFlight(
+  val flight2: BHXFlight = BHXFlight(
     "FR",
     "8045",
     "CHQ",
@@ -125,7 +128,7 @@ class BHXFeedSpec extends CrunchTestLike {
       )
     )
 
-    val result = Await.result(Unmarshal[HttpResponse](resp).to[BHXFlightsResponse], 5 seconds)
+    val result = Await.result(Unmarshal[HttpResponse](resp).to[BHXFlightsResponse], 5.seconds)
       .asInstanceOf[BHXFlightsResponseSuccess]
       .flights
     val expected = List(
@@ -145,7 +148,7 @@ class BHXFeedSpec extends CrunchTestLike {
       )
     )
 
-    val result = Await.result(Unmarshal[HttpResponse](resp).to[BHXFlightsResponse], 5 seconds)
+    val result = Await.result(Unmarshal[HttpResponse](resp).to[BHXFlightsResponse], 5.seconds)
       .asInstanceOf[BHXFlightsResponseSuccess]
       .flights
       .head
@@ -171,7 +174,7 @@ class BHXFeedSpec extends CrunchTestLike {
     val client = BHXMockClient(bhxSoapResponse2FlightsXml)
 
     val result: Flights = Await
-      .result(client.initialFlights, 1 second).asInstanceOf[ArrivalsFeedSuccess].arrivals
+      .result(client.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
     val expected = Flights(List(
       BHXFlight.bhxFlightToArrival(flight1),
       BHXFlight.bhxFlightToArrival(flight2)
@@ -183,7 +186,7 @@ class BHXFeedSpec extends CrunchTestLike {
   "Given a request for a full refresh of all flights, if we are rate limited then we should get an ArrivalsFeedFailure" >> {
     val client = BHXMockClient(rateLimitReachedResponse)
 
-    val result = Await.result(client.initialFlights, 1 second)
+    val result = Await.result(client.initialFlights, 1.second)
 
     result must haveClass[ArrivalsFeedFailure]
   }
@@ -191,7 +194,7 @@ class BHXFeedSpec extends CrunchTestLike {
   "Given a mock client returning an invalid XML response I should get an ArrivalFeedFailure " >> {
     val client = BHXMockClient(invalidXmlResponse)
 
-    val result = Await.result(client.initialFlights, 1 second)
+    val result = Await.result(client.initialFlights, 1.second)
 
     result must haveClass[ArrivalsFeedFailure]
   }
@@ -227,44 +230,45 @@ class BHXFeedSpec extends CrunchTestLike {
   }
 
   "Given a request for a full refresh of all flights fails, we should poll for a full request until it succeeds" >> {
-
     val firstFailure = ArrivalsFeedFailure("First Failure")
     val secondFailure = ArrivalsFeedFailure("Second Failure")
-    val success = ArrivalsFeedSuccess(Flights(List()))
+    val finallySuccess = ArrivalsFeedSuccess(Flights(List()))
 
-    val initialResponses = List(firstFailure, secondFailure, success)
-    val updateResponses = List(success)
+    val initialResponses = List(firstFailure, secondFailure, finallySuccess)
+    val updateResponses = List(finallySuccess)
 
-    val feed: Source[ArrivalsFeedResponse, Cancellable] = BHXFeed(
+    val feed = BHXFeed(
       BHXMockClientWithUpdates(initialResponses, updateResponses),
-      1 millisecond,
-      1 millisecond
+      Feed.actorRefSource
     )
 
-    val expected = Seq(firstFailure, secondFailure, success, success)
-    val result = Await.result(feed.take(4).runWith(Sink.seq), 1 second)
+    val probe = TestProbe()
+    val expected = Seq(firstFailure, secondFailure, finallySuccess, finallySuccess)
+    val actorSource = feed.take(4).to(Sink.actorRef(probe.ref, NotUsed)).run
+    Source(1 to 4).map(_ => actorSource ! Feed.Tick).run()
 
-    result === expected
+    probe.receiveN(4, 1.second) === expected
   }
 
   "Given a successful initial request, followed by a failed update, we should continue to poll for updates" >> {
 
     val failure = ArrivalsFeedFailure("First Failure")
-    val success = ArrivalsFeedSuccess(Flights(List()))
+    val finallySuccess = ArrivalsFeedSuccess(Flights(List()))
 
-    val initialResponses = List(success)
-    val updateResponses = List(failure, success)
+    val initialResponses = List(finallySuccess)
+    val updateResponses = List(failure, finallySuccess)
 
-    val feed: Source[ArrivalsFeedResponse, Cancellable] = BHXFeed(
+    val feed = BHXFeed(
       BHXMockClientWithUpdates(initialResponses, updateResponses),
-      1 millisecond,
-      1 millisecond
+      Feed.actorRefSource
     )
 
-    val expected = Seq(success, failure, success)
-    val result = Await.result(feed.take(3).runWith(Sink.seq), 1 second)
+    val expected = Seq(finallySuccess, failure, finallySuccess)
+    val probe = TestProbe()
+    val actorSource = feed.take(3).to(Sink.actorRef(probe.ref, NotUsed)).run
+    Source(1 to 3).map(_ => actorSource ! Feed.Tick).run()
 
-    result === expected
+    probe.receiveN(3, 1.second) === expected
   }
 
   "Given a list of operation times I should be able to extract the scheduled time" >> {
@@ -415,7 +419,7 @@ class BHXFeedSpec extends CrunchTestLike {
     val client = BHXMockClient(bhxSoapResponseWith0PaxXml)
 
     val result: Flights = Await
-      .result(client.initialFlights, 1 second).asInstanceOf[ArrivalsFeedSuccess].arrivals
+      .result(client.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
 
     val actMax = result match {
       case Flights(f :: tail) => (f.ActPax, f.MaxPax)
@@ -426,7 +430,7 @@ class BHXFeedSpec extends CrunchTestLike {
     actMax === expected
   }
 
-  val multiplePassengerTypesXML =
+  def multiplePassengerTypesXML: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
       |        <IATA_AIDX_FlightLegRS TimeStamp="2019-07-25T09:13:19.4014748+01:00" Version="16.1" xmlns="http://www.iata.org/IATA/2007/00">
@@ -473,7 +477,7 @@ class BHXFeedSpec extends CrunchTestLike {
       |</s:Envelope>
     """.stripMargin
 
-  val bhxSoapResponse1FlightXml: String =
+  def bhxSoapResponse1FlightXml: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
       |        <IATA_AIDX_FlightLegRS TimeStamp="2019-07-25T09:13:19.4014748+01:00" Version="16.1" xmlns="http://www.iata.org/IATA/2007/00">
@@ -532,7 +536,7 @@ class BHXFeedSpec extends CrunchTestLike {
       |</s:Envelope>
     """.stripMargin
 
-  val bhxSoapResponseWith0PaxXml: String =
+  def bhxSoapResponseWith0PaxXml: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
       |        <IATA_AIDX_FlightLegRS TimeStamp="2019-07-25T09:13:19.4014748+01:00" Version="16.1" xmlns="http://www.iata.org/IATA/2007/00">
@@ -591,7 +595,7 @@ class BHXFeedSpec extends CrunchTestLike {
       |</s:Envelope>
     """.stripMargin
 
-  val bhxSoapResponse2FlightsXml: String =
+  def bhxSoapResponse2FlightsXml: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
       |        <IATA_AIDX_FlightLegRS TimeStamp="2019-07-25T09:13:19.4014748+01:00" Version="16.1" xmlns="http://www.iata.org/IATA/2007/00">
@@ -700,7 +704,7 @@ class BHXFeedSpec extends CrunchTestLike {
       |</s:Envelope>
     """.stripMargin
 
-  val rateLimitReachedResponse: String =
+  def rateLimitReachedResponse: String =
     """
       |<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |    <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -714,7 +718,7 @@ class BHXFeedSpec extends CrunchTestLike {
       |</s:Envelope>
     """.stripMargin
 
-  val invalidXmlResponse: String =
+  def invalidXmlResponse: String =
     """
       |Blah blah
     """.stripMargin

@@ -1,10 +1,10 @@
 package drt.chroma
 
-import akka.NotUsed
-import akka.actor.Cancellable
+import akka.actor.typed
 import akka.stream.scaladsl.Source
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaFlightLike, ChromaForecastFlight, ChromaLiveFlight}
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
 import drt.shared.Operator
@@ -13,32 +13,30 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource}
 
 import scala.collection.immutable.Seq
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 object StreamingChromaFlow {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def chromaPollingSource[X <: ChromaFlightLike](chromaFetcher: ChromaFetcher[X],
-                                                 pollFrequency: FiniteDuration,
-                                                 toDrtArrival: Seq[X] => List[Arrival])(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
-    Source.tick(1 milliseconds, pollFrequency, NotUsed)
-      .mapAsync(1) { _ =>
-        chromaFetcher.currentFlights
-          .map {
-            case Success(flights) => ArrivalsFeedSuccess(Flights(toDrtArrival(flights)))
-            case Failure(t) => ArrivalsFeedFailure(t.getMessage)
-          }
-          .recoverWith { case t =>
-            Future(ArrivalsFeedFailure(t.getMessage))
-          }
-      }
+                                                 toDrtArrival: Seq[X] => List[Arrival],
+                                                 source: Source[FeedTick, typed.ActorRef[FeedTick]])
+                                                (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
+    source.mapAsync(1) { _ =>
+      chromaFetcher.currentFlights
+        .map {
+          case Success(flights) => ArrivalsFeedSuccess(Flights(toDrtArrival(flights)))
+          case Failure(t) => ArrivalsFeedFailure(t.getMessage)
+        }
+        .recoverWith { case t =>
+          Future(ArrivalsFeedFailure(t.getMessage))
+        }
+    }
   }
 
   def liveChromaToArrival(chromaArrivals: Seq[ChromaLiveFlight]): List[Arrival] = {

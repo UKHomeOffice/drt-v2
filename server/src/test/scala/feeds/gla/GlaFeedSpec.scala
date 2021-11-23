@@ -5,6 +5,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
+import drt.server.feeds.Feed
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
 import drt.shared.ArrivalStatus
 import drt.shared.FlightsApi.Flights
@@ -48,18 +49,13 @@ class GlaFeedSpec extends CrunchTestLike {
       feedRequester = ProdGlaFeedRequester
     )
 
-    prodFeed.tickingSource.map {
-      case ArrivalsFeedSuccess(arrivals, _) =>
-        println(s"$arrivals")
-      case f: ArrivalsFeedFailure =>
-        println(f)
-    }.runWith(Sink.seq)
+    prodFeed.source(Feed.actorRefSource).runWith(Sink.seq)
 
     Thread.sleep(20000)
     true
   }
 
-  def mockFeedWithResponse(res: String) = GlaFeed(
+  def mockFeedWithResponse(res: String): GlaFeed = GlaFeed(
     uri = "http://test.com",
     token = "",
     password = "",
@@ -73,9 +69,10 @@ class GlaFeedSpec extends CrunchTestLike {
 
     val probe = TestProbe()
 
-    mockFeed.tickingSource.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val actorSource = mockFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    actorSource ! Feed.Tick
 
-    probe.fishForMessage(1 seconds) {
+    probe.fishForMessage(1.seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-11-13T12:34:00Z").millisSinceEpoch => true
       case _ => false
     }
@@ -90,9 +87,10 @@ class GlaFeedSpec extends CrunchTestLike {
 
     val probe = TestProbe()
 
-    mockFeed.tickingSource.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val actorSource = mockFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    actorSource ! Feed.Tick
 
-    probe.fishForMessage(1 seconds) {
+    probe.fishForMessage(1.seconds) {
       case ArrivalsFeedSuccess(Flights(a), _) if a.size == 1 && !a.exists(_.Scheduled == SDate(dsd).millisSinceEpoch) => true
       case _ => false
     }
@@ -104,7 +102,7 @@ class GlaFeedSpec extends CrunchTestLike {
     "I should get an ArrivalsFeedFailure" >> {
     val mockFeed = mockFeedWithResponse("bad json")
 
-    val result = Await.result(mockFeed.requestArrivals(), 1 second)
+    val result = Await.result(mockFeed.requestArrivals(), 1.second)
 
     result must haveClass[ArrivalsFeedFailure]
   }
@@ -117,7 +115,7 @@ class GlaFeedSpec extends CrunchTestLike {
       username = "",
       feedRequester = MockExceptionThrowingFeedRequester())
 
-    val result = Await.result(mockFeed.requestArrivals(), 1 second)
+    val result = Await.result(mockFeed.requestArrivals(), 1.second)
 
     result must haveClass[ArrivalsFeedFailure]
   }
@@ -150,7 +148,7 @@ class GlaFeedSpec extends CrunchTestLike {
       CarrierScheduled = None
     )
 
-    Await.result(mockFeed.requestArrivals(), 1 second) match {
+    Await.result(mockFeed.requestArrivals(), 1.second) match {
       case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
     }
   }
@@ -210,7 +208,7 @@ class GlaFeedSpec extends CrunchTestLike {
       CarrierScheduled = None
     )
 
-    Await.result(mockFeed.requestArrivals(), 1 second) match {
+    Await.result(mockFeed.requestArrivals(), 1.second) match {
       case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
     }
   }
@@ -219,13 +217,13 @@ class GlaFeedSpec extends CrunchTestLike {
   "Given a GLA feed item with 0 for ActPax and MaxPax then we should 0 in the arrival" >> {
     val mockFeed = mockFeedWithResponse(exampleWith0s)
 
-    Await.result(mockFeed.requestArrivals(), 1 second) match {
+    Await.result(mockFeed.requestArrivals(), 1.second) match {
       case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) =>
         (arrival.ActPax, arrival.MaxPax) === ((Some(0), Some(0)))
     }
   }
 
-  val secondJsonExample: String =
+  def secondJsonExample: String =
     """[{
       |        "AIBT": "2019-11-14T14:40:00+00:00",
       |        "AirlineIATA": "TT",
@@ -252,7 +250,7 @@ class GlaFeedSpec extends CrunchTestLike {
       |        "TotalPassengerCount": 55
       |}]""".stripMargin
 
-  val exampleWith0s: String =
+  def exampleWith0s: String =
     """[{
       |        "AIBT": "2019-11-14T14:40:00+00:00",
       |        "AirlineIATA": "TT",
@@ -308,12 +306,12 @@ class GlaFeedSpec extends CrunchTestLike {
       CarrierScheduled = None
     )
 
-    Await.result(mockFeed.requestArrivals(), 1 second) match {
+    Await.result(mockFeed.requestArrivals(), 1.second) match {
       case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
     }
   }
 
-  val requiredFieldsOnlyJson: String =
+  def requiredFieldsOnlyJson: String =
     """[{
       |        "AIBT": null,
       |        "AirlineIATA": "TT",

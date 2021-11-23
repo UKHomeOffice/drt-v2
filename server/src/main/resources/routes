@@ -25,6 +25,8 @@ GET           /crunch                                                           
 GET           /crunch-snapshot/:pit                                                   controllers.Application.getCrunchSnapshot(pit: Long)
 
 GET           /feed-statuses                                                          controllers.Application.getFeedStatuses
+GET           /feeds/statuses                                                         controllers.Application.getFeedStatuses
+POST          /feeds/check                                                            controllers.Application.checkFeed
 GET           /arrival/:number/:terminal/:scheduled/:origin                           controllers.Application.getArrival(number: Int, terminal: String, scheduled: Long, origin: String)
 GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin              controllers.Application.getArrivalAtPointInTime(pointInTime: Long, number: Int, terminal: String, scheduled: Long, origin: String)
 GET           /manifest/:utcDate/summary                                              controllers.Application.getPassengerInfoForDay(utcDate: String)

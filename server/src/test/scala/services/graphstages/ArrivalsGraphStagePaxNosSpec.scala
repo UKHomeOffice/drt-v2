@@ -18,7 +18,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(nowString)))
 
     def fishForArrivalWithActPax(actPax: Option[Int], status: String = ""): Success = {
-      crunch.portStateTestProbe.fishForMessage(1 second) {
+      crunch.portStateTestProbe.fishForMessage(1.second) {
         case PortState(flights, _, _) =>
           flights.values.toList.exists(fws => fws.apiFlight.flightCodeString == "BA0001" && fws.apiFlight.ActPax == actPax && fws.apiFlight.Status == ArrivalStatus(status))
       }
@@ -168,5 +168,4 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
                           actChoxDt: String = ""): QueueOfferResult = {
     val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, actPax = actPax, tranPax = tranPax, maxPax = maxPax, status = ArrivalStatus(status), actChoxDt = actChoxDt)
     offerAndWait(input, ArrivalsFeedSuccess(Flights(Seq(arrivalLive))))
-  }
-}
+  }}

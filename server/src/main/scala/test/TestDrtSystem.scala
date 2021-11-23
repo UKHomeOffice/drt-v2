@@ -3,12 +3,13 @@ package test
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.persistent.RedListUpdatesActor.AddSubscriber
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Status}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
 import akka.pattern.ask
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
-import akka.stream.scaladsl.Source
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
+import drt.server.feeds.Feed
+import drt.server.feeds.FeedPoller.Enable
 import drt.shared._
 import drt.shared.coachTime.CoachWalkTime
 import manifests.passengers.BestAvailableManifest
@@ -16,9 +17,8 @@ import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import server.feeds.ArrivalsFeedResponse
 import services.SDate
-import test.TestActors.{TestStaffMovementsActor, _}
+import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
 import uk.gov.homeoffice.drt.auth.Roles.Role
@@ -48,7 +48,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
 
   log.warn("Using test System")
 
-  override val baseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
+  override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
   override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestPortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
   override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestPortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
 
@@ -106,10 +106,10 @@ case class TestDrtSystem(airportConfig: AirportConfig)
 
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
   val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
-  val testFeed: Source[ArrivalsFeedResponse, Cancellable] = TestFixtureFeed(system, testArrivalActor)
+  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 1.second, 2.seconds)
 
   val testActors = List(
-    baseArrivalsActor,
+    forecastBaseArrivalsActor,
     forecastArrivalsActor,
     liveArrivalsActor,
     forecastArrivalsActor,
@@ -122,7 +122,6 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     testManifestsActor,
     testArrivalActor,
   )
-
 
   val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
 
@@ -146,7 +145,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     })
   }
 
-  override def liveArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] = testFeed
+  override def liveArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[Feed.FeedTick]] = testFeed
 
   override def getRoles(config: Configuration,
                         headers: Headers,
@@ -166,6 +165,8 @@ case class TestDrtSystem(airportConfig: AirportConfig)
       refreshArrivalsOnStart = false,
       refreshManifestsOnStart = false,
       startDeskRecs = startDeskRecs)
+
+    liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
     redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
     flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)

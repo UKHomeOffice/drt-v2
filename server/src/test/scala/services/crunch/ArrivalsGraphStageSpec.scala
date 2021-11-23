@@ -274,7 +274,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     crunch.portStateTestProbe.fishForMessage(1 second) {
       case PortState(flights, _, _) =>
         val terminals = flights.values.map(a => a.apiFlight.Terminal)
-        println(s"terminals: $terminals")
         terminals == Iterable(T2)
     }
 
@@ -298,7 +297,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     crunch.portStateTestProbe.fishForMessage(1 second) {
       case PortState(flights, _, _) =>
         val terminals = flights.values.map(a => a.apiFlight.Terminal)
-        println(s"terminals: $terminals")
         terminals == Iterable(T2)
     }
 

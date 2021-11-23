@@ -1,9 +1,10 @@
 package feeds.ltn
 
-import akka.actor.Cancellable
+import akka.actor.typed.ActorRef
 import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
+import drt.server.feeds.Feed
 import drt.server.feeds.ltn.{LtnFeedRequestLike, LtnLiveFeed}
 import org.joda.time.DateTimeZone
 import server.feeds.ArrivalsFeedFailure
@@ -21,14 +22,13 @@ class LtnFeedSpec extends CrunchTestLike {
     "I should get an ArrivalsFeedFailure" >> {
     val probe = TestProbe("ltn-test-probe")
     val requester = MockLtnRequesterWithInvalidResponse()
-    val cancellable: Cancellable = LtnLiveFeed(requester, DateTimeZone.forID("Europe/London"))
-      .tickingSource(100 milliseconds)
+    val actorSource: ActorRef[Feed.FeedTick] = LtnLiveFeed(requester, DateTimeZone.forID("Europe/London"))
+      .source(Feed.actorRefSource)
       .to(Sink.actorRef(probe.ref, "done"))
       .run()
+    actorSource ! Feed.Tick
 
-    probe.expectMsgClass(5 seconds, classOf[ArrivalsFeedFailure])
-
-    cancellable.cancel()
+    probe.expectMsgClass(5.seconds, classOf[ArrivalsFeedFailure])
 
     success
   }

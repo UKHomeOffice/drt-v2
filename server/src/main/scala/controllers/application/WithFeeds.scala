@@ -7,13 +7,15 @@ import akka.actor.{ActorRef, PoisonPill}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.Application
+import drt.server.feeds.FeedPoller.AdhocCheck
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
 import services.SDate
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource}
-import upickle.default.write
+import uk.gov.homeoffice.drt.auth.Roles
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource}
+import upickle.default.{read, write}
 
 
 trait WithFeeds {
@@ -33,6 +35,32 @@ trait WithFeeds {
               })))
         Ok(write(safeStatusMessages))
       })
+    }
+  }
+
+  def checkFeed: Action[AnyContent] = authByRole(Roles.PortFeedUpload) {
+    Action { request =>
+      request.body.asText match {
+        case None => BadRequest
+        case Some(text) =>
+          read[FeedSource](text) match {
+            case AclFeedSource =>
+              log.info(s"Sending adhoc feed request to the base forecast feed actor")
+              ctrl.fcstBaseActor ! AdhocCheck
+            case ForecastFeedSource =>
+              log.info(s"Sending adhoc feed request to the forecast feed actor")
+              ctrl.fcstActor ! AdhocCheck
+            case LiveBaseFeedSource =>
+              log.info(s"Sending adhoc feed request to the base live feed actor")
+              ctrl.liveBaseActor ! AdhocCheck
+            case LiveFeedSource =>
+              log.info(s"Sending adhoc feed request to the live feed actor")
+              ctrl.liveActor ! AdhocCheck
+            case unexpected =>
+              log.info(s"Feed check not supported for $unexpected")
+          }
+          Ok
+      }
     }
   }
 

@@ -1,12 +1,14 @@
 package drt.chroma
 
+import akka.NotUsed
 import akka.http.scaladsl.model._
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaLiveFlight, ChromaToken}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.http.WithSendAndReceive
+import drt.server.feeds.Feed
 import drt.server.feeds.chroma.ChromaLiveFeed
 import org.specs2.matcher.MatchResult
 import server.feeds.ArrivalsFeedFailure
@@ -52,7 +54,7 @@ class MockChromaConnectorSpec extends CrunchTestLike {
     sut.await
   }
 
-  "When we request a chroma token, if it returns success for token and result we parse successfully" >> {
+  "Receiving bad json from the chroma feed should result in ArrivalsFeedFailure" >> {
     val fetcher = new ChromaFetcher(ChromaLive, ChromaFlightMarshallers.live) with WithSendAndReceive {
       override lazy val config: Config = mockConfig
 
@@ -60,13 +62,13 @@ class MockChromaConnectorSpec extends CrunchTestLike {
         HttpResponse().withEntity(HttpEntity(ContentTypes.`application/json`,"""bad json here""".stripMargin))
       }
     }
-    val testProbe = TestProbe("chroma-test")
+
+    val probe = TestProbe()
     val liveFeed = ChromaLiveFeed(fetcher)
-    val cancellable = liveFeed.chromaVanillaFlights(1 second).to(Sink.actorRef(testProbe.ref, "done")).run()
+    val actorSource = liveFeed.chromaVanillaFlights(Feed.actorRefSource).to(Sink.actorRef(probe.ref, NotUsed)).run()
+    Source(1 to 4).map(_ => actorSource ! Feed.Tick).run()
 
-    testProbe.expectMsgAllClassOf(1 second, classOf[ArrivalsFeedFailure])
-
-    cancellable.cancel()
+    probe.expectMsgAllClassOf(classOf[ArrivalsFeedFailure])
 
     success
   }

@@ -1,7 +1,9 @@
 package feeds.lgw
 
+import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
+import drt.server.feeds.Feed
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
 import drt.shared.api.Arrival
 import org.specs2.mock.Mockito
@@ -110,14 +112,15 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
     val azureClient = LGWAzureClient(LGWFeed.serviceBusClient(lgwNamespace, lgwSasToKey, lgwServiceBusUri))
 
     val probe = TestProbe()
-    LGWFeed(azureClient)(system).source().map{
+    val actorSource = LGWFeed(azureClient)(system).source(Feed.actorRefSource).map{
       case s: ArrivalsFeedSuccess =>
         println(s.arrivals)
       case f: ArrivalsFeedFailure =>
         println(f.responseMessage)
-    }.runWith(Sink.foreach(probe.ref ! _ ))
+    }.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    actorSource ! Feed.Tick
 
-    probe.fishForMessage(5 minutes){
+    probe.fishForMessage(5.seconds){
       case x => println(x)
         false
     }

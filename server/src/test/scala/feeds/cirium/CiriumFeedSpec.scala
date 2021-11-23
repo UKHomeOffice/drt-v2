@@ -3,6 +3,7 @@ package feeds.cirium
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
+import drt.server.feeds.Feed
 import drt.server.feeds.cirium.CiriumFeed
 import drt.shared.api.Arrival
 import drt.shared.{ArrivalStatus, Operator}
@@ -11,8 +12,8 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.cirium.services.entities._
-import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -232,12 +233,14 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
     val probe = TestProbe()
 
-    ciriumFeed.tickingSource(250 milliseconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val actorSource = ciriumFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
-    probe.fishForMessage(2 seconds) {
+    probe.fishForMessage(2.seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
       case _ => false
     }
+    timer.cancel()
 
     success
   }
@@ -248,12 +251,14 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
     val probe = TestProbe()
 
-    ciriumFeed.tickingSource(100 milliseconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val actorSource = ciriumFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
-    probe.fishForMessage(2 seconds) {
+    probe.fishForMessage(2.seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.nonEmpty && s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
       case _ => false
     }
+    timer.cancel()
 
     success
   }
