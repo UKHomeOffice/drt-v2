@@ -268,5 +268,8 @@ class ArrivalSpec extends Specification {
     "Given an arrival scheduled at 12:00, and landing at 11:50 I expect the difference to be -10 minutes" >> {
       ArrivalGenerator.arrival(schDt = "2021-08-08T12:00", actDt = "2021-08-08T11:50").differenceFromScheduled === Option(-10.minutes)
     }
+    "Given an arrival scheduled at 12:00 but no landing time I expect None for the differenceFromScheduled" >> {
+      ArrivalGenerator.arrival(schDt = "2021-08-08T12:00").differenceFromScheduled === None
+    }
   }
 }

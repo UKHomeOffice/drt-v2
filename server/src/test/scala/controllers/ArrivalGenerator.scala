@@ -1,10 +1,9 @@
 package controllers
 
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import drt.shared.api.Arrival
 import drt.shared._
-import org.springframework.util.StringUtils
+import drt.shared.api.Arrival
 import services.SDate
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 
 object ArrivalGenerator {
@@ -41,10 +40,10 @@ object ArrivalGenerator {
       Origin = origin,
       Operator = operator,
       Status = status,
-      Estimated = if (!StringUtils.isEmpty(estDt)) Option(SDate.parseString(estDt).millisSinceEpoch) else None,
-      Actual = if (!StringUtils.isEmpty(actDt)) Option(SDate.parseString(actDt).millisSinceEpoch) else None,
-      EstimatedChox = if (!StringUtils.isEmpty(estChoxDt)) Option(SDate.parseString(estChoxDt).millisSinceEpoch) else None,
-      ActualChox = if (!StringUtils.isEmpty(actChoxDt)) Option(SDate.parseString(actChoxDt).millisSinceEpoch) else None,
+      Estimated = if (estDt.nonEmpty) Option(SDate.parseString(estDt).millisSinceEpoch) else None,
+      Actual = if (actDt.nonEmpty) Option(SDate.parseString(actDt).millisSinceEpoch) else None,
+      EstimatedChox = if (estChoxDt.nonEmpty) Option(SDate.parseString(estChoxDt).millisSinceEpoch) else None,
+      ActualChox = if (actChoxDt.nonEmpty) Option(SDate.parseString(actChoxDt).millisSinceEpoch) else None,
       Gate = gate,
       Stand = stand,
       MaxPax = maxPax,
@@ -53,7 +52,7 @@ object ArrivalGenerator {
       BaggageReclaimId = baggageReclaimId,
       AirportID = airportId,
       PcpTime = pcpTime,
-      Scheduled = if (!StringUtils.isEmpty(schDt)) SDate(schDt).millisSinceEpoch else 0,
+      Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
       FeedSources = feedSources,
       ApiPax = apiPax
     )
