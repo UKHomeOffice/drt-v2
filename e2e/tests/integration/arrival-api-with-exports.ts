@@ -27,7 +27,7 @@ describe('Arrival API with exports', () => {
     const actChoxTimeLocal = actChoxTime.tz("Europe/London").format("HH:mm");
     const pcpTimeLocal = actChoxTime.add(13, "minutes").tz("Europe/London").format("HH:mm");
     const headersWithoutActApi = "IATA,ICAO,Origin,Gate/Stand,Status," +
-        "Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP," +
+        "Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes from scheduled,Est PCP," +
         "Total Pax,PCP Pax,Invalid API," +
         "API e-Gates,API EEA,API Non-EEA,API Fast Track," +
         "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
@@ -47,16 +47,16 @@ describe('Arrival API with exports', () => {
     const nonEEADesk = "17";
     const invalidApi = "";
 
-    const csvRow = (totalPax: string, apiEGates: string, terminalAverageEgates: string = "13") =>
-        "TS0123,TS0123,AMS,46/44R,On Chocks," + schDateLocal + "," + schTimeLocal + "," + estTimeLocal + "," + actTimeLocal + "," + estChoxTimeLocal + "," + actChoxTimeLocal + "," + pcpTimeLocal + "," +
-        totalPax + "," + totalPax + "," + invalidApi + "," +
-        apiEGates + "," + eeaDesk + "," + nonEEADesk + ",," +
+    const csvRow = (diffFromScheduled: string, totalPax: string, apiEGates: string, terminalAverageEgates: string = "13") =>
+        `TS0123,TS0123,AMS,46/44R,On Chocks,${schDateLocal},${schTimeLocal},${estTimeLocal},${actTimeLocal},${estChoxTimeLocal},${actChoxTimeLocal},${diffFromScheduled},${pcpTimeLocal},` +
+        `${totalPax},${totalPax},${invalidApi},` +
+        `${apiEGates},${eeaDesk},${nonEEADesk},,` +
         ",,,," +
-        terminalAverageEgates + ",37,1,";
+        `${terminalAverageEgates},37,1,`;
 
 
     it('Does not show API splits in the flights export for regular users', () => {
-        const dataWithoutActApi = csvRow("51", eGatePax);
+        const dataWithoutActApi = csvRow("12", "51", eGatePax);
 
         const csvWithNoApiSplits = headersWithoutActApi + "\n" + dataWithoutActApi + "\n";
 
@@ -65,8 +65,8 @@ describe('Arrival API with exports', () => {
                 {
                     "SchDT": todayAtUtcString(0, 55),
                     "EstDT": todayAtUtcString(1, 5),
-                    "EstChoxDT": todayAtUtcString(1, 11),
                     "ActDT": todayAtUtcString(1, 7),
+                    "EstChoxDT": todayAtUtcString(1, 11),
                     "ActChoxDT": todayAtUtcString(1, 12)
                 }
             )
@@ -87,7 +87,7 @@ describe('Arrival API with exports', () => {
     });
 
     it('Allows you to view API splits in the flights export for users with api:view permission', () => {
-        const dataWithoutActApi = csvRow("51", eGatePax);
+        const dataWithoutActApi = csvRow("12","51", eGatePax);
         const actApiData = "4.0,6.0,0.0,5.0,19.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0,\"GBR:24,AUS:10,ZWE:10,MRU:7\"";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
@@ -97,8 +97,8 @@ describe('Arrival API with exports', () => {
                 {
                     "SchDT": todayAtUtcString(0, 55),
                     "EstDT": todayAtUtcString(1, 5),
-                    "EstChoxDT": todayAtUtcString(1, 11),
                     "ActDT": todayAtUtcString(1, 7),
+                    "EstChoxDT": todayAtUtcString(1, 11),
                     "ActChoxDT": todayAtUtcString(1, 12)
                 }
             )
@@ -120,7 +120,7 @@ describe('Arrival API with exports', () => {
     });
 
     it('uses API splits for passenger numbers if they are within 5% of the port feed', () => {
-        const dataWithoutActApi = csvRow("50", "24", "12");
+        const dataWithoutActApi = csvRow("12","50", "24", "12");
         const actApiData = "4.0,6.0,0.0,5.0,18.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0,\"GBR:23,AUS:10,ZWE:10,MRU:7\"";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
@@ -131,8 +131,8 @@ describe('Arrival API with exports', () => {
                 {
                     "SchDT": todayAtUtcString(0, 55),
                     "EstDT": todayAtUtcString(1, 5),
-                    "EstChoxDT": todayAtUtcString(1, 11),
                     "ActDT": todayAtUtcString(1, 7),
+                    "EstChoxDT": todayAtUtcString(1, 11),
                     "ActChoxDT": todayAtUtcString(1, 12)
                 }
             )
