@@ -5,6 +5,8 @@ import drt.shared.ArrivalStatus
 import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 
+import scala.concurrent.duration.DurationInt
+
 class ArrivalSpec extends Specification {
   "Given an arrival with negative passengers" >> {
     "When I ask for the minimum value of the pcp range" >> {
@@ -257,6 +259,17 @@ class ArrivalSpec extends Specification {
     "Arrivals should not be considered equal if the only difference is their PCP time" >> {
       val arrivalWithDifferentPcp = arrivalWithPcp.copy(PcpTime = arrivalWithPcp.PcpTime.map(_ + 60000))
       arrivalWithDifferentPcp.isEqualTo(arrivalWithPcp) === false
+    }
+  }
+  "Difference from scheduled time" >> {
+    "Given an arrival scheduled at 12:00, and landing at 12:10 I expect the difference to be 10 minutes" >> {
+      ArrivalGenerator.arrival(schDt = "2021-08-08T12:00", actDt = "2021-08-08T12:10").differenceFromScheduled === Option(10.minutes)
+    }
+    "Given an arrival scheduled at 12:00, and landing at 11:50 I expect the difference to be -10 minutes" >> {
+      ArrivalGenerator.arrival(schDt = "2021-08-08T12:00", actDt = "2021-08-08T11:50").differenceFromScheduled === Option(-10.minutes)
+    }
+    "Given an arrival scheduled at 12:00 but no landing time I expect None for the differenceFromScheduled" >> {
+      ArrivalGenerator.arrival(schDt = "2021-08-08T12:00").differenceFromScheduled === None
     }
   }
 }
