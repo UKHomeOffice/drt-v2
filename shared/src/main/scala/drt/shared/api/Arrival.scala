@@ -8,6 +8,7 @@ import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import upickle.default.{ReadWriter, macroRW}
 
 import scala.collection.immutable.{List, NumericRange}
+import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.util.matching.Regex
 
 case class FlightCodeSuffix(suffix: String)
@@ -39,6 +40,8 @@ case class Arrival(Operator: Option[Operator],
                    ScheduledDeparture: Option[MillisSinceEpoch],
                    RedListPax: Option[Int],
                   ) extends WithUnique[UniqueArrival] {
+  lazy val differenceFromScheduled: Option[FiniteDuration] = Actual.map(a => (a - Scheduled).milliseconds)
+
   val paxOffPerMinute = 20
 
   def suffixString: String = FlightCodeSuffix match {

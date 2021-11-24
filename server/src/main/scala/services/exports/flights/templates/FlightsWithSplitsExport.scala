@@ -3,14 +3,14 @@ package services.exports.flights.templates
 import drt.shared.ApiFlightWithSplits
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 
 
 trait FlightsWithSplitsExport extends FlightsExport {
-  val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
+  val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes from scheduled,Est PCP,Total Pax"
 
   val actualApiHeadings: Seq[String] = List(
     PaxTypeAndQueue(B5JPlusNational, EeaDesk),
@@ -38,7 +38,8 @@ trait FlightsWithSplitsExport extends FlightsExport {
       headingsForSplitSource(queueNames, "Terminal Average")
 
 
-  def flightWithSplitsToCsvFields(fws: ApiFlightWithSplits, millisToDateOnly: MillisSinceEpoch => String,
+  def flightWithSplitsToCsvFields(fws: ApiFlightWithSplits,
+                                  millisToDateOnly: MillisSinceEpoch => String,
                                   millisToHoursAndMinutes: MillisSinceEpoch => String): List[String] =
     List(fws.apiFlight.flightCodeString,
       fws.apiFlight.flightCodeString,
@@ -51,6 +52,7 @@ trait FlightsWithSplitsExport extends FlightsExport {
       fws.apiFlight.Actual.map(millisToHoursAndMinutes(_)).getOrElse(""),
       fws.apiFlight.EstimatedChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
       fws.apiFlight.ActualChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
+      fws.apiFlight.differenceFromScheduled.map(_.toMinutes.toString).getOrElse(""),
       fws.apiFlight.PcpTime.map(millisToHoursAndMinutes(_)).getOrElse(""),
       fws.totalPax.map(_.toString).getOrElse(""),
     )
