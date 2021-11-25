@@ -27,7 +27,7 @@ describe('Arrival API with exports', () => {
     const actChoxTimeLocal = actChoxTime.tz("Europe/London").format("HH:mm");
     const pcpTimeLocal = actChoxTime.add(13, "minutes").tz("Europe/London").format("HH:mm");
     const headersWithoutActApi = "IATA,ICAO,Origin,Gate/Stand,Status," +
-        "Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes from scheduled,Est PCP," +
+        "Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP," +
         "Total Pax,PCP Pax,Invalid API," +
         "API e-Gates,API EEA,API Non-EEA,API Fast Track," +
         "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +

@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 
 
 trait FlightsWithSplitsExport extends FlightsExport {
-  val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes from scheduled,Est PCP,Total Pax"
+  val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP,Total Pax"
 
   val actualApiHeadings: Seq[String] = List(
     PaxTypeAndQueue(B5JPlusNational, EeaDesk),
