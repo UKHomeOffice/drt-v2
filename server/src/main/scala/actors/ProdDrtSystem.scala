@@ -172,7 +172,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           val twelveHoursAgo = SDate.now().addHours(-12).millisSinceEpoch
           if (lastSuccess < twelveHoursAgo) {
             log.info(s"Last ACL check was more than 12 hours ago. Will check in the next 60 seconds")
-            system.scheduler.scheduleOnce((Math.random() * 60).toInt.seconds, () => fcstBaseActor ! AdhocCheck)
+            system.scheduler.scheduleOnce((Math.random() * 30).toInt.minutes, () => fcstBaseActor ! AdhocCheck)
           }
         }
 
