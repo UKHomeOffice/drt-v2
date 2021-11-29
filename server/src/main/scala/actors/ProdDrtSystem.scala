@@ -128,21 +128,14 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         Option[mutable.SortedSet[CrunchRequest]],
         Option[FeedSourceStatuses],
         )] = {
-      val maybeLivePortState = initialFlightsPortState(portStateActor, params.forecastMaxDays)
-      val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](forecastBaseArrivalsActor).map(_.map(_.arrivals))
-      val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
-      val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
-      val maybeInitialCrunchQueue = initialStateFuture[mutable.SortedSet[CrunchRequest]](persistentCrunchQueueActor)
-      val maybeInitialDeploymentQueue = initialStateFuture[mutable.SortedSet[CrunchRequest]](persistentDeploymentQueueActor)
-      val aclFeedStatus = forecastBaseArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
       for {
-        lps <- maybeLivePortState
-        ba <- maybeInitialBaseArrivals
-        fa <- maybeInitialFcstArrivals
-        la <- maybeInitialLiveArrivals
-        cq <- maybeInitialCrunchQueue
-        dq <- maybeInitialDeploymentQueue
-        aclStatus <- aclFeedStatus
+        lps <- initialFlightsPortState(portStateActor, params.forecastMaxDays)
+        ba <- initialStateFuture[ArrivalsState](forecastBaseArrivalsActor).map(_.map(_.arrivals))
+        fa <- initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
+        la <- initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
+        cq <- initialStateFuture[mutable.SortedSet[CrunchRequest]](persistentCrunchQueueActor)
+        dq <- initialStateFuture[mutable.SortedSet[CrunchRequest]](persistentDeploymentQueueActor)
+        aclStatus <- forecastBaseArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
       } yield (lps, ba, fa, la, cq, dq, aclStatus)
     }
 
@@ -187,8 +180,15 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         startScheduledFeedImports(crunchInputs)
 
       case Failure(error) =>
-        system.log.error(error, s"Failed to restore initial state for App")
-        System.exit(1)
+        system.log.error(error, s"Failed to restore initial state for App. Beginning actor system shutdown")
+        system.terminate().onComplete {
+          case Success(_) =>
+            log.info("Actor system successfully shut down. Exiting")
+            System.exit(1)
+          case Failure(exception) =>
+            log.warn("Failed to shut down actor system", exception)
+            System.exit(1)
+        }
     }
 
     val staffingStates: Future[NotUsed] = {
