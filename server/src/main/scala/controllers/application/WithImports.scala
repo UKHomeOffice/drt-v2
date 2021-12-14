@@ -1,5 +1,7 @@
 package controllers.application
 
+import actors.persistent.nebo.NeboArrivalActor
+import akka.actor.ActorRef
 import akka.pattern.ask
 import api.ApiResponseBody
 import controllers.Application
@@ -20,7 +22,7 @@ import uk.gov.homeoffice.drt.ports.PortCode
 import java.nio.file.Paths
 import java.util.UUID
 import scala.concurrent.Future
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 
 trait WithImports {
@@ -31,15 +33,29 @@ trait WithImports {
       log.info(s"Received a request to import red list counts")
       request.body.asJson match {
         case Some(content) =>
-          log.info(s"Received red list pax data")
+          log.info(s"Received red list pax data $content")
           Try(content.toString.parseJson.convertTo[RedListCounts])
-            .map(redListCounts => ctrl.flightsActor
-              .ask(redListCounts)
-              .map(_ => Accepted(toJson(ApiResponseBody(s"${redListCounts.counts.size} red list records imported"))))
-            ).getOrElse(Future.successful(BadRequest("Failed to parse json")))
+            .map { redListCounts =>
+              getRedListCount(redListCounts)
+                .onComplete {
+                  case Success(_) => ctrl.flightsActor
+                    .ask(redListCounts)
+                  case Failure(exception) =>
+                    log.error(s"Error $exception ")
+                }
+              Future.successful(Accepted(toJson(ApiResponseBody(s"${redListCounts.counts.size} red list records imported"))))
+            }.getOrElse(Future.successful(BadRequest("Failed to parse json")))
         case None => Future.successful(BadRequest("No content"))
       }
     }
+  }
+
+  def getRedListCount(redListCounts: RedListCounts): Future[Iterable[Any]] = Future.sequence {
+    redListCounts.counts
+      .map { redListPassenger =>
+        val actor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassenger, now))
+        actor.ask(redListPassenger)
+      }
   }
 
   def feedImport(feedType: String, portCodeString: String): Action[Files.TemporaryFile] = authByRole(PortFeedUpload) {

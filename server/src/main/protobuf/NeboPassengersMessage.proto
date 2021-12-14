@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package server.protobuf.messages;
+
+message NeboArrivalSnapshotMessages {
+    repeated NeboPassengersMessage arrivalRedListPassengers = 1 ;
+}
+
+message NeboArrivalMessages {
+    repeated NeboPassengersMessage arrivalRedListPassengers = 1;
+    optional int64 createdAt = 2;
+}
+
+message NeboPassengersMessage {
+    required string arrivalKey = 1;
+    repeated string urns = 2;
+}

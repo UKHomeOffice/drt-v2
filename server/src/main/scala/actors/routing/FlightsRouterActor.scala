@@ -11,7 +11,7 @@ import akka.pattern.{ask, pipe}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import controllers.model.{RedListCount, RedListCounts}
+import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi._
@@ -162,7 +162,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
     case container: RedListCounts =>
       container.counts
         .groupBy {
-          case RedListCount(_, _, scheduled, _) => scheduled.toUtcDate
+          case RedListPassengers(_, _, scheduled, _) => scheduled.toUtcDate
         }
         .flatMap {
           case (sch, counts) =>
