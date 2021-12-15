@@ -3,10 +3,10 @@ package actors.daily
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.nebo.NeboArrivalActor
 import actors.persistent.staffing.GetState
+import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{flightWithSplitsFromMessage, uniqueArrivalsFromMessages}
-import actors.persistent.{RecoveryActorLike, Sizes}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import akka.util.Timeout
@@ -14,19 +14,16 @@ import controllers.DrtActorSystem
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.UtcDate
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import services.SDate
-import uk.gov.homeoffice.cirium.CiriumFlightStatusApp.materializer.system
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.duration._
+import scala.concurrent.duration.{FiniteDuration, _}
+import scala.concurrent.{Await, Future}
 
 object TerminalDayFlightActor {
   def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
@@ -85,24 +82,38 @@ class TerminalDayFlightActor(
     restorer.finish()
   }
 
-  def getRedListCount(redListPassengers: RedListPassengers, now: () => SDateLike): Future[RedListCounts] = {
-    val actor: ActorRef = DrtActorSystem.actorSystem.actorOf(NeboArrivalActor.props(redListPassengers, now))
-    val state: Future[RedListCounts] = actor.ask(GetState)(Timeout(60 seconds)).mapTo[RedListCounts]
-    state
+  def getRedListCount(arrivalKey: String, redListPassengers: RedListPassengers, now: () => SDateLike, actor: Option[ActorRef]): Set[String] = {
+    val actorRef: ActorRef = actor.getOrElse(DrtActorSystem.actorSystem.actorOf(NeboArrivalActor.props(redListPassengers, now)))
+    val state: Future[NeboArrivals] = actorRef.ask(GetState)(Timeout(60 seconds)).mapTo[NeboArrivals]
+    val neboArrivals: NeboArrivals = Await.result(state, 5 seconds)
+    log.info(s"getRedListCount neboArrivals ... $neboArrivals")
+    neboArrivals.arrivalRedListPassengers(arrivalKey)
+  }
+
+  private def matchesScheduledAndVoyageNumber(fws: ApiFlightWithSplits, scheduled: SDateLike, voyageNumber: VoyageNumberLike) = {
+    fws.apiFlight.Scheduled == scheduled.millisSinceEpoch && fws.apiFlight.VoyageNumber.numeric == voyageNumber.numeric
+  }
+
+  private def RedListCountDiffWith(counts: Iterable[RedListPassengers], actor: Option[ActorRef]): FlightsWithSplitsDiff = {
+    counts.foldLeft(FlightsWithSplitsDiff.empty) {
+      case (diff, redListPassengers: RedListPassengers) =>
+        val (_, voyageNumber, _) = FlightCode.flightCodeToParts(redListPassengers.flightCode)
+        val arrivalKey = NeboArrivalActor.getArrivalKeyString(redListPassengers)
+        val redListCount = getRedListCount(arrivalKey, redListPassengers, now, actor)
+        state.flights.values.find(matchesScheduledAndVoyageNumber(_, redListPassengers.scheduled, voyageNumber)) match {
+          case None => diff
+          case Some(fws) =>
+            val updatedArrival = fws.apiFlight.copy(RedListPax = Option(redListCount.size))
+            diff.copy(flightsToUpdate = diff.flightsToUpdate ++ Iterable(fws.copy(apiFlight = updatedArrival, lastUpdated = Option(now().millisSinceEpoch))))
+        }
+    }
   }
 
   override def receiveCommand: Receive = {
     case redListCounts: RedListCounts =>
-      log.info(s"TerminalDayFlightActor RedListCounts.................................................")
-      redListCounts.counts.map { redListPassengers: RedListPassengers =>
-        getRedListCount(redListPassengers, now).map { redListCount =>
-          val stateDiff = redListCount.diffWith(state, now().millisSinceEpoch)(system, Timeout(60 seconds))
-            .forTerminal(terminal)
-            .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
-          updateAndPersistDiffAndAck(stateDiff)
-        }
-      }
-
+      val stateDiff: FlightsWithSplitsDiff = RedListCountDiffWith(redListCounts.passengers, redListCounts.actorRef).forTerminal(terminal)
+        .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
+      updateAndPersistDiffAndAck(stateDiff)
 
     case diff: ArrivalsDiff =>
       val stateDiff = diff

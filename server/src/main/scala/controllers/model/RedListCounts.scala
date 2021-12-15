@@ -1,43 +1,16 @@
 package controllers.model
 
-import actors.persistent.nebo.NeboArrivalActor
-import actors.persistent.staffing.GetState
-import akka.actor.{ActorRef, ActorSystem}
-import akka.pattern.ask
-import akka.util.Timeout
-import drt.shared.CrunchApi.MillisSinceEpoch
+import akka.actor.ActorRef
 import drt.shared.DataUpdates.FlightUpdates
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared.{RedListPassengers, _}
 import services.SDate
-import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsString, JsValue, JsonFormat, RootJsonFormat, enrichAny}
+import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsString, JsValue, RootJsonFormat, enrichAny}
 import uk.gov.homeoffice.drt.ports.PortCode
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Success, Try}
-import scala.concurrent.duration._
 
 
-case class RedListCounts(counts: Iterable[RedListPassengers]) extends FlightUpdates {
-
-  def diffWith(state: FlightsApi.FlightsWithSplits, now: MillisSinceEpoch)(implicit system: ActorSystem, timeout: Timeout): FlightsWithSplitsDiff = {
-    counts.foldLeft(FlightsWithSplitsDiff.empty) {
-      case (diff, RedListPassengers(flightCode, _, scheduled, urns)) =>
-        val (_, voyageNumber, _) = FlightCode.flightCodeToParts(flightCode)
-        state.flights.values.find(matchesScheduledAndVoyageNumber(_, scheduled, voyageNumber)) match {
-          case None => diff
-          case Some(fws) =>
-            val updatedArrival = fws.apiFlight.copy(RedListPax = Option(urns.size))
-
-            diff.copy(flightsToUpdate = diff.flightsToUpdate ++ Iterable(fws.copy(apiFlight = updatedArrival, lastUpdated = Option(now))))
-        }
-    }
-  }
-
-  private def matchesScheduledAndVoyageNumber(fws: ApiFlightWithSplits, scheduled: SDateLike, voyageNumber: VoyageNumberLike) = {
-    fws.apiFlight.Scheduled == scheduled.millisSinceEpoch && fws.apiFlight.VoyageNumber.numeric == voyageNumber.numeric
-  }
-}
+case class RedListCounts(passengers: Iterable[RedListPassengers], actorRef: Option[ActorRef]) extends FlightUpdates
 
 object RedListCountsJsonFormats {
 
@@ -65,13 +38,13 @@ object RedListCountsJsonFormats {
 
 
   implicit object redListCountsFormat extends RootJsonFormat[RedListCounts] {
-    override def write(obj: RedListCounts): JsValue = obj.counts.toJson
+    override def write(obj: RedListCounts): JsValue = obj.passengers.toJson
 
     override def read(json: JsValue): RedListCounts = json match {
       case JsArray(elements) =>
         RedListCounts(elements
           .map(count => Try(count.convertTo[RedListPassengers]))
-          .collect { case Success(rlc) => rlc })
+          .collect { case Success(rlc) => rlc },None)
     }
   }
 }

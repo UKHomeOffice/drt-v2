@@ -66,10 +66,10 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
 
   override def receiveCommand: Receive = {
     case redListPassengers: RedListPassengers =>
-      log.info(s"NeboArrivalActor redListPassengers.................................................")
       val arrivalKey = getArrivalKeyString(redListPassengers)
       val existingUrns: Set[String] = state.arrivalRedListPassengers.getOrElse(arrivalKey, Set[String]())
-      state.arrivalRedListPassengers.+(arrivalKey -> Set(existingUrns.toList ++ redListPassengers.urns))
+      val combineUrns: Set[String] = existingUrns ++ redListPassengers.urns.toSet
+      state = NeboArrivals(state.arrivalRedListPassengers.+(arrivalKey -> combineUrns))
       val replyToAndMessage = Option((sender(), now().millisSinceEpoch))
       persistAndMaybeSnapshotWithAck(NeboArrivalMessageConversion.stateToNeboArrivalMessages(state), replyToAndMessage)
       log.info(s"Update arrivalKey $arrivalKey")

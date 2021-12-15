@@ -160,13 +160,13 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
 
   override def partitionUpdates: PartialFunction[FlightUpdates, Map[(Terminal, UtcDate), FlightUpdates]] = {
     case container: RedListCounts =>
-      container.counts
+      container.passengers
         .groupBy {
           case RedListPassengers(_, _, scheduled, _) => scheduled.toUtcDate
         }
         .flatMap {
           case (sch, counts) =>
-            allTerminals.map(t => ((t, sch), RedListCounts(counts)))
+            allTerminals.map(t => ((t, sch), RedListCounts(counts,None)))
         }
 
     case container: SplitsForArrivals =>

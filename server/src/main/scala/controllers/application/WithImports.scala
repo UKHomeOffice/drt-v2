@@ -43,7 +43,7 @@ trait WithImports {
                   case Failure(exception) =>
                     log.error(s"Error $exception ")
                 }
-              Future.successful(Accepted(toJson(ApiResponseBody(s"${redListCounts.counts.size} red list records imported"))))
+              Future.successful(Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers.size} red list records imported"))))
             }.getOrElse(Future.successful(BadRequest("Failed to parse json")))
         case None => Future.successful(BadRequest("No content"))
       }
@@ -51,7 +51,7 @@ trait WithImports {
   }
 
   def getRedListCount(redListCounts: RedListCounts): Future[Iterable[Any]] = Future.sequence {
-    redListCounts.counts
+    redListCounts.passengers
       .map { redListPassenger =>
         val actor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassenger, now))
         actor.ask(redListPassenger)

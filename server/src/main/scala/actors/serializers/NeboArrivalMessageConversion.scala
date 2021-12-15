@@ -14,8 +14,9 @@ object NeboArrivalMessageConversion {
 
   def messageToNeboArrivalMessages(neboArrivalMessages: NeboArrivalMessages): NeboArrivals = {
     val arrivalRedListPassengers = for {
-      n <- neboArrivalMessages.arrivalRedListPassengers
-    } yield (n.arrivalKey -> n.urns)
+      passengers <- neboArrivalMessages.arrivalRedListPassengers
+    } yield (passengers.arrivalKey -> passengers.urns)
+
     NeboArrivals(arrivalRedListPassengers = arrivalRedListPassengers.toMap.map { case (k, v) => k -> v.toSet })
   }
 

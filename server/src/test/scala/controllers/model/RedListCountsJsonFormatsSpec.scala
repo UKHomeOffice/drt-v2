@@ -11,7 +11,7 @@ class RedListCountsJsonFormatsSpec extends Specification {
     val redListCounts = RedListCounts(Iterable(
       RedListPassengers("BA0001", PortCode("LHR"), SDate("2021-06-23T12:00"), List("TUN/IOI/0309E/173", "PHL/IOI/0309E/174", "THA/IOI/0309E/175", "KEN/IOI/0309E/203", "SYC/IOI/0309E/204", "BGD/IOI/0309E/205")),
       RedListPassengers("ZZ0072", PortCode("LHR"), SDate("2021-06-23T15:30"), List("TUN/IOI/0309E/173", "PHL/IOI/0309E/174", "THA/IOI/0309E/175", "KEN/IOI/0309E/203", "SYC/IOI/0309E/204", "BGD/IOI/0309E/205")),
-    ))
+    ), None)
 
     "I should be able to convert it to json in the expected format" >> {
       import RedListCountsJsonFormats._
