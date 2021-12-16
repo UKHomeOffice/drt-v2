@@ -67,7 +67,6 @@ object Settings {
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.3.0"
     val reactHandsontable = "3.1.2"
-    val spark = "2.4.3"
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
@@ -193,8 +192,6 @@ object Settings {
     "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
-    "org.apache.spark" %% "spark-mllib" % spark,
-    "org.apache.spark" %% "spark-sql" % spark,
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
