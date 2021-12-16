@@ -41,7 +41,6 @@ node_modules/
 client/src/main/resources/bundle.js
 client/yarn.lock
 
-project/
 
 .ensime_cache/
 runsbt.sh
