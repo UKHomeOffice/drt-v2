@@ -85,7 +85,7 @@ class TerminalDayFlightActor(
     fws.apiFlight.Scheduled == scheduled.millisSinceEpoch && fws.apiFlight.VoyageNumber.numeric == voyageNumber.numeric
   }
 
-  private def RedListCountDiffWith(counts: Iterable[RedListPassengers]): FlightsWithSplitsDiff = {
+  private def redListCountDiffWith(counts: Iterable[RedListPassengers]): FlightsWithSplitsDiff = {
     counts.foldLeft(FlightsWithSplitsDiff.empty) {
       case (diff, redListPassengers: RedListPassengers) =>
         val (_, voyageNumber, _) = FlightCode.flightCodeToParts(redListPassengers.flightCode)
@@ -100,7 +100,7 @@ class TerminalDayFlightActor(
 
   override def receiveCommand: Receive = {
     case redListCounts: RedListCounts =>
-      val stateDiff: FlightsWithSplitsDiff = RedListCountDiffWith(redListCounts.passengers).forTerminal(terminal)
+      val stateDiff: FlightsWithSplitsDiff = redListCountDiffWith(redListCounts.passengers).forTerminal(terminal)
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
       updateAndPersistDiffAndAck(stateDiff)
 

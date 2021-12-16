@@ -57,7 +57,7 @@ trait WithImports {
         val actor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassenger, now))
         val stateF: Future[NeboArrivals] = actor.ask(redListPassenger).mapTo[NeboArrivals]
         stateF.map { state =>
-          redListPassenger.copy(urns = state.arrivalRedListPassengers.getOrElse(NeboArrivalActor.getRedListPassengerFlightKey(redListPassenger), Set.empty).toList)
+          redListPassenger.copy(urns = state.urns.toList)
         }
       }
   }

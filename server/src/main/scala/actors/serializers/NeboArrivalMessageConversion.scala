@@ -6,18 +6,11 @@ import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessages, Nebo
 object NeboArrivalMessageConversion {
 
   def stateToNeboArrivalMessages(state: NeboArrivals): NeboArrivalMessages = {
-    NeboArrivalMessages(
-      state.arrivalRedListPassengers.map {
-        case (arrivalKey, urns) => NeboPassengersMessage(arrivalKey, urns.toList)
-      }.toList)
+    NeboArrivalMessages(urns = state.urns.toList)
   }
 
   def messageToNeboArrivalMessages(neboArrivalMessages: NeboArrivalMessages): NeboArrivals = {
-    val arrivalRedListPassengers = for {
-      passengers <- neboArrivalMessages.arrivalRedListPassengers
-    } yield (passengers.arrivalKey -> passengers.urns)
-
-    NeboArrivals(arrivalRedListPassengers = arrivalRedListPassengers.toMap.map { case (k, v) => k -> v.toSet })
+    NeboArrivals(urns = neboArrivalMessages.urns.toSet)
   }
 
 }

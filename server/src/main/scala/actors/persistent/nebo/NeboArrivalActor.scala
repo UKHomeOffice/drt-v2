@@ -17,7 +17,13 @@ object NeboArrivalActor {
     Props(new NeboArrivalActor(redListPassengers, now, Option(now().millisSinceEpoch)))
 
   def getRedListPassengerFlightKey(redListPassengers: RedListPassengers): String = {
-    s"${redListPassengers.flightCode.toLowerCase}-${redListPassengers.scheduled.getFullYear()}-${redListPassengers.scheduled.getMonth()}-${redListPassengers.scheduled.getDate()}-${redListPassengers.scheduled.getHours()}-${redListPassengers.scheduled.getMinutes()}"
+    val flightCode = redListPassengers.flightCode.toLowerCase
+    val year = redListPassengers.scheduled.getFullYear()
+    val month = redListPassengers.scheduled.getMonth()
+    val day = redListPassengers.scheduled.getDate()
+    val hours = redListPassengers.scheduled.getHours()
+    val minutes = redListPassengers.scheduled.getMinutes()
+    s"$flightCode-$year-$month-$day-$hours-$minutes"
   }
 }
 
@@ -31,7 +37,7 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
   private val maxSnapshotInterval = 250
 
-  var state: NeboArrivals = NeboArrivals.empty
+  var state: NeboArrivals = NeboArrivals(Set.empty)
 
   override def recovery: Recovery = maybePointInTime match {
     case None =>
@@ -43,14 +49,7 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case neboArrivalMessages: NeboArrivalMessages =>
-      val neboArrivals: NeboArrivals = NeboArrivalMessageConversion.messageToNeboArrivalMessages(neboArrivalMessages)
-      val keys = state.arrivalRedListPassengers.keys ++ neboArrivals.arrivalRedListPassengers.keys
-      val existingAndRecoverNeboArrival = keys.map { key =>
-        key -> (state.arrivalRedListPassengers.getOrElse(key,Set.empty)).++(neboArrivals.arrivalRedListPassengers(key))
-      }.toMap
-
-      state = NeboArrivals(existingAndRecoverNeboArrival)
-
+      state = NeboArrivals(state.urns ++ NeboArrivalMessageConversion.messageToNeboArrivalMessages(neboArrivalMessages).urns)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
@@ -64,9 +63,7 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
   override def receiveCommand: Receive = {
     case redListPassengers: RedListPassengers =>
       val arrivalKey = getRedListPassengerFlightKey(redListPassengers)
-      val existingUrns: Set[String] = state.arrivalRedListPassengers.getOrElse(arrivalKey, Set[String]())
-      val combineUrns: Set[String] = existingUrns ++ redListPassengers.urns.toSet
-      state = NeboArrivals(state.arrivalRedListPassengers.+(arrivalKey -> combineUrns))
+      state = NeboArrivals(state.urns ++ redListPassengers.urns.toSet)
       val replyToAndMessage = Option((sender(), now().millisSinceEpoch))
       persistAndMaybeSnapshotWithAck(NeboArrivalMessageConversion.stateToNeboArrivalMessages(state), replyToAndMessage)
       log.info(s"Update arrivalKey $arrivalKey")
