@@ -129,7 +129,6 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case SetEgateBanksUpdate => SetEgateBanksUpdateMessage.parseFrom(bytes)
       case RemoveEgateBanksUpdate => RemoveEgateBanksUpdateMessage.parseFrom(bytes)
       case PortEgateBanksUpdates => PortEgateBanksUpdatesMessage.parseFrom(bytes)
-      case NeboPassengers => NeboPassengersMessage.parseFrom(bytes)
       case NeboArrival => NeboArrivalMessages.parseFrom(bytes)
     }
   }
