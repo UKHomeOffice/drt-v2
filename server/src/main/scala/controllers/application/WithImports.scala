@@ -36,13 +36,14 @@ trait WithImports {
         case Some(content) =>
           log.info(s"Received red list pax data")
           Try(content.toString.parseJson.convertTo[RedListCounts])
-            .map { redListCounts => getRedListCount(redListCounts)
-              .map { updatedRedListCounts =>
+            .map { redListCounts =>
+              getRedListCount(redListCounts)
+                .map { updatedRedListCounts =>
                   ctrl.flightsActor
                     .ask(RedListCounts(updatedRedListCounts))
-                Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers} red list records imported")))
-                }.recover{
-                case e => log.warning(s"Error while updating redListPassenger",e)
+                  Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers} red list records imported")))
+                }.recover {
+                case e => log.warning(s"Error while updating redListPassenger", e)
                   BadRequest("Failed to update the ")
               }
             }.getOrElse(Future.successful(BadRequest("Failed to parse json")))
