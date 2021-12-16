@@ -81,12 +81,6 @@ class TerminalDayFlightActor(
     restorer.finish()
   }
 
-  def getRedListCount(redListPassengers: RedListPassengers, now: () => SDateLike): Set[String] = {
-    val neboArrivalActor: ActorRef = context.system.actorOf(NeboArrivalActor.props(redListPassengers, now))
-    val neboArrivals: NeboArrivals = Await.result(neboArrivalActor.ask(GetState)(Timeout(60 seconds)).mapTo[NeboArrivals], 5 seconds)
-    neboArrivals.arrivalRedListPassengers.getOrElse(NeboArrivalActor.getRedListPassengerFlightKey(redListPassengers), Set.empty)
-  }
-
   private def matchesScheduledAndVoyageNumber(fws: ApiFlightWithSplits, scheduled: SDateLike, voyageNumber: VoyageNumberLike) = {
     fws.apiFlight.Scheduled == scheduled.millisSinceEpoch && fws.apiFlight.VoyageNumber.numeric == voyageNumber.numeric
   }
@@ -95,11 +89,10 @@ class TerminalDayFlightActor(
     counts.foldLeft(FlightsWithSplitsDiff.empty) {
       case (diff, redListPassengers: RedListPassengers) =>
         val (_, voyageNumber, _) = FlightCode.flightCodeToParts(redListPassengers.flightCode)
-        val redListCount = getRedListCount(redListPassengers, now)
         state.flights.values.find(matchesScheduledAndVoyageNumber(_, redListPassengers.scheduled, voyageNumber)) match {
           case None => diff
           case Some(fws) =>
-            val updatedArrival = fws.apiFlight.copy(RedListPax = Option(redListCount.size))
+            val updatedArrival = fws.apiFlight.copy(RedListPax = Option(redListPassengers.urns.size))
             diff.copy(flightsToUpdate = diff.flightsToUpdate ++ Iterable(fws.copy(apiFlight = updatedArrival, lastUpdated = Option(now().millisSinceEpoch))))
         }
     }

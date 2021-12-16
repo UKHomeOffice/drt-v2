@@ -1,5 +1,6 @@
 package controllers.model
 
+
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.{RedListPassengers, _}
 import services.SDate
@@ -7,7 +8,6 @@ import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsString, JsValue, Ro
 import uk.gov.homeoffice.drt.ports.PortCode
 
 import scala.util.{Success, Try}
-
 
 case class RedListCounts(passengers: Iterable[RedListPassengers]) extends FlightUpdates
 
@@ -34,7 +34,6 @@ object RedListCountsJsonFormats {
   }
 
   implicit val redListCountFormat: RootJsonFormat[RedListPassengers] = jsonFormat4(RedListPassengers.apply)
-
 
   implicit object redListCountsFormat extends RootJsonFormat[RedListCounts] {
     override def write(obj: RedListCounts): JsValue = obj.passengers.toJson

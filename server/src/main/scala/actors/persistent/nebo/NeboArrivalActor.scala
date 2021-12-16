@@ -70,6 +70,7 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
       val replyToAndMessage = Option((sender(), now().millisSinceEpoch))
       persistAndMaybeSnapshotWithAck(NeboArrivalMessageConversion.stateToNeboArrivalMessages(state), replyToAndMessage)
       log.info(s"Update arrivalKey $arrivalKey")
+      sender() ! state
 
     case GetState =>
       log.debug(s"Received GetState")

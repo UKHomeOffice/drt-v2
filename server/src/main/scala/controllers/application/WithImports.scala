@@ -11,6 +11,7 @@ import drt.server.feeds.lgw.LGWForecastXLSExtractor
 import drt.server.feeds.lhr.forecast.LHRForecastCSVExtractor
 import drt.server.feeds.stn.STNForecastXLSExtractor
 import drt.shared.FlightsApi.Flights
+import drt.shared.{NeboArrivals, RedListPassengers}
 import play.api.libs.Files
 import play.api.libs.json.Json._
 import play.api.mvc._
@@ -38,8 +39,8 @@ trait WithImports {
             .map { redListCounts =>
               getRedListCount(redListCounts)
                 .onComplete {
-                  case Success(_) => ctrl.flightsActor
-                    .ask(redListCounts)
+                  case Success(updatedRedListCounts) => ctrl.flightsActor
+                    .ask(RedListCounts(updatedRedListCounts))
                   case Failure(exception) =>
                     log.error(s"Error $exception ")
                 }
@@ -50,11 +51,14 @@ trait WithImports {
     }
   }
 
-  def getRedListCount(redListCounts: RedListCounts): Future[Iterable[Any]] = Future.sequence {
+  def getRedListCount(redListCounts: RedListCounts): Future[Iterable[RedListPassengers]] = Future.sequence {
     redListCounts.passengers
       .map { redListPassenger =>
         val actor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassenger, now))
-        actor.ask(redListPassenger)
+        val stateF: Future[NeboArrivals] = actor.ask(redListPassenger).mapTo[NeboArrivals]
+        stateF.map { state =>
+          redListPassenger.copy(urns = state.arrivalRedListPassengers.getOrElse(NeboArrivalActor.getRedListPassengerFlightKey(redListPassenger), Set.empty).toList)
+        }
       }
   }
 
