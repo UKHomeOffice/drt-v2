@@ -12,11 +12,9 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.NeboPassengersMessage.NeboArrivalMessages
 
-import scala.concurrent.duration.FiniteDuration
-
 object NeboArrivalActor {
   def props(redListPassengers: RedListPassengers, now: () => SDateLike): Props =
-    Props(new NeboArrivalActor(redListPassengers, now, Option(now().millisSinceEpoch), None))
+    Props(new NeboArrivalActor(redListPassengers, now, Option(now().millisSinceEpoch)))
 
   def getArrivalKeyString(redListPassengers: RedListPassengers): String = {
     s"${redListPassengers.flightCode.toLowerCase}-${redListPassengers.scheduled.getFullYear()}-${redListPassengers.scheduled.getMonth()}-${redListPassengers.scheduled.getDate()}-${redListPassengers.scheduled.getHours()}-${redListPassengers.scheduled.getMinutes()}"
@@ -25,8 +23,7 @@ object NeboArrivalActor {
 
 class NeboArrivalActor(redListPassengers: RedListPassengers,
                        val now: () => SDateLike,
-                       maybePointInTime: Option[MillisSinceEpoch],
-                       maybeRemovalMessageCutOff: Option[FiniteDuration]) extends RecoveryActorLike {
+                       maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass")
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
@@ -49,7 +46,7 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
       val neboArrivals: NeboArrivals = NeboArrivalMessageConversion.messageToNeboArrivalMessages(neboArrivalMessages)
       val keys = state.arrivalRedListPassengers.keys ++ neboArrivals.arrivalRedListPassengers.keys
       val existingAndRecoverNeboArrival = keys.map { key =>
-        key -> state.arrivalRedListPassengers(key).++(neboArrivals.arrivalRedListPassengers(key))
+        key -> (state.arrivalRedListPassengers.getOrElse(key,Set.empty)).++(neboArrivals.arrivalRedListPassengers(key))
       }.toMap
 
       state = NeboArrivals(existingAndRecoverNeboArrival)

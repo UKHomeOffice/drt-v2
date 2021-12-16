@@ -166,7 +166,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
         }
         .flatMap {
           case (sch, counts) =>
-            allTerminals.map(t => ((t, sch), RedListCounts(counts,None)))
+            allTerminals.map(t => ((t, sch), RedListCounts(counts)))
         }
 
     case container: SplitsForArrivals =>

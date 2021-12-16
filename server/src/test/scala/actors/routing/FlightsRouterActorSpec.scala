@@ -22,14 +22,13 @@ import drt.shared.dates.UtcDate
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaNonMachineReadable
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PortCode}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals._
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PortCode}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import scala.util.Random
 
 class FlightsRouterActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1
@@ -316,9 +315,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
         Await.ready(neboArrivalActor ? redListPassengers, 10.second)
         Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrival), Seq()), 1.second)
-        val state = Await.ready(neboArrivalActor ? GetState, 10.second)
-        println(s"state nebo .........$state")
-        Await.ready(flightsRouter ? RedListCounts(Seq(redListPassengers),Option(neboArrivalActor)), 15.second)
+        Await.ready(flightsRouter ? RedListCounts(Seq(redListPassengers)), 15.second)
         val eventualFlights = (flightsRouter ? GetFlightsForTerminalDateRange(redListNow.getLocalLastMidnight.millisSinceEpoch, redListNow.getLocalNextMidnight.millisSinceEpoch, T1)).flatMap {
           case source: Source[(UtcDate, FlightsWithSplits), NotUsed] => source.runFold(FlightsWithSplits.empty)(_ ++ _._2)
         }
@@ -341,11 +338,13 @@ class FlightsRouterActorSpec extends CrunchTestLike {
           RedListPassengers("BA0001", PortCode("LHR"), SDate(scheduled), redListPax),
           RedListPassengers("EZT1234", PortCode("LHR"), SDate(scheduled2), redListPax2),
         )
-        RedListCounts(redListPassengers,None).passengers.map { redListPassenger =>
+
+        RedListCounts(redListPassengers).passengers.map { redListPassenger =>
           val neboArrivalActor = system.actorOf(NeboArrivalActor.props(redListPassenger, () => redListNow))
           Await.ready(neboArrivalActor ? redListPassenger, 10.second)
-          Await.ready(flightsRouter ? RedListCounts(redListPassengers,Option(neboArrivalActor)), 10.second)
         }
+
+        Await.ready(flightsRouter ? RedListCounts(redListPassengers), 10.second)
 
 
         val eventualFlights = (flightsRouter ? GetFlights(redListNow.getLocalLastMidnight.millisSinceEpoch, redListNow.getLocalNextMidnight.millisSinceEpoch)).flatMap {
@@ -362,15 +361,14 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val flightsRouter = lookups.flightsActor
         val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
         val redListPax = util.RandomString.getNRandomString(10, 10)
-
         val redListPassengers = RedListPassengers("BA0001", PortCode("LHR"), SDate(scheduled), redListPax)
         Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrivalT1), Seq()), 1.second)
-        RedListCounts(Seq(redListPassengers),None).passengers.map { redListPassenger =>
+        RedListCounts(Seq(redListPassengers)).passengers.map { redListPassenger =>
           val neboArrivalActor = system.actorOf(NeboArrivalActor.props(redListPassenger, () => redListNow))
           Await.ready(neboArrivalActor ? redListPassengers, 1.second)
-          Await.ready(flightsRouter ? RedListCounts(Seq(redListPassengers),Option(neboArrivalActor)), 10.second)
 
         }
+        Await.ready(flightsRouter ? RedListCounts(Seq(redListPassengers)), 10.second)
 
 
         val updatedArrival = arrivalT1.copy(Estimated = Option(10L))

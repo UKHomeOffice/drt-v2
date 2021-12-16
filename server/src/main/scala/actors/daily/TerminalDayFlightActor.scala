@@ -10,7 +10,6 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import akka.util.Timeout
-import controllers.DrtActorSystem
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
@@ -82,24 +81,21 @@ class TerminalDayFlightActor(
     restorer.finish()
   }
 
-  def getRedListCount(arrivalKey: String, redListPassengers: RedListPassengers, now: () => SDateLike, actor: Option[ActorRef]): Set[String] = {
-    val actorRef: ActorRef = actor.getOrElse(DrtActorSystem.actorSystem.actorOf(NeboArrivalActor.props(redListPassengers, now)))
-    val state: Future[NeboArrivals] = actorRef.ask(GetState)(Timeout(60 seconds)).mapTo[NeboArrivals]
-    val neboArrivals: NeboArrivals = Await.result(state, 5 seconds)
-    log.info(s"getRedListCount neboArrivals ... $neboArrivals")
-    neboArrivals.arrivalRedListPassengers(arrivalKey)
+  def getRedListCount(redListPassengers: RedListPassengers, now: () => SDateLike): Set[String] = {
+    val neboArrivalActor: ActorRef = context.system.actorOf(NeboArrivalActor.props(redListPassengers, now))
+    val neboArrivals: NeboArrivals = Await.result(neboArrivalActor.ask(GetState)(Timeout(60 seconds)).mapTo[NeboArrivals], 5 seconds)
+    neboArrivals.arrivalRedListPassengers.getOrElse(NeboArrivalActor.getArrivalKeyString(redListPassengers), Set.empty)
   }
 
   private def matchesScheduledAndVoyageNumber(fws: ApiFlightWithSplits, scheduled: SDateLike, voyageNumber: VoyageNumberLike) = {
     fws.apiFlight.Scheduled == scheduled.millisSinceEpoch && fws.apiFlight.VoyageNumber.numeric == voyageNumber.numeric
   }
 
-  private def RedListCountDiffWith(counts: Iterable[RedListPassengers], actor: Option[ActorRef]): FlightsWithSplitsDiff = {
+  private def RedListCountDiffWith(counts: Iterable[RedListPassengers]): FlightsWithSplitsDiff = {
     counts.foldLeft(FlightsWithSplitsDiff.empty) {
       case (diff, redListPassengers: RedListPassengers) =>
         val (_, voyageNumber, _) = FlightCode.flightCodeToParts(redListPassengers.flightCode)
-        val arrivalKey = NeboArrivalActor.getArrivalKeyString(redListPassengers)
-        val redListCount = getRedListCount(arrivalKey, redListPassengers, now, actor)
+        val redListCount = getRedListCount(redListPassengers, now)
         state.flights.values.find(matchesScheduledAndVoyageNumber(_, redListPassengers.scheduled, voyageNumber)) match {
           case None => diff
           case Some(fws) =>
@@ -111,7 +107,7 @@ class TerminalDayFlightActor(
 
   override def receiveCommand: Receive = {
     case redListCounts: RedListCounts =>
-      val stateDiff: FlightsWithSplitsDiff = RedListCountDiffWith(redListCounts.passengers, redListCounts.actorRef).forTerminal(terminal)
+      val stateDiff: FlightsWithSplitsDiff = RedListCountDiffWith(redListCounts.passengers).forTerminal(terminal)
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
       updateAndPersistDiffAndAck(stateDiff)
 

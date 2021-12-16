@@ -1,6 +1,5 @@
 package controllers.model
 
-import akka.actor.ActorRef
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.{RedListPassengers, _}
 import services.SDate
@@ -10,7 +9,7 @@ import uk.gov.homeoffice.drt.ports.PortCode
 import scala.util.{Success, Try}
 
 
-case class RedListCounts(passengers: Iterable[RedListPassengers], actorRef: Option[ActorRef]) extends FlightUpdates
+case class RedListCounts(passengers: Iterable[RedListPassengers]) extends FlightUpdates
 
 object RedListCountsJsonFormats {
 
@@ -44,7 +43,7 @@ object RedListCountsJsonFormats {
       case JsArray(elements) =>
         RedListCounts(elements
           .map(count => Try(count.convertTo[RedListPassengers]))
-          .collect { case Success(rlc) => rlc },None)
+          .collect { case Success(rlc) => rlc })
     }
   }
 }
