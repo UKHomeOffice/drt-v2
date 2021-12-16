@@ -23,7 +23,7 @@ import uk.gov.homeoffice.drt.ports.PortCode
 import java.nio.file.Paths
 import java.util.UUID
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 
 trait WithImports {
@@ -34,17 +34,17 @@ trait WithImports {
       log.info(s"Received a request to import red list counts")
       request.body.asJson match {
         case Some(content) =>
-          log.info(s"Received red list pax data $content")
+          log.info(s"Received red list pax data")
           Try(content.toString.parseJson.convertTo[RedListCounts])
-            .map { redListCounts =>
-              getRedListCount(redListCounts)
-                .onComplete {
-                  case Success(updatedRedListCounts) => ctrl.flightsActor
+            .map { redListCounts => getRedListCount(redListCounts)
+              .map { updatedRedListCounts =>
+                  ctrl.flightsActor
                     .ask(RedListCounts(updatedRedListCounts))
-                  case Failure(exception) =>
-                    log.error(s"Error $exception ")
-                }
-              Future.successful(Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers.size} red list records imported"))))
+                Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers} red list records imported")))
+                }.recover{
+                case e => log.warning(s"Error while updating redListPassenger",e)
+                  BadRequest("Failed to update the ")
+              }
             }.getOrElse(Future.successful(BadRequest("Failed to parse json")))
         case None => Future.successful(BadRequest("No content"))
       }
@@ -57,6 +57,7 @@ trait WithImports {
         val actor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassenger, now))
         val stateF: Future[NeboArrivals] = actor.ask(redListPassenger).mapTo[NeboArrivals]
         stateF.map { state =>
+          system.stop(actor)
           redListPassenger.copy(urns = state.urns.toList)
         }
       }
