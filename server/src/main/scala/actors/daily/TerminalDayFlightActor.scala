@@ -84,7 +84,7 @@ class TerminalDayFlightActor(
   def getRedListCount(redListPassengers: RedListPassengers, now: () => SDateLike): Set[String] = {
     val neboArrivalActor: ActorRef = context.system.actorOf(NeboArrivalActor.props(redListPassengers, now))
     val neboArrivals: NeboArrivals = Await.result(neboArrivalActor.ask(GetState)(Timeout(60 seconds)).mapTo[NeboArrivals], 5 seconds)
-    neboArrivals.arrivalRedListPassengers.getOrElse(NeboArrivalActor.getArrivalKeyString(redListPassengers), Set.empty)
+    neboArrivals.arrivalRedListPassengers.getOrElse(NeboArrivalActor.getRedListPassengerFlightKey(redListPassengers), Set.empty)
   }
 
   private def matchesScheduledAndVoyageNumber(fws: ApiFlightWithSplits, scheduled: SDateLike, voyageNumber: VoyageNumberLike) = {

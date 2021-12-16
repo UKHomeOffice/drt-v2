@@ -1,6 +1,6 @@
 package actors.persistent.nebo
 
-import actors.persistent.nebo.NeboArrivalActor.getArrivalKeyString
+import actors.persistent.nebo.NeboArrivalActor.getRedListPassengerFlightKey
 import actors.persistent.staffing.GetState
 import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.NeboArrivalMessageConversion
@@ -16,7 +16,7 @@ object NeboArrivalActor {
   def props(redListPassengers: RedListPassengers, now: () => SDateLike): Props =
     Props(new NeboArrivalActor(redListPassengers, now, Option(now().millisSinceEpoch)))
 
-  def getArrivalKeyString(redListPassengers: RedListPassengers): String = {
+  def getRedListPassengerFlightKey(redListPassengers: RedListPassengers): String = {
     s"${redListPassengers.flightCode.toLowerCase}-${redListPassengers.scheduled.getFullYear()}-${redListPassengers.scheduled.getMonth()}-${redListPassengers.scheduled.getDate()}-${redListPassengers.scheduled.getHours()}-${redListPassengers.scheduled.getMinutes()}"
   }
 }
@@ -63,7 +63,7 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
 
   override def receiveCommand: Receive = {
     case redListPassengers: RedListPassengers =>
-      val arrivalKey = getArrivalKeyString(redListPassengers)
+      val arrivalKey = getRedListPassengerFlightKey(redListPassengers)
       val existingUrns: Set[String] = state.arrivalRedListPassengers.getOrElse(arrivalKey, Set[String]())
       val combineUrns: Set[String] = existingUrns ++ redListPassengers.urns.toSet
       state = NeboArrivals(state.arrivalRedListPassengers.+(arrivalKey -> combineUrns))
@@ -82,7 +82,7 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
   }
 
 
-  override def persistenceId: String = s"nebo-pax-${getArrivalKeyString(redListPassengers)}"
+  override def persistenceId: String = s"nebo-pax-${getRedListPassengerFlightKey(redListPassengers)}"
 
 
 }
