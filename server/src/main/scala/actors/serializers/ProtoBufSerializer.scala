@@ -8,7 +8,7 @@ import server.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage,
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
-import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessages, NeboPassengersMessage}
+import server.protobuf.messages.NeboPassengersMessage.NeboArrivalMessages
 import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
 import server.protobuf.messages.RedListUpdates._
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
@@ -71,7 +71,6 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val SetEgateBanksUpdate: String = classOf[SetEgateBanksUpdateMessage].getName
   final val RemoveEgateBanksUpdate: String = classOf[RemoveEgateBanksUpdateMessage].getName
   final val PortEgateBanksUpdates: String = classOf[PortEgateBanksUpdatesMessage].getName
-  final val NeboPassengers: String = classOf[NeboPassengersMessage].getName
   final val NeboArrival: String = classOf[NeboArrivalMessages].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = objectToSerialize match {
