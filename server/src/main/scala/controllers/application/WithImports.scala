@@ -44,7 +44,7 @@ trait WithImports {
                   Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers} red list records imported")))
                 }.recover {
                 case e => log.warning(s"Error while updating redListPassenger", e)
-                  BadRequest("Failed to update the ")
+                  BadRequest("Failed to update the red List Passenger")
               }
             }.getOrElse(Future.successful(BadRequest("Failed to parse json")))
         case None => Future.successful(BadRequest("No content"))
