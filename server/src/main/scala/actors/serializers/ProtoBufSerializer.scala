@@ -8,7 +8,7 @@ import server.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage,
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
-import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalMessages}
+import server.protobuf.messages.NeboPassengersMessage.NeboArrivalMessage
 import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
 import server.protobuf.messages.RedListUpdates._
 import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}

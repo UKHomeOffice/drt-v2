@@ -4,7 +4,6 @@ import actors.FlightLookups
 import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, PointInTimeQuery}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.nebo.NeboArrivalActor
-import actors.persistent.staffing.GetState
 import actors.routing.FlightsRouterActor.runAndCombine
 import actors.routing.minutes.MockFlightsLookup
 import akka.NotUsed

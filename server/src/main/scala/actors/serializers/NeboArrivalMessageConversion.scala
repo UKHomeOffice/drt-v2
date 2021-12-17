@@ -1,9 +1,14 @@
 package actors.serializers
 
-import drt.shared.NeboArrivals
+import drt.shared.{NeboArrivals, RedListPassengers}
 import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
 
 object NeboArrivalMessageConversion {
+
+
+  def redListPassengersToNeboArrivalMessage(redListPassengers: RedListPassengers): NeboArrivalMessage = {
+    NeboArrivalMessage(urns = redListPassengers.urns.toList)
+  }
 
   def stateToNeboArrivalMessage(state: NeboArrivals): NeboArrivalMessage = {
     NeboArrivalMessage(urns = state.urns.toList)

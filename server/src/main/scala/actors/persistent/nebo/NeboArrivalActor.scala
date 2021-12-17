@@ -11,6 +11,7 @@ import drt.shared.{NeboArrivals, RedListPassengers, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
+import NeboArrivalMessageConversion._
 
 object NeboArrivalActor {
   def props(redListPassengers: RedListPassengers, now: () => SDateLike): Props =
@@ -49,23 +50,23 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case neboArrivalMessage: NeboArrivalMessage =>
-      state = NeboArrivals(state.urns ++ NeboArrivalMessageConversion.messageToNeboArrival(neboArrivalMessage).urns)
+      state = NeboArrivals(state.urns ++ messageToNeboArrival(neboArrivalMessage).urns)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: NeboArrivalSnapshotMessage =>
       log.info(s"Processing a snapshot message")
-      state = NeboArrivalMessageConversion.snapshotMessageToNeboArrival(snapshot)
+      state = snapshotMessageToNeboArrival(snapshot)
   }
 
-  override def stateToMessage: GeneratedMessage = NeboArrivalMessageConversion.stateToNeboArrivalMessage(state)
+  override def stateToMessage: GeneratedMessage = stateToNeboArrivalMessage(state)
 
   override def receiveCommand: Receive = {
     case redListPassengers: RedListPassengers =>
       val arrivalKey = getRedListPassengerFlightKey(redListPassengers)
       state = NeboArrivals(state.urns ++ redListPassengers.urns.toSet)
       val replyToAndMessage = Option((sender(), now().millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(NeboArrivalMessageConversion.stateToNeboArrivalMessage(state), replyToAndMessage)
+      persistAndMaybeSnapshotWithAck(redListPassengersToNeboArrivalMessage(redListPassengers), replyToAndMessage)
       log.info(s"Update arrivalKey $arrivalKey")
       sender() ! state
 

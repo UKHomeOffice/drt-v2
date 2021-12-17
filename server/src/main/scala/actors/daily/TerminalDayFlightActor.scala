@@ -1,15 +1,12 @@
 package actors.daily
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.persistent.nebo.NeboArrivalActor
 import actors.persistent.staffing.GetState
 import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{flightWithSplitsFromMessage, uniqueArrivalsFromMessages}
-import akka.actor.{ActorRef, Props}
-import akka.pattern.ask
+import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
-import akka.util.Timeout
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
@@ -21,8 +18,7 @@ import server.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, Fligh
 import services.SDate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
-import scala.concurrent.duration.{FiniteDuration, _}
-import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.FiniteDuration
 
 object TerminalDayFlightActor {
   def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
