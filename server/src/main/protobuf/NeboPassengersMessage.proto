@@ -2,11 +2,11 @@ syntax = "proto2";
 
 package server.protobuf.messages;
 
-message NeboArrivalSnapshotMessages {
+message NeboArrivalSnapshotMessage {
     repeated string urns = 1 ;
 }
 
-message NeboArrivalMessages {
+message NeboArrivalMessage {
     repeated string urns = 1;
     optional int64 createdAt = 2;
 }

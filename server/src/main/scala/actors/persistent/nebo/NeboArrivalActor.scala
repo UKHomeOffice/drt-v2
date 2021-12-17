@@ -10,7 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{NeboArrivals, RedListPassengers, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.NeboPassengersMessage.NeboArrivalMessages
+import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
 
 object NeboArrivalActor {
   def props(redListPassengers: RedListPassengers, now: () => SDateLike): Props =
@@ -48,24 +48,24 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case neboArrivalMessages: NeboArrivalMessages =>
-      state = NeboArrivals(state.urns ++ NeboArrivalMessageConversion.messageToNeboArrival(neboArrivalMessages).urns)
+    case neboArrivalMessage: NeboArrivalMessage =>
+      state = NeboArrivals(state.urns ++ NeboArrivalMessageConversion.messageToNeboArrival(neboArrivalMessage).urns)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case snapshot: NeboArrivalMessages =>
+    case snapshot: NeboArrivalSnapshotMessage =>
       log.info(s"Processing a snapshot message")
-      state = NeboArrivalMessageConversion.messageToNeboArrival(snapshot)
+      state = NeboArrivalMessageConversion.snapshotMessageToNeboArrival(snapshot)
   }
 
-  override def stateToMessage: GeneratedMessage = NeboArrivalMessageConversion.stateToNeboArrivalMessages(state)
+  override def stateToMessage: GeneratedMessage = NeboArrivalMessageConversion.stateToNeboArrivalMessage(state)
 
   override def receiveCommand: Receive = {
     case redListPassengers: RedListPassengers =>
       val arrivalKey = getRedListPassengerFlightKey(redListPassengers)
       state = NeboArrivals(state.urns ++ redListPassengers.urns.toSet)
       val replyToAndMessage = Option((sender(), now().millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(NeboArrivalMessageConversion.stateToNeboArrivalMessages(state), replyToAndMessage)
+      persistAndMaybeSnapshotWithAck(NeboArrivalMessageConversion.stateToNeboArrivalMessage(state), replyToAndMessage)
       log.info(s"Update arrivalKey $arrivalKey")
       sender() ! state
 
