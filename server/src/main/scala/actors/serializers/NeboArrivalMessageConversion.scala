@@ -9,7 +9,7 @@ object NeboArrivalMessageConversion {
     NeboArrivalMessages(urns = state.urns.toList)
   }
 
-  def messageToNeboArrivalMessages(neboArrivalMessages: NeboArrivalMessages): NeboArrivals = {
+  def messageToNeboArrival(neboArrivalMessages: NeboArrivalMessages): NeboArrivals = {
     NeboArrivals(urns = neboArrivalMessages.urns.toSet)
   }
 

@@ -49,13 +49,13 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case neboArrivalMessages: NeboArrivalMessages =>
-      state = NeboArrivals(state.urns ++ NeboArrivalMessageConversion.messageToNeboArrivalMessages(neboArrivalMessages).urns)
+      state = NeboArrivals(state.urns ++ NeboArrivalMessageConversion.messageToNeboArrival(neboArrivalMessages).urns)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: NeboArrivalMessages =>
       log.info(s"Processing a snapshot message")
-      state = NeboArrivalMessageConversion.messageToNeboArrivalMessages(snapshot)
+      state = NeboArrivalMessageConversion.messageToNeboArrival(snapshot)
   }
 
   override def stateToMessage: GeneratedMessage = NeboArrivalMessageConversion.stateToNeboArrivalMessages(state)

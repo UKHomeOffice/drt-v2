@@ -37,7 +37,7 @@ trait WithImports {
           log.info(s"Received red list pax data")
           Try(content.toString.parseJson.convertTo[RedListCounts])
             .map { redListCounts =>
-              getRedListCount(redListCounts)
+              updateAndGetAllNeboPax(redListCounts)
                 .map { updatedRedListCounts =>
                   ctrl.flightsActor
                     .ask(RedListCounts(updatedRedListCounts))
@@ -52,7 +52,7 @@ trait WithImports {
     }
   }
 
-  def getRedListCount(redListCounts: RedListCounts): Future[Iterable[RedListPassengers]] = Future.sequence {
+  def updateAndGetAllNeboPax(redListCounts: RedListCounts): Future[Iterable[RedListPassengers]] = Future.sequence {
     redListCounts.passengers
       .map { redListPassenger =>
         val actor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassenger, now))
