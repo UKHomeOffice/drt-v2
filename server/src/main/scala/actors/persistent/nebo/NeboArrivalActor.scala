@@ -1,8 +1,8 @@
 package actors.persistent.nebo
 
 import actors.persistent.nebo.NeboArrivalActor.getRedListPassengerFlightKey
-import actors.persistent.staffing.GetState
-import actors.persistent.{RecoveryActorLike, Sizes}
+import actors.persistent.staffing.{GetState, SaveSnapshot}
+import actors.persistent.{PersistentDrtActor, RecoveryActorLike, Sizes}
 import actors.serializers.NeboArrivalMessageConversion
 import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
@@ -30,15 +30,14 @@ object NeboArrivalActor {
 
 class NeboArrivalActor(redListPassengers: RedListPassengers,
                        val now: () => SDateLike,
-                       maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
+                       maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike with PersistentDrtActor[NeboArrivals] {
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass")
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
   private val maxSnapshotInterval = 250
-
-  var state: NeboArrivals = NeboArrivals(Set.empty)
+  var state: NeboArrivals = initialState
 
   override def recovery: Recovery = maybePointInTime match {
     case None =>
@@ -77,11 +76,14 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
     case _: SaveSnapshotSuccess =>
       ackIfRequired()
 
+    case SaveSnapshot =>
+      log.info(s"Received request to snapshot")
+      takeSnapshot(stateToMessage)
+
     case m => log.warn(s"Got unexpected message: $m")
   }
 
-
   override def persistenceId: String = s"nebo-pax-${getRedListPassengerFlightKey(redListPassengers)}"
 
-
+  override def initialState: NeboArrivals = NeboArrivals.empty
 }
