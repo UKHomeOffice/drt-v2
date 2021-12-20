@@ -10,8 +10,8 @@ object NeboArrivalMessageConversion {
     NeboArrivalMessage(urns = redListPassengers.urns.toList)
   }
 
-  def stateToNeboArrivalMessage(state: NeboArrivals): NeboArrivalMessage = {
-    NeboArrivalMessage(urns = state.urns.toList)
+  def stateToNeboArrivalSnapshotMessage(state: NeboArrivals): NeboArrivalSnapshotMessage = {
+    NeboArrivalSnapshotMessage(urns = state.urns.toList)
   }
 
   def snapshotMessageToNeboArrival(neboArrivalSnapshotMessage: NeboArrivalSnapshotMessage): NeboArrivals = {

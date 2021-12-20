@@ -59,7 +59,7 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
       state = snapshotMessageToNeboArrival(snapshot)
   }
 
-  override def stateToMessage: GeneratedMessage = stateToNeboArrivalMessage(state)
+  override def stateToMessage: GeneratedMessage = stateToNeboArrivalSnapshotMessage(state)
 
   override def receiveCommand: Receive = {
     case redListPassengers: RedListPassengers =>
