@@ -1,11 +1,12 @@
 package actors.persistent.nebo
 
 import actors.persistent.nebo.NeboArrivalActor.getRedListPassengerFlightKey
-import actors.persistent.staffing.{GetState, SaveSnapshot}
+import actors.persistent.staffing.GetState
+import actors.serializers.NeboArrivalMessageConversion
 import actors.serializers.NeboArrivalMessageConversion.{redListPassengersToNeboArrivalMessage, snapshotMessageToNeboArrival}
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import akka.persistence.{RecoveryCompleted, SaveSnapshotSuccess, SnapshotOffer}
+import akka.persistence.{RecoveryCompleted, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotOffer}
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.{NeboArrivals, RedListPassengers, SDateLike}
 import scalapb.GeneratedMessage
@@ -24,6 +25,8 @@ object NeboArrivalActorTest {
 
   def props(redListPassengers: RedListPassengers, now: () => SDateLike, testProbeRef: ActorRef): Props =
     Props(new NeboArrivalActor(redListPassengers, () => SDate("2017-10-25T00:00:00Z"), Option(SDate("2017-10-25T00:00:00Z").millisSinceEpoch)) {
+      override val maybeSnapshotInterval = Option(1)
+
       override def receiveRecover: Receive = {
         case SnapshotOffer(md, ss) =>
           testProbeRef ! "snapshotOffer"
@@ -63,12 +66,12 @@ object NeboArrivalActorTest {
           sender() ! state
 
         case _: SaveSnapshotSuccess =>
+          testProbeRef ! "saveSnapshotSuccess"
           ackIfRequired()
 
-        case SaveSnapshot =>
-          testProbeRef ! "snapshot"
-          log.info(s"Received request to snapshot")
-          takeSnapshot(stateToMessage)
+        case SaveSnapshotFailure(md, cause) =>
+          testProbeRef ! "SaveSnapshotFailure"
+          log.error(s"Save snapshot failure: $md", cause)
 
         case m => log.warn(s"Got unexpected message: $m")
       }
@@ -76,7 +79,6 @@ object NeboArrivalActorTest {
       override def takeSnapshot(stateToSnapshot: GeneratedMessage): Unit = {
         log.debug(s"Snapshotting ${stateToSnapshot.serializedSize} bytes of ${stateToSnapshot.getClass}. Resetting counters to zero")
         saveSnapshot(stateToSnapshot)
-
         bytesSinceSnapshotCounter = 0
         messagesPersistedSinceSnapshotCounter = 0
         postSaveSnapshot()
@@ -141,6 +143,7 @@ class NeboArrivalActorSpec extends CrunchTestLike with ImplicitSender {
     probe.expectMsg(10 seconds, "recoveryCompleted")
     probe.expectMsg(10 seconds, "receiveCommand")
     probe.expectMsg(10 seconds, "takeSnapshot")
+    probe.expectMsg(10 seconds, "saveSnapshotSuccess")
     probe.expectMsg(10 seconds, "replyToAndMessage")
 
     val newProbe: TestProbe = TestProbe()
@@ -153,5 +156,33 @@ class NeboArrivalActorSpec extends CrunchTestLike with ImplicitSender {
 
     neboArrivals.urns === urns.toSet
     neboArrivalsNew.urns === urns.toSet
+  }
+
+  "Conversion check for NeboArrivalsMessage from protobuf to object and vice versa" >> {
+    val urns = RandomString.getNRandomString(5, 10)
+
+    val redListPassengers = RedListPassengers("abc", PortCode("ab"), SDate("2017-10-25T00:00:00Z"), urns)
+
+    val neboArrivals = NeboArrivals(redListPassengers.urns.toSet)
+
+    val neboArrivalMessage = NeboArrivalMessageConversion.redListPassengersToNeboArrivalMessage(redListPassengers)
+
+    val resultNeboArrival = NeboArrivalMessageConversion.messageToNeboArrival(neboArrivalMessage)
+
+    resultNeboArrival === neboArrivals
+  }
+
+  "Conversion check for NeboArrivalSnapshotMessage from protobuf to object and vice versa" >> {
+    val urns = RandomString.getNRandomString(5, 10)
+
+    val redListPassengers = RedListPassengers("abc", PortCode("ab"), SDate("2017-10-25T00:00:00Z"), urns)
+
+    val neboArrivals = NeboArrivals(redListPassengers.urns.toSet)
+
+    val neboArrivalSnapshotMessage = NeboArrivalMessageConversion.stateToNeboArrivalSnapshotMessage(neboArrivals)
+
+    val resultNeboArrival = NeboArrivalMessageConversion.snapshotMessageToNeboArrival(neboArrivalSnapshotMessage)
+
+    resultNeboArrival === neboArrivals
   }
 }

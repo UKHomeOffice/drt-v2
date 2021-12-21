@@ -1,17 +1,17 @@
 package actors.persistent.nebo
 
 import actors.persistent.nebo.NeboArrivalActor.getRedListPassengerFlightKey
-import actors.persistent.staffing.{GetState, SaveSnapshot}
+import actors.persistent.staffing.GetState
 import actors.persistent.{PersistentDrtActor, RecoveryActorLike, Sizes}
 import actors.serializers.NeboArrivalMessageConversion
+import actors.serializers.NeboArrivalMessageConversion._
 import akka.actor.Props
-import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
+import akka.persistence.{Recovery, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{NeboArrivals, RedListPassengers, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
-import NeboArrivalMessageConversion._
 
 object NeboArrivalActor {
   def props(redListPassengers: RedListPassengers, now: () => SDateLike): Props =
@@ -76,9 +76,8 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
     case _: SaveSnapshotSuccess =>
       ackIfRequired()
 
-    case SaveSnapshot =>
-      log.info(s"Received request to snapshot")
-      takeSnapshot(stateToMessage)
+    case SaveSnapshotFailure(md, cause) =>
+      log.error(s"Save snapshot failure: $md", cause)
 
     case m => log.warn(s"Got unexpected message: $m")
   }
