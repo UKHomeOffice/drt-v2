@@ -4,6 +4,7 @@ import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, 
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.nebo.NeboArrivalActor
 import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ApiFeedState, ManifestRouterActor}
 import akka.NotUsed
@@ -81,6 +82,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
     airportConfig.queuesByTerminal,
     params.maybeRemovalCutOffSeconds
   )
+
   override val flightsActor: ActorRef = flightLookups.flightsActor
   override val queuesActor: ActorRef = minuteLookups.queueMinutesActor
   override val staffActor: ActorRef = minuteLookups.staffMinutesActor

@@ -2,24 +2,23 @@ package actors.daily
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.GetState
+import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{flightWithSplitsFromMessage, uniqueArrivalsFromMessages}
-import actors.persistent.{RecoveryActorLike, Sizes}
 import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import drt.shared.dates.UtcDate
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import services.SDate
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.concurrent.duration.FiniteDuration
-
 
 object TerminalDayFlightActor {
   def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
@@ -78,11 +77,26 @@ class TerminalDayFlightActor(
     restorer.finish()
   }
 
+  private def matchesScheduledAndVoyageNumber(fws: ApiFlightWithSplits, scheduled: SDateLike, voyageNumber: VoyageNumberLike) = {
+    fws.apiFlight.Scheduled == scheduled.millisSinceEpoch && fws.apiFlight.VoyageNumber.numeric == voyageNumber.numeric
+  }
+
+  private def redListCountDiffWith(counts: Iterable[RedListPassengers]): FlightsWithSplitsDiff = {
+    counts.foldLeft(FlightsWithSplitsDiff.empty) {
+      case (diff, redListPassengers: RedListPassengers) =>
+        val (_, voyageNumber, _) = FlightCode.flightCodeToParts(redListPassengers.flightCode)
+        state.flights.values.find(matchesScheduledAndVoyageNumber(_, redListPassengers.scheduled, voyageNumber)) match {
+          case None => diff
+          case Some(fws) =>
+            val updatedArrival = fws.apiFlight.copy(RedListPax = Option(redListPassengers.urns.size))
+            diff.copy(flightsToUpdate = diff.flightsToUpdate ++ Iterable(fws.copy(apiFlight = updatedArrival, lastUpdated = Option(now().millisSinceEpoch))))
+        }
+    }
+  }
+
   override def receiveCommand: Receive = {
     case redListCounts: RedListCounts =>
-      val stateDiff = redListCounts
-        .diffWith(state, now().millisSinceEpoch)
-        .forTerminal(terminal)
+      val stateDiff: FlightsWithSplitsDiff = redListCountDiffWith(redListCounts.passengers).forTerminal(terminal)
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
       updateAndPersistDiffAndAck(stateDiff)
 

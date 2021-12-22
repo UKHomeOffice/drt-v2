@@ -1,5 +1,7 @@
 package controllers.application
 
+import actors.persistent.nebo.NeboArrivalActor
+import akka.actor.ActorRef
 import akka.pattern.ask
 import api.ApiResponseBody
 import controllers.Application
@@ -9,6 +11,7 @@ import drt.server.feeds.lgw.LGWForecastXLSExtractor
 import drt.server.feeds.lhr.forecast.LHRForecastCSVExtractor
 import drt.server.feeds.stn.STNForecastXLSExtractor
 import drt.shared.FlightsApi.Flights
+import drt.shared.{NeboArrivals, RedListPassengers}
 import play.api.libs.Files
 import play.api.libs.json.Json._
 import play.api.mvc._
@@ -33,13 +36,32 @@ trait WithImports {
         case Some(content) =>
           log.info(s"Received red list pax data")
           Try(content.toString.parseJson.convertTo[RedListCounts])
-            .map(redListCounts => ctrl.flightsActor
-              .ask(redListCounts)
-              .map(_ => Accepted(toJson(ApiResponseBody(s"${redListCounts.counts.size} red list records imported"))))
-            ).getOrElse(Future.successful(BadRequest("Failed to parse json")))
+            .map { redListCounts =>
+              updateAndGetAllNeboPax(redListCounts)
+                .map { updatedRedListCounts =>
+                  ctrl.flightsActor
+                    .ask(RedListCounts(updatedRedListCounts))
+                  Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers} red list records imported")))
+                }.recover {
+                case e => log.warning(s"Error while updating redListPassenger", e)
+                  BadRequest("Failed to update the red List Passenger")
+              }
+            }.getOrElse(Future.successful(BadRequest("Failed to parse json")))
         case None => Future.successful(BadRequest("No content"))
       }
     }
+  }
+
+  def updateAndGetAllNeboPax(redListCounts: RedListCounts): Future[Iterable[RedListPassengers]] = Future.sequence {
+    redListCounts.passengers
+      .map { redListPassenger =>
+        val actor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassenger, now))
+        val stateF: Future[NeboArrivals] = actor.ask(redListPassenger).mapTo[NeboArrivals]
+        stateF.map { state =>
+          system.stop(actor)
+          redListPassenger.copy(urns = state.urns.toList)
+        }
+      }
   }
 
   def feedImport(feedType: String, portCodeString: String): Action[Files.TemporaryFile] = authByRole(PortFeedUpload) {

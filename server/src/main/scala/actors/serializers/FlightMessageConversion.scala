@@ -43,7 +43,7 @@ object FlightMessageConversion {
     }
 
   def arrivalsStateToSnapshotMessage(state: ArrivalsState): FlightStateSnapshotMessage = {
-    val maybeStatusMessages = state.maybeSourceStatuses.flatMap(feedStatuses => feedStatusesToMessage(feedStatuses.feedStatuses))
+    val maybeStatusMessages: Option[FeedStatusesMessage] = state.maybeSourceStatuses.flatMap(feedStatuses => feedStatusesToMessage(feedStatuses.feedStatuses))
 
     FlightStateSnapshotMessage(
       state.arrivals.values.map(apiFlightToFlightMessage).toSeq,
