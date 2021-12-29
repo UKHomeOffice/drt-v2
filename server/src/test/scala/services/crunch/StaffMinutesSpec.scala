@@ -1,9 +1,9 @@
 package services.crunch
 
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
-import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import services.SDate
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import java.util.UUID
 import scala.collection.immutable.{List, SortedMap}

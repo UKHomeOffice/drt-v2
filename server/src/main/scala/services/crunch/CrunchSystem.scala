@@ -1,6 +1,6 @@
 package services.crunch
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
@@ -21,7 +21,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 
 import scala.collection.immutable.SortedMap
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 
 case class CrunchSystem[FT](shifts: SourceQueueWithComplete[ShiftAssignments],
@@ -83,7 +83,7 @@ object CrunchSystem {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply[FT](props: CrunchProps[FT])
-               (implicit materializer: Materializer, ec: ExecutionContext, system: ActorSystem): CrunchSystem[FT] = {
+               (implicit materializer: Materializer, ec: ExecutionContext): CrunchSystem[FT] = {
 
     val shiftsSource: Source[ShiftAssignments, SourceQueueWithComplete[ShiftAssignments]] = Source.queue[ShiftAssignments](10, OverflowStrategy.backpressure)
     val fixedPointsSource: Source[FixedPointAssignments, SourceQueueWithComplete[FixedPointAssignments]] = Source.queue[FixedPointAssignments](10, OverflowStrategy.backpressure)
@@ -155,6 +155,7 @@ object CrunchSystem {
       deploymentRequestActor = deploymentQueueActor,
       forecastMaxMillis = forecastMaxMillis,
       redListUpdatesSource = props.redListUpdatesSource,
+      touchdownPredictions = incoming => Future.successful(incoming)
     )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run

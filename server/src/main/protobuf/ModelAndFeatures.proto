@@ -1,0 +1,26 @@
+syntax = "proto2";
+
+package server.protobuf.messages;
+
+message ModelAndFeaturesMessage {
+  optional RegressionModelMessage model = 1;
+  optional FeaturesMessage features = 2;
+  optional int64 timestamp = 3;
+}
+
+message RegressionModelMessage {
+  repeated double coefficients = 1;
+  optional double intercept = 2;
+  optional double scale = 3;
+}
+
+message FeaturesMessage {
+  repeated OneToManyFeatureMessage oneToManyFeatures = 1;
+  repeated string singleFeatures = 2;
+  repeated string oneToManyValues = 3;
+}
+
+message OneToManyFeatureMessage {
+  repeated string columns = 1;
+  optional string prefix = 2;
+}

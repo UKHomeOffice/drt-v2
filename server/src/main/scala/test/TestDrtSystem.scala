@@ -29,7 +29,7 @@ import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Futu
 import scala.language.postfixOps
 import scala.util.Success
 
-case class MockManifestLookupService(implicit ec: ExecutionContext) extends ManifestLookupLike {
+case class MockManifestLookupService()(implicit ec: ExecutionContext) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
