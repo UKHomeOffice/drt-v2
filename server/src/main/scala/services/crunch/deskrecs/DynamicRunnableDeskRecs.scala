@@ -179,7 +179,7 @@ object DynamicRunnableDeskRecs {
           )
         }
 
-        ApiFlightWithSplits(arrival, maybeSplits.toSet)
+        ApiFlightWithSplits(arrival, flight.splits ++ maybeSplits.toSet)
       }
     }
 }
