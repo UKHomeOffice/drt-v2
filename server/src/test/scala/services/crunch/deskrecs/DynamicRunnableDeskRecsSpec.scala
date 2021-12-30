@@ -187,19 +187,19 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     "addSplits" >> {
       "When I have live manifests matching the arrival where the live manifest is within the trust threshold I should get the live splits" >> {
-        checkSplitsSource(arrival, Option(xOfPaxType(100, visa)), Map(), ApiSplitsWithHistoricalEGateAndFTPercentages)
+        checkSplitsSource(arrival, Option(xOfPaxType(100, visa)), Map(), Set(ApiSplitsWithHistoricalEGateAndFTPercentages))
       }
 
       "When I have live and historic manifests matching the arrival where the live manifest isn't within the trust threshold I should get the fallback historic splits" >> {
-        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(arrival -> Option(xOfPaxType(10, visa))), Historical)
+        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(arrival -> Option(xOfPaxType(10, visa))), Set(ApiSplitsWithHistoricalEGateAndFTPercentages, Historical))
       }
 
       "When I have live manifests matching the arrival where the live manifest isn't within the trust threshold, and no historical manifest, I should get the fallback terminal average splits" >> {
-        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(), TerminalAverage)
+        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(), Set(TerminalAverage))
       }
 
       "When I have live manifests matching the arrival where the live manifest isn't within the trust threshold, and no historical manifest, I should get the fallback terminal average splits" >> {
-        checkSplitsSource(arrival, None, Map(), TerminalAverage)
+        checkSplitsSource(arrival, None, Map(), Set(TerminalAverage))
       }
     }
   }
@@ -207,7 +207,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   private def checkSplitsSource(arrival: Arrival,
                                 maybeLiveManifestPax: Option[List[PassengerInfoJson]],
                                 maybeHistoricArrivalManifestPax: Map[Arrival, Option[List[PassengerInfoJson]]],
-                                expectedSplitsSource: SplitSource) = {
+                                expectedSplitsSources: Set[SplitSource]) = {
     val flow = DynamicRunnableDeskRecs.addSplits(
       mockLiveManifestsProvider(arrival, maybeLiveManifestPax),
       mockHistoricManifestsProvider(maybeHistoricArrivalManifestPax),
@@ -216,7 +216,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val value1 = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(arrival))))
     val result = Await.result(value1.via(flow).runWith(Sink.seq), 1.second)
 
-    result.head._2.exists(_.bestSplits.nonEmpty) && result.head._2.exists(_.splits.exists(_.source == expectedSplitsSource))
+    result.head._2.exists(_.bestSplits.nonEmpty) && result.head._2.exists(_.splits.map(_.source) === expectedSplitsSources)
   }
 
   def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =
