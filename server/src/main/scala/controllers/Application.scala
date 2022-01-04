@@ -347,7 +347,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     val defaultLastCheckThreshold = config.get[Int]("health-check.max-last-feed-check-minutes").minutes
     val feedsHealthCheckGracePeriod = config.get[Int]("health-check.feeds-grace-period-minutes").minutes
     val feedLastCheckThresholds: Map[FeedSource, FiniteDuration] = Map(
-      AclFeedSource -> config.get[Int]("feeds.acl-last-check-threshold").hours
+      AclFeedSource -> 26.hours
     )
 
     val feedsToMonitor = ctrl.feedActorsForPort
