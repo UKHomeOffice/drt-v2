@@ -345,8 +345,9 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   lazy val healthChecker: HealthChecker = if (!config.get[Boolean]("health-check.disable-feed-monitoring")) {
     val healthyResponseTimeSeconds = config.get[Int]("health-check.max-response-time-seconds")
     val defaultLastCheckThreshold = config.get[Int]("health-check.max-last-feed-check-minutes").minutes
+    val feedsHealthCheckGracePeriod = config.get[Int]("health-check.feeds-grace-period-minutes").minutes
     val feedLastCheckThresholds: Map[FeedSource, FiniteDuration] = Map(
-      AclFeedSource -> 26.hours
+      AclFeedSource -> config.get[Int]("feeds.acl-last-check-threshold").hours
     )
 
     val feedsToMonitor = ctrl.feedActorsForPort
@@ -354,7 +355,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       .values.toList
 
     HealthChecker(Seq(
-      FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now),
+      FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now, feedsHealthCheckGracePeriod),
       ActorResponseTimeHealthCheck(ctrl.portStateActor, healthyResponseTimeSeconds * MilliTimes.oneSecondMillis))
     )
   } else HealthChecker(Seq())
