@@ -373,6 +373,8 @@ class AclFeedSpec extends CrunchTestLike {
     val yesterdayMidnight = todayMidnight.addDays(-1)
     val aclFeed = AclFeed("mock-server", "mock-username", "mock-path", PortCode("BHD"), t => t)
 
-    aclFeed.latestFileDateAndSeason(PortCode("BHD")) === List((todayMidnight, "S"),(todayMidnight, "W"),(yesterdayMidnight, "S"), (yesterdayMidnight, "W"))
+    val expected = List((todayMidnight, "S"), (todayMidnight, "W"), (yesterdayMidnight, "S"), (yesterdayMidnight, "W"))
+
+    aclFeed.latestFileDateAndSeason(PortCode("BHD"), aclFeed.ssh.newSFTPClient()) === expected
   }
 }

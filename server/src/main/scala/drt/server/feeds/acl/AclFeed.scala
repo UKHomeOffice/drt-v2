@@ -2,7 +2,6 @@ package drt.server.feeds.acl
 
 import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
-import drt.shared
 import drt.shared.FlightsApi.Flights
 import drt.shared.SDateLike
 import drt.shared.api.Arrival
@@ -29,48 +28,51 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
 
   def ssh: SSHClient = sshClient(ftpServer, username, path)
 
-  def requestArrivals: ArrivalsFeedResponse =
-    latestFileDateAndSeason(portCode)
-      .map {
-        case (date, season) =>
-          val aclFilePath = "/180_Days/" + aclFileName(date, portCode, season)
-          log.info(s"Latest ACL file: $aclFilePath")
-          val feedResponseTry = (for {
-            sshClient <- Try(ssh)
-            sftpClient <- Try(sshClient.newSFTPClient)
-          } yield {
-            val responseTry = Try {
-              Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, aclFilePath), terminalMapping))
-            }
-            sftpClient.close()
-            sshClient.disconnect()
-            responseTry
-          }).flatten
-
-          feedResponseTry match {
-            case Success(a) =>
-              ArrivalsFeedSuccess(a)
-            case Failure(f) =>
-              log.error(s"Failed to get flights from ACL: $f")
-              ArrivalsFeedFailure(f.getMessage)
-          }
-      }
-      .getOrElse(ArrivalsFeedFailure("No ACL file found for yesterday or today"))
-
-  def fileExists(filePath: String): Boolean = {
-    val response = for {
+  def requestArrivals: ArrivalsFeedResponse = {
+    val trySftpClient = for {
       sshClient <- Try(ssh)
-      sftpClient <- Try(sshClient.newSFTPClient)
+      sftpClient: SFTPClient <- Try(sshClient.newSFTPClient)
     } yield {
-      sftpClient.ls(filePath)
+      (sshClient, sftpClient)
     }
+    trySftpClient.map { case (sshClient, sftpClient) =>
+      val arrivalsFeedResponse = latestFileDateAndSeason(portCode, sftpClient)
+        .map {
+          case (date, season) =>
+            val aclFilePath = "/180_Days/" + aclFileName(date, portCode, season)
+            log.info(s"Latest ACL file: $aclFilePath")
+            val feedResponseTry = Try(
+              Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, aclFilePath), terminalMapping))
+            )
 
-    response.isSuccess
+            feedResponseTry match {
+              case Success(a) =>
+                ArrivalsFeedSuccess(a)
+              case Failure(t) =>
+                log.error(s"Failed to get flights from ACL: $t")
+                ArrivalsFeedFailure(t.getMessage)
+            }
+        }
+        .getOrElse(ArrivalsFeedFailure("No ACL file found for yesterday or today"))
+
+      sftpClient.close()
+      sshClient.disconnect()
+
+      arrivalsFeedResponse
+    } match {
+      case Success(response) => response
+      case Failure(t) =>
+        log.error(s"Failed to get flights from ACL: $t")
+        ArrivalsFeedFailure("Failed to connect to sftp server")
+    }
   }
 
-  def latestFileDateAndSeason(portCode: PortCode): Option[(SDateLike, String)] =
+  def fileExists(filePath: String, sftpClient: SFTPClient): Boolean =
+    Try(sftpClient.ls(filePath)).isSuccess
+
+  def latestFileDateAndSeason(portCode: PortCode, sftpClient: SFTPClient): Option[(SDateLike, String)] =
     latestPossibleFileDatesAndSeasons.find {
-      case (date, season) => fileExists(s"/180_Days/${aclFileName(date, portCode, season)}")
+      case (date, season) => fileExists(s"/180_Days/${aclFileName(date, portCode, season)}", sftpClient)
     }
 }
 
