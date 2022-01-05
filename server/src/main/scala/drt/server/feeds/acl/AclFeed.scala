@@ -6,7 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.SDateLike
 import drt.shared.api.Arrival
 import net.schmizz.sshj.SSHClient
-import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}
+import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
@@ -18,7 +18,6 @@ import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
-import java.util
 import java.util.zip.{ZipEntry, ZipInputStream}
 import scala.collection.immutable.List
 import scala.collection.mutable.ArrayBuffer
@@ -39,11 +38,14 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
       (sshClient, sftpClient)
     }
     trySftpClient.map { case (sshClient, sftpClient) =>
-      val arrivalsFeedResponse = maybeLatestFile(sftpClient.ls("180_Days"), portCode.iata)
-        .map { aclFilePath =>
-          log.info(s"Latest ACL file: $aclFilePath")
+      val directoryName = "180_Days"
+      val allFiles = sftpClient.ls(directoryName).asScala.map(_.getName)
+      val arrivalsFeedResponse = maybeLatestFile(allFiles, portCode.iata, SDate.now())
+        .map { latestFile =>
+          val latestFilePath = s"$directoryName/$latestFile"
+          log.info(s"Latest ACL file: $latestFilePath")
           val feedResponseTry = Try(
-            Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, aclFilePath), terminalMapping))
+            Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, latestFilePath), terminalMapping))
           )
 
           feedResponseTry match {
@@ -81,20 +83,6 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
         false
     }
   }
-
-  def maybeLatestFile(allFiles: util.List[RemoteResourceInfo], portCode: String): Option[String] = {
-    val today = SDate.now()
-    List(0, 1)
-      .map { offset =>
-        val d = today.addDays(-1 * offset)
-        val todayStr = f"${d.getFullYear()}${d.getMonth()}%02d${d.getDate()}%02d"
-        s"$portCode.*$todayStr\\.zip".r
-      }
-      .map(fileRegex => allFiles.asScala.find(r => fileRegex.findFirstMatchIn(r.getName).isDefined))
-      .find(_.isDefined)
-      .flatten
-      .map(_.getPath)
-  }
 }
 
 object AclFeed {
@@ -123,6 +111,17 @@ object AclFeed {
     val nextCheck = nextAclCheck(now, updateHour)
     (nextCheck.millisSinceEpoch - now.millisSinceEpoch).millis
   }
+
+  def maybeLatestFile(allFiles: Iterable[String], portCode: String, now: SDateLike): Option[String] =
+    List(0, 1, 2, 3, 4)
+      .map { offset =>
+        val d = now.addDays(-1 * offset)
+        val todayStr = f"${d.getFullYear()}${d.getMonth()}%02d${d.getDate()}%02d"
+        s"$portCode.*$todayStr\\.zip".r
+      }
+      .map(fileRegex => allFiles.find(fileName => fileRegex.findFirstMatchIn(fileName).isDefined))
+      .find(_.isDefined)
+      .flatten
 
   def arrivalsFromCsvContent(csvContent: String, terminalMapping: Terminal => Terminal): List[Arrival] = {
     val flightEntries = csvContent

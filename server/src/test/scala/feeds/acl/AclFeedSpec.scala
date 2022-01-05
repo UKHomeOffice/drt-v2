@@ -22,6 +22,38 @@ import scala.concurrent.duration.DurationInt
 class AclFeedSpec extends CrunchTestLike {
   val regularTerminalMapping: Terminal => Terminal = (t: Terminal) => t
 
+  "Given a date, a port, and a list of files" >> {
+    val today = SDate("2022-01-04T10:00")
+    val todayFile = "LHRW21_HOMEOFFICEROLL180_20220104.zip"
+    val yesterdayFile = "LHRW21_HOMEOFFICEROLL180_20220103.zip"
+    val twoDaysAgoFile = "LHRW21_HOMEOFFICEROLL180_20220102.zip"
+    val port = "LHR"
+    "If the list of files does not contain a match for the port in question for a recent date then I should get None" >> {
+      val files = List()
+      AclFeed.maybeLatestFile(files, port, today) === None
+    }
+
+    "If the list of files contains a match for today at the port in question then I should get it's filename" >> {
+      val files = List(todayFile)
+      AclFeed.maybeLatestFile(files, port, today) === Option(todayFile)
+    }
+
+    "If the list of files has yesterday's followed by today's for the port, then I should get today's" >> {
+      val files = List(yesterdayFile, todayFile)
+      AclFeed.maybeLatestFile(files, port, today) === Option(todayFile)
+    }
+
+    "If the list of files has today's followed by yesterday's for the port, then I should get today's" >> {
+      val files = List(todayFile, yesterdayFile)
+      AclFeed.maybeLatestFile(files, port, today) === Option(todayFile)
+    }
+
+    "If the list of files has 2 days ago's followed by yesterday's for the port, then I should get yesterday's" >> {
+      val files = List(twoDaysAgoFile, yesterdayFile)
+      AclFeed.maybeLatestFile(files, port, today) === Option(yesterdayFile)
+    }
+  }
+
   "Given ACL updates are available at 18:00 UK time" >> {
     val updateHour = 18
 
