@@ -25,6 +25,7 @@ class AclFeedSpec extends CrunchTestLike {
   "Given a date, a port, and a list of files" >> {
     val today = SDate("2022-01-04T10:00")
     val todayFile = "LHRW21_HOMEOFFICEROLL180_20220104.zip"
+    val todayWrongPortFile = "BHXW21_HOMEOFFICEROLL180_20220104.zip"
     val yesterdayFile = "LHRW21_HOMEOFFICEROLL180_20220103.zip"
     val twoDaysAgoFile = "LHRW21_HOMEOFFICEROLL180_20220102.zip"
     val port = "LHR"
@@ -51,6 +52,16 @@ class AclFeedSpec extends CrunchTestLike {
     "If the list of files has 2 days ago's followed by yesterday's for the port, then I should get yesterday's" >> {
       val files = List(twoDaysAgoFile, yesterdayFile)
       AclFeed.maybeLatestFile(files, port, today) === Option(yesterdayFile)
+    }
+
+    "If the list of files has today's for our port followed by the wrong port, then I should get today's for our port" >> {
+      val files = List(todayWrongPortFile, todayFile)
+      AclFeed.maybeLatestFile(files, port, today) === Option(todayFile)
+    }
+
+    "If the list of files has today's for the wrong port followed by our port, then I should get today's for our port" >> {
+      val files = List(todayFile, todayWrongPortFile)
+      AclFeed.maybeLatestFile(files, port, today) === Option(todayFile)
     }
   }
 
