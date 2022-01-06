@@ -87,6 +87,7 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
       Operator = None,
       Status = PORT_FORECAST,
       Estimated = None,
+      PredictedTouchdown = None,
       Actual = None,
       EstimatedChox = None,
       ActualChox = None,

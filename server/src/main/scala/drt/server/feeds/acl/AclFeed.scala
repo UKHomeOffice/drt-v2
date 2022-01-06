@@ -2,7 +2,6 @@ package drt.server.feeds.acl
 
 import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
-import drt.shared
 import drt.shared.FlightsApi.Flights
 import drt.shared.SDateLike
 import drt.shared.api.Arrival
@@ -225,6 +224,7 @@ object AclFeed {
         Operator = operator,
         Status = "ACL Forecast",
         Estimated = None,
+        PredictedTouchdown = None,
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

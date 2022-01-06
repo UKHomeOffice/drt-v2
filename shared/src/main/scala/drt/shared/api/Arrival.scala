@@ -2,8 +2,8 @@ package drt.shared.api
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliTimes.oneMinuteMillis
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import upickle.default.{ReadWriter, macroRW}
 
@@ -19,6 +19,7 @@ case class Arrival(Operator: Option[Operator],
                    FlightCodeSuffix: Option[FlightCodeSuffix],
                    Status: ArrivalStatus,
                    Estimated: Option[MillisSinceEpoch],
+                   PredictedTouchdown: Option[MillisSinceEpoch],
                    Actual: Option[MillisSinceEpoch],
                    EstimatedChox: Option[MillisSinceEpoch],
                    ActualChox: Option[MillisSinceEpoch],
@@ -185,6 +186,7 @@ object Arrival {
   def apply(Operator: Option[Operator],
             Status: ArrivalStatus,
             Estimated: Option[MillisSinceEpoch],
+            PredictedTouchdown: Option[MillisSinceEpoch],
             Actual: Option[MillisSinceEpoch],
             EstimatedChox: Option[MillisSinceEpoch],
             ActualChox: Option[MillisSinceEpoch],
@@ -225,6 +227,7 @@ object Arrival {
       FlightCodeSuffix = maybeSuffix,
       Status = Status,
       Estimated = Estimated,
+      PredictedTouchdown = PredictedTouchdown,
       Actual = Actual,
       EstimatedChox = EstimatedChox,
       ActualChox = ActualChox,

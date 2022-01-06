@@ -99,6 +99,7 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
         Operator = flight.operator,
         Status = "UNK",
         Estimated = flight.estimated.map(_.toDate.getTime),
+        PredictedTouchdown = None,
         Actual = flight.touchdown.map(_.toDate.getTime),
         EstimatedChox = flight.estChox.map(_.toDate.getTime),
         ActualChox = flight.actChox.map(_.toDate.getTime),

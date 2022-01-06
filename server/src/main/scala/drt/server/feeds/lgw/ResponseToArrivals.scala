@@ -38,6 +38,7 @@ case class ResponseToArrivals(data: String) {
       Operator = if (operator.isEmpty) None else Option(Operator(operator)),
       Status = parseStatus(n),
       Estimated = parseDateTime(n, operationQualifier = "TDN", timeType = "EST"),
+      PredictedTouchdown = None,
       Actual = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),
       EstimatedChox = parseDateTime(n, operationQualifier = "ONB", timeType = "EST"),
       ActualChox = parseDateTime(n, operationQualifier = "ONB", timeType = "ACT"),

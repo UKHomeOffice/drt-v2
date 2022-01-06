@@ -108,6 +108,7 @@ object GlaFeed {
     None,
     Status = ga.FlightStatusDesc,
     Estimated = ga.AODBProbableDateTime.map(SDate(_).millisSinceEpoch),
+    PredictedTouchdown = None,
     Actual = ga.ALDT.map(SDate(_).millisSinceEpoch),
     EstimatedChox = ga.EIBT.map(SDate(_).millisSinceEpoch),
     ActualChox = ga.AIBT.map(SDate(_).millisSinceEpoch),

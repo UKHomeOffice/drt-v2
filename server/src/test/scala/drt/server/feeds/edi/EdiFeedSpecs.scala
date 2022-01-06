@@ -14,7 +14,7 @@ import scala.concurrent.{Await, Future}
 
 class EdiFeedSpecs extends CrunchTestLike {
 
-  val ediJsonData =
+  val ediJsonData: String =
     """
       |[{
       |        "FlightID": 2494582,
@@ -73,7 +73,7 @@ class EdiFeedSpecs extends CrunchTestLike {
         Option("2021-08-31T22:58:00"), Option("14"), Option("15A"), Option("GATE 14"), Option("8"), "T1", Option("06"))
     )
 
-    val result = Await.result(data, 1 seconds)
+    val result = Await.result(data, 1.seconds)
     result mustEqual expectedResult
 
   }
@@ -87,10 +87,30 @@ class EdiFeedSpecs extends CrunchTestLike {
       Option("14"), Option("15A"), Option("GATE 14"), Option("8"), "T1", Option("06"))
 
     val expectedArrival: List[Arrival] = List(
-      Arrival(Some(Operator("FR")), CarrierCode("FR"), VoyageNumber(1234), None, ArrivalStatus("Arrival is on block at a stand"),
-        Some(1630450800000L), Some(1630450380000L), None, Some(1630450680000L),
-        Some("14"), Some("15A"), Some(189), None, None, Some("06"), Some("8"), PortCode("PSA"), Terminal("T1"), PortCode("PSA"),
-        1630450800000L, None, Set(LiveFeedSource), None, None, None, None))
+      Arrival(
+        Operator = Some(Operator("FR")),
+        CarrierCode = CarrierCode("FR"),
+        VoyageNumber = VoyageNumber(1234),
+        FlightCodeSuffix = None,
+        Status = ArrivalStatus("Arrival is on block at a stand"),
+        Estimated = Some(1630450800000L),
+        PredictedTouchdown = None,
+        Actual = Some(1630450380000L),
+        EstimatedChox = None,
+        ActualChox = Some(1630450680000L),
+        Gate = Some("14"),
+        Stand = Some("15A"),
+        MaxPax = Some(189),
+        ActPax = None,
+        TranPax = None,
+        RunwayID = Some("06"),
+        BaggageReclaimId = Some("8"),
+        AirportID = PortCode("PSA"),
+        Terminal = Terminal("T1"),
+        Origin = PortCode("PSA"),
+        Scheduled = 1630450800000L,
+        PcpTime = None,
+        FeedSources = Set(LiveFeedSource), CarrierScheduled = None, ApiPax = None, ScheduledDeparture = None, RedListPax = None))
 
     val arrival = ediFeed.ediFlightDetailsToArrival(List(ediFlightDetail), LiveFeedSource)
     arrival mustEqual expectedArrival

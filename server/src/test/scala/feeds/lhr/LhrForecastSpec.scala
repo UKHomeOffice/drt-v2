@@ -25,11 +25,29 @@ class LhrForecastSpec extends Specification {
 
     val arrival = LhrForecastArrivals(arrivalLines).head
 
-    val expected = Arrival(Operator = Option(Operator("BA")), Status = ArrivalStatus("Forecast"), Estimated = None, Actual = None,
-      EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Option(337),
-      ActPax = Option(333), TranPax = Option(142), RunwayID = None, BaggageReclaimId = None, AirportID = PortCode("LHR"), Terminal = T3,
-      rawICAO = "BA0058", rawIATA = "BA0058", Origin = PortCode("CPT"), FeedSources = Set(ForecastFeedSource),
-      Scheduled = SDate("2018-02-22T04:45:00").millisSinceEpoch, PcpTime = None)
+    val expected = Arrival(
+      Operator = Option(Operator("BA")),
+      Status = ArrivalStatus("Forecast"),
+      Estimated = None,
+      PredictedTouchdown = None,
+      Actual = None,
+      EstimatedChox = None,
+      ActualChox = None,
+      Gate = None,
+      Stand = None,
+      MaxPax = Option(337),
+      ActPax = Option(333),
+      TranPax = Option(142),
+      RunwayID = None,
+      BaggageReclaimId = None,
+      AirportID = PortCode("LHR"),
+      Terminal = T3,
+      rawICAO = "BA0058",
+      rawIATA = "BA0058",
+      Origin = PortCode("CPT"),
+      FeedSources = Set(ForecastFeedSource),
+      Scheduled = SDate("2018-02-22T04:45:00").millisSinceEpoch,
+      PcpTime = None)
 
     arrival === expected
   }

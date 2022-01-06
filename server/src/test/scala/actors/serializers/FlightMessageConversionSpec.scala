@@ -12,31 +12,34 @@ import uk.gov.homeoffice.drt.ports._
 
 class FlightMessageConversionSpec extends Specification {
 
-  import drt.server.feeds.Implicits._
-
-  val arrival = Arrival(
-    Operator = Option(Operator("BA")),
-    Status = "landed",
-    Estimated = Option(2L),
-    Actual = Option(3L),
-    EstimatedChox = Option(4L),
-    ActualChox = Option(5L),
-    Gate = Option("G1"),
-    Stand = Option("S1"),
-    MaxPax = Option(350),
-    ActPax = Option(122),
-    TranPax = Option(10),
-    RunwayID = Option("R1"),
-    BaggageReclaimId = Option("B1"),
+  val arrival: Arrival = Arrival(
+    Operator = Option(Operator("British Airways")),
+    CarrierCode = CarrierCode("BA"),
+    VoyageNumber = VoyageNumber(1),
+    FlightCodeSuffix = Option(FlightCodeSuffix("G")),
+    Status = ArrivalStatus("Delayed"),
+    Estimated = Option(1L),
+    PredictedTouchdown = Option(5L),
+    Actual = Option(2L),
+    EstimatedChox = Option(3L),
+    ActualChox = Option(4L),
+    Gate = Option("A"),
+    Stand = Option("A1"),
+    MaxPax = Option(101),
+    ActPax = Option(95),
+    TranPax = Option(5),
+    RunwayID = Option("1"),
+    BaggageReclaimId = Option("abc"),
     AirportID = PortCode("LHR"),
     Terminal = T1,
-    rawICAO = "BAA1111",
-    rawIATA = "BA1111",
-    Origin = PortCode("JFK"),
-    Scheduled = 1L,
-    PcpTime = Option(10L),
-    FeedSources = Set(AclFeedSource, LiveFeedSource),
-    CarrierScheduled = Option(4L)
+    Origin = PortCode("CDG"),
+    Scheduled = 5L,
+    PcpTime = Option(6L),
+    FeedSources = Set(LiveFeedSource, AclFeedSource, ForecastFeedSource, LiveBaseFeedSource, ApiFeedSource),
+    CarrierScheduled = Option(7L),
+    ApiPax = Option(96),
+    ScheduledDeparture = Option(8L),
+    RedListPax = Option(26)
   )
 
   "Given an Arrival with no suffix" >> {

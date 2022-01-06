@@ -72,33 +72,34 @@ object CiriumFeed {
     val scheduledToNearest5Mins = timeToNearest5Minutes(SDate(carrierScheduledTime)).millisSinceEpoch
 
     Arrival(
-      f.carrierFsCode,
-      ciriumStatusCodeToStatus(f.status),
-      extractEstRunwayArrival(f),
-      f.operationalTimes.actualRunwayArrival.map(_.millis),
-      extractEstChox(f),
-      f.operationalTimes.actualGateArrival.map(_.millis),
-      f.airportResources.flatMap(_.arrivalGate),
-      None,
-      None,
-      None,
-      None,
-      None,
-      f.airportResources.flatMap(_.baggage),
-      f.arrivalAirportFsCode,
-      terminalMatchForPort(f.airportResources.flatMap(_.arrivalTerminal), portCode),
-      f.operatingCarrierFsCode + f.flightNumber,
-      f.operatingCarrierFsCode + f.flightNumber,
-      f.departureAirportFsCode,
-      scheduledToNearest5Mins,
-      None,
-      Set(LiveBaseFeedSource),
-      if (scheduledToNearest5Mins == carrierScheduledTime)
+      Operator = f.carrierFsCode,
+      Status = ciriumStatusCodeToStatus(f.status),
+      PredictedTouchdown = None,
+      Estimated = extractEstRunwayArrival(f),
+      Actual = f.operationalTimes.actualRunwayArrival.map(_.millis),
+      EstimatedChox = extractEstChox(f),
+      ActualChox = f.operationalTimes.actualGateArrival.map(_.millis),
+      Gate = f.airportResources.flatMap(_.arrivalGate),
+      Stand = None,
+      MaxPax = None,
+      ActPax = None,
+      TranPax = None,
+      RunwayID = None,
+      BaggageReclaimId = f.airportResources.flatMap(_.baggage),
+      AirportID = f.arrivalAirportFsCode,
+      Terminal = terminalMatchForPort(f.airportResources.flatMap(_.arrivalTerminal), portCode),
+      rawICAO = f.operatingCarrierFsCode + f.flightNumber,
+      rawIATA = f.operatingCarrierFsCode + f.flightNumber,
+      Origin = f.departureAirportFsCode,
+      Scheduled = scheduledToNearest5Mins,
+      PcpTime = None,
+      FeedSources = Set(LiveBaseFeedSource),
+      CarrierScheduled = if (scheduledToNearest5Mins == carrierScheduledTime)
         None
       else
         Option(carrierScheduledTime),
-      None,
-      Some(f.departureDate).map(_.millis)
+      ApiPax = None,
+      ScheduledDeparture = Some(f.departureDate).map(_.millis)
     )
   }
 

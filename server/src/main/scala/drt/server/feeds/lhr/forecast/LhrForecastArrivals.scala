@@ -70,6 +70,7 @@ object LhrForecastArrival {
         Operator = operator,
         Status = "Forecast",
         Estimated = None,
+        PredictedTouchdown = None,
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

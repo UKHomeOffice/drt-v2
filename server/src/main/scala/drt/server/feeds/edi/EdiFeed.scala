@@ -120,6 +120,7 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
         FlightCodeSuffix = flightCodeSuffix,
         Status = flight.FlightStatus.map(s => ArrivalStatus(getStatusDescription(s))).getOrElse(ArrivalStatus("")),
         Estimated = if (est == 0) None else Option(est),
+        PredictedTouchdown = None,
         Actual = if (act == 0) None else Option(act),
         EstimatedChox = None,
         ActualChox = if (actChox == 0) None else Option(actChox),

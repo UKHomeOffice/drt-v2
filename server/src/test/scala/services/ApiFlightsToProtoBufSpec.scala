@@ -16,6 +16,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
         Operator = Option(Operator("Op")),
         Status = ArrivalStatus("scheduled"),
         Estimated = Option(SDate("2016-01-01T13:05:00Z").millisSinceEpoch),
+        PredictedTouchdown = Option(SDate("2016-01-01T13:55:00Z").millisSinceEpoch),
         Actual = Option(SDate("2016-01-01T13:10:00Z").millisSinceEpoch),
         EstimatedChox = Option(SDate("2016-01-01T13:15:00Z").millisSinceEpoch),
         ActualChox = Option(SDate("2016-01-01T13:20:00Z").millisSinceEpoch),
