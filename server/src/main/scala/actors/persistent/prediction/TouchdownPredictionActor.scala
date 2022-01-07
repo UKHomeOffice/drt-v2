@@ -1,17 +1,19 @@
 package actors.persistent.prediction
 
-import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.persistent.staffing.GetState
+import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.ModelAndFeatures
-import drt.shared.SDateLike
+import drt.shared.{SDateLike, VoyageNumber}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.ModelAndFeatures.ModelAndFeaturesMessage
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 class TouchdownPredictionActor(val now: () => SDateLike,
-                               terminal: String,
-                               number: Int,
-                               origin: String
+                               terminal: Terminal,
+                               number: VoyageNumber,
+                               origin: PortCode
                               ) extends RecoveryActorLike {
   import actors.serializers.ModelAndFeaturesConversion._
 
@@ -21,7 +23,9 @@ class TouchdownPredictionActor(val now: () => SDateLike,
 
   var state: Option[ModelAndFeatures] = None
 
-  override def persistenceId: String = s"touchdown-prediction-$terminal-$number-$origin".toLowerCase
+  val uniqueId = s"${terminal.toString}-${number.numeric}-${origin.iata}"
+
+  override def persistenceId: String = s"touchdown-prediction-$uniqueId".toLowerCase
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case msg: ModelAndFeaturesMessage =>
@@ -38,7 +42,7 @@ class TouchdownPredictionActor(val now: () => SDateLike,
 
   override def receiveCommand: Receive = {
     case GetState =>
-      log.info(s"Received request for $terminal-$number-$origin model and features")
+      log.info(s"Received request for $uniqueId model and features")
       sender ! state
   }
 
