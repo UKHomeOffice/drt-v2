@@ -5,7 +5,10 @@ package server.protobuf.messages;
 message ModelAndFeaturesMessage {
   optional RegressionModelMessage model = 1;
   optional FeaturesMessage features = 2;
-  optional int64 timestamp = 3;
+  optional int32 examplesTrainedOn = 3;
+  optional int32 improvementPct = 4;
+  optional string targetName = 5;
+  optional int64 timestamp = 6;
 }
 
 message RegressionModelMessage {

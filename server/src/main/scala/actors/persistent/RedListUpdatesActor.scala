@@ -1,12 +1,10 @@
 package actors.persistent
 
-import actors.SetCrunchRequestQueue
 import actors.acking.AckingReceiver.StreamCompleted
 import actors.persistent.RedListUpdatesActor.{AddSubscriber, ReceivedSubscriberAck, SendToSubscriber}
 import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.staffing.GetState
 import actors.serializers.RedListUpdatesMessageConversion
-import akka.actor.ActorRef
 import akka.persistence._
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.SourceQueueWithComplete

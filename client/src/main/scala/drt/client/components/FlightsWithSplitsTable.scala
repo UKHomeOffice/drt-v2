@@ -133,7 +133,7 @@ object FlightsWithSplitsTable {
   def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue]): TagOf[TableSection] = {
     val redListHeading = "Red List Pax"
     val estChoxHeading = "Est Chox"
-    
+
     val columns = List(
       ("Flight", Option("arrivals__table__flight-code")),
       ("Origin", None),
@@ -142,6 +142,7 @@ object FlightsWithSplitsTable {
       ("Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
       ("Sch", None),
+      ("Pred", None),
       ("Est", None),
       ("Act", None),
       (estChoxHeading, None),
@@ -319,6 +320,7 @@ object FlightTableRow {
         <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
         <.td(flight.displayStatus.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
+        <.td(localDateTimeWithPopup(flight.PredictedTouchdown)),
         <.td(localDateTimeWithPopup(flight.Estimated)),
         <.td(localDateTimeWithPopup(flight.Actual)),
       )

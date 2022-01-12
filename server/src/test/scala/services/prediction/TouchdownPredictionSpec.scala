@@ -3,7 +3,7 @@ package services.prediction
 import actors.persistent.prediction.TouchdownPredictionActor
 import actors.persistent.staffing.GetState
 import actors.serializers.FeatureType.OneToMany
-import actors.serializers.{Features, ModelAndFeatures, RegressionModel}
+import actors.serializers.{Features, ModelAndFeatures, RegressionModel, TouchdownModelAndFeatures}
 import akka.actor.{PoisonPill, Props}
 import akka.pattern.ask
 import controllers.ArrivalGenerator
@@ -22,21 +22,22 @@ class MockTouchdownPredictionActor(terminal: Terminal,
                                   ) extends TouchdownPredictionActor(() => SDate.now(), terminal, number, origin) {
   private val model: RegressionModel = RegressionModel(Iterable(-4.491677337488966, 0.5758560689088016, 3.8006500547982798, 0.11517121378172734, 0.0), 0)
   private val features: Features = Features(List(OneToMany(List("dayOfWeek"), "dow"), OneToMany(List("hoursMinutes"), "hhmm")), IndexedSeq("dow_7", "dow_4", "dow_6", "dow_2", "hhmm_1"))
-  state = Option(ModelAndFeatures(model, features))
+  state = Option(TouchdownModelAndFeatures(model, features, examplesTrainedOn = 10, improvementPct = 25))
 }
 
 class TouchdownPredictionSpec extends CrunchTestLike {
-  val modelAndFeaturesProvider: (Terminal, VoyageNumber, PortCode) => Future[Option[ModelAndFeatures]] =
+  val modelAndFeaturesProvider: (Terminal, VoyageNumber, PortCode) => Future[Option[TouchdownModelAndFeatures]] =
     (terminal, voyageNumber, origin) => {
       val actor = system.actorOf(Props(new MockTouchdownPredictionActor(terminal, voyageNumber, origin)))
       actor
-        .ask(GetState).mapTo[Option[ModelAndFeatures]]
+        .ask(GetState).mapTo[Option[TouchdownModelAndFeatures]]
         .map { state =>
           actor ! PoisonPill
           state
         }
     }
 
+  val minutesOffScheduledThreshold = 45
   val touchdownPrediction: TouchdownPrediction = TouchdownPrediction(modelAndFeaturesProvider)
 
   "Given an arrival and an actor containing a prediction model for that arrival" >> {
@@ -55,9 +56,8 @@ class TouchdownPredictionSpec extends CrunchTestLike {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = "2022-05-01T12:00", origin = PortCode("JFK"), terminal = T2)
 
       val diff = ArrivalsDiff(Seq(arrival), Seq())
-      val minutesOffScheduledThreshold = 45
 
-      val arrivals = Await.result(touchdownPrediction.addTouchdownPredictions(diff, minutesOffScheduledThreshold), 1.second).toUpdate.values
+      val arrivals = Await.result(touchdownPrediction.addTouchdownPredictions(diff), 1.second).toUpdate.values
 
       arrivals.exists(a => a.PredictedTouchdown.get !== a.Scheduled)
     }

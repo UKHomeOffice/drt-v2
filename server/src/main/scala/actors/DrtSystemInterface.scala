@@ -23,7 +23,6 @@ import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}
 import drt.http.ProdSendAndReceive
 import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.{Feed, FeedPoller}
 import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.{ChromaForecastFeed, ChromaLiveFeed}
@@ -38,12 +37,13 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
+import drt.server.feeds.{Feed, FeedPoller}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import drt.shared.api.Arrival
 import drt.shared.coachTime.CoachWalkTime
-import drt.shared.dates.UtcDate
+import drt.shared.dates.{LocalDate, UtcDate}
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
@@ -53,12 +53,13 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
-import services.crunch.{CrunchProps, CrunchSystem}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
+import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
+import services.prediction.TouchdownPrediction
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -225,10 +226,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor)
 
-    redListUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
     egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor)
+
+    crunchRequestQueueActor ! CrunchRequest(SDate.now().toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 
     (crunchRequestQueueActor, deploymentRequestQueue, deskRecsKillSwitch, deploymentsKillSwitch)
   }
@@ -258,6 +260,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode)
 
     val simulator: TrySimulator = OptimiserWithFlexibleProcessors.runSimulationOfWork
+
+    val td = TouchdownPrediction.modelAndFeaturesProvider(now)
+
+    val touchdownPredictions = TouchdownPrediction(td, 45, 15).addTouchdownPredictions _
 
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
@@ -301,6 +307,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       startDeskRecs = startDeskRecs,
       arrivalsAdjustments = arrivalAdjustments,
       redListUpdatesSource = redListUpdatesSource,
+      touchdownPredictionsForArrivalsDiff = touchdownPredictions,
     ))
   }
 

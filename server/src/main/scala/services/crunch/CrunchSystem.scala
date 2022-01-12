@@ -74,7 +74,8 @@ case class CrunchProps[FT](logLabel: String = "",
                            optimiser: TryCrunch,
                            aclPaxAdjustmentDays: Int,
                            startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch),
-                           arrivalsAdjustments: ArrivalsAdjustmentsLike
+                           arrivalsAdjustments: ArrivalsAdjustmentsLike,
+                           touchdownPredictionsForArrivalsDiff: ArrivalsDiff => Future[ArrivalsDiff],
                           )
 
 
@@ -155,7 +156,7 @@ object CrunchSystem {
       deploymentRequestActor = deploymentQueueActor,
       forecastMaxMillis = forecastMaxMillis,
       redListUpdatesSource = props.redListUpdatesSource,
-      touchdownPredictions = incoming => Future.successful(incoming)
+      touchdownPredictions = props.touchdownPredictionsForArrivalsDiff,
     )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run

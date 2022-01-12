@@ -1,11 +1,45 @@
 package actors.serializers
 
 import actors.serializers.FeatureType.{FeatureType, OneToMany, Single}
+import drt.shared.MilliTimes
+import drt.shared.api.Arrival
 import server.protobuf.messages.ModelAndFeatures.{FeaturesMessage, ModelAndFeaturesMessage, OneToManyFeatureMessage, RegressionModelMessage}
+import services.SDate
 
 case class RegressionModel(coefficients: Iterable[Double], intercept: Double)
 
-case class ModelAndFeatures(model: RegressionModel, features: Features)
+trait ModelAndFeatures {
+  val model: RegressionModel
+  val features: Features
+  val examplesTrainedOn: Int
+  val improvementPct: Double
+}
+
+object ModelAndFeatures {
+  def apply(model: RegressionModel, features: Features, targetName: String, examplesTrainedOn: Int, improvementPct: Double): ModelAndFeatures = targetName match {
+    case TouchdownModelAndFeatures.targetName => TouchdownModelAndFeatures(model, features, examplesTrainedOn, improvementPct)
+  }
+}
+
+object TouchdownModelAndFeatures {
+  val targetName: String = "touchdown"
+}
+
+case class TouchdownModelAndFeatures(model: RegressionModel, features: Features, examplesTrainedOn: Int, improvementPct: Double) extends ModelAndFeatures {
+  def maybePrediction(arrival: Arrival): Option[Long] = {
+    val dow = s"dow_${SDate(arrival.Scheduled).getDayOfWeek()}"
+    val partOfDay = s"pod_${SDate(arrival.Scheduled).getHours() / 12}"
+    val dowIdx = features.oneToManyValues.indexOf(dow)
+    val partOfDayIds = features.oneToManyValues.indexOf(partOfDay)
+    for {
+      dowCo <- model.coefficients.toIndexedSeq.lift(dowIdx)
+      partOfDayCo <- model.coefficients.toIndexedSeq.lift(partOfDayIds)
+    } yield {
+      val offScheduled = (model.intercept + dowCo + partOfDayCo).toInt
+      arrival.Scheduled + (offScheduled * MilliTimes.oneMinuteMillis)
+    }
+  }
+}
 
 object FeatureType {
   sealed trait FeatureType
@@ -31,8 +65,11 @@ object ModelAndFeaturesConversion {
   def modelAndFeaturesFromMessage(msg: ModelAndFeaturesMessage): ModelAndFeatures = {
     val model = msg.model.map(modelFromMessage).getOrElse(throw new Exception("No value for model"))
     val features = msg.features.map(featuresFromMessage).getOrElse(throw new Exception("No value for features"))
+    val targetName = msg.targetName.getOrElse(throw new Exception("Mandatory parameter 'targetName' not specified"))
+    val examplesTrainedOn = msg.examplesTrainedOn.getOrElse(throw new Exception("No value for examplesTrainedOn"))
+    val improvement = msg.improvementPct.getOrElse(throw new Exception("No value for improvement"))
 
-    ModelAndFeatures(model, features)
+    ModelAndFeatures(model, features, targetName, examplesTrainedOn, improvement)
   }
 
   def modelFromMessage(msg: RegressionModelMessage): RegressionModel =
@@ -47,31 +84,4 @@ object ModelAndFeaturesConversion {
 
   def oneToManyFromMessage(msg: OneToManyFeatureMessage): OneToMany =
     OneToMany(msg.columns.toList, msg.prefix.getOrElse(throw new Exception("No value for prefix")))
-
-//  def modelToMessage(model: RegressionModel): RegressionModelMessage =
-//    RegressionModelMessage(
-//      coefficients = model.coefficients.toArray,
-//      intercept = Option(model.intercept),
-//    )
-//
-//  def featuresToMessage(features: Features): FeaturesMessage = {
-//    FeaturesMessage(
-//      oneToManyFeatures = features.featureTypes.collect {
-//        case OneToMany(columnNames, featurePrefix) =>
-//          OneToManyFeatureMessage(columnNames, Option(featurePrefix))
-//      },
-//      singleFeatures = features.featureTypes.collect {
-//        case Single(columnName) => columnName
-//      },
-//      oneToManyValues = features.oneToManyValues
-//    )
-//  }
-//
-//  def modelAndFeaturesToMessage(modelAndFeatures: ModelAndFeatures, now: Long): ModelAndFeaturesMessage = {
-//    ModelAndFeaturesMessage(
-//      model = Option(modelToMessage(modelAndFeatures.model)),
-//      features = Option(featuresToMessage(modelAndFeatures.features)),
-//      timestamp = Option(now),
-//    )
-//  }
 }
