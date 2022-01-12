@@ -7,11 +7,12 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FeedSourceStatuses, FeedStatuses, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.ports.FeedSource
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -22,9 +23,17 @@ trait HealthCheck {
 case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
                             defaultLastCheckThreshold: FiniteDuration,
                             feedLastCheckThresholds: Map[FeedSource, FiniteDuration],
-                            now: () => SDateLike)
+                            now: () => SDateLike,
+                            gracePeriodMinutes: FiniteDuration)
                            (implicit timeout: Timeout, mat: Materializer, ec: ExecutionContext) extends HealthCheck {
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  val startTime: MillisSinceEpoch = now().millisSinceEpoch
+
+  def gracePeriodHasPassed: Boolean = {
+    val timePassed = (now().millisSinceEpoch - startTime).millis
+    timePassed >= gracePeriodMinutes
+  }
 
   override def isPassing: Future[Boolean] =
     Source(feedActorsForPort)
@@ -34,7 +43,7 @@ case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
       .collect {
         case Some(FeedSourceStatuses(feedSource, FeedStatuses(_, Some(lastSuccessAt), _, _))) =>
           val threshold = feedLastCheckThresholds.getOrElse(feedSource, defaultLastCheckThreshold)
-          if (lastSuccessAt < (now() - threshold).millisSinceEpoch) {
+          if (gracePeriodHasPassed && lastSuccessAt < (now() - threshold).millisSinceEpoch) {
             val minutesSinceLastCheck = ((now().millisSinceEpoch - lastSuccessAt) / 60000).toInt
             log.warn(s"${feedSource.name} has not been checked for $minutesSinceLastCheck minutes")
             Some(feedSource)
