@@ -9,7 +9,7 @@ import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
-import drt.shared.api.PassengerInfoSummary
+import drt.shared.api.{PassengerInfoSummary, WalkTimes}
 import drt.shared.dates.UtcDate
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.{EgateBanksUpdates, PortEgateBanksUpdates}
@@ -162,6 +162,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      redListPorts: Pot[HashSet[PortCode]] = Empty,
                      redListUpdates: Pot[RedListUpdates] = Empty,
                      egateBanksUpdates: Pot[PortEgateBanksUpdates] = Empty,
+                     gateStandWalkTime: Pot[WalkTimes] = Empty,
                     )
 
 object PollDelay {
@@ -226,6 +227,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new SimulationHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
       new SnackbarHandler(zoomRW(_.snackbarMessage)((m, v) => m.copy(snackbarMessage = v))),
       new RedListPortsHandler(zoomRW(_.redListPorts)((m, v) => m.copy(redListPorts = v))),
+      new GateStandWalkTimePortsHandler(zoomRW(_.gateStandWalkTime)((m, v) => m.copy(gateStandWalkTime = v))),
     )
 
     composedHandlers

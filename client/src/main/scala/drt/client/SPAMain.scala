@@ -10,7 +10,6 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
 import drt.shared.SDateLike
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.dates.LocalDate
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
@@ -18,6 +17,7 @@ import org.scalajs.dom
 import org.scalajs.dom.console
 import scalacss.ProdDefaults._
 import uk.gov.homeoffice.drt.Urls
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import java.util.UUID
 import scala.collection.immutable.Seq
@@ -161,6 +161,7 @@ object SPAMain {
       GetShowAlertModalDialog,
       GetOohStatus,
       GetFeatureFlags,
+      GetGateStandWalktime,
     )
 
     initActions.foreach(SPACircuit.dispatch(_))
@@ -248,7 +249,7 @@ object SPAMain {
 
   def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
-    val proxy = SPACircuit.connect(m => PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.loggedInUserPot, m.airportConfig))
+    val proxy = SPACircuit.connect(m => PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.loggedInUserPot, m.airportConfig, m.gateStandWalkTime))
     staticRoute("#config", PortConfigLoc) ~> render(proxy(x => PortConfigPage(x())))
   }
 
