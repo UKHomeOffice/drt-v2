@@ -207,4 +207,7 @@ object Actions {
 
   case object ReSetSimulation extends Action
 
+  case object GetGateStandWalktime extends Action
+
+  case class UpdateGateStandWalktime(walkTimes:WalkTimes) extends Action
 }
