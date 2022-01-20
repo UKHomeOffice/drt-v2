@@ -4,6 +4,7 @@ import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared.TimeUtil._
 import drt.shared.api.{TerminalWalkTimes, WalkTime, WalkTimes}
 import org.specs2.mutable.Specification
+
 class WalkTimesSpec extends Specification {
 
   "When formatting a walk time as minutes and seconds" >> {
@@ -17,7 +18,7 @@ class WalkTimesSpec extends Specification {
 
     "Given 90s I should get back 1 minute" >> {
       val millis = 90000L
-      val result: String =  MinuteAsNoun(millisToMinutes(millis)).display
+      val result: String = MinuteAsNoun(millisToMinutes(millis)).display
 
       result === "1 minute"
     }
@@ -146,6 +147,52 @@ class WalkTimesSpec extends Specification {
       val result = walkTimeProvider(Option("gate1"), Option("notValid"), T1)
 
       result === s"${gate1T1.inMinutes} minute walk time"
+    }
+  }
+
+
+  "Sorting gate and stand Map" >> {
+    val stand42RT1 = WalkTime("42R", T1, 10000L)
+    val stand10T1 = WalkTime("10", T1, 20000L)
+    val stand2T1 = WalkTime("1", T1, 40000L)
+    val stand10MT1 = WalkTime("10M", T1, 20000L)
+
+    val gate45T1 = WalkTime("45", T1, 10000L)
+    val gate45MT1 = WalkTime("45M", T1, 20000L)
+    val gate1T2 = WalkTime("gate1", T1, 40000L)
+
+    val gateWalkTimes = Seq(
+      gate45T1,
+      gate45MT1,
+      gate1T2,
+    )
+
+    val standWalkTimes = Seq(
+      stand10T1,
+      stand42RT1,
+      stand2T1,
+      stand10MT1,
+    )
+
+    val wt = WalkTimes(gateWalkTimes, standWalkTimes)
+    import drt.shared.api.WalkTimes
+    "after sorting stand walktime should be" >> {
+      val result: Seq[(String, WalkTime)] = WalkTimes.sortGateStandMap(wt.byTerminal(T1).standWalkTimes)
+      val excepted = Seq(
+        ("1", WalkTime("1", T1, 40000L)),
+        ("10",WalkTime("10", T1, 20000L)),
+        ("10M", WalkTime("10M", T1, 20000L)),
+        ("42R", WalkTime("42R", T1, 10000L)))
+      result mustEqual excepted
+    }
+
+    "after sorting gate walktime should be" >> {
+      val result: Seq[(String, WalkTime)] = WalkTimes.sortGateStandMap(wt.byTerminal(T1).gateWalktimes)
+      val excepted = Seq(
+        ("45", WalkTime("45", T1, 10000L)),
+        ("45M", WalkTime("45M", T1, 20000L)),
+        ("gate1", WalkTime("gate1", T1, 40000L)))
+      result mustEqual excepted
     }
   }
 

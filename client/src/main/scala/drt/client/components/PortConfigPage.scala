@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdates, PortEgateBank
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import scala.collection.immutable.{ListMap, Map}
+import scala.collection.immutable.Map
 
 object PortConfigPage {
 
@@ -85,11 +85,13 @@ object PortConfigDetails {
               <.h4("Walktimes", " ", walkTimesTooltip),
               defaultWalktime(props.airportConfig.defaultWalkTimeMillis(tn))
             ),
-            <.div(^.className := "container config-container",
-              <.h4("Gate/Stand Walktime"),
-              gateWalktime(props.gateStandWalktime.byTerminal(tn).gateWalktimes),
-              standWalktime(props.gateStandWalktime.byTerminal(tn).standWalkTimes)
-            )
+            if (props.gateStandWalktime.byTerminal.nonEmpty) {
+              <.div(^.className := "container config-container",
+                <.h4("Gate/Stand Walktime"),
+                gateWalktime(props.gateStandWalktime.byTerminal(tn).gateWalktimes),
+                standWalktime(props.gateStandWalktime.byTerminal(tn).standWalkTimes)
+              )
+            } else ""
           )
         ).toTagMod
       )
@@ -143,7 +145,7 @@ object PortConfigDetails {
 
   def gateWalktime(gateWalktimes: Map[String, WalkTime]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
     if (gateWalktimes.nonEmpty) {
-      val sortedMap = ListMap(gateWalktimes.toSeq.sortBy(_._1): _*)
+      val sortedMap = WalkTimes.sortGateStandMap(gateWalktimes)
       <.table(^.className := "table table-bordered table-hover",
         <.tbody(
           <.tr(
@@ -164,7 +166,8 @@ object PortConfigDetails {
 
   def standWalktime(standWalkTimes: Map[String, WalkTime]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
     if (standWalkTimes.nonEmpty) {
-      val sortedMap = ListMap(standWalkTimes.toSeq.sortBy(_._1): _*)
+      val sortedMap = WalkTimes.sortGateStandMap(standWalkTimes)
+
       <.table(^.className := "table table-bordered table-hover",
         <.tbody(
           <.tr(
