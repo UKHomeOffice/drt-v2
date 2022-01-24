@@ -1,10 +1,10 @@
 package actors.serializers
 
 import actors.serializers.FeatureType.{FeatureType, OneToMany, Single}
-import drt.shared.MilliTimes
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.Arrival
+import drt.shared.{MilliTimes, SDateLike}
 import server.protobuf.messages.ModelAndFeatures.{FeaturesMessage, ModelAndFeaturesMessage, OneToManyFeatureMessage, RegressionModelMessage}
-import services.SDate
 
 case class RegressionModel(coefficients: Iterable[Double], intercept: Double)
 
@@ -16,8 +16,14 @@ trait ModelAndFeatures {
 }
 
 object ModelAndFeatures {
-  def apply(model: RegressionModel, features: Features, targetName: String, examplesTrainedOn: Int, improvementPct: Double): ModelAndFeatures = targetName match {
-    case TouchdownModelAndFeatures.targetName => TouchdownModelAndFeatures(model, features, examplesTrainedOn, improvementPct)
+  def apply(model: RegressionModel,
+            features: Features,
+            targetName: String,
+            examplesTrainedOn: Int,
+            improvementPct: Double,
+            sDateProvider: MillisSinceEpoch => SDateLike,
+           ): ModelAndFeatures = targetName match {
+    case TouchdownModelAndFeatures.targetName => TouchdownModelAndFeatures(model, features, examplesTrainedOn, improvementPct, sDateProvider)
   }
 }
 
@@ -25,10 +31,10 @@ object TouchdownModelAndFeatures {
   val targetName: String = "touchdown"
 }
 
-case class TouchdownModelAndFeatures(model: RegressionModel, features: Features, examplesTrainedOn: Int, improvementPct: Double) extends ModelAndFeatures {
+case class TouchdownModelAndFeatures(model: RegressionModel, features: Features, examplesTrainedOn: Int, improvementPct: Double, sDateProvider: MillisSinceEpoch => SDateLike) extends ModelAndFeatures {
   def maybePrediction(arrival: Arrival): Option[Long] = {
-    val dow = s"dow_${SDate(arrival.Scheduled).getDayOfWeek()}"
-    val partOfDay = s"pod_${SDate(arrival.Scheduled).getHours() / 12}"
+    val dow = s"dow_${sDateProvider(arrival.Scheduled).getDayOfWeek()}"
+    val partOfDay = s"pod_${sDateProvider(arrival.Scheduled).getHours() / 12}"
     val dowIdx = features.oneToManyValues.indexOf(dow)
     val partOfDayIds = features.oneToManyValues.indexOf(partOfDay)
     for {
@@ -62,14 +68,14 @@ case class Features(featureTypes: List[FeatureType], oneToManyValues: IndexedSeq
 }
 
 object ModelAndFeaturesConversion {
-  def modelAndFeaturesFromMessage(msg: ModelAndFeaturesMessage): ModelAndFeatures = {
+  def modelAndFeaturesFromMessage(msg: ModelAndFeaturesMessage, sDateProvider: MillisSinceEpoch => SDateLike): ModelAndFeatures = {
     val model = msg.model.map(modelFromMessage).getOrElse(throw new Exception("No value for model"))
     val features = msg.features.map(featuresFromMessage).getOrElse(throw new Exception("No value for features"))
     val targetName = msg.targetName.getOrElse(throw new Exception("Mandatory parameter 'targetName' not specified"))
     val examplesTrainedOn = msg.examplesTrainedOn.getOrElse(throw new Exception("No value for examplesTrainedOn"))
     val improvement = msg.improvementPct.getOrElse(throw new Exception("No value for improvement"))
 
-    ModelAndFeatures(model, features, targetName, examplesTrainedOn, improvement)
+    ModelAndFeatures(model, features, targetName, examplesTrainedOn, improvement, sDateProvider)
   }
 
   def modelFromMessage(msg: RegressionModelMessage): RegressionModel =

@@ -298,7 +298,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     success
   }
 
-  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0)(a, r)
+  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0, considerPredictions = true)(a, r)
 
   "Given a base live arrival with an estimated time and a port live arrival with only scheduled time " +
     "Then PCP time should be calculated from the base live arrival time." >> {

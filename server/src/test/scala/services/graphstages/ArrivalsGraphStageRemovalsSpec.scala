@@ -16,7 +16,7 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
 
   val dayOfArrivals: SDateLike = SDate("2021-03-01T12:00Z")
 
-  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0)(a, r)
+  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0, considerPredictions = true)(a, r)
 
   "Given an ACL feed with 2 arrivals, followed by another with only one of them, the other arrival should be removed" >> {
     val (aclSource, _, _, _, _) = TestableArrivalsGraphStage(

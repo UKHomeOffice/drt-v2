@@ -3,10 +3,12 @@ package actors.persistent.prediction
 import actors.persistent.staffing.GetState
 import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.ModelAndFeatures
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{SDateLike, VoyageNumber}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.ModelAndFeatures.ModelAndFeaturesMessage
+import services.SDate
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -27,15 +29,17 @@ class TouchdownPredictionActor(val now: () => SDateLike,
 
   override def persistenceId: String = s"touchdown-prediction-$uniqueId".toLowerCase
 
+  val sDateProvider: MillisSinceEpoch => SDateLike = (millis: MillisSinceEpoch) => SDate(millis)
+
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case msg: ModelAndFeaturesMessage =>
       log.info(s"recovering state from ModelAndFeaturesMessage")
-      state = Option(modelAndFeaturesFromMessage(msg))
+      state = Option(modelAndFeaturesFromMessage(msg, sDateProvider))
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case msg: ModelAndFeaturesMessage =>
-      state = Option(modelAndFeaturesFromMessage(msg))
+      state = Option(modelAndFeaturesFromMessage(msg, sDateProvider))
   }
 
   override def stateToMessage: GeneratedMessage = throw new Exception(s"Persistence not supported here")

@@ -340,7 +340,7 @@ object FlightTableRow {
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
       val noPcpPax = if (flight.Origin.isCta || outgoingDiversion) " arrival-cta" else ""
-      val trClassName = s"${offScheduleClass(flight, props.airportConfig.timeToChoxMillis)} $timeIndicatorClass$cancelledClass$noPcpPax"
+      val trClassName = s"${offScheduleClass(flight, props.airportConfig.timeToChoxMillis, props.airportConfig.useTimePredictions)} $timeIndicatorClass$cancelledClass$noPcpPax"
 
       val queueTagMod = props.splitsQueueOrder.map { q =>
         val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
