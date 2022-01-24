@@ -76,10 +76,7 @@ object PcpArrival {
 
   def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime)
              (flight: Arrival, redListUpdates: RedListUpdates): MilliDate = {
-    val bestChoxTimeMillis: Long = bestChoxTime(timeToChoxMillis, flight).getOrElse({
-      log.error(s"could not get best choxTime for $flight")
-      0L
-    })
+    val bestChoxTimeMillis: Long = flight.bestArrivalTime(timeToChoxMillis)
     val walkTimeMillis = walkTimeForFlight(flight, redListUpdates)
     val date = MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
     log.debug(s"bestChoxTime for ${Arrival.summaryString(flight)} is $bestChoxTimeMillis or ${SDate(bestChoxTimeMillis).toLocalDateTimeString()}, firstPcp ${SDate(date.millisSinceEpoch).toLocalDateTimeString()}")
@@ -101,17 +98,5 @@ object PcpArrival {
       log.debug(s"walkTimeForFlight ${Arrival.summaryString(flight)} is $walkTime millis ${walkTime / 60000} mins default is $defaultWalkTimeMillis")
       walkTime
     }
-  }
-
-  def bestChoxTime(timeToChoxMillis: Long, flight: Arrival): Option[MillisSinceEpoch] = {
-    def parseMillis(s: => Option[MillisSinceEpoch]): Option[MillisSinceEpoch] = if (s.exists(_ != 0)) s else None
-
-    def addTimeToChox(s: Option[MillisSinceEpoch]): Option[MillisSinceEpoch] = parseMillis(s).map(_ + timeToChoxMillis)
-
-    parseMillis(flight.ActualChox)
-      .orElse(parseMillis(flight.EstimatedChox)
-        .orElse(addTimeToChox(flight.Actual)
-          .orElse(addTimeToChox(flight.Estimated)
-            .orElse(addTimeToChox(Option(flight.Scheduled))))))
   }
 }

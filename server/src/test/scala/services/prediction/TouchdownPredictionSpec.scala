@@ -3,7 +3,7 @@ package services.prediction
 import actors.persistent.prediction.TouchdownPredictionActor
 import actors.persistent.staffing.GetState
 import actors.serializers.FeatureType.OneToMany
-import actors.serializers.{Features, ModelAndFeatures, RegressionModel, TouchdownModelAndFeatures}
+import actors.serializers.{Features, RegressionModel, TouchdownModelAndFeatures}
 import akka.actor.{PoisonPill, Props}
 import akka.pattern.ask
 import controllers.ArrivalGenerator
@@ -38,7 +38,7 @@ class TouchdownPredictionSpec extends CrunchTestLike {
     }
 
   val minutesOffScheduledThreshold = 45
-  val touchdownPrediction: TouchdownPrediction = TouchdownPrediction(modelAndFeaturesProvider)
+  val touchdownPrediction: TouchdownPrediction = TouchdownPrediction(modelAndFeaturesProvider, 45, 10)
 
   "Given an arrival and an actor containing a prediction model for that arrival" >> {
     "I should be able to update the arrival with an predicted touchdown time" >> {

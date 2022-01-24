@@ -131,8 +131,8 @@ class PcpArrivalSpec extends SpecificationLike {
       "then we should get the scheduled time plus the time to chox in millis" >> {
       val flight = arrival(schDt = "2017-01-01T00:20.00Z")
 
-      val result = bestChoxTime(10000L, flight)
-      val expected = Some(1483230000000L + 10000L) // 2017-01-01T00:20.00Z
+      val result = flight.bestArrivalTime(10000L)
+      val expected = 1483230000000L + 10000L // 2017-01-01T00:20.00Z
 
       result === expected
     }
@@ -142,8 +142,8 @@ class PcpArrivalSpec extends SpecificationLike {
       "then we should get the estimated time plus the time to chox in millis" >> {
       val flight = arrival(estDt = "2017-01-01T00:20.00Z")
 
-      val result = bestChoxTime(10000L, flight)
-      val expected = Some(1483230000000L + 10000L) // 2017-01-01T00:20.00Z
+      val result = flight.bestArrivalTime(10000L)
+      val expected = 1483230000000L + 10000L // 2017-01-01T00:20.00Z
 
       result === expected
     }
@@ -153,8 +153,8 @@ class PcpArrivalSpec extends SpecificationLike {
       "then we should get the touchdown time plus the time to chox in millis" >> {
       val flight = arrival(actDt = "2017-01-01T00:20.00Z")
 
-      val result = bestChoxTime(10000L, flight)
-      val expected = Some(1483230000000L + 10000L) // 2017-01-01T00:20.00Z
+      val result = flight.bestArrivalTime(10000L)
+      val expected = 1483230000000L + 10000L // 2017-01-01T00:20.00Z
 
       result === expected
     }
@@ -164,8 +164,8 @@ class PcpArrivalSpec extends SpecificationLike {
       "then we should get the estimated chox time in millis" >> {
       val flight = arrival(estChoxDt = "2017-01-01T00:20.00Z")
 
-      val result = bestChoxTime(10000L, flight)
-      val expected = Some(1483230000000L) // 2017-01-01T00:20.00Z
+      val result = flight.bestArrivalTime(10000L)
+      val expected = 1483230000000L //2017-01-01T00:20.00Z
 
       result === expected
     }
@@ -175,8 +175,8 @@ class PcpArrivalSpec extends SpecificationLike {
       "then we should get the actual chox time in millis" >> {
       val flight = arrival(actChoxDt = "2017-01-01T00:20.00Z")
 
-      val result = bestChoxTime(10000L, flight)
-      val expected = Some(1483230000000L) // 2017-01-01T00:20.00Z
+      val result = flight.bestArrivalTime(10000L)
+      val expected = 1483230000000L //2017-01-01T00:20.00Z
 
       result === expected
     }

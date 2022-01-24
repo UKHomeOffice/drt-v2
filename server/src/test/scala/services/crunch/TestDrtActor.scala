@@ -258,6 +258,7 @@ class TestDrtActor extends Actor {
         startDeskRecs = startDeskRecs,
         arrivalsAdjustments = tc.arrivalsAdjustments,
         redListUpdatesSource = redListUpdatesSource,
+        touchdownPredictionsForArrivalsDiff = diff => Future.successful(diff)
       ))
 
       replyTo ! CrunchGraphInputsAndProbes(
