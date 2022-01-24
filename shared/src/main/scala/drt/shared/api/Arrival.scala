@@ -104,12 +104,13 @@ case class Arrival(Operator: Option[Operator],
   val bestPcpPaxEstimate: Int = PcpUtils.bestPcpPaxEstimate(this)
 
   def bestArrivalTime(timeToChox: MillisSinceEpoch): MillisSinceEpoch =
-    (ActualChox, EstimatedChox, Actual, Estimated, Scheduled) match {
-      case (Some(actChox), _, _, _, _) => actChox
-      case (_, Some(estChox), _, _, _) => estChox
-      case (_, _, Some(touchdown), _, _) => touchdown + timeToChox
-      case (_, _, _, Some(estimated), _) => estimated + timeToChox
-      case (_, _, _, _, scheduled) => scheduled + timeToChox
+    (ActualChox, EstimatedChox, Actual, Estimated, PredictedTouchdown, Scheduled) match {
+      case (Some(actChox), _, _, _, _, _) => actChox
+      case (_, Some(estChox), _, _, _, _) => estChox
+      case (_, _, Some(touchdown), _, _, _) => touchdown + timeToChox
+      case (_, _, _, Some(estimated), _, _) => estimated + timeToChox
+      case (_, _, _, _, Some(predictedTd), _) => predictedTd + timeToChox
+      case (_, _, _, _, _, scheduled) => scheduled + timeToChox
     }
 
   def walkTime(timeToChox: Long, firstPaxOff: Long): Option[Long] = PcpUtils.walkTime(this, timeToChox, firstPaxOff)
