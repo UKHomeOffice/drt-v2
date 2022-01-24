@@ -192,7 +192,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   }
 
   def pcpArrivalTimeCalculator: (Arrival, RedListUpdates) => MilliDate =
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
+    PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)(walkTimeProvider)
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 

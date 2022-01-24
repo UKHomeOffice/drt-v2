@@ -374,7 +374,7 @@ object FlightTableRow {
 
   private def gateOrStand(arrival: Arrival, airportConfig: AirportConfig, paxAreDiverted: Boolean): VdomTagOf[Span] = {
     val gateOrStand = <.span(s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
-    arrival.walkTime(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis).map { wt =>
+    arrival.walkTime(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions).map { wt =>
       val description = (paxAreDiverted, arrival.Stand.isDefined, arrival.Gate.isDefined) match {
         case (true, _, _) => "walk time including transfer bus"
         case (false, true, _) => "walk time from stand"
@@ -386,8 +386,8 @@ object FlightTableRow {
     }.getOrElse(gateOrStand)
   }
 
-  def offScheduleClass(arrival: Arrival, timeToChoxMillis: Long): String = {
-    val eta = arrival.bestArrivalTime(timeToChoxMillis)
+  def offScheduleClass(arrival: Arrival, timeToChoxMillis: Long, considerPredictions: Boolean): String = {
+    val eta = arrival.bestArrivalTime(timeToChoxMillis, considerPredictions)
     val differenceFromScheduled = eta - arrival.Scheduled
     val hourInMillis = 3600000
     val offScheduleClass = if (differenceFromScheduled > hourInMillis || differenceFromScheduled < -1 * hourInMillis)

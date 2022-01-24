@@ -15,6 +15,6 @@ object PcpUtils {
       case _ => defaultPax
     }
 
-  def walkTime(arrival: Arrival, timeToChox: Long, firstPaxOff: Long): Option[Long] =
-    arrival.PcpTime.map(pcpTime => pcpTime - (arrival.bestArrivalTime(timeToChox) + firstPaxOff))
+  def walkTime(arrival: Arrival, timeToChox: Long, firstPaxOff: Long, considerPredictions: Boolean): Option[Long] =
+    arrival.PcpTime.map(pcpTime => pcpTime - (arrival.bestArrivalTime(timeToChox, considerPredictions) + firstPaxOff))
 }
