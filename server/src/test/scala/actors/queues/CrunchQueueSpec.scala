@@ -9,12 +9,11 @@ import akka.stream.scaladsl.{GraphDSL, Sink}
 import akka.stream.{ClosedShape, Materializer}
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.time.SDateLike
-import drt.shared.dates.LocalDate
 import services.SDate
 import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 
 class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {

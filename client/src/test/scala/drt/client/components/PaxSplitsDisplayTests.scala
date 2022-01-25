@@ -1,8 +1,7 @@
 package drt.client.components
 
-import drt.shared._
-import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypes, Queues}
 import utest.{TestSuite, _}

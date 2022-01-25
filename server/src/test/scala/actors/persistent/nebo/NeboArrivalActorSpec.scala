@@ -7,11 +7,12 @@ import akka.pattern.ask
 import akka.persistence.{RecoveryCompleted, SaveSnapshotSuccess, SnapshotOffer}
 import akka.testkit.{ImplicitSender, TestProbe}
 import com.typesafe.config.ConfigFactory
-import drt.shared.{NeboArrivals, RedListPassengers, SDateLike}
+import drt.shared.{NeboArrivals, RedListPassengers}
 import org.specs2.specification.BeforeEach
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.time.SDateLike
 import util.RandomString
 
 import java.io.File

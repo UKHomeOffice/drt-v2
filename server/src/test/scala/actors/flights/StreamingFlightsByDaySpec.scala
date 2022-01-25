@@ -4,13 +4,13 @@ import actors.DateRange
 import actors.routing.FlightsRouterActor
 import actors.routing.FlightsRouterActor._
 import controllers.ArrivalGenerator
-import drt.shared.ApiFlightWithSplits
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.time.UtcDate
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.time.UtcDate
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -89,7 +89,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
         val endDate = SDate(2020, 9, 4, 23, 59)
 
         val flights = FlightsRouterActor.multiTerminalFlightsByDaySource(earlyOnTimeAndLateFlights)(startDate, endDate, Seq(T1), None)
-        val result = Await.result(FlightsRouterActor.runAndCombine(Future(flights)), 1 second)
+        val result = Await.result(FlightsRouterActor.runAndCombine(Future(flights)), 1.second)
         val expected = FlightsWithSplits(Seq(flight0209Late, flight0309, flight0409, flight0509Early))
         result === expected
       }

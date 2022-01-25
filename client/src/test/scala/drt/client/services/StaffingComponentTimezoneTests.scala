@@ -3,6 +3,7 @@ package drt.client.services
 import drt.client.services.JSDateConversions.SDate
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
+import uk.gov.homeoffice.drt.time.SDateLike
 import utest._
 
 object StaffingComponentTimezoneTests extends TestSuite {

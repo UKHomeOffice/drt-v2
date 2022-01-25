@@ -8,11 +8,12 @@ import akka.testkit.{ImplicitSender, TestProbe}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PortStateUpdates, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.time.UtcDate
+import drt.shared.{PortState, TM, TQM}
+import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import drt.shared.{ApiFlightWithSplits, PortState, TM, TQM}
-import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.time.UtcDate
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -34,14 +35,14 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
     "When the mock is set to return an empty CrunchMinute MinutesContainer" >> {
       val requestQueueMinutes: QueueMinutesRequester = PartitionedPortStateActor.requestQueueMinutesFn(mockResponseActor(emptyQueueMinutes))
       "Then I should see the empty container in the future" >> {
-        val result = Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1 second)
+        val result = Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1.second)
         result === emptyQueueMinutes
       }
     }
     "When the mock is set to return an a non-MinutesContainer" >> {
       val requestQueueMinutes: QueueMinutesRequester = PartitionedPortStateActor.requestQueueMinutesFn(mockResponseActor(List()))
       "Then I should see an exception in the future" >> {
-        val result = Try(Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1 second))
+        val result = Try(Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1.second))
         result.isFailure === true
       }
     }
@@ -51,14 +52,14 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
     "When the mock is set to return an empty StaffMinute MinutesContainer" >> {
       val requestQueueMinutes: StaffMinutesRequester = PartitionedPortStateActor.requestStaffMinutesFn(mockResponseActor(emptyStaffMinutes))
       "Then I should see the empty container in the future" >> {
-        val result = Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1 second)
+        val result = Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1.second)
         result === emptyStaffMinutes
       }
     }
     "When the mock is set to return an a non-MinutesContainer" >> {
       val requestQueueMinutes: StaffMinutesRequester = PartitionedPortStateActor.requestStaffMinutesFn(mockResponseActor(List()))
       "Then I should see an exception in the future" >> {
-        val result = Try(Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1 second))
+        val result = Try(Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1.second))
         result.isFailure === true
       }
     }
@@ -69,14 +70,14 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
       val requestQueueMinutes: FlightsRequester = PartitionedPortStateActor.requestFlightsFn(mockResponseActor(Source(List((UtcDate(2021, 8, 8), emptyFlights)))))
       "Then I should see the empty container in the future" >> {
         val eventualResult: Future[FlightsWithSplits] = FlightsRouterActor.runAndCombine(requestQueueMinutes(GetStateForDateRange(0L, 0L)))
-        val result = Await.result(eventualResult, 1 second)
+        val result = Await.result(eventualResult, 1.second)
         result === emptyFlights
       }
     }
     "When the mock is set to return an a non-FlightsWithSplits" >> {
       val requestQueueMinutes: FlightsRequester = PartitionedPortStateActor.requestFlightsFn(mockResponseActor(List()))
       "Then I should see an exception in the future" >> {
-        val result = Try(Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1 second))
+        val result = Try(Await.result(requestQueueMinutes(GetStateForDateRange(0L, 0L)), 1.second))
         result.isFailure === true
       }
     }

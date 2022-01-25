@@ -6,6 +6,7 @@ import drt.shared._
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaChildToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
@@ -40,14 +41,15 @@ class PCPPaxNosSpec extends CrunchTestLike {
         terminalProcessingTimes = procTimes,
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
       ),
-      pcpPaxFn = PcpUtils.bestPcpPaxEstimate))
+//      pcpPaxFn = PcpUtils.bestPcpPaxEstimate,
+    ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
     offerAndWait(crunch.manifestsLiveInput, manifests)
 
     val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 20, 20, 20, 20, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 15)
 

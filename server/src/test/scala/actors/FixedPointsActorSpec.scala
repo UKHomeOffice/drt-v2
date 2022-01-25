@@ -7,6 +7,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration._
 
@@ -90,7 +91,7 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
     newActor ! GetState
     val expected = Set(updatedFixedPoint1, updatedFixedPoint3)
 
-    val result = expectMsgPF(1 second) {
+    val result = expectMsgPF(1.second) {
       case FixedPointAssignments(sa) => sa.toSet
     }
 
@@ -126,7 +127,7 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
     actorPit2006 ! GetState
     val expected = Set(fixedPoint2)
 
-    val result = expectMsgPF(1 second) {
+    val result = expectMsgPF(1.second) {
       case FixedPointAssignments(sa) => sa.toSet
     }
 

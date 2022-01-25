@@ -4,10 +4,11 @@ import actors.persistent.staffing.GetState
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import drt.shared.{SDateLike, TM}
+import drt.shared.TM
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -34,7 +35,7 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
 
     "When I ask for the state for that day" >> {
       "I should get back an empty map of staff minutes" >> {
-        val result = Await.result(terminalDayActor.ask(GetState).asInstanceOf[Future[Option[Map[TM, StaffMinute]]]], 1 second)
+        val result = Await.result(terminalDayActor.ask(GetState).asInstanceOf[Future[Option[Map[TM, StaffMinute]]]], 1.second)
 
         result === None
       }
@@ -45,7 +46,7 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinutesAndGetState(staffMinutes, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
+      val result = Await.result(eventual, 1.second)
 
       result === Option(MinutesContainer(Set(staffMinuteForDate(date).copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }
@@ -56,7 +57,7 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinutesAndGetState(staffMinutes, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
+      val result = Await.result(eventual, 1.second)
 
       result === None
     }
@@ -69,7 +70,7 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinutesAndGetState(staffMinutes, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
+      val result = Await.result(eventual, 1.second)
 
       result === Option(MinutesContainer(Set(inside.copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }

@@ -13,7 +13,7 @@ import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsFo
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
-import uk.gov.homeoffice.drt.time.UtcDate
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 
 class PartitionedPortStateTestActor(probe: ActorRef,
