@@ -7,14 +7,13 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.LoadingState
-import drt.shared.SDateLike
-import drt.shared.dates.LocalDate
 import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiTextField}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import scalacss.ScalaCssReactImplicits
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 object DaySelectorComponent extends ScalaCssReactImplicits {
 

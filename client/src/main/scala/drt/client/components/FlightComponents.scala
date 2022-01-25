@@ -1,14 +1,13 @@
 package drt.client.components
 
 import diode.UseValueEq
-import drt.shared._
-import drt.shared.api.Arrival
 import drt.shared.redlist.DirectRedListFlight
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.TrendingFlat
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray}
 import org.scalajs.dom.html.{Div, Span}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.PaxTypeAndQueue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 

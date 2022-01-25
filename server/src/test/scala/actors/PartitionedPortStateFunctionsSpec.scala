@@ -8,7 +8,7 @@ import akka.testkit.{ImplicitSender, TestProbe}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PortStateUpdates, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.UtcDate
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.{ApiFlightWithSplits, PortState, TM, TQM}

@@ -20,6 +20,7 @@ import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.util.{Success, Try}
 

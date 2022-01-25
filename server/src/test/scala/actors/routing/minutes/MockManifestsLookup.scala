@@ -3,7 +3,7 @@ package actors.routing.minutes
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.UtcDate
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}

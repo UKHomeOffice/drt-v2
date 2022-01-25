@@ -4,7 +4,7 @@ import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.UtcDate
 import services.SDate
 
 import scala.concurrent.{ExecutionContextExecutor, Future}

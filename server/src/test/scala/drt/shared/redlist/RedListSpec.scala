@@ -1,6 +1,6 @@
 package drt.shared.redlist
 
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch

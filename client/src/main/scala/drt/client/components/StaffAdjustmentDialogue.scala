@@ -1,20 +1,21 @@
 package drt.client.components
 
-import uk.gov.homeoffice.drt.auth.LoggedInUser
 import drt.client.actions.Actions.{AddStaffMovements, UpdateStaffAdjustmentDialogueState}
 import drt.client.components.StaffAdjustmentDialogue.roundToNearest
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.{SDateLike, StaffMovements}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import drt.shared.StaffMovements
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.util.{Success, Try}
 

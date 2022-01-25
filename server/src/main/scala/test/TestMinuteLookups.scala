@@ -6,7 +6,7 @@ import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import services.SDate
 import test.TestActors.{ResetData, TestQueueMinutesActor, TestStaffMinutesActor, TestTerminalDayQueuesActor, TestTerminalDayStaffActor}

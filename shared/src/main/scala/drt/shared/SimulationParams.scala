@@ -4,13 +4,14 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default.{ReadWriter, macroRW}
 
 import scala.util.{Success, Try}
 
 case class SimulationParams(
                              terminal: Terminal,
-                             date: dates.LocalDate,
+                             date: LocalDate,
                              passengerWeighting: Double,
                              processingTimes: Map[PaxTypeAndQueue, Int],
                              minDesks: Map[Queue, Int],
@@ -89,7 +90,7 @@ object SimulationParams {
     val maybeParams = for {
       terminalName: String <- maybeSimulationFieldsStrings("terminal")
       dateString: String <- maybeSimulationFieldsStrings("date")
-      localDate <- dates.LocalDate.parse(dateString)
+      localDate <- LocalDate.parse(dateString)
       passengerWeightingString: String <- maybeSimulationFieldsStrings("passengerWeighting")
       eGateBankSizeString: String <- maybeSimulationFieldsStrings("eGateBankSizes")
       crunchOffsetMinutes: String <- maybeSimulationFieldsStrings("crunchOffsetMinutes")

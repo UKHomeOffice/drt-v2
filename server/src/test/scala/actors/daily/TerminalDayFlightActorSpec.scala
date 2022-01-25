@@ -8,7 +8,7 @@ import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.FlightsWithSplits
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.UtcDate
 import drt.shared.{ApiFlightWithSplits, ArrivalsDiff, SDateLike, TQM}
 import services.SDate
 import services.crunch.CrunchTestLike

@@ -1,8 +1,8 @@
 package services.graphstages
 
-import drt.shared.ApiFlightWithSplits
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import services.AirportToCountry
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates

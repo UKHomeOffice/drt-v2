@@ -1,6 +1,7 @@
 package actors
 
-import drt.shared.{HasExpireables, SDateLike}
+import drt.shared.HasExpireables
+import uk.gov.homeoffice.drt.time.SDateLike
 
 trait ExpiryActorLike[A <: HasExpireables[A]] {
   def now: () => SDateLike

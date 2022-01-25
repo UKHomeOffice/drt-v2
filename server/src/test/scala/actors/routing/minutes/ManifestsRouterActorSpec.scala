@@ -13,7 +13,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.UtcDate
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}

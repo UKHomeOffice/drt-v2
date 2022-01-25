@@ -1,6 +1,6 @@
 package services.arrivals
 
-import drt.shared.api.Arrival
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 object ArrivalsAdjustmentsNoop extends ArrivalsAdjustmentsLike {

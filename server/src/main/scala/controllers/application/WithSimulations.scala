@@ -15,7 +15,7 @@ import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.{MilliTimes, UtcDate}
 import manifests.queues.SplitsCalculator
 import play.api.mvc._
 import services.SDate

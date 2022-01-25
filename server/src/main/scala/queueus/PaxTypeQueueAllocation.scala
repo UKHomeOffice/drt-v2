@@ -1,8 +1,8 @@
 package queueus
 
-import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals.{PaxNumbers, Splits}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxAge, PaxType, PaxTypeAndQueue}

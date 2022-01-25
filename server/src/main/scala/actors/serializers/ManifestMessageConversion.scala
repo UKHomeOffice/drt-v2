@@ -6,6 +6,7 @@ import passengersplits.parsing.VoyageManifestParser._
 import server.protobuf.messages.VoyageManifest.{PassengerInfoJsonMessage, VoyageManifestMessage, VoyageManifestsMessage}
 import services.SDate
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 
 import scala.util.Try

@@ -1,15 +1,14 @@
 package services
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.dates.{DateLike, LocalDate, UtcDate}
-import drt.shared.{MilliDate, SDateLike}
+import drt.shared.MilliDate
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
 import services.graphstages.Crunch.{europeLondonTimeZone, utcTimeZone}
+import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, SDateLike, UtcDate}
 
-import scala.concurrent.duration.FiniteDuration
 import scala.language.implicitConversions
 import scala.util.Try
 

@@ -2,12 +2,13 @@ package services
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.MilliDate
-import drt.shared.MilliTimes.timeToNearestMinute
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import drt.shared.api.{Arrival, WalkTime}
+import drt.shared.api.WalkTime
 import drt.shared.coachTime.CoachWalkTime
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.MilliTimes.timeToNearestMinute
 
 import scala.util.{Success, Try}
 

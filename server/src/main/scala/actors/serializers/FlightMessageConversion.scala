@@ -3,13 +3,13 @@ package actors.serializers
 import actors.persistent.arrivals.ArrivalsState
 import actors.serializers.PortStateMessageConversion.splitMessageToApiSplits
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage._
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PortCode}
 
 object FlightMessageConversion {

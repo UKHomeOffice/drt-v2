@@ -1,6 +1,6 @@
 package actors.persistent
 
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 
 
 class CrunchQueueActor(now: () => SDateLike,

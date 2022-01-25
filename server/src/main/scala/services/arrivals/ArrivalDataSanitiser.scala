@@ -1,6 +1,6 @@
 package services.arrivals
 
-import drt.shared.api.Arrival
+import uk.gov.homeoffice.drt.arrivals.Arrival
 
 case class ArrivalDataSanitiser(
                                  maybeEstimatedThresholdHours: Option[Int],
@@ -14,14 +14,14 @@ case class ArrivalDataSanitiser(
 
   def withSaneEstimatedTouchDown(arrival: Arrival): Arrival =
     (maybeEstThresholdMillis, arrival.Estimated) match {
-      case (Some(threshold), Some(est)) if (Math.abs(est - arrival.Scheduled) > threshold) =>
+      case (Some(threshold), Some(est)) if Math.abs(est - arrival.Scheduled) > threshold =>
         arrival.copy(Estimated = None)
       case _ => arrival
     }
 
   def withSaneEstimatedChox(arrival: Arrival): Arrival =
     (maybeTaxiThresholdMillis, maybeEstThresholdMillis, arrival.EstimatedChox, arrival.Estimated) match {
-      case (_, Some(threshold), Some(est), _) if (Math.abs(est - arrival.Scheduled) > threshold) =>
+      case (_, Some(threshold), Some(est), _) if Math.abs(est - arrival.Scheduled) > threshold =>
         arrival.copy(EstimatedChox = None)
       case (_, _, Some(estChox), Some(est)) if estChox <= est =>
         arrival.copy(EstimatedChox = None)
@@ -32,5 +32,5 @@ case class ArrivalDataSanitiser(
 }
 
 object ArrivalDataSanitiser {
-  val arrivalDataSanitiserWithoutThresholds = ArrivalDataSanitiser(None, None)
+  val arrivalDataSanitiserWithoutThresholds: ArrivalDataSanitiser = ArrivalDataSanitiser(None, None)
 }

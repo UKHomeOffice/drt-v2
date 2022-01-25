@@ -3,7 +3,7 @@ package controllers.application.exports
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc.{ResponseHeader, Result}
 import services.SDate

@@ -15,6 +15,7 @@ import scalapb.GeneratedMessage
 import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import services.graphstages.Crunch
 import services.{OfferHandler, SDate}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try

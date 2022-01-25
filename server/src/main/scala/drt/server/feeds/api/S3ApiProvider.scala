@@ -13,7 +13,7 @@ import com.amazonaws.auth.AWSCredentials
 import com.amazonaws.regions.Regions
 import com.mfglabs.commons.aws.s3._
 import com.typesafe.config.Config
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 

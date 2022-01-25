@@ -1,6 +1,6 @@
 package actors.daily
 
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import org.specs2.mutable.Specification
 import server.protobuf.messages.PaxMessage.PaxCountMessage
 import services.SDate

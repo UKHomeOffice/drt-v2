@@ -10,8 +10,10 @@ import drt.shared._
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import org.scalajs.dom.raw.HTMLElement
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, PaxNumbers, Percentage, Splits}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.util.Try
 

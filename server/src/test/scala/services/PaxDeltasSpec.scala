@@ -2,7 +2,7 @@ package services
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import org.specs2.mutable.Specification
 import services.PaxDeltas.maybePctDeltas
 import services.graphstages.Crunch

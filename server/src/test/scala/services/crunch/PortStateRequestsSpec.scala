@@ -13,7 +13,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import drt.shared.api.Arrival
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.UtcDate
 import services.SDate
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 import uk.gov.homeoffice.drt.ports.AirportConfig

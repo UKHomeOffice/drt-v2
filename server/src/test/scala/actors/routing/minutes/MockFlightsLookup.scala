@@ -4,7 +4,7 @@ import actors.routing.minutes.MinutesActorLike.FlightsLookup
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.UtcDate
 import drt.shared.{ApiFlightWithSplits, UniqueArrival}
 import services.SDate
 

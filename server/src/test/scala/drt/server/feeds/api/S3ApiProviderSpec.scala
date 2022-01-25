@@ -5,7 +5,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.amazonaws.auth.AWSCredentials
 import com.mfglabs.commons.aws.s3.AmazonS3Client
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import org.specs2.mock.Mockito
 import org.specs2.specification.Scope
 import services.SDate

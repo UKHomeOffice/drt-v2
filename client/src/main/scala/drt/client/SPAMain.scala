@@ -9,8 +9,6 @@ import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
-import drt.shared.SDateLike
-import drt.shared.dates.LocalDate
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
@@ -18,6 +16,7 @@ import org.scalajs.dom.console
 import scalacss.ProdDefaults._
 import uk.gov.homeoffice.drt.Urls
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import java.util.UUID
 import scala.collection.immutable.Seq

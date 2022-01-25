@@ -2,6 +2,7 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 case class StaffTimeSlotsForTerminalMonth(monthMillis: MillisSinceEpoch,
                                           terminalName: Terminal,
