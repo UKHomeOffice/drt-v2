@@ -5,6 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.ArrivalStatus
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
@@ -46,7 +47,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 30)
         resultSummary == expected
@@ -90,7 +91,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-    crunch.portStateTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 30)
         resultSummary == expected

@@ -1,7 +1,7 @@
 package services
 
-import drt.shared.dates.LocalDate
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.time.LocalDate
 
 class ServerLocalDateSpec extends Specification {
 

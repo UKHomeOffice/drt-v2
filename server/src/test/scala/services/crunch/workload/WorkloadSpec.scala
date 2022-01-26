@@ -4,10 +4,10 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
-import drt.shared.api.Arrival
 import services.SDate
 import services.crunch.CrunchTestLike
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, EventType, EventTypes, PaxNumbers, Splits}
 import uk.gov.homeoffice.drt.ports.Queues.{Open, Queue, QueueFallbacks}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals._

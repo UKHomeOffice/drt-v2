@@ -1,8 +1,8 @@
 package services
 
 import controllers.ArrivalGenerator.arrival
-import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 

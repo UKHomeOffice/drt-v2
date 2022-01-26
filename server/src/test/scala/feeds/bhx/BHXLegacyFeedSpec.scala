@@ -1,7 +1,6 @@
 package feeds.bhx
 
 import drt.server.feeds.legacy.bhx.BHXFeed
-import drt.shared.api.Arrival
 import org.joda.time.DateTimeZone
 import org.mockito.Mockito.verify
 import org.specs2.matcher.Scope
@@ -9,6 +8,7 @@ import org.specs2.mock.Mockito
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.co.bhx.online.flightinformation._
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
 

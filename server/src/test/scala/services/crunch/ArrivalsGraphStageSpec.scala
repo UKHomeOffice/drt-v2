@@ -4,18 +4,19 @@ import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.arrival
 import drt.shared.FlightsApi.Flights
 import drt.shared._
-import drt.shared.api.Arrival
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds._
 import services.SDate
 import services.crunch.VoyageManifestGenerator.{euIdCard, xOfPaxType}
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, EventTypes, Percentage, Splits, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.List
 import scala.concurrent.duration._
@@ -213,13 +214,13 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival))))
 
-        crunch.portStateTestProbe.fishForMessage(1 second) {
+        crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(flights, _, _) => flights.nonEmpty
         }
 
         offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
 
-        crunch.portStateTestProbe.fishForMessage(1 second) {
+        crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(flights, _, _) => flights.values.exists(_.apiFlight.Estimated == Option(SDate(scheduled).millisSinceEpoch))
         }
 
@@ -240,14 +241,14 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival))))
 
-        crunch.portStateTestProbe.fishForMessage(1 second) {
+        crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(flights, _, _) => flights.nonEmpty
         }
 
         offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
         offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(Flights(List(forecastArrival))))
 
-        crunch.portStateTestProbe.fishForMessage(1 second) {
+        crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(flights, _, _) =>
             flights.values.exists(_.apiFlight == forecastArrival.copy(FeedSources = Set(AclFeedSource, ForecastFeedSource)))
         }
@@ -265,13 +266,13 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival))))
 
-    crunch.portStateTestProbe.fishForMessage(1 second) {
+    crunch.portStateTestProbe.fishForMessage(1.second) {
       case PortState(flights, _, _) => flights.values.map(a => a.apiFlight.Terminal) == Iterable(T1)
     }
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival.copy(Terminal = T2)))))
 
-    crunch.portStateTestProbe.fishForMessage(1 second) {
+    crunch.portStateTestProbe.fishForMessage(1.second) {
       case PortState(flights, _, _) =>
         val terminals = flights.values.map(a => a.apiFlight.Terminal)
         terminals == Iterable(T2)
@@ -288,13 +289,13 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival))))
 
-    crunch.portStateTestProbe.fishForMessage(1 second) {
+    crunch.portStateTestProbe.fishForMessage(1.second) {
       case PortState(flights, _, _) => flights.values.map(a => a.apiFlight.Terminal) == Iterable(T1)
     }
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival.copy(Terminal = T2)))))
 
-    crunch.portStateTestProbe.fishForMessage(1 second) {
+    crunch.portStateTestProbe.fishForMessage(1.second) {
       case PortState(flights, _, _) =>
         val terminals = flights.values.map(a => a.apiFlight.Terminal)
         terminals == Iterable(T2)

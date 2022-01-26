@@ -3,11 +3,11 @@ package services.arrivals
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
-import drt.shared.api.Arrival
 import drt.shared.{DrtPortConfigs, PortState}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig, TestDefaults}
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates

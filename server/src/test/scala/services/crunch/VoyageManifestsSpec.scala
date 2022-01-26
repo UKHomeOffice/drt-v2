@@ -1,7 +1,6 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.shared.EventTypes.CI
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
@@ -12,6 +11,8 @@ import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals.EventTypes.CI
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues._

@@ -1,8 +1,7 @@
 package services.arrivals
 
-import drt.shared.api.FlightCodeSuffix
-import drt.shared.{CarrierCode, FlightCode, PcpUtils, VoyageNumber}
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, FlightCode, FlightCodeSuffix, VoyageNumber}
 
 
 class FlightCodeSpec extends CrunchTestLike {

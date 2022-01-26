@@ -5,6 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Percentage, Splits}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues._
@@ -49,7 +50,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
           updatedArrival.copy(FeedSources = Set(LiveFeedSource)),
           Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
 
-        crunch.portStateTestProbe.fishForMessage(3 seconds) {
+        crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
             val flightsAfterUpdate = ps.flights.values.map(_.copy(lastUpdated = None)).toSet
             flightsAfterUpdate == expectedFlights
@@ -80,7 +81,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
           updatedArrival.copy(FeedSources = Set(LiveFeedSource)),
           Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
 
-        crunch.portStateTestProbe.fishForMessage(3 seconds) {
+        crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
             val flightsAfterUpdate = ps.flights.values.map(_.copy(lastUpdated = None)).toSet
             flightsAfterUpdate == expectedFlights
@@ -104,7 +105,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(oneFlight))
 
-        crunch.portStateTestProbe.fishForMessage(1 second) {
+        crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(_, cms, _) if cms.nonEmpty =>
             val nonZeroPax = cms.values.map(_.paxLoad).max > 0
             val nonZeroWorkload = cms.values.map(_.workLoad).max > 0
@@ -114,7 +115,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(zeroFlights))
 
-        crunch.portStateTestProbe.fishForMessage(1 seconds) {
+        crunch.portStateTestProbe.fishForMessage(1.seconds) {
           case PortState(_, cms, _) if cms.nonEmpty =>
             val nonZeroPax = cms.values.map(_.paxLoad).max == 0
             val nonZeroWorkload = cms.values.map(_.workLoad).max == 0

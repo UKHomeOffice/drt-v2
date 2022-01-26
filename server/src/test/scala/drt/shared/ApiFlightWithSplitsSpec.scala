@@ -1,11 +1,11 @@
 package drt.shared
 
-import drt.shared.api.Arrival
 import drt.shared.splits.ApiSplitsToSplitRatio
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, EventTypes, Splits}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{Transit, VisaNational}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports._
 
 
@@ -92,7 +92,7 @@ class ApiFlightWithSplitsSpec extends Specification {
         flightWithSplits.hasValidApi mustEqual true
       }
     }
-    
+
     "when there no actual pax number in liveFeed" in {
       "and api splits has pax number and hasValidApi is true" in {
         val flightWithSplits = flightWithPaxAndApiSplits(None, 0, 100, 0, Set(LiveFeedSource))

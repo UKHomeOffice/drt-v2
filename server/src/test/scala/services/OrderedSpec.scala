@@ -2,6 +2,7 @@ package services
 
 import drt.shared._
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.arrivals.{UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
 
