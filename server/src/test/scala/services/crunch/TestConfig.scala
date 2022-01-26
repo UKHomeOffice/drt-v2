@@ -38,7 +38,6 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       recrunchOnStart: Boolean = false,
                       flexDesks: Boolean = false,
                       maybePassengersActorProps: Option[Props] = None,
-//                      pcpPaxFn: Arrival => Int = TestDefaults.pcpPaxFn,
                       arrivalsAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustmentsNoop,
                       maybeEgatesProvider: Option[() => Future[PortEgateBanksUpdates]] = None,
                      )

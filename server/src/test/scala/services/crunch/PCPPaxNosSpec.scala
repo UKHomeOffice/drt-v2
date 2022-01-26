@@ -41,7 +41,6 @@ class PCPPaxNosSpec extends CrunchTestLike {
         terminalProcessingTimes = procTimes,
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
       ),
-//      pcpPaxFn = PcpUtils.bestPcpPaxEstimate,
     ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
