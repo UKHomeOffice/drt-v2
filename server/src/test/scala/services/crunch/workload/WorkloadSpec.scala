@@ -7,7 +7,8 @@ import drt.shared._
 import services.SDate
 import services.crunch.CrunchTestLike
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, EventType, EventTypes, PaxNumbers, Splits}
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Queues.{Open, Queue, QueueFallbacks}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals._

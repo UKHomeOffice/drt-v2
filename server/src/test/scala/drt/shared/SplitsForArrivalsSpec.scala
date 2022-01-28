@@ -3,12 +3,13 @@ package drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, PaxNumbers, Splits, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
-import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports._
 
 class SplitsForArrivalsSpec extends Specification {
 

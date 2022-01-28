@@ -3,6 +3,7 @@ package actors.serializers
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical

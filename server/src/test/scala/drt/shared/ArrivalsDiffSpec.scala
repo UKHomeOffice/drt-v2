@@ -3,7 +3,8 @@ package drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalStatus, PaxNumbers, Splits}
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalStatus, Splits}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 
 class ArrivalsDiffSpec extends Specification {
