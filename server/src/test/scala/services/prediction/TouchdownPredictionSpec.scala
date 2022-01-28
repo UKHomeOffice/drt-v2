@@ -2,16 +2,17 @@ package services.prediction
 
 import actors.persistent.prediction.TouchdownPredictionActor
 import actors.persistent.staffing.GetState
-import actors.serializers.FeatureType.OneToMany
-import actors.serializers.{Features, RegressionModel, TouchdownModelAndFeatures}
 import akka.actor.{PoisonPill, Props}
 import akka.pattern.ask
 import controllers.ArrivalGenerator
-import drt.shared.{ArrivalsDiff, VoyageNumber}
+import drt.shared.ArrivalsDiff
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
+import uk.gov.homeoffice.drt.prediction.FeatureType.OneToMany
+import uk.gov.homeoffice.drt.prediction.{Features, RegressionModel, TouchdownModelAndFeatures}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}

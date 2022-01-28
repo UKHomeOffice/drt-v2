@@ -2,9 +2,10 @@ package actors.persistent.prediction
 
 import actors.persistent.staffing.GetState
 import actors.persistent.{RecoveryActorLike, Sizes}
-import actors.serializers.ModelAndFeatures
+import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
+import uk.gov.homeoffice.drt.time.SDateLike
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{SDateLike, VoyageNumber}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.ModelAndFeatures.ModelAndFeaturesMessage
