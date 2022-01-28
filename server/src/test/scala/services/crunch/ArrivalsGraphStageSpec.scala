@@ -10,7 +10,8 @@ import server.feeds._
 import services.SDate
 import services.crunch.VoyageManifestGenerator.{euIdCard, xOfPaxType}
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, EventTypes, Percentage, Splits, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage

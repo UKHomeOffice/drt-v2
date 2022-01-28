@@ -5,7 +5,8 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Percentage, Splits}
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues._

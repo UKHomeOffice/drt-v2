@@ -3,7 +3,8 @@ package services.exports
 import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
 import services.exports.Exports.actualAPISplitsAndHeadingsFromFlight
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, PaxNumbers, Splits}
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.ApiPaxTypeAndQueueCount
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, UndefinedPaxType}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk

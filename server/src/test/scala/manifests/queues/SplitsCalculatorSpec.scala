@@ -9,7 +9,8 @@ import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, PaxNumbers, Percentage, Splits, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage}
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, Splits, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources._
