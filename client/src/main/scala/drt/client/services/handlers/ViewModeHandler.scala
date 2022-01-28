@@ -6,7 +6,8 @@ import drt.client.actions.Actions._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{PortState, SDateLike}
+import drt.shared.PortState
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

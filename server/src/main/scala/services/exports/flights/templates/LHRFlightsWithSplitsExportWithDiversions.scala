@@ -5,7 +5,9 @@ import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared._
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import services.AirportToCountry
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.SDateLike
 
 
 trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {

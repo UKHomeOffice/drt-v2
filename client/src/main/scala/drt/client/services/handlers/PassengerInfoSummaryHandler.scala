@@ -6,7 +6,7 @@ import drt.client.actions.Actions._
 import drt.client.services.DrtApi
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.api.PassengerInfoSummary
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.UtcDate
 import drt.shared.{ArrivalKey, PortState}
 import upickle.default.read
 

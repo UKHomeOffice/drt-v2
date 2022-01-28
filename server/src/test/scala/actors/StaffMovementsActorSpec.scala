@@ -1,16 +1,16 @@
 package actors
 
 
-import actors.persistent.staffing.{AddStaffMovements, AddStaffMovementsAck, GetState, RemoveStaffMovements, RemoveStaffMovementsAck, StaffMovementsActorBase, StaffMovementsReadActor}
-
-import java.util.UUID
+import actors.persistent.staffing._
 import akka.actor.{PoisonPill, Props}
 import akka.testkit.ImplicitSender
-import uk.gov.homeoffice.drt.ports.Terminals.T1
-import drt.shared.{MilliDate, SDateLike, StaffMovement, StaffMovements}
+import drt.shared.{MilliDate, StaffMovement, StaffMovements}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.time.SDateLike
 
+import java.util.UUID
 import scala.concurrent.duration._
 
 
@@ -72,7 +72,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       newActor ! GetState
       val expected = Set(movement2)
 
-      val result = expectMsgPF(1 second) {
+      val result = expectMsgPF(1.second) {
         case StaffMovements(movements) => movements.toSet
       }
 
@@ -114,7 +114,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       newActor ! GetState
       val expected = Set(movement2, movement3)
 
-      val result = expectMsgPF(1 second) {
+      val result = expectMsgPF(1.second) {
         case StaffMovements(movements) => movements.toSet
       }
 
@@ -146,7 +146,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       actor ! GetState
       val expected = Set(unexpiredMovement1, unexpiredMovement2)
 
-      val result = expectMsgPF(1 second) {
+      val result = expectMsgPF(1.second) {
         case StaffMovements(movements) => movements.toSet
       }
 
@@ -177,7 +177,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       newActor ! GetState
       val expected = Set(unexpiredMovement1, unexpiredMovement2)
 
-      val result = expectMsgPF(1 second) {
+      val result = expectMsgPF(1.second) {
         case StaffMovements(movements) => movements.toSet
       }
 
@@ -210,7 +210,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       newActor ! GetState
       val expected = Set(expiredMovement1, expiredMovement2, unexpiredMovement1, unexpiredMovement2)
 
-      val result = expectMsgPF(1 second) {
+      val result = expectMsgPF(1.second) {
         case StaffMovements(movements) => movements.toSet
       }
 
@@ -243,7 +243,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       newActor ! GetState
       val expected = Set(unexpiredMovement1, unexpiredMovement2)
 
-      val result = expectMsgPF(1 second) {
+      val result = expectMsgPF(1.second) {
         case StaffMovements(movements) => movements.toSet
       }
 

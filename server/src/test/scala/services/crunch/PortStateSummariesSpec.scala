@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared._
 import org.specs2.mutable.Specification
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -53,7 +54,7 @@ class PortStateSummariesSpec extends Specification {
 
   "Given a port state with crunch minutes with no deployed or actual desks & wait times " +
     "When I ask for a summary  " +
-    "Then I should see crunch minutes witth None for all the deployed and actual desks and wait times values" >> {
+    "Then I should see crunch minutes with None for all the deployed and actual desks and wait times values" >> {
     val terminal = T1
     val queues: List[Queue] = List(Queues.EeaDesk, Queues.EGate)
     val cmsList = for {

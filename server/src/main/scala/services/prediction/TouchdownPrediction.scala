@@ -2,19 +2,20 @@ package services.prediction
 
 import actors.persistent.prediction.TouchdownPredictionActor
 import actors.persistent.staffing.GetState
-import actors.serializers.TouchdownModelAndFeatures
 import akka.actor.{ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import drt.shared.api.Arrival
-import drt.shared.{ArrivalsDiff, SDateLike, VoyageNumber}
+import drt.shared.ArrivalsDiff
 import org.slf4j.LoggerFactory
 import services.SDate
 import services.prediction.TouchdownPrediction.MaybeModelAndFeaturesProvider
+import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.prediction.TouchdownModelAndFeatures
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration.DurationLong
 import scala.concurrent.{ExecutionContext, Future}

@@ -17,7 +17,6 @@ import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import drt.shared.api.Arrival
 import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookup
 import manifests.passengers.S3ManifestPoller
@@ -27,9 +26,11 @@ import server.feeds.ManifestsFeedResponse
 import services.SDate
 import services.crunch.CrunchSystem
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.time.MilliTimes
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration.DurationInt

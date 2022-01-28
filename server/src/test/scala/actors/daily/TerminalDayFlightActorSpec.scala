@@ -6,12 +6,13 @@ import akka.pattern.ask
 import controllers.ArrivalGenerator.arrivalForDayAndTerminal
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
-import drt.shared.dates.UtcDate
-import drt.shared.{ApiFlightWithSplits, ArrivalsDiff, SDateLike, TQM}
+import drt.shared.{ArrivalsDiff, TQM}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -39,7 +40,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
-      val result = Await.result(eventual, 2 second)
+      val result = Await.result(eventual, 2.second)
 
       result === FlightsWithSplits(Map(arrival.unique -> ApiFlightWithSplits(arrival, Set(), lastUpdated = Option(myNow().millisSinceEpoch))))
     }
@@ -52,7 +53,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
+      val result = Await.result(eventual, 1.second)
 
       result === FlightsWithSplits.empty
     }
@@ -67,7 +68,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
+      val result = Await.result(eventual, 1.second)
       val expected = FlightsWithSplits(Map(inside.unique -> ApiFlightWithSplits(inside, Set(), lastUpdated = Option(myNow().millisSinceEpoch))))
 
       result === expected
@@ -84,7 +85,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
+      val result = Await.result(eventual, 1.second)
       val expected = FlightsWithSplits(Map(correctTerminal.unique -> ApiFlightWithSplits(correctTerminal, Set(), lastUpdated = Option(myNow().millisSinceEpoch))))
 
       result === expected

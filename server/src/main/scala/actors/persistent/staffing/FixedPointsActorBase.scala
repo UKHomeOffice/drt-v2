@@ -1,18 +1,19 @@
 package actors.persistent.staffing
 
-import actors.persistent.Sizes.oneMegaByte
 import actors.acking.AckingReceiver.StreamCompleted
+import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import drt.shared.{FixedPointAssignments, MilliDate, SDateLike, StaffAssignment}
+import drt.shared.{FixedPointAssignments, MilliDate, StaffAssignment}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import services.OfferHandler
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -126,7 +127,7 @@ object FixedPointsMessageParser {
     createdAt = Option(createdAt.millisSinceEpoch)
   )
 
-  def fixedPointMessageToStaffAssignment(fixedPointMessage: FixedPointMessage) = StaffAssignment(
+  def fixedPointMessageToStaffAssignment(fixedPointMessage: FixedPointMessage): StaffAssignment = StaffAssignment(
     name = fixedPointMessage.name.getOrElse(""),
     terminal = Terminal(fixedPointMessage.terminalName.getOrElse("")),
     startDt = MilliDate(fixedPointMessage.startTimestamp.getOrElse(0L)),

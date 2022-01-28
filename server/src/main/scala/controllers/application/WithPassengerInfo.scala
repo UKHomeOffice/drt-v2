@@ -8,7 +8,7 @@ import akka.stream.scaladsl.Source
 import controllers.Application
 import drt.shared.ErrorResponse
 import drt.shared.api.PassengerInfoSummary
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.UtcDate
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.mvc.{Action, AnyContent, Result}

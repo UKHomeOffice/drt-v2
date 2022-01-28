@@ -12,13 +12,13 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
-import drt.shared.api.Arrival
-import drt.shared.dates.UtcDate
 import services.SDate
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -62,7 +62,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
   def resetData(terminal: Terminal, day: SDateLike): Unit = {
     val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => SDate.now())))
-    Await.ready(actor.ask(ResetData), 1 second)
+    Await.ready(actor.ask(ResetData), 1.second)
   }
 
   def flightsWithSplits(params: Iterable[(String, String, Terminal)]): List[ApiFlightWithSplits] = params.map { case (_, scheduled, _) =>
@@ -84,7 +84,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val eventualAck = ps.ask(ArrivalsDiff(Iterable(arrival), List()))
 
       "Then I should see the flight I sent it" >> {
-        val result = Await.result(eventualFlights(eventualAck, myNow, ps), 1 second).flights.values.headOption.map(_.apiFlight)
+        val result = Await.result(eventualFlights(eventualAck, myNow, ps), 1.second).flights.values.headOption.map(_.apiFlight)
 
         result === Option(arrival)
       }
@@ -97,7 +97,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       "Then I should see the flight I sent it in the port state" >> {
         val sinceMillis = myNow().addMinutes(-1).millisSinceEpoch
 
-        val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1 second).get.flights.headOption.map(_.apiFlight)
+        val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1.second).get.flights.headOption.map(_.apiFlight)
 
         result === Option(arrival)
       }
@@ -110,7 +110,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val eventualAck = ps.ask(ArrivalsDiff(Seq(arrival1), List())).flatMap(_ => ps.ask(ArrivalsDiff(Seq(arrival2), List())))
 
       "Then I should see both flights I sent it" >> {
-        val result = Await.result(eventualFlights(eventualAck, myNow, ps), 1 second).flights.values.map(_.apiFlight)
+        val result = Await.result(eventualFlights(eventualAck, myNow, ps), 1.second).flights.values.map(_.apiFlight)
 
         result === Iterable(arrival1, arrival2)
       }
@@ -122,7 +122,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val eventualAck = ps.ask(DeskRecMinutes(Seq(lm)))
 
       "Then I should find a matching crunch minute" >> {
-        val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1 second)
+        val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
         val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
 
         result === PortState(Seq(), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), Seq())
@@ -138,7 +138,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       "Then I should get the matching crunch minute in the updates" >> {
         val sinceMillis = myNow().addMinutes(-1).millisSinceEpoch
         Thread.sleep(250)
-        val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1 second)
+        val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1.second)
         val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
 
         result === Option(PortStateUpdates(myNow().millisSinceEpoch, Set(), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch).toSet, Set()))
@@ -152,7 +152,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val eventualAck = ps.ask(DeskRecMinutes(Seq(lm1))).flatMap(_ => ps.ask(DeskRecMinutes(Seq(lm2))))
 
       "Then I should find a matching crunch minute" >> {
-        val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1 second)
+        val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
         val expectedCms = Seq(
           CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4),
           CrunchMinute(T1, EeaDesk, myNow().addMinutes(1).millisSinceEpoch, 2, 3, 4, 5))
@@ -167,7 +167,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val eventualAck = ps.ask(StaffMinutes(Seq(sm)))
 
       "Then I should find a matching staff minute" >> {
-        val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1 second)
+        val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
 
         result === PortState(Seq(), Seq(), setUpdatedSms(Seq(sm), myNow().millisSinceEpoch))
       }
@@ -180,7 +180,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val eventualAck = ps.ask(StaffMinutes(Seq(sm1))).flatMap(_ => ps.ask(StaffMinutes(Seq(sm2))))
 
       "Then I should find a matching staff minute" >> {
-        val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1 second)
+        val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
 
         result === PortState(Seq(), Seq(), setUpdatedSms(Seq(sm1, sm2), myNow().millisSinceEpoch))
       }
@@ -197,7 +197,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val eventualAck = Future.sequence(Seq(eventualAck1, eventualAck2, eventualAck3))
 
       "Then I should see the flight, & corresponding crunch & staff minutes" >> {
-        val result = Await.result(eventualTerminalState(eventualAck, myNow, ps), 1 second)
+        val result = Await.result(eventualTerminalState(eventualAck, myNow, ps), 1.second)
 
         val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
 
@@ -210,41 +210,41 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
       "Current queries" >> {
         "GetStateForDateRange(nonLegacyDate, nonLegacyDate) results in PortState.empty" >> {
-          Await.result(ps.ask(GetStateForDateRange(nonLegacyDate, nonLegacyDate)), 1 second) === PortState.empty
+          Await.result(ps.ask(GetStateForDateRange(nonLegacyDate, nonLegacyDate)), 1.second) === PortState.empty
         }
         "GetStateForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1) results in PortState.empty" >> {
-          Await.result(ps.ask(GetStateForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)), 1 second) === PortState.empty
+          Await.result(ps.ask(GetStateForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)), 1.second) === PortState.empty
         }
         "GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1) results in PortState.empty" >> {
-          Await.result(ps.ask(GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)), 1 second) === PortState.empty
+          Await.result(ps.ask(GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)), 1.second) === PortState.empty
         }
         "GetFlights(nonLegacyDate, nonLegacyDate) results in FlightsWithSplits.empty" >> {
           val streamResponse = ps.ask(GetFlights(nonLegacyDate, nonLegacyDate)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
+          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1.second) === FlightsWithSplits.empty
         }
         "GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1) results in FlightsWithSplits.empty" >> {
           val streamResponse = ps.ask(GetFlightsForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
+          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1.second) === FlightsWithSplits.empty
         }
       }
 
       "Point in time queries" >> {
         "PointInTimeQuery(nonLegacyDate, GetStateForDateRange(nonLegacyDate, nonLegacyDate)) results in PortState.empty" >> {
-          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetStateForDateRange(nonLegacyDate, nonLegacyDate))), 1 second) === PortState.empty
+          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetStateForDateRange(nonLegacyDate, nonLegacyDate))), 1.second) === PortState.empty
         }
         "PointInTimeQuery(nonLegacyDate, GetStateForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)) results in PortState.empty" >> {
-          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetStateForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1))), 1 second) === PortState.empty
+          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetStateForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1))), 1.second) === PortState.empty
         }
         "PointInTimeQuery(nonLegacyDate, GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1)) results in PortState.empty" >> {
-          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1))), 1 second) === PortState.empty
+          Await.result(ps.ask(PointInTimeQuery(nonLegacyDate, GetMinutesForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1))), 1.second) === PortState.empty
         }
         "PointInTimeQuery(nonLegacyDate, GetFlights(nonLegacyDate, nonLegacyDate)) results in FlightsWithSplits.empty" >> {
           val streamResponse = ps.ask(PointInTimeQuery(nonLegacyDate, GetFlights(nonLegacyDate, nonLegacyDate))).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
+          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1.second) === FlightsWithSplits.empty
         }
         "PointInTimeQuery(nonLegacyDate, GetFlightsForTerminal(nonLegacyDate, nonLegacyDate, T1)) results in FlightsWithSplits.empty" >> {
           val streamResponse = ps.ask(PointInTimeQuery(nonLegacyDate, GetFlightsForTerminalDateRange(nonLegacyDate, nonLegacyDate, T1))).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
+          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1.second) === FlightsWithSplits.empty
         }
       }
 
@@ -252,21 +252,21 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
       "Legacy data queries" >> {
         "GetStateForDateRange(legacyDate, legacyDate) results in PortState.empty" >> {
-          Await.result(ps.ask(GetStateForDateRange(legacyDate, legacyDate)), 1 second) === PortState.empty
+          Await.result(ps.ask(GetStateForDateRange(legacyDate, legacyDate)), 1.second) === PortState.empty
         }
         "GetStateForTerminalDateRange(legacyDate, legacyDate, T1) results in PortState.empty" >> {
-          Await.result(ps.ask(GetStateForTerminalDateRange(legacyDate, legacyDate, T1)), 1 second) === PortState.empty
+          Await.result(ps.ask(GetStateForTerminalDateRange(legacyDate, legacyDate, T1)), 1.second) === PortState.empty
         }
         "GetMinutesForTerminalDateRange(legacyDate, legacyDate, T1) results in PortState.empty" >> {
-          Await.result(ps.ask(GetMinutesForTerminalDateRange(legacyDate, legacyDate, T1)), 1 second) === PortState.empty
+          Await.result(ps.ask(GetMinutesForTerminalDateRange(legacyDate, legacyDate, T1)), 1.second) === PortState.empty
         }
         "GetFlights(legacyDate, legacyDate) results in FlightsWithSplits.empty" >> {
           val streamResponse = ps.ask(GetFlights(legacyDate, legacyDate)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
+          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1.second) === FlightsWithSplits.empty
         }
         "GetFlightsForTerminal(legacyDate, legacyDate, T1) results in FlightsWithSplits.empty" >> {
           val streamResponse = ps.ask(GetFlightsForTerminalDateRange(legacyDate, legacyDate, T1)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1 second) === FlightsWithSplits.empty
+          Await.result(FlightsRouterActor.runAndCombine(streamResponse), 1.second) === FlightsWithSplits.empty
         }
       }
     }

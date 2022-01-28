@@ -11,11 +11,10 @@ import akka.testkit.TestProbe
 import drt.server.feeds.Feed
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
-import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, Operator}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 

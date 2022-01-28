@@ -1,11 +1,9 @@
 package feeds
 
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.arrivals.Arrival.standardiseFlightCode
 
 class FlightFeedsSpec extends Specification {
-
-  import drt.shared.api.Arrival.standardiseFlightCode
-
   "standardiseFlightCode should" >> {
     "left pad the flight number with zeros to 4 digits and retain the operator code" >> {
       "given a 2 character operator code and a 2 digit flight number" in {

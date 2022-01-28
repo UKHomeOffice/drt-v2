@@ -9,6 +9,7 @@ import drt.client.services._
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.scalajs.dom
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import upickle.default.read
 
 import scala.collection.immutable.SortedMap

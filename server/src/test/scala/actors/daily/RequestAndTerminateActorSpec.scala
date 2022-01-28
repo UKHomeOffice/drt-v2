@@ -5,7 +5,7 @@ import akka.actor.Props
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import services.SDate
 import services.crunch.CrunchTestLike

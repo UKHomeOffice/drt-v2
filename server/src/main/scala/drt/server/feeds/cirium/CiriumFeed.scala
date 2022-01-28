@@ -10,15 +10,15 @@ import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
-import drt.shared.SDateLike
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.{CiriumDate, CiriumFlightDurations, CiriumFlightStatus}
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.{A1, InvalidTerminal, T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

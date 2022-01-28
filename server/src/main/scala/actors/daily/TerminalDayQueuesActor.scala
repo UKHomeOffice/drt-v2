@@ -2,11 +2,11 @@ package actors.daily
 
 import akka.actor.Props
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import drt.shared.dates.UtcDate
-import drt.shared.{SDateLike, TQM}
+import drt.shared.TQM
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 
 object TerminalDayQueuesActor {

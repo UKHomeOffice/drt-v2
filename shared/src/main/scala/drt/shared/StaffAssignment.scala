@@ -2,6 +2,7 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{macroRW, ReadWriter => RW}
 
 case class StaffAssignment(name: String,

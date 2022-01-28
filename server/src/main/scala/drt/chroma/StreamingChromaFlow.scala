@@ -7,12 +7,11 @@ import drt.chroma.chromafetcher.ChromaFetcher.{ChromaFlightLike, ChromaForecastF
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
-import drt.shared.Operator
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Operator}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource}
 

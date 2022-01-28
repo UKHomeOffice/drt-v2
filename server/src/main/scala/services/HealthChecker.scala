@@ -8,9 +8,10 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{FeedSourceStatuses, FeedStatuses, SDateLike}
+import drt.shared.{FeedSourceStatuses, FeedStatuses}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.ports.FeedSource
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}

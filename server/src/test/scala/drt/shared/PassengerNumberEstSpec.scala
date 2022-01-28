@@ -1,7 +1,7 @@
 package drt.shared
 
-import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, EventTypes, Splits}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{Transit, VisaNational}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, LiveFeedSource, Queues}

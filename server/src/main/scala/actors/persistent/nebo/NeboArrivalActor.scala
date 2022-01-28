@@ -3,15 +3,15 @@ package actors.persistent.nebo
 import actors.persistent.nebo.NeboArrivalActor.getRedListPassengerFlightKey
 import actors.persistent.staffing.GetState
 import actors.persistent.{PersistentDrtActor, RecoveryActorLike, Sizes}
-import actors.serializers.NeboArrivalMessageConversion
 import actors.serializers.NeboArrivalMessageConversion._
 import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{NeboArrivals, RedListPassengers, SDateLike}
+import drt.shared.{NeboArrivals, RedListPassengers}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object NeboArrivalActor {
   def props(redListPassengers: RedListPassengers, now: () => SDateLike): Props =
@@ -35,8 +35,8 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
   override val log: Logger = LoggerFactory.getLogger(f"$getClass")
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
-  override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
   private val maxSnapshotInterval = 250
+  override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
   var state: NeboArrivals = initialState
 
   override def recovery: Recovery = maybePointInTime match {

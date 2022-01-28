@@ -1,7 +1,7 @@
 package drt.shared.redlist
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 
 trait LhrRedListDates {
   val t3RedListOpeningDate: MillisSinceEpoch

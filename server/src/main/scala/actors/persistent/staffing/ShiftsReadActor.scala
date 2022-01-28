@@ -3,8 +3,9 @@ package actors.persistent.staffing
 import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssignments
 import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
-import drt.shared.{SDateLike, ShiftAssignments}
+import drt.shared.ShiftAssignments
 import server.protobuf.messages.ShiftMessage.{ShiftStateSnapshotMessage, ShiftsMessage}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object ShiftsReadActor {
   def props(pointInTime: SDateLike, expireBefore: () => SDateLike): Props = Props(new ShiftsReadActor(pointInTime, expireBefore))

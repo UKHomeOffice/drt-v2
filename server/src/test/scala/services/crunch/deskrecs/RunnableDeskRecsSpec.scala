@@ -13,11 +13,9 @@ import dispatch.Future
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, SplitsForArrivals}
 import drt.shared._
-import drt.shared.api.Arrival
-import drt.shared.dates.UtcDate
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
-import queueus.{AdjustmentsNoop, B5JPlusTypeAllocator, DynamicQueueStatusProvider, PaxTypeQueueAllocation, TerminalQueueAllocator}
+import queueus._
 import server.feeds.ArrivalsFeedSuccess
 import services.crunch.VoyageManifestGenerator.{euPassport, visa}
 import services.crunch.desklimits.PortDeskLimits
@@ -27,12 +25,14 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Percentage, Splits}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.collection.immutable.{Map, Seq, SortedMap}
 import scala.concurrent.ExecutionContextExecutor
@@ -94,7 +94,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
   val nowFromSDate: () => SDateLike = () => SDate.now()
 
   val flexDesks = false
-  val pcpPaxCalcFn: Arrival => Int = PcpUtils.bestPcpPaxEstimate
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   private def getDeskRecsGraph(mockPortStateActor: ActorRef, historicManifests: HistoricManifestsProvider, airportConfig: AirportConfig = defaultAirportConfig) = {

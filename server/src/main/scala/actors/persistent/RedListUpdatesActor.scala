@@ -10,7 +10,7 @@ import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import drt.shared.redlist._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

@@ -10,7 +10,6 @@ import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.SimulationParams
-import drt.shared.api.Arrival
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
 import queueus.DynamicQueueStatusProvider
@@ -20,6 +19,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs.{DynamicRunnableDeskRecs, PortDesksAndWaitsProvider, RunnableOptimisation}
 import services.graphstages.FlightFilter
 import services.{OptimiserWithFlexibleProcessors, SDate}
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

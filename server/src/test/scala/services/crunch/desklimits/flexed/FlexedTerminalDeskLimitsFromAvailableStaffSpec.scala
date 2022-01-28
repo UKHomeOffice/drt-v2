@@ -2,14 +2,14 @@ package services.crunch.desklimits.flexed
 
 import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.MilliTimes.oneHourMillis
-import services.{SDate, WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.EgatesCapacityProvider
 import services.crunch.desklimits.flexed.WorkloadProcessorsHelper.uniformDesksForHours
 import services.graphstages.Crunch
+import services.{SDate, WorkloadProcessors, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.egates.{Desk, EgateBank, EgateBanksUpdate, EgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
+import uk.gov.homeoffice.drt.time.MilliTimes.oneHourMillis
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.Await

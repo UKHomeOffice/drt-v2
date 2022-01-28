@@ -1,13 +1,12 @@
 package manifests.queues
 
-import drt.shared._
-import drt.shared.api.Arrival
 import manifests.passengers.ManifestLike
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, PaxTypeQueueAllocation, QueueAdjustments}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Percentage, Splits}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.InvalidSource
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue}
 

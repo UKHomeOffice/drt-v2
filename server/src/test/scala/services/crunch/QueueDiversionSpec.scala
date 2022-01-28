@@ -2,7 +2,7 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.TestDefaults.{airportConfig, airportConfigForSplits}

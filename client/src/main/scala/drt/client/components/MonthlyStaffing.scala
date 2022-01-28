@@ -17,6 +17,7 @@ import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.window.confirm
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.mutable
 import scala.scalajs.js

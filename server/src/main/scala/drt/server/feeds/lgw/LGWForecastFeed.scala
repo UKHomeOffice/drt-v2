@@ -7,13 +7,13 @@ import akka.stream.{ActorAttributes, Supervision}
 import com.box.sdk._
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
-import drt.shared.api.Arrival
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.{N, S}
 

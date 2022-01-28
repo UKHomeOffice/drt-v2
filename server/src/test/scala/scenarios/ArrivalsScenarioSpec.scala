@@ -8,8 +8,6 @@ import controllers.ArrivalGenerator
 import dispatch.Future
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
-import drt.shared.api.Arrival
-import drt.shared.dates.LocalDate
 import manifests.passengers.ManifestLike
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -18,18 +16,20 @@ import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class ArrivalsScenarioSpec extends CrunchTestLike {
-  val crunchDate = LocalDate(2021, 3, 8)
+  val crunchDate: LocalDate = LocalDate(2021, 3, 8)
 
   val terminalQueueAllocationMap: Map[Terminal, Map[PaxType, List[(Queue, Double)]]] = Map(T2 -> Map(
     EeaMachineReadable -> List(Queues.EGate -> 0.5, Queues.EeaDesk -> 0.5),
@@ -38,18 +38,17 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1.0)
   ))
 
-  val testPaxTypeAllocator = PaxTypeQueueAllocation(
+  val testPaxTypeAllocator: PaxTypeQueueAllocation = PaxTypeQueueAllocation(
     B5JPlusTypeAllocator,
     TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap))
 
-  val splitsCalculator = SplitsCalculator(testPaxTypeAllocator, defaultAirportConfig.terminalPaxSplits, ChildEGateAdjustments(1.0))
+  val splitsCalculator: SplitsCalculator = SplitsCalculator(testPaxTypeAllocator, defaultAirportConfig.terminalPaxSplits, ChildEGateAdjustments(1.0))
   private val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(100), schDt = "2021-03-08T00:00")
   val arrivals = List(
     arrival
   )
 
   def flightsProvider(cr: CrunchRequest): Future[Source[List[Arrival], NotUsed]] = {
-
     Future(Source(List(arrivals)))
   }
 
@@ -80,7 +79,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
       })),
     )
 
-    val result = Await.result(futureResult, 1 second)
+    val result = Await.result(futureResult, 1.second)
 
     result.minutes.map(_.paxLoad).sum === 100
   }

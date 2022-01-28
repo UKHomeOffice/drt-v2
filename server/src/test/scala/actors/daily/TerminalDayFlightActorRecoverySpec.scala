@@ -8,9 +8,9 @@ import akka.pattern.ask
 import akka.persistence.PersistentActor
 import controllers.ArrivalGenerator.flightWithSplitsForDayAndTerminal
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.UtcDate
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.SDate

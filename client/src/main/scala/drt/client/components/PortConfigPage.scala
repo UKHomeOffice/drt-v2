@@ -5,6 +5,7 @@ import diode.data.Pot
 import drt.client.components.ToolTips._
 import drt.client.modules.GoogleEventTracker
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.api.{WalkTime, WalkTimes}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
@@ -15,10 +16,11 @@ import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdates, PortEgateBank
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import scala.collection.immutable.Map
 
 object PortConfigPage {
 
-  case class Props(redListUpdates: Pot[RedListUpdates], portEgateBanksUpdates: Pot[PortEgateBanksUpdates], user: Pot[LoggedInUser], airportConfig: Pot[AirportConfig]) extends UseValueEq
+  case class Props(redListUpdates: Pot[RedListUpdates], portEgateBanksUpdates: Pot[PortEgateBanksUpdates], user: Pot[LoggedInUser], airportConfig: Pot[AirportConfig], gateStandWalktime: Pot[WalkTimes]) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigPage")
     .render_P { props =>
@@ -27,6 +29,7 @@ object PortConfigPage {
         portEgateBanksUpdates <- props.portEgateBanksUpdates
         user <- props.user
         airportConfig <- props.airportConfig
+        gateStandWalktime <- props.gateStandWalktime
       } yield
         <.div(
           ^.className := "port-config",
@@ -44,7 +47,7 @@ object PortConfigPage {
               }.toTagMod
             )
           } else EmptyVdom,
-          PortConfigDetails(airportConfig)
+          PortConfigDetails(airportConfig, gateStandWalktime)
         )
       mp.render(identity)
     }
@@ -58,7 +61,7 @@ object PortConfigPage {
 
 object PortConfigDetails {
 
-  case class Props(airportConfig: AirportConfig) extends UseValueEq
+  case class Props(airportConfig: AirportConfig, gateStandWalktime: WalkTimes) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigDetails")
     .render_P { props =>
@@ -81,7 +84,14 @@ object PortConfigDetails {
             <.div(^.className := "container config-container",
               <.h4("Walktimes", " ", walkTimesTooltip),
               defaultWalktime(props.airportConfig.defaultWalkTimeMillis(tn))
-            )
+            ),
+            if (props.gateStandWalktime.byTerminal.nonEmpty) {
+              <.div(^.className := "container config-container",
+                <.h4("Gate/Stand Walktime"),
+                gateWalktime(props.gateStandWalktime.byTerminal(tn).gateWalktimes),
+                standWalktime(props.gateStandWalktime.byTerminal(tn).standWalkTimes)
+              )
+            } else ""
           )
         ).toTagMod
       )
@@ -133,6 +143,49 @@ object PortConfigDetails {
     )
   )
 
+  def gateWalktime(gateWalktimes: Map[String, WalkTime]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
+    if (gateWalktimes.nonEmpty) {
+      val sortedMap = WalkTimes.sortGateStandMap(gateWalktimes)
+      <.table(^.className := "table table-bordered table-hover",
+        <.tbody(
+          <.tr(
+            <.th(^.className := "col", "Gate"),
+            <.th(^.className := "col", "Walk time minutes")
+          ),
+          sortedMap.map {
+            case (gate, walktime) =>
+              <.tr(
+                <.th(^.scope := "row", gate),
+                <.td(^.className := "text-right", (walktime.walkTimeMillis / 60000).toInt)
+              )
+          }.toTagMod))
+    } else {
+      ""
+    }
+  )
+
+  def standWalktime(standWalkTimes: Map[String, WalkTime]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
+    if (standWalkTimes.nonEmpty) {
+      val sortedMap = WalkTimes.sortGateStandMap(standWalkTimes)
+
+      <.table(^.className := "table table-bordered table-hover",
+        <.tbody(
+          <.tr(
+            <.th(^.className := "col", "Stand"),
+            <.th(^.className := "col", "Walk time minutes")
+          ),
+          sortedMap.map {
+            case (stand, walktime) =>
+              <.tr(
+                <.th(^.scope := "row", stand),
+                <.td(^.className := "text-right", (walktime.walkTimeMillis / 60000).toInt)
+              )
+          }.toTagMod))
+    } else {
+      ""
+    }
+  )
+
   def defaultWalktime(defaultWalkTime: MillisSinceEpoch): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
     <.table(^.className := "table table-bordered table-hover",
       <.tbody(
@@ -144,7 +197,6 @@ object PortConfigDetails {
           <.th(^.scope := "row", "Default"),
           <.td(^.className := "text-right", (defaultWalkTime / 60000).toInt)
         )
-
       )
     )
   )
@@ -177,6 +229,6 @@ object PortConfigDetails {
     )
   )
 
-  def apply(airportConfig: AirportConfig): VdomElement = component(Props(airportConfig))
+  def apply(airportConfig: AirportConfig, gateStandWalktime: WalkTimes): VdomElement = component(Props(airportConfig, gateStandWalktime))
 }
 

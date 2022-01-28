@@ -10,12 +10,9 @@ import drt.client.components.ToolTips._
 import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.TimeUtil.millisToMinutes
 import drt.shared._
-import drt.shared.api.{Arrival, PassengerInfoSummary}
-import drt.shared.dates.UtcDate
+import drt.shared.api.PassengerInfoSummary
 import drt.shared.redlist._
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -24,10 +21,14 @@ import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, Span, TableSection}
 import scalacss.ScalaCssReact
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.collection.immutable.{HashSet, Map}
 
@@ -244,7 +245,7 @@ object FlightTableRow {
       val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
-        .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map())
+        .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map[Queue, Int]())
 
       val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
         "arrivals__table__flight-code arrivals__table__flight-code--clickable"

@@ -1,9 +1,8 @@
 package services
 
 import controllers.ArrivalGenerator
-import drt.shared.ArrivalStatus
-import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus}
 
 import scala.concurrent.duration.DurationInt
 

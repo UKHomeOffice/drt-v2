@@ -3,13 +3,14 @@ package services.crunch
 import actors.DrtStaticParameters
 import akka.actor.{ActorRef, Props}
 import drt.shared._
-import drt.shared.api.Arrival
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
 import services.{TryCrunch, TrySimulator}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
@@ -37,7 +38,6 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       recrunchOnStart: Boolean = false,
                       flexDesks: Boolean = false,
                       maybePassengersActorProps: Option[Props] = None,
-                      pcpPaxFn: Arrival => Int = TestDefaults.pcpPaxFn,
                       arrivalsAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustmentsNoop,
                       maybeEgatesProvider: Option[() => Future[PortEgateBanksUpdates]] = None,
                      )

@@ -5,10 +5,10 @@ import akka.actor.Actor
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared._
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import slickdb.ArrivalTableLike
+import uk.gov.homeoffice.drt.arrivals.Arrival
 
 import java.sql.Timestamp
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}

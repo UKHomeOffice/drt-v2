@@ -2,17 +2,17 @@ package actors.daily
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
-import drt.shared.api.Arrival
-import drt.shared.{ApiFlightWithSplits, SDateLike}
 import org.specs2.mutable.Specification
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 class FlightsWithSplitsDiffSpec extends Specification {
 
-  val arrival = ArrivalGenerator.arrival()
+  val arrival: Arrival = ArrivalGenerator.arrival()
 
-  val arrivalWithSplits = ApiFlightWithSplits(arrival, Set(), None)
+  val arrivalWithSplits: ApiFlightWithSplits = ApiFlightWithSplits(arrival, Set(), None)
 
   def arrivalForDate(date: SDateLike): Arrival = ArrivalGenerator.arrival(schDt = date.toISOString())
   def arrivalForDateAndTerminal(date: SDateLike, terminal: Terminal): Arrival =

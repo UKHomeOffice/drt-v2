@@ -3,6 +3,7 @@ package drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.redlist.LhrTerminalTypes
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 

@@ -10,6 +10,7 @@ import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.List
 import scala.concurrent.duration.DurationInt
@@ -179,12 +180,12 @@ class StaffDeploymentSpec extends CrunchTestLike {
 
       offerAndWait(crunch.shiftsInput, initialShifts)
 
-      crunch.portStateTestProbe.fishForMessage(2 seconds) {
+      crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.shifts) == Option(10)
       }
       offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
 
-      crunch.portStateTestProbe.fishForMessage(5 seconds) {
+      crunch.portStateTestProbe.fishForMessage(5.seconds) {
         case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.fixedPoints) == Option(2)
       }
 
@@ -201,7 +202,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
         (Queues.NonEeaDesk, shiftStart.addMinutes(4), 1)
       )
 
-      crunch.portStateTestProbe.fishForMessage(5 seconds) {
+      crunch.portStateTestProbe.fishForMessage(5.seconds) {
         case ps: PortState =>
           val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queue)).take(10)
           val deployments = minutesInOrder.map(cm => (cm.queue, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet

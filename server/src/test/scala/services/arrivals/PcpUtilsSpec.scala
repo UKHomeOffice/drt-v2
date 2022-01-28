@@ -1,7 +1,6 @@
 package services.arrivals
 
 import controllers.ArrivalGenerator._
-import drt.shared.PcpUtils
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource}
 
@@ -12,7 +11,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 50 PCP pax" >> {
       val a = arrival(actPax = Option(50), apiPax = Option(100), feedSources = Set(LiveFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 50
 
       result === expected
@@ -22,7 +21,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 50 PCP pax" >> {
       val a = arrival(actPax = Option(50), apiPax = None, feedSources = Set(LiveFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 50
 
       result === expected
@@ -32,7 +31,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = None, apiPax = Option(100), feedSources = Set(LiveFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 100
 
       result === expected
@@ -42,7 +41,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = None, feedSources = Set(LiveFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 100
 
       result === expected
@@ -52,7 +51,7 @@ class PcpUtilsSpec extends Specification {
       "Then we should get 0 PCP Pax " >> {
       val a = arrival(actPax = Option(50), tranPax = Option(100), maxPax = Option(150), feedSources = Set(LiveFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 0
 
       result === expected
@@ -62,7 +61,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = Option(0), feedSources = Set(LiveFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 100
 
       result === expected
@@ -72,7 +71,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 0 PCP pax" >> {
       val a = arrival(actPax = Option(0), tranPax = Option(0), maxPax = Option(130), feedSources = Set(LiveFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 0
 
       result === expected
@@ -82,7 +81,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 90 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = Option(10), feedSources = Set(LiveFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 90
 
       result === expected
@@ -92,7 +91,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 0 PCP pax" >> {
       val a = arrival(actPax = None, tranPax = None, maxPax = Option(130), feedSources = Set(LiveFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 0
 
       result === expected
@@ -105,7 +104,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 100 PCP pax - API trumps ACL numbers" >> {
       val a = arrival(actPax = Option(50), apiPax = Option(100), feedSources = Set(AclFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 100
 
       result === expected
@@ -115,7 +114,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 50 PCP pax" >> {
       val a = arrival(actPax = Option(50), apiPax = None, feedSources = Set(AclFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 50
 
       result === expected
@@ -125,7 +124,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = None, apiPax = Option(100), feedSources = Set(AclFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 100
 
       result === expected
@@ -135,7 +134,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = None, feedSources = Set(AclFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 100
 
       result === expected
@@ -145,7 +144,7 @@ class PcpUtilsSpec extends Specification {
       "Then we should get 0 PCP Pax " >> {
       val a = arrival(actPax = Option(50), tranPax = Option(100), maxPax = Option(150), feedSources = Set(AclFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 0
 
       result === expected
@@ -155,7 +154,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = Option(0), feedSources = Set(AclFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 100
 
       result === expected
@@ -165,7 +164,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 0 PCP pax" >> {
       val a = arrival(actPax = Option(0), tranPax = Option(0), maxPax = Option(130), feedSources = Set(AclFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 0
 
       result === expected
@@ -175,7 +174,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 90 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = Option(10), feedSources = Set(AclFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 90
 
       result === expected
@@ -185,7 +184,7 @@ class PcpUtilsSpec extends Specification {
       "Then I should expect 0 PCP pax" >> {
       val a = arrival(actPax = None, tranPax = None, maxPax = Option(130), feedSources = Set(AclFeedSource))
 
-      val result = PcpUtils.bestPcpPaxEstimate(a)
+      val result = a.bestPcpPaxEstimate
       val expected = 0
 
       result === expected

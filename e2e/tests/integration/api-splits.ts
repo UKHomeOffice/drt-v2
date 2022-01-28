@@ -76,7 +76,7 @@ describe('API splits', () => {
             {
                 "arrivalKey": {
                     "origin": {"iata": "AMS"},
-                    "voyageNumber": {"$type": "drt.shared.VoyageNumber", "numeric": 123},
+                    "voyageNumber": {"$type": "uk.gov.homeoffice.drt.arrivals.VoyageNumber", "numeric": 123},
                     "scheduled": scheduledTime.unix() * 1000
                 },
                 "ageRanges": [["25-49", 2]],
@@ -114,7 +114,7 @@ describe('API splits', () => {
             {
                 "arrivalKey": {
                     "origin": {"iata": "AMS"},
-                    "voyageNumber": {"$type": "drt.shared.VoyageNumber", "numeric": 123},
+                    "voyageNumber": {"$type": "uk.gov.homeoffice.drt.arrivals.VoyageNumber", "numeric": 123},
                     "scheduled": scheduledTime.unix() * 1000
                 },
 

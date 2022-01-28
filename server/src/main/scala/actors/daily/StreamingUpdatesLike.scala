@@ -9,10 +9,11 @@ import akka.persistence.{PersistentActor, RecoveryCompleted}
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
-import drt.shared.{MilliTimes, SDateLike, WithTimeAccessor}
 import org.slf4j.Logger
 import scalapb.GeneratedMessage
 import services.StreamSupervision
+import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 object StreamingUpdatesLike {
   case object StopUpdates

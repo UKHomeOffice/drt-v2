@@ -2,11 +2,10 @@ package drt.server.feeds.lgw
 
 import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
-import drt.shared._
-import drt.shared.api.Arrival
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, Operator, VoyageNumber}
+import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Terminals}
 
 import scala.language.postfixOps

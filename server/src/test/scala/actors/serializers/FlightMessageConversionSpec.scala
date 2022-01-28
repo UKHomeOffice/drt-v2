@@ -1,10 +1,9 @@
 package actors.serializers
 
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
-import drt.shared._
-import drt.shared.api.{Arrival, FlightCodeSuffix}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.T1

@@ -1,9 +1,9 @@
 package actors.serializers
 
-import drt.shared.dates.LocalDate
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState.{CrunchRequestMessage, RemoveCrunchRequestMessage}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import uk.gov.homeoffice.drt.time.LocalDate
 
 object CrunchRequestMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass)

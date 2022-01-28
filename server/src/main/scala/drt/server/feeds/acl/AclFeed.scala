@@ -3,8 +3,6 @@ package drt.server.feeds.acl
 import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
 import drt.shared.FlightsApi.Flights
-import drt.shared.SDateLike
-import drt.shared.api.Arrival
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
@@ -13,8 +11,10 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets.UTF_8

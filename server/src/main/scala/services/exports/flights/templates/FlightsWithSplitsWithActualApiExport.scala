@@ -1,10 +1,11 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
-import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals._
+import uk.gov.homeoffice.drt.time.SDateLike
 
 
 trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {

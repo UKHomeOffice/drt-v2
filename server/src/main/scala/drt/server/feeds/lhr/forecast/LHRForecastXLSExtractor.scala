@@ -1,29 +1,26 @@
 package drt.server.feeds.lhr.forecast
 
 
-import java.util.TimeZone
-
 import drt.server.feeds.common.XlsExtractorUtil._
 import drt.server.feeds.lhr.LHRForecastFeed
-import drt.shared.SDateLike
-import drt.shared.api.Arrival
 import org.apache.poi.ss.usermodel.DateUtil
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.europeLondonId
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.time.SDateLike
 
+import java.util.TimeZone
 import scala.util.Success
 
 
-case class LHRForecastFlightRow(
-                                 scheduledDate: SDateLike,
+case class LHRForecastFlightRow(scheduledDate: SDateLike,
                                  flightCode: String = "",
                                  origin: String = "",
                                  internationalDomestic: String = "",
                                  totalPax: Int = 0,
                                  transferPax: Int = 0,
-                                 terminal: String
-                               )
+                                 terminal: String)
 
 object LHRForecastXLSExtractor {
 

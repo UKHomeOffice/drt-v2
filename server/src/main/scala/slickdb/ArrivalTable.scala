@@ -1,9 +1,8 @@
 package slickdb
 
-import drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.arrivals.{Arrival => DrtArrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -19,7 +18,7 @@ case class AggregatedArrivals(arrivals: Seq[AggregatedArrival])
 case class AggregatedArrival(code: String, scheduled: MillisSinceEpoch, origin: String, destination: String, terminalName: String)
 
 object AggregatedArrival {
-  def apply(arrival: Arrival, destination: String): AggregatedArrival = AggregatedArrival(
+  def apply(arrival: DrtArrival, destination: String): AggregatedArrival = AggregatedArrival(
     arrival.flightCodeString,
     arrival.Scheduled,
     arrival.Origin.toString,
@@ -55,7 +54,7 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
     }
   }
 
-  def insertOrUpdateArrival(f: shared.api.Arrival): Future[Int] = {
+  def insertOrUpdateArrival(f: DrtArrival): Future[Int] = {
     db.run(arrivalsTableQuery.insertOrUpdate(arrivalRow(f))) recover {
       case throwable =>
         log.error(s"insertOrUpdate failed", throwable)
@@ -69,7 +68,7 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
       arrival.scheduled === scheduledTs &&
       arrival.destination === portCode.toString
 
-  def arrivalRow(f: shared.api.Arrival): tables.ArrivalRow = {
+  def arrivalRow(f: uk.gov.homeoffice.drt.arrivals.Arrival): tables.ArrivalRow = {
     val sch = new Timestamp(f.Scheduled)
     val est = f.Estimated.map(new Timestamp(_))
     val act = f.Actual.map(new Timestamp(_))

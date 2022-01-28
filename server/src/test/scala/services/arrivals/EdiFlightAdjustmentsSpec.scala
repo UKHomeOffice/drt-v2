@@ -1,10 +1,10 @@
 package services.arrivals
 
 import controllers.ArrivalGenerator
+import drt.shared.ArrivalsDiff
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.api.Arrival
-import drt.shared.{ArrivalsDiff, UniqueArrival}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{A2, Terminal}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates

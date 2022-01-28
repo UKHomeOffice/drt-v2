@@ -7,11 +7,12 @@ import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, Mani
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator.{euPassport, inTransitFlag}
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
 
 import scala.collection.immutable.{Seq, SortedMap}
 import scala.concurrent.duration._
@@ -96,7 +97,8 @@ class TransferPaxInApiSpec extends CrunchTestLike {
     val inputManifests = ManifestsFeedSuccess(
       DqManifests("",
         Set(
-          VoyageManifest(EventTypes.CI,
+          VoyageManifest(
+            EventTypes.CI,
             portCode,
             PortCode("JFK"),
             VoyageNumber(1),
