@@ -12,25 +12,25 @@ class PcpUtilsSpec extends Specification {
       val walkTimeWithChoxRemoved = pcpTime - (givenTime + timeToChox + firstPaxOff)
       "When the arrival only has a scheduled time" in {
         val arrival = ArrivalGenerator.arrival(sch = givenTime, pcpTime = Option(pcpTime))
-        arrival.walkTime(timeToChox, firstPaxOff, considerPredictions = true) === Option(walkTimeWithChoxRemoved)
+        arrival.walkTime(timeToChox, firstPaxOff) === Option(walkTimeWithChoxRemoved)
       }
       "When the arrival has an estimated time" in {
         val arrival = ArrivalGenerator.arrival(est = givenTime, pcpTime = Option(pcpTime))
-        arrival.walkTime(timeToChox, firstPaxOff, considerPredictions = true) === Option(walkTimeWithChoxRemoved)
+        arrival.walkTime(timeToChox, firstPaxOff) === Option(walkTimeWithChoxRemoved)
       }
       "When the arrival has a touchdown time" in {
         val arrival = ArrivalGenerator.arrival(act = givenTime, pcpTime = Option(pcpTime))
-        arrival.walkTime(timeToChox, firstPaxOff, considerPredictions = true) === Option(walkTimeWithChoxRemoved)
+        arrival.walkTime(timeToChox, firstPaxOff) === Option(walkTimeWithChoxRemoved)
       }
 
       val walkTimeWithoutChoxRemoved = pcpTime - (givenTime + firstPaxOff)
       "When the arrival has an estimated chox time" in {
         val arrival = ArrivalGenerator.arrival(estChox = givenTime, pcpTime = Option(pcpTime))
-        arrival.walkTime(timeToChox, firstPaxOff, considerPredictions = true) === Option(walkTimeWithoutChoxRemoved)
+        arrival.walkTime(timeToChox, firstPaxOff) === Option(walkTimeWithoutChoxRemoved)
       }
       "When the arrival has an actual chox time" in {
         val arrival = ArrivalGenerator.arrival(actChox = givenTime, pcpTime = Option(pcpTime))
-        arrival.walkTime(timeToChox, firstPaxOff, considerPredictions = true) === Option(walkTimeWithoutChoxRemoved)
+        arrival.walkTime(timeToChox, firstPaxOff) === Option(walkTimeWithoutChoxRemoved)
       }
     }
   }

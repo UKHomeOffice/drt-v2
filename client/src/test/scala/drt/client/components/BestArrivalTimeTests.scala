@@ -16,7 +16,7 @@ object BestArrivalTimeTests extends TestSuite {
 
           val expected = SDate(scheduled).addMinutes(minutesToChox).millisSinceEpoch
 
-          val result = arrival.bestArrivalTime(minutesToChox * 60000, considerPredictions = true)
+          val result = arrival.bestArrivalTime(minutesToChox * 60000)
 
           assert(result == expected)
         }
@@ -28,7 +28,7 @@ object BestArrivalTimeTests extends TestSuite {
 
         val expected = SDate(estimated).addMinutes(minutesToChox).millisSinceEpoch
 
-        val result = arrival.bestArrivalTime(minutesToChox * 60000, considerPredictions = true)
+        val result = arrival.bestArrivalTime(minutesToChox * 60000)
 
         assert(result == expected)
       }
@@ -42,7 +42,7 @@ object BestArrivalTimeTests extends TestSuite {
 
         val expected = SDate(touchdown).addMinutes(minutesToChox).millisSinceEpoch
 
-        val result = arrival.bestArrivalTime(minutesToChox * 60000, considerPredictions = true)
+        val result = arrival.bestArrivalTime(minutesToChox * 60000)
 
         assert(result == expected)
       }
