@@ -10,52 +10,6 @@ import upickle.default.{macroRW, _}
 
 import scala.collection.immutable.{SortedMap => ISortedMap}
 
-//sealed trait VoyageNumberLike {
-//  def numeric: Int
-//
-//  def toPaddedString: String
-//}
-//
-//case class VoyageNumber(numeric: Int) extends VoyageNumberLike with Ordered[VoyageNumber] {
-//  override def toString: String = numeric.toString
-//
-//  def toPaddedString: String = {
-//    val string = numeric.toString
-//    val prefix = string.length match {
-//      case 4 => ""
-//      case 3 => "0"
-//      case 2 => "00"
-//      case 1 => "000"
-//      case _ => ""
-//    }
-//    prefix + string
-//  }
-//
-//  override def compare(that: VoyageNumber): Int = numeric.compare(that.numeric)
-//}
-//
-//case class InvalidVoyageNumber(exception: Throwable) extends VoyageNumberLike {
-//  override def toString: String = "invalid"
-//
-//  override def toPaddedString: String = toString
-//
-//  override def numeric: Int = 0
-//}
-
-//case object VoyageNumber {
-//  implicit val rw: ReadWriter[VoyageNumber] = macroRW
-//
-//  def apply(string: String): VoyageNumberLike = Try(string.toInt) match {
-//    case Success(value) => VoyageNumber(value)
-//    case Failure(exception) => InvalidVoyageNumber(exception)
-//  }
-//}
-
-//case class Operator(code: String)
-
-//case class ArrivalStatus(description: String) {
-//  override def toString: String = description
-//}
 
 case class FeedSourceArrival(feedSource: FeedSource, arrival: Arrival)
 
