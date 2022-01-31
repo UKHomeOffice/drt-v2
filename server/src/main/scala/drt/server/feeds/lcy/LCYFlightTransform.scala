@@ -5,9 +5,9 @@ import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshaller}
 import drt.server.feeds.Implicits._
 import drt.server.feeds.common.FlightStatus
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 

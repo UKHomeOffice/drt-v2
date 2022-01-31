@@ -8,7 +8,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch

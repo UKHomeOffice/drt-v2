@@ -4,13 +4,14 @@ import actors.routing.minutes.MockMinutesLookup
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
-import drt.shared.{SDateLike, TM, TQM}
+import drt.shared.{TM, TQM}
 import services.SDate
 import services.`export`.CsvTestHelper.{dropHeadings, resultStreamToCSV, takeCSVLines}
 import services.crunch.CrunchTestLike
 import services.exports.StreamingDesksExport
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.time.SDateLike
 
 class StreamingDesksBstExportSpec extends CrunchTestLike {
 
@@ -71,8 +72,6 @@ class StreamingDesksBstExportSpec extends CrunchTestLike {
     val shifts = 1
     val misc = 2
     val moves = 1
-
-    val totalRec = eeaDeskRec + nonEEADeskRec + eGateRec + misc
 
     val staffMinutesContainer = MinutesContainer[StaffMinute, TM](List(
       StaffMinute(T1, minute1.millisSinceEpoch, shifts, misc, moves),

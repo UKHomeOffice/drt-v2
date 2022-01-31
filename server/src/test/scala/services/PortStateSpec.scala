@@ -7,9 +7,9 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import drt.shared._
-import drt.shared.api.Arrival
 import server.feeds.ArrivalsFeedSuccess
 import services.crunch.{CrunchTestLike, TestConfig}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, Queues}
@@ -31,7 +31,7 @@ class PortStateSpec extends CrunchTestLike {
 
     offerAndWait(crunch.shiftsInput, ShiftAssignments(Seq(StaffAssignment("", T1, MilliDate(SDate(minute).addMinutes(-15).millisSinceEpoch), MilliDate(SDate(minute).addMinutes(15).millisSinceEpoch), 1, None))))
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val staffUpdated = ps.staffMinutes.exists {
           case (TM(T1, m), sm) if m == millis => sm.shifts == 1
@@ -127,7 +127,7 @@ class PortStateSpec extends CrunchTestLike {
 
         val expected = newArrival.copy(FeedSources = Set(AclFeedSource))
 
-        crunch.portStateTestProbe.fishForMessage(5 seconds) {
+        crunch.portStateTestProbe.fishForMessage(5.seconds) {
           case PortState(flights, _, _) =>
             flights.size == 1 && flights.values.head.apiFlight == expected
         }

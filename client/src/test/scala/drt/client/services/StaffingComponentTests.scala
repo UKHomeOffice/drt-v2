@@ -1,8 +1,9 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
+import drt.shared.{StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import drt.shared.{SDateLike, StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
+import uk.gov.homeoffice.drt.time.SDateLike
 import utest._
 
 object StaffingComponentTests extends TestSuite {

@@ -1,10 +1,10 @@
 package actors.queues
 
 import actors.DateRange
-import drt.shared.dates.{DateLike, LocalDate, UtcDate}
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, UtcDate}
 
 class DateRangeSpec extends Specification {
   "Concerning BST dates" >> {

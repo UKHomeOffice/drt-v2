@@ -1,7 +1,7 @@
 package actors.persistent.arrivals
 
-import drt.shared.api.Arrival
-import drt.shared.{FeedSourceStatuses, UniqueArrival}
+import drt.shared.FeedSourceStatuses
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.FeedSource
 
 import scala.collection.immutable.SortedMap

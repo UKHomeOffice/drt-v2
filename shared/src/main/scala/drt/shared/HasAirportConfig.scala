@@ -21,14 +21,6 @@ trait HasAirportConfig {
   val airportConfig: AirportConfig
 }
 
-case class CarrierCode(code: String) {
-  override def toString: String = code
-}
-
-object CarrierCode {
-  implicit val rw: ReadWriter[CarrierCode] = macroRW
-}
-
 object DrtPortConfigs {
 
   import uk.gov.homeoffice.drt.ports.config._

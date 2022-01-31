@@ -2,6 +2,7 @@ package drt.client.services
 
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.util.Try
 

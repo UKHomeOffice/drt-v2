@@ -1,6 +1,7 @@
 package drt.shared
 
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.time.MilliTimes
 
 import scala.concurrent.duration.DurationInt
 
@@ -21,7 +22,7 @@ class MilliTimesSpec extends Specification {
   }
   "Given a duration" >> {
     "I should be able to get its milliseconds" >> {
-      val oneSecond = 1 second
+      val oneSecond = 1.second
 
       oneSecond.toMillis === MilliTimes.oneSecondMillis
     }

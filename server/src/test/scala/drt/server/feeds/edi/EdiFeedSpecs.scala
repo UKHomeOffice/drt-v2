@@ -2,10 +2,9 @@ package drt.server.feeds.edi
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import drt.server.feeds.common.ProdHttpClient
-import drt.shared._
-import drt.shared.api.{Arrival, FlightCodeSuffix}
 import org.specs2.mock.Mockito.mock
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 

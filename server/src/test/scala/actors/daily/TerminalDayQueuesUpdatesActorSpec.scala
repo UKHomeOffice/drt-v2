@@ -6,7 +6,7 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import scalapb.GeneratedMessage
 import server.protobuf.messages.CrunchState.CrunchMinuteMessage
 import services.SDate

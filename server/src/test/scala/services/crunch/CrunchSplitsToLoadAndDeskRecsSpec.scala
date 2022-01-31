@@ -7,6 +7,7 @@ import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, Mani
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
@@ -57,7 +58,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             Queues.EGate -> Seq(20 * egSplit, 1 * egSplit)
           ))
 
-          crunch.portStateTestProbe.fishForMessage(5 seconds) {
+          crunch.portStateTestProbe.fishForMessage(5.seconds) {
             case ps: PortState =>
               paxLoadsFromPortState(ps, 2) == expected
           }
@@ -90,7 +91,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
               Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)))
 
-          crunch.portStateTestProbe.fishForMessage(5 seconds) {
+          crunch.portStateTestProbe.fishForMessage(5.seconds) {
             case ps: PortState =>
               paxLoadsFromPortState(ps, 5) == expected
           }
@@ -135,7 +136,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             Queues.NonEeaDesk -> List(0, 0, 0, 0, 0)
           ))
 
-          crunch.portStateTestProbe.fishForMessage(5 seconds) {
+          crunch.portStateTestProbe.fishForMessage(5.seconds) {
             case ps: PortState =>
               workLoadsFromPortState(ps, 5) == expected
           }
@@ -179,7 +180,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
                 Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)
               ))
 
-            crunch.portStateTestProbe.fishForMessage(5 seconds) {
+            crunch.portStateTestProbe.fishForMessage(5.seconds) {
               case ps: PortState =>
                 paxLoadsFromPortState(ps, 5) == expected
             }
@@ -229,7 +230,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               Queues.EGate -> Seq(8.0, 0.0, 0.0, 0.0, 0.0)
             ))
 
-            crunch.portStateTestProbe.fishForMessage(5 seconds) {
+            crunch.portStateTestProbe.fishForMessage(5.seconds) {
               case ps: PortState =>
                 paxLoadsFromPortState(ps, 5) == expected
             }

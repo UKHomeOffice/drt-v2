@@ -6,13 +6,13 @@ import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
-import drt.shared.dates.UtcDate
-import drt.shared.{SDateLike, TQM}
+import drt.shared.TQM
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -37,7 +37,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
       "I should get None" >> {
         val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
-        val result = Await.result(eventualResult, 1 second)
+        val result = Await.result(eventualResult, 1.second)
 
         result === minutesContainer
       }
@@ -47,7 +47,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
       "I should get the data from the source" >> {
         val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
-        val result = Await.result(eventualResult, 1 second)
+        val result = Await.result(eventualResult, 1.second)
 
         result === minutesContainer
       }
@@ -68,7 +68,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
       "I should get the one minute back" >> {
         val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesState), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(startMinute.millisSinceEpoch, endMinute.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
-        val result = Await.result(eventualResult, 1 second)
+        val result = Await.result(eventualResult, 1.second)
 
         result === MinutesContainer(Iterable(crunchMinuteInsideRange1, crunchMinuteInsideRange2))
       }

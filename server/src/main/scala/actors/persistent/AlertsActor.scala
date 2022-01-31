@@ -1,16 +1,17 @@
 package actors.persistent
 
-import Sizes.oneMegaByte
 import actors.acking.AckingReceiver.StreamCompleted
+import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.staffing.GetState
 import actors.serializers.AlertMessageConversion
 import akka.persistence._
+import drt.shared.Alert
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{Alert, SDateLike}
 import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.Alert.{AlertSnapshotMessage, Alert => ProtobufAlert}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 case object DeleteAlerts
 

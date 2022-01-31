@@ -3,11 +3,11 @@ package controllers
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince}
 import akka.pattern.ask
 import drt.shared.CrunchApi._
-import drt.shared.api.Arrival
 import drt.shared.{ArrivalsDiff, PortState}
 import services.crunch.CrunchTestLike
 import test.TestActors.ResetData
 import test.TestDrtSystem
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 

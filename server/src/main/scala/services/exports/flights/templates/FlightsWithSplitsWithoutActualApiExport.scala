@@ -1,8 +1,9 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import drt.shared.{ApiFlightWithSplits, SDateLike}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 trait FlightsWithSplitsWithoutActualApiExport extends FlightsWithSplitsExport {
   val request: FlightsRequest = GetFlightsForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal)

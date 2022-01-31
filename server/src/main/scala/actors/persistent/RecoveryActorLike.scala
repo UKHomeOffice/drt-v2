@@ -3,7 +3,7 @@ package actors.persistent
 import akka.actor.ActorRef
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.Logger
 import scalapb.GeneratedMessage
 

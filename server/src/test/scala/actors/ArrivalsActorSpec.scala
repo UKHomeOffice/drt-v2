@@ -1,10 +1,9 @@
 package actors
 
 import controllers.ArrivalGenerator
-import drt.shared.UniqueArrival
-import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 

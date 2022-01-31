@@ -1,10 +1,10 @@
 package server.feeds
 
 import drt.shared.FlightsApi.Flights
-import drt.shared.SDateLike
 import manifests.passengers.BestAvailableManifest
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.SDate
+import uk.gov.homeoffice.drt.time.SDateLike
 
 sealed trait FeedResponse {
   val createdAt: SDateLike

@@ -1,15 +1,14 @@
 package drt.shared
 
 import drt.shared.CrunchApi._
-import drt.shared.EventTypes.{CI, DC, InvalidEventType}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import uk.gov.homeoffice.drt.Urls
+import uk.gov.homeoffice.drt.arrivals.{UniqueArrival, WithLastUpdated, WithTerminal, WithTimeAccessor}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, ClassNameForToString, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PortCode}
 import upickle.default._
 
 import java.util.UUID
@@ -40,45 +39,45 @@ object MilliDate {
   def atTime: MillisSinceEpoch => MilliDate = (time: MillisSinceEpoch) => MilliDate(time)
 }
 
-sealed trait EventType extends ClassNameForToString
+//sealed trait EventType extends ClassNameForToString
+//
+//object EventType {
+//  implicit val rw: ReadWriter[EventType] = macroRW
+//
+//  def apply(eventType: String): EventType = eventType match {
+//    case "DC" => DC
+//    case "CI" => CI
+//    case _ => InvalidEventType
+//  }
+//}
+//
+//object EventTypes {
+//
+//  object DC extends EventType
+//
+//  object CI extends EventType
+//
+//  object InvalidEventType extends EventType
+//
+//}
 
-object EventType {
-  implicit val rw: ReadWriter[EventType] = macroRW
-
-  def apply(eventType: String): EventType = eventType match {
-    case "DC" => DC
-    case "CI" => CI
-    case _ => InvalidEventType
-  }
-}
-
-object EventTypes {
-
-  object DC extends EventType
-
-  object CI extends EventType
-
-  object InvalidEventType extends EventType
-
-}
-
-case class Splits(splits: Set[ApiPaxTypeAndQueueCount],
-                  source: SplitSource,
-                  maybeEventType: Option[EventType],
-                  splitStyle: SplitStyle = PaxNumbers) {
-  lazy val totalExcludingTransferPax: Double = Splits.totalExcludingTransferPax(splits)
-  lazy val totalPax: Double = Splits.totalPax(splits)
-}
-
-object Splits {
-  def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).toList.map(_.paxCount).sum
-
-  def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.toList.map(s => {
-    s.paxCount
-  }).sum
-
-  implicit val rw: ReadWriter[Splits] = macroRW
-}
+//case class Splits(splits: Set[ApiPaxTypeAndQueueCount],
+//                  source: SplitSource,
+//                  maybeEventType: Option[EventType],
+//                  splitStyle: SplitStyle = PaxNumbers) {
+//  lazy val totalExcludingTransferPax: Double = Splits.totalExcludingTransferPax(splits)
+//  lazy val totalPax: Double = Splits.totalPax(splits)
+//}
+//
+//object Splits {
+//  def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).toList.map(_.paxCount).sum
+//
+//  def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.toList.map(s => {
+//    s.paxCount
+//  }).sum
+//
+//  implicit val rw: ReadWriter[Splits] = macroRW
+//}
 
 case class StaffTimeSlot(terminal: Terminal,
                          start: MillisSinceEpoch,
@@ -96,12 +95,12 @@ object MinuteHelper {
 
 case class FlightsNotReady()
 
-object MonthStrings {
-  val months = List(
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  )
-}
+//object MonthStrings {
+//  val months = List(
+//    "January", "February", "March", "April", "May", "June",
+//    "July", "August", "September", "October", "November", "December"
+//  )
+//}
 
 case class RemoveFlight(flightKey: UniqueArrival)
 

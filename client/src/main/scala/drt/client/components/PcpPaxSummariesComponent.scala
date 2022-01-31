@@ -5,7 +5,7 @@ import diode.data.Pot
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.{PortState, SDateLike, TQM}
+import drt.shared.{PortState, TQM}
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
@@ -13,6 +13,7 @@ import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 case class PcpPaxSummary(totalPax: Int, queuesPax: Map[Queue, Double])
 

@@ -6,7 +6,6 @@ import akka.actor.{Actor, Props}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared._
-import drt.shared.api.Arrival
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.OptimiserMocks.MockSinkActor
@@ -37,7 +36,6 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
 
   val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, egatesProvider)
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
-  val pcpPaxCalcFn: Arrival => Int = PcpUtils.bestPcpPaxEstimate
 
   val staffToDeskLimits: StaffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, egatesProvider)
   val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig))

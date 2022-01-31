@@ -2,8 +2,7 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, Operator}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 

@@ -10,10 +10,10 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import java.util.UUID
 import scala.concurrent.duration._

@@ -8,8 +8,6 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import uk.gov.homeoffice.drt.ports.Terminals.T1
-import drt.shared.api.Arrival
 import org.specs2.specification.BeforeEach
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
@@ -17,6 +15,8 @@ import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
 import test.feeds.test.GetArrivals
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
@@ -64,13 +64,13 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
   def createTables(): Unit = {
     H2Tables.schema.createStatements.toList.foreach { query =>
-      Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10 seconds)
+      Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
     }
   }
 
   def dropTables(): Unit = {
     H2Tables.schema.dropStatements.toList.reverse.foreach { query =>
-      Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10 seconds)
+      Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
     }
   }
 
@@ -98,7 +98,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     testProbe.expectMsg(UpdateHandled)
 
-    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
+    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
       case ag: AggregatedArrivals => ag
     }
 
@@ -133,7 +133,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     testProbe.expectMsg(UpdateHandled)
 
-    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
+    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
       case ag: AggregatedArrivals => ag.arrivals.toSet
     }
 
@@ -168,14 +168,14 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(descheduledArrival))))
     testProbe.expectMsg(UpdateHandled)
 
-    val arrivalsResult1 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
+    val arrivalsResult1 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
       case ag: AggregatedArrivals => ag.arrivals.toSet
     }
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
     testProbe.expectMsg(RemovalHandled)
 
-    val arrivalsResult2 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
+    val arrivalsResult2 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
       case ag: AggregatedArrivals => ag.arrivals.toSet
     }
 

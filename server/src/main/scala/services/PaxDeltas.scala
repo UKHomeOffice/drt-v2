@@ -7,9 +7,9 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -114,7 +114,7 @@ object PaxDeltas {
     }
 
     val updatedPax = arrival.ActPax.map(pax => (pax * saneDelta).round.toInt)
-    
+
     arrival.copy(ActPax = updatedPax)
   }
 }

@@ -1,6 +1,6 @@
 package drt.shared.splits
 
-import drt.shared._
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, SplitStyle, Splits}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, Queues}
 

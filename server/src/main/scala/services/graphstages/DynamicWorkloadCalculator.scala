@@ -4,11 +4,12 @@ import akka.stream.Materializer
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.{FlightSplitMinute, SplitMinutes}
 import services.workloadcalculator.PaxLoadCalculator.Load
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, UndefinedSplitStyle}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Splits}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, Queues}

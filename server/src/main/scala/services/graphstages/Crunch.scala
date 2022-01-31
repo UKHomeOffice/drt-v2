@@ -1,16 +1,16 @@
 package services.graphstages
 
 import drt.shared.CrunchApi._
-import drt.shared.MilliTimes._
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.Arrival
-import drt.shared.dates.{DateLikeOrdering, UtcDate}
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Splits, UniqueArrival, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.PaxType
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.MilliTimes.{minutesInADay, oneDayMillis, oneMinuteMillis}
+import uk.gov.homeoffice.drt.time.{DateLikeOrdering, MilliTimes, SDateLike, UtcDate}
 
 import scala.collection.immutable.{Map, SortedMap, SortedSet}
 import scala.collection.mutable
@@ -19,7 +19,7 @@ object Crunch {
   val paxOffPerMinute: Int = 20
 
   val log: Logger = LoggerFactory.getLogger(getClass)
-  
+
   case class SplitMinutes(minutes: Map[TQM, LoadMinute]) {
     def ++(incoming: Iterable[FlightSplitMinute]): SplitMinutes = {
       incoming.foldLeft(this) {

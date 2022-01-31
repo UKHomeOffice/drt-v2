@@ -1,8 +1,9 @@
 package drt.shared.api
 
-import drt.shared.{ArrivalStatus, CarrierCode, SDateLike, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ArrivalStatus, CarrierCode, FlightCodeSuffix, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 case class ScheduledArrival(CarrierCode: CarrierCode,
                             VoyageNumber: VoyageNumber,

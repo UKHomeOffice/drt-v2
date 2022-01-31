@@ -1,7 +1,7 @@
 package actors.persistent
 
 import akka.persistence.SnapshotMetadata
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.Logger
 import services.SDate
 

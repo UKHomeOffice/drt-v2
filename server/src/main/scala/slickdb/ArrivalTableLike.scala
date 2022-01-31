@@ -1,10 +1,10 @@
 package slickdb
 
-import java.sql.Timestamp
-
 import drt.shared
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
+import java.sql.Timestamp
 import scala.concurrent.Future
 
 trait ArrivalTableLike {
@@ -12,5 +12,5 @@ trait ArrivalTableLike {
 
   def removeArrival(number: Int, terminalName: Terminal, scheduledTs: Timestamp): Future[Int]
 
-  def insertOrUpdateArrival(f: shared.api.Arrival): Future[Int]
+  def insertOrUpdateArrival(f: Arrival): Future[Int]
 }

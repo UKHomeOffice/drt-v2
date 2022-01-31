@@ -1,8 +1,9 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Terminals._
-import drt.shared._
+import uk.gov.homeoffice.drt.time.SDateLike
 
 trait BhxFlightsWithSplitsExportWithCombinedTerminals {
   val terminal: Terminal

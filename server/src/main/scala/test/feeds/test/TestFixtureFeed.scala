@@ -7,11 +7,11 @@ import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.server.feeds.Feed.FeedTick
 import drt.shared.FlightsApi.Flights
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import test.TestActors.ResetData
+import uk.gov.homeoffice.drt.arrivals.Arrival
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._

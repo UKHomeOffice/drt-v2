@@ -4,7 +4,9 @@ import diode.data.{Pending, Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions._
 import drt.client.services.{DrtApi, PollDelay}
-import drt.shared.{FeedSourceArrival, SDateLike, UniqueArrival}
+import drt.shared.FeedSourceArrival
+import uk.gov.homeoffice.drt.arrivals.UniqueArrival
+import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.read
 
 import scala.concurrent.Future

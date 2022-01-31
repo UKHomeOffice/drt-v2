@@ -1,12 +1,13 @@
 package queues
 
-import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.specs2.mutable.Specification
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import queueus._
 import services.SDate
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, Splits, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources._

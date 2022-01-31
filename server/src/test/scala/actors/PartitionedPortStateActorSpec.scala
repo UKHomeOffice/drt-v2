@@ -4,7 +4,7 @@ import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.testkit.TestProbe
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import services.SDate
 import services.crunch.CrunchTestLike

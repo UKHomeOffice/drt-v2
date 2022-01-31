@@ -1,8 +1,8 @@
 package services.graphstages
 
 import controllers.ArrivalGenerator
-import drt.shared.{ApiFlightWithSplits, ArrivalStatus}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalStatus}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.config.Lhr

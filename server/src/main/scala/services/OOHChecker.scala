@@ -6,7 +6,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 import scala.concurrent.ExecutionContext.Implicits.global

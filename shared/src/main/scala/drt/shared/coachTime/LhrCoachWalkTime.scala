@@ -1,9 +1,9 @@
 package drt.shared.coachTime
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Terminals._
-import drt.shared.api.Arrival
 import drt.shared.redlist.{LhrRedListDates, LhrTerminalTypes}
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.Terminals._
 
 object LhrCoachWalkTime {
   val coachTransfers: List[CoachTransfer] = List(

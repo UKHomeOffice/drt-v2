@@ -2,14 +2,14 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import drt.shared._
-import drt.shared.api.Arrival
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
+import uk.gov.homeoffice.drt.arrivals.{Arrival, EventTypes}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
@@ -141,7 +141,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
   private def offerAndCheckResult(arrivals: Seq[Arrival], queues: Seq[Queue] = Seq()): Unit = {
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(arrivals)))
 
-    crunch.portStateTestProbe.fishForMessage(5 second) {
+    crunch.portStateTestProbe.fishForMessage(5.second) {
       case ps: PortState => paxLoadsAreCorrect(ps, arrivals, queues)
     }
   }

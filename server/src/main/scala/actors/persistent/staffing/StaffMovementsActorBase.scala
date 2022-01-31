@@ -1,20 +1,21 @@
 package actors.persistent.staffing
 
-import actors.persistent.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.StreamCompleted
+import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import akka.actor.Scheduler
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import drt.shared.{MilliDate, SDateLike, StaffMovement, StaffMovements}
+import drt.shared.{MilliDate, StaffMovement, StaffMovements}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import services.OfferHandler
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -145,7 +146,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
     case unexpected => log.info(s"unhandled message: $unexpected")
   }
 
-  def staffMovementMessageToStaffMovement(sm: StaffMovementMessage) = StaffMovement(
+  def staffMovementMessageToStaffMovement(sm: StaffMovementMessage): StaffMovement = StaffMovement(
     terminal = Terminal(sm.terminalName.getOrElse("")),
     reason = sm.reason.getOrElse(""),
     time = MilliDate(sm.time.getOrElse(0L)),
@@ -158,7 +159,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   def staffMovementsToStaffMovementMessages(staffMovements: StaffMovements): Seq[StaffMovementMessage] =
     staffMovements.movements.map(staffMovementToStaffMovementMessage)
 
-  def staffMovementToStaffMovementMessage(sm: StaffMovement) = StaffMovementMessage(
+  def staffMovementToStaffMovementMessage(sm: StaffMovement): StaffMovementMessage = StaffMovementMessage(
     terminalName = Some(sm.terminal.toString),
     reason = Some(sm.reason),
     time = Some(sm.time.millisSinceEpoch),

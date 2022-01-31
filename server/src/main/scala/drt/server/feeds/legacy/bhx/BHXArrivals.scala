@@ -1,14 +1,14 @@
 package drt.server.feeds.legacy.bhx
 
 import drt.server.feeds.Implicits._
-import drt.shared.api.Arrival
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.springframework.util.StringUtils
 import services.SDate
 import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
 
 import javax.xml.datatype.XMLGregorianCalendar
 

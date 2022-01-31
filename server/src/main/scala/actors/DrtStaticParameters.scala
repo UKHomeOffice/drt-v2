@@ -1,6 +1,6 @@
 package actors
 
-import drt.shared.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 object DrtStaticParameters {
   val expireAfterMillis: Int = 2 * MilliTimes.oneDayMillis

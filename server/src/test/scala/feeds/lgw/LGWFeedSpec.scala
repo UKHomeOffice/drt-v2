@@ -5,11 +5,11 @@ import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import drt.server.feeds.Feed
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
-import drt.shared.api.Arrival
 import org.specs2.mock.Mockito
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.N
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 

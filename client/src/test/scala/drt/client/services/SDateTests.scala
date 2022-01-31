@@ -1,11 +1,10 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.dates.{LocalDate, UtcDate}
-import drt.shared.{MilliDate, SDateLike}
+import drt.shared.MilliDate
 import moment.Moment
-import utest.TestSuite
-import utest._
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
+import utest.{TestSuite, _}
 
 import scala.scalajs.js.Date
 

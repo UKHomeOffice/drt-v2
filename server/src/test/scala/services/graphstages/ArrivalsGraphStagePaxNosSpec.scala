@@ -9,6 +9,7 @@ import org.specs2.execute.Success
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
+import uk.gov.homeoffice.drt.arrivals.ArrivalStatus
 
 import scala.concurrent.duration._
 
@@ -142,7 +143,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     "Given an arrival with a zero pax, undefined trans pax, and max pax of 100" >> {
       val arrival = ArrivalGenerator.arrival(actPax = Option(0), tranPax = None, maxPax = Option(100))
       "When I ask for the best pax" >> {
-        val bestPax = PcpUtils.bestPcpPaxEstimate(arrival)
+        val bestPax = arrival.bestPcpPaxEstimate
         "I should see 0" >> {
           bestPax === 0
         }

@@ -7,6 +7,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration._
 

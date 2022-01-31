@@ -1,8 +1,7 @@
 package actors.serializers
 
-import drt.shared._
-import drt.shared.api.{Arrival, FlightCodeSuffix}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, FlightCodeSuffix, Operator, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
 

@@ -1,7 +1,7 @@
 package manifests.queues
 
-import drt.shared.CarrierCode
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.arrivals.CarrierCode
 
 import scala.io.Source
 import scala.util.{Success, Try}

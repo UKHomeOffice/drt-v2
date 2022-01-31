@@ -2,14 +2,14 @@ package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.api.Arrival
-import drt.shared.{ApiFlightWithSplits, SDateLike}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.exports.Exports
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 
 case class CedatFlightsExport(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsExport {

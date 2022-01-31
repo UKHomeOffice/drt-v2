@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 
 import java.util.UUID
 import scala.collection.immutable.{List, SortedMap}
@@ -37,7 +38,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
     val expectedMillis = (shiftStart.millisSinceEpoch to (shiftStart.millisSinceEpoch + 29 * oneMinuteMillis) by oneMinuteMillis).toList
 
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
         val staff = minutesInOrder.map(_.shifts).take(expectedStaff.length)
@@ -89,7 +90,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       shiftStart.addMinutes(9).millisSinceEpoch -> 1
     )
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(10)
         val staffAvailable = minutesInOrder.map(sm => (sm.minute, sm.available))
@@ -124,7 +125,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val minutesToCheck = 5
     val expectedStaffAvailableAndMovements = List.fill(minutesToCheck)((0, -1))
 
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.filter(m => startDate.millisSinceEpoch <= m.minute).sortBy(_.minute).take(minutesToCheck)
         val actualAvailableAndMovements = minutesInOrder.map(m => (m.available, m.movements))
@@ -164,7 +165,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val minutesToCheck = 5
     val expectedStaffAvailableAndMovements = List.fill(minutesToCheck)((9, -1))
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.filter(m => startDate.millisSinceEpoch <= m.minute).sortBy(_.minute).take(minutesToCheck)
         val actualAvailableAndMovements = minutesInOrder.map(m => (m.available, m.movements))
@@ -211,7 +212,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       shiftStart.addMinutes(9).millisSinceEpoch -> -6
     )
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
         val staffMovements = minutesInOrder.filter(_.minute >= shiftStart.millisSinceEpoch).map(sm => (sm.minute, sm.movements)).take(10)
@@ -257,7 +258,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       shiftStart.addMinutes(9).millisSinceEpoch -> 0
     )
 
-    crunch.portStateTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(10)
         val fixedPoints = minutesInOrder.map(sm => (sm.minute, sm.fixedPoints))
@@ -292,7 +293,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       (date, minutes)
     }.toMap
 
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case PortState(_, _, staffMinutes) =>
         val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).mapValues { minutes =>
           minutes.map(m => SDate(m.minute).millisSinceEpoch).sorted
@@ -339,7 +340,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       (date, minutes)
     }.toMap
 
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case PortState(_, _, staffMinutes) =>
         val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).mapValues { minutes =>
           minutes.map(m => SDate(m.minute).toISOString()).sorted
@@ -378,7 +379,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       "2017-01-01T00:02:00Z"
     )
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
+    crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
         val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
         isoMinutes == expectedIsoMinutes
@@ -415,7 +416,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       "2017-01-01T00:02:00Z"
     )
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
+    crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
         val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
         isoMinutes == expectedIsoMinutes
@@ -452,7 +453,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       "2017-01-01T00:01:00Z"
     )
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
+    crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
         val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
         isoMinutes == expectedIsoMinutes

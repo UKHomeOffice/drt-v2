@@ -1,11 +1,11 @@
 package drt.server.feeds.lhr.forecast
 
 import drt.server.feeds.Implicits._
-import drt.shared.SDateLike
-import drt.shared.api.Arrival
+import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch.europeLondonTimeZone
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 

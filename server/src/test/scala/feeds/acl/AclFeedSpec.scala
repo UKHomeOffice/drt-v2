@@ -5,12 +5,12 @@ import controllers.ArrivalGenerator._
 import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.acl.AclFeed.{arrivalsFromCsvContent, delayUntilNextAclCheck, nextAclCheck}
 import drt.shared.FlightsApi.Flights
-import drt.shared.api.Arrival
 import drt.shared._
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, Operator, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource, PortCode}

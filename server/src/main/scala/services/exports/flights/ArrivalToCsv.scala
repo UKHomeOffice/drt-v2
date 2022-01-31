@@ -1,7 +1,7 @@
 package services.exports.flights
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.api.Arrival
+import uk.gov.homeoffice.drt.arrivals.Arrival
 
 object ArrivalToCsv {
 

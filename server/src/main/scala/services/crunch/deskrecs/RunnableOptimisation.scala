@@ -8,11 +8,11 @@ import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
 import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink}
 import akka.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.dates.LocalDate
-import drt.shared.{PortStateQueueMinutes, SDateLike}
+import drt.shared.PortStateQueueMinutes
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.europeLondonTimeZone
 import services.{SDate, StreamSupervision, TimeLogger}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.NumericRange
 

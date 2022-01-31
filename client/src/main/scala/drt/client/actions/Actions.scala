@@ -9,13 +9,14 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
 import drt.shared.api.{PassengerInfoSummary, WalkTimes}
-import drt.shared.dates.{LocalDate, UtcDate}
 import org.scalajs.dom.FormData
+import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.egates.{EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates, SetEgateBanksUpdate}
+import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
 
 import java.util.UUID
 import scala.collection.immutable.HashSet

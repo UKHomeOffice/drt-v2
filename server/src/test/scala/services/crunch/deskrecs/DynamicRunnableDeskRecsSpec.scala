@@ -10,7 +10,6 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared._
-import drt.shared.api.Arrival
 import manifests.passengers.BestAvailableManifest
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
@@ -25,6 +24,8 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
@@ -32,6 +33,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHist
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiPaxTypeAndQueueCount, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
@@ -110,7 +112,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.terminalProvider(airportConfig))
   val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
-  val pcpPaxCalcFn: Arrival => Int = PcpUtils.bestPcpPaxEstimate
 
   val ptqa: PaxTypeQueueAllocation = PaxTypeQueueAllocation(
     B5JPlusTypeAllocator,

@@ -1,10 +1,10 @@
 package actors.serializers
 
 import actors.serializers.CrunchRequestMessageConversion.{crunchRequestToMessage, crunchRequestsFromMessages, maybeCrunchRequestFromMessage, removeCrunchRequestMessage}
-import drt.shared.dates.LocalDate
 import org.specs2.mutable.Specification
 import server.protobuf.messages.CrunchState.RemoveCrunchRequestMessage
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import uk.gov.homeoffice.drt.time.LocalDate
 
 class CrunchRequestMessageConversionSpec extends Specification {
   "When converting to a message and then back again the original data should remain unchanged" >> {

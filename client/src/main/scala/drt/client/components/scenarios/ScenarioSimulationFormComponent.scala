@@ -7,9 +7,6 @@ import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.components.styles.ScalaCssImplicits._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import drt.shared._
-import drt.shared.dates.LocalDate
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.icons.{MuiIcons, MuiIconsModule}
@@ -19,7 +16,9 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.Div
 import scalacss.ScalaCssReactImplicits
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, PaxTypes, Queues}
+import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.util.Try
 

@@ -6,7 +6,7 @@ import drt.client.components.TerminalContentComponent.exportLink
 import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services._
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid}

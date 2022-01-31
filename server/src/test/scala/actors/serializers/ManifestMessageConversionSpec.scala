@@ -1,11 +1,11 @@
 package actors.serializers
 
-import drt.shared._
 import org.specs2.mutable.Specification
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.protobuf.messages.VoyageManifest.PassengerInfoJsonMessage
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 
 class ManifestMessageConversionSpec extends Specification {

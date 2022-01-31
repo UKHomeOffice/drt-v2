@@ -2,16 +2,16 @@ package services.`export`
 
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
-import drt.shared.EventTypes.DC
 import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.ports.Terminals.T1
-import drt.shared._
-import passengersplits.parsing.VoyageManifestParser.{EeaFlag, InTransit, ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser._
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.exports.flights.templates.{CedatFlightsExport, FlightsWithSplitsWithActualApiExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExport, FlightsWithSplitsWithoutActualApiExportImpl}
+import services.exports.flights.templates._
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiPaxTypeAndQueueCount, FeedSource, LiveFeedSource, PaxTypes, PortCode, Queues, SplitRatiosNs}
+import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
+import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports._
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -208,7 +208,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val resultStream = withoutActualApiExport
       .csvStream(Source(List((FlightsWithSplits(flights), VoyageManifests.empty))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
     val expected =
       s"""|$flightHeadings,$apiHeadings
@@ -240,7 +240,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val resultStream = withoutActualApiExport
       .csvStream(Source(List((FlightsWithSplits(flightsWithPcpTimes), VoyageManifests.empty))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
     val expected =
       s"""|$flightHeadings,$apiHeadings
@@ -257,7 +257,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val resultStream = withoutActualApiExport
       .csvStream(Source(List((FlightsWithSplits(codeShareFlights), VoyageManifests.empty))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
     val expected =
       s"""|$flightHeadings,$apiHeadings
@@ -272,7 +272,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val resultStream = withoutActualApiExport
       .csvStream(Source(List((FlightsWithSplits(List(flightWithAllTypesOfAPISplit)), VoyageManifests.empty))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
     val expected =
       s"""|$flightHeadings,$apiHeadings
@@ -306,7 +306,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val resultStream = withActualApiExport
       .csvStream(Source(List((FlightsWithSplits(flightsIncludingOneWithNoPaxNos), VoyageManifests.empty))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
@@ -329,7 +329,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val resultStream = withActualApiExport
       .csvStream(Source(List((FlightsWithSplits(List(flightWithAllTypesOfAPISplit)), manifests))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
@@ -343,7 +343,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     val resultStream = withActualApiExport
       .csvStream(Source(List((FlightsWithSplits(codeShareFlights), VoyageManifests.empty))))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
@@ -362,7 +362,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         (FlightsWithSplits(codeShareFlights), VoyageManifests.empty))
       ))
 
-    val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+    val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
@@ -386,7 +386,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
           (FlightsWithSplits(codeShareFlights), VoyageManifests.empty))
         ))
 
-      val result: String = Await.result(resultStream.runWith(Sink.seq), 1 second).mkString
+      val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
       val expected =
         s"""|$cedatFlightHeadings,$cedatApiHeadings,$cedatActualApiHeadings

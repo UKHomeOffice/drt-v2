@@ -5,12 +5,13 @@ import actors.persistent.staffing.GetState
 import actors.persistent.{RecoveryActorLike, Sizes}
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, MinuteLike, MinutesContainer}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import drt.shared.{SDateLike, WithTimeAccessor}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 
 abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor](year: Int,

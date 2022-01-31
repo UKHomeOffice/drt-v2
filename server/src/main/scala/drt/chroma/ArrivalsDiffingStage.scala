@@ -3,11 +3,10 @@ package drt.chroma
 import akka.stream._
 import akka.stream.stage._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.UniqueArrival
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.metrics.StageTimer
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 
 import scala.collection.immutable.SortedMap
 

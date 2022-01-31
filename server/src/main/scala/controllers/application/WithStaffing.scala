@@ -17,6 +17,7 @@ import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
 import services.exports.StaffMovementsExport
+import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{read, write}
 
 import scala.concurrent.Future
@@ -121,7 +122,7 @@ trait WithStaffing {
 
           staffMovementsForDay(date)
       }
-      
+
       eventualStaffMovements.map(sms => Ok(write(sms)))
     }
   }

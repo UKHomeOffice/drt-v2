@@ -1,11 +1,12 @@
 package actors.persistent.arrivals
 
-import drt.shared.api.Arrival
-import drt.shared.{FeedStatusSuccess, SDateLike, UniqueArrival}
+import drt.shared.FeedStatusSuccess
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.AclFeedSource
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.SortedMap
 

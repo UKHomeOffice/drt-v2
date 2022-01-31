@@ -1,10 +1,10 @@
 package actors.serializers
 
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
-import drt.shared._
-import drt.shared.api.{Arrival, FlightCodeSuffix}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -12,11 +12,9 @@ import uk.gov.homeoffice.drt.ports._
 
 class FlightMessageConversionSpec extends Specification {
 
-  import drt.server.feeds.Implicits._
-
   val arrival = Arrival(
     Operator = Option(Operator("BA")),
-    Status = "landed",
+    Status = ArrivalStatus("landed"),
     Estimated = Option(2L),
     Actual = Option(3L),
     EstimatedChox = Option(4L),

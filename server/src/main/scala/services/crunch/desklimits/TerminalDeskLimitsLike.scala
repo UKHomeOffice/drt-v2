@@ -1,9 +1,8 @@
 package services.crunch.desklimits
 
-import drt.shared.MilliTimes
-import services.{OptimiserWithFlexibleProcessors, WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.deskrecs.DeskRecs
-import uk.gov.homeoffice.drt.egates.{Desk, EgateBank, EgateBanksUpdates}
+import services.{WorkloadProcessors, WorkloadProcessorsProvider}
+import uk.gov.homeoffice.drt.egates.{Desk, EgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 
 import scala.collection.immutable.{Map, NumericRange}

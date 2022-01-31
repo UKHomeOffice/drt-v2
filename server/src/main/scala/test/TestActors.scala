@@ -18,9 +18,10 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
-import drt.shared.dates.UtcDate
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 import org.slf4j.Logger
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 
 import scala.concurrent.Future
 
