@@ -106,8 +106,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val egateBanksUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new EgateBanksUpdatesActor(now, defaultEgates, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, params.forecastMaxDays)), "egate-banks-updates-actor")
   val liveBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new CirriumLiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
-  val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
-  val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  val persistentCrunchQueueActor: ActorRef
+  val persistentDeploymentQueueActor: ActorRef
 
   val minuteLookups: MinuteLookupsLike
 
@@ -230,8 +230,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor)
 
-    crunchRequestQueueActor ! CrunchRequest(SDate.now().toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
-
     (crunchRequestQueueActor, deploymentRequestQueue, deskRecsKillSwitch, deploymentsKillSwitch)
   }
 
@@ -281,6 +279,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         "live-base-arrivals" -> liveBaseArrivalsActor,
         "live-arrivals" -> liveArrivalsActor,
         "aggregated-arrivals" -> aggregatedArrivalsActor,
+        "crunch-queue" -> persistentCrunchQueueActor,
+        "deployment-queue" -> persistentDeploymentQueueActor,
       ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       manifestsLiveSource = voyageManifestsLiveSource,
