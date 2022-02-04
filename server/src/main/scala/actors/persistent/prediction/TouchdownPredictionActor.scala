@@ -35,12 +35,12 @@ class TouchdownPredictionActor(val now: () => SDateLike,
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case msg: ModelAndFeaturesMessage =>
       log.info(s"recovering state from ModelAndFeaturesMessage")
-      state = Option(modelAndFeaturesFromMessage(msg, sDateProvider))
+      state = Option(modelAndFeaturesFromMessage(msg))
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case msg: ModelAndFeaturesMessage =>
-      state = Option(modelAndFeaturesFromMessage(msg, sDateProvider))
+      state = Option(modelAndFeaturesFromMessage(msg))
   }
 
   override def stateToMessage: GeneratedMessage = throw new Exception(s"Persistence not supported here")

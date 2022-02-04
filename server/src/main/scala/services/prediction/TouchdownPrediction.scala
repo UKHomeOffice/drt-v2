@@ -8,6 +8,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.ArrivalsDiff
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
 import services.SDate
 import services.prediction.TouchdownPrediction.MaybeModelAndFeaturesProvider
@@ -67,7 +68,9 @@ case class TouchdownPrediction(modelAndFeaturesProvider: MaybeModelAndFeaturesPr
         diff.copy(toUpdate = diff.toUpdate ++ arrivals.map(a => (a.unique, a)))
       }
 
-  def maybePredictedTouchdown(arrival: Arrival): Future[Option[Long]] =
+  def maybePredictedTouchdown(arrival: Arrival): Future[Option[Long]] = {
+    implicit val millisToSDate: MillisSinceEpoch => SDateLike = (millis: MillisSinceEpoch) => SDate(millis)
+
     modelAndFeaturesProvider(arrival.Terminal, arrival.VoyageNumber, arrival.Origin)
       .map {
         case Some(maf) if maf.improvementPct > minimumImprovementPctThreshold => maf.maybePrediction(arrival)
@@ -78,4 +81,5 @@ case class TouchdownPrediction(modelAndFeaturesProvider: MaybeModelAndFeaturesPr
           log.error(s"Failed to fetch prediction model and features for ${arrival.unique}", t)
           None
       }
+  }
 }

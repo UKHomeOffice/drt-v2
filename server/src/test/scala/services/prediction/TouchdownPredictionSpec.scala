@@ -11,8 +11,8 @@ import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
-import uk.gov.homeoffice.drt.prediction.FeatureType.OneToMany
-import uk.gov.homeoffice.drt.prediction.{Features, RegressionModel, TouchdownModelAndFeatures}
+import uk.gov.homeoffice.drt.prediction.Feature.OneToMany
+import uk.gov.homeoffice.drt.prediction.{FeaturesWithOneToManyValues, RegressionModel, TouchdownModelAndFeatures}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -22,8 +22,8 @@ class MockTouchdownPredictionActor(terminal: Terminal,
                                    origin: PortCode
                                   ) extends TouchdownPredictionActor(() => SDate.now(), terminal, number, origin) {
   private val model: RegressionModel = RegressionModel(Iterable(-4.491677337488966, 0.5758560689088016, 3.8006500547982798, 0.11517121378172734, 0.0), 0)
-  private val features: Features = Features(List(OneToMany(List("dayOfWeek"), "dow"), OneToMany(List("hoursMinutes"), "pod")), IndexedSeq("dow_7", "dow_4", "dow_6", "dow_2", "pod_1"))
-  state = Option(TouchdownModelAndFeatures(model, features, examplesTrainedOn = 10, improvementPct = 25, m => SDate(m)))
+  private val features: FeaturesWithOneToManyValues = FeaturesWithOneToManyValues(List(OneToMany(List("dayOfWeek"), "dow"), OneToMany(List("hoursMinutes"), "pod")), IndexedSeq("dow_7", "dow_4", "dow_6", "dow_2", "pod_1"))
+  state = Option(TouchdownModelAndFeatures(model, features, examplesTrainedOn = 10, improvementPct = 25))
 }
 
 class TouchdownPredictionSpec extends CrunchTestLike {
