@@ -56,10 +56,10 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 object PaxFlow {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def pcpArrivalTimeForFlight(timeToChoxMillis: MillisSinceEpoch, firstPaxOffMillis: MillisSinceEpoch)
+  def pcpArrivalTimeForFlight(timeToChoxMillis: MillisSinceEpoch, firstPaxOffMillis: MillisSinceEpoch, considerPredictions: Boolean)
                              (walkTimeProvider: FlightWalkTime)
                              (flight: Arrival, redListUpdates: RedListUpdates): MilliDate =
-    pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider)(flight, redListUpdates)
+    pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider, considerPredictions)(flight, redListUpdates)
 }
 
 trait AirportConfiguration {
@@ -74,12 +74,15 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def oohPhone: Option[String] = config.getOptional[String]("ooh-phone")
 
+  def useTimePredictions: Boolean = config.get[Boolean]("feature-flags.use-time-predictions")
+
   def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
 
   lazy val airportConfig: AirportConfig = {
     val configForPort = getPortConfFromEnvVar.copy(
       contactEmail = contactEmail,
-      outOfHoursContactPhone = oohPhone
+      outOfHoursContactPhone = oohPhone,
+      useTimePredictions = useTimePredictions
     )
 
     configForPort.assertValid()

@@ -36,6 +36,7 @@ object RunnableCrunch {
                                            staffMovementsSource: Source[Seq[StaffMovement], SMM],
                                            actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
                                            redListUpdatesSource: Source[List[RedListUpdateCommand], RL],
+                                           touchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff],
 
                                            arrivalsGraphStage: ArrivalsGraphStage,
                                            staffGraphStage: StaffGraphStage,
@@ -67,7 +68,7 @@ object RunnableCrunch {
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
-    val graph = GraphDSL.create(
+    val graph = GraphDSL.createGraph(
       forecastBaseArrivalsSource,
       forecastArrivalsSource,
       liveBaseArrivalsSource,
@@ -196,7 +197,7 @@ object RunnableCrunch {
           fixedPointsSourceAsync ~> fixedPointsKillSwitchSync ~> staff.in1
           staffMovementsSourceAsync ~> movementsKillSwitchSync ~> staff.in2
 
-          arrivals.out ~> arrivalsFanOut
+          arrivals.out.mapAsync(1)(touchdownPredictions) ~> arrivalsFanOut
           arrivalsFanOut ~> flightsSink
           arrivalsFanOut ~> aggregatedArrivalsSink
 

@@ -165,28 +165,29 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
   }
 
   def lcyFlightToArrival(f: LCYFlight) = Arrival(
-      f.airline,
-      FlightStatus(f.status),
-      maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
-      maybeTimeStringToMaybeMillis(f.actualTouchDown),
-      None,
-      maybeTimeStringToMaybeMillis(f.actualOnBlocks),
-      f.passengerGate,
-      f.aircraftParkingPosition,
-      f.seatCapacity,
-      f.paxCount,
-      None,
-      None,
-      None,
-      f.arrivalAirport,
-      Terminal(f.aircraftTerminal),
-      f.airline + f.flightNumber,
-      f.airline + f.flightNumber,
-      f.departureAirport,
-      SDate(f.scheduledOnBlocks).millisSinceEpoch,
-      None,
-      Set(LiveFeedSource)
-    )
+    Operator = f.airline,
+    Status = FlightStatus(f.status),
+    Estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
+    PredictedTouchdown = None,
+    Actual = maybeTimeStringToMaybeMillis(f.actualTouchDown),
+    EstimatedChox = None,
+    ActualChox = maybeTimeStringToMaybeMillis(f.actualOnBlocks),
+    Gate = f.passengerGate,
+    Stand = f.aircraftParkingPosition,
+    MaxPax = f.seatCapacity,
+    ActPax = f.paxCount,
+    TranPax = None,
+    RunwayID = None,
+    BaggageReclaimId = None,
+    AirportID = f.arrivalAirport,
+    Terminal = Terminal(f.aircraftTerminal),
+    rawICAO = f.airline + f.flightNumber,
+    rawIATA = f.airline + f.flightNumber,
+    Origin = f.departureAirport,
+    Scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
+    PcpTime = None,
+    FeedSources = Set(LiveFeedSource)
+  )
 
 
   def maybeTimeStringToMaybeMillis(t: Option[String]): Option[MillisSinceEpoch] = t.flatMap(

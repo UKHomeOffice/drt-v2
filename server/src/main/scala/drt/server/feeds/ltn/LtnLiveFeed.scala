@@ -92,6 +92,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       Operator = operator,
       Status = status,
       Estimated = ltnFeedFlight.EstimatedDateTime.map(sdateWithTimeZoneApplied),
+      PredictedTouchdown = None,
       Actual = ltnFeedFlight.ActualDateTime.map(sdateWithTimeZoneApplied),
       EstimatedChox = None,
       ActualChox = ltnFeedFlight.AIBT.map(sdateWithTimeZoneApplied),

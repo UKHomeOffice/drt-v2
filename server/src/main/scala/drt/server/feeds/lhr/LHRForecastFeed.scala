@@ -20,6 +20,7 @@ object LHRForecastFeed {
         Operator = None,
         Status = "Port Forecast",
         Estimated = None,
+        PredictedTouchdown = None,
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

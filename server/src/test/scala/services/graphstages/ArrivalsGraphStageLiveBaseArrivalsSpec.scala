@@ -30,7 +30,7 @@ object TestableArrivalsGraphStage {
       SourceQueueWithComplete[List[Arrival]],
       SourceQueueWithComplete[List[Arrival]],
       SourceQueueWithComplete[List[RedListUpdateCommand]])
-    ] = {
+  ] = {
 
     val liveArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
     val liveBaseArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
@@ -187,7 +187,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     offerAndCheck(liveBaseSource, ciriumArrivals,
       (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.Scheduled == scheduled.millisSinceEpoch)
 
-    offerAndCheck(forecastArrivalSource, List(arrival(actPax=Some(90))),
+    offerAndCheck(forecastArrivalSource, List(arrival(actPax = Some(90))),
       (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.ActPax.get == 90)
 
     success
@@ -205,7 +205,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     offerAndCheck(liveBaseSource, ciriumArrivals,
       (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.Scheduled == scheduled.millisSinceEpoch)
 
-    offerAndCheck(forecastArrivalSource, List(arrival(actPax=Some(90))),
+    offerAndCheck(forecastArrivalSource, List(arrival(actPax = Some(90))),
       (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture &&
         a.FeedSources.contains(ForecastFeedSource) &&
         a.Scheduled == scheduled.millisSinceEpoch)
@@ -299,7 +299,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     success
   }
 
-  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0)(a, r)
+  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0, considerPredictions = true)(a, r)
 
   "Given a base live arrival with an estimated time and a port live arrival with only scheduled time " +
     "Then PCP time should be calculated from the base live arrival time." >> {
@@ -325,41 +325,42 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     success
   }
 
-  def arrival(
-               estimated: Option[Long] = None,
-               actual: Option[Long] = None,
-               estChox: Option[Long] = None,
-               actChox: Option[Long] = None,
-               gate: Option[String] = None,
-               status: ArrivalStatus = ArrivalStatus("test"),
-               scheduledDate: MillisSinceEpoch = scheduled.millisSinceEpoch,
-               scheduledDepartureDate: Option[MillisSinceEpoch] = None,
-               actPax :Option[Int] = None
+  def arrival(estimated: Option[Long] = None,
+              predTouchdown: Option[Long] = None,
+              actual: Option[Long] = None,
+              estChox: Option[Long] = None,
+              actChox: Option[Long] = None,
+              gate: Option[String] = None,
+              status: ArrivalStatus = ArrivalStatus("test"),
+              scheduledDate: MillisSinceEpoch = scheduled.millisSinceEpoch,
+              scheduledDepartureDate: Option[MillisSinceEpoch] = None,
+              actPax: Option[Int] = None
              ): Arrival =
     Arrival(
-      None,
-      status,
-      estimated,
-      actual,
-      estChox,
-      actChox,
-      gate,
-      None,
-      None,
-      actPax,
-      None,
-      None,
-      None,
-      PortCode("STN"),
-      T1,
-      "TST100",
-      "TST100",
-      PortCode("TST"),
-      scheduledDate,
-      None,
-      Set(),
-      None,
-      None,
-      scheduledDepartureDate
+      Operator = None,
+      Status = status,
+      Estimated = estimated,
+      PredictedTouchdown = predTouchdown,
+      Actual = actual,
+      EstimatedChox = estChox,
+      ActualChox = actChox,
+      Gate = gate,
+      Stand = None,
+      MaxPax = None,
+      ActPax = actPax,
+      TranPax = None,
+      RunwayID = None,
+      BaggageReclaimId = None,
+      AirportID = PortCode("STN"),
+      Terminal = T1,
+      rawICAO = "TST100",
+      rawIATA = "TST100",
+      Origin = PortCode("TST"),
+      Scheduled = scheduledDate,
+      PcpTime = None,
+      FeedSources = Set(),
+      CarrierScheduled = None,
+      ApiPax = None,
+      ScheduledDeparture = scheduledDepartureDate
     )
 }

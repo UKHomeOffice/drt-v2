@@ -224,6 +224,7 @@ object AclFeed {
         Operator = operator,
         Status = "ACL Forecast",
         Estimated = None,
+        PredictedTouchdown = None,
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

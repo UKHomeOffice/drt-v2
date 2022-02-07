@@ -45,46 +45,46 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
-  val queuedDays: mutable.SortedSet[CrunchRequest] = mutable.SortedSet()
+  val state: mutable.SortedSet[CrunchRequest] = mutable.SortedSet()
 
   def crunchRequestFromMillis(millis: MillisSinceEpoch): CrunchRequest =
     CrunchRequest(SDate(millis).toLocalDate, crunchOffsetMinutes, durationMinutes)
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
-      queuedDays ++= crunchRequestsFromMessages(requests)
+      state ++= crunchRequestsFromMessages(requests)
     case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day)) =>
-      queuedDays.find(_.localDate == LocalDate(year, month, day)).foreach {
-        queuedDays -= _
+      state.find(_.localDate == LocalDate(year, month, day)).foreach {
+        state -= _
       }
 
-    case DaysMessage(days) => queuedDays ++= days.map(crunchRequestFromMillis)
-    case RemoveDayMessage(Some(day)) => queuedDays -= crunchRequestFromMillis(day)
+    case DaysMessage(days) => state ++= days.map(crunchRequestFromMillis)
+    case RemoveDayMessage(Some(day)) => state -= crunchRequestFromMillis(day)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
       log.info(s"Restoring queue to ${requests.size} days")
-      queuedDays ++= crunchRequestsFromMessages(requests).to[mutable.SortedSet]
+      state ++= crunchRequestsFromMessages(requests).to[mutable.SortedSet]
 
     case DaysMessage(days) =>
       log.info(s"Restoring queue to ${days.size} days")
-      queuedDays ++= days.map(crunchRequestFromMillis).to[mutable.SortedSet]
+      state ++= days.map(crunchRequestFromMillis).to[mutable.SortedSet]
   }
 
   override def stateToMessage: GeneratedMessage =
-    CrunchRequestsMessage(queuedDays.map(crunchRequestToMessage).toList)
+    CrunchRequestsMessage(state.map(crunchRequestToMessage).toList)
 
   override def receiveCommand: Receive = {
     case GetState =>
-      sender() ! queuedDays
+      sender() ! state
 
     case cr: CrunchRequest =>
       updateState(Seq(cr))
       persistAndMaybeSnapshot(CrunchRequestsMessage(List(crunchRequestToMessage(cr))))
 
     case RemoveCrunchRequest(cr) =>
-      queuedDays -= cr
+      state -= cr
       persistAndMaybeSnapshot(CrunchRequestsMessage(List(crunchRequestToMessage(cr))))
 
     case _: SaveSnapshotSuccess =>
@@ -98,8 +98,8 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
   }
 
   def updateState(days: Iterable[CrunchRequest]): Unit = {
-    log.info(s"Adding ${days.size} days to queue. Queue now contains ${queuedDays.size} days")
-    queuedDays ++= days
+    state ++= days
+    log.info(s"Adding ${days.size} days to queue. Queue now contains ${state.size} days")
   }
 
 }

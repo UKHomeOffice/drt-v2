@@ -48,7 +48,7 @@ object BigSummaryBoxes {
 
   val bestFlightSplits: ApiFlightWithSplits => Set[(PaxTypeAndQueue, Double)] = {
     case ApiFlightWithSplits(_, s, _) if s.isEmpty => Set()
-    case fws@ApiFlightWithSplits(flight, splits, _) =>
+    case fws@ApiFlightWithSplits(_, splits, _) =>
       if (splits.exists { case Splits(_, _, _, t) => t == PaxNumbers }) {
         splits.find { case Splits(_, _, _, t) => t == PaxNumbers } match {
           case None => Set()

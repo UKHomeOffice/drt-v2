@@ -3,7 +3,7 @@ package test
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily._
-import actors.persistent.ManifestRouterActor
+import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
 import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
@@ -91,6 +91,22 @@ object TestActors {
 
   class TestPortLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends PortLiveArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
+    override def resetState(): Unit = state.clear()
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
+  class TestCrunchQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
+    extends CrunchQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+    override def resetState(): Unit = {
+      state.clear()
+    }
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
+  class TestDeploymentQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
+    extends DeploymentQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

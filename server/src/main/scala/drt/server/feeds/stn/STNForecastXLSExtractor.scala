@@ -85,6 +85,7 @@ object STNForecastXLSExtractor {
         Operator = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
+        PredictedTouchdown = None,
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

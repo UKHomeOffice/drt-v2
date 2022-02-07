@@ -5,7 +5,7 @@ import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdat
 import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, ShiftsActor, StaffMovementsActor}
-import actors.persistent.{ApiFeedState, ManifestRouterActor}
+import actors.persistent.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.ask
@@ -25,7 +25,6 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services.SDate
 import services.crunch.CrunchSystem
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
@@ -34,7 +33,6 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.MilliTimes
 
 import scala.collection.immutable.SortedMap
-import scala.collection.mutable
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -75,6 +73,9 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
   override val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
 
   override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+
+  override val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
   val flightLookups: FlightLookups = FlightLookups(
     system,
@@ -126,8 +127,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         Option[SortedMap[UniqueArrival, Arrival]],
         Option[SortedMap[UniqueArrival, Arrival]],
         Option[SortedMap[UniqueArrival, Arrival]],
-        Option[mutable.SortedSet[CrunchRequest]],
-        Option[mutable.SortedSet[CrunchRequest]],
         Option[FeedSourceStatuses],
         )] = {
       for {
@@ -135,14 +134,12 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         ba <- initialStateFuture[ArrivalsState](forecastBaseArrivalsActor).map(_.map(_.arrivals))
         fa <- initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
         la <- initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
-        cq <- initialStateFuture[mutable.SortedSet[CrunchRequest]](persistentCrunchQueueActor)
-        dq <- initialStateFuture[mutable.SortedSet[CrunchRequest]](persistentDeploymentQueueActor)
         aclStatus <- forecastBaseArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
-      } yield (lps, ba, fa, la, cq, dq, aclStatus)
+      } yield (lps, ba, fa, la, aclStatus)
     }
 
     futurePortStates.onComplete {
-      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeCrunchQueue, maybeDeploymentQueue, maybeAclStatus)) =>
+      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeAclStatus)) =>
         system.log.info(s"Successfully restored initial state for App")
 
         val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(

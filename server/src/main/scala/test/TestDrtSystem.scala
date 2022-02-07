@@ -10,7 +10,6 @@ import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.Enable
-import drt.shared._
 import drt.shared.coachTime.CoachWalkTime
 import manifests.passengers.BestAvailableManifest
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
@@ -31,7 +30,7 @@ import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Futu
 import scala.language.postfixOps
 import scala.util.Success
 
-case class MockManifestLookupService(implicit ec: ExecutionContext) extends ManifestLookupLike {
+case class MockManifestLookupService()(implicit ec: ExecutionContext) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
@@ -61,6 +60,9 @@ case class TestDrtSystem(airportConfig: AirportConfig)
   override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()))
   override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
+
+  override val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
@@ -200,15 +202,16 @@ class RestartActor(startSystem: () => List[KillSwitch],
     case ResetData =>
       val replyTo = sender()
       log.info(s"About to shut down everything. Pressing kill switches")
-      resetInMemoryData()
 
       currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
         log.info(s"Kill switch ${idx + 1}")
         ks.shutdown()
       }
 
-      Future.sequence(testActors.map(_.ask(ResetData)(new Timeout(5 second)))).onComplete { _ =>
+      val resetFutures = testActors.map(_.ask(ResetData)(new Timeout(5 second)))
+      Future.sequence(resetFutures).onComplete { _ =>
         log.info(s"Shutdown triggered")
+        resetInMemoryData()
         startTestSystem()
         replyTo ! Ack
       }
@@ -225,10 +228,7 @@ class RestartActor(startSystem: () => List[KillSwitch],
 
   def startTestSystem(): Unit = currentKillSwitches = startSystem()
 
-  def resetInMemoryData(): Unit = {
-    persistenceTestKit.clearAll()
-  }
-
+  def resetInMemoryData(): Unit = persistenceTestKit.clearAll()
 }
 
 case object StartTestSystem

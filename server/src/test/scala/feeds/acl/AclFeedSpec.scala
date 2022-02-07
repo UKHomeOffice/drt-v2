@@ -112,11 +112,29 @@ class AclFeedSpec extends CrunchTestLike {
           """.stripMargin
 
       val arrivals = arrivalsFromCsvContent(csvContent, regularTerminalMapping)
-      val expected = List(Arrival(Operator = Option(Operator("4U")), Status = ArrivalStatus("ACL Forecast"), Estimated = None, Actual = None,
-        EstimatedChox = None, ActualChox = None, Gate = None, Stand = None, MaxPax = Option(180), ActPax = Option(149),
-        TranPax = None, RunwayID = None, BaggageReclaimId = None, AirportID = PortCode("LHR"), Terminal = T2,
-        rawICAO = "4U0460", rawIATA = "4U0460", Origin = PortCode("CGN"), FeedSources = Set(AclFeedSource),
-        Scheduled = 1507878600000L, PcpTime = None))
+      val expected = List(Arrival(
+        Operator = Option(Operator("4U")),
+        Status = ArrivalStatus("ACL Forecast"),
+        Estimated = None,
+        PredictedTouchdown = None,
+        Actual = None,
+        EstimatedChox = None,
+        ActualChox = None,
+        Gate = None,
+        Stand = None,
+        MaxPax = Option(180),
+        ActPax = Option(149),
+        TranPax = None,
+        RunwayID = None,
+        BaggageReclaimId = None,
+        AirportID = PortCode("LHR"),
+        Terminal = T2,
+        rawICAO = "4U0460",
+        rawIATA = "4U0460",
+        Origin = PortCode("CGN"),
+        FeedSources = Set(AclFeedSource),
+        Scheduled = 1507878600000L,
+        PcpTime = None))
 
       arrivals === expected
     }
@@ -163,6 +181,7 @@ class AclFeedSpec extends CrunchTestLike {
           Operator = Option(Operator("4U")),
           Status = ArrivalStatus("ACL Forecast"),
           Estimated = None,
+          PredictedTouchdown = None,
           Actual = None,
           EstimatedChox = None,
           ActualChox = None,
@@ -199,6 +218,7 @@ class AclFeedSpec extends CrunchTestLike {
           Operator = Option(Operator("4U")),
           Status = ArrivalStatus("ACL Forecast"),
           Estimated = None,
+          PredictedTouchdown = None,
           Actual = None,
           EstimatedChox = None,
           ActualChox = None,

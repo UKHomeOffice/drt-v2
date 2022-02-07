@@ -8,6 +8,7 @@ import server.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage,
 import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import server.protobuf.messages.FlightsMessage._
 import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
+import server.protobuf.messages.ModelAndFeatures.ModelAndFeaturesMessage
 import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
 import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
 import server.protobuf.messages.RedListUpdates._
@@ -73,6 +74,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
   final val PortEgateBanksUpdates: String = classOf[PortEgateBanksUpdatesMessage].getName
   final val NeboArrival: String = classOf[NeboArrivalMessage].getName
   final val NeboArrivalSnapshot: String = classOf[NeboArrivalSnapshotMessage].getName
+  final val ModelAndFeatures: String = classOf[ModelAndFeaturesMessage].getName
 
   override def toBinary(objectToSerialize: AnyRef): Array[Byte] = objectToSerialize match {
     case m: GeneratedMessage => m.toByteArray
@@ -131,6 +133,7 @@ class ProtoBufSerializer extends SerializerWithStringManifest {
       case PortEgateBanksUpdates => PortEgateBanksUpdatesMessage.parseFrom(bytes)
       case NeboArrival => NeboArrivalMessage.parseFrom(bytes)
       case NeboArrivalSnapshot => NeboArrivalSnapshotMessage.parseFrom(bytes)
+      case ModelAndFeatures => ModelAndFeaturesMessage.parseFrom(bytes)
     }
   }
 }

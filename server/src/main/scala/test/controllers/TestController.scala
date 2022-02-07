@@ -73,6 +73,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
             Estimated = Some(SDate(flight.EstDT).millisSinceEpoch),
             Actual = Some(SDate(flight.ActDT).millisSinceEpoch),
             EstimatedChox = Some(SDate(flight.EstChoxDT).millisSinceEpoch),
+            PredictedTouchdown = None,
             ActualChox = Some(SDate(flight.ActChoxDT).millisSinceEpoch),
             Gate = Some(flight.Gate),
             Stand = Some(flight.Stand),

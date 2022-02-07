@@ -179,6 +179,7 @@ object MagFeed {
     Operator = ma.operatingAirline.iata,
     Status = if (ma.onBlockTime.actual.isDefined) "On Chocks" else if (ma.touchDownTime.actual.isDefined) "Landed" else ma.flightStatus,
     Estimated = ma.arrival.estimated.map(str => SDate(str).millisSinceEpoch),
+    PredictedTouchdown = None,
     Actual = ma.arrival.actual.map(str => SDate(str).millisSinceEpoch),
     EstimatedChox = ma.onBlockTime.estimated.map(str => SDate(str).millisSinceEpoch),
     ActualChox = ma.onBlockTime.actual.map(str => SDate(str).millisSinceEpoch),

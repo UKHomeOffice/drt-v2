@@ -44,6 +44,7 @@ trait BHXLiveArrivals extends BHXArrivals {
     Arrival(
       Operator = None,
       Status = flightRecord.getFlightStatus,
+      PredictedTouchdown = None,
       Estimated = convertToUTC(flightRecord.getEstimatedTime).map(SDate(_).millisSinceEpoch),
       Actual = convertToUTC(flightRecord.getTouchdownTime).map(SDate(_).millisSinceEpoch),
       EstimatedChox = convertToUTC(flightRecord.getEstimatedChoxTime).map(SDate(_).millisSinceEpoch),
@@ -77,6 +78,7 @@ trait BHXForecastArrivals extends BHXArrivals {
       Operator = None,
       Status = "Port Forecast",
       Estimated = None,
+      PredictedTouchdown = None,
       Actual = None,
       EstimatedChox = None,
       ActualChox = None,

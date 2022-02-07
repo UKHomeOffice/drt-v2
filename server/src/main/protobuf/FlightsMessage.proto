@@ -33,6 +33,7 @@ message FlightMessage {
     optional int32 ApiPax = 25;
     optional int32 RedListPax = 26;
     optional int64 ScheduledDeparture = 27;
+    optional int64 PredictedTouchdown = 28;
 
     optional int32 FlightID__OLD = 10;
     optional int32 LastKnownPax__OLD = 22;

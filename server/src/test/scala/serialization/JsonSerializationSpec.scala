@@ -96,7 +96,7 @@ class JsonSerializationSpec extends Specification {
 
     "PortState" >> {
       val flightWithSplits = ApiFlightWithSplits(
-        Arrival(None, ArrivalStatus("scheduled"), None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
+        Arrival(None, ArrivalStatus("scheduled"), None, None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
         Set(
           Splits(
             Set(
@@ -140,7 +140,7 @@ class JsonSerializationSpec extends Specification {
         0L,
         Set(
           ApiFlightWithSplits(
-            Arrival(None, ArrivalStatus("scheduled"), None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
+            Arrival(None, ArrivalStatus("scheduled"), None, None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
             Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("tw") -> 7.0)), None)), Historical, None, Percentage))
           )
         ),

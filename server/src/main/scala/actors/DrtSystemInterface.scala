@@ -51,13 +51,14 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
-import services.crunch.{CrunchProps, CrunchSystem}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
+import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import services.prediction.TouchdownPrediction
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -105,8 +106,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val egateBanksUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new EgateBanksUpdatesActor(now, defaultEgates, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, params.forecastMaxDays)), "egate-banks-updates-actor")
   val liveBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new CirriumLiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
-  val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
-  val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  val persistentCrunchQueueActor: ActorRef
+  val persistentDeploymentQueueActor: ActorRef
 
   val minuteLookups: MinuteLookupsLike
 
@@ -191,7 +192,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   }
 
   def pcpArrivalTimeCalculator: (Arrival, RedListUpdates) => MilliDate =
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis)(walkTimeProvider)
+    PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)(walkTimeProvider)
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
@@ -225,7 +226,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor)
 
-    redListUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
     egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
 
     if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor)
@@ -259,6 +259,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val simulator: TrySimulator = OptimiserWithFlexibleProcessors.runSimulationOfWork
 
+    val td = TouchdownPrediction.modelAndFeaturesProvider(now)
+
+    val touchdownPredictions = TouchdownPrediction(td, 45, 15).addTouchdownPredictions _
+
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
       pcpArrival = pcpArrivalTimeCalculator,
@@ -275,6 +279,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         "live-base-arrivals" -> liveBaseArrivalsActor,
         "live-arrivals" -> liveArrivalsActor,
         "aggregated-arrivals" -> aggregatedArrivalsActor,
+        "crunch-queue" -> persistentCrunchQueueActor,
+        "deployment-queue" -> persistentDeploymentQueueActor,
       ),
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       manifestsLiveSource = voyageManifestsLiveSource,
@@ -301,6 +307,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       startDeskRecs = startDeskRecs,
       arrivalsAdjustments = arrivalAdjustments,
       redListUpdatesSource = redListUpdatesSource,
+      touchdownPredictionsForArrivalsDiff = touchdownPredictions,
     ))
   }
 
