@@ -74,12 +74,15 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def oohPhone: Option[String] = config.getOptional[String]("ooh-phone")
 
+  def useTimePredictions: Boolean = config.get[Boolean]("feature-flags.use-time-predictions")
+
   def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
 
   lazy val airportConfig: AirportConfig = {
     val configForPort = getPortConfFromEnvVar.copy(
       contactEmail = contactEmail,
-      outOfHoursContactPhone = oohPhone
+      outOfHoursContactPhone = oohPhone,
+      useTimePredictions = useTimePredictions
     )
 
     configForPort.assertValid()

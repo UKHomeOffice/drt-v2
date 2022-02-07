@@ -42,7 +42,7 @@ object ArrivalGenerator {
       Operator = operator,
       Status = status,
       Estimated = if (estDt.nonEmpty) Option(SDate.parseString(estDt).millisSinceEpoch) else None,
-      PredictedTouchdown = if (predTouchdownDt.nonEmpty) Option(SDate.parseString(estDt).millisSinceEpoch) else None,
+      PredictedTouchdown = if (predTouchdownDt.nonEmpty) Option(SDate.parseString(predTouchdownDt).millisSinceEpoch) else None,
       Actual = if (actDt.nonEmpty) Option(SDate.parseString(actDt).millisSinceEpoch) else None,
       EstimatedChox = if (estChoxDt.nonEmpty) Option(SDate.parseString(estChoxDt).millisSinceEpoch) else None,
       ActualChox = if (actChoxDt.nonEmpty) Option(SDate.parseString(actChoxDt).millisSinceEpoch) else None,

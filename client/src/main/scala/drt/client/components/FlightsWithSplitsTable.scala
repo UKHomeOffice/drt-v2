@@ -135,6 +135,7 @@ object FlightsWithSplitsTable {
     val redListHeading = "Red List Pax"
     val estChoxHeading = "Est Chox"
 
+    val predHeading = "Pred"
     val columns = List(
       ("Flight", Option("arrivals__table__flight-code")),
       ("Origin", None),
@@ -143,7 +144,7 @@ object FlightsWithSplitsTable {
       ("Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
       ("Sch", None),
-      ("Pred", None),
+      (predHeading, None),
       ("Est", None),
       ("Act", None),
       (estChoxHeading, None),
@@ -157,6 +158,9 @@ object FlightsWithSplitsTable {
       }
       .filter {
         case (label, _) => label != redListHeading || props.displayRedListInfo
+      }
+      .filter {
+        case (label, _) => label != predHeading || props.airportConfig.useTimePredictions
       }
       .map {
         case (label, None) if label == "Flight" => <.th(
@@ -321,7 +325,7 @@ object FlightTableRow {
         <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
         <.td(flight.displayStatus.description),
         <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
-        <.td(localDateTimeWithPopup(flight.PredictedTouchdown)),
+        if (props.airportConfig.useTimePredictions) <.td(localDateTimeWithPopup(flight.PredictedTouchdown)) else EmptyVdom,
         <.td(localDateTimeWithPopup(flight.Estimated)),
         <.td(localDateTimeWithPopup(flight.Actual)),
       )

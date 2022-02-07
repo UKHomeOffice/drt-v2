@@ -273,6 +273,28 @@ class PcpArrivalSpec extends SpecificationLike {
       result === expected
     }
 
+    "Given an Arrival with a scheduled time & predicted touchdown time, a gate and stand, but no walk times, " +
+      "when we ask for the pcpFrom time, " +
+      "then we should get predicted touchdown + time to chox + first pax off time + default walk time" >> {
+      val predTdStr = "2017-01-01T00:25.00Z"
+      val schStr = "2017-01-01T00:20.00Z"
+      val flight = arrival(schDt = schStr, predTouchdownDt = predTdStr, terminal = T1, gate = Option("2"), stand = Option("2L"))
+      val walkTimes: Map[(String, Terminal), Long] = Map()
+      val timeToChoxMillis = 120000L // 2 minutes
+      val firstPaxOffMillis = 180000L // 3 minutes
+      val defaultWalkTimeMillis = 300000L // 5 minutes
+
+      val wtp = walkTimeMillis(walkTimes) _
+
+      def walkTimeForFlight(flight: Arrival, redListUpdates: RedListUpdates): Long = gateOrStandWalkTimeCalculator(wtp, wtp, defaultWalkTimeMillis, DefaultCoachWalkTime)(flight, redListUpdates)
+
+      val result = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeForFlight, considerPredictions = true)(flight, RedListUpdates.empty)
+
+      val expected = SDate(predTdStr).addMillis(timeToChoxMillis).addMillis(firstPaxOffMillis).addMillis(defaultWalkTimeMillis)
+
+      result.millisSinceEpoch === expected.millisSinceEpoch
+    }
+
     "Given an Arrival with a scheduled time, a gate and stand, and only a matching gate walk time, " +
       "when we ask for the pcpFrom time, " +
       "then we should get scheduled + time to chox + first pax off time + gate walk time" >> {

@@ -79,9 +79,7 @@ object PcpArrival {
              (flight: Arrival, redListUpdates: RedListUpdates): MilliDate = {
     val bestChoxTimeMillis: Long = flight.bestArrivalTime(timeToChoxMillis, considerPredictions)
     val walkTimeMillis = walkTimeForFlight(flight, redListUpdates)
-    val date = MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
-    log.debug(s"bestChoxTime for ${Arrival.summaryString(flight)} is $bestChoxTimeMillis or ${SDate(bestChoxTimeMillis).toLocalDateTimeString()}, firstPcp ${SDate(date.millisSinceEpoch).toLocalDateTimeString()}")
-    date
+    MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
   }
 
   def gateOrStandWalkTimeCalculator(gateWalkTimesProvider: GateOrStandWalkTime,
