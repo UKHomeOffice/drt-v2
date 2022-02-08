@@ -1,6 +1,8 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
+import drt.shared.api.{AgeRange, PassengerInfoSummary, UnknownAge}
+import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -11,26 +13,46 @@ import uk.gov.homeoffice.drt.time.SDateLike
 trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
   val request: FlightsRequest = GetFlightsForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal)
 
-  def flightWithSplitsHeadingsPlusActualApi(queueNames: Seq[Queue]): String = arrivalWithSplitsHeadings(queueNames) + "," + actualApiHeadings.mkString(",") + ",Nationalities"
+  def flightWithSplitsHeadingsPlusActualApi(queueNames: Seq[Queue]): String =
+    arrivalWithSplitsHeadings(queueNames) + "," + actualApiHeadings.mkString(",") + ",Nationalities,Ages"
 
   override val headings: String = flightWithSplitsHeadingsPlusActualApi(queueNames)
 
-  override def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Seq[String] = (flightWithSplitsToCsvRow(fws) :::
-    actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList).map(s => s"$s") ::: List(s""""${nationalitiesFromManifest(maybeManifest)}"""")
+  override def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Seq[String] = {
+    val maybePaxSummary = maybeManifest.flatMap(PassengerInfo.manifestToPassengerInfoSummary)
 
-  def nationalitiesFromManifest(maybeManifest: Option[VoyageManifest]): String =
-    maybeManifest.map { manifest =>
-      manifest.uniquePassengers
-        .groupBy(_.nationality)
+    (flightWithSplitsToCsvRow(fws) :::
+      actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList).map(s => s"$s") :::
+      List(s""""${nationalitiesFromSummary(maybePaxSummary)}"""", s""""${ageRangesFromSummary(maybePaxSummary)}"""")
+  }
+
+  def nationalitiesFromSummary(maybeSummary: Option[PassengerInfoSummary]): String =
+    maybeSummary.map {
+      _.nationalities
         .toList
-        .sortBy { case (nat, pax) =>
-          f"${pax.length}%03d-${nat.toString().getBytes.map(265 - _).mkString("-")}"
+        .sortBy { case (nat, paxCount) =>
+          f"${paxCount}%03d-${nat.code.getBytes.map(265 - _).mkString("-")}"
         }
         .reverseMap {
-          case (nat, pax) => s"${nat.toString()}:${pax.length}"
+          case (nat, pax) => s"${nat.toString()}:${pax}"
         }
         .mkString(",")
     }.getOrElse("")
+
+  def ageRangesFromSummary(maybeSummary: Option[PassengerInfoSummary]): String =
+    maybeSummary.map {
+      _.ageRanges
+        .toList
+        .sortBy {
+          case (AgeRange(bottom, _), _) => bottom
+          case (UnknownAge, _) => 1000
+        }
+        .map {
+          case (ageRange, pax) => s"${ageRange.title}:$pax"
+        }
+        .mkString(",")
+    }.getOrElse("")
+
 }
 
 case class FlightsWithSplitsWithActualApiExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithActualApiExport {

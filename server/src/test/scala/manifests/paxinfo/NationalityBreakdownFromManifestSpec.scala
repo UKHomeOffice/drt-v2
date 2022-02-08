@@ -8,8 +8,6 @@ import uk.gov.homeoffice.drt.Nationality
 import scala.collection.immutable.List
 
 object NationalityBreakdownFromManifestSpec extends Specification {
-
-
   "When extracting nationality breakdown" >> {
     "Given a manifest with 1 passenger with a nationality of GB " +
       "Then I should get a Map of GBR to 1" >> {
@@ -85,5 +83,4 @@ object NationalityBreakdownFromManifestSpec extends Specification {
       result === expected
     }
   }
-
 }
