@@ -300,7 +300,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     }
   }
 
-  private val actualApiHeadings = """API Actual - B5J+ National to EEA,API Actual - B5J+ National to e-Gates,API Actual - B5J+ Child to EEA,API Actual - EEA Machine Readable to EEA,API Actual - EEA Machine Readable to e-Gates,API Actual - EEA Non-Machine Readable to EEA,API Actual - EEA Child to EEA,API Actual - Non-Visa National to Fast Track,API Actual - Visa National to Fast Track,API Actual - Non-Visa National to Non-EEA,API Actual - Visa National to Non-EEA,API Actual - Transit to Tx,Nationalities"""
+  private val actualApiHeadings = """API Actual - B5J+ National to EEA,API Actual - B5J+ National to e-Gates,API Actual - B5J+ Child to EEA,API Actual - EEA Machine Readable to EEA,API Actual - EEA Machine Readable to e-Gates,API Actual - EEA Non-Machine Readable to EEA,API Actual - EEA Child to EEA,API Actual - Non-Visa National to Fast Track,API Actual - Visa National to Fast Track,API Actual - Non-Visa National to Non-EEA,API Actual - Visa National to Non-EEA,API Actual - Transit to Tx,Nationalities,Ages"""
 
   "Given a list of Flights With Splits then I should get all the data for with API numbers when live numbers are missing" >> {
     val resultStream = withActualApiExport
@@ -310,21 +310,21 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,28,28,,2,4,9,13,3,7,8,10,,,,,0.0,0.0,0.0,1.0,2.0,3.0,0.0,6.0,7.0,4.0,5.0,0.0,""
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0,""
-          |SA0326,SA0326,JHD,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,100,100,,30,60,10,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0,""
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,28,28,,2,4,9,13,3,7,8,10,,,,,0.0,0.0,0.0,1.0,2.0,3.0,0.0,6.0,7.0,4.0,5.0,0.0,"",""
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
+          |SA0326,SA0326,JHD,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,100,100,,30,60,10,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
           |""".stripMargin
 
     result === expected
   }
 
-  "Given a Flight With Splits and a VoyageManifests with a matching arrival then I should get all the data with API nos plus the nationalities breakdown in size then alphabetical order" >> {
+  "Given a Flight With Splits and a VoyageManifests with a matching arrival I should get all the data with API nos plus the nationalities breakdown in size then alphabetical order, and age breakdowns in ascending range order" >> {
     val manifests = VoyageManifests(Set(VoyageManifest(DC, PortCode("AAA"), flightWithAllTypesOfAPISplit.apiFlight.Origin, flightWithAllTypesOfAPISplit.apiFlight.VoyageNumber,
       flightWithAllTypesOfAPISplit.apiFlight.CarrierCode, ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("20:00"), List(
-        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), None, None, InTransit(false), None, Option(Nationality("GBR")), None),
-        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), None, None, InTransit(false), None, Option(Nationality("USA")), None),
-        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), None, None, InTransit(false), None, Option(Nationality("FRA")), None),
-        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), None, None, InTransit(false), None, Option(Nationality("FRA")), None),
+        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(50)), None, InTransit(false), None, Option(Nationality("GBR")), None),
+        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(25)), None, InTransit(false), None, Option(Nationality("USA")), None),
+        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(5)), None, InTransit(false), None, Option(Nationality("FRA")), None),
+        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(30)), None, InTransit(false), None, Option(Nationality("FRA")), None),
       ))))
     val resultStream = withActualApiExport
       .csvStream(Source(List((FlightsWithSplits(List(flightWithAllTypesOfAPISplit)), manifests))))
@@ -333,7 +333,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,98,98,Y,7,15,32,44,11,23,29,35,,,,,0.0,0.0,0.0,1.0,2.0,3.0,0.0,6.0,7.0,4.0,5.0,0.0,"FRA:2,GBR:1,USA:1"
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,98,98,Y,7,15,32,44,11,23,29,35,,,,,0.0,0.0,0.0,1.0,2.0,3.0,0.0,6.0,7.0,4.0,5.0,0.0,"FRA:2,GBR:1,USA:1","0-11:1,25-49:2,50-65:1"
           |""".stripMargin
 
     result === expected
@@ -347,8 +347,8 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0,""
-          |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,105,105,Y,32,62,11,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0,""
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
+          |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,105,105,Y,32,62,11,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
           |""".stripMargin
 
     result === expected
@@ -366,8 +366,8 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0,""
-          |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,105,105,Y,32,62,11,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0,""
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
+          |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,,20:00,105,105,Y,32,62,11,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
           |""".stripMargin
 
     result === expected
