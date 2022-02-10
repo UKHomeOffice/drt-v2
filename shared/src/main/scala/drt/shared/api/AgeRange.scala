@@ -8,7 +8,7 @@ trait PaxAgeRange {
 }
 
 case class AgeRange(bottom: Int, top: Option[Int]) extends PaxAgeRange {
-  def isInRange(age: Int) = this match {
+  def isInRange(age: Int): Boolean = this match {
     case AgeRange(bottom, Some(top)) => age >= bottom && age <= top
     case AgeRange(bottom, None) => age > bottom
   }
@@ -46,6 +46,5 @@ object PaxAgeRange {
     case bottom :: Nil =>
       AgeRange(bottom.replace(">", "").toInt)
   }
-
 }
 

@@ -9,7 +9,6 @@ import uk.gov.homeoffice.drt.ports.PaxAge
 import scala.collection.immutable.List
 
 object AgeRangeDataFromManifestsSpec extends Specification {
-
   "When extracting Age data from a manifest" >> {
     "Given a voyage manifest with 1 passenger aged 11" +
       "Then I should get back age data with 1 passenger in the 0-11 age range" >> {
@@ -84,5 +83,4 @@ object AgeRangeDataFromManifestsSpec extends Specification {
 
     result === expected
   }
-
 }

@@ -4,7 +4,7 @@ import drt.shared.api._
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import queueus.B5JPlusWithTransitTypeAllocator
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.ports.PaxType
+import uk.gov.homeoffice.drt.ports.{PaxAge, PaxType}
 
 object PassengerInfo {
 
@@ -16,33 +16,36 @@ object PassengerInfo {
     AgeRange(65),
   )
 
-  def manifestToAgeRangeCount(manifest: VoyageManifest): Map[PaxAgeRange, Int] =
+  def ageRangeForAge(age: PaxAge): PaxAgeRange = ageRanges
+    .find { ar =>
+      val withinTop = ar.top match {
+        case Some(top) => age.years <= top
+        case None => true
+      }
+      val withinBottom = ar.bottom <= age.years
+
+      withinBottom && withinTop
+    }
+    .getOrElse(UnknownAge)
+
+  def manifestToAgeRangeCount(manifest: VoyageManifest): Map[PaxAgeRange, Int] = {
     manifest
       .uniquePassengers
-      .foldLeft(Map[PaxAgeRange, Int]())((acc: Map[PaxAgeRange, Int], info) => {
-        val maybeRange = info.age.flatMap(age => ageRanges.find(_.isInRange(age.years)))
-        maybeRange match {
-          case Some(range) =>
-            acc + (range -> (acc.getOrElse(range, 0) + 1))
-          case None =>
-            acc + (UnknownAge -> (acc.getOrElse(UnknownAge, 0) + 1))
-        }
-      })
-
-  def manifestToNationalityCount(manifest: VoyageManifest): Map[Nationality, Int] = {
-    val unknownNat = Nationality("Unknown")
-
-    manifest
-      .uniquePassengers
-      .foldLeft(Map[Nationality, Int]())((acc: Map[Nationality, Int], info: ManifestPassengerProfile) => {
-        info.nationality match {
-          case nationality if nationality.code.nonEmpty =>
-            acc + (nationality -> (acc.getOrElse(nationality, 0) + 1))
-          case _ =>
-            acc + (unknownNat -> (acc.getOrElse(unknownNat, 0) + 1))
-        }
-      })
+      .groupBy(_.age.map(ageRangeForAge).getOrElse(UnknownAge))
+      .map {
+        case (ageRange, paxProfiles) => (ageRange, paxProfiles.size)
+      }
   }
+
+  def manifestToNationalityCount(manifest: VoyageManifest): Map[Nationality, Int] =
+    manifest
+      .uniquePassengers
+      .groupBy(_.nationality)
+      .map {
+        case (nat, paxProfiles) =>
+          val natWithUnknown = if (nat.code.isEmpty) Nationality("Unknown") else nat
+          (natWithUnknown, paxProfiles.size)
+      }
 
   def manifestToPaxTypes(manifest: ManifestLike): Map[PaxType, Int] = {
     manifest.uniquePassengers.map(p => B5JPlusWithTransitTypeAllocator(p))
