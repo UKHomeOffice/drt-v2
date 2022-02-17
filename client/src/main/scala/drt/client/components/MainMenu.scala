@@ -142,11 +142,9 @@ object PortSwitcher {
       .initialState(State())
       .renderPS((scope, props, state) => {
         val showClass = if (state.showDropDown) "show" else ""
-        val otherPorts = props.user.portRoles.collect {
-          case portRole: PortAccess if props.portCode != PortCode(portRole.name) => PortCode(portRole.name)
-        }
-        if (otherPorts.size == 1) {
-          <.a(Icon.plane, " ", ^.href := SPAMain.urls.urlForPort(otherPorts.head.toString), otherPorts.head.iata)
+        val ports = props.user.portRoles.map(portRole => PortCode(portRole.name))
+        if (ports.size == 1) {
+          <.a(Icon.plane, " ", ^.href := SPAMain.urls.urlForPort(ports.head.toString), ports.head.iata)
         } else {
           <.span(
             ^.className := "dropdown",
@@ -154,8 +152,12 @@ object PortSwitcher {
             ^.onClick --> scope.modState(_.copy(showDropDown = !state.showDropDown)),
             if (state.showDropDown) <.div(^.className := "menu-overlay", ^.onClick --> scope.modState(_ => State())) else "",
             <.ul(^.className := s"main-menu__port-switcher dropdown-menu $showClass",
-              otherPorts.toList.sorted.map(p => <.li(^.className := "dropdown-item",
-                <.a(^.href := SPAMain.urls.urlForPort(p.toString), p.iata))).toTagMod
+              ports.toList.sorted.map { p =>
+                <.li(^.className := "dropdown-item",
+                  if (p == props.portCode) <.span(p.iata, ^.disabled := true, ^.className := "non-selectable")
+                  else <.a(^.href := SPAMain.urls.urlForPort(p.toString), p.iata)
+                )
+              }.toTagMod
             )
           )
         }
