@@ -21,7 +21,7 @@ describe('Port switcher menu', () => {
       .contains("LHR")
   });
 
-  it("should be a drop down menu for users with access to more than 2 ports", () => {
+  it("should be a drop down menu for users with access to more than 2 ports, which includes the current port", () => {
     cy
       .asABorderForceOfficerWithRoles(["LHR", "STN", "LGW"])
       .navigateHome()
@@ -32,7 +32,7 @@ describe('Port switcher menu', () => {
       .should('have.class', 'show')
       .get(".dropdown-menu")
       .find('li')
-      .should("have.length", 3)
+      .should("have.length", 4)
       .contains("LGW")
       .get('.dropdown')
       .click( { force: true } )
