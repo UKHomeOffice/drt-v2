@@ -48,6 +48,14 @@ ul.dropdown-menu > li.dropdown-item > span.non-selectable {
   display: block;
 }
 
+ul.dropdown-menu > li.dropdown-item > span.region {
+  padding: 3px 10px;
+}
+
+ul.dropdown-menu > li.dropdown-item > span.port {
+  background-color: @bgHighlight;
+}
+
 .mui-textfield-date-input {
   font-family: Roboto, Helvetica, Arial, sans-serif;
   font-weight: 400;
@@ -180,13 +188,6 @@ ul.dropdown-menu > li.dropdown-item > span.non-selectable {
       &:hover, &:focus {
         color: @colHighlight;
       }
-    }
-
-    > li > p.non-selectable {
-      color: @colDefault;
-      font-weight: bold;
-      margin: 0;
-      padding: 3px 20px;
     }
 
     > .active {
