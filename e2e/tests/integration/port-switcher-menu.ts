@@ -21,7 +21,28 @@ describe('Port switcher menu', () => {
       .contains("LHR")
   });
 
-  it("should be a drop down menu for users with access to more than 2 ports", () => {
+  it("should be a drop down menu for users with access to more than 2 ports in the same region, including the current port", () => {
+    cy
+      .asABorderForceOfficerWithRoles(["LTN", "STN", "LCY"])
+      .navigateHome()
+      .get('.dropdown > a')
+      .click({ force: true })
+
+    cy.get(".dropdown-menu")
+      .should('have.class', 'show')
+      .get(".dropdown-menu")
+      .contains("LTN")
+      .get(".dropdown-menu")
+      .contains("STN")
+      .get(".dropdown-menu")
+      .contains("LCY")
+      .get('.dropdown')
+      .click( { force: true } )
+      .get(".dropdown-menu")
+      .should('not.have.class', 'show')
+  });
+
+  it("should be a drop down menu for users with access to more than 1 region ports, showing each region and its ports", () => {
     cy
       .asABorderForceOfficerWithRoles(["LHR", "STN", "LGW"])
       .navigateHome()
@@ -31,14 +52,21 @@ describe('Port switcher menu', () => {
     cy.get(".dropdown-menu")
       .should('have.class', 'show')
       .get(".dropdown-menu")
-      .find('li')
-      .should("have.length", 3)
+      .contains("LHR")
+      .get(".dropdown-menu")
+      .contains("STN")
+      .get(".dropdown-menu")
       .contains("LGW")
+      .get(".dropdown-menu")
+      .contains("Heathrow")
+      .get(".dropdown-menu")
+      .contains("Central")
+      .get(".dropdown-menu")
+      .contains("South")
       .get('.dropdown')
       .click( { force: true } )
       .get(".dropdown-menu")
       .should('not.have.class', 'show')
-
   });
 
 });

@@ -10,13 +10,13 @@ import drt.shared._
 import japgolly.scalajs.react.component.Js
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, LI}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles._
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, PortRegion}
 
 object MainMenu {
   @inline private def bss: BootstrapStyles.type = GlobalStyles.bootstrapStyles
@@ -142,24 +142,39 @@ object PortSwitcher {
       .initialState(State())
       .renderPS((scope, props, state) => {
         val showClass = if (state.showDropDown) "show" else ""
-        val otherPorts = props.user.portRoles.collect {
-          case portRole: PortAccess if props.portCode != PortCode(portRole.name) => PortCode(portRole.name)
-        }
-        if (otherPorts.size == 1) {
-          <.a(Icon.plane, " ", ^.href := SPAMain.urls.urlForPort(otherPorts.head.toString), otherPorts.head.iata)
+        val ports = props.user.portRoles.map(portRole => PortCode(portRole.name))
+        if (ports.size == 2) {
+          <.a(Icon.plane, " ", ^.href := SPAMain.urls.urlForPort(ports.head.toString), ports.filter(_ != props.portCode).head.iata)
         } else {
+          val regions = PortRegion.regions.collect {
+            case region if region.ports.intersect(ports).nonEmpty => (region.name -> region.ports.intersect(ports))
+          }.toList.sortBy(_._1)
           <.span(
             ^.className := "dropdown",
             <.a(Icon.plane, " ", "Switch port"),
             ^.onClick --> scope.modState(_.copy(showDropDown = !state.showDropDown)),
             if (state.showDropDown) <.div(^.className := "menu-overlay", ^.onClick --> scope.modState(_ => State())) else "",
             <.ul(^.className := s"main-menu__port-switcher dropdown-menu $showClass",
-              otherPorts.toList.sorted.map(p => <.li(^.className := "dropdown-item",
-                <.a(^.href := SPAMain.urls.urlForPort(p.toString), p.iata))).toTagMod
+              if (regions.size == 1) listPorts(ports, props.portCode).toTagMod
+              else listPortsByRegion(regions, props.portCode).toTagMod
             )
           )
         }
       }).build
+
+  private def listPortsByRegion(regions: List[(String, Set[PortCode])], currentPort: PortCode): List[html_<^.VdomTagOf[LI]] =
+    regions.flatMap { case (region, regionPorts) =>
+      val regionLi = <.li(^.className := "dropdown-item", <.span(region, ^.disabled := true, ^.className := "non-selectable region"))
+      regionLi :: listPorts(regionPorts, currentPort)
+    }
+
+  private def listPorts(ports: Set[PortCode], currentPort: PortCode): List[VdomTagOf[LI]] =
+    ports.toList.sorted.map { p =>
+      <.li(^.className := "dropdown-item",
+        if (p == currentPort) <.span(p.iata, ^.disabled := true, ^.className := "non-selectable port")
+        else <.a(^.href := SPAMain.urls.urlForPort(p.toString), p.iata)
+      )
+    }
 
   def apply(user: LoggedInUser, portCode: PortCode): VdomElement = component(Props(user, portCode))
 }
