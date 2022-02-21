@@ -10,7 +10,6 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
-import drt.shared.api.PassengerInfoSummary
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -20,9 +19,9 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.collection.immutable.{HashSet, Map}
+import scala.collection.immutable.HashSet
 
 object TerminalComponent {
 
@@ -30,32 +29,29 @@ object TerminalComponent {
 
   case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc]) extends UseValueEq
 
-  case class TerminalModel(
-                            portStatePot: Pot[PortState],
-                            passengerInfoByDayPot: Pot[Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]]],
-                            forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
-                            potShifts: Pot[ShiftAssignments],
-                            potMonthOfShifts: Pot[MonthOfShifts],
-                            potFixedPoints: Pot[FixedPointAssignments],
-                            potStaffMovements: Pot[StaffMovements],
-                            airportConfig: Pot[AirportConfig],
-                            loadingState: LoadingState,
-                            showActuals: Boolean,
-                            loggedInUserPot: Pot[LoggedInUser],
-                            viewMode: ViewMode,
-                            minuteTicker: Int,
-                            maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState],
-                            featureFlags: Pot[FeatureFlags],
-                            arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                            redListPorts: Pot[HashSet[PortCode]],
-                            redListUpdates: Pot[RedListUpdates],
+  case class TerminalModel(portStatePot: Pot[PortState],
+                           forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
+                           potShifts: Pot[ShiftAssignments],
+                           potMonthOfShifts: Pot[MonthOfShifts],
+                           potFixedPoints: Pot[FixedPointAssignments],
+                           potStaffMovements: Pot[StaffMovements],
+                           airportConfig: Pot[AirportConfig],
+                           loadingState: LoadingState,
+                           showActuals: Boolean,
+                           loggedInUserPot: Pot[LoggedInUser],
+                           viewMode: ViewMode,
+                           minuteTicker: Int,
+                           maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState],
+                           featureFlags: Pot[FeatureFlags],
+                           arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
+                           redListPorts: Pot[HashSet[PortCode]],
+                           redListUpdates: Pot[RedListUpdates],
                           ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         model.portStatePot,
-        model.passengerInfoSummariesByDayPot,
         model.forecastPeriodPot,
         model.shifts,
         model.monthOfShifts,
@@ -108,7 +104,6 @@ object TerminalComponent {
               model.redListUpdates.render { redListUpdates =>
                 val terminalContentProps = TerminalContentComponent.Props(
                   portStatePot = model.portStatePot,
-                  passengerInfoByDayPot = model.passengerInfoByDayPot,
                   potShifts = model.potShifts,
                   potFixedPoints = model.potFixedPoints,
                   potStaffMovements = model.potStaffMovements,
@@ -178,19 +173,17 @@ object TerminalComponent {
                     <.div(^.id := "dashboard", ^.className := s"tab-pane terminal-dashboard-container $dashboardContentClass",
                       if (props.terminalPageTab.mode == "dashboard") {
                         terminalContentProps.portStatePot.renderReady(ps =>
-                          terminalContentProps.passengerInfoByDayPot.renderReady(paxInfo => {
-                            TerminalDashboardComponent(
-                              terminalPageTabLoc = props.terminalPageTab,
-                              airportConfig = terminalContentProps.airportConfig,
-                              portState = ps,
-                              passengerInfoSummaryByDay = paxInfo,
-                              router = props.router,
-                              featureFlags = model.featureFlags,
-                              loggedInUser = loggedInUser,
-                              redListPorts = model.redListPorts,
-                              redListUpdates = redListUpdates,
-                            )
-                          }))
+                          TerminalDashboardComponent(
+                            terminalPageTabLoc = props.terminalPageTab,
+                            airportConfig = terminalContentProps.airportConfig,
+                            portState = ps,
+                            router = props.router,
+                            featureFlags = model.featureFlags,
+                            loggedInUser = loggedInUser,
+                            redListPorts = model.redListPorts,
+                            redListUpdates = redListUpdates,
+                          )
+                        )
                       } else ""
                     ),
                     <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {

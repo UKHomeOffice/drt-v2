@@ -44,8 +44,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
       modelRW.value match {
         case (Ready(existingState), _) =>
           val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
-          val scheduledUpdateRequests = Effect(Future(SchedulePortStateUpdateRequest(viewMode))) +
-            Effect(Future(GetPassengerInfoForFlights))
+          val scheduledUpdateRequests = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
 
           val newOriginCodes = crunchUpdates.flights.map(_.apiFlight.Origin) -- existingState.flights.map { case (_, fws) => fws.apiFlight.Origin }
           val effects = if (newOriginCodes.nonEmpty)

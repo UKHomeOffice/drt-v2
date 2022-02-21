@@ -3,6 +3,7 @@ package actors.persistent
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.Ack
+import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.arrivals.FeedStateLike
 import actors.persistent.staffing.{GetFeedStatuses, GetState}
@@ -20,7 +21,8 @@ import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import passengersplits.parsing.VoyageManifestParser
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.FeedStatusMessage
 import server.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
@@ -29,11 +31,21 @@ import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
+import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 object ManifestRouterActor {
+  case class GetForArrival(arrival: ArrivalKey)
+
+  sealed trait ManifestResult
+
+  case class ManifestFound(manifest: VoyageManifest) extends ManifestResult
+
+  case object ManifestNotFound extends ManifestResult
+
   def manifestsByDaySource(manifestsByDayLookup: ManifestLookup)
                           (start: SDateLike,
                            end: SDateLike,
@@ -138,6 +150,25 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), Option(pit))
+
+    case GetForArrival(arrival) =>
+      val scheduled = SDate(arrival.scheduled)
+      val replyTo = sender()
+      ManifestRouterActor
+        .manifestsByDaySource(manifestLookup)(scheduled, scheduled, None)
+        .map(manifests => manifests.manifests.find { _.maybeKey.exists(_ == arrival)}.toList)
+        .runWith(Sink.seq)
+        .map(_.flatten)
+        .onComplete {
+          case Success(manifests) =>
+            manifests.headOption match {
+              case Some(manifest) => replyTo ! ManifestFound(manifest)
+              case None => replyTo ! ManifestNotFound
+            }
+          case Failure(throwable) =>
+            log.error(s"Failed to look up manifest for $arrival")
+            replyTo ! ManifestNotFound
+        }
 
     case GetStateForDateRange(startMillis, endMillis) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), None)

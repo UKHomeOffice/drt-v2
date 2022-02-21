@@ -6,7 +6,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import japgolly.scalajs.react.Ref.Simple
 import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Children, JsComponent, Ref, ScalaComponent}
+import japgolly.scalajs.react.{Callback, Children, JsComponent, ReactEventFromInput, Ref, ScalaComponent}
 import org.scalajs.dom.raw.{HTMLElement, KeyboardEvent}
 import org.scalajs.dom.{Event, document}
 import scalacss.ScalaCssReactImplicits
@@ -91,15 +91,19 @@ object Tippy extends ScalaCssReactImplicits {
     val focusAndHover = s"$hover $focus"
   }
 
-  case class Props(content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String) extends UseValueEq
+  case class Props(content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String, maybeOnClick: Option[ReactEventFromInput => Callback]) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("FlightChart")
     .render_P(props => {
 
+      val trigger = props.maybeOnClick match {
+        case Some(onClick) => <.span(^.onClick ==> onClick, props.trigger)
+        case None => props.trigger
+      }
       val triggerWithTabIndex = <.span(
         ^.className := "tooltip-trigger",
         DefaultToolTipsStyle.triggerHoverIndicator,
-        props.trigger,
+        trigger,
         ^.tabIndex := 0
       )
 
@@ -109,8 +113,8 @@ object Tippy extends ScalaCssReactImplicits {
     })
     .build
 
-  def apply(content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String = TriggerEvents.focus) =
-    component(Props(content, interactive, trigger, triggerEvent))
+  def apply(content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String = TriggerEvents.focus, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
+    component(Props(content, interactive, trigger, triggerEvent, triggerCallback))
 
   def interactive(content: VdomElement, trigger: VdomNode) =
     apply(content, interactive = true, <.div(trigger))
@@ -118,8 +122,8 @@ object Tippy extends ScalaCssReactImplicits {
   def describe(content: VdomElement, trigger: TagMod) =
     apply(content, interactive = false, <.span(trigger))
 
-  def interactiveInfo(content: VdomElement) =
-    apply(content, interactive = true, Icon.infoCircle)
+  def interactiveInfo(content: VdomElement, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
+    apply(content, interactive = true, Icon.infoCircle, triggerCallback = triggerCallback)
 
   def info(content: VdomElement) =
     apply(content, interactive = true, Icon.infoCircle)
