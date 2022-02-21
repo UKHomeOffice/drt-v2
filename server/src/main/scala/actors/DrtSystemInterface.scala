@@ -261,7 +261,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val td = TouchdownPrediction.modelAndFeaturesProvider(now)
 
-    val touchdownPredictions = TouchdownPrediction(td, 45, 15).addTouchdownPredictions _
+    val touchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = TouchdownPrediction(td, 45, 15).addTouchdownPredictions _
+    val dummyTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = diff => Future.successful(diff)
 
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
@@ -307,7 +308,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       startDeskRecs = startDeskRecs,
       arrivalsAdjustments = arrivalAdjustments,
       redListUpdatesSource = redListUpdatesSource,
-      touchdownPredictionsForArrivalsDiff = touchdownPredictions,
+      touchdownPredictionsForArrivalsDiff = dummyTouchdownPredictions,
     ))
   }
 
