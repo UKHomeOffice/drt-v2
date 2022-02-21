@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import java.util.UUID
 import scala.collection.immutable.{HashSet, Map}
@@ -158,7 +158,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      featureFlags: Pot[FeatureFlags] = Empty,
                      fileUploadState: Pot[FileUploadState] = Empty,
                      simulationResult: Pot[SimulationResult] = Empty,
-                     passengerInfoSummariesByDayPot: Pot[Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]]] = Ready(Map()),
+                     passengerInfoSummariesByArrival: Pot[Map[ArrivalKey, PassengerInfoSummary]] = Ready(Map()),
                      snackbarMessage: Pot[String] = Empty,
                      redListPorts: Pot[HashSet[PortCode]] = Empty,
                      redListUpdates: Pot[RedListUpdates] = Empty,
@@ -195,7 +195,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new PortStateUpdatesHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
-      new PassengerInfoSummaryHandler(zoom(_.portStatePot), zoomRW(_.passengerInfoSummariesByDayPot)((m, v) => m.copy(passengerInfoSummariesByDayPot = v))),
+      new PassengerInfoSummaryHandler(zoom(_.portStatePot), zoomRW(_.passengerInfoSummariesByArrival)((m, v) => m.copy(passengerInfoSummariesByArrival = v))),
       new ArrivalSourcesHandler(zoomRW(_.arrivalSources)((m, v) => m.copy(arrivalSources = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),

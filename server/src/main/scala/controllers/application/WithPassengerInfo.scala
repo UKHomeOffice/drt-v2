@@ -2,18 +2,21 @@ package controllers.application
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.ManifestRouterActor
+import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound, ManifestResult}
 import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import controllers.Application
-import drt.shared.ErrorResponse
 import drt.shared.api.PassengerInfoSummary
-import uk.gov.homeoffice.drt.time.UtcDate
+import drt.shared.{ArrivalKey, ErrorResponse}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.mvc.{Action, AnyContent, Result}
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.auth.Roles.EnhancedApiView
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.time.UtcDate
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -26,6 +29,20 @@ trait WithPassengerInfo {
     authByRole(EnhancedApiView) {
       Action.async {
         respondWithManifestSummary(utcDateString, passengerSummariesForDay)
+      }
+    }
+
+  def getPassengerInfoArrival(origin: String, voyageNumber: Int, scheduled: Long): Action[AnyContent] =
+    authByRole(EnhancedApiView) {
+      val arrivalKey = ArrivalKey(PortCode(origin), VoyageNumber(voyageNumber), scheduled)
+      Action.async {
+        ctrl.manifestsRouterActor.ask(GetForArrival(arrivalKey)).mapTo[ManifestResult].map {
+          case ManifestFound(manifest) => PassengerInfo.manifestToPassengerInfoSummary(manifest) match {
+            case Some(info) => Ok(write(info))
+            case None => BadRequest("not found")
+          }
+          case ManifestNotFound => BadRequest("not found")
+        }
       }
     }
 

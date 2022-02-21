@@ -6,45 +6,30 @@ import drt.client.actions.Actions._
 import drt.client.services.DrtApi
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.api.PassengerInfoSummary
-import uk.gov.homeoffice.drt.time.UtcDate
 import drt.shared.{ArrivalKey, PortState}
+import uk.gov.homeoffice.drt.time.UtcDate
 import upickle.default.read
 
 import scala.collection.immutable.Map
-import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class PassengerInfoSummaryHandler[M](
-                                      portStatePot: ModelR[M, Pot[PortState]],
-                                      modelRW: ModelRW[M, Pot[Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]]]]
+class PassengerInfoSummaryHandler[M](portStatePot: ModelR[M, Pot[PortState]],
+                                     modelRW: ModelRW[M, Pot[Map[ArrivalKey, PassengerInfoSummary]]]
                                     ) extends LoggingActionHandler(modelRW) {
 
   def daysToRequestManifestsFor: Set[UtcDate] = portStatePot
     .zoom(_.map(_.flights.keys.map(k => SDate(k.scheduled).toUtcDate).toSet)).value.getOrElse(Set())
 
   override def handle: PartialFunction[Any, ActionResult[M]] = {
-    case GetPassengerInfoForFlights =>
-      val flightDays = daysToRequestManifestsFor.map(day => Effect(Future(GetPassengerInfoSummary(day)))).toList
-
-      val firstFlightDay: Effect = flightDays.head
-      val remainingFlightDays = flightDays.tail
-
-      val effects = remainingFlightDays.foldLeft(firstFlightDay)((acc, ef) => acc + ef)
-
-      effectOnly(effects)
-
-    case GetPassengerInfoSummary(utcDate) =>
-      effectOnly(Effect(DrtApi.get(s"manifest/${utcDate.toISOString}/summary")
+    case GetPassengerInfoSummary(arrivalKey) =>
+      effectOnly(Effect(DrtApi.get(s"manifest/${arrivalKey.origin.iata}/${arrivalKey.voyageNumber.numeric}/${arrivalKey.scheduled}")
         .map { response =>
-
-          val passengerInfo = read[Seq[PassengerInfoSummary]](response.responseText)
-          SetPassengerInfoSummary(utcDate, passengerInfo)
+          val passengerInfo = read[PassengerInfoSummary](response.responseText)
+          SetPassengerInfoSummary(arrivalKey, passengerInfo)
         }))
 
-    case SetPassengerInfoSummary(utcDate, passengerInfo) =>
-      val updates: Map[ArrivalKey, PassengerInfoSummary] = passengerInfo.map(pi => pi.arrivalKey -> pi).toMap
+    case SetPassengerInfoSummary(arrivalKey, passengerInfo) =>
       val existing = value.getOrElse(Map())
-
-      updated(Ready(existing ++ Map(utcDate -> updates)))
+      updated(Ready(existing.updated(arrivalKey, passengerInfo)))
   }
 }

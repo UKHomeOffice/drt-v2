@@ -11,7 +11,6 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewLive
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
-import drt.shared.api.PassengerInfoSummary
 import drt.shared.redlist.RedList
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -22,7 +21,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.{HashSet, Map}
 import scala.scalajs.js.URIUtils
@@ -30,17 +29,14 @@ import scala.util.Try
 
 
 object TerminalDashboardComponent {
-
-  case class Props(
-                    terminalPageTabLoc: TerminalPageTabLoc,
-                    airportConfig: AirportConfig,
-                    router: RouterCtl[Loc],
-                    portState: PortState,
-                    passengerInfoSummary: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
-                    featureFlags: Pot[FeatureFlags],
-                    loggedInUser: LoggedInUser,
-                    redListPorts: Pot[HashSet[PortCode]],
-                    redListUpdates: RedListUpdates,
+  case class Props(terminalPageTabLoc: TerminalPageTabLoc,
+                   airportConfig: AirportConfig,
+                   router: RouterCtl[Loc],
+                   portState: PortState,
+                   featureFlags: Pot[FeatureFlags],
+                   loggedInUser: LoggedInUser,
+                   redListPorts: Pot[HashSet[PortCode]],
+                   redListUpdates: RedListUpdates,
                   ) extends UseValueEq
 
   val defaultSlotSize = 120
@@ -91,7 +87,6 @@ object TerminalDashboardComponent {
                       splitsGraphComponentColoured)(
                       FlightsWithSplitsTable.Props(
                         ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
-                        p.passengerInfoSummary,
                         p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
                         p.airportConfig.hasEstChox,
                         None,
@@ -134,9 +129,9 @@ object TerminalDashboardComponent {
               <.dl(^.aria.label := s"Passenger joining queue ${Queues.displayName(q)}",
                 ^.className := s"queue-box col ${q.toString.toLowerCase} ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, p.airportConfig.slaByQueue(q))}",
                 <.dt(^.className := "queue-name", s"${Queues.displayName(q)}"),
-                  <.dd(^.className := "queue-box-text", Icon.users, s"$qPax pax joining"),
-                  <.dd(^.className := "queue-box-text", Icon.clockO, s"${MinuteAsAdjective(qWait).display} wait"),
-                  <.dd(^.className := "queue-box-text", waitIcon, s"queue time")
+                <.dd(^.className := "queue-box-text", Icon.users, s"$qPax pax joining"),
+                <.dd(^.className := "queue-box-text", Icon.clockO, s"${MinuteAsAdjective(qWait).display} wait"),
+                <.dd(^.className := "queue-box-text", waitIcon, s"queue time")
               )
             }).toTagMod
           ),
@@ -187,7 +182,6 @@ object TerminalDashboardComponent {
   def apply(terminalPageTabLoc: TerminalPageTabLoc,
             airportConfig: AirportConfig,
             portState: PortState,
-            passengerInfoSummaryByDay: Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]],
             router: RouterCtl[Loc],
             featureFlags: Pot[FeatureFlags],
             loggedInUser: LoggedInUser,
@@ -199,7 +193,6 @@ object TerminalDashboardComponent {
       airportConfig,
       router,
       portState,
-      passengerInfoSummaryByDay,
       featureFlags,
       loggedInUser,
       redListPorts,

@@ -33,13 +33,12 @@ import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.{HashSet, Map}
 
 object TerminalContentComponent {
   case class Props(portStatePot: Pot[PortState],
-                   passengerInfoByDayPot: Pot[Map[UtcDate, Map[ArrivalKey, PassengerInfoSummary]]],
                    potShifts: Pot[ShiftAssignments],
                    potFixedPoints: Pot[FixedPointAssignments],
                    potStaffMovements: Pot[StaffMovements],
@@ -104,160 +103,157 @@ object TerminalContentComponent {
           <.div(^.id := "terminal-data", "Nothing to show for this time period")
         } else ""),
         props.portStatePot.render((portState: PortState) => {
-          props.passengerInfoByDayPot.renderReady(passengerInfoByDay => {
-            val queues = props.airportConfig.queuesByTerminal.filterKeys(_ == terminal)
-            val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
-            val terminalName = terminal.toString
-            val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, viewStart)
-            <.div(^.className := s"view-mode-content $viewModeStr",
-              <.div(^.className := "tabs-with-export",
-                <.ul(^.className := "nav nav-tabs",
-                  <.li(^.className := desksAndQueuesActive,
-                    <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues", ^.href := "JavaScript:void(0)"), ^.onClick --> {
-                      GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                      props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
-                    }),
-                  <.li(^.className := arrivalsActive,
-                    <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals", ^.href := "JavaScript:void(0)"), ^.onClick --> {
-                      GoogleEventTracker.sendEvent(terminalName, "Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                      props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
-                    }),
-                  <.li(^.className := staffingActive,
-                    <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", " ", staffMovementsTabTooltip, ^.href := "JavaScript:void(0)"), ^.onClick --> {
-                      GoogleEventTracker.sendEvent(terminalName, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                      props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
-                    }),
-                  displayForRole(
-                    <.li(^.className := simulationsActive,
-                      <.a(^.id := "simulationDayTab", VdomAttr("data-toggle") := "tab", "Simulate Day", ^.href := "JavaScript:void(0)"), ^.onClick --> {
-                        GoogleEventTracker.sendEvent(terminalName, "Simulate Day", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                        props.router.set(props.terminalPageTab.copy(subMode = "simulations"))
-                      }),
-                    ArrivalSimulationUpload, props.loggedInUser
-                  )
-                ),
-                <.div(^.className := "exports",
-                  arrivalsExportForPort(
-                    props.terminalPageTab.terminal,
-                    props.terminalPageTab.dateFromUrlOrNow,
-                    props.loggedInUser,
-                    props.viewMode),
-                  exportLink(
-                    props.terminalPageTab.dateFromUrlOrNow,
-                    terminalName,
-                    ExportDeskRecs,
-                    SPAMain.exportUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal)
-                  ),
-                  exportLink(
-                    props.terminalPageTab.dateFromUrlOrNow,
-                    terminalName,
-                    ExportDeployments,
-                    SPAMain.exportUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal)
-                  ),
-                  displayForRole(
-                    exportLink(
-                      props.terminalPageTab.dateFromUrlOrNow,
-                      terminalName,
-                      ExportStaffMovements,
-                      SPAMain.absoluteUrl(
-                        s"export/staff-movements/${props.terminalPageTab.viewMode.millis}/$terminal?pointInTime=${props.viewMode.millis}"
-                      )
-                    ),
-                    StaffMovementsExport,
-                    props.loggedInUser
-                  ),
-                  MultiDayExportComponent(props.airportConfig.portCode, terminal, props.viewMode, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
-              <.div(^.className := "tab-content",
-                <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
-                  if (state.activeTab == "desksAndQueues") {
-                    val (viewStart, _) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
-                    props.featureFlags.render(features =>
-                      TerminalDesksAndQueues(
-                        TerminalDesksAndQueues.Props(
-                          props.router,
-                          portState.windowWithTerminalFilter(viewStart, viewEnd, queues.toMap),
-                          viewStart,
-                          timeRangeHours.end - timeRangeHours.start,
-                          props.airportConfig,
-                          props.terminalPageTab,
-                          props.showActuals,
-                          props.viewMode,
-                          props.loggedInUser,
-                          features
-                        )
-                      ))
-                  } else ""
-                ),
-                <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
-                  if (state.activeTab == "arrivals") {
-                    val maybeArrivalsComp = for {
-                      features <- props.featureFlags
-                      redListPorts <- props.redListPorts
-                      redListUpdates <- props.redListUpdates
-                    } yield {
-
-                      val flightDisplayFilter = props.airportConfig.portCode match {
-                        case PortCode("LHR") => LhrFlightDisplayFilter(redListUpdates, (portCode, _, _) => redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
-                        case _ => DefaultFlightDisplayFilter
-                      }
-                      val flights = portState.window(viewStart, viewEnd).flights.values
-                      val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminalPageTab.terminal)
-                      arrivalsTableComponent(
-                        FlightsWithSplitsTable.Props(
-                          flightsWithSplits = flightsForTerminal.toList,
-                          passengerInfoSummaryByDay = passengerInfoByDay,
-                          queueOrder = queueOrder,
-                          hasEstChox = props.airportConfig.hasEstChox,
-                          arrivalSources = props.arrivalSources,
-                          loggedInUser = props.loggedInUser,
-                          viewMode = props.viewMode,
-                          defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
-                          hasTransfer = props.airportConfig.hasTransfer,
-                          displayRedListInfo = features.displayRedListInfo,
-                          redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
-                          terminal = terminal,
-                          portCode = props.airportConfig.portCode,
-                          redListPorts = redListPorts,
-                          airportConfig = props.airportConfig,
-                          redListUpdates = redListUpdates,
-                        )
-                      )
-                    }
-                    maybeArrivalsComp.render(x => x)
-                  } else EmptyVdom
-                }),
-                displayForRole(
-                  <.div(^.id := "simulations", ^.className := s"tab-pane in $simulationsActive", {
-                    if (state.activeTab == "simulations") {
-
-                      props.portStatePot.renderReady(ps =>
-                        ScenarioSimulationComponent(
-                          props.viewMode.dayStart.toLocalDate,
-                          props.terminalPageTab.terminal,
-                          props.airportConfig,
-                          ps.window(props.viewMode.dayStart, props.viewMode.dayStart.getLocalNextMidnight)
-                        )
-                      )
-                    } else "not rendering"
+          val queues = props.airportConfig.queuesByTerminal.filterKeys(_ == terminal)
+          val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
+          val terminalName = terminal.toString
+          val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, viewStart)
+          <.div(^.className := s"view-mode-content $viewModeStr",
+            <.div(^.className := "tabs-with-export",
+              <.ul(^.className := "nav nav-tabs",
+                <.li(^.className := desksAndQueuesActive,
+                  <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues", ^.href := "JavaScript:void(0)"), ^.onClick --> {
+                    GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
+                    props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
                   }),
-                  ArrivalSimulationUpload,
+                <.li(^.className := arrivalsActive,
+                  <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals", ^.href := "JavaScript:void(0)"), ^.onClick --> {
+                    GoogleEventTracker.sendEvent(terminalName, "Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
+                    props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
+                  }),
+                <.li(^.className := staffingActive,
+                  <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", " ", staffMovementsTabTooltip, ^.href := "JavaScript:void(0)"), ^.onClick --> {
+                    GoogleEventTracker.sendEvent(terminalName, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
+                    props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
+                  }),
+                displayForRole(
+                  <.li(^.className := simulationsActive,
+                    <.a(^.id := "simulationDayTab", VdomAttr("data-toggle") := "tab", "Simulate Day", ^.href := "JavaScript:void(0)"), ^.onClick --> {
+                      GoogleEventTracker.sendEvent(terminalName, "Simulate Day", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
+                      props.router.set(props.terminalPageTab.copy(subMode = "simulations"))
+                    }),
+                  ArrivalSimulationUpload, props.loggedInUser
+                )
+              ),
+              <.div(^.className := "exports",
+                arrivalsExportForPort(
+                  props.terminalPageTab.terminal,
+                  props.terminalPageTab.dateFromUrlOrNow,
+                  props.loggedInUser,
+                  props.viewMode),
+                exportLink(
+                  props.terminalPageTab.dateFromUrlOrNow,
+                  terminalName,
+                  ExportDeskRecs,
+                  SPAMain.exportUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal)
+                ),
+                exportLink(
+                  props.terminalPageTab.dateFromUrlOrNow,
+                  terminalName,
+                  ExportDeployments,
+                  SPAMain.exportUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal)
+                ),
+                displayForRole(
+                  exportLink(
+                    props.terminalPageTab.dateFromUrlOrNow,
+                    terminalName,
+                    ExportStaffMovements,
+                    SPAMain.absoluteUrl(
+                      s"export/staff-movements/${props.terminalPageTab.viewMode.millis}/$terminal?pointInTime=${props.viewMode.millis}"
+                    )
+                  ),
+                  StaffMovementsExport,
                   props.loggedInUser
                 ),
-                <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
-                  if (state.activeTab == "staffing") {
-                    TerminalStaffing(TerminalStaffing.Props(
-                      terminal,
-                      props.potShifts,
-                      props.potFixedPoints,
-                      props.potStaffMovements,
-                      props.airportConfig,
-                      props.loggedInUser,
-                      props.viewMode
+                MultiDayExportComponent(props.airportConfig.portCode, terminal, props.viewMode, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
+            <.div(^.className := "tab-content",
+              <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
+                if (state.activeTab == "desksAndQueues") {
+                  val (viewStart, _) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
+                  props.featureFlags.render(features =>
+                    TerminalDesksAndQueues(
+                      TerminalDesksAndQueues.Props(
+                        props.router,
+                        portState.windowWithTerminalFilter(viewStart, viewEnd, queues.toMap),
+                        viewStart,
+                        timeRangeHours.end - timeRangeHours.start,
+                        props.airportConfig,
+                        props.terminalPageTab,
+                        props.showActuals,
+                        props.viewMode,
+                        props.loggedInUser,
+                        features
+                      )
                     ))
-                  } else ""
-                ))
-            )
-          })
+                } else ""
+              ),
+              <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
+                if (state.activeTab == "arrivals") {
+                  val maybeArrivalsComp = for {
+                    features <- props.featureFlags
+                    redListPorts <- props.redListPorts
+                    redListUpdates <- props.redListUpdates
+                  } yield {
+
+                    val flightDisplayFilter = props.airportConfig.portCode match {
+                      case PortCode("LHR") => LhrFlightDisplayFilter(redListUpdates, (portCode, _, _) => redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
+                      case _ => DefaultFlightDisplayFilter
+                    }
+                    val flights = portState.window(viewStart, viewEnd).flights.values
+                    val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminalPageTab.terminal)
+                    arrivalsTableComponent(
+                      FlightsWithSplitsTable.Props(
+                        flightsWithSplits = flightsForTerminal.toList,
+                        queueOrder = queueOrder,
+                        hasEstChox = props.airportConfig.hasEstChox,
+                        arrivalSources = props.arrivalSources,
+                        loggedInUser = props.loggedInUser,
+                        viewMode = props.viewMode,
+                        defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
+                        hasTransfer = props.airportConfig.hasTransfer,
+                        displayRedListInfo = features.displayRedListInfo,
+                        redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                        terminal = terminal,
+                        portCode = props.airportConfig.portCode,
+                        redListPorts = redListPorts,
+                        airportConfig = props.airportConfig,
+                        redListUpdates = redListUpdates,
+                      )
+                    )
+                  }
+                  maybeArrivalsComp.render(x => x)
+                } else EmptyVdom
+              }),
+              displayForRole(
+                <.div(^.id := "simulations", ^.className := s"tab-pane in $simulationsActive", {
+                  if (state.activeTab == "simulations") {
+
+                    props.portStatePot.renderReady(ps =>
+                      ScenarioSimulationComponent(
+                        props.viewMode.dayStart.toLocalDate,
+                        props.terminalPageTab.terminal,
+                        props.airportConfig,
+                        ps.window(props.viewMode.dayStart, props.viewMode.dayStart.getLocalNextMidnight)
+                      )
+                    )
+                  } else "not rendering"
+                }),
+                ArrivalSimulationUpload,
+                props.loggedInUser
+              ),
+              <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
+                if (state.activeTab == "staffing") {
+                  TerminalStaffing(TerminalStaffing.Props(
+                    terminal,
+                    props.potShifts,
+                    props.potFixedPoints,
+                    props.potStaffMovements,
+                    props.airportConfig,
+                    props.loggedInUser,
+                    props.viewMode
+                  ))
+                } else ""
+              ))
+          )
         }))
     }
   }

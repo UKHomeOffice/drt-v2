@@ -30,6 +30,7 @@ POST          /feeds/check                                                      
 GET           /arrival/:number/:terminal/:scheduled/:origin                           controllers.Application.getArrival(number: Int, terminal: String, scheduled: Long, origin: String)
 GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin              controllers.Application.getArrivalAtPointInTime(pointInTime: Long, number: Int, terminal: String, scheduled: Long, origin: String)
 GET           /manifest/:utcDate/summary                                              controllers.Application.getPassengerInfoForDay(utcDate: String)
+GET           /manifest/:origin/:voyageNumber/:scheduled                              controllers.Application.getPassengerInfoArrival(origin: String, voyageNumber: Int, scheduled: Long)
 GET           /red-list/ports/:date                                                   controllers.Application.getRedListPorts(date: String)
 POST          /red-list/updates                                                       controllers.Application.updateRedListUpdates()
 GET           /red-list/updates                                                       controllers.Application.getRedListUpdates

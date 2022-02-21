@@ -124,9 +124,9 @@ object Actions {
 
   case class SetWalktimes(walkTimes: WalkTimes) extends Action
 
-  case class GetPassengerInfoSummary(utcDate: UtcDate) extends Action
+  case class GetPassengerInfoSummary(arrivalKey: ArrivalKey) extends Action
 
-  case class SetPassengerInfoSummary(utcDate: UtcDate, infoSummaries: Seq[PassengerInfoSummary]) extends Action
+  case class SetPassengerInfoSummary(arrivalKey: ArrivalKey, infoSummary: PassengerInfoSummary) extends Action
 
   case object GetPassengerInfoForCurrentFlights extends Action
 
