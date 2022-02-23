@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS public.journal (
   deleted BOOLEAN DEFAULT FALSE,
   tags VARCHAR(255) DEFAULT NULL,
   message BYTEA NOT NULL,
+  from_migration BOOLEAN DEFAULT FALSE,
   PRIMARY KEY(persistence_id, sequence_number)
 );
 
@@ -19,5 +20,6 @@ CREATE TABLE IF NOT EXISTS public.snapshot (
   sequence_number BIGINT NOT NULL,
   created BIGINT NOT NULL,
   snapshot BYTEA NOT NULL,
+  from_migration BOOLEAN DEFAULT FALSE,
   PRIMARY KEY(persistence_id, sequence_number)
 );
