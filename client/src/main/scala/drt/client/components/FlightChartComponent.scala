@@ -62,8 +62,8 @@ object FlightChartComponent {
                         case (pt, _) => PaxTypes.displayNameShort(pt)
                       }, sortedPaxTypes.map(_._2.toDouble), "Live API")
 
-                      <.div(^.cls := "container arrivals__table__flight__chart-box", ^.width := (chartWidth * 3).toString + "px",
-                        <.div(^.cls := "row",
+                      <.div(^.cls := "container arrivals__table__flight__chart-box",
+                        <.div(^.cls := "row", ^.width := (chartWidth * 3).toString + "px",
                           if (sortedNats.toMap.values.sum > 0)
                             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart nationality-chart",
                               ChartJSComponent.Bar(
@@ -100,14 +100,14 @@ object FlightChartComponent {
                           else
                             EmptyVdom
                         ),
-                      if (info.nationalities.size > 10)
+                        if (info.nationalities.size > 10)
                           <.div(^.cls := s"arrivals__table__flight__chart__show__nationalities",
-                          <.input.checkbox(^.className := "arrivals__table__flight__chart__show__nationalities_checkbox", ^.checked := state.showAllNationalities,
-                            ^.onChange ==> toggleShowAllNationalities, ^.id := "toggle-showAllNationalities"),
-                          <.label(^.className := "arrivals__table__flight__chart__show__nationalities_label", ^.`for` := "toggle-showAllNationalities", s"Show all ${info.nationalities.size} Nationalities")
-                        )
-                      else
-                        EmptyVdom,
+                            <.input.checkbox(^.className := "arrivals__table__flight__chart__show__nationalities_checkbox", ^.checked := state.showAllNationalities,
+                              ^.onChange ==> toggleShowAllNationalities, ^.id := "toggle-showAllNationalities"),
+                            <.label(^.className := "arrivals__table__flight__chart__show__nationalities_label", ^.`for` := "toggle-showAllNationalities", s"Show all ${info.nationalities.size} Nationalities")
+                          )
+                        else
+                          EmptyVdom,
                       )
                     case None => <.div(MuiCircularProgress()(), ^.height := "282px", ^.display := "flex", ^.alignItems := "center", ^.justifyContent := "center")
                   }
