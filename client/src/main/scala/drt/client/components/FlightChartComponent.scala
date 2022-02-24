@@ -15,30 +15,28 @@ import uk.gov.homeoffice.drt.ports.PaxTypes
 object FlightChartComponent {
   case class Props(flightWithSplits: ApiFlightWithSplits)
 
-  case class State(flightWithSplits: ApiFlightWithSplits, showAllNationalities: Boolean)
+  case class State(showAllNationalities: Boolean)
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
   val component = ScalaComponent.builder[Props]("FlightChart")
-    .initialStateFromProps { p =>
-      State(p.flightWithSplits, false)
-    }
-    .renderS((scope, state) => {
+    .initialState(State(false))
+    .renderPS((scope, props, state) => {
       val proxy = SPACircuit.connect(_.passengerInfoSummariesByArrival)
       <.div(^.id := "charts-box",
         Tippy.interactiveInfo(
           triggerCallback = Option((_: ReactEventFromInput) => {
-            Callback(SPACircuit.dispatch(GetPassengerInfoSummary(ArrivalKey(state.flightWithSplits.apiFlight))))
+            Callback(SPACircuit.dispatch(GetPassengerInfoSummary(ArrivalKey(props.flightWithSplits.apiFlight))))
           }),
           content =
             proxy { rcp =>
               val infosPot = rcp()
-              <.div(
+              <.div(^.cls := "container arrivals__table__flight__chart-box",
                 infosPot.render { infos =>
-                  infos.get(ArrivalKey(state.flightWithSplits.apiFlight)) match {
+                  infos.get(ArrivalKey(props.flightWithSplits.apiFlight)) match {
                     case Some(info) =>
-                      val nationalitiesCount = () => if (state.showAllNationalities) info.nationalities.size else 10
+                      val nationalitiesCount = if (state.showAllNationalities) info.nationalities.size else 10
 
-                      val sortedNats = summariseNationalities(info.nationalities, nationalitiesCount())
+                      val sortedNats = summariseNationalities(info.nationalities, nationalitiesCount)
                         .toList
                         .sortBy {
                           case (_, pax) => pax
@@ -65,11 +63,14 @@ object FlightChartComponent {
                       }, sortedPaxTypes.map(_._2.toDouble), "Live API")
 
                       <.div(^.cls := "container arrivals__table__flight__chart-box", ^.width := (chartWidth * 3).toString + "px",
-                        <.div(^.className := "arrivals__table__flight__chart__show__count_div", sortedNats.toMap.values.sum, <.span(^.className := s"arrivals__table__flight__chart__show__nationalities",
-                          <.input.checkbox(^.className := "arrivals__table__flight__chart__show__nationalities_checkbox", ^.checked := state.showAllNationalities,
-                            ^.onChange ==> toggleShowAllNationalities, ^.id := "toggle-showAllNationalities"),
-                          <.label(^.className := "arrivals__table__flight__chart__show__nationalities_label", ^.`for` := "toggle-showAllNationalities", "Show all Nationalities")
-                        )),
+                        if (info.nationalities.size > 10)
+                          <.div(^.className := "arrivals__table__flight__chart__show__count_div", <.span(^.className := s"arrivals__table__flight__chart__show__nationalities",
+                            <.input.checkbox(^.className := "arrivals__table__flight__chart__show__nationalities_checkbox", ^.checked := state.showAllNationalities,
+                              ^.onChange ==> toggleShowAllNationalities, ^.id := "toggle-showAllNationalities"),
+                            <.label(^.className := "arrivals__table__flight__chart__show__nationalities_label", ^.`for` := "toggle-showAllNationalities", s"Show all ${info.nationalities.size} Nationalities")
+                          ))
+                        else
+                          EmptyVdom,
                         <.div(^.cls := "row",
                           if (sortedNats.toMap.values.sum > 0)
                             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart nationality-chart",
@@ -110,7 +111,8 @@ object FlightChartComponent {
                       )
                     case None => <.div(MuiCircularProgress()(), ^.height := "282px", ^.display := "flex", ^.alignItems := "center", ^.justifyContent := "center")
                   }
-                })
+                }
+              )
             }
         ))
     }).build
