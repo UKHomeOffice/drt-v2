@@ -1,63 +1,152 @@
 package drt.server.feeds.api
 
-import java.io.InputStream
-import java.nio.charset.StandardCharsets.UTF_8
-import java.util.zip.ZipInputStream
 import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source, StreamConverters}
+import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
-import com.amazonaws.auth.AWSCredentials
-import com.amazonaws.regions.Regions
 import com.mfglabs.commons.aws.s3._
-import com.typesafe.config.Config
-import drt.server.feeds.api.S3ApiProvider.{fileNameAndContentFromZip, filterToFilesNewerThan}
-import uk.gov.homeoffice.drt.time.SDateLike
+import drt.server.feeds.api.S3ApiProvider.log
 import org.slf4j.{Logger, LoggerFactory}
+import passengersplits.parsing.VoyageManifestParser
+import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import server.feeds.DqManifests
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.EventTypes
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.time.SDateLike
 
+import java.io.InputStream
+import java.nio.charset.StandardCharsets.UTF_8
+import java.util.zip.ZipInputStream
 import scala.collection.mutable.ArrayBuffer
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 
 trait ApiProviderLike {
-  def manifestsFuture(latestFile: String): Future[Seq[(String, String)]]
+  def manifestAsStream(lastFileName: String): Source[DqManifests, NotUsed]
 }
 
-case class S3ApiProvider(awsCredentials: AWSCredentials, bucketName: String)
+case class DqFileContent(fileName: String, manifests: Iterable[String])
+
+trait DqFileContentProvider {
+  def fromS3(objectKey: String): DqFileContent
+}
+
+case class DqFileContentProviderImpl(s3Client: AmazonS3Client, bucketName: String)
+                                    (implicit mat: Materializer) extends DqFileContentProvider {
+  override def fromS3(objectKey: String): DqFileContent = {
+    val zipByteStream = s3Client.getFileAsStream(bucketName, objectKey)
+    fileNameAndContentFromZip(objectKey, zipByteStream)
+  }
+
+  def fileNameAndContentFromZip(zipFileName: String, zippedFileByteStream: Source[ByteString, NotUsed])
+                               (implicit mat: Materializer): DqFileContent = {
+    val inputStream: InputStream = zippedFileByteStream
+      .log(getClass.getName)
+      .runWith(StreamConverters.asInputStream())
+
+    val zipInputStream = new ZipInputStream(inputStream)
+
+    val jsonContents = Try {
+      Stream
+        .continually(zipInputStream.getNextEntry)
+        .takeWhile(_ != null)
+        .map { zipEntry =>
+          val buffer = new Array[Byte](4096)
+          val stringBuffer = new ArrayBuffer[Byte]()
+          var len: Int = zipInputStream.read(buffer)
+          log.info(s"Zip: $zipFileName :: ${zipEntry.getName}")
+
+          while (len > 0) {
+            stringBuffer ++= buffer.take(len)
+            len = zipInputStream.read(buffer)
+          }
+          log.debug(s"$zipFileName: ${zipEntry.getName}")
+          new String(stringBuffer.toArray, UTF_8)
+        }
+        .toList
+    } match {
+      case Success(contents) => contents
+      case Failure(e) =>
+        log.error(e.getMessage)
+        List.empty[String]
+    }
+
+    Try(zipInputStream.close())
+
+    DqFileContent(zipFileName, jsonContents)
+  }
+}
+
+trait DqFileNamesProvider {
+  def fileNamesAfter(lastFileName: String): Source[String, NotUsed]
+}
+
+case class DqFileNamesProviderImpl(s3Client: AmazonS3Client, bucketName: String) extends DqFileNamesProvider {
+  override def fileNamesAfter(lastFileName: String): Source[String, NotUsed] = {
+    val filterFrom: String = filterFromFileName(lastFileName)
+    s3Client.
+      listFilesAsStream(bucketName)
+      .collect {
+        case s3ObjectSummary if filterFrom <= s3ObjectSummary.getKey => s3ObjectSummary.getKey
+      }
+  }
+
+  def filterFromFileName(latestFile: String): String = {
+    latestFile match {
+      case S3ApiProvider.dqRegex(dateTime, _) => dateTime
+      case _ => latestFile
+    }
+  }
+}
+
+case class S3ApiProvider(fileNamesProvider: DqFileNamesProvider, contentProvider: DqFileContentProvider, portCode: PortCode)
                         (implicit actorSystem: ActorSystem, materializer: Materializer) extends ApiProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val s3Client: AmazonS3Client = AmazonS3Client(Regions.EU_WEST_2, awsCredentials)()
+  def manifestAsStream(lastFileName: String): Source[DqManifests, NotUsed] = fileNamesProvider
+    .fileNamesAfter(lastFileName)
+    .map(contentProvider.fromS3)
+    .map { fileContent =>
+      val manifests = fileContent.manifests
+        .map(jsonStringToManifest)
+        .collect {
+          case Some(manifest) => manifest
+        }
+      DqManifests(fileContent.fileName, manifests)
+    }
 
-  def manifestsFuture(latestFile: String): Future[Seq[(String, String)]] = {
-    log.info(s"Requesting DQ zip files > ${latestFile.take(20)}")
-    zipFiles(latestFile)
-      .mapAsync(1) { filename =>
-        log.info(s"Fetching $filename")
-        val zipByteStream = s3Client.getFileAsStream(bucketName, filename)
-        Future(fileNameAndContentFromZip(filename, zipByteStream))
-      }
-      .map {
-        case (zipFileName, maybeManifests) => maybeManifests.map(content => (zipFileName, content))
-      }
-      .mapConcat(identity)
-      .log(getClass.getName)
-      .runWith(Sink.seq[(String, String)])
+  def jsonStringToManifest(content: String): Option[VoyageManifest] = {
+    VoyageManifestParser.parseVoyagePassengerInfo(content) match {
+      case Success(m) =>
+        if (m.EventCode == EventTypes.DC && m.ArrivalPortCode == portCode) {
+          log.info(s"Using ${m.EventCode} manifest for ${m.ArrivalPortCode} arrival ${m.flightCode}")
+          Option(m)
+        }
+        else None
+      case Failure(t) =>
+        log.error(s"Failed to parse voyage manifest json", t)
+        None
+    }
   }
 
-  def zipFiles(latestFile: String): Source[String, NotUsed] = {
-    filterToFilesNewerThan(filesAsSource, latestFile)
-  }
 
-  def filesAsSource: Source[String, NotUsed] = s3Client.
-    listFilesAsStream(bucketName)
-    .map(_.getKey)
-
+  //  def manifestsFuture(latestFile: String): Future[Seq[(String, String)]] = {
+  //    log.info(s"Requesting DQ zip files > ${latestFile.take(20)}")
+  //    fileNamesProvider.fileNamesAfter(latestFile)
+  //      .map { filename =>
+  //        log.info(s"Fetching $filename")
+  //        contentProvider.fromS3(filename)
+  //      }
+  //      .map {
+  //        case DqFileContent(zipFileName, maybeManifests) => maybeManifests.map(content => (zipFileName, content))
+  //      }
+  //      .mapConcat(identity)
+  //      .log(getClass.getName)
+  //      .runWith(Sink.seq[(String, String)])
+  //  }
 }
 
 object S3ApiProvider {
@@ -93,57 +182,6 @@ object S3ApiProvider {
     val hhmmYesterday = f"${expireAt.getHours()}%02d${expireAt.getMinutes()}%02d${expireAt.getSeconds()}%02d"
 
     s"drt_dq_${yymmddYesterday}_${hhmmYesterday}"
-  }
-
-  def filterToFilesNewerThan(filesSource: Source[String, NotUsed], latestFile: String): Source[String, NotUsed] = {
-    val filterFrom: String = filterFromFileName(latestFile)
-    filesSource.filter(fn => fn >= filterFrom && fn != latestFile)
-  }
-
-  def filterFromFileName(latestFile: String): String = {
-    latestFile match {
-      case S3ApiProvider.dqRegex(dateTime, _) => dateTime
-      case _ => latestFile
-    }
-  }
-
-  def fileNameAndContentFromZip[X](zipFileName: String,
-                                   zippedFileByteStream: Source[ByteString, X])
-                                  (implicit mat: Materializer): (String, List[String]) = {
-    val inputStream: InputStream = zippedFileByteStream
-      .log(getClass.getName)
-      .runWith(StreamConverters.asInputStream())
-
-    val zipInputStream = new ZipInputStream(inputStream)
-
-    val jsonContents = Try {
-      Stream
-        .continually(zipInputStream.getNextEntry)
-        .takeWhile(_ != null)
-        .map { zipEntry =>
-          val buffer = new Array[Byte](4096)
-          val stringBuffer = new ArrayBuffer[Byte]()
-          var len: Int = zipInputStream.read(buffer)
-          log.info(s"Zip: $zipFileName :: ${zipEntry.getName}")
-
-          while (len > 0) {
-            stringBuffer ++= buffer.take(len)
-            len = zipInputStream.read(buffer)
-          }
-          log.debug(s"$zipFileName: ${zipEntry.getName}")
-          new String(stringBuffer.toArray, UTF_8)
-        }
-        .toList
-    } match {
-      case Success(contents) => contents
-      case Failure(e) =>
-        log.error(e.getMessage)
-        List.empty[String]
-    }
-
-    Try(zipInputStream.close())
-
-    (zipFileName, jsonContents)
   }
 
 }

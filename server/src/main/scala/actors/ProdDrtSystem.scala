@@ -12,9 +12,11 @@ import akka.pattern.ask
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
 import akka.util.Timeout
+import com.amazonaws.regions.Regions
+import com.mfglabs.commons.aws.s3.AmazonS3Client
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
-import drt.server.feeds.api.S3ApiProvider
+import drt.server.feeds.api.{DqFileContentProviderImpl, DqFileNamesProviderImpl, S3ApiProvider}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import drt.shared.coachTime.CoachWalkTime
@@ -108,7 +110,11 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
   override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new FixedPointsActor(now)), "staff-fixed-points")
   override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now))), "staff-movements")
 
-  val s3ApiProvider: S3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
+  val s3Client: AmazonS3Client = AmazonS3Client(Regions.EU_WEST_2, params.awSCredentials)()
+  val dqFileNamesProvider: DqFileNamesProviderImpl = DqFileNamesProviderImpl(s3Client, params.dqZipBucketName)
+  val dqFileContentProvider: DqFileContentProviderImpl = DqFileContentProviderImpl(s3Client, params.dqZipBucketName)
+  val s3ApiProvider: S3ApiProvider = S3ApiProvider(dqFileNamesProvider, dqFileContentProvider, airportConfig.portCode)
+
   val initialManifestsState: Option[ApiFeedState] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor)
   system.log.info(s"Providing latest API Zip Filename from storage: ${initialManifestsState.map(_.latestZipFilename).getOrElse("None")}")
   val latestZipFileName: String = S3ApiProvider.latestUnexpiredDqZipFilename(initialManifestsState.map(_.latestZipFilename), now, expireAfterMillis)

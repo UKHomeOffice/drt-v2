@@ -11,24 +11,28 @@ import org.specs2.specification.Scope
 import services.SDate
 import services.crunch.CrunchTestLike
 
+case class MockFileNamesProvider(fileNames: List[String]) extends DqFileNamesProvider {
+  override def fileNamesAfter(lastFileName: String): Source[String, NotUsed] = Source(fileNames)
+}
+
+case class MockFileContentProvider(fileContent: Map[String, List[String]]) extends DqFileContentProvider {
+  override def fromS3(objectKey: String): DqFileContent = DqFileContent(objectKey, fileContent.getOrElse(objectKey, List()))
+}
+
 class S3ApiProviderSpec extends CrunchTestLike with Mockito {
-
-  trait Context extends Scope {
-    val s3ClientMock: AmazonS3Client = mock[AmazonS3Client]
-    val awsCredentialsMock: AWSCredentials = mock[AWSCredentials]
-    val s3ApiProvider: S3ApiProvider = new S3ApiProvider(awsCredentialsMock, "") {
-      override val s3Client: AmazonS3Client = s3ClientMock
-    }
-  }
-
-  "Can continue if there is an error getting a file from s3" in new Context {
-    val list = List(ByteString(""), null)
-    val iterator: Iterator[ByteString] = list.iterator
-    val source: Source[ByteString, NotUsed] = Source.fromIterator(() => iterator)
-    val result: (String, List[String]) = S3ApiProvider.fileNameAndContentFromZip("drt_dq_181108_000233_2957.zip", source)
-
-    result must be_==(("drt_dq_181108_000233_2957.zip", List.empty))
-  }
+  //  "API provider gives an empty set of file content for a file name with no content" in {
+//    val s3ApiProvider: S3ApiProvider = new S3ApiProvider(MockFileNamesProvider(List("a")), MockFileContentProvider(Map("a" -> List())))
+//
+////    s3ApiProvider.manifestsFuture()
+////    val list = List(ByteString(""), null)
+////    val iterator: Iterator[ByteString] = list.iterator
+////    val source: Source[ByteString, NotUsed] = Source.fromIterator(() => iterator)
+////    val result: (String, List[String]) = S3ApiProvider.fileNameAndContentFromZip("drt_dq_181108_000233_2957.zip", source)
+////
+////    result must be_==(("drt_dq_181108_000233_2957.zip", List.empty))
+//
+//
+//  }
 
   "DQ latest file name for zips" >> {
     val nowString = "2020-01-15T12:10:15"

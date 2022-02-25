@@ -48,7 +48,7 @@ trait WithPassengerInfo {
 
   def passengerSummariesForDay: VoyageManifests => String =
     (manifests: VoyageManifests) => {
-      val summaries: Set[PassengerInfoSummary] = manifests
+      val summaries = manifests
         .manifests
         .map(PassengerInfo.manifestToPassengerInfoSummary)
         .collect {
@@ -60,10 +60,7 @@ trait WithPassengerInfo {
   def respondWithManifestSummary(utcDateString: String, summaryFn: VoyageManifests => String): Future[Result] = {
     UtcDate.parse(utcDateString) match {
       case Some(utcDate) =>
-        manifestsForDay(utcDate).map {
-          case manifests =>
-            Ok(summaryFn(manifests))
-        }
+        manifestsForDay(utcDate).map(manifests => Ok(summaryFn(manifests)))
 
       case _ =>
         Future(BadRequest(write(ErrorResponse("Invalid scheduled date"))))

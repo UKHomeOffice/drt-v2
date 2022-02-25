@@ -54,7 +54,7 @@ case class BestManifestsFeedSuccess(manifests: Seq[BestAvailableManifest], creat
   override val length: Int = manifests.length
 }
 
-case class DqManifests(lastSeenFileName: String, manifests: Set[VoyageManifest]) {
+case class DqManifests(lastSeenFileName: String, manifests: Iterable[VoyageManifest]) {
   def isEmpty: Boolean = manifests.isEmpty
   def nonEmpty: Boolean = !isEmpty
   def length: Int = manifests.size
