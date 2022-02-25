@@ -17,7 +17,7 @@ class S3ApiProviderSpec extends CrunchTestLike with Mockito {
     val s3ClientMock: AmazonS3Client = mock[AmazonS3Client]
     val awsCredentialsMock: AWSCredentials = mock[AWSCredentials]
     val s3ApiProvider: S3ApiProvider = new S3ApiProvider(awsCredentialsMock, "") {
-      override def s3Client: AmazonS3Client = s3ClientMock
+      override val s3Client: AmazonS3Client = s3ClientMock
     }
   }
 
@@ -25,7 +25,7 @@ class S3ApiProviderSpec extends CrunchTestLike with Mockito {
     val list = List(ByteString(""), null)
     val iterator: Iterator[ByteString] = list.iterator
     val source: Source[ByteString, NotUsed] = Source.fromIterator(() => iterator)
-    val result: (String, List[String]) = s3ApiProvider.fileNameAndContentFromZip("drt_dq_181108_000233_2957.zip", source)
+    val result: (String, List[String]) = S3ApiProvider.fileNameAndContentFromZip("drt_dq_181108_000233_2957.zip", source)
 
     result must be_==(("drt_dq_181108_000233_2957.zip", List.empty))
   }
