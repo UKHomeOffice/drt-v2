@@ -136,7 +136,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
           DefaultFormFieldsStyle.datePicker,
           ^.`type` := "date",
           ^.defaultValue := SDate(currentDate).toISODateOnly,
-          ^.onChange ==> setDate
+          ^.onBlur ==> setDate
         )
       ))
   }

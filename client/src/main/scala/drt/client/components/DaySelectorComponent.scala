@@ -10,7 +10,7 @@ import drt.client.services.LoadingState
 import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiTextField}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.html_<^.{^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
@@ -121,7 +121,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                 DefaultFormFieldsStyle.datePicker,
                 ^.`type` := "date",
                 ^.defaultValue := s"${state.date.toISOString}",
-                ^.onChange ==> updateState
+                ^.onBlur ==> updateState,
               )
             ),
             MuiGrid(item = true, xs = 5)(
