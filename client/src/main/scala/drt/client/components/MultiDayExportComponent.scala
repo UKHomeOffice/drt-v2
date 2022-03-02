@@ -70,14 +70,14 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
           ),
           MuiGrid(item = true, xs = 6)(
             if (label == "From")
-              dataValid(state.startDate.isNotValid)
+              validDateIndicator(state.startDate.isNotValid)
             else
-              dataValid(state.endDate.isNotValid)
+              validDateIndicator(state.endDate.isNotValid)
           )
         )
       }
 
-      def dataValid(isNotValid: Boolean): TagMod = isNotValid match {
+      def validDateIndicator(isNotValid: Boolean): TagMod = isNotValid match {
         case true =>
           <.div(^.id := "snapshot-error", <.div("Please enter valid date"))
         case false =>

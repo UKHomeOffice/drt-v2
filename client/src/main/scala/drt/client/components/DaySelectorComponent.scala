@@ -33,7 +33,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
     def update(d: LocalDate): State = copy(stateDate = StateDate(date = d))
 
-    def update(isNotValid: Boolean): State = copy(stateDate = StateDate(date = stateDate.date, isNotValid = isNotValid))
+    def updateValidity(isNotValid: Boolean): State = copy(stateDate = StateDate(date = stateDate.date, isNotValid = isNotValid))
   }
 
   val today: SDateLike = SDate.now()
@@ -52,7 +52,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         e.persist()
         isNotValidDate(e.target.value) match {
           case true =>
-            scope.modState(_.update(true))
+            scope.modState(_.updateValidity(true))
           case false =>
             scope.modState(_.update(LocalDate.parse(e.target.value).getOrElse(state.stateDate.date)))
         }
@@ -87,7 +87,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         updateUrlWithDateCallback(None)
       }
 
-      def goButton(loading: Boolean, isCurrentSelection: Boolean, isNotValid: Boolean): TagMod = (loading, isCurrentSelection, isNotValid) match {
+      def goButton(loading: Boolean, isCurrentSelection: Boolean, isNotValidDate: Boolean): TagMod = (loading, isCurrentSelection, isNotValidDate) match {
         case (_, _, true) =>
           <.div(^.id := "snapshot-error", <.div("Please enter valid date"))
         case (true, true, _) =>
