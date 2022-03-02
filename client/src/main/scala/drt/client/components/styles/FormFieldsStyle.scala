@@ -40,7 +40,7 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
     maxWidth(850.px),
   )
   val daySelector = style(
-    maxWidth(520.px),
+    maxWidth(820.px),
   )
 
   val goButton = style(
