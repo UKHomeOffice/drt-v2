@@ -7,6 +7,7 @@ import drt.client.components.styles.{DefaultFormFieldsStyle, WithScalaCssImplici
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
+import drt.client.util.DateUtil.isNotValidDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.redlist.LhrRedListDatesImpl
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
@@ -29,36 +30,79 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
   case class Props(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser) extends UseValueEq
 
-  case class State(startDate: LocalDate, endDate: LocalDate, showDialogue: Boolean = false) extends UseValueEq {
+  case class StateDate(date: LocalDate, isNotValid: Boolean = false)
 
-    def setStart(dateString: String): State = copy(startDate = LocalDate.parse(dateString).getOrElse(startDate))
+  case class State(startDate: StateDate, endDate: StateDate, showDialogue: Boolean = false) extends UseValueEq {
 
-    def setEnd(dateString: String): State = copy(endDate = LocalDate.parse(dateString).getOrElse(endDate))
+    def setStart(dateString: String, isNotValid: Boolean): State = if (isNotValid) copy(startDate = StateDate(startDate.date, isNotValid = true)) else copy(startDate = StateDate(LocalDate.parse(dateString).getOrElse(startDate.date)))
 
-    def startMillis: MillisSinceEpoch = SDate(startDate).millisSinceEpoch
+    def setEnd(dateString: String, isNotValid: Boolean): State = if (isNotValid) copy(endDate = StateDate(endDate.date, isNotValid = true)) else copy(endDate = StateDate(LocalDate.parse(dateString).getOrElse(endDate.date)))
 
-    def endMillis: MillisSinceEpoch = SDate(endDate).millisSinceEpoch
+    def startMillis: MillisSinceEpoch = SDate(startDate.date).millisSinceEpoch
+
+    def endMillis: MillisSinceEpoch = SDate(endDate.date).millisSinceEpoch
   }
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
     .initialStateFromProps { p =>
       State(
-        startDate = p.selectedDate.toLocalDate,
-        endDate = p.selectedDate.toLocalDate
+        startDate = StateDate(p.selectedDate.toLocalDate),
+        endDate = StateDate(p.selectedDate.toLocalDate)
       )
     }
     .renderPS((scope, props, state) => {
 
       val showClass = if (state.showDialogue) "show" else "fade"
 
+      def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String, currentDate: LocalDate): html_<^.VdomElement = {
+        MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
+          MuiGrid(item = true, xs = 1)(
+            DefaultFormFieldsStyle.datePickerLabel,
+            MuiFormLabel()(label),
+          ),
+          MuiGrid(item = true, xs = 4)(
+            MuiTextField()(
+              DefaultFormFieldsStyle.datePicker,
+              ^.`type` := "date",
+              ^.defaultValue := SDate(currentDate).toISODateOnly,
+              ^.onChange ==> setDate
+            )
+          ),
+          MuiGrid(item = true, xs = 6)(
+            if (label == "From")
+              validDateIndicator(state.startDate.isNotValid)
+            else
+              validDateIndicator(state.endDate.isNotValid)
+          )
+        )
+      }
+
+      def validDateIndicator(isNotValid: Boolean): TagMod = isNotValid match {
+        case true =>
+          <.div(^.id := "snapshot-error", <.div("Please enter valid date"))
+        case false =>
+          <.div(^.id := "snapshot-done", Icon.checkCircleO)
+      }
+
       val setStartDate: ReactEventFromInput => CallbackTo[Unit] = e => {
         e.persist()
-        scope.modState(_.setStart(e.target.value))
+        isNotValidDate(e.target.value) match {
+          case true =>
+            scope.modState(_.setStart(e.target.value, true))
+
+          case _ =>
+            scope.modState(_.setStart(e.target.value, false))
+        }
       }
 
       val setEndDate: ReactEventFromInput => CallbackTo[Unit] = e => {
         e.persist()
-        scope.modState(_.setEnd(e.target.value))
+        isNotValidDate(e.target.value) match {
+          case true =>
+            scope.modState(_.setEnd(e.target.value, true))
+          case _ =>
+            scope.modState(_.setEnd(e.target.value, false))
+        }
       }
 
       val gridXs = 4
@@ -87,16 +131,16 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                 ^.id := "multi-day-export-modal-body",
                 MuiGrid(container = true)(
                   MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
-                    datePickerWithLabel(setStartDate, "From", state.startDate),
-                    datePickerWithLabel(setEndDate, "To", state.endDate),
-                    if (state.startDate > state.endDate)
+                    datePickerWithLabel(setStartDate, "From", state.startDate.date),
+                    datePickerWithLabel(setEndDate, "To", state.endDate.date),
+                    if (state.startDate.date > state.endDate.date)
                       MuiGrid(item = true, xs = 12)(<.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date."))
                     else
                       EmptyVdom,
 
                     if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
                       val exports = props.portCode match {
-                        case PortCode("LHR") if LhrRedListDatesImpl.dayHasPaxDiversions(SDate(state.endDate)) =>
+                        case PortCode("LHR") if LhrRedListDatesImpl.dayHasPaxDiversions(SDate(state.endDate.date)) =>
                           List(ExportArrivalsWithRedListDiversions("Reflect pax diversions"), ExportArrivalsWithoutRedListDiversions("Don't reflect pax diversions"))
                         case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
                         case _ => List(ExportArrivals)
@@ -106,7 +150,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                     if (props.loggedInUser.hasRole(DesksAndQueuesView))
                       exportLinksGroup(props, state, gridXs, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
                     else EmptyVdom,
-                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate <= SDate.now().toLocalDate))
+                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate))
                       exportLinksGroup(props, state, gridXs, List(ExportLiveArrivalsFeed), "Feeds")
                     else EmptyVdom
                   )),
@@ -125,21 +169,6 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
     })
     .build
 
-  private def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String, currentDate: LocalDate): html_<^.VdomElement = {
-    MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
-      MuiGrid(item = true, xs = 1)(
-        DefaultFormFieldsStyle.datePickerLabel,
-        MuiFormLabel()(label),
-      ),
-      MuiGrid(item = true, xs = 11)(
-        MuiTextField()(
-          DefaultFormFieldsStyle.datePicker,
-          ^.`type` := "date",
-          ^.defaultValue := SDate(currentDate).toISODateOnly,
-          ^.onChange ==> setDate
-        )
-      ))
-  }
 
   private def exportLinksGroup(props: Props, state: State, gridXs: Int, exports: List[ExportType], title: String): VdomElement =
     MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
@@ -150,7 +179,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
             props.selectedDate,
             props.terminal.toString,
             export,
-            SPAMain.exportDatesUrl(export, state.startDate, state.endDate, props.terminal)
+            SPAMain.exportDatesUrl(export, state.startDate.date, state.endDate.date, props.terminal)
           )
         )
       ).toVdomArray
