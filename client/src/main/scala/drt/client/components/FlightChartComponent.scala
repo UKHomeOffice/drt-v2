@@ -15,11 +15,13 @@ import uk.gov.homeoffice.drt.ports.PaxTypes
 object FlightChartComponent {
   case class Props(flightWithSplits: ApiFlightWithSplits)
 
+  case class State(showAllNationalities: Boolean)
+
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
   val component = ScalaComponent.builder[Props]("FlightChart")
-    .render_P { props =>
+    .initialState(State(false))
+    .renderPS((scope, props, state) => {
       val proxy = SPACircuit.connect(_.passengerInfoSummariesByArrival)
-
       <.div(^.id := "charts-box",
         Tippy.interactiveInfo(
           triggerCallback = Option((_: ReactEventFromInput) => {
@@ -32,7 +34,9 @@ object FlightChartComponent {
                 infosPot.render { infos =>
                   infos.get(ArrivalKey(props.flightWithSplits.apiFlight)) match {
                     case Some(info) =>
-                      val sortedNats = summariseNationalities(info.nationalities, 10)
+                      val nationalitiesCount = if (state.showAllNationalities) info.nationalities.size else 10
+
+                      val sortedNats = summariseNationalities(info.nationalities, nationalitiesCount)
                         .toList
                         .sortBy {
                           case (_, pax) => pax
@@ -45,45 +49,65 @@ object FlightChartComponent {
 
                       val sortedPaxTypes = info.paxTypes.toList.sortBy(_._1.cleanName)
 
+                      val toggleShowAllNationalities = (e: ReactEventFromInput) => {
+                        val newValue: Boolean = e.target.checked
+                        scope.modState(_.copy(showAllNationalities = newValue))
+                      }
+
+                      val (chartWidth, chartHeight): (Int, Int) = if (info.nationalities.size > 10 && state.showAllNationalities)
+                        (300 + 5 * info.nationalities.size, 300)
+                      else (300, 300)
+
                       val paxTypeData: ChartJsData = ChartJsData(sortedPaxTypes.map {
                         case (pt, _) => PaxTypes.displayNameShort(pt)
                       }, sortedPaxTypes.map(_._2.toDouble), "Live API")
-                      <.div(^.cls := "row",
-                        if (sortedNats.toMap.values.sum > 0)
-                          <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart nationality-chart",
-                            ChartJSComponent.Bar(
-                              ChartJsProps(
-                                data = nationalityData,
-                                300,
-                                300,
-                                options = ChartJsOptions.withSuggestedMax("Nationality breakdown", sortedNats.toMap.values.max + 5)
-                              )
-                            ))
-                        else
-                          EmptyVdom,
-                        if (sortedPaxTypes.toMap.values.sum > 0 && sortedAges.toMap.values.sum > 0)
-                          <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart passenger-type-chart",
-                            ChartJSComponent.Bar(
-                              ChartJsProps(
-                                data = paxTypeData,
-                                300,
-                                300,
-                                options = ChartJsOptions.withSuggestedMax("Passenger types", sortedPaxTypes.toMap.values.max + 5)
-                              )))
-                        else
-                          EmptyVdom,
-                        if (sortedAges.toMap.values.sum > 0)
-                          <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart age-breakdown-chart",
-                            ChartJSComponent.Bar(
-                              ChartJsProps(
-                                data = ageData,
-                                300,
-                                300,
-                                options = ChartJsOptions.withSuggestedMax("Age breakdown", sortedAges.toMap.values.max + 5)
+
+                      <.div(^.cls := "container arrivals__table__flight__chart-box",
+                        <.div(^.cls := "row", ^.width := (chartWidth * 3).toString + "px",
+                          if (sortedNats.toMap.values.sum > 0)
+                            <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart nationality-chart",
+                              ChartJSComponent.Bar(
+                                ChartJsProps(
+                                  data = nationalityData,
+                                  chartWidth,
+                                  chartHeight,
+                                  options = ChartJsOptions.withSuggestedMax("Nationality breakdown", sortedNats.toMap.values.max + 5)
+                                )
                               ))
+                          else
+                            EmptyVdom,
+                          if (sortedPaxTypes.toMap.values.sum > 0 && sortedAges.toMap.values.sum > 0)
+                            <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart passenger-type-chart",
+                              ChartJSComponent.Bar(
+                                ChartJsProps(
+                                  data = paxTypeData,
+                                  chartWidth,
+                                  chartHeight,
+                                  options = ChartJsOptions.withSuggestedMax("Passenger types", sortedPaxTypes.toMap.values.max + 5)
+                                )))
+                          else
+                            EmptyVdom,
+                          if (sortedAges.toMap.values.sum > 0)
+                            <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart age-breakdown-chart",
+                              ChartJSComponent.Bar(
+                                ChartJsProps(
+                                  data = ageData,
+                                  chartWidth,
+                                  chartHeight,
+                                  options = ChartJsOptions.withSuggestedMax("Age breakdown", sortedAges.toMap.values.max + 5)
+                                ))
+                            )
+                          else
+                            EmptyVdom
+                        ),
+                        if (info.nationalities.size > 10)
+                          <.div(^.cls := s"arrivals__table__flight__chart__show__nationalities",
+                            <.input.checkbox(^.className := "arrivals__table__flight__chart__show__nationalities_checkbox", ^.checked := state.showAllNationalities,
+                              ^.onChange ==> toggleShowAllNationalities, ^.id := "toggle-showAllNationalities"),
+                            <.label(^.className := "arrivals__table__flight__chart__show__nationalities_label", ^.`for` := "toggle-showAllNationalities", s"Show all ${info.nationalities.size} Nationalities")
                           )
                         else
-                          EmptyVdom
+                          EmptyVdom,
                       )
                     case None => <.div(MuiCircularProgress()(), ^.height := "282px", ^.display := "flex", ^.alignItems := "center", ^.justifyContent := "center")
                   }
@@ -91,8 +115,7 @@ object FlightChartComponent {
               )
             }
         ))
-    }
-    .build
+    }).build
 
   def summariseNationalities(nats: Map[Nationality, Int], numberToShow: Int): Map[Nationality, Int] =
     nats
