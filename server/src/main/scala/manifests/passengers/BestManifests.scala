@@ -23,9 +23,10 @@ trait ManifestLike {
 
   def uniquePassengers: Seq[ManifestPassengerProfile] = {
     if (passengers.exists(_.passengerIdentifier.exists(_ != "")))
-      passengers.collect {
-        case p@ManifestPassengerProfile(_, _, _, _, Some(id)) if id != "" => p
-      }
+      passengers
+        .collect {
+          case p@ManifestPassengerProfile(_, _, _, _, Some(id)) if id != "" => p
+        }
         .map { passengerInfo =>
           passengerInfo.passengerIdentifier -> passengerInfo
         }

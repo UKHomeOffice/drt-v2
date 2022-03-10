@@ -29,7 +29,7 @@ class TestManifestsActor extends Actor with ActorLogging {
       maybeSubscriber match {
         case Some(subscriber) =>
           val onCompletionSendAck = Option(() => replyTo ! Ack)
-          OfferHandler.offerWithRetries(subscriber, ManifestsFeedSuccess(DqManifests("", manifests)), 5, onCompletionSendAck)
+          OfferHandler.offerWithRetries(subscriber, ManifestsFeedSuccess(DqManifests(0L, manifests)), 5, onCompletionSendAck)
           maybeManifests = None
         case None =>
           maybeManifests = Option(manifests)
@@ -42,6 +42,6 @@ class TestManifestsActor extends Actor with ActorLogging {
 
     case SubscribeResponseQueue(manifestsResponse) =>
       maybeSubscriber = Option(manifestsResponse)
-      maybeManifests.foreach(manifests => ManifestsFeedSuccess(DqManifests("", manifests)))
+      maybeManifests.foreach(manifests => ManifestsFeedSuccess(DqManifests(0L, manifests)))
   }
 }

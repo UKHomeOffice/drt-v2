@@ -20,7 +20,7 @@ import services.SDate
 import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
-import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
@@ -30,13 +30,15 @@ import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Futu
 import scala.language.postfixOps
 import scala.util.Success
 
-case class MockManifestLookupService()(implicit ec: ExecutionContext) extends ManifestLookupLike {
+case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Materializer) extends ManifestLookupLike {
+  override def liveManifestForArrival(uniqueArrivalKey: UniqueArrivalKey): Future[Option[BestAvailableManifest]] =
+    Future.successful(None)
+
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
-                                          scheduled: SDateLike)
-                                         (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
-    Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+                                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
 }
 
 case class TestDrtSystem(airportConfig: AirportConfig)

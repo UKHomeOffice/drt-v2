@@ -88,22 +88,23 @@ object OptimiserMocks {
         val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
         val maybeManifest = maybePax.map(pax => BestAvailableManifest.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
         (key, maybeManifest)
-      })
+      }, PortCode("STN"))
     )
   }
 }
 
-import scala.concurrent.ExecutionContext.Implicits.global
+case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]], destinationPort: PortCode)
+                                    (implicit mat: Materializer) extends ManifestLookupLike {
+  override def liveManifestForArrival(uniqueArrivalKey: UniqueArrivalKey): Future[Option[BestAvailableManifest]] = {
+    Future.successful(bestAvailableManifests.get(uniqueArrivalKey).flatten)
+  }
 
-case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]]) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
-                                          scheduled: SDateLike)
-                                         (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = {
+                                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = {
     val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
-    val maybeManifest = bestAvailableManifests.get(key).flatten
-    Future((key, maybeManifest))
+    Future.successful((key, bestAvailableManifests.get(key).flatten))
   }
 }
 

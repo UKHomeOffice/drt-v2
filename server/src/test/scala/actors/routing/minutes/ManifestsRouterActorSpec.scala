@@ -53,7 +53,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
 
       val manifest = manifestForDate("2020-11-20")
 
-      val manifestFeedSuccess = ManifestsFeedSuccess(DqManifests("lastSeen.zip", Set(manifest)), creationDate)
+      val manifestFeedSuccess = ManifestsFeedSuccess(DqManifests(0, Set(manifest)), creationDate)
 
       "Then it should be sent to the actor for the correct day" >> {
 
@@ -70,14 +70,14 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
 
       val manifest = manifestForDate("2020-11-20")
 
-      val manifestFeedSuccess = ManifestsFeedSuccess(DqManifests("lastSeen.zip", Set(manifest)), creationDate)
+      val manifestFeedSuccess = ManifestsFeedSuccess(DqManifests(0, Set(manifest)), creationDate)
 
-      "Then it should update the last seen zip file name" >> {
+      "Then it should update the last processed marker" >> {
         Await.result(manifestRouterActor.ask(manifestFeedSuccess), 1 second)
 
         val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 1 second)
 
-        result.latestZipFilename === "lastSeen.zip"
+        result.lastProcessedMarker === 0
       }
 
       "Then it should record the successful response" >> {

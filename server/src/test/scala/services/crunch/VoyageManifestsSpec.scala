@@ -37,13 +37,13 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(1))
-    val inputManifestsCi = ManifestsFeedSuccess(DqManifests("", Set(
+    val inputManifestsCi = ManifestsFeedSuccess(DqManifests(0, Set(
       VoyageManifest(EventTypes.CI, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
         List(
           PassengerInfoGenerator.passengerInfoJson(Nationality("GBR"), DocumentType("P"), Nationality("GBR"))
         ))
     )))
-    val inputManifestsDc = ManifestsFeedSuccess(DqManifests("", Set(
+    val inputManifestsDc = ManifestsFeedSuccess(DqManifests(0, Set(
       VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
         List(
           PassengerInfoGenerator.passengerInfoJson(Nationality("ZAF"), DocumentType("P"), Nationality("ZAF"))
@@ -86,7 +86,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         val portCode = PortCode("LHR")
 
         val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(100))
-        val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+        val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
           VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
             manifestPax(101, euPassport))
         )))
@@ -135,7 +135,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T00:00Z"
         val portCode = PortCode("LHR")
         val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(5))
-        val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+        val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
           VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
             manifestPax(5, euPassport) ++ manifestPax(2, inTransitFlag) ++ manifestPax(3, inTransitCountry)
           )
@@ -251,7 +251,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         val portCode = PortCode("LHR")
 
         val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(10), tranPax = Option(6))
-        val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+        val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
           VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
             inTransitFlag,
             inTransitCountry,
@@ -310,7 +310,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val portCode = PortCode("LHR")
 
     val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = None, tranPax = None)
-    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+    val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
       VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber(1), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
         euPassportWithIdentifier("ID1"),
         euPassportWithIdentifier("ID1"),
@@ -358,7 +358,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val portCode = PortCode("LHR")
 
     val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = None, tranPax = Option(6))
-    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+    val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
       VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber(1), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
         euPassport,
         euPassport,
@@ -405,7 +405,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val portCode = PortCode("LHR")
 
     val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = None, tranPax = Option(6))
-    val inputManifests = ManifestsFeedSuccess(DqManifests("", Set(
+    val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
       VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber(1), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
         euPassportWithIdentifier("Id1"),
         euPassportWithIdentifier("Id2"),

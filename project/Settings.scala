@@ -53,7 +53,6 @@ object Settings {
     val levelDbJni = "1.8"
     val renjin = "0.9.2646"
     val awsSdk = "1.11.89"
-    val awsCommons = "0.12.2"
     val csvCommons = "1.4"
     val pprint = "0.5.6"
     val scalaCheck = "1.13.4"
@@ -71,7 +70,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "48"
-    val drtLib = "v158"
+    val drtLib = "v162"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "1.2.0"
@@ -147,8 +146,6 @@ object Settings {
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
-
-    "com.mfglabs" %% "commons-aws-s3" % awsCommons,
 
     "javax.mail" % "mail" % "1.4.7",
     "javax.xml.ws" % "jaxws-api" % "2.3.1",
