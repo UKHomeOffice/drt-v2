@@ -141,7 +141,9 @@ case class ApiFeedImpl(arrivalKeyProvider: ManifestArrivalKeys,
     Source
       .unfoldAsync((since, Iterable[(UniqueArrivalKey, MillisSinceEpoch)]())) { case (lastProcessedAt, lastKeys) =>
         markerAndNextArrivalKeys(lastProcessedAt).map {
-          case (nextMarker, newKeys) => Option((nextMarker, newKeys), (lastProcessedAt, lastKeys))
+          case (nextMarker, newKeys) =>
+            if (newKeys.nonEmpty) log.info(s"${newKeys.size} new live manifests available. Next marker: ${SDate(nextMarker).toISOString()}")
+            Option((nextMarker, newKeys), (lastProcessedAt, lastKeys))
         }
       }
       .throttle(1, throttle)

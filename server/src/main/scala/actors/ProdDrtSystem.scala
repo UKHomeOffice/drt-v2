@@ -107,8 +107,8 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
   override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new FixedPointsActor(now)), "staff-fixed-points")
   override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now))), "staff-movements")
 
-  val initialManifestsState: Option[ApiFeedState] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor)
-  system.log.info(s"Providing latest API Zip Filename from storage: ${initialManifestsState.map(_.lastProcessedMarker).getOrElse("None")}")
+  val lastProcessedLiveApiMarker: Option[MillisSinceEpoch] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor).map(_.lastProcessedMarker)
+  system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString()).getOrElse("None")}")
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
 
@@ -168,8 +168,10 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
         val arrivalKeysProvider = DbManifestArrivalKeys(VoyageManifestPassengerInfoTable(PostgresTables), airportConfig.portCode)
         val manifestProcessor = DbManifestProcessor(VoyageManifestPassengerInfoTable(PostgresTables), airportConfig.portCode, crunchInputs.manifestsLiveResponse)
+        val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
+        log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString()}")
         ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 15.seconds)
-          .processFilesAfter(SDate.now().addHours(-12).millisSinceEpoch)
+          .processFilesAfter(processFilesAfter)
           .runWith(Sink.ignore)
 
         redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
