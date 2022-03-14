@@ -1,6 +1,5 @@
 package slickdb
 
-import drt.shared
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 

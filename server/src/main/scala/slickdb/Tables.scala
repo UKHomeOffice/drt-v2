@@ -7,6 +7,7 @@ import java.sql.Timestamp
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
 trait Tables {
   val profile: slick.jdbc.JdbcProfile
+  val db: profile.backend.Database
 
   import profile.api._
   // NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.

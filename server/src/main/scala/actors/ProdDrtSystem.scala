@@ -24,7 +24,7 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services.SDate
 import services.crunch.CrunchSystem
-import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
+import slickdb.{ArrivalTable, Tables}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
@@ -38,7 +38,8 @@ import scala.util.{Failure, Success}
 
 
 object PostgresTables extends {
-  val profile = slick.jdbc.PostgresProfile
+  override val profile = slick.jdbc.PostgresProfile
+  override val db: profile.backend.Database = profile.api.Database.forConfig("aggregated-db")
 } with Tables
 
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
@@ -55,8 +56,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
   val minSecondsBetweenBatches: Int = config.get[Int]("crunch.manifests.min-seconds-between-batches")
   val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
 
-  val aggregateArrivalsDbConfigKey = "aggregated-db"
-
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
   override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AclForecastArrivalsActor(params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis)), name = "base-arrivals-actor")
@@ -69,7 +68,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
   override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
-  override val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
+  override val manifestLookupService: ManifestLookup = ManifestLookup(PostgresTables)
 
   override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
@@ -166,8 +165,8 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           }
         }
 
-        val arrivalKeysProvider = DbManifestArrivalKeys(VoyageManifestPassengerInfoTable(PostgresTables), airportConfig.portCode)
-        val manifestProcessor = DbManifestProcessor(VoyageManifestPassengerInfoTable(PostgresTables), airportConfig.portCode, crunchInputs.manifestsLiveResponse)
+        val arrivalKeysProvider = DbManifestArrivalKeys(PostgresTables, airportConfig.portCode)
+        val manifestProcessor = DbManifestProcessor(PostgresTables, airportConfig.portCode, crunchInputs.manifestsLiveResponse)
         val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
         log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString()}")
         ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 15.seconds)

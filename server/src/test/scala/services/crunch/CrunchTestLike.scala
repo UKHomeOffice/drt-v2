@@ -17,6 +17,7 @@ import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.{AfterAll, AfterEach}
 import services._
+import services.crunch.H2Tables.profile
 import slickdb.Tables
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.STN
@@ -36,7 +37,8 @@ import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
 
 
 object H2Tables extends {
-  val profile = slick.jdbc.H2Profile
+  override val profile = slick.jdbc.H2Profile
+  override val db: profile.backend.Database = profile.api.Database.forConfig("h2-aggregated-db")
 } with Tables
 
 object TestDefaults {
