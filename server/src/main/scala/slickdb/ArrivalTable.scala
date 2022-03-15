@@ -36,7 +36,7 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
   val arrivalsTableQuery = TableQuery[Arrival]
 
   def selectAll: AggregatedArrivals = {
-    val eventualArrivals = tables.db.run(arrivalsTableQuery.result).map(arrivalRows =>
+    val eventualArrivals = tables.run(arrivalsTableQuery.result).map(arrivalRows =>
       arrivalRows.map(ar =>
         AggregatedArrival(ar.code, ar.scheduled.getTime, ar.origin, ar.destination, ar.terminal)))
     val arrivals = Await.result(eventualArrivals, 5 seconds)
@@ -46,7 +46,7 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
   def removeArrival(number: Int, terminal: Terminal, scheduledTs: Timestamp): Future[Int] = {
     val idx = matchIndex(number, terminal, scheduledTs)
     log.info(s"removing: $number / ${terminal.toString} / $scheduledTs")
-    tables.db.run(arrivalsTableQuery.filter(idx).delete) recover {
+    tables.run(arrivalsTableQuery.filter(idx).delete) recover {
       case throwable =>
         log.error(s"delete failed", throwable)
         0
@@ -54,7 +54,7 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
   }
 
   def insertOrUpdateArrival(f: DrtArrival): Future[Int] = {
-    tables.db.run(arrivalsTableQuery.insertOrUpdate(arrivalRow(f))) recover {
+    tables.run(arrivalsTableQuery.insertOrUpdate(arrivalRow(f))) recover {
       case throwable =>
         log.error(s"insertOrUpdate failed", throwable)
         0

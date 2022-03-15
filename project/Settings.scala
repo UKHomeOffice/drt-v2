@@ -37,7 +37,7 @@ object Settings {
     val booPickle = "1.3.3"
     val diode = "1.1.13"
     val uTest = "0.7.4"
-    val h2 = "1.4.197"
+    val h2 = "2.1.210"
 
     val akka = "2.6.17"
     val akkaStreamContrib = "0.9"
@@ -75,7 +75,7 @@ object Settings {
     val playIteratees = "2.6.1"
     val uPickle = "1.2.0"
     val akkaHttp = "10.2.6"
-    val slick = "3.3.2"
+    val slick = "3.3.3"
     val censorinus = "2.1.13"
     val janinoVersion = "3.1.6"
     val scalaJsReactMaterialUi = "0.2.1"

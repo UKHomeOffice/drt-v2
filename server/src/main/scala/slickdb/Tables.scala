@@ -1,13 +1,17 @@
 package slickdb
 
+import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.PostgresProfile
 
 import java.sql.Timestamp
+import scala.concurrent.Future
 
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
 trait Tables {
   val profile: slick.jdbc.JdbcProfile
-  val db: profile.backend.Database
+//  val db: profile.backend.Database
+
+  def run[R](a: DBIOAction[R, NoStream, Nothing]): Future[R]
 
   import profile.api._
   // NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.

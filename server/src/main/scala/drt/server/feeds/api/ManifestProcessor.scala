@@ -27,18 +27,16 @@ case class DbManifestProcessor(tables: Tables,
                               (implicit ec: ExecutionContext) extends ManifestProcessor {
   private val log = LoggerFactory.getLogger(getClass)
 
-  import tables.dbConnection.profile.api._
+  import tables.profile.api._
 
   override def process(uniqueArrivalKey: UniqueArrivalKey, processedAt: MillisSinceEpoch): Future[Done] =
     manifestForArrivalKey(uniqueArrivalKey).flatMap {
       case None =>
-        println(s"found no manifest")
         log.warn(s"No manifest entries found for $uniqueArrivalKey")
         Future.successful(Done)
 
       case Some(manifest) =>
         val response = ManifestsFeedSuccess(DqManifests(processedAt, Seq(manifest)))
-        println(s"enqueuing response")
         manifestsLiveResponse
           .offer(response)
           .map(_ => Done)
@@ -81,14 +79,10 @@ case class DbManifestProcessor(tables: Tables,
               )
           }
         }
-        println(s"executing select query")
 
-    tables.dbConnection.db.run(query).map {
-      case pax if pax.isEmpty =>
-        println("not found")
-        None
+    tables.run(query).map {
+      case pax if pax.isEmpty => None
       case pax =>
-        println("found")
         Option(VoyageManifest(
           DC,
           uniqueArrivalKey.arrivalPort,

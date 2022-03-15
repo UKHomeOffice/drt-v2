@@ -52,10 +52,6 @@ object PassengerInfo {
       .groupBy(identity).mapValues(_.size)
   }
 
-  def excludeDuplicatePax(manifest: VoyageManifest): VoyageManifest = manifest.copy(
-    PassengerList = BestAvailableManifest.removeDuplicatePax(manifest)
-  )
-
   def manifestToPassengerInfoSummary(manifest: VoyageManifest): Option[PassengerInfoSummary] =
     manifest
       .maybeKey

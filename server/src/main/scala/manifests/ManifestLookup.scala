@@ -74,7 +74,7 @@ case class ManifestLookup(tables: Tables)
   }
 
   private def paxProfilesFromQuery(builder: SQLActionBuilder): Future[Try[List[ManifestPassengerProfile]]] =
-    tables.db
+    tables
       .run(builder.as[(String, String, String, String, String, Boolean, String)])
       .map { rows =>
         Success(passengerProfiles(rows).toList)
@@ -88,7 +88,7 @@ case class ManifestLookup(tables: Tables)
                                     (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = queries match {
     case Nil => Future((uniqueArrivalKey, None))
     case (_, nextQuery) :: tail =>
-      tables.db
+      tables
         .run(nextQuery(uniqueArrivalKey))
         .map {
           case flightsFound if flightsFound.nonEmpty =>
@@ -235,6 +235,6 @@ case class ManifestLookup(tables: Tables)
         case _ => false
       }
       val maybeIdentifier = if (identifier.nonEmpty) Option(identifier) else None
-      ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(PaxAge(age.toInt)).toOption, Option(transit), maybeIdentifier)
+      ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(PaxAge(age.toInt)).toOption, transit, maybeIdentifier)
   }
 }

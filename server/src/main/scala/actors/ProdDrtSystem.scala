@@ -24,6 +24,7 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services.SDate
 import services.crunch.CrunchSystem
+import slick.dbio.{DBIOAction, NoStream}
 import slickdb.{ArrivalTable, Tables}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
@@ -37,10 +38,12 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 
-object PostgresTables extends {
+object PostgresTables extends Tables {
   override val profile = slick.jdbc.PostgresProfile
-  override val db: profile.backend.Database = profile.api.Database.forConfig("aggregated-db")
-} with Tables
+  val db: profile.backend.Database = profile.api.Database.forConfig("aggregated-db")
+
+  override def run[R](action: DBIOAction[R, NoStream, Nothing]): Future[R] = db.run[R](action)
+}
 
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 

@@ -17,7 +17,8 @@ import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.{AfterAll, AfterEach}
 import services._
-import services.crunch.H2Tables.profile
+import slick.dbio.{DBIOAction, NoStream}
+import slick.jdbc.JdbcProfile
 import slickdb.Tables
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.STN
@@ -33,13 +34,15 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.collection.immutable
 import scala.collection.immutable.{Map, SortedMap}
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 
 
-object H2Tables extends {
-  override val profile = slick.jdbc.H2Profile
-  override val db: profile.backend.Database = profile.api.Database.forConfig("h2-aggregated-db")
-} with Tables
+object H2Tables extends Tables {
+  override val profile: JdbcProfile = slick.jdbc.H2Profile
+  val db: profile.backend.Database = profile.api.Database.forConfig("h2-aggregated-db")
+
+  override def run[R](action: DBIOAction[R, NoStream, Nothing]): Future[R] = db.run[R](action)
+}
 
 object TestDefaults {
   val airportConfig: AirportConfig = AirportConfig(

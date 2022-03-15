@@ -21,7 +21,7 @@ trait PaxTypeAllocator {
   }
 
   val transit: PartialFunction[ManifestPassengerProfile, PaxType] = {
-    case ManifestPassengerProfile(_, _, _, Some(isTransit), _) if isTransit => Transit
+    case ManifestPassengerProfile(_, _, _, isTransit, _) if isTransit => Transit
   }
 
   val withTransit: PartialFunction[ManifestPassengerProfile, PaxType] = transit orElse countryAndDocumentTypes

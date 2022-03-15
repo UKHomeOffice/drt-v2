@@ -43,6 +43,6 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
         }
       }
 
-    tables.db.run(query)
+    tables.run(query)
   }
 }
