@@ -4,6 +4,7 @@ import akka.Done
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
+import org.slf4j.LoggerFactory
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
@@ -24,18 +25,26 @@ case class DbManifestProcessor(tables: Tables,
                                destinationPortCode: PortCode,
                                manifestsLiveResponse: SourceQueueWithComplete[ManifestsFeedResponse])
                               (implicit ec: ExecutionContext) extends ManifestProcessor {
+  private val log = LoggerFactory.getLogger(getClass)
 
-  import tables.profile.api._
+  import tables.dbConnection.profile.api._
 
   override def process(uniqueArrivalKey: UniqueArrivalKey, processedAt: MillisSinceEpoch): Future[Done] =
-    manifestForArrivalKey(uniqueArrivalKey).flatMap { manifest =>
-      val response = ManifestsFeedSuccess(DqManifests(processedAt, Seq(manifest)))
-      manifestsLiveResponse
-        .offer(response)
-        .map(_ => Done)
+    manifestForArrivalKey(uniqueArrivalKey).flatMap {
+      case None =>
+        println(s"found no manifest")
+        log.warn(s"No manifest entries found for $uniqueArrivalKey")
+        Future.successful(Done)
+
+      case Some(manifest) =>
+        val response = ManifestsFeedSuccess(DqManifests(processedAt, Seq(manifest)))
+        println(s"enqueuing response")
+        manifestsLiveResponse
+          .offer(response)
+          .map(_ => Done)
     }
 
-  def manifestForArrivalKey(uniqueArrivalKey: UniqueArrivalKey): Future[VoyageManifest] = {
+  private def manifestForArrivalKey(uniqueArrivalKey: UniqueArrivalKey): Future[Option[VoyageManifest]] = {
     val scheduled = SDate(uniqueArrivalKey.scheduled.millisSinceEpoch).toISOString()
     val query =
       sql"""SELECT
@@ -72,18 +81,29 @@ case class DbManifestProcessor(tables: Tables,
               )
           }
         }
+        println(s"executing select query")
 
-    tables.db.run(query).map { pax =>
-      VoyageManifest(
-        DC,
-        uniqueArrivalKey.arrivalPort,
-        uniqueArrivalKey.departurePort,
-        uniqueArrivalKey.voyageNumber,
-        CarrierCode(""),
-        ManifestDateOfArrival(uniqueArrivalKey.scheduled.toISODateOnly),
-        ManifestTimeOfArrival(uniqueArrivalKey.scheduled.toHoursAndMinutes),
-        pax.toList
-      )
+    tables.dbConnection.db.run(query).map {
+      case pax if pax.isEmpty =>
+        println("not found")
+        None
+      case pax =>
+        println("found")
+        Option(VoyageManifest(
+          DC,
+          uniqueArrivalKey.arrivalPort,
+          uniqueArrivalKey.departurePort,
+          uniqueArrivalKey.voyageNumber,
+          CarrierCode(""),
+          ManifestDateOfArrival(uniqueArrivalKey.scheduled.toISODateOnly),
+          ManifestTimeOfArrival(uniqueArrivalKey.scheduled.toHoursAndMinutes),
+          pax.toList
+        ))
     }
+      .recover {
+        case t =>
+          log.error(s"Failed to execute query", t)
+          None
+      }
   }
 }
