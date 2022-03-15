@@ -53,6 +53,16 @@ class DbManifestProcessorTest
     val paxId = "1"
     val key = UniqueArrivalKey(PortCode(arrivalPort), PortCode(departurePort), VoyageNumber(voyageNumber), scheduled)
 
+    "Enqueues no manifest when there are no matching passengers" in {
+      implicit val probe: TestProbe = TestProbe("manifestProbe")
+
+      processor(probe).process(key, SDate.now().millisSinceEpoch)
+
+      probe.expectNoMessage(500.millis)
+
+      success
+    }
+
     "Find matching passengers and enqueue a successful manifest response for iAPI" in {
       implicit val probe: TestProbe = TestProbe("manifestProbe")
       addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
@@ -100,7 +110,7 @@ class DbManifestProcessorTest
   }
 
   private def processAndCheckIapiManifestPax(key: UniqueArrivalKey, expectedPaxIds: Set[String])
-                                        (implicit probe: TestProbe): Any = {
+                                            (implicit probe: TestProbe): Any = {
     processor(probe).process(key, SDate.now().millisSinceEpoch)
 
     probe.fishForMessage(1.second) {
@@ -111,7 +121,7 @@ class DbManifestProcessorTest
   }
 
   private def processAndCheckNonIapiManifestPax(key: UniqueArrivalKey, expectedPaxCount: Int)
-                                        (implicit probe: TestProbe): Any = {
+                                               (implicit probe: TestProbe): Any = {
     processor(probe).process(key, SDate.now().millisSinceEpoch)
 
     probe.fishForMessage(1.second) {
@@ -125,8 +135,7 @@ class DbManifestProcessorTest
       .queue[ManifestsFeedResponse](10, OverflowStrategy.dropHead)
       .map(probe.ref ! _).toMat(Sink.ignore)(Keep.left).run()
 
-    val dbManifestProcessor = DbManifestProcessor(H2Tables, PortCode("LHR"), manifestQueue)
-    dbManifestProcessor
+    DbManifestProcessor(H2Tables, PortCode("LHR"), manifestQueue)
   }
 
   private def addPaxRecord(tables: Tables, arrivalPort: String, departurePort: String, voyageNumber: Int, scheduled: SDateLike, paxId: String, jsonFileName: String): Any = {
