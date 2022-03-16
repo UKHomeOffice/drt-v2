@@ -9,7 +9,6 @@ import scala.concurrent.Future
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
 trait Tables {
   val profile: slick.jdbc.JdbcProfile
-//  val db: profile.backend.Database
 
   def run[R](a: DBIOAction[R, NoStream, Nothing]): Future[R]
 
@@ -119,7 +118,7 @@ trait Tables {
     }
   } with profile.api.Table[ArrivalRow](_tableTag, maybeSchema, "arrival") {
     def * = (code, number, destination, origin, terminal, gate, stand, status, scheduled, estimated, actual, estimatedchox, actualchox, pcp, totalpassengers, pcppassengers,scheduled_departure) <> (ArrivalRow.tupled, ArrivalRow.unapply)
-    def ? = (Rep.Some(code), Rep.Some(number), Rep.Some(destination), Rep.Some(origin), Rep.Some(terminal), gate, stand, Rep.Some(status), Rep.Some(scheduled), estimated, actual, estimatedchox, actualchox, Rep.Some(pcp), totalpassengers, pcppassengers,scheduled_departure).shaped.<>({ r=>import r._; _1.map(_=> ArrivalRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6, _7, _8.get, _9.get, _10, _11, _12, _13, _14.get, _15, _16,_17)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+//    def ? = (Rep.Some(code), Rep.Some(number), Rep.Some(destination), Rep.Some(origin), Rep.Some(terminal), gate, stand, Rep.Some(status), Rep.Some(scheduled), estimated, actual, estimatedchox, actualchox, Rep.Some(pcp), totalpassengers, pcppassengers,scheduled_departure).shaped.<>({ r=>import r._; _1.map(_=> ArrivalRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get, _6, _7, _8.get, _9.get, _10, _11, _12, _13, _14.get, _15, _16,_17)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
 
     val code: Rep[String] = column[String]("code")
     val number: Rep[Int] = column[Int]("number")

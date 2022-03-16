@@ -22,10 +22,10 @@ trait ManifestLike {
   val maybeEventType: Option[EventType]
 
   def uniquePassengers: Seq[ManifestPassengerProfile] = {
-    if (nonUniquePassengers.exists(_.passengerIdentifier.exists(_ != "")))
+    if (nonUniquePassengers.exists(_.passengerIdentifier.exists(_.nonEmpty)))
       nonUniquePassengers
         .collect {
-          case p@ManifestPassengerProfile(_, _, _, _, Some(id)) if id != "" => p
+          case p@ManifestPassengerProfile(_, _, _, _, Some(id)) if id.nonEmpty => p
         }
         .map { passengerInfo =>
           passengerInfo.passengerIdentifier -> passengerInfo
