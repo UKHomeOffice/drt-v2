@@ -43,8 +43,6 @@ case class DrtConfigParameters(config: Configuration) {
   val manifestLookupBatchSize: Int = config.getOptional[Int]("crunch.manifests.lookup-batch-size").getOrElse(10)
 
   val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")
-  val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
-  val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
   val isSuperUserMode: Boolean = config.getOptional[String]("feature-flags.super-user-mode").isDefined
   val maybeBlackJackUrl: Option[String] = config.getOptional[String]("feeds.lhr.blackjack_url")
 

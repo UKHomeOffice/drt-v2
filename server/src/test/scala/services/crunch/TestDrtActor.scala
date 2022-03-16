@@ -25,7 +25,7 @@ import services.crunch.deskrecs._
 import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
-import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
@@ -37,14 +37,13 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
-case object MockManifestLookupService extends ManifestLookupLike {
+case class MockManifestLookupService()(implicit mat: Materializer) extends ManifestLookupLike {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
-                                          scheduled: SDateLike)
-                                         (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+                                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
     Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
 }
 
@@ -157,7 +156,7 @@ class TestDrtActor extends Actor {
 
         val splitsCalculator = SplitsCalculator(ptqa, tc.airportConfig.terminalPaxSplits, splitAdjustments)
 
-        val historicManifestLookups: ManifestLookupLike = MockManifestLookupService
+        val historicManifestLookups: ManifestLookupLike = MockManifestLookupService()
 
         val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
           arrivalsProvider = OptimisationProviders.arrivalsProvider(portStateActor),

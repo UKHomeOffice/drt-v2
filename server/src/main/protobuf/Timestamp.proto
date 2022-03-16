@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+package server.protobuf.messages;
+
+message Timestamp {
+  optional int64 marker = 1;
+  optional int64 createdAt = 2;
+}

@@ -2,21 +2,21 @@ package manifests
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import services.StreamSupervision
 import slick.jdbc.SQLActionBuilder
 import slick.sql.SqlStreamingAction
-import slickdb.VoyageManifestPassengerInfoTable
+import slickdb.Tables
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
-import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
+import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import java.sql.Timestamp
+import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -25,8 +25,7 @@ trait ManifestLookupLike {
   def maybeBestAvailableManifest(arrivalPort: PortCode,
                                  departurePort: PortCode,
                                  voyageNumber: VoyageNumber,
-                                 scheduled: SDateLike)
-                                (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])]
+                                 scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])]
 }
 
 case class UniqueArrivalKey(arrivalPort: PortCode,
@@ -34,28 +33,27 @@ case class UniqueArrivalKey(arrivalPort: PortCode,
                             voyageNumber: VoyageNumber,
                             scheduled: SDateLike) {
   override def toString: String = s"$arrivalPort -> $departurePort: $voyageNumber @ ${scheduled.toISOString()}"
+
+  val queryArrivalKey: (String, String, String, Timestamp) =
+    (arrivalPort.iata, departurePort.iata, voyageNumber.numeric.toString, new Timestamp(scheduled.millisSinceEpoch))
 }
 
-case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extends ManifestLookupLike {
+case class ManifestLookup(tables: Tables)
+                         (implicit mat: Materializer) extends ManifestLookupLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  import paxInfoTable.tables.profile.api._
+  import tables.profile.api._
 
-  def manifestTriesForScheduled(arrivalToLookUp: UniqueArrivalKey,
-                                flightKeys: Vector[(String, String, String, Timestamp)])
-                               (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = {
-    val eventualMaybePaxProfiles: Future[Seq[Try[List[ManifestPassengerProfile]]]] = Source(paxForArrivalQuery(flightKeys))
-      .mapAsync(1) { builder =>
-        paxInfoTable.db
-          .run(builder.as[(String, String, String, String, String, Boolean, String)])
-          .map { rows =>
-            Success(passengerProfiles(rows).toList)
-          }
-          .recover { case t =>
-            log.error(s"Didn't get pax for $arrivalToLookUp", t)
-            Failure(t)
-          }
-      }
+  override def maybeBestAvailableManifest(arrivalPort: PortCode,
+                                          departurePort: PortCode,
+                                          voyageNumber: VoyageNumber,
+                                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+    historicManifestSearch(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
+
+  private def manifestTriesForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
+                                       (implicit mat: Materializer): Future[immutable.Seq[ManifestPassengerProfile]] = {
+    val eventualMaybePaxProfiles = Source(paxForArrivalQuery(flightKeys))
+      .mapAsync(1)(paxProfilesFromQuery)
       .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .runWith(Sink.seq)
 
@@ -64,41 +62,46 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
         case Failure(t) => log.warn(s"Failed to get manifests", t)
       }
 
-      val profiles = tries.collect { case Success(paxProfiles) => paxProfiles }.flatten
-
-      val maybeManifests = if (profiles.nonEmpty)
-        Option(BestAvailableManifest(SplitSources.Historical, arrivalToLookUp, profiles.toList))
-      else
-        None
-
-      (arrivalToLookUp, maybeManifests)
+      tries.collect { case Success(paxProfiles) => paxProfiles }.flatten
     }
   }
 
-  def manifestSearch(uniqueArrivalKey: UniqueArrivalKey,
-                     queries: List[(String, QueryFunction)])
-                    (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = queries match {
+  private def paxProfilesFromQuery(builder: SQLActionBuilder): Future[Try[List[ManifestPassengerProfile]]] =
+    tables
+      .run(builder.as[(String, String, String, String, String, Boolean, String)])
+      .map { rows =>
+        Success(passengerProfiles(rows).toList)
+      }
+      .recover {
+        case t => Failure(t)
+      }
+
+  private def historicManifestSearch(uniqueArrivalKey: UniqueArrivalKey,
+                                     queries: List[(String, QueryFunction)])
+                                    (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = queries match {
     case Nil => Future((uniqueArrivalKey, None))
     case (_, nextQuery) :: tail =>
-      paxInfoTable.db
+      tables
         .run(nextQuery(uniqueArrivalKey))
         .map {
           case flightsFound if flightsFound.nonEmpty =>
-            manifestTriesForScheduled(uniqueArrivalKey, flightsFound)
+            manifestTriesForScheduled(flightsFound).map { profiles =>
+              (uniqueArrivalKey, maybeManifestFromProfiles(uniqueArrivalKey, profiles))
+            }
+
           case _ =>
-            manifestSearch(uniqueArrivalKey, tail)
+            historicManifestSearch(uniqueArrivalKey, tail)
         }
         .flatMap(identity)
   }
 
-  override def maybeBestAvailableManifest(arrivalPort: PortCode,
-                                          departurePort: PortCode,
-                                          voyageNumber: VoyageNumber,
-                                          scheduled: SDateLike)
-                                         (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
-    manifestSearch(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
+  private def maybeManifestFromProfiles(uniqueArrivalKey: UniqueArrivalKey, profiles: immutable.Seq[ManifestPassengerProfile]) = {
+    if (profiles.nonEmpty)
+      Option(BestAvailableManifest(SplitSources.Historical, uniqueArrivalKey, profiles.toList))
+    else None
+  }
 
-  type QueryFunction = UniqueArrivalKey => SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), paxInfoTable.tables.profile.api.Effect]
+  type QueryFunction = UniqueArrivalKey => SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), tables.profile.api.Effect]
 
   private val queryHierarchy: List[(String, QueryFunction)] = List(
     ("sameFlightAndDay3WeekWindowPreviousYearQuery", sameFlightAndDay3WeekWindowPreviousYearQuery),
@@ -106,7 +109,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
     ("sameRouteAndDay3WeekWindowPreviousYearQuery", sameRouteAndDay3WeekWindowPreviousYearQuery)
   )
 
-  def sameFlightAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
+  private def sameFlightAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
     val lastYear = uniqueArrivalKey.scheduled.addMonths(-12)
     val earliestWeek = lastYear.addDays(-7)
     val latestWeek = lastYear.addDays(7)
@@ -137,8 +140,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
           """.as[(String, String, String, Timestamp)]
   }
 
-
-  def sameFlight3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
+  private def sameFlight3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
     val lastYear = uniqueArrivalKey.scheduled.addMonths(-12)
     val earliestWeek = lastYear.addDays(-7)
     val latestWeek = lastYear.addDays(7)
@@ -166,7 +168,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
           """.as[(String, String, String, Timestamp)]
   }
 
-  def sameRouteAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
+  private def sameRouteAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
     val lastYear = uniqueArrivalKey.scheduled.addMonths(-12)
     val earliestWeek = lastYear.addDays(-7)
     val latestWeek = lastYear.addDays(7)
@@ -196,7 +198,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
           """.as[(String, String, String, Timestamp)]
   }
 
-  def paxForArrivalQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Vector[SQLActionBuilder] =
+  private def paxForArrivalQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Vector[SQLActionBuilder] =
     flightKeys.map {
       case (destination, origin, voyageNumberString, scheduled) =>
         val voyageNumber = VoyageNumber(voyageNumberString)
@@ -217,7 +219,7 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
             and scheduled_date=$scheduled"""
     }
 
-  def passengerProfiles(rows: Vector[(String, String, String, String, String, Boolean, String)]): Vector[ManifestPassengerProfile] = rows.map {
+  private def passengerProfiles(rows: Vector[(String, String, String, String, String, Boolean, String)]): Vector[ManifestPassengerProfile] = rows.map {
     case (nat, doc, age, transitFlag, endCountry, inTransit, identifier) =>
       val transit = (transitFlag, endCountry, inTransit) match {
         case (t, _, _) if t == "Y" => true
@@ -226,6 +228,6 @@ case class ManifestLookup(paxInfoTable: VoyageManifestPassengerInfoTable) extend
         case _ => false
       }
       val maybeIdentifier = if (identifier.nonEmpty) Option(identifier) else None
-      ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(PaxAge(age.toInt)).toOption, Option(transit), maybeIdentifier)
+      ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(PaxAge(age.toInt)).toOption, transit, maybeIdentifier)
   }
 }

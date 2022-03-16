@@ -5,14 +5,16 @@ package server.protobuf.messages;
 import "FlightsMessage.proto";
 
 message VoyageManifestStateSnapshotMessage {
-    optional string latestFilename = 1;
+    optional string latestFilename__OLD = 1;
     repeated VoyageManifestMessage manifestMessages = 2;
     optional FeedStatusesMessage statuses = 3;
+    optional int64 lastProcessedMarker = 4;
 }
 
 message VoyageManifestLatestFileNameMessage {
     optional int64 createdAt = 1;
-    optional string latestFilename = 2;
+    optional string latestFilename__OLD = 2;
+    optional int64 lastProcessedMarker = 3;
 }
 
 message VoyageManifestsMessage {

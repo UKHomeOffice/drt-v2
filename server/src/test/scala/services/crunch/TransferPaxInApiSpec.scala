@@ -95,7 +95,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
     val portCode = PortCode("LHR")
 
     val inputManifests = ManifestsFeedSuccess(
-      DqManifests("",
+      DqManifests(0,
         Set(
           VoyageManifest(
             EventTypes.CI,

@@ -37,7 +37,7 @@ object Settings {
     val booPickle = "1.3.3"
     val diode = "1.1.13"
     val uTest = "0.7.4"
-    val h2 = "1.4.197"
+    val h2 = "2.1.210"
 
     val akka = "2.6.17"
     val akkaStreamContrib = "0.9"
@@ -53,7 +53,6 @@ object Settings {
     val levelDbJni = "1.8"
     val renjin = "0.9.2646"
     val awsSdk = "1.11.89"
-    val awsCommons = "0.12.2"
     val csvCommons = "1.4"
     val pprint = "0.5.6"
     val scalaCheck = "1.13.4"
@@ -76,7 +75,7 @@ object Settings {
     val playIteratees = "2.6.1"
     val uPickle = "1.2.0"
     val akkaHttp = "10.2.6"
-    val slick = "3.3.2"
+    val slick = "3.3.3"
     val censorinus = "2.1.13"
     val janinoVersion = "3.1.6"
     val scalaJsReactMaterialUi = "0.2.1"
@@ -147,8 +146,6 @@ object Settings {
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
-
-    "com.mfglabs" %% "commons-aws-s3" % awsCommons,
 
     "javax.mail" % "mail" % "1.4.7",
     "javax.xml.ws" % "jaxws-api" % "2.3.1",

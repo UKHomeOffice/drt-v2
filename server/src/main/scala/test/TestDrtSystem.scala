@@ -30,13 +30,12 @@ import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Futu
 import scala.language.postfixOps
 import scala.util.Success
 
-case class MockManifestLookupService()(implicit ec: ExecutionContext) extends ManifestLookupLike {
+case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Materializer) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
-                                          scheduled: SDateLike)
-                                         (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
-    Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+                                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
 }
 
 case class TestDrtSystem(airportConfig: AirportConfig)

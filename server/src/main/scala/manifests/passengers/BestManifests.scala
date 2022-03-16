@@ -18,14 +18,15 @@ trait ManifestLike {
   val voyageNumber: VoyageNumberLike
   val carrierCode: CarrierCode
   val scheduled: SDateLike
-  val passengers: List[ManifestPassengerProfile]
+  val nonUniquePassengers: Seq[ManifestPassengerProfile]
   val maybeEventType: Option[EventType]
 
   def uniquePassengers: Seq[ManifestPassengerProfile] = {
-    if (passengers.exists(_.passengerIdentifier.exists(_ != "")))
-      passengers.collect {
-        case p@ManifestPassengerProfile(_, _, _, _, Some(id)) if id != "" => p
-      }
+    if (nonUniquePassengers.exists(_.passengerIdentifier.exists(_.nonEmpty)))
+      nonUniquePassengers
+        .collect {
+          case p@ManifestPassengerProfile(_, _, _, _, Some(id)) if id.nonEmpty => p
+        }
         .map { passengerInfo =>
           passengerInfo.passengerIdentifier -> passengerInfo
         }
@@ -33,14 +34,8 @@ trait ManifestLike {
         .values
         .toList
     else
-      passengers
+      nonUniquePassengers
   }
-
-  def excludeTransitPax(manifest: VoyageManifest): VoyageManifest = manifest.copy(
-    PassengerList = manifest
-      .PassengerList
-      .filterNot(_.isInTransit(manifest.ArrivalPortCode))
-  )
 
   def maybeKey: Option[ArrivalKey] = voyageNumber match {
     case vn: VoyageNumber =>
@@ -55,7 +50,7 @@ case class BestAvailableManifest(source: SplitSource,
                                  voyageNumber: VoyageNumberLike,
                                  carrierCode: CarrierCode,
                                  scheduled: SDateLike,
-                                 passengers: List[ManifestPassengerProfile],
+                                 nonUniquePassengers: Seq[ManifestPassengerProfile],
                                  override val maybeEventType: Option[EventType]) extends ManifestLike
 
 object BestAvailableManifest {
@@ -66,8 +61,6 @@ object BestAvailableManifest {
     fromManifest(manifest, SplitSources.Historical)
 
   def fromManifest(manifest: VoyageManifest, source: SplitSource): BestAvailableManifest = {
-    val uniquePax: List[PassengerInfoJson] = removeDuplicatePax(manifest)
-
     BestAvailableManifest(
       source = source,
       arrivalPortCode = manifest.ArrivalPortCode,
@@ -75,24 +68,9 @@ object BestAvailableManifest {
       voyageNumber = manifest.VoyageNumber,
       carrierCode = manifest.CarrierCode,
       scheduled = manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
-      passengers = uniquePax.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode)),
+      nonUniquePassengers = manifest.uniquePassengers,
       maybeEventType = Option(manifest.EventCode)
     )
-  }
-
-  def removeDuplicatePax(manifest: VoyageManifest): List[PassengerInfoJson] = {
-    if (manifest.PassengerList.exists(_.PassengerIdentifier.exists(_ != "")))
-      manifest.PassengerList.collect {
-        case p@PassengerInfoJson(_, _, _, _, _, _, _, _, Some(id)) if id != "" => p
-      }
-        .map { passengerInfo =>
-          passengerInfo.PassengerIdentifier -> passengerInfo
-        }
-        .toMap
-        .values
-        .toList
-    else
-      manifest.PassengerList
   }
 
   def apply(source: SplitSource,
@@ -104,14 +82,14 @@ object BestAvailableManifest {
     voyageNumber = uniqueArrivalKey.voyageNumber,
     carrierCode = CarrierCode(""),
     scheduled = uniqueArrivalKey.scheduled,
-    passengers = passengerList,
+    nonUniquePassengers = passengerList,
     maybeEventType = None)
 }
 
 case class ManifestPassengerProfile(nationality: Nationality,
                                     documentType: Option[DocumentType],
                                     age: Option[PaxAge],
-                                    inTransit: Option[Boolean],
+                                    inTransit: Boolean,
                                     passengerIdentifier: Option[String])
 
 object ManifestPassengerProfile {
@@ -120,7 +98,7 @@ object ManifestPassengerProfile {
       nationality = pij.NationalityCountryCode.getOrElse(Nationality("")),
       documentType = pij.docTypeWithNationalityAssumption,
       age = pij.Age,
-      inTransit = Option(pij.isInTransit(portCode)),
+      inTransit = pij.isInTransit(portCode),
       passengerIdentifier = pij.PassengerIdentifier
     )
 }

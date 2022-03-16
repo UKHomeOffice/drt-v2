@@ -12,16 +12,15 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifest) extends ManifestLookupLike {
+case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifest)
+                                    (implicit mat: Materializer) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
-                                          scheduled: SDateLike)
-                                         (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
-    Future((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), Option(bestAvailableManifest)))
+                                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), Option(bestAvailableManifest)))
 }
 
 class ManifestProviderSpec extends CrunchTestLike {

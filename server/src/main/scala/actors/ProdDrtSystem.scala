@@ -9,23 +9,23 @@ import actors.persistent.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, 
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.ask
-import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
 import akka.util.Timeout
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
-import drt.server.feeds.api.S3ApiProvider
+import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookup
-import manifests.passengers.S3ManifestPoller
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services.SDate
 import services.crunch.CrunchSystem
-import slickdb.{ArrivalTable, Tables, VoyageManifestPassengerInfoTable}
+import slick.dbio.{DBIOAction, NoStream}
+import slickdb.{ArrivalTable, Tables}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
@@ -38,9 +38,12 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 
-object PostgresTables extends {
-  val profile = slick.jdbc.PostgresProfile
-} with Tables
+object PostgresTables extends Tables {
+  override val profile = slick.jdbc.PostgresProfile
+  val db: profile.backend.Database = profile.api.Database.forConfig("aggregated-db")
+
+  override def run[R](action: DBIOAction[R, NoStream, Nothing]): Future[R] = db.run[R](action)
+}
 
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
@@ -56,8 +59,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
   val minSecondsBetweenBatches: Int = config.get[Int]("crunch.manifests.min-seconds-between-batches")
   val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
 
-  val aggregateArrivalsDbConfigKey = "aggregated-db"
-
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
   override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AclForecastArrivalsActor(params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis)), name = "base-arrivals-actor")
@@ -70,7 +71,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
   override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
-  override val manifestLookupService: ManifestLookup = ManifestLookup(VoyageManifestPassengerInfoTable(PostgresTables))
+  override val manifestLookupService: ManifestLookup = ManifestLookup(PostgresTables)
 
   override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
@@ -108,10 +109,8 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
   override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new FixedPointsActor(now)), "staff-fixed-points")
   override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now))), "staff-movements")
 
-  val s3ApiProvider: S3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
-  val initialManifestsState: Option[ApiFeedState] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor)
-  system.log.info(s"Providing latest API Zip Filename from storage: ${initialManifestsState.map(_.latestZipFilename).getOrElse("None")}")
-  val latestZipFileName: String = S3ApiProvider.latestUnexpiredDqZipFilename(initialManifestsState.map(_.latestZipFilename), now, expireAfterMillis)
+  val lastProcessedLiveApiMarker: Option[MillisSinceEpoch] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor).map(_.lastProcessedMarker)
+  system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString()).getOrElse("None")}")
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
 
@@ -169,7 +168,13 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           }
         }
 
-        new S3ManifestPoller(crunchInputs.manifestsLiveResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
+        val arrivalKeysProvider = DbManifestArrivalKeys(PostgresTables, airportConfig.portCode)
+        val manifestProcessor = DbManifestProcessor(PostgresTables, airportConfig.portCode, crunchInputs.manifestsLiveResponse)
+        val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
+        log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString()}")
+        ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 15.seconds)
+          .processFilesAfter(processFilesAfter)
+          .runWith(Sink.ignore)
 
         redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
         flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)

@@ -64,13 +64,13 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
   def createTables(): Unit = {
     H2Tables.schema.createStatements.toList.foreach { query =>
-      Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
+      Await.ready(H2Tables.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
     }
   }
 
   def dropTables(): Unit = {
     H2Tables.schema.dropStatements.toList.reverse.foreach { query =>
-      Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
+      Await.ready(H2Tables.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
     }
   }
 

@@ -1,6 +1,5 @@
 package actors.persistent
 
-import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.Ack
 import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound}
@@ -17,11 +16,9 @@ import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import drt.server.feeds.api.S3ApiProvider
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
 import server.protobuf.messages.FlightsMessage.FeedStatusMessage
@@ -31,7 +28,6 @@ import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
-import scala.collection.immutable
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -62,7 +58,7 @@ object ManifestRouterActor {
     )
 }
 
-case class ApiFeedState(latestZipFilename: String, maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
+case class ApiFeedState(lastProcessedMarker: MillisSinceEpoch, maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
   override def feedSource: FeedSource = ApiFeedSource
 }
 
@@ -78,7 +74,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   var processingRequest: Boolean = false
 
   val initialState: ApiFeedState = ApiFeedState(
-    S3ApiProvider.defaultApiLatestZipFilename(() => SDate.now(), expireAfterMillis),
+    SDate.now().addDays(-2).millisSinceEpoch,
     None
   )
 
@@ -92,11 +88,10 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case recoveredLZF: String =>
-      state = state.copy(latestZipFilename = recoveredLZF)
+    case _: String => log.debug(s"Ignoring redundant zip file name")
 
-    case VoyageManifestLatestFileNameMessage(_, Some(latestFilename)) =>
-      state = state.copy(latestZipFilename = latestFilename)
+    case VoyageManifestLatestFileNameMessage(_, _, Some(lastProcessedMarker)) =>
+      state = state.copy(lastProcessedMarker = lastProcessedMarker)
 
     case feedStatusMessage: FeedStatusMessage =>
       val status = feedStatusFromFeedStatusMessage(feedStatusMessage)
@@ -104,21 +99,21 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   }
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case VoyageManifestStateSnapshotMessage(Some(latestFilename), _, maybeStatusMessages) =>
+    case VoyageManifestStateSnapshotMessage(_, _, maybeStatusMessages, Some(lastProcessedMarker)) =>
       val maybeStatuses = maybeStatusMessages
         .map(feedStatusesFromFeedStatusesMessage)
         .map(fs => FeedSourceStatuses(ApiFeedSource, fs))
 
-      state = state.copy(latestZipFilename = latestFilename, maybeSourceStatuses = maybeStatuses)
+      state = state.copy(lastProcessedMarker = lastProcessedMarker, maybeSourceStatuses = maybeStatuses)
 
-    case lzf: String =>
-      log.debug(s"Ignoring old snapshot message $lzf")
+    case _ => log.debug(s"Ignoring redundant snapshot message")
   }
 
   override def stateToMessage: VoyageManifestStateSnapshotMessage = VoyageManifestStateSnapshotMessage(
-    Option(state.latestZipFilename),
+    None,
     Seq(),
-    state.maybeSourceStatuses.flatMap(mss => FlightMessageConversion.feedStatusesToMessage(mss.feedStatuses))
+    state.maybeSourceStatuses.flatMap(mss => FlightMessageConversion.feedStatusesToMessage(mss.feedStatuses)),
+    Option(state.lastProcessedMarker)
   )
 
   override def receiveCommand: Receive = {
@@ -131,7 +126,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
 
       val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, newManifests.size)
       state = state.copy(
-        latestZipFilename = updatedLZF,
+        lastProcessedMarker = updatedLZF,
         maybeSourceStatuses = Option(state.addStatus(newStatus))
       )
 
@@ -156,7 +151,9 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       val replyTo = sender()
       ManifestRouterActor
         .manifestsByDaySource(manifestLookup)(scheduled, scheduled, None)
-        .map(manifests => manifests.manifests.find { _.maybeKey.exists(_ == arrival)}.toList)
+        .map(manifests => manifests.manifests.find {
+          _.maybeKey.exists(_ == arrival)
+        }.toList)
         .runWith(Sink.seq)
         .map(_.flatten)
         .onComplete {
@@ -235,16 +232,16 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
         UpdatedMillis.empty
       }
 
-  def persistLastSeenFileName(lastSeenFileName: String): Unit =
-    persistAndMaybeSnapshot(latestFilenameToMessage(lastSeenFileName))
+  def persistLastSeenFileName(lastProcessedMarker: MillisSinceEpoch): Unit =
+    persistAndMaybeSnapshot(lastProcessedMarkerToMessage(lastProcessedMarker))
 
   def persistFeedStatus(feedStatus: FeedStatus): Unit = persistAndMaybeSnapshot(feedStatusToMessage(feedStatus))
 
-  def latestFilenameToMessage(filename: String): VoyageManifestLatestFileNameMessage = {
+  def lastProcessedMarkerToMessage(lastProcessedMarker: MillisSinceEpoch): VoyageManifestLatestFileNameMessage =
     VoyageManifestLatestFileNameMessage(
       createdAt = Option(SDate.now().millisSinceEpoch),
-      latestFilename = Option(filename))
-  }
+      lastProcessedMarker = Option(lastProcessedMarker)
+    )
 
   def partitionUpdates(vms: VoyageManifests): Map[UtcDate, VoyageManifests] = vms
     .manifests

@@ -63,7 +63,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
         Estimated = Option(SDate("2019-01-01T00:01").millisSinceEpoch),
         ActPax = Option(76)
       )
-      val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
         manifestForArrival(updatedArrival, manifestPax(25, visa) ++
           manifestPax(26, euPassport) ++
           manifestPax(25, nonVisa))
@@ -79,7 +79,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
         Estimated = Option(SDate("2019-01-01T00:25").millisSinceEpoch),
         ActPax = Option(35)
       )
-      val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
         manifestForArrival(updatedArrival,
           manifestPax(7,visa) ++
           manifestPax(7,euPassport) ++
@@ -98,7 +98,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
         Estimated = Option(SDate("2019-01-01T00:25").millisSinceEpoch),
         ActPax = Option(211)
       )
-      val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
         manifestForArrival(updatedArrival,
           manifestPax(42, visa) ++
           manifestPax(127, euPassport) ++
@@ -120,7 +120,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
         Estimated = Option(SDate("2019-01-01T00:03").millisSinceEpoch),
         ActPax = Option(176)
       )
-      val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
+      val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
         manifestForArrival(updatedArrivalOne, manifestPax(300, visa) ++ manifestPax(99, euPassport) ++ manifestPax(2, nonVisa)),
         manifestForArrival(updatedArrivalTwo, manifestPax(30, euIdCard) ++ manifestPax( 30, nonVisa) ++ manifestPax(116, euPassport))
       )))

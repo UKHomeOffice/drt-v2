@@ -217,7 +217,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
             offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival))))
 
-            val voyageManifests = ManifestsFeedSuccess(DqManifests("", Set(
+            val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
               VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
                 manifestPax(10, euPassport)
               )

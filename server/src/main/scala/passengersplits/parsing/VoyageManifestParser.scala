@@ -53,7 +53,7 @@ object VoyageManifestParser {
     }
   }
 
-  case class VoyageManifests(manifests: Set[VoyageManifest]) {
+  case class VoyageManifests(manifests: Iterable[VoyageManifest]) {
 
     def toMap: Map[ArrivalKey, VoyageManifest] = manifests.collect {
       case vm if vm.maybeKey.isDefined =>
@@ -95,7 +95,7 @@ object VoyageManifestParser {
     override val departurePortCode: PortCode = DeparturePortCode
     override val voyageNumber: VoyageNumberLike = VoyageNumber
     override val carrierCode: CarrierCode = CarrierCode
-    override val passengers: List[ManifestPassengerProfile] = PassengerList.map(ManifestPassengerProfile(_, arrivalPortCode))
+    override val nonUniquePassengers: List[ManifestPassengerProfile] = PassengerList.map(ManifestPassengerProfile(_, arrivalPortCode))
     override val maybeEventType: Option[EventType] = Option(EventCode)
   }
 

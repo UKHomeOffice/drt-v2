@@ -1,5 +1,6 @@
 package server.feeds
 
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import manifests.passengers.BestAvailableManifest
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
@@ -54,12 +55,12 @@ case class BestManifestsFeedSuccess(manifests: Seq[BestAvailableManifest], creat
   override val length: Int = manifests.length
 }
 
-case class DqManifests(lastSeenFileName: String, manifests: Set[VoyageManifest]) {
+case class DqManifests(lastProcessedMarker: MillisSinceEpoch, manifests: Iterable[VoyageManifest]) {
   def isEmpty: Boolean = manifests.isEmpty
   def nonEmpty: Boolean = !isEmpty
   def length: Int = manifests.size
-  def update(newLastSeenFileName: String, newManifests: Set[VoyageManifest]): DqManifests = {
+  def update(newLastProcessedMarker: MillisSinceEpoch, newManifests: Set[VoyageManifest]): DqManifests = {
     val mergedManifests = manifests ++ newManifests
-    DqManifests(newLastSeenFileName, mergedManifests)
+    DqManifests(lastProcessedMarker, mergedManifests)
   }
 }
