@@ -40,9 +40,6 @@ import scala.language.postfixOps
 case class MockManifestLookupService()(implicit mat: Materializer) extends ManifestLookupLike {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
-  override def liveManifestForArrival(uniqueArrivalKey: UniqueArrivalKey): Future[Option[BestAvailableManifest]] =
-    Future.successful(None)
-
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,

@@ -95,10 +95,6 @@ object OptimiserMocks {
 
 case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]], destinationPort: PortCode)
                                     (implicit mat: Materializer) extends ManifestLookupLike {
-  override def liveManifestForArrival(uniqueArrivalKey: UniqueArrivalKey): Future[Option[BestAvailableManifest]] = {
-    Future.successful(bestAvailableManifests.get(uniqueArrivalKey).flatten)
-  }
-
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,

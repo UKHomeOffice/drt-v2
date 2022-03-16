@@ -22,8 +22,6 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 trait ManifestLookupLike {
-  def liveManifestForArrival(uniqueArrivalKey: UniqueArrivalKey): Future[Option[BestAvailableManifest]]
-
   def maybeBestAvailableManifest(arrivalPort: PortCode,
                                  departurePort: PortCode,
                                  voyageNumber: VoyageNumber,
@@ -45,11 +43,6 @@ case class ManifestLookup(tables: Tables)
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._
-
-  override def liveManifestForArrival(uniqueArrivalKey: UniqueArrivalKey): Future[Option[BestAvailableManifest]] = {
-    manifestTriesForScheduled(Vector(uniqueArrivalKey.queryArrivalKey))
-      .map(profiles => maybeManifestFromProfiles(uniqueArrivalKey, profiles))
-  }
 
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,

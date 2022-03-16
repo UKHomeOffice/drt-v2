@@ -16,9 +16,6 @@ import scala.concurrent.Future
 
 case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifest)
                                     (implicit mat: Materializer) extends ManifestLookupLike {
-  override def liveManifestForArrival(uniqueArrivalKey: UniqueArrivalKey): Future[Option[BestAvailableManifest]] =
-    Future.successful(Option(bestAvailableManifest))
-
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
