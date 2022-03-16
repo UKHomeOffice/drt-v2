@@ -2,6 +2,7 @@ package drt.server.feeds.api
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
+import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import slickdb.Tables
@@ -24,22 +25,22 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
     val ts = SDate(since).toISOString()
     val query: DBIOAction[Vector[(UniqueArrivalKey, MillisSinceEpoch)], NoStream, Effect] =
       sql"""SELECT
-              vm.departure_port_code, vm.voyage_number, vm.scheduled_date, pz.processed_at
+              vm.departure_port_code, vm.voyage_number, EXTRACT(EPOCH FROM vm.scheduled_date) * 1000, EXTRACT(EPOCH FROM pz.processed_at) * 1000
             FROM processed_zip pz
             INNER JOIN processed_json pj ON pz.zip_file_name = pj.zip_file_name
             INNER JOIN voyage_manifest_passenger_info vm ON vm.json_file = pj.json_file_name
             WHERE
-              pz.processed_at >= TIMESTAMP '#$ts'
+              pz.processed_at > TIMESTAMP '#$ts'
               AND vm.arrival_port_code = ${destinationPortCode.iata}
               AND event_code = 'DC'
             GROUP BY vm.departure_port_code, vm.voyage_number, vm.scheduled_date, pz.processed_at
             ORDER BY pz.processed_at
             """.stripMargin
-        .as[(String, Int, String, String)].map {
+        .as[(String, Int, Long, Long)].map {
         _.map {
           case (origin, voyageNumber, scheduled, processedAt) =>
-            val key = UniqueArrivalKey(destinationPortCode, PortCode(origin), VoyageNumber(voyageNumber), SDate(scheduled.replace(" ", "T")))
-            (key, SDate(processedAt.replace(" ", "T")).millisSinceEpoch)
+            val key = UniqueArrivalKey(destinationPortCode, PortCode(origin), VoyageNumber(voyageNumber), SDate(scheduled, DateTimeZone.UTC))
+            (key, SDate(processedAt, DateTimeZone.UTC).millisSinceEpoch)
         }
       }
 

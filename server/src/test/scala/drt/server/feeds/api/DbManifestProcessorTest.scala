@@ -3,6 +3,7 @@ package drt.server.feeds.api
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.TestProbe
+import drt.server.feeds.api.DbHelper.addPaxRecord
 import manifests.UniqueArrivalKey
 import org.specs2.specification.BeforeEach
 import server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
@@ -10,12 +11,9 @@ import services.SDate
 import services.crunch.{CrunchTestLike, H2Tables}
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
-import slickdb.Tables
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.time.SDateLike
 
-import java.sql.Timestamp
 import scala.collection.immutable.List
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -136,35 +134,5 @@ class DbManifestProcessorTest
       .map(probe.ref ! _).toMat(Sink.ignore)(Keep.left).run()
 
     DbManifestProcessor(H2Tables, PortCode("LHR"), manifestQueue)
-  }
-
-  private def addPaxRecord(tables: Tables, arrivalPort: String, departurePort: String, voyageNumber: Int, scheduled: SDateLike, paxId: String, jsonFileName: String): Any = {
-    import tables.profile.api._
-
-    val scheduledTs = new Timestamp(scheduled.millisSinceEpoch)
-
-    val row = tables.VoyageManifestPassengerInfoRow(
-      event_code = "DC",
-      arrival_port_code = arrivalPort,
-      departure_port_code = departurePort,
-      voyage_number = voyageNumber,
-      carrier_code = "BA",
-      scheduled_date = scheduledTs,
-      day_of_week = 1,
-      week_of_year = 24,
-      document_type = "P",
-      document_issuing_country_code = "GBR",
-      eea_flag = "Y",
-      age = 34,
-      disembarkation_port_code = "LHR",
-      in_transit_flag = "N",
-      disembarkation_port_country_code = "GBR",
-      nationality_country_code = "GBR",
-      passenger_identifier = paxId,
-      in_transit = false,
-      json_file = jsonFileName)
-
-    val tableQuery = TableQuery[tables.VoyageManifestPassengerInfo]
-    Await.ready(tables.run(tableQuery += row), 1.second)
   }
 }
