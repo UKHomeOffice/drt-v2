@@ -25,13 +25,14 @@ import services.crunch.deskrecs._
 import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
-import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
+import scala.collection.SortedSet
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -170,7 +171,7 @@ class TestDrtActor extends Actor {
           DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
         )
 
-        val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)
+        val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
 
         val (crunchRequestActor, deskRecsKillSwitch) = RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, deskRecsProducer).run()
 
@@ -181,7 +182,7 @@ class TestDrtActor extends Actor {
           portDeskRecs.loadsToSimulations
         )
 
-        val deploymentGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)
+        val deploymentGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
         val (deploymentRequestActor, deploymentsKillSwitch) = RunnableOptimisation.createGraph(deploymentGraphSource, portStateActor, deploymentsProducer).run()
 
         flightsActor ! SetCrunchRequestQueue(crunchRequestActor)

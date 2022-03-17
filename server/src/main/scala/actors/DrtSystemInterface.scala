@@ -65,6 +65,7 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike, UtcDate}
 
+import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -196,7 +197,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
-  val startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch) = () => {
+  val startDeskRecs: (SortedSet[CrunchRequest], SortedSet[CrunchRequest]) => () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch) = (cq, dq) => () => {
     val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
 
     implicit val timeout: Timeout = new Timeout(1 second)
@@ -215,7 +216,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       DynamicQueueStatusProvider(airportConfig, egatesProvider)
     )
 
-    val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor)
+    val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor, cq)
 
     val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
       OptimisationProviders.loadsProvider(minuteLookups.queueMinutesActor),
@@ -224,7 +225,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       portDeskRecs.loadsToSimulations
     )
 
-    val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor)
+    val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, dq)
 
     egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
 
@@ -235,8 +236,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
 
   private def startOptimisationGraph(deskRecsProducer: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed],
-                                     persistentQueueActor: ActorRef): (ActorRef, UniqueKillSwitch) = {
-    val crunchGraphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+                                     persistentQueueActor: ActorRef,
+                                     initialQueue: SortedSet[CrunchRequest]): (ActorRef, UniqueKillSwitch) = {
+    val crunchGraphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, initialQueue)
     val (crunchRequestQueueActor, deskRecsKillSwitch) =
       RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, deskRecsProducer).run()
     (crunchRequestQueueActor, deskRecsKillSwitch)
@@ -249,7 +251,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         refreshArrivalsOnStart: Boolean,
                         refreshManifestsOnStart: Boolean,
-                        startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch)): CrunchSystem[typed.ActorRef[FeedTick]] = {
+                        startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch),
+                       ): CrunchSystem[typed.ActorRef[FeedTick]] = {
 
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
 

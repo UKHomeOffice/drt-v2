@@ -6,7 +6,7 @@ import akka.stream._
 import akka.stream.stage._
 import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, RemoveCrunchRequest}
 
-import scala.collection.mutable
+import scala.collection.{SortedSet, mutable}
 
 private object SortedActorRefSource {
   private sealed trait ActorRefStage {
@@ -14,7 +14,8 @@ private object SortedActorRefSource {
   }
 }
 
-final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes: Int, durationMinutes: Int)(implicit system: ActorSystem)
+final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes: Int, durationMinutes: Int, initialQueue: SortedSet[CrunchRequest])
+                                (implicit system: ActorSystem)
   extends GraphStageWithMaterializedValue[SourceShape[CrunchRequest], ActorRef] {
 
   import SortedActorRefSource._
@@ -32,11 +33,10 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
       with ActorRefStage {
       override protected def logSource: Class[_] = classOf[SortedActorRefSource]
 
-      private val buffer: mutable.SortedSet[CrunchRequest] = mutable.SortedSet[CrunchRequest]()
+      private val buffer: mutable.SortedSet[CrunchRequest] = mutable.SortedSet[CrunchRequest]() ++ initialQueue
 
       override protected def stageActorName: String =
         inheritedAttributes.get[Attributes.Name].map(_.n).getOrElse(super.stageActorName)
-
 
       val ref: ActorRef = getEagerStageActor(eagerMaterializer) {
         case (_, m: CrunchRequest @unchecked) =>

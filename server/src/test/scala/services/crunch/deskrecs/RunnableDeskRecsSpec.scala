@@ -35,6 +35,7 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
+import scala.collection.SortedSet
 import scala.collection.immutable.{Map, Seq, SortedMap}
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
@@ -118,7 +119,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
     )
 
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet())
 
     RunnableOptimisation.createGraph(crunchGraphSource, mockPortStateActor, deskRecsProducer).run()
   }

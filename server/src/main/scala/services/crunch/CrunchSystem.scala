@@ -79,7 +79,6 @@ case class CrunchProps[FT](logLabel: String = "",
                            touchdownPredictionsForArrivalsDiff: ArrivalsDiff => Future[ArrivalsDiff],
                           )
 
-
 object CrunchSystem {
 
   val log: Logger = LoggerFactory.getLogger(getClass)

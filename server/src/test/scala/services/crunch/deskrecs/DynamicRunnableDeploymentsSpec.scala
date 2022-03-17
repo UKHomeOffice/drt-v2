@@ -18,6 +18,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
+import scala.collection.SortedSet
 import scala.collection.immutable.Map
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -54,7 +55,7 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
       staffToDeskLimits,
       desksAndWaitsProvider.loadsToSimulations)
 
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet())
 
     val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, deskRecs).run()
     queue ! request

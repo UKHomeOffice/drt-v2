@@ -4,7 +4,7 @@ import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, 
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, ShiftsActor, StaffMovementsActor}
+import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, GetState, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
@@ -24,6 +24,7 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services.SDate
 import services.crunch.CrunchSystem
+import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import slick.dbio.{DBIOAction, NoStream}
 import slickdb.{ArrivalTable, Tables}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
@@ -32,6 +33,7 @@ import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.MilliTimes
 
+import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
@@ -127,6 +129,8 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         Option[SortedMap[UniqueArrival, Arrival]],
         Option[SortedMap[UniqueArrival, Arrival]],
         Option[FeedSourceStatuses],
+        SortedSet[CrunchRequest],
+        SortedSet[CrunchRequest],
         )] = {
       for {
         lps <- initialFlightsPortState(portStateActor, params.forecastMaxDays)
@@ -134,11 +138,13 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         fa <- initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
         la <- initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
         aclStatus <- forecastBaseArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
-      } yield (lps, ba, fa, la, aclStatus)
+        crunchQueue <- persistentCrunchQueueActor.ask(GetState).mapTo[SortedSet[CrunchRequest]]
+        deploymentQueue <- persistentCrunchQueueActor.ask(GetState).mapTo[SortedSet[CrunchRequest]]
+      } yield (lps, ba, fa, la, aclStatus, crunchQueue, deploymentQueue)
     }
 
     futurePortStates.onComplete {
-      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeAclStatus)) =>
+      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeAclStatus, crunchQueue, deploymentQueue)) =>
         system.log.info(s"Successfully restored initial state for App")
 
         val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
@@ -149,7 +155,8 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           initialLiveArrivals = maybeLiveArrivals,
           refreshArrivalsOnStart = params.refreshArrivalsOnStart,
           refreshManifestsOnStart = params.refreshManifestsOnStart,
-          startDeskRecs = startDeskRecs)
+          startDeskRecs = startDeskRecs(crunchQueue, deploymentQueue),
+        )
 
         fcstBaseActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)
         fcstActor ! Enable(crunchInputs.forecastArrivalsResponse)
