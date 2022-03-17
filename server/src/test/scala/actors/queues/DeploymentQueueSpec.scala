@@ -15,13 +15,15 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
+import scala.collection.SortedSet
+
 
 class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
   val myNow: () => SDateLike = () => SDate("2020-05-06", Crunch.europeLondonTimeZone)
   val durationMinutes = 60
 
   def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int): ActorRef = {
-    val source = new SortedActorRefSource(TestProbe().ref, crunchOffsetMinutes, durationMinutes)
+    val source = new SortedActorRefSource(TestProbe().ref, crunchOffsetMinutes, durationMinutes, SortedSet())
     val graph = GraphDSL.create(source) {
       implicit builder =>
         crunchRequests =>

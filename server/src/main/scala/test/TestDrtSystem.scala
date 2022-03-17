@@ -25,6 +25,7 @@ import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
+import scala.collection.SortedSet
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -167,7 +168,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
       initialLiveArrivals = None,
       refreshArrivalsOnStart = false,
       refreshManifestsOnStart = false,
-      startDeskRecs = startDeskRecs)
+      startDeskRecs = startDeskRecs(SortedSet(), SortedSet()))
 
     liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
