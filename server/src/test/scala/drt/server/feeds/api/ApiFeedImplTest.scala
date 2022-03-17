@@ -27,10 +27,14 @@ case class MockManifestArrivalKeys(keysWithProcessedAts: List[Iterable[(UniqueAr
 }
 
 case class MockManifestProcessor(probe: ActorRef) extends ManifestProcessor {
+  override def reportNoNewData(processedAt: MillisSinceEpoch): Future[Done] =
+    Future.successful(Done)
+
   override def process(uniqueArrivalKey: UniqueArrivalKey, processedAt: MillisSinceEpoch): Future[Done] = {
     probe ! (uniqueArrivalKey, processedAt)
     Future.successful(Done)
   }
+
 }
 
 class ApiFeedImplTest extends CrunchTestLike {

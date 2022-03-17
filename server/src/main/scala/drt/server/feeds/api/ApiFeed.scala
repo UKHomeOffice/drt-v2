@@ -31,7 +31,10 @@ case class ApiFeedImpl(arrivalKeyProvider: ManifestArrivalKeys,
         }
       }
       .throttle(1, throttle)
-      .map { case (_, keys) => keys }
+      .map { case (marker, keys) =>
+        if (keys.isEmpty) manifestProcessor.reportNoNewData(marker)
+        keys
+      }
       .mapConcat(identity)
       .mapAsync(1) {
         case (uniqueArrivalKey, processedAt) =>
