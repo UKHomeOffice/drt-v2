@@ -216,6 +216,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       DynamicQueueStatusProvider(airportConfig, egatesProvider)
     )
 
+    log.info(s"Initial crunchqueue: ${cq.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
     val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor, cq)
 
     val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
@@ -225,6 +226,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       portDeskRecs.loadsToSimulations
     )
 
+    log.info(s"Initial deploymentqueue: ${dq.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
     val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, dq)
 
     egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
