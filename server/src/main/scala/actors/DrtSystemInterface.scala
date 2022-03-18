@@ -200,7 +200,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val startDeskRecs: (SortedSet[CrunchRequest], SortedSet[CrunchRequest]) => () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch) = (cq, dq) => () => {
     val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
 
-    implicit val timeout: Timeout = new Timeout(1 second)
+    implicit val timeout: Timeout = new Timeout(10.seconds)
 
     val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
 
