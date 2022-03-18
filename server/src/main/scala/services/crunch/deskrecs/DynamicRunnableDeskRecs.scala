@@ -191,7 +191,16 @@ object DynamicRunnableDeskRecs {
       }
       .flatMapConcat {
         case (crunchRequest, flights, manifestsSource) =>
-          manifestsSource.fold[List[ManifestLike]](List[ManifestLike]())(_ :+ _).map(manifests => (crunchRequest, flights, manifests))
+          manifestsSource
+            .fold[List[ManifestLike]](List[ManifestLike]()) { case (acc, next) =>
+              log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: folding manifests")
+              acc :+ next
+//              _ :+ _
+            }
+            .map { manifests =>
+              log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: folded all manifests")
+              (crunchRequest, flights, manifests)
+            }
       }
       .map { case (crunchRequest, flights, manifests) =>
         log.info(f"Adding historic manifests to flights")
