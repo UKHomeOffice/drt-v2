@@ -12,14 +12,32 @@ import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage}
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, Splits, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
-import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.{NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources._
-import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.Bhx
 
 class SplitsCalculatorSpec extends CrunchTestLike {
   val config: AirportConfig = Bhx.config
+
+  "A SplitsCalculator" should {
+    "Not produce ApiPaxTypeAndQueueCounts for SplitRatios with a zero ratio value" in {
+      val terminalRatios: Map[Terminal, SplitRatios] = Map(
+        T1 -> SplitRatios(Iterable(
+          SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk), 0d),
+          SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.NonEeaDesk), 1d),
+        ), SplitSources.TerminalAverage))
+      val allocator = PaxTypeQueueAllocation(
+        B5JPlusTypeAllocator,
+        TerminalQueueAllocator(defaultAirportConfig.terminalPaxTypeQueueAllocation))
+
+      val calc = SplitsCalculator(allocator, terminalRatios, AdjustmentsNoop)
+      val result = calc.terminalDefaultSplits(T1)
+      result === Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, NonEeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage)
+    }
+  }
 
   "Concerning BestAvailableManifests" >> {
     def apiManifest(passengerProfiles: List[ManifestPassengerProfile]): BestAvailableManifest = {
@@ -321,7 +339,6 @@ class SplitsCalculatorSpec extends CrunchTestLike {
     "Given a splits calculator with BHX's terminal pax splits " +
       "When I ask for the default splits for T2 " +
       "I should see no EGate split" >> {
-
       val paxTypeQueueAllocation = PaxTypeQueueAllocation(
         B5JPlusWithTransitTypeAllocator,
         TerminalQueueAllocatorWithFastTrack(config.terminalPaxTypeQueueAllocation))
@@ -330,7 +347,6 @@ class SplitsCalculatorSpec extends CrunchTestLike {
 
       val expected = Splits(Set(
         ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 4.0, None, None),
-        ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 0.0, None, None),
         ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 92.0, None, None),
         ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 4.0, None, None)),
         TerminalAverage, None, Percentage)
@@ -548,7 +564,6 @@ class SplitsCalculatorSpec extends CrunchTestLike {
 
             val expected = Splits(Set(
               ApiPaxTypeAndQueueCount(NonVisaNational, Queues.NonEeaDesk, 4.0, None, None),
-              ApiPaxTypeAndQueueCount(EeaNonMachineReadable, Queues.EeaDesk, 0.0, None, None),
               ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 92.0, None, None),
               ApiPaxTypeAndQueueCount(VisaNational, Queues.NonEeaDesk, 4.0, None, None)),
               TerminalAverage, None, Percentage)

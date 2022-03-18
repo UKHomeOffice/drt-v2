@@ -17,7 +17,8 @@ trait PortDesksAndWaitsProviderLike {
   val minutesToCrunch: Int
   val crunchOffsetMinutes: Int
 
-  def flightsToLoads(flights: FlightsWithSplits,
+  def flightsToLoads(minuteMillis: NumericRange[MillisSinceEpoch],
+                     flights: FlightsWithSplits,
                      redListUpdates: RedListUpdates,
                      terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
                     (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, LoadMinute]

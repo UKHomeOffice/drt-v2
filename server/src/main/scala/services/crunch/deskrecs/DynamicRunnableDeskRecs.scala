@@ -79,7 +79,9 @@ object DynamicRunnableDeskRecs {
           for {
             redListUpdates <- redListUpdatesProvider()
             statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(crunchDay.minutesInMillis)
-            deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, portDesksAndWaitsProvider.flightsToLoads(FlightsWithSplits(flights), redListUpdates, queueStatusesProvider(statuses)), maxDesksProviders)
+            queueStatusProvider = queueStatusesProvider(statuses)
+            loads = portDesksAndWaitsProvider.flightsToLoads(crunchDay.minutesInMillis, FlightsWithSplits(flights), redListUpdates, queueStatusProvider)
+            deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, loads, maxDesksProviders)
           } yield {
             log.info(s"Crunch finished: (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
             deskRecs

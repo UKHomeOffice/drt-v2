@@ -15,14 +15,15 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.ExecutionContext
 
 
 trait WorkloadCalculatorLike {
   val defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]]
 
-  def flightLoadMinutes(flights: FlightsWithSplits,
+  def flightLoadMinutes(minuteMillis: NumericRange[MillisSinceEpoch],
+                        flights: FlightsWithSplits,
                         redListUpdates: RedListUpdates,
                         terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
                        (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes
@@ -65,17 +66,19 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override def flightLoadMinutes(flights: FlightsWithSplits,
+  override def flightLoadMinutes(minuteMillis: NumericRange[MillisSinceEpoch],
+                                 flights: FlightsWithSplits,
                                  redListUpdates: RedListUpdates,
                                  terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
                                 (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes =
     flightsWithPcpWorkload(combineCodeShares(flights.flights.values), redListUpdates).toList
       .foldLeft(SplitMinutes(Map())) {
         case (acc, fws) =>
-          acc ++ flightToFlightSplitMinutes(fws, terminalQueueStatuses(fws.apiFlight.Terminal))
+          acc ++ flightToFlightSplitMinutes(minuteMillis, fws, terminalQueueStatuses(fws.apiFlight.Terminal))
       }
 
-  def flightToFlightSplitMinutes(flightWithSplits: ApiFlightWithSplits,
+  def flightToFlightSplitMinutes(minuteMillis: NumericRange[MillisSinceEpoch],
+                                 flightWithSplits: ApiFlightWithSplits,
                                  statusAt: (Queue, MillisSinceEpoch) => QueueStatus)
                                 (implicit ec: ExecutionContext): Iterable[FlightSplitMinute] = {
 
@@ -89,7 +92,11 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
 
           val paxTypesAndQueuesMinusTransit = paxTypeAndQueueCounts.filterNot(_.queueType == Queues.Transfer)
 
-          flight.paxDeparturesByMinute(20)
+          flight
+            .paxDeparturesByMinute(20)
+            .filter {
+              case (minute, _) => minuteMillis.contains(minute)
+            }
             .flatMap {
               case (minuteMillis, flightPaxInMinute) =>
                 paxTypesAndQueuesMinusTransit
@@ -98,7 +105,7 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                       queuesToTry.find(statusAt(_, minuteMillis) == Open) match {
                         case Some(queue) => queue
                         case None =>
-                          log.error(s"Failed to find alternative queue for $pt ($queuesToTry). Reverting to $originalQueue")
+                          log.error(s"Failed to find alternative queue (out of $queuesToTry) for $pt at ${SDate(minuteMillis).toISOString()}. Reverting to $originalQueue")
                           originalQueue
                       }
                     }
@@ -107,7 +114,7 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                       case Closed =>
                         val fallbacks = fallbacksProvider.availableFallbacks(flight.Terminal, queue, pt)
                         val newQueue = findAlternativeQueue(queue, fallbacks)
-                        log.info(s"$queue is closed. Redirecting to $newQueue")
+                        log.info(s"$queue is closed at ${SDate(minuteMillis).toISOString()}. Redirecting to $newQueue")
                         ptqc.copy(queueType = newQueue)
                       case Open => ptqc
                     }

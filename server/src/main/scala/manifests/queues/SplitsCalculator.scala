@@ -22,8 +22,8 @@ case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
 
   def terminalDefaultSplits(terminalName: Terminal): Splits = {
     val emptySplits = SplitRatios(InvalidSource, List())
-    val portDefault = terminalDefaultSplitRatios.getOrElse(terminalName, emptySplits).splits.map {
-      case SplitRatio(PaxTypeAndQueue(paxType, queue), ratio) =>
+    val portDefault = terminalDefaultSplitRatios.getOrElse(terminalName, emptySplits).splits.collect {
+      case SplitRatio(PaxTypeAndQueue(paxType, queue), ratio) if ratio > 0 =>
         ApiPaxTypeAndQueueCount(paxType, queue, ratio * 100, None, None)
     }
 

@@ -51,17 +51,23 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
       }.ref
 
       private def tryPushElement(): Unit = {
+        log.info(s"$getClass tryPushElement")
         if (isAvailable(out)) {
+          log.info(s"$getClass tryPushElement isAvailable ${buffer.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
           buffer.headOption.foreach { e =>
+            log.info(s"$getClass tryPushElement pushing: $e")
             persistentActor ! RemoveCrunchRequest(e)
             buffer -= e
             push(out, e)
           }
+        } else {
+          log.info(s"$getClass tryPushElement is not available")
         }
       }
 
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
+          log.info(s"onPull called")
           tryPushElement()
         }
       })
