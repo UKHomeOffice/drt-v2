@@ -60,14 +60,17 @@ object DynamicRunnableDeskRecs {
                           (implicit ec: ExecutionContext, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
-        case (cr, flights) =>
+        case (crunchRequest, flights) =>
           splitsSink
             .ask(SplitsForArrivals(flights.map(fws => (fws.unique, fws.splits)).toMap))
-            .map(_ => (cr, flights))
+            .map { _ =>
+              log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: updated for arrivals")
+              (crunchRequest, flights)
+            }
             .recover {
               case t =>
                 log.error(s"Failed to updates splits for arrivals", t)
-                (cr, flights)
+                (crunchRequest, flights)
             }
       }
 
@@ -119,7 +122,11 @@ object DynamicRunnableDeskRecs {
     Flow[CrunchRequest]
       .mapAsync(1) { crunchRequest =>
         flightsProvider(crunchRequest)
-          .map(flightsStream => Option((crunchRequest, flightsStream)))
+          .map { flightsStream =>
+            log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: got arrivals")
+
+            Option((crunchRequest, flightsStream))
+          }
           .recover {
             case t =>
               log.error(s"Failed to fetch flights stream for crunch request ${crunchRequest.localDate}", t)
@@ -130,8 +137,9 @@ object DynamicRunnableDeskRecs {
         case Some((crunchRequest, flights)) => (crunchRequest, flights)
       }
       .flatMapConcat {
-        case (crunchRequest, flights) =>
-          flights.fold(List[Arrival]())(_ ++ _).map(flights => (crunchRequest, flights))
+        case (crunchRequest, flightsStream) =>
+          log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: folding arrivals")
+          flightsStream.fold(List[Arrival]())(_ ++ _).map(flights => (crunchRequest, flights))
       }
 
   def addSplits(liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
@@ -142,7 +150,10 @@ object DynamicRunnableDeskRecs {
       .mapAsync(1) {
         case (crunchRequest, flightsSource) =>
           liveManifestsProvider(crunchRequest)
-            .map(manifestsStream => Option((crunchRequest, flightsSource, manifestsStream)))
+            .map { manifestsStream =>
+              log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: got live manifests")
+              Option((crunchRequest, flightsSource, manifestsStream))
+            }
             .recover {
               case t =>
                 log.error(s"Failed to fetch live manifests", t)
@@ -166,7 +177,7 @@ object DynamicRunnableDeskRecs {
         val arrivalsToLookup = flights.filter(_.bestSplits.isEmpty).map(_.apiFlight)
         historicManifestsProvider(arrivalsToLookup)
           .map { manifests =>
-            log.info(f"Looking up ${arrivalsToLookup.size} arrivals' historic manifests")
+            log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: got historic manifests")
             Option((crunchRequest, flights, manifests))
           }
         .recover {
@@ -195,6 +206,7 @@ object DynamicRunnableDeskRecs {
               flightWithNoSplits.copy(splits = Set(terminalDefault))
             case flightWithSplits => flightWithSplits
           }
+          log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: got all splits")
           (crunchRequest, allFlightsWithSplits)
       }
 
