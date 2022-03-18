@@ -34,7 +34,6 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
       override protected def logSource: Class[_] = classOf[SortedActorRefSource]
 
       private val buffer: mutable.SortedSet[CrunchRequest] = mutable.SortedSet[CrunchRequest]() ++ initialQueue
-      log.info(s"SortedActorRefSource initial buffer: ${buffer.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
 
       override protected def stageActorName: String =
         inheritedAttributes.get[Attributes.Name].map(_.n).getOrElse(super.stageActorName)
@@ -54,7 +53,7 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
       private def tryPushElement(): Unit = {
         log.info(s"$getClass tryPushElement")
         if (isAvailable(out)) {
-          log.info(s"$getClass tryPushElement isAvailable ${buffer.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
+          log.info(s"$getClass tryPushElement isAvailable. buffer: ${buffer.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
           buffer.headOption.foreach { e =>
             log.info(s"$getClass tryPushElement pushing: $e")
             persistentActor ! RemoveCrunchRequest(e)
