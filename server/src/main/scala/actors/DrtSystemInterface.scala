@@ -217,7 +217,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     )
 
     log.info(s"Initial crunchqueue: ${cq.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
-    val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor, cq)
+    val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor, cq, enableLog = true)
 
     val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
       OptimisationProviders.loadsProvider(minuteLookups.queueMinutesActor),
@@ -239,8 +239,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   private def startOptimisationGraph(deskRecsProducer: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed],
                                      persistentQueueActor: ActorRef,
-                                     initialQueue: SortedSet[CrunchRequest]): (ActorRef, UniqueKillSwitch) = {
-    val crunchGraphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, initialQueue)
+                                     initialQueue: SortedSet[CrunchRequest], enableLog: Boolean = false): (ActorRef, UniqueKillSwitch) = {
+    val crunchGraphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, initialQueue, enableLog)
     val (crunchRequestQueueActor, deskRecsKillSwitch) =
       RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, deskRecsProducer).run()
     (crunchRequestQueueActor, deskRecsKillSwitch)

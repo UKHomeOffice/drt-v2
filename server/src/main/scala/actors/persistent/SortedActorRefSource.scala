@@ -14,7 +14,7 @@ private object SortedActorRefSource {
   }
 }
 
-final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes: Int, durationMinutes: Int, initialQueue: SortedSet[CrunchRequest])
+final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes: Int, durationMinutes: Int, initialQueue: SortedSet[CrunchRequest], enableLog: Boolean = false)
                                 (implicit system: ActorSystem)
   extends GraphStageWithMaterializedValue[SourceShape[CrunchRequest], ActorRef] {
 
@@ -51,23 +51,23 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
       }.ref
 
       private def tryPushElement(): Unit = {
-        log.info(s"$getClass tryPushElement")
+        if (enableLog) log.info(s"$getClass tryPushElement")
         if (isAvailable(out)) {
-          log.info(s"$getClass tryPushElement isAvailable. buffer: ${buffer.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
+          if (enableLog) log.info(s"$getClass tryPushElement isAvailable. buffer: ${buffer.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
           buffer.headOption.foreach { e =>
-            log.info(s"$getClass tryPushElement pushing: $e")
+            if (enableLog) log.info(s"$getClass tryPushElement pushing: $e")
             persistentActor ! RemoveCrunchRequest(e)
             buffer -= e
             push(out, e)
           }
         } else {
-          log.info(s"$getClass tryPushElement is not available")
+          if (enableLog) log.info(s"$getClass tryPushElement is not available")
         }
       }
 
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
-          log.info(s"onPull called")
+          if (enableLog) log.info(s"onPull called")
           tryPushElement()
         }
       })
@@ -75,4 +75,5 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
 
     (stage, stage.ref)
   }
+
 }
