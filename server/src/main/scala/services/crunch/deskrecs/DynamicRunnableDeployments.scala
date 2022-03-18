@@ -26,15 +26,42 @@ object DynamicRunnableDeployments {
                                  (implicit executionContext: ExecutionContext): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] = {
     Flow[CrunchRequest]
       .mapAsync(1) { request =>
-        loadsProvider(request).map { minutes => (request, minutes) }
+        loadsProvider(request)
+          .map { minutes => Option((request, minutes)) }
+          .recover {
+            case t =>
+              log.error(s"Failed to fetch loads", t)
+              None
+          }
+      }
+      .collect {
+        case Some(requestAndMinutes) => requestAndMinutes
       }
       .mapAsync(1) { case (request, loads) =>
-        staffProvider(request).map(staff => (request, loads, staffToDeskLimits(staff)))
+        staffProvider(request)
+          .map(staff => Option((request, loads, staffToDeskLimits(staff))))
+          .recover {
+            case t =>
+              log.error(s"Failed to fetch staff", t)
+              None
+          }
+      }
+      .collect {
+        case Some(requestWithData) => requestWithData
       }
       .mapAsync(1) {
         case (request, loads, deskLimitsByTerminal) =>
           log.info(s"Simulating ${request.durationMinutes} minutes (${request.start.toISOString()} to ${request.end.toISOString()})")
           loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal)
+            .map(minutes => Option(minutes))
+            .recover {
+              case t =>
+                log.error(s"Failed to fetch staff", t)
+                None
+            }
+      }
+      .collect {
+        case Some(minutes) => minutes
       }
   }
 }

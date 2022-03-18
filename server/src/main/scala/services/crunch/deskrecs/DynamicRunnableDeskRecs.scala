@@ -64,6 +64,11 @@ object DynamicRunnableDeskRecs {
           splitsSink
             .ask(SplitsForArrivals(flights.map(fws => (fws.unique, fws.splits)).toMap))
             .map(_ => (cr, flights))
+            .recover {
+              case t =>
+                log.error(s"Failed to updates splits for arrivals", t)
+                (cr, flights)
+            }
       }
 
   private def toDeskRecs(maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
@@ -76,7 +81,7 @@ object DynamicRunnableDeskRecs {
       .mapAsync(1) {
         case (crunchDay, flights) =>
           log.info(s"Crunch starting: ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
-          for {
+          val eventualDeskRecs = for {
             redListUpdates <- redListUpdatesProvider()
             statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(crunchDay.minutesInMillis)
             queueStatusProvider = queueStatusesProvider(statuses)
@@ -84,12 +89,20 @@ object DynamicRunnableDeskRecs {
             deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, loads, maxDesksProviders)
           } yield {
             log.info(s"Crunch finished: (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
-            deskRecs
+            Option(deskRecs)
           }
+          eventualDeskRecs.recover {
+            case t =>
+              log.error(s"Failed to crunch $crunchDay", t)
+              None
+          }
+      }
+      .collect {
+        case Some(minutes) => minutes
       }
   }
 
-  def queueStatusesProvider(statuses: Map[Terminal, Map[Queue, Map[MillisSinceEpoch, QueueStatus]]]): Terminal => (Queue, MillisSinceEpoch) => QueueStatus =
+  private def queueStatusesProvider(statuses: Map[Terminal, Map[Queue, Map[MillisSinceEpoch, QueueStatus]]]): Terminal => (Queue, MillisSinceEpoch) => QueueStatus =
     (terminal: Terminal) => (queue: Queue, time: MillisSinceEpoch) => statuses.getOrElse(terminal, {
       log.error(s"terminal $terminal not found")
       Map[Queue, Map[MillisSinceEpoch, QueueStatus]]()
@@ -105,10 +118,20 @@ object DynamicRunnableDeskRecs {
                          (implicit ec: ExecutionContext): Flow[CrunchRequest, (CrunchRequest, List[Arrival]), NotUsed] =
     Flow[CrunchRequest]
       .mapAsync(1) { crunchRequest =>
-        flightsProvider(crunchRequest).map(flightsStream => (crunchRequest, flightsStream))
+        flightsProvider(crunchRequest)
+          .map(flightsStream => Option((crunchRequest, flightsStream)))
+          .recover {
+            case t =>
+              log.error(s"Failed to fetch flights stream for crunch request ${crunchRequest.localDate}", t)
+              None
+          }
       }
-      .flatMapConcat { case (crunchRequest, flights) =>
-        flights.fold(List[Arrival]())(_ ++ _).map(flights => (crunchRequest, flights))
+      .collect {
+        case Some((crunchRequest, flights)) => (crunchRequest, flights)
+      }
+      .flatMapConcat {
+        case (crunchRequest, flights) =>
+          flights.fold(List[Arrival]())(_ ++ _).map(flights => (crunchRequest, flights))
       }
 
   def addSplits(liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
@@ -116,13 +139,24 @@ object DynamicRunnableDeskRecs {
                 splitsCalculator: SplitsCalculator)
                (implicit ec: ExecutionContext): Flow[(CrunchRequest, List[Arrival]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(CrunchRequest, List[Arrival])]
-      .mapAsync(1) { case (crunchRequest, flightsSource) =>
-        liveManifestsProvider(crunchRequest).map(manifestsStream => (crunchRequest, flightsSource, manifestsStream))
+      .mapAsync(1) {
+        case (crunchRequest, flightsSource) =>
+          liveManifestsProvider(crunchRequest)
+            .map(manifestsStream => Option((crunchRequest, flightsSource, manifestsStream)))
+            .recover {
+              case t =>
+                log.error(s"Failed to fetch live manifests", t)
+                None
+            }
       }
-      .flatMapConcat { case (crunchRequest, arrivals, manifestsSource) =>
-        manifestsSource.fold(VoyageManifests.empty)(_ ++ _).map { manifests =>
-          (crunchRequest, arrivals, manifests)
-        }
+      .collect {
+        case Some((crunchRequest, flightsSource, manifestsSource)) => (crunchRequest, flightsSource, manifestsSource)
+      }
+      .flatMapConcat {
+        case (crunchRequest, arrivals, manifestsSource) =>
+          manifestsSource.fold(VoyageManifests.empty)(_ ++ _).map { manifests =>
+            (crunchRequest, arrivals, manifests)
+          }
       }
       .map { case (crunchRequest, arrivals, manifests) =>
         val manifestsByKey = arrivalKeysToManifests(manifests.manifests)
@@ -130,10 +164,19 @@ object DynamicRunnableDeskRecs {
       }
       .mapAsync(1) { case (crunchRequest, flights) =>
         val arrivalsToLookup = flights.filter(_.bestSplits.isEmpty).map(_.apiFlight)
-        historicManifestsProvider(arrivalsToLookup).map { manifests =>
-          log.info(f"Looking up ${arrivalsToLookup.size} arrivals' historic manifests")
-          (crunchRequest, flights, manifests)
+        historicManifestsProvider(arrivalsToLookup)
+          .map { manifests =>
+            log.info(f"Looking up ${arrivalsToLookup.size} arrivals' historic manifests")
+            Option((crunchRequest, flights, manifests))
+          }
+        .recover {
+          case t =>
+            log.error(s"Failed to fetch historic manifests", t)
+            None
         }
+      }
+      .collect {
+        case Some((crunchRequest, flightsSource, manifestsSource)) => (crunchRequest, flightsSource, manifestsSource)
       }
       .flatMapConcat {
         case (crunchRequest, flights, manifestsSource) =>
