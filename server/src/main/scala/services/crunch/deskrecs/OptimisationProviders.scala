@@ -10,7 +10,8 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{TM, TQM}
-import manifests.ManifestLookupLike
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
+import org.slf4j.LoggerFactory
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
@@ -25,15 +26,24 @@ import scala.collection.immutable.Map
 import scala.concurrent.{ExecutionContext, Future}
 
 object OptimisationProviders {
+  val log = LoggerFactory.getLogger(getClass)
+
   def historicManifestsProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
                                (implicit mat: Materializer, ec: ExecutionContext): HistoricManifestsProvider = arrivals => {
-    Future(
+//    Future.successful(
       Source(arrivals.toList)
         .mapAsync(1) { arrival =>
-          manifestLookupService.maybeBestAvailableManifest(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+          manifestLookupService
+            .maybeBestAvailableManifest(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+            .map { case (_, maybeManifest) => maybeManifest}
+            .recover {
+              case t =>
+                log.error(s"Failed to get historic manifest for ${arrival.unique}")
+                None
+            }
         }
-        .collect { case (_, Some(bam)) => bam }
-    )
+        .collect { case Some(bam) => bam }
+//    )
   }
 
   def arrivalsProvider(arrivalsActor: ActorRef)

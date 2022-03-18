@@ -6,6 +6,7 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import manifests.passengers.BestAvailableManifest
 import services.crunch.VoyageManifestGenerator.euPassport
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.OptimisationProviders
 import services.crunch.{CrunchTestLike, VoyageManifestGenerator}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
@@ -30,9 +31,9 @@ class ManifestProviderSpec extends CrunchTestLike {
   val probe: TestProbe = TestProbe("manifests")
 
   "Given a mock lookup returning a BestAvailableManifest" >> {
-    val lookup = OptimisationProviders.historicManifestsProvider(PortCode("STN"), mockLookupService)
+    val lookup: HistoricManifestsProvider = OptimisationProviders.historicManifestsProvider(PortCode("STN"), mockLookupService)
 
-    lookup(Seq(arrival)).map(_.runWith(Sink.seq)).flatten.map(probe.ref ! _)
+    lookup(Seq(arrival)).runWith(Sink.seq).map(probe.ref ! _)
 
     probe.expectMsg(Iterable(manifestForArrival))
 

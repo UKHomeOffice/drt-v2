@@ -68,7 +68,7 @@ object OptimiserMocks {
   }
 
   def mockHistoricManifestsProviderNoop(implicit ec: ExecutionContext): HistoricManifestsProvider = {
-    _: Iterable[Arrival] => Future(Source(List()))
+    _: Iterable[Arrival] => Source(List())
   }
 
   def mockLiveManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]])
