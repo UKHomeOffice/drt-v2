@@ -59,12 +59,12 @@ object OptimiserMocks {
   }
 
   def mockFlightsProvider(arrivals: List[Arrival])
-                         (implicit ec: ExecutionContext): CrunchRequest => Future[Source[List[Arrival], NotUsed]] =
-    _ => Future(Source(List(arrivals)))
+                         (implicit ec: ExecutionContext): CrunchRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]] =
+    _ => Future.successful(Source(List(arrivals.map(a => ApiFlightWithSplits(a, Set())))))
 
 
   def mockLiveManifestsProviderNoop(implicit ec: ExecutionContext): CrunchRequest => Future[Source[VoyageManifests, NotUsed]] = {
-    _ => Future(Source(List()))
+    _ => Future.successful(Source(List()))
   }
 
   def mockHistoricManifestsProviderNoop(implicit ec: ExecutionContext): HistoricManifestsProvider = {
@@ -78,7 +78,7 @@ object OptimiserMocks {
       case None => VoyageManifests(Set())
     }
 
-    _ => Future(Source(List(manifests)))
+    _ => Future.successful(Source(List(manifests)))
   }
 
   def mockHistoricManifestsProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
@@ -212,7 +212,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       mockHistoricManifestsProvider(maybeHistoricArrivalManifestPax),
       splitsCalculator)
 
-    val value1 = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(arrival))))
+    val value1 = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(ApiFlightWithSplits(arrival, Set())))))
     val result = Await.result(value1.via(flow).runWith(Sink.seq), 1.second)
 
     result.head._2.exists(_.bestSplits.nonEmpty) && result.head._2.exists(_.splits.map(_.source) === expectedSplitsSources)

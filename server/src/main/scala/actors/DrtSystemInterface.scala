@@ -205,7 +205,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
 
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-      arrivalsProvider = OptimisationProviders.arrivalsProvider(portStateActor),
+      arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
       liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
       historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
       splitsCalculator = splitsCalculator,

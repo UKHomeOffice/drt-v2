@@ -19,7 +19,8 @@ import services.TimeLogger
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Splits}
+import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -39,7 +40,7 @@ object DynamicRunnableDeskRecs {
 
   type FlightsToLoads = (FlightsWithSplits, RedListUpdates) => Map[TQM, Crunch.LoadMinute]
 
-  def crunchRequestsToQueueMinutes(arrivalsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]],
+  def crunchRequestsToQueueMinutes(arrivalsProvider: CrunchRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                                    liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
                                    historicManifestsProvider: HistoricManifestsProvider,
                                    splitsCalculator: SplitsCalculator,
@@ -117,14 +118,13 @@ object DynamicRunnableDeskRecs {
       Closed
     })
 
-  private def addArrivals(flightsProvider: CrunchRequest => Future[Source[List[Arrival], NotUsed]])
-                         (implicit ec: ExecutionContext): Flow[CrunchRequest, (CrunchRequest, List[Arrival]), NotUsed] =
+  private def addArrivals(flightsProvider: CrunchRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]])
+                         (implicit ec: ExecutionContext): Flow[CrunchRequest, (CrunchRequest, List[ApiFlightWithSplits]), NotUsed] =
     Flow[CrunchRequest]
       .mapAsync(1) { crunchRequest =>
         flightsProvider(crunchRequest)
           .map { flightsStream =>
             log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: got arrivals")
-
             Option((crunchRequest, flightsStream))
           }
           .recover {
@@ -139,14 +139,14 @@ object DynamicRunnableDeskRecs {
       .flatMapConcat {
         case (crunchRequest, flightsStream) =>
           log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: folding arrivals")
-          flightsStream.fold(List[Arrival]())(_ ++ _).map(flights => (crunchRequest, flights))
+          flightsStream.fold(List[ApiFlightWithSplits]())(_ ++ _).map(flights => (crunchRequest, flights))
       }
 
   def addSplits(liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
                 historicManifestsProvider: Iterable[Arrival] => Source[ManifestLike, NotUsed],
                 splitsCalculator: SplitsCalculator)
-               (implicit ec: ExecutionContext, mat: Materializer): Flow[(CrunchRequest, List[Arrival]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
-    Flow[(CrunchRequest, List[Arrival])]
+               (implicit ec: ExecutionContext, mat: Materializer): Flow[(CrunchRequest, List[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+    Flow[(CrunchRequest, List[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flightsSource) =>
           liveManifestsProvider(crunchRequest)
@@ -164,17 +164,17 @@ object DynamicRunnableDeskRecs {
         case Some((crunchRequest, flightsSource, manifestsSource)) => (crunchRequest, flightsSource, manifestsSource)
       }
       .flatMapConcat {
-        case (crunchRequest, arrivals, manifestsSource) =>
-          manifestsSource.fold(VoyageManifests.empty)(_ ++ _).map { manifests =>
-            (crunchRequest, arrivals, manifests)
-          }
+        case (crunchRequest, arrivals, manifestsSource) => manifestsSource
+          .fold(VoyageManifests.empty)(_ ++ _)
+          .map(manifests => (crunchRequest, arrivals, manifests))
       }
       .map { case (crunchRequest, arrivals, manifests) =>
         val manifestsByKey = arrivalKeysToManifests(manifests.manifests)
-        (crunchRequest, addManifests(arrivals.map(ApiFlightWithSplits.fromArrival), manifestsByKey, splitsCalculator.splitsForArrival))
+        (crunchRequest, addManifests(arrivals, manifestsByKey, splitsCalculator.splitsForArrival))
       }
       .mapAsync(1) { case (crunchRequest, flights) =>
         val arrivalsToLookup = flights.filter(_.bestSplits.isEmpty).map(_.apiFlight)
+        log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: looking up ${arrivalsToLookup.size} historic manifests")
         historicManifestsProvider(arrivalsToLookup)
           .map { m =>
             log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: got historic manifest for ${m.maybeKey}")
@@ -186,18 +186,6 @@ object DynamicRunnableDeskRecs {
             (crunchRequest, flights, manifests)
           }
       }
-//      .flatMapConcat {
-//        case (crunchRequest, flights, manifests) =>
-//          val manifests
-//            .foldLeft[List[ManifestLike]](List[ManifestLike]()) { case (acc, next) =>
-//              log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: folding manifests")
-//              acc :+ next
-//            }
-//            .map { manifests =>
-//              log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: folded all manifests")
-//              (crunchRequest, flights, manifests)
-//            }
-//      }
       .map { case (crunchRequest, flights, manifests) =>
         log.info(f"Adding historic manifests to flights")
         val manifestsByKey = arrivalKeysToManifests(manifests)
@@ -205,12 +193,18 @@ object DynamicRunnableDeskRecs {
       }
       .map {
         case (crunchRequest, flights) =>
-          val allFlightsWithSplits = flights.map {
-            case flightWithNoSplits if flightWithNoSplits.bestSplits.isEmpty =>
-              val terminalDefault = splitsCalculator.terminalDefaultSplits(flightWithNoSplits.apiFlight.Terminal)
-              flightWithNoSplits.copy(splits = Set(terminalDefault))
-            case flightWithSplits => flightWithSplits
-          }
+          val allFlightsWithSplits = flights
+            .map {
+              case flightWithNoSplits if flightWithNoSplits.bestSplits.isEmpty =>
+                val terminalDefault = splitsCalculator.terminalDefaultSplits(flightWithNoSplits.apiFlight.Terminal)
+                flightWithNoSplits.copy(splits = Set(terminalDefault))
+              case flightWithSplits => flightWithSplits
+            }
+            .map { fws =>
+              if (fws.bestSplits.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages))
+                fws.copy(apiFlight = fws.apiFlight.copy(FeedSources = fws.apiFlight.FeedSources + ApiFeedSource))
+              else fws
+            }
           log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: got all splits")
           (crunchRequest, allFlightsWithSplits)
       }
@@ -227,21 +221,30 @@ object DynamicRunnableDeskRecs {
   def addManifests(flights: Iterable[ApiFlightWithSplits],
                    manifests: Map[ArrivalKey, ManifestLike],
                    splitsForArrival: SplitsForArrival): Iterable[ApiFlightWithSplits] =
-    flights.map { flight =>
-      if (flight.bestSplits.nonEmpty) flight
-      else {
-        val maybeSplits = manifests
+    flights
+      .map { flight =>
+        val maybeNewSplits = manifests
           .get(ArrivalKey(flight.apiFlight))
           .map(splitsForArrival(_, flight.apiFlight))
 
-        val arrival = maybeSplits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages) match {
-          case None => flight.apiFlight
-          case Some(liveSplits) => flight.apiFlight.copy(
-            ApiPax = Option(liveSplits.totalExcludingTransferPax.toInt)
-          )
+        val existingSplits = maybeNewSplits match {
+          case Some(splits) if splits.source == ApiSplitsWithHistoricalEGateAndFTPercentages =>
+            flight.splits.filter(_.source != ApiSplitsWithHistoricalEGateAndFTPercentages)
+          case _ =>
+            flight.splits
         }
 
-        ApiFlightWithSplits(arrival, flight.splits ++ maybeSplits.toSet)
+        flight.copy(splits = existingSplits ++ maybeNewSplits)
       }
-    }
+      .map { flight =>
+        flight.splits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages) match {
+          case None => flight
+          case Some(liveSplits) =>
+            val arrival = flight.apiFlight.copy(
+              ApiPax = Option(liveSplits.totalExcludingTransferPax.toInt),
+              FeedSources = flight.apiFlight.FeedSources + ApiFeedSource,
+            )
+            flight.copy(apiFlight = arrival)
+        }
+      }
 }

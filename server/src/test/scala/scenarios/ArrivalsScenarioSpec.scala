@@ -48,9 +48,8 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     arrival
   )
 
-  def flightsProvider(cr: CrunchRequest): Future[Source[List[Arrival], NotUsed]] = {
-    Future(Source(List(arrivals)))
-  }
+  def flightsProvider(cr: CrunchRequest): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
+    Future.successful(Source(List(arrivals.map(a => ApiFlightWithSplits(a, Set())))))
 
   def manifestsProvider(cr: CrunchRequest): Future[Source[VoyageManifests, NotUsed]] = Future.successful(Source(List()))
 
