@@ -31,7 +31,7 @@ import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiPaxTypeAndQueueCount, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiFeedSource, ApiPaxTypeAndQueueCount, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -172,7 +172,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         val manifestsForArrival = manifestsByKey(manifest)
         val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
 
-        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1)), Set(splits)))
+        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1), FeedSources = arrival.FeedSources + ApiFeedSource), Set(splits)))
       }
 
       "When I have no manifests matching the arrival I should get no splits added to the arrival" >> {
