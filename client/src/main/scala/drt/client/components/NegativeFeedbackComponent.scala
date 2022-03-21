@@ -122,7 +122,7 @@ object NegativeFeedbackComponent {
         )
       }
 
-      <.div(
+      <.div( ^.className := "feedback",
         feedBackButton(Icon.thumbsODown, "negativeFeedback", "btn-danger"),
         negativeFeedbackDialog())
 

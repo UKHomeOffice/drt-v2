@@ -19,7 +19,7 @@ object PositiveFeedbackComponent {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("NegativeFeedbackComponent")
     .render_P(props => {
-      <.div(
+      <.div(^.className := "feedback",
         <.button(Icon.thumbsOUp,
           ^.aria.label := "Positive feedback",
           ^.className := "btn btn-default btn-success",

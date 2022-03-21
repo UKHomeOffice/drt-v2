@@ -173,10 +173,10 @@ object EgatesScheduleEditor {
             case None => EmptyVdom
           },
           MuiGrid(container = true)(
-            MuiGrid(item = true, xs = 6)(
-              MuiGrid(container = true, item = true, spacing = 8)(
-                MuiGrid(item = true, xs = 4)(<.span(^.fontSize := "20px", ^.color := "#666", "Effective from")),
-                MuiGrid(item = true, xs = 4)(<.span(^.fontSize := "20px", ^.color := "#666", "Open gates per bank")),
+            MuiGrid(item = true, xs = 8)(
+              MuiGrid(container = true, item = true, spacing = 12)(
+                MuiGrid(item = true, xs = 4)(<.span(^.fontSize := "1.25rem", ^.color := "#666", "Effective from")),
+                MuiGrid(item = true, xs = 4)(<.span(^.fontSize := "1.25rem", ^.color := "#666", "Open gates per bank")),
                 MuiGrid(item = true, xs = 4, justify = "flex-end", container = true)(
                   MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
                     MuiIcons(Add)(fontSize = "small"),

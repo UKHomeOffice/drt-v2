@@ -103,7 +103,7 @@ object FlightComponents {
   }
 
   def splitsSummaryTooltip(splits: Seq[(String, Int)]): TagMod = {
-    <.table(^.className := "table table-responsive table-striped table-hover table-sm ",
+    <.table(^.className := "table table-flex table-responsive table-striped table-hover table-sm ",
       <.tbody(
         splits.map {
           case (label, paxCount) => <.tr(<.td(s"$paxCount $label"))

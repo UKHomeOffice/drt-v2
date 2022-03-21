@@ -65,7 +65,7 @@ object FlightsWithSplitsTable {
 
       if (sortedFlights.nonEmpty) {
         val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
-        val classesAttr = ^.className := "table table-responsive table-striped table-hover table-sm"
+        val classesAttr = ^.className := "table table-flex table-responsive table-striped table-hover table-sm"
         val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
           "* Passengers from CTA & Red List origins do not contribute to PCP workload"
         else

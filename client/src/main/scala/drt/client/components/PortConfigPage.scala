@@ -32,7 +32,6 @@ object PortConfigPage {
         gateStandWalktime <- props.gateStandWalktime
       } yield
         <.div(
-          ^.className := "port-config",
           <.h3("Port Config"),
           if (user.hasRole(RedListsEdit)) {
             RedListEditor(redListUpdates)
