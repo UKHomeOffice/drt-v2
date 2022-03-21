@@ -52,9 +52,11 @@ object DynamicRunnableDeskRecs {
                                   )
                                   (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] =
     Flow[CrunchRequest]
+      .wireTap(cr => log.info(s"Crunch request processing started ${cr.localDate}"))
       .via(addArrivals(arrivalsProvider))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
       .via(updateSplits(splitsSink))
+      .wireTap(crWithFlights => log.info(s"Crunch request processing finished ${crWithFlights._1.localDate}"))
       .via(toDeskRecs(maxDesksProviders, portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider))
 
   private def updateSplits(splitsSink: ActorRef)
