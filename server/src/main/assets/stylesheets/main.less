@@ -186,7 +186,14 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   color: #008000;
 }
 
-@media (max-width: 100%) {
+@media (max-width: 800px){
+    .table-flex {
+        display: flex;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 800px) {
   .navbar-default .navbar-nav .open .dropdown-menu {
     > li > a {
       color: @colDefault;
@@ -1835,7 +1842,7 @@ div#arrivals {
 }
 
 body {
-  font-size: 1.25rem
+  font-size: 1.45rem
 }
 
 .port-config{
@@ -2094,6 +2101,10 @@ div.access-restricted {
   width: 85%;
   opacity: 95%;
   min-width: 1100px;
+  @media (max-width: 800px){
+    min-width: 800px;
+  }
+  font-size: 1.45rem;
 }
 
 .arrivals-table__body:nth-child(odd) {
@@ -2183,7 +2194,7 @@ div.access-restricted {
 
 .tb-bar {
   background-color: #d5e8fe;
-  font-size: 1.25rem;
+  font-size: 1.45rem;
   font-weight: bold;
   text-align: center;
   border-style: solid;
@@ -2223,7 +2234,7 @@ div.access-restricted {
   border-radius: 15px;
   background-color: #d5e8fe;
   position: relative;
-  font-size: 1.25rem;
+  font-size: 1.45rem;
   font-weight: bold;
   text-align: center;
   color: black;
@@ -2234,7 +2245,7 @@ div.access-restricted {
 
 .terminal-dashboard-side__sidebar_widget__label {
   margin-right: 0.3em;
-    font-size: 1.25rem;
+  font-size: 1.45rem;
 }
 
 .time-slot-changer {
