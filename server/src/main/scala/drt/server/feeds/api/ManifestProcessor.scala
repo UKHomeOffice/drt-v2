@@ -1,6 +1,7 @@
 package drt.server.feeds.api
 
 import akka.Done
+import akka.stream.QueueOfferResult
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
@@ -19,6 +20,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait ManifestProcessor {
   def process(uniqueArrivalKey: UniqueArrivalKey, processedAt: MillisSinceEpoch): Future[Done]
+  def reportNoNewData(processedAt: MillisSinceEpoch): Future[Done]
 }
 
 case class DbManifestProcessor(tables: Tables,
@@ -28,6 +30,11 @@ case class DbManifestProcessor(tables: Tables,
   private val log = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._
+
+  override def reportNoNewData(processedAt: MillisSinceEpoch): Future[Done] =
+    manifestsLiveResponse
+      .offer(ManifestsFeedSuccess(DqManifests(processedAt, Seq())))
+      .map(_ => Done)
 
   override def process(uniqueArrivalKey: UniqueArrivalKey, processedAt: MillisSinceEpoch): Future[Done] =
     manifestForArrivalKey(uniqueArrivalKey).flatMap {
