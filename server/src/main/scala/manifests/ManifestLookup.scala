@@ -86,6 +86,7 @@ case class ManifestLookup(tables: Tables)
         .run(nextQuery(uniqueArrivalKey))
         .flatMap {
           case flightsFound if flightsFound.nonEmpty =>
+            log.info(s"Historic manifest query $queryNumber found ${flightsFound.size} flights to fetch passengers for")
             manifestTriesForScheduled(flightsFound).map { profiles =>
               (uniqueArrivalKey, maybeManifestFromProfiles(uniqueArrivalKey, profiles))
             }
