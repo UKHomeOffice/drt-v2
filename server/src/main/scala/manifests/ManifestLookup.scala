@@ -143,6 +143,8 @@ case class ManifestLookup(tables: Tables)
             departure_port_code,
             voyage_number,
             scheduled_date
+          ORDER BY scheduled_date DESC
+          LIMIT 6
           """.as[(String, String, String, Timestamp)]
   }
 
@@ -171,6 +173,8 @@ case class ManifestLookup(tables: Tables)
             departure_port_code,
             voyage_number,
             scheduled_date
+          ORDER BY scheduled_date DESC
+          LIMIT 6
           """.as[(String, String, String, Timestamp)]
   }
 
@@ -200,7 +204,8 @@ case class ManifestLookup(tables: Tables)
             departure_port_code,
             voyage_number,
             scheduled_date
-          LIMIT 3
+          ORDER BY scheduled_date DESC
+          LIMIT 6
           """.as[(String, String, String, Timestamp)]
   }
 
