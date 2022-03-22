@@ -86,10 +86,10 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   border-right: 0px;
 
   .navbar-brand {
-    color: @colDefault;
+    color: black;
 
     &:hover, &:focus {
-      color: @colHighlight;
+      color: black;
     }
   }
 
@@ -168,6 +168,12 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   }
 }
 
+.navbar-right {
+    margin-left : 10px;
+    float : right !important;
+}
+
+
 .navbar-nav li.red .fa-bar-chart {
   color: #f55;
 }
@@ -180,7 +186,14 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   color: #008000;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 800px){
+    .table-flex {
+        display: flex;
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 800px) {
   .navbar-default .navbar-nav .open .dropdown-menu {
     > li > a {
       color: @colDefault;
@@ -256,12 +269,12 @@ a:hover {
 }
 
 .multi-day-export .modal-content, .arrivals-export .modal-content {
-  margin-top: 200px;
-  min-width: 650px;
+  margin-top: 15%;
+  min-width: 30%;
 }
 
 .arrivals-export .modal-content a, .multi-day-export .modal-content a {
-  width: 200px;
+  width: 100%;
 }
 
 .date .form-group.row .date-field {
@@ -509,6 +522,11 @@ table.headlines tr:nth-child(odd) {
   padding-left: 5px;
 }
 
+.feedback {
+  display:inline;
+  margin: 5px 5px 5px 5px ;
+}
+
 .staff-adjustment--save-cancel.btn.btn-default, .staff-adjustment--save-cancel.btn.btn-primary {
   float: right;
 }
@@ -575,6 +593,13 @@ table.headlines tr:nth-child(odd) {
   overflow: auto;
 }
 
+@media (max-width: 800px) {
+    .tab-content {
+      display: flex ;
+      flex-wrap: wrap;
+    }
+}
+
 #snapshot-done {
   display: inline;
 }
@@ -624,10 +649,13 @@ table.headlines tr:nth-child(odd) {
 
 .tabs-with-export {
   display: flex;
+  flex-wrap: wrap;
 }
 
 .nav-tabs {
-  width: 100%;
+  min-width: 64%;
+  display: flex;
+  flex-wrap: wrap;
 }
 
 .muiButton {
@@ -750,7 +778,7 @@ table.user-desk-recs thead tr:nth-child(1) th {
 }
 
 table.user-desk-recs thead tr:nth-child(2) th {
-  font-size: 14px;
+  font-size: 10px;
   padding-top: 5px;
   padding-bottom: 5px;
 }
@@ -870,6 +898,11 @@ table.user-desk-recs > tbody > tr > td:nth-last-child(1) {
 table.user-desk-recs > tbody > tr > td:nth-child(1) {
   padding-left: 4px;
   text-align: center;
+}
+
+
+.terminal-dashboard-container {
+  min-width: 50%
 }
 
 div.user-desk-recs-chart {
@@ -1454,7 +1487,7 @@ th h2 {
 }
 
 .dashboard-summary__pax-summary {
-  min-width: 589px;
+  min-width: 30%;
 }
 
 .dashboard-summary__pax-summary-table {
@@ -1810,6 +1843,15 @@ div#arrivals {
   height: 160px;
 }
 
+body {
+  font-size: 1.45rem
+}
+
+.port-config{
+ display: flex ;
+  flexWrap: wrap;
+
+}
 .no-gutters {
   margin-right: 0;
   margin-left: 0;
@@ -1995,15 +2037,21 @@ div.access-restricted {
   padding: 0
 }
 
-/***/
+.terminal-dashboard {
+    font-size: 1.75rem
+}
+
 .terminal-dashboard-queues {
   width: 73%;
   padding-top: 3%;
-  display: inline-block;
+  display:inline-block;
+  @media (max-width: 800px) {
+    width: 100%;
+  }
 }
 
 .terminal-dashboard-side {
-  width: 20%;
+  min-width: 20%;
   display: inline-block;
   vertical-align: top;
   padding-top: 3%;
@@ -2034,11 +2082,11 @@ div.access-restricted {
   background-color: #eee;
   position: relative;
   top: 20%;
-  font-size: 27px;
+  font-size: 1.75rem;
   font-weight: bold;
   text-align: center;
-  height: 2.5em;
-  margin-bottom: 2%;
+  height: 4.5em;
+  margin-bottom: 12%;
 }
 
 
@@ -2058,6 +2106,10 @@ div.access-restricted {
   width: 85%;
   opacity: 95%;
   min-width: 1100px;
+  @media (max-width: 800px){
+    min-width: 800px;
+  }
+  font-size: 1.45rem;
 }
 
 .arrivals-table__body:nth-child(odd) {
@@ -2115,14 +2167,14 @@ div.access-restricted {
   background-color: #eee;
   transform: translateY(-10%);
   position: relative;
-  font-size: 30px;
+  font-size: 1.75rem;
   font-weight: bold;
   text-align: center;
   display: inline-block;
   float: left;
   margin-right: 3%;
   margin-top: 3%;
-  min-width: 300px;
+  min-width: 14%;
   width: 31.3%;
 }
 
@@ -2137,7 +2189,7 @@ div.access-restricted {
 .queue-box-text {
   width: 85%;
   position: relative;
-  font-size: 24px;
+  font-size: 1.50rem;
   font-weight: bold;
   text-align: left;
   left: 10%;
@@ -2147,12 +2199,12 @@ div.access-restricted {
 
 .tb-bar {
   background-color: #d5e8fe;
-  font-size: 27px;
+  font-size: 1.45rem;
   font-weight: bold;
   text-align: center;
   border-style: solid;
   border-radius: 15px;
-  height: 2.5em;
+  height: 4.5em;
 }
 
 .time-label {
@@ -2160,8 +2212,8 @@ div.access-restricted {
   display: inline-block;
   height: 100%;
   vertical-align: middle;
-  margin: 0;
-  padding: 0.5em;
+  margin: 5;
+  padding: 1.5em 0.5em 0.5em 0.5em;
 }
 
 .dashboard-time-switcher {
@@ -2187,7 +2239,7 @@ div.access-restricted {
   border-radius: 15px;
   background-color: #d5e8fe;
   position: relative;
-  font-size: 27px;
+  font-size: 1.45rem;
   font-weight: bold;
   text-align: center;
   color: black;
@@ -2198,6 +2250,7 @@ div.access-restricted {
 
 .terminal-dashboard-side__sidebar_widget__label {
   margin-right: 0.3em;
+  font-size: 1.45rem;
 }
 
 .time-slot-changer {
