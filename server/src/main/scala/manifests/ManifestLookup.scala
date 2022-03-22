@@ -82,11 +82,12 @@ case class ManifestLookup(tables: Tables)
     case Nil => Future((uniqueArrivalKey, None))
     case ((_, nextQuery), queryNumber) :: tail =>
       val startTime = SDate.now()
+      log.info(s"Historic manifest query $queryNumber for $uniqueArrivalKey looking up flights")
       tables
         .run(nextQuery(uniqueArrivalKey))
         .flatMap {
           case flightsFound if flightsFound.nonEmpty =>
-            log.info(s"Historic manifest query $queryNumber found ${flightsFound.size} flights to fetch passengers for")
+            log.info(s"Historic manifest query $queryNumber for $uniqueArrivalKey found ${flightsFound.size} flights and took ${SDate.now().millisSinceEpoch - startTime.millisSinceEpoch}ms")
             manifestTriesForScheduled(flightsFound).map { profiles =>
               (uniqueArrivalKey, maybeManifestFromProfiles(uniqueArrivalKey, profiles))
             }
