@@ -14,7 +14,7 @@ private object SortedActorRefSource {
   }
 }
 
-final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes: Int, durationMinutes: Int, initialQueue: SortedSet[CrunchRequest], enableLog: Boolean = false)
+final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes: Int, durationMinutes: Int, initialQueue: SortedSet[CrunchRequest])
                                 (implicit system: ActorSystem)
   extends GraphStageWithMaterializedValue[SourceShape[CrunchRequest], ActorRef] {
 
@@ -51,23 +51,17 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
       }.ref
 
       private def tryPushElement(): Unit = {
-        if (enableLog) log.info(s"$getClass tryPushElement")
         if (isAvailable(out)) {
-          if (enableLog) log.info(s"$getClass tryPushElement isAvailable. buffer: ${buffer.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
           buffer.headOption.foreach { e =>
-            if (enableLog) log.info(s"$getClass tryPushElement pushing: $e")
             persistentActor ! RemoveCrunchRequest(e)
             buffer -= e
             push(out, e)
           }
-        } else {
-          if (enableLog) log.info(s"$getClass tryPushElement is not available")
         }
       }
 
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
-          if (enableLog) log.info(s"onPull called")
           tryPushElement()
         }
       })

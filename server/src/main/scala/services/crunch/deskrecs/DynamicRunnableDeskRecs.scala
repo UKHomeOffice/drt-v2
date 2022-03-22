@@ -19,7 +19,7 @@ import services.TimeLogger
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
@@ -68,10 +68,6 @@ object DynamicRunnableDeskRecs {
         case (crunchRequest, flights) =>
           splitsSink
             .ask(SplitsForArrivals(flights.map(fws => (fws.unique, fws.splits)).toMap))
-            .map { _ =>
-              log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: updated for arrivals")
-              (crunchRequest, flights)
-            }
             .recover {
               case t =>
                 log.error(s"Failed to updates splits for arrivals", t)
@@ -88,7 +84,7 @@ object DynamicRunnableDeskRecs {
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchDay, flights) =>
-          log.info(s"Crunch starting: ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
+          log.info(s"Desk optimisation starting: ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
           val eventualDeskRecs = for {
             redListUpdates <- redListUpdatesProvider()
             statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(crunchDay.minutesInMillis)
@@ -96,12 +92,12 @@ object DynamicRunnableDeskRecs {
             loads = portDesksAndWaitsProvider.flightsToLoads(crunchDay.minutesInMillis, FlightsWithSplits(flights), redListUpdates, queueStatusProvider)
             deskRecs <- portDesksAndWaitsProvider.loadsToDesks(crunchDay.minutesInMillis, loads, maxDesksProviders)
           } yield {
-            log.info(s"Crunch finished: (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
+            log.info(s"Desk optimisation finished: (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
             Option(deskRecs)
           }
           eventualDeskRecs.recover {
             case t =>
-              log.error(s"Failed to crunch $crunchDay", t)
+              log.error(s"Failed to optimise desks for ${crunchDay.localDate}", t)
               None
           }
       }
@@ -178,17 +174,9 @@ object DynamicRunnableDeskRecs {
       }
       .mapAsync(1) { case (crunchRequest, flights) =>
         val arrivalsToLookup = flights.filter(_.bestSplits.isEmpty).map(_.apiFlight)
-        log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: looking up ${arrivalsToLookup.size} historic manifests")
         historicManifestsProvider(arrivalsToLookup)
-          .map { m =>
-            log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: got historic manifest for ${m.maybeKey}")
-            m
-          }
           .runWith(Sink.seq)
-          .map { manifests =>
-            log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: got historic manifests")
-            (crunchRequest, flights, manifests)
-          }
+          .map(manifests => (crunchRequest, flights, manifests))
       }
       .map { case (crunchRequest, flights, manifests) =>
         log.info(f"Adding historic manifests to flights")
@@ -209,7 +197,6 @@ object DynamicRunnableDeskRecs {
                 fws.copy(apiFlight = fws.apiFlight.copy(FeedSources = fws.apiFlight.FeedSources + ApiFeedSource))
               else fws
             }
-          log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: got all splits")
           (crunchRequest, allFlightsWithSplits)
       }
 

@@ -434,41 +434,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     success
   }
 
-//  "Given a flight with splits for the EEA and NonEEA queues and the NonEEA queue is diverted to the EEA queue " +
-//    "When I ask for the workload " +
-//    "Then I should see the combined workload associated with the best splits for that flight only in the EEA queue " >> {
-//    val scheduled = "2018-01-01T00:05"
-//    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25))
-//
-//    val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
-//
-//    val portStateProbe = TestProbe("port-state")
-//    val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
-//    mockPortStateActor ! SetFlights(flight)
-//
-//    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop)
-//
-//    val scheduledMillis = SDate(scheduled).millisSinceEpoch
-//    daysQueueSource ! crunchRequest(SDate(scheduled))
-//
-//    val expectedLoads = Set(
-//      (Queues.EeaDesk, 20, scheduledMillis),
-//      (Queues.EeaDesk, 5, SDate(scheduled).addMinutes(1).millisSinceEpoch)
-//    )
-//
-//    portStateProbe.fishForMessage(2.seconds) {
-//      case DeskRecMinutes(drms) =>
-//        val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queue, drm.paxLoad, drm.minute)).toSet
-//        if (result != expectedLoads) println(s"\n\nresult: $result\nexpected: $expectedLoads")
-//        result == expectedLoads
-//      case x =>
-//        println("\n\nunexpected: $x")
-//        false
-//    }
-//
-//    success
-//  }
-
   "Given a flight with splits which is subsequently removed " +
     "When I ask for the output loads " +
     "Then I should see zero loads for the minutes affected by the flight in question" >> {
