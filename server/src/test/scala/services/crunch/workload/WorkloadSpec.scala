@@ -39,7 +39,7 @@ class WorkloadSpec extends CrunchTestLike {
   private def workloadForFlight(arrival: Arrival, splits: Set[Splits], filter: FlightFilter): Double = {
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> procTime)
     workloadCalculator(procTimes, filter)
-      .flightLoadMinutes(FlightsWithSplits(Iterable(ApiFlightWithSplits(arrival, splits, None))), redListedZimbabwe, (t: Terminal) => (q: Queue, m: MillisSinceEpoch) => Open)
+      .flightLoadMinutes(arrival.pcpRange, FlightsWithSplits(Iterable(ApiFlightWithSplits(arrival, splits, None))), redListedZimbabwe, (t: Terminal) => (q: Queue, m: MillisSinceEpoch) => Open)
       .minutes.values.map(_.workLoad).sum
   }
 
@@ -63,7 +63,7 @@ class WorkloadSpec extends CrunchTestLike {
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> procTime)
 
     val workloads = workloadCalculator(procTimes, FlightFilter.regular(List(T1)))
-      .flightToFlightSplitMinutes(ApiFlightWithSplits(arrival, splits, None), (q: Queue, m: MillisSinceEpoch) => Open)
+      .flightToFlightSplitMinutes(arrival.pcpRange, ApiFlightWithSplits(arrival, splits, None), (q: Queue, m: MillisSinceEpoch) => Open)
 
     val startTime = SDate(workloads.head.minute).toISOString()
 

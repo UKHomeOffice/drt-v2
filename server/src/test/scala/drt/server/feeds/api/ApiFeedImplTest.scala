@@ -3,7 +3,7 @@ package drt.server.feeds.api
 import akka.Done
 import akka.actor.ActorRef
 import akka.stream.KillSwitches
-import akka.stream.scaladsl.{Keep, Sink}
+import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
@@ -12,7 +12,7 @@ import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
 
 case class MockManifestArrivalKeys(keysWithProcessedAts: List[Iterable[(UniqueArrivalKey, MillisSinceEpoch)]]) extends ManifestArrivalKeys {
@@ -38,6 +38,20 @@ case class MockManifestProcessor(probe: ActorRef) extends ManifestProcessor {
 }
 
 class ApiFeedImplTest extends CrunchTestLike {
+  "A source" should {
+    "continue with a collect" in {
+      val c = Source(List(1, 2, 3))
+        .collect {
+          case 1 => "1 yes"
+          case 3 => "3 yes"
+        }
+        .map { c => println(s"got: $c")}
+        .run()
+
+      Await.ready(c, 1.second)
+      success
+    }
+  }
   "An ApiFeed" should {
     val key1 = UniqueArrivalKey(PortCode("LHR"), PortCode("JFK"), VoyageNumber(1), SDate("2022-06-01T00:00"))
     val processedAt1220 = SDate("2022-05-31T12:20").millisSinceEpoch

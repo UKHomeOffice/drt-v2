@@ -11,12 +11,13 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, S
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{TM, TQM}
 import manifests.ManifestLookupLike
+import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch.LoadMinute
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{MilliTimes, UtcDate}
@@ -25,16 +26,22 @@ import scala.collection.immutable.Map
 import scala.concurrent.{ExecutionContext, Future}
 
 object OptimisationProviders {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
   def historicManifestsProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
-                               (implicit mat: Materializer, ec: ExecutionContext): HistoricManifestsProvider = arrivals => {
-    Future(
-      Source(arrivals.toList)
-        .mapAsync(1) { arrival =>
-          manifestLookupService.maybeBestAvailableManifest(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-        }
-        .collect { case (_, Some(bam)) => bam }
-    )
-  }
+                               (implicit mat: Materializer, ec: ExecutionContext): HistoricManifestsProvider = arrivals =>
+    Source(arrivals.toList)
+      .mapAsync(1) { arrival =>
+        manifestLookupService
+          .maybeBestAvailableManifest(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+          .map { case (_, maybeManifest) => maybeManifest }
+          .recover {
+            case t =>
+              log.error(s"Failed to get historic manifest for ${arrival.unique}")
+              None
+          }
+      }
+      .collect { case Some(bam) => bam }
 
   def arrivalsProvider(arrivalsActor: ActorRef)
                       (crunchRequest: CrunchRequest)
@@ -43,6 +50,14 @@ object OptimisationProviders {
       .ask(GetFlights(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
       .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
       .map(_.map(_._2.flights.map(_._2.apiFlight).toList))
+
+  def flightsWithSplitsProvider(arrivalsActor: ActorRef)
+                               (crunchRequest: CrunchRequest)
+                               (implicit timeout: Timeout, ec: ExecutionContext): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
+    arrivalsActor
+      .ask(GetFlights(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
+      .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
+      .map(_.map(_._2.flights.values.toList))
 
   def liveManifestsProvider(manifestsActor: ActorRef)
                            (crunchRequest: CrunchRequest)

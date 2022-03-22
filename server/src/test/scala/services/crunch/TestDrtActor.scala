@@ -160,7 +160,7 @@ class TestDrtActor extends Actor {
         val historicManifestLookups: ManifestLookupLike = MockManifestLookupService()
 
         val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-          arrivalsProvider = OptimisationProviders.arrivalsProvider(portStateActor),
+          arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
           liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
           historicManifestsProvider = OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups),
           splitsCalculator = splitsCalculator,

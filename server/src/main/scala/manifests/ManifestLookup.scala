@@ -5,7 +5,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import services.StreamSupervision
+import services.{SDate, StreamSupervision}
 import slick.jdbc.SQLActionBuilder
 import slick.sql.SqlStreamingAction
 import slickdb.Tables
@@ -78,21 +78,27 @@ case class ManifestLookup(tables: Tables)
 
   private def historicManifestSearch(uniqueArrivalKey: UniqueArrivalKey,
                                      queries: List[(String, QueryFunction)])
-                                    (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = queries match {
+                                    (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = queries.zipWithIndex match {
     case Nil => Future((uniqueArrivalKey, None))
-    case (_, nextQuery) :: tail =>
+    case ((_, nextQuery), queryNumber) :: tail =>
+      val startTime = SDate.now()
+      log.info(s"Historic manifest query $queryNumber for $uniqueArrivalKey looking up flights")
       tables
         .run(nextQuery(uniqueArrivalKey))
-        .map {
+        .flatMap {
           case flightsFound if flightsFound.nonEmpty =>
+            log.info(s"Historic manifest query $queryNumber for $uniqueArrivalKey found ${flightsFound.size} flights and took ${SDate.now().millisSinceEpoch - startTime.millisSinceEpoch}ms")
             manifestTriesForScheduled(flightsFound).map { profiles =>
               (uniqueArrivalKey, maybeManifestFromProfiles(uniqueArrivalKey, profiles))
             }
 
           case _ =>
-            historicManifestSearch(uniqueArrivalKey, tail)
+            historicManifestSearch(uniqueArrivalKey, tail.map(_._1))
         }
-        .flatMap(identity)
+        .map { res =>
+          log.info(s"Historic manifest query $queryNumber for $uniqueArrivalKey took ${SDate.now().millisSinceEpoch - startTime.millisSinceEpoch}ms")
+          res
+        }
   }
 
   private def maybeManifestFromProfiles(uniqueArrivalKey: UniqueArrivalKey, profiles: immutable.Seq[ManifestPassengerProfile]) = {
@@ -137,6 +143,8 @@ case class ManifestLookup(tables: Tables)
             departure_port_code,
             voyage_number,
             scheduled_date
+          ORDER BY scheduled_date DESC
+          LIMIT 6
           """.as[(String, String, String, Timestamp)]
   }
 
@@ -165,6 +173,8 @@ case class ManifestLookup(tables: Tables)
             departure_port_code,
             voyage_number,
             scheduled_date
+          ORDER BY scheduled_date DESC
+          LIMIT 6
           """.as[(String, String, String, Timestamp)]
   }
 
@@ -194,7 +204,8 @@ case class ManifestLookup(tables: Tables)
             departure_port_code,
             voyage_number,
             scheduled_date
-          LIMIT 3
+          ORDER BY scheduled_date DESC
+          LIMIT 6
           """.as[(String, String, String, Timestamp)]
   }
 

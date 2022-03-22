@@ -200,12 +200,12 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val startDeskRecs: (SortedSet[CrunchRequest], SortedSet[CrunchRequest]) => () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch) = (cq, dq) => () => {
     val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
 
-    implicit val timeout: Timeout = new Timeout(1 second)
+    implicit val timeout: Timeout = new Timeout(10.seconds)
 
     val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
 
     val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-      arrivalsProvider = OptimisationProviders.arrivalsProvider(portStateActor),
+      arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
       liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
       historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
       splitsCalculator = splitsCalculator,
@@ -216,6 +216,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       DynamicQueueStatusProvider(airportConfig, egatesProvider)
     )
 
+    log.info(s"Initial crunch queue: ${cq.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
     val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor, cq)
 
     val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
@@ -225,6 +226,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       portDeskRecs.loadsToSimulations
     )
 
+    log.info(s"Initial deployment queue: ${dq.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
     val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, dq)
 
     egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)

@@ -48,13 +48,12 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     arrival
   )
 
-  def flightsProvider(cr: CrunchRequest): Future[Source[List[Arrival], NotUsed]] = {
-    Future(Source(List(arrivals)))
-  }
+  def flightsProvider(cr: CrunchRequest): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
+    Future.successful(Source(List(arrivals.map(a => ApiFlightWithSplits(a, Set())))))
 
-  def manifestsProvider(cr: CrunchRequest): Future[Source[VoyageManifests, NotUsed]] = Future(Source(List()))
+  def manifestsProvider(cr: CrunchRequest): Future[Source[VoyageManifests, NotUsed]] = Future.successful(Source(List()))
 
-  def historicManifestsProvider(arrivals: Iterable[Arrival]): Future[Source[ManifestLike, NotUsed]] = Future(Source(List()))
+  def historicManifestsProvider(arrivals: Iterable[Arrival]): Source[ManifestLike, NotUsed] = Source(List())
 
   "Given some arrivals and simlution config I should get back DeskRecMinutes containing all the passengers from the arrivals" >> {
 

@@ -49,11 +49,12 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
   def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
     deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch)
 
-  override def flightsToLoads(flights: FlightsWithSplits,
+  override def flightsToLoads(minuteMillis: NumericRange[MillisSinceEpoch],
+                              flights: FlightsWithSplits,
                               redListUpdates: RedListUpdates,
                               terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
                              (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, LoadMinute] = workloadCalculator
-    .flightLoadMinutes(flights, redListUpdates, terminalQueueStatuses).minutes
+    .flightLoadMinutes(minuteMillis, flights, redListUpdates, terminalQueueStatuses).minutes
     .groupBy {
       case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
         TQM(t, finalQueueName, m)

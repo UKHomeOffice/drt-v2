@@ -69,4 +69,5 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
 
     (stage, stage.ref)
   }
+
 }
