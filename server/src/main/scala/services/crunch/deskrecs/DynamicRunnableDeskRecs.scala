@@ -68,6 +68,7 @@ object DynamicRunnableDeskRecs {
         case (crunchRequest, flights) =>
           splitsSink
             .ask(SplitsForArrivals(flights.map(fws => (fws.unique, fws.splits)).toMap))
+            .map(_ => (crunchRequest, flights))
             .recover {
               case t =>
                 log.error(s"Failed to updates splits for arrivals", t)
