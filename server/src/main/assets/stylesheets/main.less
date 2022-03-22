@@ -593,9 +593,11 @@ table.headlines tr:nth-child(odd) {
   overflow: auto;
 }
 
-.tab-content {
-  display: flex ;
-  flex-wrap: wrap;
+@media (max-width: 800px) {
+    .tab-content {
+      display: flex ;
+      flex-wrap: wrap;
+    }
 }
 
 #snapshot-done {
@@ -2040,13 +2042,16 @@ div.access-restricted {
 }
 
 .terminal-dashboard-queues {
-  width: 100%;
+  width: 73%;
   padding-top: 3%;
-  flexWrap: wrap;
+  display:inline-block;
+  @media (max-width: 800px) {
+    width: 100%;
+  }
 }
 
 .terminal-dashboard-side {
-  min-width: 30%;
+  min-width: 20%;
   display: inline-block;
   vertical-align: top;
   padding-top: 3%;
