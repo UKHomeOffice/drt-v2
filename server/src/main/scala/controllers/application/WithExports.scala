@@ -41,11 +41,13 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
     }
   }
 
+  private val sixMonthsDays = 180
+
   def exportForecastWeekToCSV(startDay: String, terminalName: String): Action[AnyContent] = authByRole(ForecastView) {
     val terminal = Terminal(terminalName)
     Action.async {
       timedEndPoint(s"Export planning", Option(s"$terminal")) {
-        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, 180)
+        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, sixMonthsDays)
 
         val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
 
@@ -73,7 +75,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
     Action.async {
       timedEndPoint(s"Export planning headlines", Option(s"$terminal")) {
         val startOfWeekMidnight = SDate(startDay.toLong).getLocalLastMidnight
-        val endOfForecast = startOfWeekMidnight.addDays(180)
+        val endOfForecast = startOfWeekMidnight.addDays(sixMonthsDays)
         val now = SDate.now()
 
         val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) {
@@ -86,7 +88,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
 
         portStateFuture
           .map { portState =>
-            val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
+            val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, sixMonthsDays, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
             val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.forecastExportQueueOrder)
             CsvFileStreaming.csvFileResult(fileName, csvData)
           }

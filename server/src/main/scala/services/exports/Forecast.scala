@@ -10,13 +10,12 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 object Forecast {
   def headlineFigures(startOfForecast: SDateLike,
-                      endOfForecast: SDateLike,
+                      numberOfDays: Int,
                       terminal: Terminal,
                       portState: PortState,
                       queues: List[Queue]): ForecastHeadlineFigures = {
     val dayMillis = 60 * 60 * 24 * 1000
-    val periods = (endOfForecast.millisSinceEpoch - startOfForecast.millisSinceEpoch) / dayMillis
-    val crunchSummaryDaily = portState.crunchSummary(startOfForecast, periods, 1440, terminal, queues)
+    val crunchSummaryDaily = portState.dailyCrunchSummary(startOfForecast, numberOfDays, terminal, queues)
 
     val figures = for {
       (dayMillis, queueMinutes) <- crunchSummaryDaily

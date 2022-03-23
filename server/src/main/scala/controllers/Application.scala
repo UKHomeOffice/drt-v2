@@ -200,7 +200,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
       def forecastWeekSummary(startDay: MillisSinceEpoch,
                               terminal: Terminal): Future[Option[ForecastPeriodWithHeadlines]] = {
-        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, 7)
+        val numberOfDays = 7
+        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, numberOfDays)
 
         val portStateFuture = portStateActor.ask(
           GetStateForTerminalDateRange(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
@@ -211,7 +212,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
             case portState: PortState =>
               log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
               val fp = services.exports.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
-              val hf = services.exports.Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
+              val hf = services.exports.Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
               Option(ForecastPeriodWithHeadlines(fp, hf))
           }
           .recover {
