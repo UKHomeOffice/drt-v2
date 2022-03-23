@@ -48,7 +48,7 @@ object Navbar {
                 onClose = handleClose)()
             },
             <.span(^.className := "navbar-brand",
-              <.a("", " ", s"DRT ${props.airportConfig.portCode}"),
+              <.a(Icon.bars, " ", s"DRT ${props.airportConfig.portCode}"),
               ^.onClick --> scope.modState(_.copy(showDropDown = !state.showDropDown))),
             <.div(^.className := "navbar-collapse",
               if (state.showDropDown)
