@@ -16,7 +16,7 @@ class ForecastHeadlineFiguresSpec extends Specification {
       "Then I should see Total Pax of 1 and EEA Pax of 1 and total workload of 2 on 2017-01-02" >> {
       val startMinute = SDate("2017-01-02T00:00Z")
       val ps = PortState(List(), List(CrunchMinute(T1, Queues.EeaDesk, startMinute.millisSinceEpoch, 1, 2, 0, 0)), List())
-      val result = Forecast.headlineFigures(startMinute, startMinute.addDays(1), T1, ps, List(Queues.EeaDesk))
+      val result = Forecast.headlineFigures(startMinute, 1, T1, ps, List(Queues.EeaDesk))
 
       val expected = ForecastHeadlineFigures(Seq(QueueHeadline(startMinute.millisSinceEpoch, Queues.EeaDesk, 1, 2)))
       result === expected
@@ -32,7 +32,7 @@ class ForecastHeadlineFiguresSpec extends Specification {
         CrunchMinute(T2, Queues.EeaDesk, startMinute.millisSinceEpoch, 1, 2, 0, 0)
       ), List())
 
-      val result = Forecast.headlineFigures(startMinute, startMinute.addDays(1), T1, ps, List(Queues.EeaDesk))
+      val result = Forecast.headlineFigures(startMinute, 1, T1, ps, List(Queues.EeaDesk))
       val expected = ForecastHeadlineFigures(Seq(QueueHeadline(startMinute.millisSinceEpoch, Queues.EeaDesk, 1, 2)))
 
       result === expected
@@ -47,7 +47,7 @@ class ForecastHeadlineFiguresSpec extends Specification {
         CrunchMinute(T1, Queues.EeaDesk, startMinute.millisSinceEpoch, 1, 2, 0, 0),
         CrunchMinute(T1, Queues.EGate, startMinute.millisSinceEpoch, 1, 2, 0, 0)
       ), List())
-      val result = Forecast.headlineFigures(startMinute, startMinute.addDays(1), T1, ps, List(Queues.EeaDesk, Queues.EGate))
+      val result = Forecast.headlineFigures(startMinute, 1, T1, ps, List(Queues.EeaDesk, Queues.EGate))
 
       val expected = ForecastHeadlineFigures(Seq(
         QueueHeadline(startMinute.millisSinceEpoch, Queues.EeaDesk, 1, 2),
@@ -70,7 +70,7 @@ class ForecastHeadlineFiguresSpec extends Specification {
         CrunchMinute(T1, Queues.EeaDesk, day2StartMinute.millisSinceEpoch, 1, 2, 0, 0),
         CrunchMinute(T1, Queues.EGate, day2StartMinute.millisSinceEpoch, 1, 2, 0, 0)
       ), List())
-      val result = Forecast.headlineFigures(day1StartMinute, day2StartMinute.addDays(1), T1, ps, List(Queues.EeaDesk, Queues.EGate))
+      val result = Forecast.headlineFigures(day1StartMinute, 2, T1, ps, List(Queues.EeaDesk, Queues.EGate))
 
       val expected = ForecastHeadlineFigures(Seq(
         QueueHeadline(day1StartMinute.millisSinceEpoch, Queues.EeaDesk, 1, 2),

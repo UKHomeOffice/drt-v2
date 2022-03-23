@@ -4,7 +4,7 @@ import drt.shared.CrunchApi._
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import upickle.default.{readwriter, ReadWriter => RW}
 
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
@@ -79,6 +79,24 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
       }
       .toMap
   }
+
+  def dailyCrunchSummary(start: SDateLike, days: Int, terminal: Terminal, queues: List[Queue]): ISortedMap[Long, IMap[Queue, CrunchMinute]] =
+    ISortedMap[Long, IMap[Queue, CrunchMinute]]() ++ (0 until days)
+      .map { day =>
+        val dayStart = start.addDays(day)
+        val dayEnd = dayStart.addDays(1)
+        val queueMinutes = queues
+          .map { queue =>
+            val slotMinutes = (dayStart.millisSinceEpoch until dayEnd.millisSinceEpoch by 60000)
+              .map { minute => crunchMinutes.get(TQM(terminal, queue, minute)) }
+              .collect { case Some(cm) => cm }
+              .toList
+            (queue, crunchPeriodSummary(terminal, dayStart.millisSinceEpoch, queue, slotMinutes))
+          }
+          .toMap
+        (dayStart.millisSinceEpoch, queueMinutes)
+      }
+      .toMap
 
   def staffSummary(start: SDateLike, periods: Long, periodSize: Long, terminal: Terminal): ISortedMap[Long, StaffMinute] = {
     val startMillis = start.roundToMinute().millisSinceEpoch
