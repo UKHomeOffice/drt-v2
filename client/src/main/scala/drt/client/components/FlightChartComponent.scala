@@ -57,11 +57,11 @@ object FlightChartComponent {
 
                       val chartHeight = 300
                       val widthFactor = if (info.nationalities.size > 10 && state.showAllNationalities) 5 else 0
-                      val chartWidth: Int = if (dom.window.innerWidth > 800) {
+                      val chartWidth: Int = if (dom.window.innerWidth > 800)
                         300 + widthFactor * info.nationalities.size
                         else
                         150 + widthFactor * info.nationalities.size
-                      }
+
 
                       val paxTypeData: ChartJsData = ChartJsData(sortedPaxTypes.map {
                         case (pt, _) => PaxTypes.displayNameShort(pt)
