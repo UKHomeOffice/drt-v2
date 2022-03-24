@@ -55,9 +55,13 @@ object FlightChartComponent {
                         scope.modState(_.copy(showAllNationalities = newValue))
                       }
 
-                      val (chartWidth, chartHeight): (Int, Int) = if (info.nationalities.size > 10 && state.showAllNationalities)
-                       if(dom.window.innerWidth > 800) (300 + 5 * info.nationalities.size, 300) else (100 + 5 * info.nationalities.size, 300)
-                      else (300, 300)
+                      val chartHeight = 300
+                      val widthFactor = if (info.nationalities.size > 10 && state.showAllNationalities) 5 else 0
+                      val chartWidth: Int = if (dom.window.innerWidth > 800) {
+                        300 + widthFactor * info.nationalities.size
+                        else
+                        150 + widthFactor * info.nationalities.size
+                      }
 
                       val paxTypeData: ChartJsData = ChartJsData(sortedPaxTypes.map {
                         case (pt, _) => PaxTypes.displayNameShort(pt)
