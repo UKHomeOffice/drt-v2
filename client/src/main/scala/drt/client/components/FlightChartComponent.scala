@@ -60,7 +60,7 @@ object FlightChartComponent {
                       val chartWidth: Int = if (dom.window.innerWidth > 800)
                         300 + widthFactor * info.nationalities.size
                         else
-                        150 + widthFactor * info.nationalities.size
+                        200 + widthFactor * info.nationalities.size
 
 
                       val paxTypeData: ChartJsData = ChartJsData(sortedPaxTypes.map {
