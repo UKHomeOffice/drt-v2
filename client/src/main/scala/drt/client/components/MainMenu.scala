@@ -144,7 +144,9 @@ object PortSwitcher {
         val showClass = if (state.showDropDown) "show" else ""
         val ports = props.user.portRoles.map(portRole => PortCode(portRole.name))
         if (ports.size == 2) {
-          <.a(Icon.plane, " ", ^.href := SPAMain.urls.urlForPort(ports.head.toString), ports.filter(_ != props.portCode).head.iata)
+          ports.find(_ != props.portCode).map { pc =>
+            <.a(Icon.plane, " ", ^.href := SPAMain.urls.urlForPort(pc.toString), pc.iata)
+          }.getOrElse(EmptyVdom)
         } else {
           val regions = PortRegion.regions.collect {
             case region if region.ports.intersect(ports).nonEmpty => (region.name -> region.ports.intersect(ports))
