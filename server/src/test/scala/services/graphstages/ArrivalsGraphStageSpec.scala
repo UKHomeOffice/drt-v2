@@ -22,6 +22,7 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.List
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class ArrivalsGraphStageSpec extends CrunchTestLike {
@@ -41,16 +42,19 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     useTimePredictions = true,
   )
   val defaultWalkTime = 300000L
-  val pcpCalc: (Arrival, RedListUpdates) => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)((_, _) => defaultWalkTime)
+  val pcpCalc: Arrival => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)((_, _) => defaultWalkTime)(RedListUpdates.empty)
+
+  val setPcpTime: ArrivalsDiff => Future[ArrivalsDiff] =
+    diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.mapValues(arrival => arrival.copy(PcpTime = Option(pcpCalc(arrival).millisSinceEpoch)))))
 
   def withPcpTime(arrival: Arrival): Arrival =
-    arrival.copy(PcpTime = Option(pcpCalc(arrival, RedListUpdates(Map())).millisSinceEpoch))
+    arrival.copy(PcpTime = Option(pcpCalc(arrival).millisSinceEpoch))
 
   "An Arrivals Graph Stage configured to use predicted times" should {
     implicit val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
       airportConfig = airportConfig,
       now = () => dateNow,
-      pcpArrivalTime = pcpCalc
+      setPcpTimes = setPcpTime
     ))
 
     "set the correct pcp time given an arrival with a predicted touchdown time" >> {

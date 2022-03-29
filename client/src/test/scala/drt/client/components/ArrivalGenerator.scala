@@ -2,7 +2,7 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Prediction}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 
@@ -35,11 +35,11 @@ object ArrivalGenerator {
     Arrival(
       Operator = operator,
       Status = status,
-      Estimated = if (estDt != "") Some(SDate(estDt).millisSinceEpoch) else None,
-      PredictedTouchdown = if (actDt != "") Some(SDate(predTouchdownDt).millisSinceEpoch) else None,
-      Actual = if (actDt != "") Some(SDate(actDt).millisSinceEpoch) else None,
-      EstimatedChox = if (estChoxDt != "") Some(SDate(estChoxDt).millisSinceEpoch) else None,
-      ActualChox = if (actChoxDt != "") Some(SDate(actChoxDt).millisSinceEpoch) else None,
+      Estimated = if (estDt != "") Option(SDate(estDt).millisSinceEpoch) else None,
+      PredictedTouchdown = if (predTouchdownDt != "") Option(Prediction(SDate.now().millisSinceEpoch, SDate(predTouchdownDt).millisSinceEpoch)) else None,
+      Actual = if (actDt != "") Option(SDate(actDt).millisSinceEpoch) else None,
+      EstimatedChox = if (estChoxDt != "") Option(SDate(estChoxDt).millisSinceEpoch) else None,
+      ActualChox = if (actChoxDt != "") Option(SDate(actChoxDt).millisSinceEpoch) else None,
       Gate = gate,
       Stand = stand,
       MaxPax = maxPax,

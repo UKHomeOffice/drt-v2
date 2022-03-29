@@ -8,7 +8,7 @@ import services.SDate
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop, LiveArrivalsUtil}
 import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone, mergeApproxIfFoundElseOriginal}
 import services.metrics.{Metrics, StageTimer}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate}
@@ -50,12 +50,13 @@ class ArrivalsGraphStage(name: String = "",
                          initialLiveBaseArrivals: SortedMap[UniqueArrival, Arrival],
                          initialLiveArrivals: SortedMap[UniqueArrival, Arrival],
                          initialMergedArrivals: SortedMap[UniqueArrival, Arrival],
-                         pcpArrivalTime: (Arrival, RedListUpdates) => MilliDate,
                          validPortTerminals: Set[Terminal],
                          arrivalDataSanitiser: ArrivalDataSanitiser,
                          arrivalsAdjustments: ArrivalsAdjustmentsLike,
                          expireAfterMillis: Int,
-                         now: () => SDateLike)
+                         now: () => SDateLike,
+                         flushOnStart: Boolean = false,
+                        )
   extends GraphStage[FanInShape5[List[Arrival], List[Arrival], List[Arrival], List[Arrival], List[RedListUpdateCommand], ArrivalsDiff]] {
 
   import ArrivalsGraphStage._
@@ -118,6 +119,11 @@ class ArrivalsGraphStage(name: String = "",
       } else log.info("No adjustments to make to initial arrivals")
 
       merged = withAdjustments
+
+      if (flushOnStart) {
+        log.info(s"Flushing ${merged.size} arrivals at startup")
+        toPush = Option(ArrivalsDiff(merged, Seq()))
+      }
 
       super.preStart()
     }
@@ -378,7 +384,7 @@ class ArrivalsGraphStage(name: String = "",
         TranPax = transPax,
         Status = bestStatus(key),
         FeedSources = feedSources(key),
-        PcpTime = Option(pcpArrivalTime(bestArrival, redListUpdates).millisSinceEpoch),
+//        PcpTime = Option(pcpArrivalTime(bestArrival, redListUpdates).millisSinceEpoch),
         ScheduledDeparture = if (bestArrival.ScheduledDeparture.isEmpty) baseArrival.ScheduledDeparture else bestArrival.ScheduledDeparture
       )
     }

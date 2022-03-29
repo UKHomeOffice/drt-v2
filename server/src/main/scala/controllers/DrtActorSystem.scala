@@ -23,7 +23,7 @@ object DrtActorSystem extends AirportConfProvider {
     if (isTestEnvironment) drtTestSystem
     else drtProdSystem
 
-  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(getPortConfFromEnvVar)
-  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(getPortConfFromEnvVar)
+  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig)
+  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig)
 
 }

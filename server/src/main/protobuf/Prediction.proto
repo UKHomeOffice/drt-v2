@@ -1,0 +1,8 @@
+syntax = "proto2";
+
+package server.protobuf.messages;
+
+message PredictionLongMessage {
+    optional int64 updatedAt = 1;
+    optional int64 value = 2;
+}

@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.{Pending, Pot, Ready}
-import drt.client.components.FlightTableComponents.localDateTimeWithPopup
+import drt.client.components.FlightTableComponents.maybeLocalTimeWithPopup
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^._
@@ -77,11 +77,11 @@ object FeedSourceRow {
         <.td(arrival.Origin.toString),
         <.td(s"${arrival.Gate.getOrElse("")}/${arrival.Stand.getOrElse("")}"),
         <.td(arrival.displayStatus.description),
-        <.td(localDateTimeWithPopup(Option(arrival.Scheduled))),
-        <.td(localDateTimeWithPopup(arrival.Estimated)),
-        <.td(localDateTimeWithPopup(arrival.Actual)),
-        <.td(localDateTimeWithPopup(arrival.EstimatedChox)),
-        <.td(localDateTimeWithPopup(arrival.ActualChox)),
+        <.td(maybeLocalTimeWithPopup(Option(arrival.Scheduled))),
+        <.td(maybeLocalTimeWithPopup(arrival.Estimated)),
+        <.td(maybeLocalTimeWithPopup(arrival.Actual)),
+        <.td(maybeLocalTimeWithPopup(arrival.EstimatedChox)),
+        <.td(maybeLocalTimeWithPopup(arrival.ActualChox)),
         <.td(paxTotal),
         <.td(paxTrans),
       )

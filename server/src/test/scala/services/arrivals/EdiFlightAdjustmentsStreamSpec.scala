@@ -19,7 +19,7 @@ class EdiFlightAdjustmentsStreamSpec extends CrunchTestLike {
   val isRedListed: (PortCode, MillisSinceEpoch, RedListUpdates) => Boolean = (_, _, _) => portIsRedListed
   val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
     now = () => SDate("2019-01-01T01:00"),
-    pcpArrivalTime = TestDefaults.pcpForFlightFromBest,
+    setPcpTimes = TestDefaults.setPcpFromBest,
     airportConfig = DrtPortConfigs.confByPort(PortCode("EDI")),
     arrivalsAdjustments = EdiArrivalsTerminalAdjustments(isRedListed)
   ))

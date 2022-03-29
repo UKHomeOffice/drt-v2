@@ -10,7 +10,6 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.TimeUtil.millisToMinutes
 import drt.shared._
-import drt.shared.api.PassengerInfoSummary
 import drt.shared.redlist._
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -19,7 +18,7 @@ import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, Span}
 import scalacss.ScalaCssReact
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Prediction}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -107,6 +106,10 @@ object FlightTableRow {
       val ctaOrRedListMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
       val flightCodes = s"${allCodes.mkString(" - ")}$ctaOrRedListMarker"
 
+      val estimatedContent = (flight.Estimated, flight.PredictedTouchdown, props.airportConfig.useTimePredictions) match {
+        case (None, Some(Prediction(_, value)), true) => maybeLocalTimeWithPopup(Option(value), Option("Predicted touchdown based on recent patterns"))
+        case _ => maybeLocalTimeWithPopup(flight.Estimated)
+      }
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           <.div(
@@ -140,14 +143,13 @@ object FlightTableRow {
         },
         <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
         <.td(flight.displayStatus.description),
-        <.td(localDateTimeWithPopup(Option(flight.Scheduled))),
-        if (props.airportConfig.useTimePredictions) <.td(localDateTimeWithPopup(flight.PredictedTouchdown)) else EmptyVdom,
-        <.td(localDateTimeWithPopup(flight.Estimated)),
-        <.td(localDateTimeWithPopup(flight.Actual)),
+        <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
+        <.td(estimatedContent),
+        <.td(maybeLocalTimeWithPopup(flight.Actual)),
       )
-      val estCell = List(<.td(localDateTimeWithPopup(flight.EstimatedChox)))
+      val estCell = List(<.td(maybeLocalTimeWithPopup(flight.EstimatedChox)))
       val lastCells = List[TagMod](
-        <.td(localDateTimeWithPopup(flight.ActualChox)),
+        <.td(maybeLocalTimeWithPopup(flight.ActualChox)),
         <.td(pcpTimeRange(flightWithSplits), ^.className := "arrivals__table__flight-est-pcp"),
         <.td(FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
       )

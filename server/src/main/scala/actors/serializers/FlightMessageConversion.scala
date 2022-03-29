@@ -7,6 +7,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.protobuf.messages.CrunchState._
 import server.protobuf.messages.FlightsMessage._
+import server.protobuf.messages.Prediction.PredictionLongMessage
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -137,7 +138,7 @@ object FlightMessageConversion {
       feedSources = apiFlight.FeedSources.map(_.toString).toSeq,
       scheduled = Option(apiFlight.Scheduled),
       estimated = apiFlight.Estimated,
-      predictedTouchdown = apiFlight.PredictedTouchdown,
+      predictedTouchdown = predictionToMessage(apiFlight.PredictedTouchdown),
       touchdown = apiFlight.Actual,
       estimatedChox = apiFlight.EstimatedChox,
       actualChox = apiFlight.ActualChox,
@@ -148,12 +149,22 @@ object FlightMessageConversion {
     )
   }
 
+  def predictionToMessage(maybePred: Option[Prediction[Long]]): Option[PredictionLongMessage] =
+    maybePred.map(pred => PredictionLongMessage(Option(pred.updatedAt), Option(pred.value)))
+
+  def predictionFromMessage(maybePredMessage: Option[PredictionLongMessage]): Option[Prediction[Long]] =
+    for {
+      predMsg <- maybePredMessage
+      updatedAt <- predMsg.updatedAt
+      value <- predMsg.value
+    } yield Prediction(updatedAt, value)
+
   def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
     Arrival(
       Operator = flightMessage.operator.map(Operator),
       Status = ArrivalStatus(flightMessage.status.getOrElse("")),
       Estimated = flightMessage.estimated,
-      PredictedTouchdown = flightMessage.predictedTouchdown,
+      PredictedTouchdown = predictionFromMessage(flightMessage.predictedTouchdown),
       Actual = flightMessage.touchdown,
       EstimatedChox = flightMessage.estimatedChox,
       ActualChox = flightMessage.actualChox,

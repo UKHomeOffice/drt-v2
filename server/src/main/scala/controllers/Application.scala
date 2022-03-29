@@ -58,7 +58,8 @@ object PaxFlow {
 
   def pcpArrivalTimeForFlight(timeToChoxMillis: MillisSinceEpoch, firstPaxOffMillis: MillisSinceEpoch, considerPredictions: Boolean)
                              (walkTimeProvider: FlightWalkTime)
-                             (flight: Arrival, redListUpdates: RedListUpdates): MilliDate =
+                             (redListUpdates: RedListUpdates)
+                             (flight: Arrival): MilliDate =
     pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider, considerPredictions)(flight, redListUpdates)
 }
 
@@ -76,9 +77,10 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def useTimePredictions: Boolean = config.get[Boolean]("feature-flags.use-time-predictions")
 
-  def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
+  private def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
 
   lazy val airportConfig: AirportConfig = {
+    println(s"predictions flag: $useTimePredictions")
     val configForPort = getPortConfFromEnvVar.copy(
       contactEmail = contactEmail,
       outOfHoursContactPhone = oohPhone,

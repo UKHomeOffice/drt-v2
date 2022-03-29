@@ -10,7 +10,7 @@ import org.specs2.specification.AfterEach
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsNoop}
 import services.crunch.CrunchTestLike
 import services.{PcpArrival, SDate}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Prediction, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
@@ -77,7 +77,7 @@ object TestableArrivalsGraphStage {
     initialLiveBaseArrivals = SortedMap[UniqueArrival, Arrival](),
     initialLiveArrivals = SortedMap[UniqueArrival, Arrival](),
     initialMergedArrivals = SortedMap[UniqueArrival, Arrival](),
-    pcpArrivalTime = pcpCalcFn,
+//    pcpArrivalTime = pcpCalcFn,
     validPortTerminals = Set(T1),
     arrivalDataSanitiser = sanitiser,
     arrivalsAdjustments = ArrivalsAdjustmentsNoop,
@@ -301,32 +301,8 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
   def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0, considerPredictions = true)(a, r)
 
-  "Given a base live arrival with an estimated time and a port live arrival with only scheduled time " +
-    "Then PCP time should be calculated from the base live arrival time." >> {
-    val (_, _, liveBaseSource, liveSource, _) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
-    val baseLiveEstimated = Option(SDate("2019-10-22T14:00:00Z").millisSinceEpoch)
-
-    liveBaseSource.offer(List(arrival(estimated = baseLiveEstimated)))
-
-    offerAndCheck(liveSource, List(arrival()), (a: Arrival) => a.PcpTime == baseLiveEstimated)
-
-    success
-  }
-
-  "Given a base live arrival with an estimated time and an ACL arrival" +
-    " Then we should calculate PCP time from the base live arrival." >> {
-    val (aclSource, _, liveBaseSource, _, _) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, scheduled)).run
-    val baseLiveEstimated = Option(SDate("2019-10-22T14:00:00Z").millisSinceEpoch)
-
-    liveBaseSource.offer(List(arrival(estimated = baseLiveEstimated)))
-
-    offerAndCheck(aclSource, List(arrival()), (a: Arrival) => a.PcpTime == baseLiveEstimated)
-
-    success
-  }
-
   def arrival(estimated: Option[Long] = None,
-              predTouchdown: Option[Long] = None,
+              predTouchdown: Option[Prediction[Long]] = None,
               actual: Option[Long] = None,
               estChox: Option[Long] = None,
               actChox: Option[Long] = None,

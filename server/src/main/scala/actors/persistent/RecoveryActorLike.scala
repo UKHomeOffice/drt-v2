@@ -109,7 +109,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
         playRecoveryMessage(event)
       } match {
         case Failure(exception) =>
-          log.error(s"Failed to reply $event", exception)
+          log.error(s"Failed replay recovery message $event", exception)
         case _ =>
       }
   }

@@ -52,15 +52,15 @@ class TouchdownPredictionSpec extends CrunchTestLike {
     }
   }
 
-  "Given an ArrivalsDiff and an actor containing touchdown prediction models" >> {
-    "I should be able to update the arrival with an predicted touchdown time" >> {
-      val arrival = ArrivalGenerator.arrival("BA0001", schDt = "2022-05-01T12:00", origin = PortCode("JFK"), terminal = T2)
-
-      val diff = ArrivalsDiff(Seq(arrival), Seq())
-
-      val arrivals = Await.result(touchdownPrediction.addTouchdownPredictions(diff), 1.second).toUpdate.values
-
-      arrivals.exists(a => a.PredictedTouchdown.get !== a.Scheduled)
-    }
-  }
+//  "Given an ArrivalsDiff and an actor containing touchdown prediction models" >> {
+//    "I should be able to update the arrival with an predicted touchdown time" >> {
+//      val arrival = ArrivalGenerator.arrival("BA0001", schDt = "2022-05-01T12:00", origin = PortCode("JFK"), terminal = T2)
+//
+//      val diff = ArrivalsDiff(Seq(arrival), Seq())
+//
+//      val arrivals = Await.result(touchdownPrediction.addTouchdownPredictions(diff), 1.second).toUpdate.values
+//
+//      arrivals.exists(a => a.PredictedTouchdown.get !== a.Scheduled)
+//    }
+//  }
 }

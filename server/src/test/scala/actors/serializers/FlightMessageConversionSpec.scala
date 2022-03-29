@@ -2,6 +2,7 @@ package actors.serializers
 
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import org.specs2.mutable.Specification
+import services.SDate
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
 import uk.gov.homeoffice.drt.arrivals._
@@ -19,7 +20,7 @@ class FlightMessageConversionSpec extends Specification {
     FlightCodeSuffix = Option(FlightCodeSuffix("G")),
     Status = ArrivalStatus("Delayed"),
     Estimated = Option(1L),
-    PredictedTouchdown = Option(5L),
+    PredictedTouchdown = Option(Prediction(SDate.now().millisSinceEpoch, 5L)),
     Actual = Option(2L),
     EstimatedChox = Option(3L),
     ActualChox = Option(4L),

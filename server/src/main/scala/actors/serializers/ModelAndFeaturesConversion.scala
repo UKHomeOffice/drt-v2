@@ -11,7 +11,7 @@ object ModelAndFeaturesConversion {
     val features = msg.features.map(featuresFromMessage).getOrElse(throw new Exception("No value for features"))
     val targetName = msg.targetName.getOrElse(throw new Exception("Mandatory parameter 'targetName' not specified"))
     val examplesTrainedOn = msg.examplesTrainedOn.getOrElse(throw new Exception("No value for examplesTrainedOn"))
-    val improvement = msg.improvementPct.getOrElse(throw new Exception("No value for improvement"))
+    val improvement = msg.improvementPct.getOrElse(throw new Exception("No value for improvementPct"))
 
     ModelAndFeatures(model, features, targetName, examplesTrainedOn, improvement)
   }
