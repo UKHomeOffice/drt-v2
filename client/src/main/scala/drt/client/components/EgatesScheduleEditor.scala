@@ -113,7 +113,7 @@ object EgatesScheduleEditor {
 
         val today = SDate.now().getLocalLastMidnight.millisSinceEpoch
 
-        <.div(
+        <.div(^.className := "terminal-config",
           <.h3(s"$terminal schedule"),
           s.editing match {
             case Some(editing) =>
