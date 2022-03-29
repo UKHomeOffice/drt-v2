@@ -77,7 +77,6 @@ object TestableArrivalsGraphStage {
     initialLiveBaseArrivals = SortedMap[UniqueArrival, Arrival](),
     initialLiveArrivals = SortedMap[UniqueArrival, Arrival](),
     initialMergedArrivals = SortedMap[UniqueArrival, Arrival](),
-//    pcpArrivalTime = pcpCalcFn,
     validPortTerminals = Set(T1),
     arrivalDataSanitiser = sanitiser,
     arrivalsAdjustments = ArrivalsAdjustmentsNoop,

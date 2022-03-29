@@ -194,11 +194,11 @@ object RunnableCrunch {
 
           arrivals.out
             .mapAsync(1) { diff =>
-              log.info(s"looking for predictions for ${diff.toUpdate.size} arrivals")
+              log.info(s"Running touchdown prediction lookups for up to ${diff.toUpdate.size} arrivals.")
               addTouchdownPredictions(diff)
             }
             .mapAsync(1) { diff =>
-              log.info(s"got predictions for ${diff.toUpdate.size} arrivals. Updating pcp times now")
+              log.info(s"Touchdown prediction lookups finished for up to ${diff.toUpdate.size} arrivals. Updating pcp times.")
               setPcpTimes(diff)
             } ~> arrivalsFanOut
           arrivalsFanOut ~> flightsSink

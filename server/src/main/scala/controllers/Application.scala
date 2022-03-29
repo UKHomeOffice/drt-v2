@@ -80,7 +80,6 @@ trait AirportConfProvider extends AirportConfiguration {
   private def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
 
   lazy val airportConfig: AirportConfig = {
-    println(s"predictions flag: $useTimePredictions")
     val configForPort = getPortConfFromEnvVar.copy(
       contactEmail = contactEmail,
       outOfHoursContactPhone = oohPhone,
