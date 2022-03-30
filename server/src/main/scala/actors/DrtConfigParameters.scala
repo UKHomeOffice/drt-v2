@@ -32,6 +32,7 @@ case class DrtConfigParameters(config: Configuration) {
   val aclUsername: Option[String] = config.getOptional[String]("acl.username")
   val aclKeyPath: Option[String] = config.getOptional[String]("acl.keypath")
   val refreshArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.refresh-arrivals-on-start").getOrElse(false)
+  val flushArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.flush-arrivals-on-start").getOrElse(false)
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
   val refreshManifestsOnStart: Boolean = if (refreshArrivalsOnStart) {
     log.warn("Refresh arrivals flag is active. Turning on historic manifest refresh")

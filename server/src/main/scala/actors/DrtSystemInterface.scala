@@ -327,7 +327,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       redListUpdatesSource = redListUpdatesSource,
       addTouchdownPredictions = addTouchdownPredictions,
       setPcpTimes = setPcpTimes,
-      flushArrivalsOnStart = params.recrunchOnStart,
+      flushArrivalsOnStart = params.flushArrivalsOnStart,
     ))
   }
 
