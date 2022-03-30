@@ -319,7 +319,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       refreshManifestsOnStart = refreshManifestsOnStart,
-      adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
       optimiser = optimiser,
       aclPaxAdjustmentDays = aclPaxAdjustmentDays,
       startDeskRecs = startDeskRecs,
