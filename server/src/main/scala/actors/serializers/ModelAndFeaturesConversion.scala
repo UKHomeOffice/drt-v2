@@ -11,9 +11,9 @@ object ModelAndFeaturesConversion {
     val features = msg.features.map(featuresFromMessage).getOrElse(throw new Exception("No value for features"))
     val targetName = msg.targetName.getOrElse(throw new Exception("Mandatory parameter 'targetName' not specified"))
     val examplesTrainedOn = msg.examplesTrainedOn.getOrElse(throw new Exception("No value for examplesTrainedOn"))
-    val improvement = msg.improvementPct.getOrElse(0)
+    val improvementPct = msg.improvementPct.getOrElse(0D)
 
-    ModelAndFeatures(model, features, targetName, examplesTrainedOn, improvement)
+    ModelAndFeatures(model, features, targetName, examplesTrainedOn, improvementPct)
   }
 
   def modelFromMessage(msg: RegressionModelMessage): RegressionModel =
