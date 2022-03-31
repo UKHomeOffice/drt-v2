@@ -194,12 +194,16 @@ object RunnableCrunch {
 
           arrivals.out
             .mapAsync(1) { diff =>
-              log.info(s"Running touchdown prediction lookups for up to ${diff.toUpdate.size} arrivals.")
-              addTouchdownPredictions(diff)
+              if (diff.toUpdate.nonEmpty) {
+                log.info(s"Running touchdown prediction lookups for up to ${diff.toUpdate.size} arrivals.")
+                addTouchdownPredictions(diff)
+              } else Future.successful(diff)
             }
             .mapAsync(1) { diff =>
-              log.info(s"Touchdown prediction lookups finished for up to ${diff.toUpdate.size} arrivals. Updating pcp times.")
-              setPcpTimes(diff)
+              if (diff.toUpdate.nonEmpty) {
+                log.info(s"Touchdown prediction lookups finished for up to ${diff.toUpdate.size} arrivals. Updating pcp times.")
+                setPcpTimes(diff)
+              } else Future.successful(diff)
             } ~> arrivalsFanOut
           arrivalsFanOut ~> flightsSink
           arrivalsFanOut ~> aggregatedArrivalsSink
