@@ -201,7 +201,7 @@ object RunnableCrunch {
             }
             .mapAsync(1) { diff =>
               if (diff.toUpdate.nonEmpty) {
-                log.info(s"Touchdown prediction lookups finished. ${diff.toUpdate.count(_._2.PredictedTouchdown.isEmpty)} arrivals now have predictions. Updating pcp times.")
+                log.info(s"Touchdown prediction lookups finished. ${diff.toUpdate.count(_._2.PredictedTouchdown.nonEmpty)} arrivals now have predictions. Updating pcp times.")
                 setPcpTimes(diff)
               } else Future.successful(diff)
             } ~> arrivalsFanOut
