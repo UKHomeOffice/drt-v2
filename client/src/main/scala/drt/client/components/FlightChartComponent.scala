@@ -8,6 +8,7 @@ import drt.shared.ArrivalKey
 import io.kinoplan.scalajs.react.material.ui.core.MuiCircularProgress
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import org.scalajs.dom
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.PaxTypes
@@ -54,9 +55,13 @@ object FlightChartComponent {
                         scope.modState(_.copy(showAllNationalities = newValue))
                       }
 
-                      val (chartWidth, chartHeight): (Int, Int) = if (info.nationalities.size > 10 && state.showAllNationalities)
-                        (300 + 5 * info.nationalities.size, 300)
-                      else (300, 300)
+                      val chartHeight = 300
+                      val widthFactor = if (info.nationalities.size > 10 && state.showAllNationalities) 5 else 0
+                      val chartWidth: Int = if (dom.window.innerWidth > 800)
+                        300 + widthFactor * info.nationalities.size
+                        else
+                        200 + widthFactor * info.nationalities.size
+
 
                       val paxTypeData: ChartJsData = ChartJsData(sortedPaxTypes.map {
                         case (pt, _) => PaxTypes.displayNameShort(pt)

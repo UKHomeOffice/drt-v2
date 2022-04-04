@@ -19,7 +19,7 @@ object RedListEditor {
       .initialStateFromProps(p => State(p.initialUpdates.updates.values))
       .renderS { (scope, s) =>
         MuiGrid(container = true)(
-          MuiGrid(item = true, xs = 6)(
+          MuiGrid(item = true, xs = 12)(
             MuiGrid(item = true, xs = 12)(<.h2("Red list changes")),
             MuiGrid(container = true, item = true, spacing = 8)(
               MuiGrid(item = true, xs = 4)(<.span(^.fontSize := "20px", ^.color := "#666", "Effective from")),
