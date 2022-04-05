@@ -2,21 +2,21 @@ package actors.serializers
 
 import akka.serialization.SerializerWithStringManifest
 import scalapb.GeneratedMessage
-import server.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
-import server.protobuf.messages.CrunchState._
-import server.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
-import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
-import server.protobuf.messages.FlightsMessage._
-import server.protobuf.messages.FlightsSummary.FlightsSummaryMessage
-import server.protobuf.messages.ModelAndFeatures.ModelAndFeaturesMessage
-import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
-import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
-import server.protobuf.messages.RedListUpdates._
-import server.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
-import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
-import server.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
-import server.protobuf.messages.TerminalQueuesSummary.TerminalQueuesSummaryMessage
-import server.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestMessage, VoyageManifestStateSnapshotMessage, VoyageManifestsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.Alert.{Alert, AlertSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
+import uk.gov.homeoffice.drt.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage._
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsSummary.FlightsSummaryMessage
+import uk.gov.homeoffice.drt.protobuf.messages.ModelAndFeatures.ModelAndFeaturesMessage
+import uk.gov.homeoffice.drt.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.RedListUpdates._
+import uk.gov.homeoffice.drt.protobuf.messages.RegisteredArrivalMessage.{RegisteredArrivalMessage, RegisteredArrivalsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.TerminalQueuesSummary.TerminalQueuesSummaryMessage
+import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestMessage, VoyageManifestStateSnapshotMessage, VoyageManifestsMessage}
 
 class ProtoBufSerializer extends SerializerWithStringManifest {
   override def identifier: Int = 9001

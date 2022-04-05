@@ -21,8 +21,8 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
-import server.protobuf.messages.FlightsMessage.FeedStatusMessage
-import server.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FeedStatusMessage
+import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}

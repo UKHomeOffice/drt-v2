@@ -15,7 +15,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import services.{SDate, StreamSupervision}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

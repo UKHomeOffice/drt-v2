@@ -275,10 +275,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val tdModelProvider = TouchdownPrediction.modelAndFeaturesProvider(now)
 
     val addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
-      log.info(s"using prediction lookup")
+      log.info(s"Touchdown predictions enabled")
       TouchdownPrediction(tdModelProvider, 45, 15).addTouchdownPredictions
     } else {
-      log.info(s"using dummy prediction lookup")
+      log.info(s"Touchdown predictions disabled. Using noop lookup")
       diff => Future.successful(diff)
     }
 

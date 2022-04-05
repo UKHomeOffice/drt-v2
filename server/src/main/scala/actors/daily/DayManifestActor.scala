@@ -11,7 +11,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.VoyageManifest.VoyageManifestsMessage
+import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.VoyageManifestsMessage
 import services.SDate
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 

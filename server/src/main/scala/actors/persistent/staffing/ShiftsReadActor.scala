@@ -4,7 +4,7 @@ import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssign
 import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.ShiftAssignments
-import server.protobuf.messages.ShiftMessage.{ShiftStateSnapshotMessage, ShiftsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftStateSnapshotMessage, ShiftsMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object ShiftsReadActor {

@@ -3,7 +3,7 @@ package actors.persistent.staffing
 import actors.persistent.staffing.FixedPointsMessageParser.fixedPointMessagesToFixedPoints
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.FixedPointAssignments
-import server.protobuf.messages.FixedPointMessage.{FixedPointsMessage, FixedPointsStateSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 class FixedPointsReadActor(pointInTime: SDateLike, val now: () => SDateLike) extends FixedPointsActorBase(() => pointInTime) {

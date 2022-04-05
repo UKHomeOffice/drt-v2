@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import services.graphstages.Crunch
 import services.{OfferHandler, SDate}
 import uk.gov.homeoffice.drt.time.SDateLike

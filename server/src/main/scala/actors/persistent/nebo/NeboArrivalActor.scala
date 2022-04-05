@@ -10,7 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{NeboArrivals, RedListPassengers}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object NeboArrivalActor {

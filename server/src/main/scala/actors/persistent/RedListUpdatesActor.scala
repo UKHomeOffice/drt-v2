@@ -14,7 +14,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import drt.shared.redlist._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.RedListUpdates.{RedListUpdatesMessage, RemoveUpdateMessage, SetRedListUpdateMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.RedListUpdates.{RedListUpdatesMessage, RemoveUpdateMessage, SetRedListUpdateMessage}
 import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate}
 
 import scala.concurrent.ExecutionContextExecutor

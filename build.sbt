@@ -138,10 +138,6 @@ lazy val server = (project in file("server"))
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // compress CSS
     LessKeys.compress in Assets := true,
-    PB.targets in Compile := Seq(
-      scalapb.gen() -> (sourceManaged in Compile).value / "protobuf"
-    ),
-    PB.deleteTargetDirectory := false,
     TwirlKeys.templateImports += "buildinfo._",
     parallelExecution in Test := false,
     sources in doc in Compile := List()

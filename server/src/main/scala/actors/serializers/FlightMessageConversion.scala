@@ -5,9 +5,9 @@ import actors.serializers.PortStateMessageConversion.splitMessageToApiSplits
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.CrunchState._
-import server.protobuf.messages.FlightsMessage._
-import server.protobuf.messages.Prediction.PredictionLongMessage
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage._
+import uk.gov.homeoffice.drt.protobuf.messages.Prediction.PredictionLongMessage
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

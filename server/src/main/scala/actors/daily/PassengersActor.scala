@@ -7,7 +7,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
 import services.{PaxDeltas, SDate}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

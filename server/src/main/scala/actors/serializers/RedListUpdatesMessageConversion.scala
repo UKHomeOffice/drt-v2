@@ -1,6 +1,6 @@
 package actors.serializers
 
-import server.protobuf.messages.RedListUpdates._
+import uk.gov.homeoffice.drt.protobuf.messages.RedListUpdates._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
 
 object RedListUpdatesMessageConversion {
