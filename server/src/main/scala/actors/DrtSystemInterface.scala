@@ -6,6 +6,7 @@ import actors.daily.PassengersActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
+import actors.persistent.prediction.TouchdownPredictionActor
 import actors.persistent.staffing._
 import actors.routing.FlightsRouterActor
 import actors.supervised.RestartOnStop
@@ -272,7 +273,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val simulator: TrySimulator = OptimiserWithFlexibleProcessors.runSimulationOfWork
 
-    val tdModelProvider = TouchdownPrediction.modelAndFeaturesProvider(now)
+    val tdModelProvider = TouchdownPrediction.modelAndFeaturesProvider(now, classOf[TouchdownPredictionActor])
 
     val addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
       log.info(s"Touchdown predictions enabled")

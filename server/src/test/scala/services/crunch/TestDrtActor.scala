@@ -257,7 +257,7 @@ class TestDrtActor extends Actor {
         startDeskRecs = startDeskRecs,
         arrivalsAdjustments = tc.arrivalsAdjustments,
         redListUpdatesSource = redListUpdatesSource,
-        addTouchdownPredictions = diff => Future.successful(diff),
+        addTouchdownPredictions = tc.addTouchdownPredictions,
         setPcpTimes = tc.setPcpTimes,
         flushArrivalsOnStart = tc.recrunchOnStart,
       ))

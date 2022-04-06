@@ -1,6 +1,5 @@
 package services.prediction
 
-import actors.persistent.prediction.TouchdownPredictionActor
 import actors.persistent.staffing.GetState
 import akka.actor.{ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
@@ -25,10 +24,10 @@ import scala.math.abs
 object TouchdownPrediction {
   type MaybeModelAndFeaturesProvider = (Terminal, VoyageNumber, PortCode) => Future[Option[TouchdownModelAndFeatures]]
 
-  def modelAndFeaturesProvider(now: () => SDateLike)
+  def modelAndFeaturesProvider[T](now: () => SDateLike, clazz: Class[T])
                               (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): MaybeModelAndFeaturesProvider =
     (terminal, voyageNumber, origin) => {
-      val actor = system.actorOf(Props(new TouchdownPredictionActor(now, terminal, voyageNumber, origin)))
+      val actor = system.actorOf(Props(clazz, now, terminal, voyageNumber, origin))
       actor
         .ask(GetState).mapTo[Option[TouchdownModelAndFeatures]]
         .map { state =>
