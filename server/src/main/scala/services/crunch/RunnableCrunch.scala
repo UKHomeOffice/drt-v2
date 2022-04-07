@@ -11,7 +11,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds._
-import services.StreamSupervision
+import services.{SDate, StreamSupervision}
 import services.graphstages._
 import services.metrics.Metrics
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
@@ -195,15 +195,18 @@ object RunnableCrunch {
           arrivals.out
             .mapAsync(1) { diff =>
               if (diff.toUpdate.nonEmpty) {
-                log.info(s"Running touchdown prediction lookups for ${diff.toUpdate.count(_._2.PredictedTouchdown.isEmpty)} arrivals.")
-                addTouchdownPredictions(diff)
+                val startMillis = SDate.now().millisSinceEpoch
+                val withoutPredictions = diff.toUpdate.count(_._2.PredictedTouchdown.isEmpty)
+                addTouchdownPredictions(diff).map { diffWithPredictions =>
+                  val predictionsAdded = withoutPredictions - diff.toUpdate.count(_._2.PredictedTouchdown.isEmpty)
+                  val millisTaken = SDate.now().millisSinceEpoch - startMillis
+                  log.info(s"Touchdown prediction lookups finished for ${diff.toUpdate.size} arrivals. $predictionsAdded new predictions added. Took ${millisTaken}ms")
+                  diffWithPredictions
+                }
               } else Future.successful(diff)
             }
             .mapAsync(1) { diff =>
-              if (diff.toUpdate.nonEmpty) {
-                log.info(s"Touchdown prediction lookups finished. ${diff.toUpdate.count(_._2.PredictedTouchdown.nonEmpty)} arrivals now have predictions. Updating pcp times.")
-                setPcpTimes(diff)
-              } else Future.successful(diff)
+              if (diff.toUpdate.nonEmpty) setPcpTimes(diff) else Future.successful(diff)
             } ~> arrivalsFanOut
           arrivalsFanOut ~> flightsSink
           arrivalsFanOut ~> aggregatedArrivalsSink
