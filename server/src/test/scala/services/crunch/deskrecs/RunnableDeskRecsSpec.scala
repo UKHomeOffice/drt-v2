@@ -143,6 +143,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     portStateProbe.fishForMessage(5.seconds) {
       case GetFlights(start, end) => start == expectedStart && end == expectedEnd
+      case _ => false
     }
 
     success
