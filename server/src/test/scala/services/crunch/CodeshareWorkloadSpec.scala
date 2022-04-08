@@ -21,7 +21,7 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
     val schSdate = SDate(sch)
     val crunch = runCrunchGraph(TestConfig(
       now = () => schSdate,
-      pcpArrivalTime = TestDefaults.pcpForFlightFromBest
+      setPcpTimes = TestDefaults.setPcpFromBest
     ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival1, arrival2))))

@@ -12,12 +12,15 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 object FlightTableComponents {
 
-  def localDateTimeWithPopup(dt: Option[MillisSinceEpoch]): TagMod = {
-    dt.map(millis => localTimePopup(millis)).getOrElse(<.span())
+  def maybeLocalTimeWithPopup(dt: Option[MillisSinceEpoch], maybeToolTip: Option[String] = None): TagMod = {
+    dt.map(millis => localTimePopup(millis, maybeToolTip)).getOrElse(<.span())
   }
 
-  def localTimePopup(dt: MillisSinceEpoch): VdomElement = {
-    sdateLocalTimePopup(SDate(dt))
+  def localTimePopup(dt: MillisSinceEpoch, maybeToolTip: Option[String]): VdomElement = {
+    maybeToolTip match {
+      case None => sdateLocalTimePopup(SDate(dt))
+      case Some(tooltip) => <.span(^.display := "flex", ^.flexWrap := "nowrap", sdateLocalTimePopup(SDate(dt)), <.span(^.marginLeft := "5px", Tippy.info(tooltip)))
+    }
   }
 
   def millisToDisembark(pax: Int): Long = {
@@ -30,7 +33,7 @@ object FlightTableComponents {
     fws.apiFlight.PcpTime.map { pcpTime: MillisSinceEpoch =>
       val sdateFrom = SDate(MilliDate(pcpTime))
       val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(fws.pcpPaxEstimate)))
-      <.div(
+      <.div(^.display := "flex", ^.flexWrap := "nowrap",
         sdateLocalTimePopup(sdateFrom),
         " \u2192 ",
         sdateLocalTimePopup(sdateTo)

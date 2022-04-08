@@ -1,7 +1,7 @@
 package actors.serializers
 
 import drt.shared.Alert
-import server.protobuf.messages.Alert.{Alert => ProtobufAlert}
+import uk.gov.homeoffice.drt.protobuf.messages.Alert.{Alert => ProtobufAlert}
 
 object AlertMessageConversion {
 

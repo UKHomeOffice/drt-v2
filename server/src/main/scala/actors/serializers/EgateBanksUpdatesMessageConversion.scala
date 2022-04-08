@@ -1,9 +1,8 @@
 package actors.serializers
 
-import scalapb.GeneratedMessage
-import server.protobuf.messages.EgateBanksUpdates._
 import uk.gov.homeoffice.drt.egates._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.EgateBanksUpdates._
 
 object EgateBanksUpdatesMessageConversion {
   def removeEgateBanksUpdateToMessage(delete: DeleteEgateBanksUpdates): RemoveEgateBanksUpdateMessage =

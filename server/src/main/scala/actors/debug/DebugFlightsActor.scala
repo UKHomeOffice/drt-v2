@@ -7,8 +7,8 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
-import server.protobuf.messages.FlightsMessage.FlightsDiffMessage
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import services.SDate
 
 case class DebugState(lastSnapshot: Option[GeneratedMessage], messages: List[GeneratedMessage])

@@ -141,8 +141,9 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val expectedStart = midnight20190101.millisSinceEpoch
     val expectedEnd = midnight20190101.addMinutes(30).millisSinceEpoch
 
-    portStateProbe.fishForMessage(1.second) {
+    portStateProbe.fishForMessage(5.seconds) {
       case GetFlights(start, end) => start == expectedStart && end == expectedEnd
+      case _ => false
     }
 
     success
@@ -360,7 +361,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         minutesToCrunch = 60
       ),
       now = () => SDate(noon),
-      pcpArrivalTime = TestDefaults.pcpForFlightFromBest,
+      setPcpTimes = TestDefaults.setPcpFromBest,
       initialPortState = Option(initialPortState)
     ))
 
@@ -396,7 +397,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         minutesToCrunch = 60
       ),
       now = () => SDate(noon),
-      pcpArrivalTime = TestDefaults.pcpForFlightFromBest
+      setPcpTimes = TestDefaults.setPcpFromBest
     ))
 
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = PortCode("JFK"))
@@ -446,7 +447,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(TestConfig(
       airportConfig = testAirportConfig,
       now = () => SDate(noon),
-      pcpArrivalTime = TestDefaults.pcpForFlightFromBest
+      setPcpTimes = TestDefaults.setPcpFromBest
     ))
 
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, actPax = Option(25), origin = PortCode("JFK"))

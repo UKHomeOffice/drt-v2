@@ -11,15 +11,15 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, EventTypes}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
-import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{List, Map, SortedMap}
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
   val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
     now = () => SDate("2019-01-01T01:00"),
-    pcpArrivalTime = TestDefaults.pcpForFlightFromBest,
+    setPcpTimes = TestDefaults.setPcpFromBest,
     airportConfig = defaultAirportConfig.copy(
       slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
       queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq())
@@ -168,13 +168,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
       case _ => (0L, 0, false)
     }
 
-    val earliestPcpMinuteAcrossArrivals = arrivals.foldLeft(Long.MaxValue) {
-      case (earliestSoFar, a) => TestDefaults.pcpForFlightFromBest(a, RedListUpdates.empty).millisSinceEpoch match {
-        case pcp if pcp < earliestSoFar => pcp
-        case _ => earliestSoFar
-      }
-    }
-
+    val earliestPcpMinuteAcrossArrivals = Await.result(TestDefaults.setPcpFromBest(ArrivalsDiff(arrivals.toList, Seq())).map(_.toUpdate.values.minBy(_.PcpTime.getOrElse(Long.MaxValue))), 1.second).PcpTime.getOrElse(Long.MaxValue)
     val firstPaxMinuteEqualsPcpTime = firstPaxLoadMinute == earliestPcpMinuteAcrossArrivals
     val paxLoadEqualsActPax = paxLoadTotal == arrivalsPaxTotal
 

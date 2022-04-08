@@ -6,6 +6,7 @@ import actors.daily.PassengersActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
+import actors.persistent.prediction.TouchdownPredictionActor
 import actors.persistent.staffing._
 import actors.routing.FlightsRouterActor
 import actors.supervised.RestartOnStop
@@ -57,8 +58,8 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs._
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import services.prediction.TouchdownPrediction
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -192,8 +193,16 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, defaultWalkTimeMillis, coachWalkTime)(flight, redListUpdates)
   }
 
-  def pcpArrivalTimeCalculator: (Arrival, RedListUpdates) => MilliDate =
+  val pcpArrivalTimeCalculator: RedListUpdates => Arrival => MilliDate =
     PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)(walkTimeProvider)
+
+  val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff => {
+    redListUpdatesActor.ask(GetState).mapTo[RedListUpdates]
+      .map{ redListUpdates =>
+        val calc = pcpArrivalTimeCalculator(redListUpdates)
+        diff.copy(toUpdate = diff.toUpdate.mapValues(arrival => arrival.copy(PcpTime = Option(calc(arrival).millisSinceEpoch))))
+      }
+  }
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
@@ -264,14 +273,18 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val simulator: TrySimulator = OptimiserWithFlexibleProcessors.runSimulationOfWork
 
-    val td = TouchdownPrediction.modelAndFeaturesProvider(now)
+    val tdModelProvider = TouchdownPrediction.modelAndFeaturesProvider(now, classOf[TouchdownPredictionActor])
 
-    val touchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = TouchdownPrediction(td, 45, 15).addTouchdownPredictions _
-    val dummyTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = diff => Future.successful(diff)
+    val addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
+      log.info(s"Touchdown predictions enabled")
+      TouchdownPrediction(tdModelProvider, 45, 15).addTouchdownPredictions
+    } else {
+      log.info(s"Touchdown predictions disabled. Using noop lookup")
+      diff => Future.successful(diff)
+    }
 
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
-      pcpArrival = pcpArrivalTimeCalculator,
       portStateActor = portStateActor,
       flightsActor = flightsActor,
       maxDaysToCrunch = params.forecastMaxDays,
@@ -307,13 +320,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       refreshManifestsOnStart = refreshManifestsOnStart,
-      adjustEGateUseByUnder12s = params.adjustEGateUseByUnder12s,
       optimiser = optimiser,
       aclPaxAdjustmentDays = aclPaxAdjustmentDays,
       startDeskRecs = startDeskRecs,
       arrivalsAdjustments = arrivalAdjustments,
       redListUpdatesSource = redListUpdatesSource,
-      touchdownPredictionsForArrivalsDiff = dummyTouchdownPredictions,
+      addTouchdownPredictions = addTouchdownPredictions,
+      setPcpTimes = setPcpTimes,
+      flushArrivalsOnStart = params.flushArrivalsOnStart,
     ))
   }
 

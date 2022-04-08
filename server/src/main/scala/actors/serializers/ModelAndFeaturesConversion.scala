@@ -1,6 +1,6 @@
 package actors.serializers
 
-import server.protobuf.messages.ModelAndFeatures.{FeaturesMessage, ModelAndFeaturesMessage, OneToManyFeatureMessage, RegressionModelMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.ModelAndFeatures.{FeaturesMessage, ModelAndFeaturesMessage, OneToManyFeatureMessage, RegressionModelMessage}
 import uk.gov.homeoffice.drt.prediction.Feature.{OneToMany, Single}
 import uk.gov.homeoffice.drt.prediction.{Feature, FeaturesWithOneToManyValues, ModelAndFeatures, RegressionModel}
 
@@ -11,9 +11,9 @@ object ModelAndFeaturesConversion {
     val features = msg.features.map(featuresFromMessage).getOrElse(throw new Exception("No value for features"))
     val targetName = msg.targetName.getOrElse(throw new Exception("Mandatory parameter 'targetName' not specified"))
     val examplesTrainedOn = msg.examplesTrainedOn.getOrElse(throw new Exception("No value for examplesTrainedOn"))
-    val improvement = msg.improvementPct.getOrElse(throw new Exception("No value for improvement"))
+    val improvementPct = msg.improvementPct.getOrElse(0D)
 
-    ModelAndFeatures(model, features, targetName, examplesTrainedOn, improvement)
+    ModelAndFeatures(model, features, targetName, examplesTrainedOn, improvementPct)
   }
 
   def modelFromMessage(msg: RegressionModelMessage): RegressionModel =

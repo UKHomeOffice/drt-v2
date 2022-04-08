@@ -10,7 +10,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import scalapb.GeneratedMessage
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import server.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}

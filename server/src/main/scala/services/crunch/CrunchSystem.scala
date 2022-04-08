@@ -42,7 +42,6 @@ case class CrunchSystem[FT](shifts: SourceQueueWithComplete[ShiftAssignments],
 
 case class CrunchProps[FT](logLabel: String = "",
                            airportConfig: AirportConfig,
-                           pcpArrival: (Arrival, RedListUpdates) => MilliDate,
                            portStateActor: ActorRef,
                            flightsActor: ActorRef,
                            maxDaysToCrunch: Int,
@@ -69,14 +68,15 @@ case class CrunchProps[FT](logLabel: String = "",
                            initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
                            initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
                            initialStaffMovements: Seq[StaffMovement] = Seq(),
+                           flushArrivalsOnStart: Boolean,
                            refreshArrivalsOnStart: Boolean,
                            refreshManifestsOnStart: Boolean,
-                           adjustEGateUseByUnder12s: Boolean,
                            optimiser: TryCrunch,
                            aclPaxAdjustmentDays: Int,
                            startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch),
                            arrivalsAdjustments: ArrivalsAdjustmentsLike,
-                           touchdownPredictionsForArrivalsDiff: ArrivalsDiff => Future[ArrivalsDiff],
+                           addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff],
+                           setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
                           )
 
 object CrunchSystem {
@@ -105,7 +105,6 @@ object CrunchSystem {
       initialLiveBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals,
       initialLiveArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals,
       initialMergedArrivals = initialMergedArrivals,
-      pcpArrivalTime = props.pcpArrival,
       validPortTerminals = props.airportConfig.terminals.toSet,
       ArrivalDataSanitiser(
         props.airportConfig.maybeCiriumEstThresholdHours,
@@ -114,6 +113,7 @@ object CrunchSystem {
       arrivalsAdjustments = props.arrivalsAdjustments,
       expireAfterMillis = props.expireAfterMillis,
       now = props.now,
+      flushOnStart = props.flushArrivalsOnStart,
     )
 
     val forecastArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals, forecastMaxMillis)
@@ -156,7 +156,8 @@ object CrunchSystem {
       deploymentRequestActor = deploymentQueueActor,
       forecastMaxMillis = forecastMaxMillis,
       redListUpdatesSource = props.redListUpdatesSource,
-      touchdownPredictions = props.touchdownPredictionsForArrivalsDiff,
+      addTouchdownPredictions = props.addTouchdownPredictions,
+      setPcpTimes = props.setPcpTimes,
     )
 
     val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run

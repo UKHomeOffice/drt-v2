@@ -13,7 +13,7 @@ import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsFo
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightCode, VoyageNumberLike}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

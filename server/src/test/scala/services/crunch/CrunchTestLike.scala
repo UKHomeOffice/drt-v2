@@ -28,7 +28,6 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable
@@ -189,14 +188,20 @@ object TestDefaults {
     )
   }
 
-  val pcpForFlightFromSch: (Arrival, RedListUpdates) => MilliDate = (a, _) => MilliDate(SDate(a.Scheduled).millisSinceEpoch)
-  val pcpForFlightFromBest: (Arrival, RedListUpdates) => MilliDate = (a, _) => {
-    if (a.ActualChox.isDefined) MilliDate(SDate(a.ActualChox.get).millisSinceEpoch)
-    else if (a.EstimatedChox.isDefined) MilliDate(SDate(a.EstimatedChox.get).millisSinceEpoch)
-    else if (a.Actual.isDefined) MilliDate(SDate(a.Actual.get).millisSinceEpoch)
-    else if (a.Estimated.isDefined) MilliDate(SDate(a.Estimated.get).millisSinceEpoch)
-    else MilliDate(SDate(a.Scheduled).millisSinceEpoch)
-  }
+  val setPcpFromSch: ArrivalsDiff => Future[ArrivalsDiff] =
+    diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.mapValues(a => a.copy(PcpTime = Option(SDate(a.Scheduled).millisSinceEpoch)))))
+
+  val setPcpFromBest: ArrivalsDiff => Future[ArrivalsDiff] =
+    diff => Future.successful(
+      diff.copy(toUpdate = diff.toUpdate.mapValues { a =>
+        val pcp = if (a.ActualChox.isDefined) SDate(a.ActualChox.get).millisSinceEpoch
+        else if (a.EstimatedChox.isDefined) SDate(a.EstimatedChox.get).millisSinceEpoch
+        else if (a.Actual.isDefined) SDate(a.Actual.get).millisSinceEpoch
+        else if (a.Estimated.isDefined) SDate(a.Estimated.get).millisSinceEpoch
+        else SDate(a.Scheduled).millisSinceEpoch
+        a.copy(PcpTime = Option(pcp))
+      }
+    ))
 
   def testProbe(name: String)(implicit system: ActorSystem): TestProbe = TestProbe(name = name)
 }

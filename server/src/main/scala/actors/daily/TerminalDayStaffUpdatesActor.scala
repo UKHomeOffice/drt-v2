@@ -9,7 +9,7 @@ import drt.shared.CrunchApi.StaffMinute
 import drt.shared.TM
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
 import services.SDate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike

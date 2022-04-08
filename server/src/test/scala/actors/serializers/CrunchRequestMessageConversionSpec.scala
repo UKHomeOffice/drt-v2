@@ -2,7 +2,7 @@ package actors.serializers
 
 import actors.serializers.CrunchRequestMessageConversion.{crunchRequestToMessage, crunchRequestsFromMessages, maybeCrunchRequestFromMessage, removeCrunchRequestMessage}
 import org.specs2.mutable.Specification
-import server.protobuf.messages.CrunchState.RemoveCrunchRequestMessage
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.RemoveCrunchRequestMessage
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import uk.gov.homeoffice.drt.time.LocalDate
 

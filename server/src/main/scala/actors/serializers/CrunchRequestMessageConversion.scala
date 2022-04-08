@@ -1,7 +1,7 @@
 package actors.serializers
 
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.CrunchState.{CrunchRequestMessage, RemoveCrunchRequestMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchRequestMessage, RemoveCrunchRequestMessage}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import uk.gov.homeoffice.drt.time.LocalDate
 

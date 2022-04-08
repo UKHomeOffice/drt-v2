@@ -131,7 +131,6 @@ object FlightsWithSplitsTable {
     val redListHeading = "Red List Pax"
     val estChoxHeading = "Est Chox"
 
-    val predHeading = "Pred"
     val columns = List(
       ("Flight", Option("arrivals__table__flight-code")),
       ("Origin", None),
@@ -140,7 +139,6 @@ object FlightsWithSplitsTable {
       ("Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
       ("Sch", None),
-      (predHeading, None),
       ("Est", None),
       ("Act", None),
       (estChoxHeading, None),
@@ -154,9 +152,6 @@ object FlightsWithSplitsTable {
       }
       .filter {
         case (label, _) => label != redListHeading || props.displayRedListInfo
-      }
-      .filter {
-        case (label, _) => label != predHeading || props.airportConfig.useTimePredictions
       }
       .map {
         case (label, None) if label == "Flight" => <.th(

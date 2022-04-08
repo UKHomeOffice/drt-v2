@@ -3,7 +3,7 @@ package actors.serializers
 import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
-import server.protobuf.messages.VoyageManifest.{PassengerInfoJsonMessage, VoyageManifestMessage, VoyageManifestsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{PassengerInfoJsonMessage, VoyageManifestMessage, VoyageManifestsMessage}
 import services.SDate
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumber}

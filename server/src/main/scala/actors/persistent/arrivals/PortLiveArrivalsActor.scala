@@ -2,7 +2,7 @@ package actors.persistent.arrivals
 
 import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
-import server.protobuf.messages.FlightsMessage.FlightsDiffMessage
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 

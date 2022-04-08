@@ -8,7 +8,7 @@ import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import uk.gov.homeoffice.drt.time.SDateLike
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.CrunchMinuteMessage
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.CrunchMinuteMessage
 import services.SDate
 import services.crunch.CrunchTestLike
 import test.TestActors.TestTerminalDayQueuesActor

@@ -10,7 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FixedPointAssignments, MilliDate, StaffAssignment}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import services.OfferHandler
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike

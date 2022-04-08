@@ -21,7 +21,6 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
                       initialPortState: Option[PortState] = None,
                       airportConfig: AirportConfig = TestDefaults.airportConfig,
-                      pcpArrivalTime: (Arrival, RedListUpdates) => MilliDate = TestDefaults.pcpForFlightFromSch,
                       expireAfterMillis: Int = DrtStaticParameters.expireAfterMillis,
                       now: () => SDateLike,
                       initialShifts: ShiftAssignments = ShiftAssignments.empty,
@@ -40,4 +39,6 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       maybePassengersActorProps: Option[Props] = None,
                       arrivalsAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustmentsNoop,
                       maybeEgatesProvider: Option[() => Future[PortEgateBanksUpdates]] = None,
+                      setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = TestDefaults.setPcpFromSch,
+                      addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = diff => Future.successful(diff),
                      )

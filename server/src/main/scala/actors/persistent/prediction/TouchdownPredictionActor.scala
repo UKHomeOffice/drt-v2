@@ -8,7 +8,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.ModelAndFeatures.ModelAndFeaturesMessage
+import uk.gov.homeoffice.drt.protobuf.messages.ModelAndFeatures.ModelAndFeaturesMessage
 import services.SDate
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -34,7 +34,6 @@ class TouchdownPredictionActor(val now: () => SDateLike,
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case msg: ModelAndFeaturesMessage =>
-      log.info(s"recovering state from ModelAndFeaturesMessage")
       state = Option(modelAndFeaturesFromMessage(msg))
   }
 
@@ -46,9 +45,7 @@ class TouchdownPredictionActor(val now: () => SDateLike,
   override def stateToMessage: GeneratedMessage = throw new Exception(s"Persistence not supported here")
 
   override def receiveCommand: Receive = {
-    case GetState =>
-      log.info(s"Received request for $uniqueId model and features")
-      sender ! state
+    case GetState => sender ! state
   }
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte

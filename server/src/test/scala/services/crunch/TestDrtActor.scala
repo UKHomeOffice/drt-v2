@@ -218,7 +218,6 @@ class TestDrtActor extends Actor {
       val crunchInputs = CrunchSystem(CrunchProps(
         logLabel = tc.logLabel,
         airportConfig = tc.airportConfig,
-        pcpArrival = tc.pcpArrivalTime,
         portStateActor = portStateActor,
         flightsActor = flightsActor,
         maxDaysToCrunch = tc.maxDaysToCrunch,
@@ -253,13 +252,14 @@ class TestDrtActor extends Actor {
         initialStaffMovements = tc.initialStaffMovements,
         refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
         refreshManifestsOnStart = tc.refreshManifestsOnStart,
-        adjustEGateUseByUnder12s = false,
         optimiser = tc.cruncher,
         aclPaxAdjustmentDays = aclPaxAdjustmentDays,
         startDeskRecs = startDeskRecs,
         arrivalsAdjustments = tc.arrivalsAdjustments,
         redListUpdatesSource = redListUpdatesSource,
-        touchdownPredictionsForArrivalsDiff = diff => Future.successful(diff)
+        addTouchdownPredictions = tc.addTouchdownPredictions,
+        setPcpTimes = tc.setPcpTimes,
+        flushArrivalsOnStart = tc.recrunchOnStart,
       ))
 
       replyTo ! CrunchGraphInputsAndProbes(

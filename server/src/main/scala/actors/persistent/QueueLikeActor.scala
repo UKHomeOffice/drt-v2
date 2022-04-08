@@ -6,7 +6,7 @@ import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchRequestsMessage, DaysMessage, RemoveCrunchRequestMessage, RemoveDayMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchRequestsMessage, DaysMessage, RemoveCrunchRequestMessage, RemoveDayMessage}
 import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, RemoveCrunchRequest}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}

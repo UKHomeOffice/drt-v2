@@ -2,7 +2,7 @@ package services.arrivals
 
 import org.specs2.mutable.Specification
 import services.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Prediction}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -12,7 +12,7 @@ class ArrivalDataSanitiserSpec extends Specification {
   val scheduled: SDateLike = SDate(2019, 9, 30, 16, 0)
 
   def arrival(estimated: Option[Long] = None,
-              predTouchdown: Option[Long] = None,
+              predTouchdown: Option[Prediction[Long]] = None,
               actual: Option[Long] = None,
               estChox: Option[Long] = None,
               actChox: Option[Long] = None,

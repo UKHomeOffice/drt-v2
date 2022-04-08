@@ -1,7 +1,7 @@
 package actors.serializers
 
 import drt.shared.{NeboArrivals, RedListPassengers}
-import server.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
 
 object NeboArrivalMessageConversion {
 

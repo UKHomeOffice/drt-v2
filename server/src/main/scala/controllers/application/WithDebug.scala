@@ -7,7 +7,7 @@ import akka.pattern.ask
 import controllers.Application
 import uk.gov.homeoffice.drt.auth.Roles.Debug
 import play.api.mvc.{Action, AnyContent}
-import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.{ActorTree, SDate}
 
 import scala.collection.SortedMap

@@ -7,7 +7,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.FlightsMessage.{FlightMessage, FlightsDiffMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FlightMessage, FlightsDiffMessage}
 import services.SDate
 import services.crunch.CrunchTestLike
 

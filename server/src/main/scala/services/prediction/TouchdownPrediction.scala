@@ -1,6 +1,5 @@
 package services.prediction
 
-import actors.persistent.prediction.TouchdownPredictionActor
 import actors.persistent.staffing.GetState
 import akka.actor.{ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
@@ -12,7 +11,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
 import services.SDate
 import services.prediction.TouchdownPrediction.MaybeModelAndFeaturesProvider
-import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Prediction, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.prediction.TouchdownModelAndFeatures
@@ -25,10 +24,10 @@ import scala.math.abs
 object TouchdownPrediction {
   type MaybeModelAndFeaturesProvider = (Terminal, VoyageNumber, PortCode) => Future[Option[TouchdownModelAndFeatures]]
 
-  def modelAndFeaturesProvider(now: () => SDateLike)
+  def modelAndFeaturesProvider[T](now: () => SDateLike, clazz: Class[T])
                               (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): MaybeModelAndFeaturesProvider =
     (terminal, voyageNumber, origin) => {
-      val actor = system.actorOf(Props(new TouchdownPredictionActor(now, terminal, voyageNumber, origin)))
+      val actor = system.actorOf(Props(clazz, now, terminal, voyageNumber, origin))
       actor
         .ask(GetState).mapTo[Option[TouchdownModelAndFeatures]]
         .map { state =>
@@ -40,33 +39,42 @@ object TouchdownPrediction {
 
 case class TouchdownPrediction(modelAndFeaturesProvider: MaybeModelAndFeaturesProvider,
                                minutesOffScheduledThreshold: Int,
-                               minimumImprovementPctThreshold: Int)
+                               minimumImprovementPctThreshold: Int,
+                              )
                               (implicit ec: ExecutionContext, mat: Materializer) {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def addTouchdownPredictions(diff: ArrivalsDiff): Future[ArrivalsDiff] =
-    Source(diff.toUpdate.values.toList)
-      .mapAsync(1) { arrival: Arrival =>
-        maybePredictedTouchdown(arrival).map {
-          case None =>
-            log.info(s"No prediction model found for ${arrival.flightCodeString} ${SDate(arrival.Scheduled).toISOString()}")
-            arrival.copy(PredictedTouchdown = None)
-          case Some(prediction) =>
-            val minutesOffScheduled = prediction - arrival.Scheduled
-            val absMinutesOffScheduled = abs(minutesOffScheduled).millis.toMinutes
-            if (absMinutesOffScheduled <= minutesOffScheduledThreshold) {
-              log.info(s"Adding $minutesOffScheduled to ${arrival.flightCodeString} ${SDate(arrival.Scheduled).toISOString()}")
-              arrival.copy(PredictedTouchdown = Option(prediction))
-            } else {
-              log.warn(s"Predicted touchdown is $absMinutesOffScheduled minutes off scheduled time. Threshold is $minutesOffScheduledThreshold")
-              arrival.copy(PredictedTouchdown = None)
+  val addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
+    diff => {
+      log.info(s"Looking up predictions for ${diff.toUpdate.size} arrivals")
+      val lastUpdatedThreshold = SDate.now().addDays(-7).millisSinceEpoch
+      Source(diff.toUpdate.values.toList)
+        .mapAsync(1) { arrival: Arrival =>
+          if (recentPredictionExists(lastUpdatedThreshold, arrival)) Future.successful(arrival)
+          else {
+            maybePredictedTouchdown(arrival).map {
+              case None =>
+                arrival.copy(PredictedTouchdown = None)
+              case Some(prediction) =>
+                val minutesOffScheduled = prediction - arrival.Scheduled
+                val absMinutesOffScheduled = abs(minutesOffScheduled).millis.toMinutes
+                if (absMinutesOffScheduled <= minutesOffScheduledThreshold) {
+                  arrival.copy(PredictedTouchdown = Option(Prediction(SDate.now().millisSinceEpoch, prediction)))
+                } else {
+                  log.warn(s"Predicted touchdown is $absMinutesOffScheduled minutes off scheduled time. Threshold is $minutesOffScheduledThreshold")
+                  arrival.copy(PredictedTouchdown = None)
+                }
             }
+          }
         }
-      }
-      .runWith(Sink.seq)
-      .map { arrivals =>
-        diff.copy(toUpdate = diff.toUpdate ++ arrivals.map(a => (a.unique, a)))
-      }
+        .runWith(Sink.seq)
+        .map { arrivals =>
+          diff.copy(toUpdate = diff.toUpdate ++ arrivals.map(a => (a.unique, a)))
+        }
+    }
+
+  private def recentPredictionExists(lastUpdatedThreshold: MillisSinceEpoch, arrival: Arrival): Boolean =
+    arrival.PredictedTouchdown.exists(_.updatedAt > lastUpdatedThreshold)
 
   def maybePredictedTouchdown(arrival: Arrival): Future[Option[Long]] = {
     implicit val millisToSDate: MillisSinceEpoch => SDateLike = (millis: MillisSinceEpoch) => SDate(millis)

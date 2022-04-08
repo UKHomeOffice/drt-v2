@@ -4,7 +4,7 @@ import akka.actor.Props
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared.TQM
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
