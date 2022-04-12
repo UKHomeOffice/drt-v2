@@ -93,7 +93,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       Status = status,
       Estimated = ltnFeedFlight.EstimatedDateTime.map(sdateWithTimeZoneApplied),
       PredictedTouchdown = None,
-      Actual = ltnFeedFlight.ActualDateTime.map(sdateWithTimeZoneApplied),
+      Actual = ltnFeedFlight.ALDT.map(sdateWithTimeZoneApplied),
       EstimatedChox = None,
       ActualChox = ltnFeedFlight.AIBT.map(sdateWithTimeZoneApplied),
       Gate = ltnFeedFlight.GateCode,
@@ -140,7 +140,7 @@ case class LtnLiveFlight(TotalPassengerCount: Option[Int],
                          AirlineDesc: Option[String],
                          MaxPax: Option[Int],
                          AIBT: Option[String],
-                         ActualDateTime: Option[String],
+                         ALDT: Option[String],
                          OriginDestAirportIATA: Option[String]
                         )
 
