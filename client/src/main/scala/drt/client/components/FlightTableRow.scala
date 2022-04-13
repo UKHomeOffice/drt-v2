@@ -52,6 +52,7 @@ object FlightTableRow {
                    directRedListFlight: DirectRedListFlight,
                    airportConfig: AirportConfig,
                    redListUpdates: RedListUpdates,
+                   includeIndirectRedListColumn: Boolean,
                   ) extends UseValueEq
 
   case class RowState(hasChanged: Boolean)
@@ -125,19 +126,15 @@ object FlightTableRow {
           <.span(
             proxy().renderEmpty(<.span()),
             proxy().render(ai => {
-              val style = if (props.indirectRedListPax.isEnabled && isRedListCountry(ai.country, props.viewMode.dayEnd, props.redListUpdates)) {
-                ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField)
-              } else EmptyVdom
-
-              <.span(
-                style,
-                ai.country
-              )
+              val redListCountry = props.indirectRedListPax.isEnabled && isRedListCountry(ai.country, props.viewMode.dayEnd, props.redListUpdates)
+              val style = if (redListCountry) ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField) else EmptyVdom
+              <.span(style, ai.country)
             })
           )
         }),
         props.indirectRedListPax match {
           case NoIndirectRedListPax => EmptyVdom
+          case _ if !props.includeIndirectRedListColumn => EmptyVdom
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },

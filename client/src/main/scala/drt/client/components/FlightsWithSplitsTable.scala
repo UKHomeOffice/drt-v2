@@ -34,7 +34,8 @@ import scala.collection.immutable.{HashSet, Map}
 
 object FlightsWithSplitsTable {
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],
-                   queueOrder: Seq[Queue], hasEstChox: Boolean,
+                   queueOrder: Seq[Queue],
+                   hasEstChox: Boolean,
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    loggedInUser: LoggedInUser,
                    viewMode: ViewMode,
@@ -66,6 +67,7 @@ object FlightsWithSplitsTable {
       if (sortedFlights.nonEmpty) {
         val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
         val classesAttr = ^.className := "table table-flex table-responsive table-striped table-hover table-sm"
+        val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
         val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
           "* Passengers from CTA & Red List origins do not contribute to PCP workload"
         else
@@ -85,13 +87,13 @@ object FlightsWithSplitsTable {
             <.table(
               ^.id := "sticky",
               classesAttr,
-              tableHead(props, timelineTh, props.queueOrder)))
+              tableHead(props, timelineTh, props.queueOrder, redListPaxExist)))
           ,
           <.table(
             ^.id := "sticky-body",
             dataStickyAttr,
             classesAttr,
-            tableHead(props, timelineTh, props.queueOrder),
+            tableHead(props, timelineTh, props.queueOrder, redListPaxExist),
             <.tbody(
               sortedFlights.zipWithIndex.map {
                 case ((flightWithSplits, codeShares), idx) =>
@@ -115,6 +117,7 @@ object FlightsWithSplitsTable {
                     directRedListFlight = directRedListFlight,
                     airportConfig = props.airportConfig,
                     redListUpdates = props.redListUpdates,
+                    includeIndirectRedListColumn = redListPaxExist,
                   ))
               }.toTagMod)
           ),
@@ -127,7 +130,7 @@ object FlightsWithSplitsTable {
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 
-  def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue]): TagOf[TableSection] = {
+  def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue], redListPaxExist: Boolean): TagOf[TableSection] = {
     val redListHeading = "Red List Pax"
     val estChoxHeading = "Est Chox"
 
@@ -151,7 +154,7 @@ object FlightsWithSplitsTable {
         case (label, _) => label != estChoxHeading || props.hasEstChox
       }
       .filter {
-        case (label, _) => label != redListHeading || props.displayRedListInfo
+        case (label, _) => label != redListHeading || (props.displayRedListInfo && redListPaxExist)
       }
       .map {
         case (label, None) if label == "Flight" => <.th(
