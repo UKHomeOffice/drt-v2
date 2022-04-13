@@ -9,13 +9,14 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.server.feeds.Feed.FeedTick
 import drt.shared.FlightsApi.Flights
+import manifests.passengers.HistoricManifestPax
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, FlightCodeSuffix, Operator, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, FlightCodeSuffix, Operator, TotalPaxSource, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSource, PortCode}
 
@@ -139,7 +140,8 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
         CarrierScheduled = None,
         ApiPax = None,
         ScheduledDeparture = None,
-        RedListPax = None
+        RedListPax = None,
+        TotalPax =  List(TotalPaxSource(flight.Passengers.getOrElse(0),feedSource,None))
       )
     } match {
       case Success(a) => Option(a)
