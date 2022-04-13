@@ -15,6 +15,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsPaxProvider
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch.LoadMinute
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
@@ -42,6 +43,18 @@ object OptimisationProviders {
           }
       }
       .collect { case Some(bam) => bam }
+
+  def historicManifestsPaxProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
+                                  (implicit mat: Materializer, ec: ExecutionContext): HistoricManifestsPaxProvider = arrival =>
+    manifestLookupService
+      .historicManifestPax(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+      .map { case (_, maybeManifest) => maybeManifest }
+      .recover {
+        case t =>
+          log.error(s"Failed to get historic manifest for ${arrival.unique}")
+          None
+      }
+//      .collect { case Some(bam) => Option(bam) }
 
   def arrivalsProvider(arrivalsActor: ActorRef)
                       (crunchRequest: CrunchRequest)

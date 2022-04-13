@@ -5,27 +5,30 @@ import akka.NotUsed
 import akka.actor.{Actor, Props}
 import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
-import dispatch.Future
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
-import manifests.passengers.ManifestLike
+import manifests.UniqueArrivalKey
+import manifests.passengers.{HistoricManifestPax, ManifestLike, ManifestPaxLike}
 import manifests.queues.SplitsCalculator
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import queueus.{B5JPlusTypeAllocator, ChildEGateAdjustments, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
+import services.SDate
 import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.LocalDate
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 class ArrivalsScenarioSpec extends CrunchTestLike {
@@ -55,6 +58,10 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
 
   def historicManifestsProvider(arrivals: Iterable[Arrival]): Source[ManifestLike, NotUsed] = Source(List())
 
+  def historicManifestsPaxProvider(arrival:Arrival): Future[Option[ManifestPaxLike]] = Future.successful(
+    Option(HistoricManifestPax(SplitSource("ApiSplitsWithHistoricalEGateAndFTPercentages"),
+      UniqueArrivalKey(PortCode("LHR"),departurePort = arrival.Origin,voyageNumber = arrival.VoyageNumber,SDate(arrival.Scheduled)),10)))
+
   "Given some arrivals and simlution config I should get back DeskRecMinutes containing all the passengers from the arrivals" >> {
 
     val simulationParams = defaultSimulationParams(Terminals.T1, crunchDate, defaultAirportConfig)
@@ -70,6 +77,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
       flightsProvider = flightsProvider,
       liveManifestsProvider = manifestsProvider,
       historicManifestsProvider = historicManifestsProvider,
+      historicManifestsPaxProvider =  historicManifestsPaxProvider,
       flightsActor = system.actorOf(Props(new AkkingActor())),
       portStateActor = portStateActor,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),

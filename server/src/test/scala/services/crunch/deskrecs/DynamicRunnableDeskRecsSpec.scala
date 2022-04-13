@@ -10,7 +10,7 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared._
-import manifests.passengers.BestAvailableManifest
+import manifests.passengers.{BestAvailableManifest, HistoricManifestPax, ManifestPaxLike}
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
@@ -18,8 +18,8 @@ import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageMa
 import queueus._
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsProvider, addManifests}
-import services.crunch.deskrecs.OptimiserMocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsProvider, mockLiveManifestsProvider}
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider, addManifests}
+import services.crunch.deskrecs.OptimiserMocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsPaxProvider, mockHistoricManifestsPaxProviderNoop, mockHistoricManifestsProvider, mockLiveManifestsProvider}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
@@ -71,6 +71,10 @@ object OptimiserMocks {
     _: Iterable[Arrival] => Source(List())
   }
 
+  def mockHistoricManifestsPaxProviderNoop(implicit ec: ExecutionContext): HistoricManifestsPaxProvider = {
+    _: Arrival => Future.successful(None)
+  }
+
   def mockLiveManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]])
                                (implicit ec: ExecutionContext): CrunchRequest => Future[Source[VoyageManifests, NotUsed]] = {
     val manifests = maybePax match {
@@ -89,12 +93,32 @@ object OptimiserMocks {
         val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
         val maybeManifest = maybePax.map(pax => BestAvailableManifest.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
         (key, maybeManifest)
-      }, PortCode("STN"))
+      }, (arrivalsWithMaybePax.map { case (arrival, maybePax) =>
+        val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+        val maybeManifest = maybePax.map(pax => HistoricManifestPax.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
+        (key, maybeManifest)
+      }),PortCode("STN"))
+    )
+  }
+
+  def mockHistoricManifestsPaxProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
+                                   (implicit ec: ExecutionContext, mat: Materializer): HistoricManifestsPaxProvider = {
+    OptimisationProviders.historicManifestsPaxProvider(
+      PortCode("STN"),
+      MockManifestLookupService(arrivalsWithMaybePax.map { case (arrival, maybePax) =>
+        val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+        val maybeManifest = maybePax.map(pax => BestAvailableManifest.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
+        (key, maybeManifest)
+      }, arrivalsWithMaybePax.map { case (arrival, maybePax) =>
+        val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+        val maybeManifest = maybePax.map(pax => HistoricManifestPax.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
+        (key, maybeManifest)
+      },PortCode("STN"))
     )
   }
 }
 
-case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]], destinationPort: PortCode)
+case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]], historicManifestsPax: Map[UniqueArrivalKey, Option[HistoricManifestPax]] ,destinationPort: PortCode)
                                     (implicit mat: Materializer) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
@@ -103,6 +127,12 @@ case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKe
     val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
     Future.successful((key, bestAvailableManifests.get(key).flatten))
   }
+
+  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[HistoricManifestPax])] = {
+    val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
+    Future.successful((key, historicManifestsPax.get(key).flatten))
+  }
+
 }
 
 class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
@@ -132,6 +162,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       arrivalsProvider = mockFlightsProvider(List(arrival)),
       liveManifestsProvider = mockLiveManifestsProvider(arrival, livePax),
       historicManifestsProvider = mockHistoricManifestsProvider(Map(arrival -> historicPax)),
+      historicManifestsPaxProvider = mockHistoricManifestsPaxProvider(Map(arrival -> historicPax)),
       splitsCalculator = splitsCalculator,
       splitsSink = mockSplitsSink,
       portDesksAndWaitsProvider = desksAndWaitsProvider,

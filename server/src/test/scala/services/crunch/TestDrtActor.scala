@@ -13,7 +13,7 @@ import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.server.feeds.Feed
-import manifests.passengers.BestAvailableManifest
+import manifests.passengers.{BestAvailableManifest, HistoricManifestPax}
 import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
@@ -46,6 +46,10 @@ case class MockManifestLookupService()(implicit mat: Materializer) extends Manif
                                           voyageNumber: VoyageNumber,
                                           scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
     Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+
+  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[HistoricManifestPax])] = {
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+  }
 }
 
 object MockEgatesProvider {
@@ -163,6 +167,7 @@ class TestDrtActor extends Actor {
           arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
           liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
           historicManifestsProvider = OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups),
+          historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(tc.airportConfig.portCode, historicManifestLookups),
           splitsCalculator = splitsCalculator,
           splitsSink = portStateActor,
           portDesksAndWaitsProvider = portDeskRecs,
