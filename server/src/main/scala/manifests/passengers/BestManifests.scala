@@ -44,6 +44,23 @@ trait ManifestLike {
   }
 }
 
+trait ManifestPaxLike {
+  val source: SplitSource
+  val arrivalPortCode: PortCode
+  val departurePortCode: PortCode
+  val voyageNumber: VoyageNumberLike
+  val carrierCode: CarrierCode
+  val scheduled: SDateLike
+  val pax: Option[Int]
+  val maybeEventType: Option[EventType]
+
+  def maybeKey: Option[ArrivalKey] = voyageNumber match {
+    case vn: VoyageNumber =>
+      Option(ArrivalKey(departurePortCode, vn, scheduled.millisSinceEpoch))
+    case _ => None
+  }
+}
+
 case class BestAvailableManifest(source: SplitSource,
                                  arrivalPortCode: PortCode,
                                  departurePortCode: PortCode,
@@ -52,6 +69,49 @@ case class BestAvailableManifest(source: SplitSource,
                                  scheduled: SDateLike,
                                  nonUniquePassengers: Seq[ManifestPassengerProfile],
                                  override val maybeEventType: Option[EventType]) extends ManifestLike
+
+case class HistoricManifestPax(source: SplitSource,
+                               arrivalPortCode: PortCode,
+                               departurePortCode: PortCode,
+                               voyageNumber: VoyageNumberLike,
+                               carrierCode: CarrierCode,
+                               scheduled: SDateLike,
+                               pax: Option[Int],
+                               override val maybeEventType: Option[EventType]) extends ManifestPaxLike
+
+object HistoricManifestPax {
+
+  def apply(manifest: VoyageManifest): HistoricManifestPax =
+    fromManifest(manifest, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
+
+  def historic(manifest: VoyageManifest): HistoricManifestPax =
+    fromManifest(manifest, SplitSources.Historical)
+
+  def fromManifest(manifest: VoyageManifest, source: SplitSource): HistoricManifestPax = {
+    HistoricManifestPax(
+      source = source,
+      arrivalPortCode = manifest.ArrivalPortCode,
+      departurePortCode = manifest.DeparturePortCode,
+      voyageNumber = manifest.VoyageNumber,
+      carrierCode = manifest.CarrierCode,
+      scheduled = manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
+      pax = Option(manifest.uniquePassengers.size),
+      maybeEventType = Option(manifest.EventCode)
+    )
+  }
+
+  def apply(source: SplitSource,
+            uniqueArrivalKey: UniqueArrivalKey,
+            pax: Int): HistoricManifestPax = HistoricManifestPax(
+    source = source,
+    arrivalPortCode = uniqueArrivalKey.arrivalPort,
+    departurePortCode = uniqueArrivalKey.departurePort,
+    voyageNumber = uniqueArrivalKey.voyageNumber,
+    carrierCode = CarrierCode(""),
+    scheduled = uniqueArrivalKey.scheduled,
+    pax = Option(pax),
+    maybeEventType = None)
+}
 
 object BestAvailableManifest {
   def apply(manifest: VoyageManifest): BestAvailableManifest =

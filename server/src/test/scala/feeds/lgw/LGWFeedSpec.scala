@@ -9,7 +9,7 @@ import org.specs2.mock.Mockito
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.N
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
@@ -23,7 +23,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
 
   import drt.server.feeds.Implicits._
 
-  "Can convert response XML into an Arrival" in  {
+  "Can convert response XML into an Arrival" in {
 
     val xml: String = Source.fromInputStream(getClass.getClassLoader.getResourceAsStream("lgw.xml")).mkString
 
@@ -35,9 +35,9 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       Status = "Landed",
       Estimated = Some(SDate("2018-06-03T19:28:00Z").millisSinceEpoch),
       PredictedTouchdown = None,
-      Actual =  Some(SDate("2018-06-03T19:30:00Z").millisSinceEpoch),
-      EstimatedChox =  Some(SDate("2018-06-03T19:37:00Z").millisSinceEpoch),
-      ActualChox =  Some(SDate("2018-06-03T19:36:00Z").millisSinceEpoch),
+      Actual = Some(SDate("2018-06-03T19:30:00Z").millisSinceEpoch),
+      EstimatedChox = Some(SDate("2018-06-03T19:37:00Z").millisSinceEpoch),
+      ActualChox = Some(SDate("2018-06-03T19:36:00Z").millisSinceEpoch),
       Gate = None,
       Stand = None,
       MaxPax = Some(308),
@@ -51,12 +51,12 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       rawIATA = "VS808",
       Origin = PortCode("LHR"),
       FeedSources = Set(LiveFeedSource),
-      Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None)
-
+      Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None,
+      TotalPax = List(TotalPaxSource(120, LiveFeedSource, None)))
 
   }
 
-  "Given a feed item with 0 pax in act and max then I should see that reflected in the arrival" in  {
+  "Given a feed item with 0 pax in act and max then I should see that reflected in the arrival" in {
 
     val xml: String = Source.fromInputStream(getClass.getClassLoader.getResourceAsStream("lgwWith0Pax.xml")).mkString
 
@@ -68,9 +68,9 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       Status = "Landed",
       Estimated = Some(SDate("2018-06-03T19:28:00Z").millisSinceEpoch),
       PredictedTouchdown = None,
-      Actual =  Some(SDate("2018-06-03T19:30:00Z").millisSinceEpoch),
-      EstimatedChox =  Some(SDate("2018-06-03T19:37:00Z").millisSinceEpoch),
-      ActualChox =  Some(SDate("2018-06-03T19:36:00Z").millisSinceEpoch),
+      Actual = Some(SDate("2018-06-03T19:30:00Z").millisSinceEpoch),
+      EstimatedChox = Some(SDate("2018-06-03T19:37:00Z").millisSinceEpoch),
+      ActualChox = Some(SDate("2018-06-03T19:36:00Z").millisSinceEpoch),
       Gate = None,
       Stand = None,
       MaxPax = Some(0),
@@ -84,12 +84,13 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       rawIATA = "VS808",
       Origin = PortCode("LHR"),
       FeedSources = Set(LiveFeedSource),
-      Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None)
-
+      Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch,
+      PcpTime = None,
+      TotalPax = List(TotalPaxSource(0, LiveFeedSource, None)))
 
   }
 
-  "An empty response returns an empty list of arrivals" in  {
+  "An empty response returns an empty list of arrivals" in {
     val xml: String = ""
 
     val arrivals: Seq[Arrival] = ResponseToArrivals(xml).getArrivals
@@ -97,7 +98,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
     arrivals mustEqual List()
 
   }
-  "A bad response returns an empty list of arrivals" in  {
+  "A bad response returns an empty list of arrivals" in {
     val xml: String = "<thing>some not valid xml</thing>"
 
     val arrivals: Seq[Arrival] = ResponseToArrivals(xml).getArrivals
@@ -114,7 +115,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
     val azureClient = LGWAzureClient(LGWFeed.serviceBusClient(lgwNamespace, lgwSasToKey, lgwServiceBusUri))
 
     val probe = TestProbe()
-    val actorSource = LGWFeed(azureClient)(system).source(Feed.actorRefSource).map{
+    val actorSource = LGWFeed(azureClient)(system).source(Feed.actorRefSource).map {
       case s: ArrivalsFeedSuccess =>
         println(s.arrivals)
       case f: ArrivalsFeedFailure =>
@@ -122,7 +123,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
     }.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
     actorSource ! Feed.Tick
 
-    probe.fishForMessage(5.seconds){
+    probe.fishForMessage(5.seconds) {
       case x => println(x)
         false
     }

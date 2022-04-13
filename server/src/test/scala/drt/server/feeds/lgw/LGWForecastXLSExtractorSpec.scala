@@ -58,7 +58,8 @@ class LGWForecastXLSExtractorSpec extends Specification {
         CarrierScheduled = None,
         ApiPax = None,
         ScheduledDeparture = None,
-        RedListPax = None),
+        RedListPax = None,
+        TotalPax = List.empty),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TA"),
@@ -86,7 +87,8 @@ class LGWForecastXLSExtractorSpec extends Specification {
         CarrierScheduled = None,
         ApiPax = None,
         ScheduledDeparture = None,
-        RedListPax = None),
+        RedListPax = None,
+        TotalPax = List.empty),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TA"),
@@ -114,7 +116,8 @@ class LGWForecastXLSExtractorSpec extends Specification {
         CarrierScheduled = None,
         ApiPax = None,
         ScheduledDeparture = None,
-        RedListPax = None))
+        RedListPax = None,
+        TotalPax = List.empty))
     result === expected
   }
 

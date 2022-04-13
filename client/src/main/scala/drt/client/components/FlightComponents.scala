@@ -35,6 +35,10 @@ object FlightComponents {
     )
   }
 
+  def classNameForTotalPax(flightWithSplits:ApiFlightWithSplits) = {
+    flightWithSplits.apiFlight.FeedSources
+  }
+
   def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = {
     if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
       "pax-no-splits"
@@ -51,7 +55,8 @@ object FlightComponents {
 
     val paxNos = List(
       <.p(s"Pax: $portDirectPax (${flight.apiFlight.ActPax.getOrElse(0)} - ${flight.apiFlight.TranPax.getOrElse(0)} transfer)"),
-      <.p(s"Max: $max")
+      <.p(s"Max: $max"),
+      <.p(s"List totalPax : ${flight.apiFlight.TotalPax}")
     ) :+ flight.totalPaxFromApiExcludingTransfer.map(p => <.span(s"API: $p")).getOrElse(EmptyVdom)
     <.span(paxNos.toVdomArray)
   }
