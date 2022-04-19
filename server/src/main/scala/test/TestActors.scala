@@ -166,9 +166,9 @@ object TestActors {
     }
 
     def resetReceive: Receive = {
-      case StreamCompleted =>
-        log.info(s"Received StreamCompleted. Shutting down.")
-        context.stop(self)
+//      case StreamCompleted =>
+//        log.info(s"Received StreamCompleted. Shutting down.")
+//        context.stop(self)
       case container: MinutesContainer[A, B] =>
         val replyTo = sender()
         addToTerminalDays(container)

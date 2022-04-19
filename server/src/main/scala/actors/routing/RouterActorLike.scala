@@ -91,9 +91,9 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
 
     case StreamInitialized => sender() ! Ack
 
-    case StreamCompleted =>
-      log.info(s"Stream completed. Shutting down")
-      context.stop(self)
+//    case StreamCompleted =>
+//      log.info(s"Stream completed. Shutting down")
+//      context.stop(self)
 
     case StreamFailure(t) => log.error(s"Stream failed", t)
   }
