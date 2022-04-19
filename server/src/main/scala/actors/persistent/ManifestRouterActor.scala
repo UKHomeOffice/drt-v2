@@ -1,7 +1,7 @@
 package actors.persistent
 
 import actors.PartitionedPortStateActor._
-import actors.acking.AckingReceiver.Ack
+import actors.acking.AckingReceiver.{Ack, StreamCompleted}
 import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.arrivals.FeedStateLike
@@ -117,6 +117,10 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   )
 
   override def receiveCommand: Receive = {
+    case StreamCompleted =>
+      log.info(s"Received StreamCompleted. Shutting down.")
+      context.stop(self)
+      
     case SetCrunchRequestQueue(queueActor) =>
       log.info("Received subscriber")
       maybeUpdatesSubscriber = Option(queueActor)

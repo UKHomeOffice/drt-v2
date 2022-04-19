@@ -53,7 +53,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
   }
 
-  "Given a CiriumFlightStatus I should be able to parse it to an equivelant DRT Arrival Instance" >> {
+  "Given a CiriumFlightStatus I should be able to parse it to an equivalent DRT Arrival Instance" >> {
     val publishedArrivalTime = "2019-07-15T11:05:00.000Z"
     val estRunwayArrival = "2019-07-15T11:07:00.000Z"
     val actRunwayArrival = "2019-07-15T11:08:00.000Z"
@@ -264,7 +264,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
   }
 
   "Given a flight with an estimated touchdown, no estimated chox time, and scheduledTaxiInMinutes" +
-    " we should calculate estimated chox time" >> {
+    " we should not calculate estimated chox time" >> {
     val estimatedRunwayArrivalTime = "2019-07-15T11:05:00.000Z"
     val ciriumFlight = basicCiriumFlightStatus
       .copy(
@@ -276,7 +276,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
     val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
     val result = arrival.EstimatedChox
-    val expected = Option(SDate(estimatedRunwayArrivalTime).addMinutes(5).millisSinceEpoch)
+    val expected = None
 
     result === expected
   }
@@ -294,7 +294,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
     val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
     val result = arrival.EstimatedChox
-    val expected = Option(SDate(actualRunwayTime).addMinutes(5).millisSinceEpoch)
+    val expected = None
 
     result === expected
   }
@@ -312,7 +312,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
     val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
     val result = arrival.Estimated
-    val expected = Option(SDate(estimatedChoxTime).addMinutes(-5).millisSinceEpoch)
+    val expected = None
 
     result === expected
   }
