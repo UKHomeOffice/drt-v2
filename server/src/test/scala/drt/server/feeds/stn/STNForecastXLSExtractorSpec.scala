@@ -2,6 +2,7 @@ package drt.server.feeds.stn
 
 import org.specs2.mutable.Specification
 import services.SDate
+import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
@@ -20,13 +21,11 @@ class STNForecastXLSExtractorSpec extends Specification {
 
 
     val expected = Set(
-      (SDate("2020-08-04T00:00").millisSinceEpoch, "TST1001", "AGP", "INTERNATIONAL", 50),
-      (SDate("2020-08-04T01:15").millisSinceEpoch, "TST1002", "DLM", "INTERNATIONAL", 50),
-      (SDate("2020-08-04T07:05").millisSinceEpoch, "TST1003", "CGN", "INTERNATIONAL", 50),
-      (SDate("2020-08-04T07:20").millisSinceEpoch, "TST1005", "SXF", "INTERNATIONAL", 50)
-
+      (SDate("2020-08-03T23:00").millisSinceEpoch, "TST1001", "AGP", "INTERNATIONAL", 50),
+      (SDate("2020-08-04T00:15").millisSinceEpoch, "TST1002", "DLM", "INTERNATIONAL", 50),
+      (SDate("2020-08-04T06:05").millisSinceEpoch, "TST1003", "CGN", "INTERNATIONAL", 50),
+      (SDate("2020-08-04T06:20").millisSinceEpoch, "TST1005", "SXF", "INTERNATIONAL", 50)
     )
-
 
     result === expected
   }
@@ -58,7 +57,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         AirportID = PortCode("STN"),
         Terminal = Terminal("T1"),
         Origin = PortCode("AGP"),
-        Scheduled = SDate("2020-08-04T00:00").millisSinceEpoch,
+        Scheduled = SDate("2020-08-03T23:00").millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
         CarrierScheduled = None,
@@ -86,7 +85,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         AirportID = PortCode("STN"),
         Terminal = Terminal("T1"),
         Origin = PortCode("DLM"),
-        Scheduled = SDate("2020-08-04T01:15").millisSinceEpoch,
+        Scheduled = SDate("2020-08-04T00:15").millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
         CarrierScheduled = None,
@@ -114,7 +113,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         AirportID = PortCode("STN"),
         Terminal = Terminal("T1"),
         Origin = PortCode("CGN"),
-        Scheduled = SDate("2020-08-04T07:05").millisSinceEpoch,
+        Scheduled = SDate("2020-08-04T06:05").millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
         CarrierScheduled = None,
@@ -142,7 +141,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         AirportID = PortCode("STN"),
         Terminal = Terminal("T1"),
         Origin = PortCode("SXF"),
-        Scheduled = SDate("2020-08-04T07:20").millisSinceEpoch,
+        Scheduled = SDate("2020-08-04T06:20").millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
         CarrierScheduled = None,

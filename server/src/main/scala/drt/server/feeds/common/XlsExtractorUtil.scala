@@ -1,11 +1,10 @@
 package drt.server.feeds.common
 
+import java.util.Date
+
 import org.apache.poi.ss.usermodel.{Cell, Row, Sheet, Workbook}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-
-import java.util.Date
 import scala.util.Try
-import scala.util.matching.Regex
 
 object XlsExtractorUtil {
 
@@ -31,14 +30,6 @@ object XlsExtractorUtil {
 
   val tryNumericThenStringCellDoubleOption: (Int, Row) => Double = (index, row) => Try(numericCellOption(index, row).getOrElse(0.0)).getOrElse(stringCellOption(index, row).map(_.toDouble).getOrElse(0.0))
 
-  val flightNumberRegex: Regex = "^([0-9]{1,4})([A-Z]*)$".r
+  val tryNumericThenStringCellIntOption: (Int, Row) => Int = (index, row) => Try(numericCellOption(index, row).map(_.toInt).getOrElse(0)).getOrElse(stringCellOption(index, row).map(_.toInt).getOrElse(0))
 
-  val tryNumericThenStringCellIntOption: (Int, Row) => Int = (index, row) => Try(
-    stringCellOption(index, row)
-      .map {
-        case flightNumberRegex(number, _) => number.toInt
-        case invalidData => throw new Exception(s"Failed to extract numeric flight number from '$invalidData'")
-      }
-      .getOrElse(throw new Exception(s"Failed to extract numeric flight number. No string found on row $row at cell $index")))
-      .getOrElse(throw new Exception(s"Failed to extract numeric flight number. No string found on row $row at cell $index"))
 }
