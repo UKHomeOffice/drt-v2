@@ -4,6 +4,7 @@ import drt.server.feeds.common.XlsExtractorUtil._
 import org.apache.poi.ss.usermodel.{Cell, DateUtil}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
@@ -23,7 +24,6 @@ case class STNForecastFlightRow(scheduledDate: SDateLike,
 object STNForecastXLSExtractor {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
-
 
   def apply(xlsFilePath: String): List[Arrival] = rows(xlsFilePath)
     .map(stnFieldsToArrival)
@@ -68,8 +68,10 @@ object STNForecastXLSExtractor {
     }
 
     val arrivalRows = arrivalRowsTry.zipWithIndex.toList.flatMap {
-      case (Success(a), _) => Some(a)
-      case (Failure(e), i) => log.warn(s"Invalid data on row ${i + 2} ${e.getMessage}", e)
+      case (Success(a), _) =>
+        val inLondonEuropeTz = a.copy(scheduledDate = SDate(s"${a.scheduledDate.toISODateOnly}T${a.scheduledDate.toHoursAndMinutes}", Crunch.europeLondonTimeZone))
+        Some(inLondonEuropeTz)
+      case (Failure(e), i) => log.warn(s"Invalid data on row ${i + 3} ${e.getMessage}", e)
         None
     }.filter(_.internationalDomestic == "INTERNATIONAL")
 
