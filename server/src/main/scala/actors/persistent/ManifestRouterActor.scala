@@ -1,7 +1,7 @@
 package actors.persistent
 
 import actors.PartitionedPortStateActor._
-import actors.acking.AckingReceiver.{Ack, StreamCompleted}
+import actors.acking.AckingReceiver.Ack
 import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.arrivals.FeedStateLike
@@ -21,11 +21,11 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FeedStatusMessage
-import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FeedStatusMessage
+import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.concurrent.duration._
@@ -117,10 +117,6 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   )
 
   override def receiveCommand: Receive = {
-//    case StreamCompleted =>
-//      log.info(s"Received StreamCompleted. Shutting down.")
-//      context.stop(self)
-
     case SetCrunchRequestQueue(queueActor) =>
       log.info("Received subscriber")
       maybeUpdatesSubscriber = Option(queueActor)
