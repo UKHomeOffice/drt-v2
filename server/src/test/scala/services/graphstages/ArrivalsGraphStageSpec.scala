@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, T3}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -370,6 +370,24 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     "give 1 removal given an arrival at T2 which was previously at T1" >> {
       val removals = ArrivalsGraphStage.terminalRemovals(Seq(arrivalT2), Seq(arrivalT1))
       removals === Iterable(arrivalT1)
+    }
+  }
+
+  "Unmatched arrivals" >> {
+    "Given 3 incoming arrivals, and 2 matching existing arrivals" >> {
+      "The percentage unmatched should be 33 when rounded" >> {
+        val incoming = Seq(
+          ArrivalGenerator.arrival(iata = "BA001", schDt = "2022-06-01T00:00", terminal = T1, origin = PortCode("JFK")),
+          ArrivalGenerator.arrival(iata = "BA002", schDt = "2022-06-01T00:05", terminal = T2, origin = PortCode("ABC")),
+          ArrivalGenerator.arrival(iata = "BA003", schDt = "2022-06-01T00:30", terminal = T3, origin = PortCode("ZYX")),
+        ).map(a => a.unique)
+
+        val existing = incoming.take(2)
+
+        val unmatched = ArrivalsGraphStage.unmatchedArrivalsPercentage(incoming, existing)
+
+        unmatched.toInt === 33
+      }
     }
   }
 }
