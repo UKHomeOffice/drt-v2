@@ -48,6 +48,8 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
           requests.foreach(persistentActor ! _)
           buffer ++= requests
           tryPushElement()
+        case unexpected =>
+          log.warning(s"Ignoring unexpected message: $unexpected")
       }.ref
 
       private def tryPushElement(): Unit = {

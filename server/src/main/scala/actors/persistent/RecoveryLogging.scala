@@ -23,6 +23,6 @@ trait RecoveryLogging {
   def logCounters(bytes: Int, messages: Int, bytesThreshold: Int, maybeMessageThreshold: Option[Int]): Unit = {
     val megaBytes = bytes.toDouble / (1024 * 1024)
     val megaBytesThreshold = bytesThreshold.toDouble / (1024 * 1024)
-    log.info(f"$megaBytes%.2fMB persisted in $messages messages since last snapshot. Thresholds: $megaBytesThreshold%.2fMB, $maybeMessageThreshold messages")
+    log.debug(f"$megaBytes%.2fMB persisted in $messages messages since last snapshot. Thresholds: $megaBytesThreshold%.2fMB, $maybeMessageThreshold messages")
   }
 }
