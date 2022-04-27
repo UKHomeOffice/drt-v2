@@ -384,9 +384,13 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
         val existing = incoming.take(2)
 
-        val unmatched = ArrivalsGraphStage.unmatchedArrivalsPercentage(incoming, existing)
+        ArrivalsGraphStage.unmatchedArrivalsPercentage(incoming, existing).toInt === 33
+      }
+    }
 
-        unmatched.toInt === 33
+    "Given 0 incoming arrivals, and 0 matching existing arrivals" >> {
+      "The percentage unmatched should be 0" >> {
+        ArrivalsGraphStage.unmatchedArrivalsPercentage(Seq(), Seq()).toInt === 0
       }
     }
   }
