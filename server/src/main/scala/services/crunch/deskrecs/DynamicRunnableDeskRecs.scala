@@ -74,7 +74,7 @@ object DynamicRunnableDeskRecs {
       val percentage = (validLiveSplits.toDouble / totalLiveSplits) * 100
       log.info(s"Valid API: 100 * $validLiveSplits / $totalLiveSplits = $percentage")
       percentage
-    } else 0
+    } else 100
   }
 
   private def updateSplits(splitsSink: ActorRef)

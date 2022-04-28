@@ -287,8 +287,8 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   "validApiPercentage" >> {
     val validApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
     val invalidApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
-    "Given no flights, then validApiPercentage should give 0%" >> {
-      DynamicRunnableDeskRecs.validApiPercentage(Seq()) === 0d
+    "Given no flights, then validApiPercentage should give 100%" >> {
+      DynamicRunnableDeskRecs.validApiPercentage(Seq()) === 100d
     }
     "Given 1 flight with live api splits, when it is valid, then validApiPercentage should give 100%" >> {
       DynamicRunnableDeskRecs.validApiPercentage(Seq(validApi)) === 100d
