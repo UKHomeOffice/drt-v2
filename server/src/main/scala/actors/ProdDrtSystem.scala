@@ -1,10 +1,10 @@
 package actors
 
-import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
+import actors.PartitionedPortStateActor.{GetStateForDateRange, flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, GetState, ShiftsActor, StaffMovementsActor}
+import actors.persistent.staffing._
 import actors.persistent.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
@@ -16,6 +16,7 @@ import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookup
@@ -24,14 +25,16 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services.SDate
 import services.crunch.CrunchSystem
+import services.crunch.deskrecs.DynamicRunnableDeskRecs
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.metrics.{ApiValidityReporter, Metrics}
 import slick.dbio.{DBIOAction, NoStream}
 import slickdb.{ArrivalTable, Tables}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.time.MilliTimes
+import uk.gov.homeoffice.drt.time.{MilliTimes, UtcDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -190,6 +193,8 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
         subscribeStaffingActors(crunchInputs)
         startScheduledFeedImports(crunchInputs)
+
+        system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(flightsActor))
 
       case Failure(error) =>
         system.log.error(error, s"Failed to restore initial state for App. Beginning actor system shutdown")

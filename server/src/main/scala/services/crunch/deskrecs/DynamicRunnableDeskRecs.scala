@@ -59,9 +59,6 @@ object DynamicRunnableDeskRecs {
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
       .wireTap { crWithFlights =>
         log.info(s"${crWithFlights._1.localDate} crunch request processing splits added")
-        if (crWithFlights._1.localDate == SDate.now().toLocalDate) {
-          Metrics.counter("api-live-valid-percentage", validApiPercentage(crWithFlights._2))
-        }
       }
       .via(updateSplits(splitsSink))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits persisted"))
