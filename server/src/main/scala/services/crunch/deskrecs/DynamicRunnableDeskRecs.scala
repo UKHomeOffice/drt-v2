@@ -15,10 +15,11 @@ import manifests.queues.SplitsCalculator.SplitsForArrival
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.DynamicQueueStatusProvider
-import services.TimeLogger
+import services.{SDate, TimeLogger}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
+import services.metrics.Metrics
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
@@ -56,10 +57,22 @@ object DynamicRunnableDeskRecs {
       .via(addArrivals(arrivalsProvider))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing got flights"))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits added"))
+      .wireTap { crWithFlights =>
+        log.info(s"${crWithFlights._1.localDate} crunch request processing splits added")
+      }
       .via(updateSplits(splitsSink))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits persisted"))
       .via(toDeskRecs(maxDesksProviders, portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider))
+
+  def validApiPercentage(flights: Iterable[ApiFlightWithSplits]): Double = {
+    val totalLiveSplits = flights.count(_.hasApi)
+    val validLiveSplits = flights.count(_.hasValidApi)
+    if (totalLiveSplits > 0) {
+      val percentage = (validLiveSplits.toDouble / totalLiveSplits) * 100
+      log.info(s"Valid API: 100 * $validLiveSplits / $totalLiveSplits = $percentage")
+      percentage
+    } else 100
+  }
 
   private def updateSplits(splitsSink: ActorRef)
                           (implicit ec: ExecutionContext, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =

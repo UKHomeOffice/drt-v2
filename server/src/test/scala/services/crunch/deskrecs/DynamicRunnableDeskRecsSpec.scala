@@ -31,7 +31,7 @@ import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiFeedSource, ApiPaxTypeAndQueueCount, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -282,6 +282,19 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
       success
     }
+  }
 
+  "validApiPercentage" >> {
+    val validApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+    val invalidApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+    "Given no flights, then validApiPercentage should give 100%" >> {
+      DynamicRunnableDeskRecs.validApiPercentage(Seq()) === 100d
+    }
+    "Given 1 flight with live api splits, when it is valid, then validApiPercentage should give 100%" >> {
+      DynamicRunnableDeskRecs.validApiPercentage(Seq(validApi)) === 100d
+    }
+    "Given 4 flights with live api splits, when 3 are categorised as valid, then validApiPercentage should give 75%" >> {
+      DynamicRunnableDeskRecs.validApiPercentage(Seq(validApi, validApi, validApi, invalidApi)) === 75d
+    }
   }
 }
