@@ -70,7 +70,11 @@ object DynamicRunnableDeskRecs {
   def validApiPercentage(flights: Iterable[ApiFlightWithSplits]): Double = {
     val totalLiveSplits = flights.count(_.hasApi)
     val validLiveSplits = flights.count(_.hasValidApi)
-    if (totalLiveSplits > 0) (validLiveSplits.toDouble / totalLiveSplits) * 100 else 0
+    if (totalLiveSplits > 0) {
+      val percentage = (validLiveSplits.toDouble / totalLiveSplits) * 100
+      log.info(s"Valid API: 100 * $validLiveSplits / $totalLiveSplits = $percentage")
+      percentage
+    } else 0
   }
 
   private def updateSplits(splitsSink: ActorRef)
