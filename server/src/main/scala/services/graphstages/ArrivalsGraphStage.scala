@@ -246,7 +246,8 @@ class ArrivalsGraphStage(name: String = "",
 
       toPush = (maybeNewDiff, toPush) match {
         case (Some(newDiff), Some(existingDiff)) =>
-          Option(existingDiff.copy(existingDiff.toUpdate ++ newDiff.toUpdate, existingDiff.toRemove ++ newDiff.toRemove))
+          val adjustedUpdates = arrivalsAdjustments(newDiff.toUpdate.values, redListUpdates).map(a => (a.unique, a))
+          Option(existingDiff.copy(existingDiff.toUpdate ++ adjustedUpdates, existingDiff.toRemove ++ newDiff.toRemove))
         case (None, Some(existingDiff)) => Option(existingDiff)
         case (Some(newDiff), None) => Option(newDiff)
         case _ => None
