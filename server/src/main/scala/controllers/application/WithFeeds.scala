@@ -105,7 +105,7 @@ trait WithFeeds {
       case (id, source) =>
         (ua: UniqueArrival) =>
           system.actorOf(
-            ArrivalLookupActor.props(SDate(pointInTime), ua, id, source),
+            ArrivalLookupActor.props(airportConfig.portCode, SDate(pointInTime), ua, id, source),
             name = s"arrival-read-$id-${UUID.randomUUID()}"
           )
     }

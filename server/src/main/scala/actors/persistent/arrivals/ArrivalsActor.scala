@@ -86,7 +86,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     case GetFeedStatuses =>
       log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
-      
+
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
 

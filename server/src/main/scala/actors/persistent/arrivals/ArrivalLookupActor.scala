@@ -18,12 +18,12 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.collection.immutable.SortedMap
 
 object ArrivalLookupActor {
-  def props(pointInTime: SDateLike, arrivalToLookup: UniqueArrival, persistenceId: String, feedSource: FeedSource): Props = Props(
-    new ArrivalLookupActor(pointInTime, arrivalToLookup, persistenceId, feedSource)
+  def props(portCode: PortCode, pointInTime: SDateLike, arrivalToLookup: UniqueArrival, persistenceId: String, feedSource: FeedSource): Props = Props(
+    new ArrivalLookupActor(portCode, pointInTime, arrivalToLookup, persistenceId, feedSource)
   )
 }
 
-class ArrivalLookupActor(pointInTime: SDateLike, arrivalToLookup: UniqueArrival, persistenceIdString: String, feedSource: FeedSource)
+class ArrivalLookupActor(portCode: PortCode, pointInTime: SDateLike, arrivalToLookup: UniqueArrival, persistenceIdString: String, feedSource: FeedSource)
   extends ArrivalsActor(() => pointInTime, Int.MaxValue, feedSource) {
   override def persistenceId: String = persistenceIdString
 
@@ -52,7 +52,7 @@ class ArrivalLookupActor(pointInTime: SDateLike, arrivalToLookup: UniqueArrival,
     val terminal = msg.terminal.getOrElse("")
     val ua = UniqueArrival(flightNumber, Terminal(terminal), scheduled, origin)
 
-    if (System.getenv("PORT_CODE") == "edi")
+    if (portCode.iata.toLowerCase == "edi")
       List(A1, A2, T1).find(t => toLookup.copy(terminal = t) == ua).map(_ => msg)
     else if (ua == arrivalToLookup)
       Option(msg)
