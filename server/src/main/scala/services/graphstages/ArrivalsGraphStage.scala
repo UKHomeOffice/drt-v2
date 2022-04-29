@@ -255,7 +255,12 @@ class ArrivalsGraphStage(name: String = "",
     def mergeUpdatesFromAllSources(): Option[ArrivalsDiff] = maybeDiffFromAllSources().map(diff => {
       merged --= diff.toRemove.map(UniqueArrival(_))
       merged ++= diff.toUpdate
-      diff
+      toPush match {
+        case Some(arrivalsDiff) =>
+          arrivalsDiff.copy(arrivalsDiff.toUpdate ++ diff.toUpdate, arrivalsDiff.toRemove ++ diff.toRemove)
+        case None =>
+          diff
+      }
     })
 
     def mergeUpdatesFromKeys(uniqueArrivals: Iterable[UniqueArrival]): Option[ArrivalsDiff] = {
