@@ -46,12 +46,12 @@ object ArrivalsGraphStage {
     incomingArrivals.filter { newArrival =>
       val newKey = newArrival.unique
       val didNotExist = !existingArrivals.exists(_.unique == newKey)
-      val existsAtDifferentTerminal = incomingArrivals.exists { incoming =>
-        val incomingKey = incoming.unique
-        val numberMatches = incomingKey.number == newKey.number
-        val originMatches = incomingKey.origin == newKey.origin
-        val scheduledMatches = incomingKey.scheduled == newKey.scheduled
-        val differentTerminal = incomingKey.terminal != newKey.terminal
+      val existsAtDifferentTerminal = existingArrivals.exists { existing =>
+        val existingKey = existing.unique
+        val numberMatches = existingKey.number == newKey.number
+        val originMatches = existingKey.origin == newKey.origin
+        val scheduledMatches = existingKey.scheduled == newKey.scheduled
+        val differentTerminal = existingKey.terminal != newKey.terminal
         numberMatches && originMatches && scheduledMatches && differentTerminal
       }
       didNotExist && existsAtDifferentTerminal
