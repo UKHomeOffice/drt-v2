@@ -10,11 +10,12 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import scalapb.GeneratedMessage
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.FeedSource
+import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2, T1}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.SortedMap
@@ -85,10 +86,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     case GetFeedStatuses =>
       log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
-
-    case ua: UniqueArrival =>
-      sender() ! state.arrivals.get(ua).map(a => FeedSourceArrival(feedSource, a))
-
+      
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
 
