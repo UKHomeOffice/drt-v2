@@ -42,6 +42,21 @@ object ArrivalsGraphStage {
       noLongerExists && existsAtDifferentTerminal
     }
 
+  def terminalAdditions(incomingArrivals: Iterable[Arrival], existingArrivals: Iterable[Arrival]): Iterable[Arrival] =
+    incomingArrivals.filter { newArrival =>
+      val newKey = newArrival.unique
+      val didNotExist = !existingArrivals.exists(_.unique == newKey)
+      val existsAtDifferentTerminal = incomingArrivals.exists { incoming =>
+        val incomingKey = incoming.unique
+        val numberMatches = incomingKey.number == newKey.number
+        val originMatches = incomingKey.origin == newKey.origin
+        val scheduledMatches = incomingKey.scheduled == newKey.scheduled
+        val differentTerminal = incomingKey.terminal != newKey.terminal
+        numberMatches && originMatches && scheduledMatches && differentTerminal
+      }
+      didNotExist && existsAtDifferentTerminal
+    }
+
   def unmatchedArrivalsPercentage(incomingArrivals: Iterable[UniqueArrival], existingArrivals: Iterable[UniqueArrival]): Double = {
     val unmatched = (incomingArrivals.toSet -- existingArrivals).size.toDouble
     unmatched / incomingArrivals.size * 100
@@ -116,13 +131,19 @@ class ArrivalsGraphStage(name: String = "",
         case adjustments =>
           val adjusted = adjustments(initialMergedArrivals.values, redListUpdates)
           val adjustedByUnique = SortedMap[UniqueArrival, Arrival]() ++ adjusted.map(a => (a.unique, a))
-          (adjustedByUnique, terminalRemovals(adjusted, initialMergedArrivals.values))
-      }
+          val removals = terminalRemovals(adjusted, initialMergedArrivals.values)
+          val additions = terminalAdditions(adjusted, initialMergedArrivals.values)
 
-      if (removals.nonEmpty) {
-        log.info(s"Adjusting ${removals.size} initial arrivals")
-        toPush = Option(ArrivalsDiff(Seq(), removals))
-      } else log.info("No adjustments to make to initial arrivals")
+          println(s"removing ${removals.map(a => (a.unique, SDate(a.unique.scheduled).toISOString())).mkString("\n")}")
+          println(s"adding ${additions.map(a => (a.unique, SDate(a.unique.scheduled).toISOString())).mkString("\n")}")
+
+          if (removals.nonEmpty || additions.nonEmpty) {
+            log.info(s"Removing ${removals.size} initial arrivals with terminal changes")
+            toPush = Option(ArrivalsDiff(additions, removals))
+          } else log.info("No adjustments to make to initial arrivals")
+
+          (adjustedByUnique, removals)
+      }
 
       merged = withAdjustments
 
