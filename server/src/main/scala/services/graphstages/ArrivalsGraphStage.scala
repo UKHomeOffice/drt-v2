@@ -208,7 +208,8 @@ class ArrivalsGraphStage(name: String = "",
     def onPushArrivals(arrivalsInlet: Inlet[List[Arrival]], sourceType: ArrivalsSourceType): Unit = {
       val timer = StageTimer(stageName, outArrivalsDiff)
 
-      val incoming = arrivalsAdjustments.apply(grab(arrivalsInlet), redListUpdates).toList
+//      val incoming = arrivalsAdjustments.apply(grab(arrivalsInlet), redListUpdates).toList
+      val incoming = grab(arrivalsInlet)
 
       log.info(s"Grabbed ${incoming.length} arrivals from $arrivalsInlet of $sourceType")
       if (incoming.nonEmpty || sourceType == BaseArrivals) handleIncomingArrivals(sourceType, incoming)
@@ -221,11 +222,11 @@ class ArrivalsGraphStage(name: String = "",
     def handleIncomingArrivals(sourceType: ArrivalsSourceType, incomingArrivals: Seq[Arrival]): Unit = {
       val filteredArrivals = relevantFlights(SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals.map(a => (UniqueArrival(a), a)))
       log.info(s"${filteredArrivals.size} arrivals after filtering")
-      sourceType match {
+      val maybeNewDiff = sourceType match {
         case LiveArrivals =>
-          val toRemove = terminalRemovals(incomingArrivals, liveArrivals.values)
+//          val toRemove = terminalRemovals(incomingArrivals, liveArrivals.values)
           liveArrivals = updateArrivalsSource(liveArrivals, filteredArrivals)
-          toPush = mergeUpdatesFromKeys(liveArrivals.keys).map { diff => diff.copy(toRemove = diff.toRemove ++ toRemove) }
+          mergeUpdatesFromKeys(liveArrivals.keys)//.map { diff => diff.copy(toRemove = diff.toRemove ++ toRemove) }
         case LiveBaseArrivals =>
           ciriumArrivals = updateArrivalsSource(ciriumArrivals, filteredArrivals)
           val missingTerminals = ciriumArrivals.count {
@@ -233,15 +234,24 @@ class ArrivalsGraphStage(name: String = "",
             case _ => false
           }
           log.info(s"Got $missingTerminals Cirium Arrivals with no terminal")
-          toPush = mergeUpdatesFromKeys(ciriumArrivals.keys)
+          mergeUpdatesFromKeys(ciriumArrivals.keys)
         case ForecastArrivals =>
           reportUnmatchedArrivals(forecastBaseArrivals.keys, filteredArrivals.keys)
           forecastArrivals = updateArrivalsSource(forecastArrivals, filteredArrivals)
-          toPush = mergeUpdatesFromKeys(forecastArrivals.keys)
+          mergeUpdatesFromKeys(forecastArrivals.keys)
         case BaseArrivals =>
           forecastBaseArrivals = filteredArrivals
-          toPush = mergeUpdatesFromAllSources()
+          mergeUpdatesFromAllSources()
       }
+
+      toPush = (maybeNewDiff, toPush) match {
+        case (Some(newDiff), Some(existingDiff)) =>
+          Option(existingDiff.copy(existingDiff.toUpdate ++ newDiff.toUpdate, existingDiff.toRemove ++ newDiff.toRemove))
+        case (None, Some(existingDiff)) => Option(existingDiff)
+        case (Some(newDiff), None) => Option(newDiff)
+        case _ => None
+      }
+
       pushIfAvailable(toPush, outArrivalsDiff)
     }
 
@@ -255,12 +265,7 @@ class ArrivalsGraphStage(name: String = "",
     def mergeUpdatesFromAllSources(): Option[ArrivalsDiff] = maybeDiffFromAllSources().map(diff => {
       merged --= diff.toRemove.map(UniqueArrival(_))
       merged ++= diff.toUpdate
-      toPush match {
-        case Some(arrivalsDiff) =>
-          arrivalsDiff.copy(arrivalsDiff.toUpdate ++ diff.toUpdate, arrivalsDiff.toRemove ++ diff.toRemove)
-        case None =>
-          diff
-      }
+      diff
     })
 
     def mergeUpdatesFromKeys(uniqueArrivals: Iterable[UniqueArrival]): Option[ArrivalsDiff] = {
