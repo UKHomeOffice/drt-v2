@@ -125,10 +125,6 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"Received ${initialLiveArrivals.size} live initial arrivals")
       liveArrivals = prepInitialArrivals(initialLiveArrivals)
 
-      println(s"live: ${liveArrivals.values.map(a => (a.Terminal, a.BaggageReclaimId))}")
-      println(s"forecastBase: ${forecastBaseArrivals.values.map(a => (a.Terminal, a.BaggageReclaimId))}")
-      println(s"merged: ${initialMergedArrivals.values.map(a => (a.Terminal, a.BaggageReclaimId))}")
-
       arrivalsAdjustments match {
         case ArrivalsAdjustmentsNoop =>
           merged = initialMergedArrivals
@@ -137,11 +133,6 @@ class ArrivalsGraphStage(name: String = "",
           val adjustedByUnique = SortedMap[UniqueArrival, Arrival]() ++ adjusted.map(a => (a.unique, a))
           val removals = terminalRemovals(adjusted, initialMergedArrivals.values)
           val additions = terminalAdditions(adjusted, initialMergedArrivals.values)
-
-          println(s"adjusted: ${adjusted.map(a => (a.Terminal, a.BaggageReclaimId))}")
-
-          println(s"removing ${removals.map(a => (a.unique, SDate(a.unique.scheduled).toISOString())).mkString("\n")}")
-          println(s"adding ${additions.map(a => (a.unique, SDate(a.unique.scheduled).toISOString())).mkString("\n")}")
 
           if (removals.nonEmpty || additions.nonEmpty) {
             log.info(s"Removing ${removals.size} initial arrivals with terminal changes")
@@ -212,7 +203,6 @@ class ArrivalsGraphStage(name: String = "",
     def onPushArrivals(arrivalsInlet: Inlet[List[Arrival]], sourceType: ArrivalsSourceType): Unit = {
       val timer = StageTimer(stageName, outArrivalsDiff)
 
-//      val incoming = arrivalsAdjustments.apply(grab(arrivalsInlet), redListUpdates).toList
       val incoming = grab(arrivalsInlet)
 
       log.info(s"Grabbed ${incoming.length} arrivals from $arrivalsInlet of $sourceType")
@@ -251,8 +241,6 @@ class ArrivalsGraphStage(name: String = "",
       maybeNewDiff.foreach { newDiff =>
         val adjustedUpdates = arrivalsAdjustments(newDiff.toUpdate.values, redListUpdates)
         val adjustedRemovals = arrivalsAdjustments(newDiff.toRemove, redListUpdates)
-        println(s"Adding $adjustedUpdates")
-        println(s"Removing $adjustedRemovals")
         toPush = toPush match {
           case Some(existingDiff) =>
             Option(existingDiff.copy(
