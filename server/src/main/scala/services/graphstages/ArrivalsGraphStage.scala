@@ -125,14 +125,20 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"Received ${initialLiveArrivals.size} live initial arrivals")
       liveArrivals = prepInitialArrivals(initialLiveArrivals)
 
-      val (withAdjustments, removals) = arrivalsAdjustments match {
+      println(s"live: ${liveArrivals.values.map(a => (a.Terminal, a.BaggageReclaimId))}")
+      println(s"forecastBase: ${forecastBaseArrivals.values.map(a => (a.Terminal, a.BaggageReclaimId))}")
+      println(s"merged: ${initialMergedArrivals.values.map(a => (a.Terminal, a.BaggageReclaimId))}")
+
+      arrivalsAdjustments match {
         case ArrivalsAdjustmentsNoop =>
-          (initialMergedArrivals, Iterable[Arrival]())
+          merged = initialMergedArrivals
         case adjustments =>
           val adjusted = adjustments(initialMergedArrivals.values, redListUpdates)
           val adjustedByUnique = SortedMap[UniqueArrival, Arrival]() ++ adjusted.map(a => (a.unique, a))
           val removals = terminalRemovals(adjusted, initialMergedArrivals.values)
           val additions = terminalAdditions(adjusted, initialMergedArrivals.values)
+
+          println(s"adjusted: ${adjusted.map(a => (a.Terminal, a.BaggageReclaimId))}")
 
           println(s"removing ${removals.map(a => (a.unique, SDate(a.unique.scheduled).toISOString())).mkString("\n")}")
           println(s"adding ${additions.map(a => (a.unique, SDate(a.unique.scheduled).toISOString())).mkString("\n")}")
@@ -142,10 +148,8 @@ class ArrivalsGraphStage(name: String = "",
             toPush = Option(ArrivalsDiff(additions, removals))
           } else log.info("No adjustments to make to initial arrivals")
 
-          (adjustedByUnique, removals)
+          merged = adjustedByUnique
       }
-
-      merged = withAdjustments
 
       if (flushOnStart) {
         log.info(s"Flushing ${merged.size} arrivals at startup")
@@ -224,9 +228,8 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"${filteredArrivals.size} arrivals after filtering")
       val maybeNewDiff = sourceType match {
         case LiveArrivals =>
-//          val toRemove = terminalRemovals(incomingArrivals, liveArrivals.values)
           liveArrivals = updateArrivalsSource(liveArrivals, filteredArrivals)
-          mergeUpdatesFromKeys(liveArrivals.keys)//.map { diff => diff.copy(toRemove = diff.toRemove ++ toRemove) }
+          mergeUpdatesFromKeys(liveArrivals.keys)
         case LiveBaseArrivals =>
           ciriumArrivals = updateArrivalsSource(ciriumArrivals, filteredArrivals)
           val missingTerminals = ciriumArrivals.count {
@@ -244,13 +247,19 @@ class ArrivalsGraphStage(name: String = "",
           mergeUpdatesFromAllSources()
       }
 
-      toPush = (maybeNewDiff, toPush) match {
-        case (Some(newDiff), Some(existingDiff)) =>
-          val adjustedUpdates = arrivalsAdjustments(newDiff.toUpdate.values, redListUpdates).map(a => (a.unique, a))
-          Option(existingDiff.copy(existingDiff.toUpdate ++ adjustedUpdates, existingDiff.toRemove ++ newDiff.toRemove))
-        case (None, Some(existingDiff)) => Option(existingDiff)
-        case (Some(newDiff), None) => Option(newDiff)
-        case _ => None
+      maybeNewDiff.foreach { newDiff =>
+        val adjustedUpdates = arrivalsAdjustments(newDiff.toUpdate.values, redListUpdates)
+        val adjustedRemovals = arrivalsAdjustments(newDiff.toRemove, redListUpdates)
+        println(s"Adding $adjustedUpdates")
+        println(s"Removing $adjustedRemovals")
+        toPush = toPush match {
+          case Some(existingDiff) =>
+            Option(existingDiff.copy(
+              toUpdate = existingDiff.toUpdate ++ adjustedUpdates.map(a => (a.unique, a)),
+              toRemove = existingDiff.toRemove ++ adjustedRemovals))
+          case None =>
+            Option(ArrivalsDiff(adjustedUpdates, adjustedRemovals))
+        }
       }
 
       pushIfAvailable(toPush, outArrivalsDiff)
