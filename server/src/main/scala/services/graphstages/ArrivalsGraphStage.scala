@@ -228,8 +228,9 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"${filteredArrivals.size} arrivals after filtering")
       val maybeNewDiff = sourceType match {
         case LiveArrivals =>
+          val removals = terminalRemovals(incomingArrivals, liveArrivals.values)
           liveArrivals = updateArrivalsSource(liveArrivals, filteredArrivals)
-          mergeUpdatesFromKeys(liveArrivals.keys)
+          mergeUpdatesFromKeys(liveArrivals.keys).map(d => d.copy(toRemove = d.toRemove ++ removals))
         case LiveBaseArrivals =>
           ciriumArrivals = updateArrivalsSource(ciriumArrivals, filteredArrivals)
           val missingTerminals = ciriumArrivals.count {
