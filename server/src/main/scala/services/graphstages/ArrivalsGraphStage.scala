@@ -9,11 +9,12 @@ import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, Arrival
 import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone, mergeApproxIfFoundElseOriginal}
 import services.metrics.{Metrics, StageTimer}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, UniqueArrival}
-import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate}
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.collection.immutable
 import scala.collection.immutable.SortedMap
 
 sealed trait ArrivalsSourceType
@@ -130,16 +131,15 @@ class ArrivalsGraphStage(name: String = "",
           merged = initialMergedArrivals
         case adjustments =>
           val adjusted = adjustments(initialMergedArrivals.values, redListUpdates)
-          val adjustedByUnique = SortedMap[UniqueArrival, Arrival]() ++ adjusted.map(a => (a.unique, a))
-          val removals = terminalRemovals(adjusted, initialMergedArrivals.values)
           val additions = terminalAdditions(adjusted, initialMergedArrivals.values)
+          val removals = terminalRemovals(adjusted, initialMergedArrivals.values)
 
           if (removals.nonEmpty || additions.nonEmpty) {
             log.info(s"Removing ${removals.size} initial arrivals with terminal changes")
             toPush = Option(ArrivalsDiff(additions, removals))
           } else log.info("No adjustments to make to initial arrivals")
 
-          merged = adjustedByUnique
+          merged = SortedMap[UniqueArrival, Arrival]() ++ adjusted.map(a => (a.unique, a)) -- removals.map(_.unique)
       }
 
       if (flushOnStart) {
@@ -218,72 +218,45 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"${filteredArrivals.size} arrivals after filtering")
       val maybeNewDiff = sourceType match {
         case LiveArrivals =>
-          val removals = terminalRemovals(incomingArrivals, liveArrivals.values)
-          liveArrivals = updateArrivalsSource(liveArrivals, filteredArrivals)
-          mergeUpdatesFromKeys(liveArrivals.keys).map(d => d.copy(toRemove = d.toRemove ++ removals))
+          val keysWithUpdates = changedArrivals(liveArrivals, filteredArrivals)
+          liveArrivals = liveArrivals ++ filteredArrivals
+          if (keysWithUpdates.nonEmpty) Option(ArrivalsDiff(getUpdatesFromNonBaseArrivals(keysWithUpdates), Seq())) else None
         case LiveBaseArrivals =>
-          ciriumArrivals = updateArrivalsSource(ciriumArrivals, filteredArrivals)
-          val missingTerminals = ciriumArrivals.count {
-            case (_, a) if a.Terminal == InvalidTerminal => true
-            case _ => false
-          }
-          log.info(s"Got $missingTerminals Cirium Arrivals with no terminal")
-          mergeUpdatesFromKeys(ciriumArrivals.keys)
+          val keysWithUpdates = changedArrivals(ciriumArrivals, filteredArrivals)
+          ciriumArrivals = ciriumArrivals ++ filteredArrivals
+          if (keysWithUpdates.nonEmpty) Option(ArrivalsDiff(getUpdatesFromNonBaseArrivals(keysWithUpdates), Seq())) else None
         case ForecastArrivals =>
           reportUnmatchedArrivals(forecastBaseArrivals.keys, filteredArrivals.keys)
-          forecastArrivals = updateArrivalsSource(forecastArrivals, filteredArrivals)
-          mergeUpdatesFromKeys(forecastArrivals.keys)
+          val keysWithUpdates = changedArrivals(forecastArrivals, filteredArrivals)
+          forecastArrivals = forecastArrivals ++ filteredArrivals
+          if (keysWithUpdates.nonEmpty) Option(ArrivalsDiff(getUpdatesFromNonBaseArrivals(keysWithUpdates), Seq())) else None
         case BaseArrivals =>
           forecastBaseArrivals = filteredArrivals
-          mergeUpdatesFromAllSources()
+          maybeDiffFromAllSources()
       }
 
       maybeNewDiff.foreach { newDiff =>
         val adjustedUpdates = arrivalsAdjustments(newDiff.toUpdate.values, redListUpdates)
         val adjustedRemovals = arrivalsAdjustments(newDiff.toRemove, redListUpdates)
+        val oldTerminalRemovals = terminalRemovals(adjustedUpdates, merged.values)
+        merged = (merged ++ adjustedUpdates.map(a => (a.unique, a))) -- (adjustedRemovals.map(_.unique) ++ oldTerminalRemovals.map(_.unique))
+
         toPush = toPush match {
           case Some(existingDiff) =>
             Option(existingDiff.copy(
               toUpdate = existingDiff.toUpdate ++ adjustedUpdates.map(a => (a.unique, a)),
-              toRemove = existingDiff.toRemove ++ adjustedRemovals))
+              toRemove = existingDiff.toRemove ++ adjustedRemovals ++ oldTerminalRemovals))
           case None =>
-            Option(ArrivalsDiff(adjustedUpdates, adjustedRemovals))
+            Option(ArrivalsDiff(adjustedUpdates, adjustedRemovals ++ oldTerminalRemovals))
         }
       }
 
       pushIfAvailable(toPush, outArrivalsDiff)
     }
 
-    def updateArrivalsSource(existingArrivals: SortedMap[UniqueArrival, Arrival],
-                             newArrivals: SortedMap[UniqueArrival, Arrival]): SortedMap[UniqueArrival, Arrival] = newArrivals.foldLeft(existingArrivals) {
-      case (soFar, (key, newArrival)) =>
-        if (!existingArrivals.contains(key) || !existingArrivals(key).isEqualTo(newArrival)) soFar + (key -> newArrival)
-        else soFar
-    }
-
-    def mergeUpdatesFromAllSources(): Option[ArrivalsDiff] = maybeDiffFromAllSources().map(diff => {
-      merged --= diff.toRemove.map(UniqueArrival(_))
-      merged ++= diff.toUpdate
-      diff
-    })
-
-    def mergeUpdatesFromKeys(uniqueArrivals: Iterable[UniqueArrival]): Option[ArrivalsDiff] = {
-      val updatedArrivals = getUpdatesFromNonBaseArrivals(uniqueArrivals)
-
-      merged ++= updatedArrivals
-
-      updateDiffToPush(updatedArrivals)
-    }
-
-    def updateDiffToPush(updatedLiveArrivals: SortedMap[UniqueArrival, Arrival]): Option[ArrivalsDiff] = {
-      toPush match {
-        case None => Option(ArrivalsDiff(SortedMap[UniqueArrival, Arrival]() ++ updatedLiveArrivals, Set()))
-        case Some(diff) =>
-          val newToUpdate = updatedLiveArrivals.foldLeft(diff.toUpdate) {
-            case (toUpdateSoFar, (ak, arrival)) => toUpdateSoFar.updated(ak, arrival)
-          }
-          Option(diff.copy(toUpdate = newToUpdate))
-      }
+    def changedArrivals(existingArrivals: SortedMap[UniqueArrival, Arrival],
+                        newArrivals: SortedMap[UniqueArrival, Arrival]): immutable.Iterable[UniqueArrival] = newArrivals.collect {
+      case (key, newArrival) if !existingArrivals.contains(key) || !existingArrivals(key).isEqualTo(newArrival) => key
     }
 
     def maybeDiffFromAllSources(): Option[ArrivalsDiff] = {

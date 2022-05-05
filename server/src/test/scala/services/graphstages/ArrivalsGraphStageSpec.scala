@@ -346,6 +346,26 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       success
     }
+
+    "Remove any existing duplicates in the PortState" in {
+      val live = ArrivalGenerator.arrival(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, feedSources = Set(LiveFeedSource), baggageReclaimId = Option("1"))
+      val fcBase = ArrivalGenerator.arrival(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, feedSources = Set(AclFeedSource))
+      val mergedA1 = ApiFlightWithSplits(
+        ArrivalGenerator.arrival(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A1, feedSources = Set(LiveFeedSource, AclFeedSource), baggageReclaimId = Option("1")),
+        Set())
+      val mergedA2 = ApiFlightWithSplits(
+        ArrivalGenerator.arrival(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, feedSources = Set(LiveFeedSource, AclFeedSource), baggageReclaimId = Option("1")),
+        Set())
+
+      val crunch: CrunchGraphInputsAndProbes = newCrunch(Seq(live), Seq(fcBase), Seq(mergedA1, mergedA2))
+
+      crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
+        case ps: PortState =>
+          ps.flights.values.map(a => a.apiFlight.Terminal) == List(A1)
+      }
+
+      success
+    }
   }
 
   "Given an ACL arrival and a cirium arrival scheduled within 5 minutes of each other" >> {
