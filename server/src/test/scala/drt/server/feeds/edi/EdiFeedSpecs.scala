@@ -77,7 +77,7 @@ class EdiFeedSpecs extends CrunchTestLike {
 
   }
 
-  "Given EdiFlightDetails object , it gets transform to Arrival" in {
+  "Given EdiFlightDetails object, it gets transform to Arrival with a default terminal of A2" in {
     val ediFeed = new EdiFeed(EdiClient("", "", mock[ProdHttpClient]))
 
     val ediFlightDetail: EdiFlightDetails = EdiFlightDetails("FR", "RYR", "FR", "1234", Option(189),
@@ -105,7 +105,7 @@ class EdiFeedSpecs extends CrunchTestLike {
         RunwayID = Some("06"),
         BaggageReclaimId = Some("8"),
         AirportID = PortCode("PSA"),
-        Terminal = Terminal("T1"),
+        Terminal = Terminal("A2"),
         Origin = PortCode("PSA"),
         Scheduled = 1630450800000L,
         PcpTime = None,

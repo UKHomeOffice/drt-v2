@@ -16,7 +16,7 @@ import services.SDate
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, FlightCodeSuffix, Operator, VoyageNumber}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.{A2, InvalidTerminal, T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSource, PortCode}
 
 import scala.collection.immutable.Seq
@@ -131,7 +131,7 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
         RunwayID = flight.RunWayCode,
         BaggageReclaimId = flight.BagageReclaim,
         AirportID = PortCode(flight.AirportCode_IATA),
-        Terminal = Terminal(flight.TerminalCode),
+        Terminal = terminalMapping(flight.TerminalCode),
         Origin = PortCode(flight.AirportCode_IATA),
         Scheduled = SDate(flight.ScheduledDateTime_Zulu).millisSinceEpoch,
         PcpTime = None,
@@ -147,6 +147,10 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
         None
     }).toList.flatten
 
+  private def terminalMapping(feedTerminal: String): Terminal = Terminal(feedTerminal) match {
+    case T1 => A2
+    case _ => InvalidTerminal
+  }
 }
 
 

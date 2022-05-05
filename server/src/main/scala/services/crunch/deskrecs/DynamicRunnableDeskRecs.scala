@@ -15,11 +15,10 @@ import manifests.queues.SplitsCalculator.SplitsForArrival
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.DynamicQueueStatusProvider
-import services.{SDate, TimeLogger}
+import services.TimeLogger
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
-import services.metrics.Metrics
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}

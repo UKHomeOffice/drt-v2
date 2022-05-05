@@ -14,7 +14,8 @@ case class EdiArrivalsTerminalAdjustments(isRedListed: (PortCode, MillisSinceEpo
     arrivals
       .map { arrival =>
         val redListed = isRedListed(arrival.Origin, arrival.Scheduled, redListUpdates)
-        val correctedTerminal = if (redListed) A1 else A2
+        val a1BaggageBelt = Seq("1", "2", "3").contains(arrival.BaggageReclaimId.getOrElse(""))
+        val correctedTerminal = if (redListed || a1BaggageBelt) A1 else A2
         arrival.copy(Terminal = correctedTerminal)
       }
 }
