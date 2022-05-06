@@ -204,21 +204,9 @@ object DynamicRunnableDeskRecs {
           }.map { updatedFlight =>
           log.info(s"before sink run updatedFlight ..... $updatedFlight")
           updatedFlight
-        }.runWith(Sink.fold(List.empty[ApiFlightWithSplits]) { (a, b) =>
-          //            log.info(s"inside sink fold.. ${a :+ b}")
-
-          val c = (a :+ b)
-          splitsSink
-            .ask(ArrivalsDiff(c.map(_.apiFlight), Seq()))
-            .map(_ => (cr, flights))
-            .recover {
-              case t =>
-                log.error(s"Failed to updates total pax for arrivals", t)
-                (cr, flights)
-            }
-          (a :+ b)
-        }).map { updatedFlights =>
-          (cr,updatedFlights)
+        }.runWith(Sink.seq).map { updatedFlights =>
+          log.info(s"after run updatedFlights ..... $updatedFlights")
+          (cr,updatedFlights.toList)
         }
 //          .flatMap { updatedFlights =>
 //          log.info(s"updatedFlights ..... $updatedFlights")
