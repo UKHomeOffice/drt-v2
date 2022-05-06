@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
-import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Queues}
 
 import scala.collection.immutable.{List, Map, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -51,7 +51,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             now = () => SDate(scheduled),
             airportConfig = airportConfigWithEgates))
 
-          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
 
           val expected = Map(T1 -> Map(
             Queues.EeaDesk -> Seq(20 * edSplit, 1 * edSplit),
@@ -81,7 +81,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
           val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
 
-          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
 
           val expected = Map(
             T1 -> Map(
@@ -129,7 +129,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
                 )
               ))
             )))
-          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
 
           val expected = Map(T1 -> Map(
             Queues.EeaDesk -> List(5.25, 5.25, 5.25, 5.25, 5.25),
@@ -170,7 +170,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               )
             ))
 
-            offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+            offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
 
             val expected = Map(
               T1 -> Map(
@@ -216,7 +216,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               )
             ))
 
-            offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival))))
+            offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival)),LiveFeedSource))
 
             val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
               VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),

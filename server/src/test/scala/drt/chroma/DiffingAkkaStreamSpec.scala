@@ -9,6 +9,7 @@ import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 import services.crunch.CrunchTestLike
 import spray.json._
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.collection.immutable.{Seq, SortedMap}
 
@@ -66,8 +67,8 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
       val date = SDate.now()
       source
         .map(content => content.parseJson.convertTo[List[ChromaLiveFlight]])
-        .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), date))
-        .via(new ArrivalsDiffingStage(SortedMap(), () => SDate.now().millisSinceEpoch))
+        .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), LiveFeedSource, date))
+        .via(new ArrivalsDiffingStage(SortedMap(), LiveFeedSource,() => SDate.now().millisSinceEpoch))
         .runWith(TestSink.probe[FeedResponse])
         .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
           ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
@@ -76,8 +77,8 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
             "",
             "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
             1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-          )))), date))
-        .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(flight2))), date))
+          )))), LiveFeedSource, date))
+        .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(flight2))), LiveFeedSource, date))
         .expectComplete()
     }
   }
@@ -90,8 +91,8 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
 
     "we really can diff it and parse it" in {
       source
-        .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), date))
-        .via(new ArrivalsDiffingStage(SortedMap(), () => SDate.now().millisSinceEpoch))
+        .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), LiveFeedSource, date))
+        .via(new ArrivalsDiffingStage(SortedMap(), LiveFeedSource, () => SDate.now().millisSinceEpoch))
         .runWith(TestSink.probe[FeedResponse])
         .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
           ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
@@ -100,15 +101,15 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
             "",
             "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
             1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-          )))), date))
+          )))), LiveFeedSource, date))
         .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
           ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
-          "2016-08-04T04:40:00Z",
-          "2016-08-04T09:11:00Z",
-          "",
-          "2016-08-04T04:54:00Z", "", "207", 0, 0, 0, "24", "",
-          1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-        )))), date))
+            "2016-08-04T04:40:00Z",
+            "2016-08-04T09:11:00Z",
+            "",
+            "2016-08-04T04:54:00Z", "", "207", 0, 0, 0, "24", "",
+            1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
+          )))), LiveFeedSource, date))
         .expectComplete()
     }
   }

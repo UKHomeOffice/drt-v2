@@ -44,8 +44,8 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         val inputFlightsAfter = Flights(List(updatedArrival))
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore,LiveFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter,LiveFeedSource))
 
         val expectedFlights = Set(ApiFlightWithSplits(
           updatedArrival.copy(FeedSources = Set(LiveFeedSource)),
@@ -74,9 +74,9 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         val inputFlightsAfter = Flights(List(updatedArrival))
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore,LiveFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore,LiveFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter,LiveFeedSource))
 
         val expectedFlights = Set(ApiFlightWithSplits(
           updatedArrival.copy(FeedSources = Set(LiveFeedSource)),
@@ -104,7 +104,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
 
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(oneFlight))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(oneFlight,AclFeedSource))
 
         crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(_, cms, _) if cms.nonEmpty =>
@@ -114,7 +114,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
           case _ => false
         }
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(zeroFlights))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(zeroFlights,AclFeedSource))
 
         crunch.portStateTestProbe.fishForMessage(1.seconds) {
           case PortState(_, cms, _) if cms.nonEmpty =>

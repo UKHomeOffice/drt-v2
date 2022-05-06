@@ -8,7 +8,7 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig, TestDefaults}
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
@@ -52,7 +52,7 @@ class EdiFlightAdjustmentsStreamSpec extends CrunchTestLike {
 
   private def offerAndCheck(arrival: Arrival): PortState = {
     val adjustedArrivals = EdiArrivalsTerminalAdjustments(isRedListed).apply(List(arrival), RedListUpdates.empty)
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(adjustedArrivals)))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(adjustedArrivals),LiveFeedSource))
 
     crunch.portStateTestProbe.fishForMessage(1.second) {
       case ps: PortState =>

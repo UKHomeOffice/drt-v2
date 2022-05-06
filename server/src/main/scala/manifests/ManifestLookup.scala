@@ -139,9 +139,10 @@ case class ManifestLookup(tables: Tables)
   }
 
   private def maybeManifestPaxFromProfiles(uniqueArrivalKey: UniqueArrivalKey, profiles: immutable.Seq[ManifestPassengerProfile]) = {
-    if (profiles.nonEmpty)
+    if (profiles.nonEmpty) {
+      log.info(s"maybeManifestPaxFromProfiles profiles.toList.size... ${profiles.toList.size}")
       Option(HistoricManifestPax(SplitSources.Historical, uniqueArrivalKey, profiles.toList.size))
-    else None
+    } else None
   }
 
   type QueryFunction = UniqueArrivalKey => SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), tables.profile.api.Effect]

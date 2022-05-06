@@ -119,7 +119,7 @@ trait BHXClientLike extends ScalaXmlSupport {
 
         bhxResponse.map {
           case s: BHXFlightsResponseSuccess =>
-            ArrivalsFeedSuccess(Flights(s.flights.map(fs => BHXFlight.bhxFlightToArrival(fs))))
+            ArrivalsFeedSuccess(Flights(s.flights.map(fs => BHXFlight.bhxFlightToArrival(fs))),LiveFeedSource)
 
           case f: BHXFlightsResponseFailure =>
             ArrivalsFeedFailure(f.message)

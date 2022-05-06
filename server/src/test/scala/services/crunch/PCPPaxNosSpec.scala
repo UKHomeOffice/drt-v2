@@ -9,7 +9,7 @@ import services.SDate
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaChildToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PortCode, Queues}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -43,7 +43,7 @@ class PCPPaxNosSpec extends CrunchTestLike {
       ),
     ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
     offerAndWait(crunch.manifestsLiveInput, manifests)
 
     val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 20, 20, 20, 20, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0)))

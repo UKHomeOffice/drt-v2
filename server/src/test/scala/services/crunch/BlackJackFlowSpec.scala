@@ -6,6 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PortState
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
+import uk.gov.homeoffice.drt.ports.AclFeedSource
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -40,7 +41,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk)))
     ))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq),AclFeedSource))
     Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 
@@ -85,7 +86,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk)))
     ))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq),AclFeedSource))
     Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 

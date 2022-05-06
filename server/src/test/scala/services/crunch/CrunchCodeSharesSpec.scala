@@ -6,7 +6,7 @@ import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PortCode, Queues}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -39,7 +39,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
         )))
 
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
 
       val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
@@ -72,7 +72,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk), T2 -> Seq(Queues.EeaDesk)))
         ))
 
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
 
       val expected = Map(
         T1 -> Map(Queues.EeaDesk -> Seq(

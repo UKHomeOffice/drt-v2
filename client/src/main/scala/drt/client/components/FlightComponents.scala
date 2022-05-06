@@ -24,7 +24,7 @@ object FlightComponents {
     <.div(
       ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",
       <.div(^.className := "arrivals__table__flight__pcp-pax__container",
-        <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", flightWithSplits.pcpPaxEstimate)))
+        <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", flightWithSplits.pcpPaxEstimate + "-" + flightWithSplits.apiFlight.TotalPax)))
       ),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =

@@ -54,10 +54,11 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   def persistAndMaybeSnapshot(message: GeneratedMessage): Unit = persistAndMaybeSnapshotWithAck(message, None)
 
   def persistAndMaybeSnapshotWithAck(messageToPersist: GeneratedMessage, maybeAck: Option[(ActorRef, Any)]): Unit = {
+
     persist(messageToPersist) { message =>
       val messageBytes = message.serializedSize
       log.debug(s"Persisting $messageBytes bytes of ${message.getClass}")
-
+//      log.info(s".........messageToPersist  $messageToPersist")
       context.system.eventStream.publish(message)
       bytesSinceSnapshotCounter += messageBytes
       messagesPersistedSinceSnapshotCounter += 1

@@ -8,7 +8,7 @@ import services.SDate
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop, LiveArrivalsUtil}
 import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone, mergeApproxIfFoundElseOriginal}
 import services.metrics.{Metrics, StageTimer}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, TotalPaxSource, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate}
@@ -196,11 +196,21 @@ class ArrivalsGraphStage(name: String = "",
       log.info(s"${filteredArrivals.size} arrivals after filtering")
       sourceType match {
         case LiveArrivals =>
+          val updateFilteredArrivals : SortedMap[UniqueArrival, Arrival] = filteredArrivals.map { case (k,arrival) =>
+            (k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), LiveFeedSource, None))))
+          }
+          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals LiveArrivals arrival....... $arrival")}
+
           val toRemove = terminalRemovals(incomingArrivals, liveArrivals.values)
-          liveArrivals = updateArrivalsSource(liveArrivals, filteredArrivals)
+          liveArrivals = updateArrivalsSource(liveArrivals, updateFilteredArrivals)
           toPush = mergeUpdatesFromKeys(liveArrivals.keys).map { diff => diff.copy(toRemove = diff.toRemove ++ toRemove) }
         case LiveBaseArrivals =>
-          ciriumArrivals = updateArrivalsSource(ciriumArrivals, filteredArrivals)
+          val updateFilteredArrivals : SortedMap[UniqueArrival, Arrival] = filteredArrivals.map { case (k,arrival) =>
+            (k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), LiveBaseFeedSource, None))))
+          }
+          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals LiveBaseArrivals arrival....... $arrival")}
+
+          ciriumArrivals = updateArrivalsSource(ciriumArrivals, updateFilteredArrivals)
           val missingTerminals = ciriumArrivals.count {
             case (_, a) if a.Terminal == InvalidTerminal => true
             case _ => false
@@ -208,10 +218,19 @@ class ArrivalsGraphStage(name: String = "",
           log.info(s"Got $missingTerminals Cirium Arrivals with no terminal")
           toPush = mergeUpdatesFromKeys(ciriumArrivals.keys)
         case ForecastArrivals =>
-          forecastArrivals = updateArrivalsSource(forecastArrivals, filteredArrivals)
+          val updateFilteredArrivals : SortedMap[UniqueArrival, Arrival] = filteredArrivals.map { case (k,arrival) =>
+            (k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), ForecastFeedSource, None))))
+          }
+          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals ForecastArrivals arrival....... $arrival")}
+
+          forecastArrivals = updateArrivalsSource(forecastArrivals, updateFilteredArrivals)
           toPush = mergeUpdatesFromKeys(forecastArrivals.keys)
         case BaseArrivals =>
-          aclArrivals = filteredArrivals
+          val updateFilteredArrivals: SortedMap[UniqueArrival, Arrival] = filteredArrivals.map { case (k,arrival) =>
+            (k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), AclFeedSource, None))))
+          }
+          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals BaseArrivals arrival....... $arrival")}
+          aclArrivals = updateFilteredArrivals
           toPush = mergeUpdatesFromAllSources()
       }
       pushIfAvailable(toPush, outArrivalsDiff)
@@ -384,7 +403,8 @@ class ArrivalsGraphStage(name: String = "",
         TranPax = transPax,
         Status = bestStatus(key),
         FeedSources = feedSources(key),
-        ScheduledDeparture = if (bestArrival.ScheduledDeparture.isEmpty) baseArrival.ScheduledDeparture else bestArrival.ScheduledDeparture
+        ScheduledDeparture = if (bestArrival.ScheduledDeparture.isEmpty) baseArrival.ScheduledDeparture else bestArrival.ScheduledDeparture,
+        TotalPax = baseArrival.TotalPax ++ bestArrival.TotalPax
       )
     }
 

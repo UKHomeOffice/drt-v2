@@ -14,7 +14,7 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSucc
 import services.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.ports.ForecastFeedSource
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.ports.Terminals.{N, S}
 
 import java.io.{ByteArrayOutputStream, File, FileReader}
@@ -186,7 +186,7 @@ object LGWForecastFeed {
         feed.getArrivals match {
           case Success(arrivals) =>
             log.info(s"Got forecast Arrivals ${arrivals.size}.")
-            ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
+            ArrivalsFeedSuccess(Flights(arrivals), LiveFeedSource, SDate.now())
           case Failure(e: BoxAPIResponseException) =>
             log.error(s"BOX API Exception: ${e.getResponse}", e)
             ArrivalsFeedFailure(e.toString, SDate.now())

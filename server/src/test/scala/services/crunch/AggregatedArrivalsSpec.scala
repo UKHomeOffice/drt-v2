@@ -16,6 +16,7 @@ import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
 import test.feeds.test.GetArrivals
 import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import scala.collection.immutable.{List, Seq}
@@ -94,7 +95,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
     ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights,LiveFeedSource))
 
     testProbe.expectMsg(UpdateHandled)
 
@@ -129,7 +130,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
     ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights,LiveFeedSource))
 
     testProbe.expectMsg(UpdateHandled)
 
@@ -165,14 +166,14 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       maxDaysToCrunch = 10
     ))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(descheduledArrival))))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(descheduledArrival)),LiveFeedSource))
     testProbe.expectMsg(UpdateHandled)
 
     val arrivalsResult1 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
       case ag: AggregatedArrivals => ag.arrivals.toSet
     }
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List()),LiveFeedSource))
     testProbe.expectMsg(RemovalHandled)
 
     val arrivalsResult2 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {

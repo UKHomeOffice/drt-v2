@@ -47,7 +47,7 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
       response.status match {
         case OK => unMarshalResponseToEdiFlightDetails(response).map { flights =>
           log.info(s"$feedSource Edi feed status ${response.status} with api call for ${flights.size} flights")
-          ArrivalsFeedSuccess(Flights(ediFlightDetailsToArrival(flights, feedSource)))
+          ArrivalsFeedSuccess(Flights(ediFlightDetailsToArrival(flights, feedSource)),feedSource)
         }
         case _ => log.warn(s"Edi feed status ${response.status} while api call with response ${response.entity}")
           Future.successful(ArrivalsFeedFailure(s"$feedSource Response with status ${response.status} from edi ${response.entity}"))
@@ -141,7 +141,7 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax =  List(TotalPaxSource(flight.Passengers.getOrElse(0),feedSource,None))
+        TotalPax =  Set(TotalPaxSource(flight.Passengers.getOrElse(0),feedSource,None))
       )
     } match {
       case Success(a) => Option(a)

@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpda
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PortCode}
 
 import scala.collection.immutable.List
 import scala.concurrent.Future
@@ -38,7 +38,7 @@ class QueueDiversionSpec extends CrunchTestLike {
           airportConfig = config,
           now = () => dateNow))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival)),LiveFeedSource))
         expectPaxByQueue(Map(EeaDesk -> 75, EGate -> 25))
         crunch.shutdown()
 
@@ -52,7 +52,7 @@ class QueueDiversionSpec extends CrunchTestLike {
           maybeEgatesProvider = Option(() => Future.successful(allGatesClosed))
         ))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival)),LiveFeedSource))
         expectPaxByQueue(Map(EeaDesk -> 100))
         crunch.shutdown()
 
@@ -70,7 +70,7 @@ class QueueDiversionSpec extends CrunchTestLike {
           maybeEgatesProvider = Option(() => Future.successful(allGatesClosed))
         ))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival)),LiveFeedSource))
         expectPaxByQueue(Map(NonEeaDesk -> 100))
         crunch.shutdown()
 

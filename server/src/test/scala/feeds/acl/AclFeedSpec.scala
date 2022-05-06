@@ -255,7 +255,7 @@ class AclFeedSpec extends CrunchTestLike {
           now = () => SDate(scheduled),
           airportConfig = defaultAirportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)))))
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight,AclFeedSource))
 
         val expected = Set(arrival.copy(FeedSources = Set(AclFeedSource)))
 
@@ -283,8 +283,8 @@ class AclFeedSpec extends CrunchTestLike {
           now = () => SDate(scheduled),
           airportConfig = defaultAirportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)))))
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlights))
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlights,AclFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights,LiveFeedSource))
 
         val expected = Set(liveFlight.copy(CarrierCode = aclFlight.CarrierCode, VoyageNumber = aclFlight.VoyageNumber, FeedSources = Set(AclFeedSource, LiveFeedSource)))
 
@@ -313,9 +313,9 @@ class AclFeedSpec extends CrunchTestLike {
 
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduledLive)))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(initialLive.toList)))
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialAcl.toList)))
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(newAcl.toList)))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(initialLive.toList),LiveFeedSource))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialAcl.toList),AclFeedSource))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(newAcl.toList),LiveFeedSource))
 
         val expected = initialLive.map(_.copy(FeedSources = Set(LiveFeedSource))) ++ newAcl.map(_.copy(FeedSources = Set(AclFeedSource)))
 
@@ -346,8 +346,8 @@ class AclFeedSpec extends CrunchTestLike {
           initialLiveArrivals = initialLive
         ))
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialAcl.toList)))
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(newLive.toList)))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialAcl.toList),AclFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(newLive.toList),LiveFeedSource))
 
         val expected = newLive.map(_.copy(CarrierCode = CarrierCode("BA"), VoyageNumber = VoyageNumber(1), FeedSources = Set(LiveFeedSource, AclFeedSource))) + initialAcl2.copy(FeedSources = Set(AclFeedSource))
 
@@ -379,8 +379,8 @@ class AclFeedSpec extends CrunchTestLike {
           initialLiveArrivals = initialLive
         ))
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(newAcl))
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(newLive))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(newAcl,AclFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(newLive,LiveFeedSource))
 
         val expected = Set(VoyageNumber(3), VoyageNumber(4), VoyageNumber(5))
 
@@ -405,8 +405,8 @@ class AclFeedSpec extends CrunchTestLike {
 
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduledLive)))
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclInput1))
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclInput2))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclInput1,AclFeedSource))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclInput2,AclFeedSource))
 
         val portStateFlightLists = crunch.portStateTestProbe.receiveWhile(3.seconds) {
           case PortState(f, _, _) => f.values.map(_.apiFlight)

@@ -32,7 +32,7 @@ class AclForecastArrivalsActor(initialSnapshotBytesThreshold: Int,
 
   override def handleFeedSuccess(incomingArrivals: Iterable[Arrival], createdAt: SDateLike): Unit = {
     log.info(s"Received arrivals (base)")
-    val incomingArrivalsWithKeys = incomingArrivals.map(a => (a.unique, a.copy(TotalPax = List(TotalPaxSource(a.ActPax.getOrElse(0),AclFeedSource,None))))).toMap
+    val incomingArrivalsWithKeys = incomingArrivals.map(a => (a.unique, a.copy(TotalPax =  a.TotalPax ++ Set(TotalPaxSource(a.ActPax.getOrElse(0)-a.TranPax.getOrElse(0),AclFeedSource,None))))).toMap
     val (removals, updates) = Crunch.baseArrivalsRemovalsAndUpdates(incomingArrivalsWithKeys, state.arrivals)
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
 

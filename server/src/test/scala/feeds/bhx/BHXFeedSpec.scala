@@ -231,7 +231,7 @@ class BHXFeedSpec extends CrunchTestLike {
   "Given a request for a full refresh of all flights fails, we should poll for a full request until it succeeds" >> {
     val firstFailure = ArrivalsFeedFailure("First Failure")
     val secondFailure = ArrivalsFeedFailure("Second Failure")
-    val finallySuccess = ArrivalsFeedSuccess(Flights(List()))
+    val finallySuccess = ArrivalsFeedSuccess(Flights(List()),LiveFeedSource)
 
     val initialResponses = List(firstFailure, secondFailure, finallySuccess)
     val updateResponses = List(finallySuccess)
@@ -252,7 +252,7 @@ class BHXFeedSpec extends CrunchTestLike {
   "Given a successful initial request, followed by a failed update, we should continue to poll for updates" >> {
 
     val failure = ArrivalsFeedFailure("First Failure")
-    val finallySuccess = ArrivalsFeedSuccess(Flights(List()))
+    val finallySuccess = ArrivalsFeedSuccess(Flights(List()),LiveFeedSource)
 
     val initialResponses = List(finallySuccess)
     val updateResponses = List(failure, finallySuccess)

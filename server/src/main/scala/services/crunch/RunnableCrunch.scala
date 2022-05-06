@@ -15,6 +15,7 @@ import services.{SDate, StreamSupervision}
 import services.graphstages._
 import services.metrics.Metrics
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdateCommand
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -90,21 +91,21 @@ object RunnableCrunch {
 
       implicit builder =>
         (
-          forecastBaseArrivalsSourceSync,
-          forecastArrivalsSourceSync,
-          liveBaseArrivalsSourceSync,
-          liveArrivalsSourceSync,
-          manifestsLiveSourceSync,
-          shiftsSourceAsync,
-          fixedPointsSourceAsync,
-          staffMovementsSourceAsync,
-          actualDesksAndWaitTimesSourceSync,
-          redListUpdatesSourceAsync,
-          arrivalsKillSwitchSync,
-          manifestsLiveKillSwitchSync,
-          shiftsKillSwitchSync,
-          fixedPointsKillSwitchSync,
-          movementsKillSwitchSync
+        forecastBaseArrivalsSourceSync,
+        forecastArrivalsSourceSync,
+        liveBaseArrivalsSourceSync,
+        liveArrivalsSourceSync,
+        manifestsLiveSourceSync,
+        shiftsSourceAsync,
+        fixedPointsSourceAsync,
+        staffMovementsSourceAsync,
+        actualDesksAndWaitTimesSourceSync,
+        redListUpdatesSourceAsync,
+        arrivalsKillSwitchSync,
+        manifestsLiveKillSwitchSync,
+        shiftsKillSwitchSync,
+        fixedPointsKillSwitchSync,
+        movementsKillSwitchSync
         ) =>
           def ackingActorSink(actorRef: ActorRef): SinkShape[Any] =
             builder.add(Sink.actorRefWithAck(actorRef, StreamInitialized, Ack, StreamCompleted, StreamFailure).async)
@@ -140,14 +141,14 @@ object RunnableCrunch {
 
           // @formatter:off
           forecastBaseArrivalsSourceSync.out.map {
-            case ArrivalsFeedSuccess(Flights(as), ca) =>
+            case ArrivalsFeedSuccess(Flights(as), ForecastFeedSource, ca) =>
               val maxScheduledMillis = forecastMaxMillis()
-              ArrivalsFeedSuccess(Flights(as.filter(_.Scheduled < maxScheduledMillis)), ca)
+              ArrivalsFeedSuccess(Flights(as.filter(_.Scheduled < maxScheduledMillis)), ForecastFeedSource, ca)
             case failure => failure
           } ~> forecastBaseArrivalsFanOut
 
           forecastBaseArrivalsFanOut
-            .collect { case ArrivalsFeedSuccess(Flights(as), _) =>
+            .collect { case ArrivalsFeedSuccess(Flights(as), ForecastFeedSource, _) =>
               Metrics.successCounter("forecastBase.arrival", as.size)
               as.toList
             }
@@ -157,7 +158,7 @@ object RunnableCrunch {
           forecastArrivalsSourceSync ~> fcstArrivalsDiffing ~> forecastArrivalsFanOut
 
           forecastArrivalsFanOut
-            .collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty =>
+            .collect { case ArrivalsFeedSuccess(Flights(as), ForecastFeedSource, _) if as.nonEmpty =>
               Metrics.successCounter("forecast.arrival", as.size)
               as.toList
             } ~> arrivals.in1
@@ -165,7 +166,7 @@ object RunnableCrunch {
 
           liveBaseArrivalsSourceSync ~> liveBaseArrivalsDiffing ~> liveBaseArrivalsFanOut
           liveBaseArrivalsFanOut
-            .collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty =>
+            .collect { case ArrivalsFeedSuccess(Flights(as), LiveBaseFeedSource, _) if as.nonEmpty =>
               Metrics.successCounter("liveBase.arrival", as.size)
               as.toList
             } ~> arrivals.in2
@@ -173,7 +174,7 @@ object RunnableCrunch {
 
           liveArrivalsSourceSync ~> arrivalsKillSwitchSync ~> liveArrivalsDiffing ~> liveArrivalsFanOut
           liveArrivalsFanOut
-            .collect { case ArrivalsFeedSuccess(Flights(as), _) =>
+            .collect { case ArrivalsFeedSuccess(Flights(as), LiveFeedSource, _) =>
               Metrics.successCounter("live.arrival", as.size)
               as.toList
             } ~> arrivals.in3

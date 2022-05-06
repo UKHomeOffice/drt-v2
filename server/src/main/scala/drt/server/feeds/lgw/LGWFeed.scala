@@ -10,6 +10,7 @@ import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -47,5 +48,5 @@ case class LGWFeed(lGWAzureClient: LGWAzureClient)(val system: ActorSystem) {
         List()
       })
       .filter(_.nonEmpty)
-      .map(arrivals => ArrivalsFeedSuccess(Flights(arrivals)))
+      .map(arrivals => ArrivalsFeedSuccess(Flights(arrivals),LiveFeedSource))
 }

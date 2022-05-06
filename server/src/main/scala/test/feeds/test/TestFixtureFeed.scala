@@ -12,6 +12,7 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import test.TestActors.ResetData
 import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -34,7 +35,7 @@ object TestFixtureFeed {
           .recover { case _ => List() }
       }
       .collect {
-        case arrivals if arrivals.nonEmpty => ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
+        case arrivals if arrivals.nonEmpty => ArrivalsFeedSuccess(Flights(arrivals),ForecastFeedSource ,SDate.now()) ///todo confirm feedSource
       }
   }
 }
