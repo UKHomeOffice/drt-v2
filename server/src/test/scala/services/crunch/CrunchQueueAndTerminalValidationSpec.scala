@@ -9,7 +9,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PaxTypes, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PaxTypes, Queues}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -43,7 +43,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
               queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk))
               )))
 
-          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
 
           val expected = Set(Queues.EeaDesk)
 
@@ -80,7 +80,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
         )
       ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
 
     val expected = Map(T1 -> Map(Queues.EeaDesk -> List(15.0)))
 

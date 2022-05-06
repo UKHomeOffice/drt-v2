@@ -10,6 +10,7 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.arrivals.ArrivalStatus
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.concurrent.duration._
 
@@ -168,5 +169,5 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
                           status: String = "",
                           actChoxDt: String = ""): QueueOfferResult = {
     val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, actPax = actPax, tranPax = tranPax, maxPax = maxPax, status = ArrivalStatus(status), actChoxDt = actChoxDt)
-    offerAndWait(input, ArrivalsFeedSuccess(Flights(Seq(arrivalLive))))
+    offerAndWait(input, ArrivalsFeedSuccess(Flights(Seq(arrivalLive)),LiveFeedSource))
   }}

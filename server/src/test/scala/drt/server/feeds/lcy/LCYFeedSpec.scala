@@ -13,6 +13,7 @@ import org.mockito.Mockito.{times, verify}
 import org.specs2.mock.Mockito
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -48,7 +49,7 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
   "Given a request for a full refresh of all flights success , it keeps polling for update" >> {
     val lcyClient = mock[LCYClient]
 
-    val arrivalsSuccess = ArrivalsFeedSuccess(Flights(List()))
+    val arrivalsSuccess = ArrivalsFeedSuccess(Flights(List()),LiveFeedSource)
 
     lcyClient.initialFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)
     lcyClient.updateFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)

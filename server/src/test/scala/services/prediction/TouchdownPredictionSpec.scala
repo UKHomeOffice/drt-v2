@@ -9,7 +9,7 @@ import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
 import services.prediction.TouchdownPrediction.MaybeModelAndFeaturesProvider
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
 import uk.gov.homeoffice.drt.prediction.Feature.OneToMany
 import uk.gov.homeoffice.drt.prediction.{FeaturesWithOneToManyValues, RegressionModel, TouchdownModelAndFeatures}
@@ -66,7 +66,7 @@ class TouchdownPredictionSpec extends CrunchTestLike {
           addTouchdownPredictions = touchdownPrediction.addTouchdownPredictions
         ))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival)),LiveFeedSource))
 
         crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for a predicted time") {
           case ps: PortState => ps.flights.values.exists(_.apiFlight.PredictedTouchdown.nonEmpty)

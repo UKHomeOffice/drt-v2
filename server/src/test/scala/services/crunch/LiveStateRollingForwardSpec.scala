@@ -7,7 +7,7 @@ import drt.shared.PortState
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -34,12 +34,12 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(now = myNow, maxDaysToCrunch = 5))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival)),LiveFeedSource))
 
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival))
 
     nowDate = SDate(wednesday)
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2)),LiveFeedSource))
 
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2))
 
@@ -62,11 +62,11 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(now = myNow, maxDaysToCrunch = 5))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival)),LiveFeedSource))
 
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2)),LiveFeedSource))
 
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2))
 

@@ -7,11 +7,12 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.metrics.StageTimer
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.FeedSource
 
 import scala.collection.immutable.SortedMap
 
 
-final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, Arrival],
+final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, Arrival], feedSource: FeedSource,
                                  forecastMaxMillis: () => MillisSinceEpoch)
   extends GraphStage[FlowShape[ArrivalsFeedResponse, ArrivalsFeedResponse]]
 {
@@ -61,7 +62,7 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
     }
 
     def processFeedResponse(arrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = arrivalsFeedResponse match {
-      case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
+      case afs@ArrivalsFeedSuccess(latestArrivals,feedSource, _) =>
         val maxScheduledMillis = forecastMaxMillis()
         val incomingArrivals: Iterable[(UniqueArrival, Arrival)] = latestArrivals.flights.filter(_.Scheduled <= maxScheduledMillis).map(a => (UniqueArrival(a), a))
         val newUpdates: Iterable[(UniqueArrival, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)

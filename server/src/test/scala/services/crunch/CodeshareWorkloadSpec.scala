@@ -5,7 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.{PortState, TQM}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
-import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import scala.concurrent.duration._
@@ -24,7 +24,7 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
       setPcpTimes = TestDefaults.setPcpFromBest
     ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival1, arrival2))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival1, arrival2)),LiveFeedSource))
 
     crunch.portStateTestProbe.fishForMessage(2 seconds) {
       case PortState(_, crunchMinutes, _) =>
@@ -36,7 +36,7 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
 
     val updatedArrival2 = arrival2.copy(Estimated = Option(schSdate.addMinutes(1).millisSinceEpoch), ActPax = Option(16))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(updatedArrival2))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(updatedArrival2)),LiveFeedSource))
 
     crunch.portStateTestProbe.fishForMessage(5 seconds) {
       case PortState(_, crunchMinutes, _) =>

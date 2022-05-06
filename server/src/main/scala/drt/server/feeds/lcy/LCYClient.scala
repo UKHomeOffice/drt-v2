@@ -10,6 +10,7 @@ import drt.server.feeds.common.HttpClient
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -84,7 +85,7 @@ trait ProdLcyClientSupport extends LcyClientSupport with ScalaXmlSupport {
 
         lcyResponse.map {
           case s: LCYFlightsResponseSuccess =>
-            ArrivalsFeedSuccess(Flights(s.flights.map(fs => LCYFlightTransform.lcyFlightToArrival(fs))))
+            ArrivalsFeedSuccess(Flights(s.flights.map(fs => LCYFlightTransform.lcyFlightToArrival(fs))),LiveFeedSource)
 
           case f: LCYFlightsResponseFailure =>
             ArrivalsFeedFailure(f.message)

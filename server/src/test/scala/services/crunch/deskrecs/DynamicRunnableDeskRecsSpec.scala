@@ -5,7 +5,7 @@ import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.DeskRecMinutes
@@ -18,7 +18,7 @@ import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageMa
 import queueus._
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider, addManifests}
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider, addManifests, updatePaxNos}
 import services.crunch.deskrecs.OptimiserMocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsPaxProvider, mockHistoricManifestsPaxProviderNoop, mockHistoricManifestsProvider, mockLiveManifestsProvider}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
@@ -158,7 +158,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val request = CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440)
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
 
-    val deskRecs = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+    val deskRecs: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
       arrivalsProvider = mockFlightsProvider(List(arrival)),
       liveManifestsProvider = mockLiveManifestsProvider(arrival, livePax),
       historicManifestsProvider = mockHistoricManifestsProvider(Map(arrival -> historicPax)),
@@ -212,6 +212,17 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         val withLiveManifests = addManifests(flights, manifestsForDifferentArrival, mockSplits)
 
         withLiveManifests === Seq(ApiFlightWithSplits(arrival, Set()))
+      }
+    }
+
+    "updateArrival" >> {
+      "When I have a manifest matching the arrival I should get the mock splits added to the arrival" >> {
+        val manifest = VoyageManifestGenerator.manifestForArrival(arrival, List(euIdCard))
+        val manifestsForArrival = manifestsByKey(manifest)
+        val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
+        val updatePax = updatePaxNos(mockSplitsSink)
+
+        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1), FeedSources = arrival.FeedSources + ApiFeedSource), Set(splits)))
       }
     }
 

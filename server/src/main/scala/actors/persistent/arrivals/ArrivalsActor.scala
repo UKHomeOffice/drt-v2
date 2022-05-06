@@ -12,7 +12,7 @@ import scalapb.GeneratedMessage
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, TotalPaxSource, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -73,8 +73,13 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def receiveCommand: Receive = {
-    case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
-      handleFeedSuccess(incomingArrivals, createdAt)
+    case ArrivalsFeedSuccess(Flights(incomingArrivals), feedSource, createdAt) =>
+      log.info(s"ArrivalsFeedSuccess incomingArrivals  $incomingArrivals")
+      val amendIncomingArrivalsSource = incomingArrivals.map { arrival =>
+          arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), feedSource, None)))
+        }
+      log.info(s"ArrivalsFeedSuccess amendIncomingArrivalsSource  $amendIncomingArrivalsSource")
+      handleFeedSuccess(amendIncomingArrivalsSource, createdAt)
 
     case ArrivalsFeedFailure(message, createdAt) => handleFeedFailure(message, createdAt)
 
@@ -123,7 +128,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
       createdAt = Option(SDate.now().millisSinceEpoch),
       removals = removalMessages,
       updates = updateMessages)
-
+    updateMessages.map { msg =>
+      log.info(s"msg.totalPax .... ${msg.totalPax}")
+      log.info(s"msg .....$msg")
+      log.info(s"\\n")
+    }
     persistAndMaybeSnapshot(diffMessage)
   }
 

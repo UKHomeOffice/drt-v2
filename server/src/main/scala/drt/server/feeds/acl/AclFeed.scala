@@ -50,7 +50,7 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
 
           feedResponseTry match {
             case Success(a) =>
-              ArrivalsFeedSuccess(a)
+              ArrivalsFeedSuccess(a,AclFeedSource)
             case Failure(t) =>
               log.error(s"Failed to get flights from ACL: $t")
               ArrivalsFeedFailure(t.getMessage)

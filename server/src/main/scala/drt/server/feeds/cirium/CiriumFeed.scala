@@ -15,8 +15,8 @@ import services.SDate
 import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.ports.Terminals.{A1, InvalidTerminal, T1, Terminal, A2}
-import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.Terminals.{A1, InvalidTerminal, T1, Terminal ,A2}
+import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -35,7 +35,7 @@ case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem
             log.debug(s"Got ${fs.size} arrivals from Cirium")
             fs.map(a => toArrival(a, portCode))
           })
-          .map(as => ArrivalsFeedSuccess(Flights(as)))
+          .map(as => ArrivalsFeedSuccess(Flights(as),LiveBaseFeedSource))
           .recover {
             case throwable: Throwable =>
               log.error("Failed to connect to Cirium", throwable)

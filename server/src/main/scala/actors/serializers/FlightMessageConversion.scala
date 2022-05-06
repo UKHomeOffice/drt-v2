@@ -10,8 +10,9 @@ import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage._
 import uk.gov.homeoffice.drt.protobuf.messages.Prediction.PredictionLongMessage
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PortCode, UnknownFeedSource}
 
 object FlightMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass.toString)
@@ -119,7 +120,8 @@ object FlightMessageConversion {
   }
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
-    FlightMessage(
+    log.info(s"......apiFlightToFlightMessage  $apiFlight")
+    val a = FlightMessage(
       operator = apiFlight.Operator.map(_.code),
       gate = apiFlight.Gate,
       stand = apiFlight.Stand,
@@ -145,8 +147,14 @@ object FlightMessageConversion {
       carrierScheduled = apiFlight.CarrierScheduled,
       apiPax = apiFlight.ApiPax,
       redListPax = apiFlight.RedListPax,
-      scheduledDeparture = apiFlight.ScheduledDeparture
+      scheduledDeparture = apiFlight.ScheduledDeparture,
+      totalPax = apiFlight.TotalPax.map(tp => uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.TotalPaxSource(
+          pax = Option(tp.pax),
+          feedSource = Option(tp.feedSource.name),
+          splitSource = tp.splitSource.map(_.toString))).toSeq
     )
+    log.info(s"......apiFlightToFlightMessage $a")
+    a
   }
 
   def predictionToMessage(maybePred: Option[Prediction[Long]]): Option[PredictionLongMessage] =
@@ -160,7 +168,8 @@ object FlightMessageConversion {
     } yield Prediction(updatedAt, value)
 
   def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
-    Arrival(
+    log.info(s"flightMessageToApiFlight ...$flightMessage")
+    val a  = Arrival(
       Operator = flightMessage.operator.map(Operator),
       Status = ArrivalStatus(flightMessage.status.getOrElse("")),
       Estimated = flightMessage.estimated,
@@ -187,7 +196,12 @@ object FlightMessageConversion {
       ApiPax = flightMessage.apiPax,
       RedListPax = flightMessage.redListPax,
       ScheduledDeparture = flightMessage.scheduledDeparture,
+      TotalPax = flightMessage.totalPax.map(a => uk.gov.homeoffice.drt.arrivals.TotalPaxSource(a.pax.getOrElse(0),
+        a.feedSource.flatMap(FeedSource.findByName).getOrElse(UnknownFeedSource),
+        a.splitSource.map(SplitSource(_)))).toSet
     )
+    log.info(s"flightMessageToApiFlight ...$a")
+    a
   }
 
   def flightsToMessage(flights: Iterable[ApiFlightWithSplits]): FlightsWithSplitsMessage =

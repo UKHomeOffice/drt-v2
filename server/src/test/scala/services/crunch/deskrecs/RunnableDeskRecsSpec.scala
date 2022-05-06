@@ -369,7 +369,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       initialPortState = Option(initialPortState)
     ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis))))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis)))),LiveFeedSource))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(_, cms, _) =>
@@ -410,7 +410,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val noonMillis = SDate(noon).millisSinceEpoch
     val noon30Millis = SDate(noon30).millisSinceEpoch
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2)),LiveFeedSource))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(_, cms, _) =>
@@ -421,7 +421,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         nonZeroAtNoon
     }
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis))))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis)))),LiveFeedSource))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(_, cms, _) =>
@@ -459,7 +459,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val noonMillis = SDate(noon).millisSinceEpoch
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2))))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2)),AclFeedSource))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(_, cms, _) =>
@@ -470,7 +470,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         nonZeroAtNoon
     }
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival))))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival)),AclFeedSource))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(_, cms, _) =>

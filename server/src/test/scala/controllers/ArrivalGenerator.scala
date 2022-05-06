@@ -1,10 +1,12 @@
 package controllers
 
 import services.SDate
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Prediction}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Prediction, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
+
+import scala.collection.immutable.List
 
 object ArrivalGenerator {
   def arrival(iata: String = "",
@@ -29,7 +31,8 @@ object ArrivalGenerator {
               baggageReclaimId: Option[String] = None,
               airportId: PortCode = PortCode(""),
               feedSources: Set[FeedSource] = Set(),
-              apiPax: Option[Int] = None
+              apiPax: Option[Int] = None ,
+              totalPax: Set[TotalPaxSource] = Set.empty
              ): Arrival = {
     val pcpTime = if (pcpDt.nonEmpty) Option(SDate(pcpDt).millisSinceEpoch) else if (schDt.nonEmpty) Option(SDate(schDt).millisSinceEpoch) else None
 
@@ -56,7 +59,8 @@ object ArrivalGenerator {
       PcpTime = pcpTime,
       Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
       FeedSources = feedSources,
-      ApiPax = apiPax
+      ApiPax = apiPax,
+      TotalPax = totalPax
     )
   }
 

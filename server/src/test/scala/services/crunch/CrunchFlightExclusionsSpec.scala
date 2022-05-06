@@ -7,7 +7,7 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.ArrivalStatus
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
-import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, LiveFeedSource, Queues}
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -40,7 +40,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         minutesToCrunch = 120
         )))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
 
     val expected = Map(
       T1 -> Map(Queues.EeaDesk -> Seq(
@@ -84,7 +84,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         )
       ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
 
     val expected = Map(
       T1 -> Map(Queues.EeaDesk -> Seq(

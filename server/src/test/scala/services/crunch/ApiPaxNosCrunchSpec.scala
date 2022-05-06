@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaChildToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{PaxAge, PaxTypeAndQueue, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, PaxAge, PaxTypeAndQueue, PortCode, Queues}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -48,7 +48,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
       )))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights,AclFeedSource))
     offerAndWait(crunch.manifestsLiveInput, manifests)
 
     val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
@@ -72,7 +72,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
       )))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights,AclFeedSource))
     offerAndWait(crunch.manifestsLiveInput, manifests)
 
     val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
