@@ -74,11 +74,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   override def receiveCommand: Receive = {
     case ArrivalsFeedSuccess(Flights(incomingArrivals), feedSource, createdAt) =>
-      log.info(s"ArrivalsFeedSuccess incomingArrivals  $incomingArrivals")
+//      log.info(s"ArrivalsFeedSuccess incomingArrivals  $incomingArrivals")
       val amendIncomingArrivalsSource = incomingArrivals.map { arrival =>
           arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), feedSource, None)))
         }
-      log.info(s"ArrivalsFeedSuccess amendIncomingArrivalsSource  $amendIncomingArrivalsSource")
+//      log.info(s"ArrivalsFeedSuccess amendIncomingArrivalsSource  $amendIncomingArrivalsSource")
       handleFeedSuccess(amendIncomingArrivalsSource, createdAt)
 
     case ArrivalsFeedFailure(message, createdAt) => handleFeedFailure(message, createdAt)
@@ -133,11 +133,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
       createdAt = Option(SDate.now().millisSinceEpoch),
       removals = removalMessages,
       updates = updateMessages)
-    updateMessages.map { msg =>
-      log.info(s"msg.totalPax .... ${msg.totalPax}")
-      log.info(s"msg .....$msg")
-      log.info(s"\\n")
-    }
+//    updateMessages.map { msg =>
+//      log.info(s"msg.totalPax .... ${msg.totalPax}")
+//      log.info(s"msg .....$msg")
+//      log.info(s"\\n")
+//    }
     persistAndMaybeSnapshot(diffMessage)
   }
 

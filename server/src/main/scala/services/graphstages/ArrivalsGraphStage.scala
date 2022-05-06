@@ -199,7 +199,7 @@ class ArrivalsGraphStage(name: String = "",
           val updateFilteredArrivals : SortedMap[UniqueArrival, Arrival] = filteredArrivals.map { case (k,arrival) =>
             (k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), LiveFeedSource, None))))
           }
-          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals LiveArrivals arrival....... $arrival")}
+//          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals LiveArrivals arrival....... $arrival")}
 
           val toRemove = terminalRemovals(incomingArrivals, liveArrivals.values)
           liveArrivals = updateArrivalsSource(liveArrivals, updateFilteredArrivals)
@@ -208,7 +208,7 @@ class ArrivalsGraphStage(name: String = "",
           val updateFilteredArrivals : SortedMap[UniqueArrival, Arrival] = filteredArrivals.map { case (k,arrival) =>
             (k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), LiveBaseFeedSource, None))))
           }
-          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals LiveBaseArrivals arrival....... $arrival")}
+//          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals LiveBaseArrivals arrival....... $arrival")}
 
           ciriumArrivals = updateArrivalsSource(ciriumArrivals, updateFilteredArrivals)
           val missingTerminals = ciriumArrivals.count {
@@ -221,7 +221,7 @@ class ArrivalsGraphStage(name: String = "",
           val updateFilteredArrivals : SortedMap[UniqueArrival, Arrival] = filteredArrivals.map { case (k,arrival) =>
             (k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), ForecastFeedSource, None))))
           }
-          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals ForecastArrivals arrival....... $arrival")}
+//          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals ForecastArrivals arrival....... $arrival")}
 
           forecastArrivals = updateArrivalsSource(forecastArrivals, updateFilteredArrivals)
           toPush = mergeUpdatesFromKeys(forecastArrivals.keys)
@@ -229,7 +229,7 @@ class ArrivalsGraphStage(name: String = "",
           val updateFilteredArrivals: SortedMap[UniqueArrival, Arrival] = filteredArrivals.map { case (k,arrival) =>
             (k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), AclFeedSource, None))))
           }
-          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals BaseArrivals arrival....... $arrival")}
+//          updateFilteredArrivals.map{arrival => log.info(s"updateFilteredArrivals BaseArrivals arrival....... $arrival")}
           aclArrivals = updateFilteredArrivals
           toPush = mergeUpdatesFromAllSources()
       }

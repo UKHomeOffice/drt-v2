@@ -10,7 +10,7 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared._
-import manifests.passengers.{BestAvailableManifest, HistoricManifestPax, ManifestPaxLike}
+import manifests.passengers.{BestAvailableManifest, HistoricManifestPax}
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
@@ -19,7 +19,7 @@ import queueus._
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider, addManifests, updatePaxNos}
-import services.crunch.deskrecs.OptimiserMocks.{MockSinkActor, mockFlightsProvider, mockHistoricManifestsPaxProvider, mockHistoricManifestsPaxProviderNoop, mockHistoricManifestsProvider, mockLiveManifestsProvider}
+import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
@@ -31,7 +31,7 @@ import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiFeedSource, ApiPaxTypeAndQueueCount, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -97,12 +97,12 @@ object OptimiserMocks {
         val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
         val maybeManifest = maybePax.map(pax => HistoricManifestPax.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
         (key, maybeManifest)
-      }),PortCode("STN"))
+      }), PortCode("STN"))
     )
   }
 
   def mockHistoricManifestsPaxProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
-                                   (implicit ec: ExecutionContext, mat: Materializer): HistoricManifestsPaxProvider = {
+                                      (implicit ec: ExecutionContext, mat: Materializer): HistoricManifestsPaxProvider = {
     OptimisationProviders.historicManifestsPaxProvider(
       PortCode("STN"),
       MockManifestLookupService(arrivalsWithMaybePax.map { case (arrival, maybePax) =>
@@ -113,12 +113,12 @@ object OptimiserMocks {
         val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
         val maybeManifest = maybePax.map(pax => HistoricManifestPax.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
         (key, maybeManifest)
-      },PortCode("STN"))
+      }, PortCode("STN"))
     )
   }
 }
 
-case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]], historicManifestsPax: Map[UniqueArrivalKey, Option[HistoricManifestPax]] ,destinationPort: PortCode)
+case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]], historicManifestsPax: Map[UniqueArrivalKey, Option[HistoricManifestPax]], destinationPort: PortCode)
                                     (implicit mat: Materializer) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
@@ -243,6 +243,12 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         checkSplitsSource(arrival, None, Map(), Set(TerminalAverage))
       }
     }
+
+    "add historic API pax" >> {
+      "When I have live manifests matching the arrival where the live manifest is within the trust threshold I should get some pax from historic API" >> {
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(10, ApiFeedSource, Option(Historical))))
+      }
+    }
   }
 
   private def checkSplitsSource(arrival: Arrival,
@@ -258,6 +264,19 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val result = Await.result(value1.via(flow).runWith(Sink.seq), 1.second)
 
     result.head._2.exists(_.bestSplits.nonEmpty) && result.head._2.exists(_.splits.map(_.source) === expectedSplitsSources)
+  }
+
+  private def checkPaxSource(arrival: Arrival,
+                             maybeHistoricArrivalManifestPax: Map[Arrival, Option[List[PassengerInfoJson]]],
+                             expectedPaxSources: Set[TotalPaxSource]) = {
+    val flow = DynamicRunnableDeskRecs.addPax(mockHistoricManifestsPaxProvider(maybeHistoricArrivalManifestPax))
+
+    val value1 = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(ApiFlightWithSplits(arrival, Set())))))
+    val result = Await.result(value1.via(flow).runWith(Sink.seq), 1.second)
+
+    println(s"result: $result")
+
+    result.head._2.exists(_.bestSplits.nonEmpty) && result.head._2.exists(_.splits.map(_.source) === expectedPaxSources)
   }
 
   def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =
