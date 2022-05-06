@@ -141,7 +141,14 @@ class ArrivalsGraphStage(name: String = "",
           }
       }
 
-      val existingFeedArrivalKeys = initialLiveArrivals.keys.toSet ++ initialForecastBaseArrivals.keys.toSet
+      val existingFeedArrivalKeys = arrivalsAdjustments(
+        (initialLiveArrivals.keys.toSet ++ initialForecastBaseArrivals.keys.toSet)
+          .map(key => mergeArrivalWithMaybeBase(key, initialForecastBaseArrivals.get(key)))
+          .collect {
+            case Some(arrival) => arrival
+          },
+        redListUpdates
+      ).map(_.unique).toSet
 
       toPush = initialMergedArrivals.foldLeft(List[Arrival]()) {
         case (acc, (existingMergedKey, _)) if existingFeedArrivalKeys.contains(existingMergedKey) => acc
