@@ -120,7 +120,7 @@ object FlightMessageConversion {
   }
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
-    log.info(s"......apiFlightToFlightMessage  $apiFlight")
+//    log.info(s"......apiFlightToFlightMessage  $apiFlight")
     val a = FlightMessage(
       operator = apiFlight.Operator.map(_.code),
       gate = apiFlight.Gate,
@@ -153,7 +153,7 @@ object FlightMessageConversion {
           feedSource = Option(tp.feedSource.name),
           splitSource = tp.splitSource.map(_.toString))).toSeq
     )
-    log.info(s"......apiFlightToFlightMessage $a")
+//    log.info(s"......apiFlightToFlightMessage $a")
     a
   }
 
@@ -168,7 +168,7 @@ object FlightMessageConversion {
     } yield Prediction(updatedAt, value)
 
   def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
-    log.info(s"flightMessageToApiFlight ...$flightMessage")
+//    log.info(s"flightMessageToApiFlight ...$flightMessage")
     val a  = Arrival(
       Operator = flightMessage.operator.map(Operator),
       Status = ArrivalStatus(flightMessage.status.getOrElse("")),
@@ -200,7 +200,7 @@ object FlightMessageConversion {
         a.feedSource.flatMap(FeedSource.findByName).getOrElse(UnknownFeedSource),
         a.splitSource.map(SplitSource(_)))).toSet
     )
-    log.info(s"flightMessageToApiFlight ...$a")
+//    log.info(s"flightMessageToApiFlight ...$a")
     a
   }
 

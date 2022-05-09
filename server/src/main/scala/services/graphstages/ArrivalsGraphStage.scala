@@ -296,6 +296,20 @@ class ArrivalsGraphStage(name: String = "",
       pushIfAvailable(toPush, outArrivalsDiff)
     }
 
+    maybeNewDiff.foreach { newDiff =>
+      val adjustedUpdates = arrivalsAdjustments(newDiff.toUpdate.values, redListUpdates)
+      val adjustedRemovals = arrivalsAdjustments(newDiff.toRemove, redListUpdates)
+      val oldTerminalRemovals = terminalRemovals(adjustedUpdates, newDiff.toUpdate.values)
+      toPush = toPush match {
+        case Some(existingDiff) =>
+          Option(existingDiff.copy(
+            toUpdate = existingDiff.toUpdate ++ adjustedUpdates.map(a => (a.unique, a)),
+            toRemove = existingDiff.toRemove ++ adjustedRemovals ++ oldTerminalRemovals))
+        case None =>
+          Option(ArrivalsDiff(adjustedUpdates, adjustedRemovals ++ oldTerminalRemovals))
+      }
+    }
+
     def changedArrivals(existingArrivals: SortedMap[UniqueArrival, Arrival],
                         newArrivals: SortedMap[UniqueArrival, Arrival]): immutable.Iterable[UniqueArrival] = newArrivals.collect {
       case (key, newArrival) if !existingArrivals.contains(key) || !existingArrivals(key).isEqualTo(newArrival) => key
