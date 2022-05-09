@@ -246,7 +246,14 @@ class ArrivalsGraphStage(name: String = "",
           val terminalRemovals = ArrivalsGraphStage.terminalRemovals(filteredIncoming.values, liveArrivals.values)
           val keysWithUpdates = changedArrivals(liveArrivals, filteredIncoming)
           val existingMergedForKeys = keysWithUpdates.map(key => (key, mergeArrivalWithMaybeBase(key, forecastBaseArrivals.get(key)))).toMap
-          liveArrivals = liveArrivals ++ filteredIncoming
+          liveArrivals = filteredIncoming.foldLeft(liveArrivals) {
+            case (acc, (incomingKey, incomingArrival)) =>
+              acc.get(incomingKey) match {
+                case Some(existing) if existing.BaggageReclaimId.nonEmpty && !incomingArrival.BaggageReclaimId.exists(_.nonEmpty) =>
+                  acc + (incomingKey -> incomingArrival.copy(BaggageReclaimId = existing.BaggageReclaimId))
+                case _ => acc + (incomingKey -> incomingArrival)
+              }
+          }
           if (keysWithUpdates.nonEmpty || terminalRemovals.nonEmpty)
             Option(ArrivalsDiff(getUpdatesFromNonBaseArrivals(keysWithUpdates, existingMergedForKeys), terminalRemovals))
           else None
@@ -381,13 +388,13 @@ class ArrivalsGraphStage(name: String = "",
     }
 
     def mergeArrivalWithMaybeBase(key: UniqueArrival, maybeBaseArrival: Option[Arrival]): Option[Arrival] = {
-      val maybeArrival = ciriumArrivals.get(key)
-      val maybeSanitisedLiveBaseArrival = maybeArrival.map(arrivalDataSanitiser.withSaneEstimates)
+      val maybeLiveBaseArrival = ciriumArrivals.get(key)
+      val maybeSanitisedLiveBaseArrival = maybeLiveBaseArrival.map(arrivalDataSanitiser.withSaneEstimates)
 
       val maybeBestArrival: Option[Arrival] = (liveArrivals.get(key), maybeSanitisedLiveBaseArrival, maybeBaseArrival) match {
-        case (Some(liveArrival), Some(ciriumArrival), _) =>
-          if (ciriumArrival.Origin == liveArrival.Origin) {
-            val mergedLiveArrival = LiveArrivalsUtil.mergePortFeedWithLiveBase(liveArrival, ciriumArrival)
+        case (Some(liveArrival), Some(liveBaseArrival), _) =>
+          if (liveBaseArrival.Origin == liveArrival.Origin) {
+            val mergedLiveArrival = LiveArrivalsUtil.mergePortFeedWithLiveBase(liveArrival, liveBaseArrival)
             val sanitisedLiveArrival = ArrivalDataSanitiser
               .arrivalDataSanitiserWithoutThresholds
               .withSaneEstimates(mergedLiveArrival)
