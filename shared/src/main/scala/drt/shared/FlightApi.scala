@@ -166,13 +166,14 @@ object FlightsApi {
 
 }
 
-class ArrivalsRestorer[A <: WithUnique[UniqueArrival]] {
+class ArrivalsRestorer[A <: WithUnique[UniqueArrival] with Updatable[A]] {
   var arrivals: Map[UniqueArrival, A] = Map()
 
   def removeHashLegacies(removals: Iterable[Int]): Unit = removals.foreach(keyToRemove => arrivals = arrivals.filterKeys(_.legacyUniqueId != keyToRemove))
 
   def applyUpdates(updates: Iterable[A]): Unit = updates.foreach { update =>
-    arrivals = arrivals + ((update.unique, update))
+    val updated = arrivals.get(update.unique).map(_.update(update)).getOrElse(update)
+    arrivals = arrivals + ((update.unique, updated))
   }
 
   def remove(removals: Iterable[UniqueArrivalLike]): Unit =
