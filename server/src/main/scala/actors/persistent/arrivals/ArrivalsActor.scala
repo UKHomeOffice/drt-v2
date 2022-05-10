@@ -28,7 +28,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
-  override def initialState: ArrivalsState = ArrivalsState(SortedMap(), feedSource, None)
+  override def initialState: ArrivalsState = ArrivalsState.empty(feedSource)
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case stateMessage: FlightStateSnapshotMessage =>
@@ -113,9 +113,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     val updatedArrivals = incomingArrivals.toSet
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size)
 
-    state = state.copy(
-      arrivals = state.arrivals ++ incomingArrivals.map(a => (a.unique, a)),
-      maybeSourceStatuses = Option(state.addStatus(newStatus)))
+    state = state ++ (incomingArrivals, Option(state.addStatus(newStatus)))
 
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)

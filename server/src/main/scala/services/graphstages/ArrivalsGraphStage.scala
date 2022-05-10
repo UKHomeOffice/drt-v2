@@ -246,14 +246,7 @@ class ArrivalsGraphStage(name: String = "",
           val terminalRemovals = ArrivalsGraphStage.terminalRemovals(filteredIncoming.values, liveArrivals.values)
           val keysWithUpdates = changedArrivals(liveArrivals, filteredIncoming)
           val existingMergedForKeys = keysWithUpdates.map(key => (key, mergeArrivalWithMaybeBase(key, forecastBaseArrivals.get(key)))).toMap
-          liveArrivals = filteredIncoming.foldLeft(liveArrivals) {
-            case (acc, (incomingKey, incomingArrival)) =>
-              acc.get(incomingKey) match {
-                case Some(existing) if existing.BaggageReclaimId.nonEmpty && !incomingArrival.BaggageReclaimId.exists(_.nonEmpty) =>
-                  acc + (incomingKey -> incomingArrival.copy(BaggageReclaimId = existing.BaggageReclaimId))
-                case _ => acc + (incomingKey -> incomingArrival)
-              }
-          }
+          liveArrivals = liveArrivals ++ filteredIncoming
           if (keysWithUpdates.nonEmpty || terminalRemovals.nonEmpty)
             Option(ArrivalsDiff(getUpdatesFromNonBaseArrivals(keysWithUpdates, existingMergedForKeys), terminalRemovals))
           else None
