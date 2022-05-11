@@ -70,60 +70,59 @@ trait WithFeeds {
                  terminal: String,
                  scheduled: MillisSinceEpoch,
                  origin: String): Action[AnyContent] = authByRole(ArrivalSource) {
-    Action.async { _ =>
-      Source(ctrl.feedActorsForPort)
-        .mapAsync(1) {
-          case (_, feed) =>
-            feed
-              .ask(UniqueArrival(number, terminal, scheduled, origin))
-              .map {
-                case Some(fsa: FeedSourceArrival) if ctrl.isValidFeedSource(fsa.feedSource) => Option(fsa)
-                case _ => None
-              }
-        }
-        .log(getClass.getName)
-        .runWith(Sink.seq)
-        .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
-    }
+    getAllFeedSourceArrivals(SDate.now().millisSinceEpoch, number, terminal, scheduled, origin)
   }
 
-  def getArrivalAtPointInTime(
-                               pointInTime: MillisSinceEpoch,
-                               number: Int,
-                               terminal: String,
-                               scheduled: MillisSinceEpoch,
-                               origin: String
-                             ): Action[AnyContent] = authByRole(ArrivalSource) {
-    val arrivalActorPersistenceIds = Seq(
-      (CirriumLiveArrivalsActor.persistenceId, LiveBaseFeedSource),
-      (PortLiveArrivalsActor.persistenceId, LiveFeedSource),
-      (AclForecastArrivalsActor.persistenceId, AclFeedSource),
-      (PortForecastArrivalsActor.persistenceId, ForecastFeedSource)
-    )
+  def getArrivalAtPointInTime(pointInTime: MillisSinceEpoch,
+                              number: Int,
+                              terminal: String,
+                              scheduled: MillisSinceEpoch,
+                              origin: String): Action[AnyContent] = authByRole(ArrivalSource) {
+    getAllFeedSourceArrivals(pointInTime, number, terminal, scheduled, origin)
+  }
 
-    val pointInTimeActorSources: Seq[UniqueArrival => ActorRef] = arrivalActorPersistenceIds.map {
-      case (id, source) =>
-        (ua: UniqueArrival) =>
-          system.actorOf(
-            ArrivalLookupActor.props(airportConfig.portCode, SDate(pointInTime), ua, id, source),
-            name = s"arrival-read-$id-${UUID.randomUUID()}"
-          )
-    }
+  private def getAllFeedSourceArrivals(pointInTime: MillisSinceEpoch,
+                                       number: Int,
+                                       terminal: String,
+                                       scheduled: MillisSinceEpoch,
+                                       origin: String) =
     Action.async { _ =>
-      Source(pointInTimeActorSources.toList)
+      Source(pointInTimeActorSources(pointInTime).toList)
         .mapAsync(1) { feedActor =>
           val actor = feedActor(UniqueArrival(number, terminal, scheduled, origin))
           actor
             .ask(GetState)
             .mapTo[Option[FeedSourceArrival]]
-            .map { maybeArrival =>
+            .map { result =>
               actor ! PoisonPill
-              maybeArrival
+              result
+            }
+            .map {
+              case Some(feedSourceArrival) if ctrl.isValidFeedSource(feedSourceArrival.feedSource) =>
+                Option(feedSourceArrival)
+              case _ => None
             }
         }
         .log(getClass.getName)
         .runWith(Sink.seq)
-        .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
+        .map(arrivalSources => Ok(write(arrivalSources)))
+    }
+
+  val arrivalActorPersistenceIds = Seq(
+    (CirriumLiveArrivalsActor.persistenceId, LiveBaseFeedSource),
+    (PortLiveArrivalsActor.persistenceId, LiveFeedSource),
+    (AclForecastArrivalsActor.persistenceId, AclFeedSource),
+    (PortForecastArrivalsActor.persistenceId, ForecastFeedSource)
+  )
+
+  def pointInTimeActorSources(pit: MillisSinceEpoch): Seq[UniqueArrival => ActorRef] = {
+    arrivalActorPersistenceIds.map {
+      case (id, source) =>
+        (ua: UniqueArrival) =>
+          system.actorOf(
+            ArrivalLookupActor.props(airportConfig.portCode, SDate(pit), ua, id, source),
+            name = s"arrival-read-$id-${UUID.randomUUID()}"
+          )
     }
   }
 
