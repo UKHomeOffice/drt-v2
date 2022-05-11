@@ -1,6 +1,6 @@
 package drt.server.feeds.edi
 
-import akka.actor.{ActorSystem, typed}
+import akka.actor.typed
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.model.StatusCodes.OK
@@ -15,7 +15,7 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSucc
 import services.SDate
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, FlightCodeSuffix, Operator, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.{A2, InvalidTerminal, T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSource, PortCode}
 
@@ -25,26 +25,31 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 trait EdiFeedJsonSupport extends DefaultJsonProtocol with SprayJsonSupport {
+  implicit val mat: Materializer
+  implicit val ec: ExecutionContext
 
   implicit val ediFlightDetailsFormat: RootJsonFormat[EdiFlightDetails] = jsonFormat22(EdiFlightDetails)
 
-  def unMarshalResponseToEdiFlightDetails(httpResponse: HttpResponse)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Future[List[EdiFlightDetails]] = {
+  def unMarshalResponseToEdiFlightDetails(httpResponse: HttpResponse): Future[List[EdiFlightDetails]] =
     httpResponse.entity.dataBytes.runReduce(_ ++ _)
       .flatMap(d => Unmarshal(d.utf8String).to[List[EdiFlightDetails]])
-  }
 }
 
-class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
+case class EdiFeed(ediClient: EdiClient)
+                  (implicit val mat: Materializer, val ec: ExecutionContext)
+  extends EdiFeedJsonSupport {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   case class FeedDates(startDate: String, endDate: String)
 
-  def makeRequestAndFeedResponseToArrivalSource(startData: String, endDate: String, feedSource: FeedSource)(implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Future[ArrivalsFeedResponse] = {
+  def makeRequestAndFeedResponseToArrivalSource(startData: String, endDate: String, feedSource: FeedSource): Future[ArrivalsFeedResponse] = {
     log.info(s"$feedSource Edi feed api call at ${DateTime.now()} from $startData and $endDate ")
     ediClient.makeRequest(startData, endDate).flatMap { response =>
       response.status match {
         case OK => unMarshalResponseToEdiFlightDetails(response).map { flights =>
+          println(s"baggage: ${flights.map(_.BagageReclaim).toSet.mkString(", ")}")
+          println(s"A1 flights: ${flights.filter(a => a.BagageReclaim.exists(b => Seq("1", "2", "3").contains(b))).map(a => (a.AirlineCode_IATA, a.ScheduledDateTime_Zulu, a.TerminalCode))}")
           log.info(s"$feedSource Edi feed status ${response.status} with api call for ${flights.size} flights")
           ArrivalsFeedSuccess(Flights(ediFlightDetailsToArrival(flights, feedSource)))
         }
@@ -57,8 +62,7 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
     }
   }
 
-  def ediForecastFeedSource(source: Source[FeedTick, typed.ActorRef[FeedTick]])
-                           (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
+  def ediForecastFeedSource(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
     source
       .mapConcat { _ =>
         (2 to 152 by 30).map { days =>
@@ -72,8 +76,7 @@ class EdiFeed(ediClient: EdiClient) extends EdiFeedJsonSupport {
         makeRequestAndFeedResponseToArrivalSource(fd.startDate, fd.endDate, ForecastFeedSource)
       }
 
-  def ediLiveFeedSource(source: Source[FeedTick, typed.ActorRef[FeedTick]])
-                       (implicit system: ActorSystem, mat: Materializer, ec: ExecutionContext): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
+  def ediLiveFeedSource(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
     source.mapAsync(1) { _ =>
       val currentDate = SDate.yyyyMmDdForZone(SDate.now(), DateTimeZone.UTC)
       val endDate = SDate.yyyyMmDdForZone(JodaSDate(new DateTime(DateTimeZone.UTC).plusDays(2)), DateTimeZone.UTC)

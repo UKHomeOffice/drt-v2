@@ -403,7 +403,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case "BHX" if params.bhxIataEndPointUrl.nonEmpty =>
         Feed(BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), Feed.actorRefSource), 5.seconds, 80.seconds)
       case "LCY" if params.lcyLiveEndPointUrl.nonEmpty =>
-        Feed(LCYFeed(LCYClient(new ProdHttpClient, params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), Feed.actorRefSource), 5.seconds, 80.seconds)
+        Feed(LCYFeed(LCYClient(ProdHttpClient(), params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), Feed.actorRefSource), 5.seconds, 80.seconds)
       case "LTN" =>
         val url = params.maybeLtnLiveFeedUrl.getOrElse(throw new Exception("Missing live feed url"))
         val username = params.maybeLtnLiveFeedUsername.getOrElse(throw new Exception("Missing live feed username"))
@@ -445,7 +445,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case "PIK" | "HUY" | "INV" | "NQY" | "NWI" =>
         Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30 seconds)
       case "EDI" =>
-        Feed(new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new ProdHttpClient)).ediLiveFeedSource(Feed.actorRefSource), 5.seconds, 1.minute)
+        Feed(EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), ProdHttpClient())).ediLiveFeedSource(Feed.actorRefSource), 5.seconds, 1.minute)
       case _ =>
         arrivalsNoOp
     }
@@ -455,7 +455,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
       case PortCode("BHX") => Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 5.seconds, 30.seconds)
       case PortCode("EDI") =>
-        Feed(new EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), new ProdHttpClient)).ediForecastFeedSource(Feed.actorRefSource), 5.seconds, 10.minutes)
+        Feed(EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), ProdHttpClient())).ediForecastFeedSource(Feed.actorRefSource), 5.seconds, 10.minutes)
       case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }

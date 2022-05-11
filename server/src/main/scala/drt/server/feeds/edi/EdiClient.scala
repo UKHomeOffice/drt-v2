@@ -9,7 +9,7 @@ import scala.concurrent.Future
 
 case class EdiClient(endpoint: String, subscriberId: String, httpClient: ProdHttpClient) {
 
-  def makeRequest(startDate: String, endDate: String)(implicit system: ActorSystem): Future[HttpResponse] = {
+  def makeRequest(startDate: String, endDate: String): Future[HttpResponse] = {
     val httpRequest = HttpRequest(HttpMethods.POST, endpoint)
       .withHeaders(RawHeader("Content-Type", "application/json"))
       .withHeaders(RawHeader("Ocp-Apim-Subscription-Key", subscriberId))

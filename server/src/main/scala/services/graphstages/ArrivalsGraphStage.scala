@@ -240,7 +240,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def handleIncomingArrivals(sourceType: ArrivalsSourceType, incomingArrivals: Seq[Arrival]): Unit = {
       val filteredIncoming = relevantFlights(SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals.map(a => (UniqueArrival(a), a)))
-      log.info(s"${filteredIncoming.size} arrivals after filtering")
+      log.info(s"${filteredIncoming.size} $sourceType incoming arrivals after filtering")
       val maybeNewDiff = sourceType match {
         case LiveArrivals =>
           val terminalRemovals = ArrivalsGraphStage.terminalRemovals(filteredIncoming.values, liveArrivals.values)
@@ -270,8 +270,10 @@ class ArrivalsGraphStage(name: String = "",
       maybeNewDiff.foreach { newDiff =>
         val adjustedUpdates = arrivalsAdjustments(newDiff.toUpdate.values, redListUpdates)
         val adjustedRemovals = arrivalsAdjustments(newDiff.toRemove, redListUpdates)
+//        println(s"EI3250: adjusted updates: ${adjustedUpdates.filter(_.flightCodeString == "EI3250")} - diff updates: ${newDiff.toUpdate.values.filter(_.flightCodeString == "EI3250")}")
         val oldTerminalRemovals = terminalRemovals(adjustedUpdates, newDiff.toUpdate.values)
-
+//        println(s"adjusted removals: ${adjustedRemovals.map(a => (a.flightCodeString, SDate(a.Scheduled).toISOString(), a.Terminal, a.BaggageReclaimId)).toList.sortBy(_._2).mkString("\n")}")
+//        println(s"old terminal removals: ${oldTerminalRemovals.map(a => (a.flightCodeString, SDate(a.Scheduled).toISOString(), a.Terminal, a.BaggageReclaimId)).toList.sortBy(_._2).mkString("\n")}")
         toPush = toPush match {
           case Some(existingDiff) =>
             Option(existingDiff.copy(

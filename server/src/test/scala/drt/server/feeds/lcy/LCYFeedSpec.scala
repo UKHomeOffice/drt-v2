@@ -17,9 +17,9 @@ import services.crunch.CrunchTestLike
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class MockHttpClient(probeActor: ActorRef) extends HttpClient {
-  def sendRequest(httpRequest: HttpRequest)
-                 (implicit system: ActorSystem): Future[HttpResponse] = {
+case class MockHttpClient(probeActor: ActorRef)
+                         (implicit system: ActorSystem) extends HttpClient {
+  def sendRequest(httpRequest: HttpRequest): Future[HttpResponse] = {
     probeActor ! httpRequest
     Future.successful(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, "")))
   }
