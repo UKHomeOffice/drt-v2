@@ -193,7 +193,7 @@ object FlightTableRow {
     .build
 
   private def gateOrStand(arrival: Arrival, airportConfig: AirportConfig, paxAreDiverted: Boolean): VdomTagOf[Span] = {
-    val gateOrStand = <.span(s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")} / ${arrival.BaggageReclaimId.getOrElse("n/a")}")
+    val gateOrStand = <.span(s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
     arrival.walkTime(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions).map { wt =>
       val description = (paxAreDiverted, arrival.Stand.isDefined, arrival.Gate.isDefined) match {
         case (true, _, _) => "walk time including transfer bus"

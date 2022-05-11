@@ -48,8 +48,6 @@ case class EdiFeed(ediClient: EdiClient)
     ediClient.makeRequest(startData, endDate).flatMap { response =>
       response.status match {
         case OK => unMarshalResponseToEdiFlightDetails(response).map { flights =>
-          println(s"baggage: ${flights.map(_.BagageReclaim).toSet.mkString(", ")}")
-          println(s"A1 flights: ${flights.filter(a => a.BagageReclaim.exists(b => Seq("1", "2", "3").contains(b))).map(a => (a.AirlineCode_IATA, a.ScheduledDateTime_Zulu, a.TerminalCode))}")
           log.info(s"$feedSource Edi feed status ${response.status} with api call for ${flights.size} flights")
           ArrivalsFeedSuccess(Flights(ediFlightDetailsToArrival(flights, feedSource)))
         }
