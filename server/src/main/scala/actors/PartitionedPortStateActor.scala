@@ -120,7 +120,6 @@ object PartitionedPortStateActor {
       val ua = flightsDiff.arrivalsToRemove.collect {
         case ua: UniqueArrival => ua
       }
-      println(s"flights: $flightsDiff")
       val cms = queueMinutes.minutes.map(_.toMinute)
       val sms = staffMinutes.minutes.map(_.toMinute)
       val latestMillis = Seq(flightsDiff.latestUpdateMillis, queueMinutes.latestUpdateMillis, staffMinutes.latestUpdateMillis).max
