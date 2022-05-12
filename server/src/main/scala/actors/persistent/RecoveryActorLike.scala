@@ -58,7 +58,6 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
     persist(messageToPersist) { message =>
       val messageBytes = message.serializedSize
       log.debug(s"Persisting $messageBytes bytes of ${message.getClass}")
-      log.info(s".........messageToPersist  $messageToPersist")
       context.system.eventStream.publish(message)
       bytesSinceSnapshotCounter += messageBytes
       messagesPersistedSinceSnapshotCounter += 1
