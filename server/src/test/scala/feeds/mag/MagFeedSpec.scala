@@ -68,7 +68,7 @@ class MagFeedSpec extends CrunchTestLike {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrival))
 
     val result = Await.result(feed.requestArrivals(SDate.now()), 1 second) match {
-      case ArrivalsFeedSuccess(Flights(arrivals),LiveFeedSource, _) => arrivals
+      case ArrivalsFeedSuccess(Flights(arrivals), _) => arrivals
       case _ => List()
     }
 
@@ -80,7 +80,7 @@ class MagFeedSpec extends CrunchTestLike {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrivalWith0Pax))
 
     val actMax = Await.result(feed.requestArrivals(SDate.now()), 1 second) match {
-      case ArrivalsFeedSuccess(Flights(arrivals), LiveFeedSource,_) => (arrivals.head.ActPax, arrivals.head.MaxPax)
+      case ArrivalsFeedSuccess(Flights(arrivals),_) => (arrivals.head.ActPax, arrivals.head.MaxPax)
       case _ => List()
     }
 

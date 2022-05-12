@@ -35,7 +35,7 @@ object TestFixtureFeed {
           .recover { case _ => List() }
       }
       .collect {
-        case arrivals if arrivals.nonEmpty => ArrivalsFeedSuccess(Flights(arrivals),ForecastFeedSource ,SDate.now()) ///todo confirm feedSource
+        case arrivals if arrivals.nonEmpty => ArrivalsFeedSuccess(Flights(arrivals) ,SDate.now())
       }
   }
 }

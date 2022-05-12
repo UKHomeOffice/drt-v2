@@ -145,7 +145,7 @@ object LHRFlightFeed {
         case Success(csvContents) =>
           log.info(s"Got CSV content")
           val feedArrivals = LHRFlightFeed(csvParserAsIteratorOfColumnGetter(csvContents)).copiedToApiFlights
-          ArrivalsFeedSuccess(Flights(feedArrivals), LiveFeedSource, SDate.now())
+          ArrivalsFeedSuccess(Flights(feedArrivals), SDate.now())
         case Failure(exception) =>
           log.info(s"Failed to get data from LHR live", exception)
           ArrivalsFeedFailure(exception.toString, SDate.now())

@@ -69,7 +69,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
                 minutesToCrunch = 120
               )))
 
-            offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
+            offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
             crunch.portStateTestProbe.fishForMessage(5 seconds) {
               case ps: PortState =>

@@ -100,7 +100,7 @@ case class MagFeed(key: String,
         case as if as.nonEmpty =>
           val uniqueArrivals = as.map(a => (a.unique, a)).toMap.values.toSeq
           log.info(s"Sending ${uniqueArrivals.length} arrivals")
-          ArrivalsFeedSuccess(Flights(uniqueArrivals), LiveFeedSource, now())
+          ArrivalsFeedSuccess(Flights(uniqueArrivals), now())
         case as if as.isEmpty =>
           ArrivalsFeedFailure("No arrivals records received", now())
       }

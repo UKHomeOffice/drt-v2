@@ -41,7 +41,7 @@ class FlightMessageConversionSpec extends Specification {
     ApiPax = Option(96),
     ScheduledDeparture = Option(8L),
     RedListPax = Option(26),
-    TotalPax = Set.empty
+    TotalPax = Set.empty[TotalPaxSource]
   )
 
   "Given an Arrival with no suffix" >> {

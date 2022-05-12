@@ -90,7 +90,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(Flights(a),LiveFeedSource, _) if a.size == 1 && !a.exists(_.Scheduled == SDate(dsd).millisSinceEpoch) => true
+      case ArrivalsFeedSuccess(Flights(a), _) if a.size == 1 && !a.exists(_.Scheduled == SDate(dsd).millisSinceEpoch) => true
       case _ => false
     }
 
@@ -149,7 +149,7 @@ class GlaFeedSpec extends CrunchTestLike {
     )
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil),LiveFeedSource, _) => arrival === expected
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
     }
   }
 
@@ -210,7 +210,7 @@ class GlaFeedSpec extends CrunchTestLike {
     )
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil),LiveFeedSource, _) => arrival === expected
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
     }
   }
 
@@ -219,7 +219,7 @@ class GlaFeedSpec extends CrunchTestLike {
     val mockFeed = mockFeedWithResponse(exampleWith0s)
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil),LiveFeedSource, _) =>
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) =>
         (arrival.ActPax, arrival.MaxPax) === ((Some(0), Some(0)))
     }
   }
@@ -309,7 +309,7 @@ class GlaFeedSpec extends CrunchTestLike {
     )
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil),LiveFeedSource, _) => arrival === expected
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
     }
   }
 

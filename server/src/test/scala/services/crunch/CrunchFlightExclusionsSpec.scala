@@ -40,7 +40,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         minutesToCrunch = 120
         )))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
     val expected = Map(
       T1 -> Map(Queues.EeaDesk -> Seq(
@@ -84,7 +84,7 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
         )
       ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
     val expected = Map(
       T1 -> Map(Queues.EeaDesk -> Seq(

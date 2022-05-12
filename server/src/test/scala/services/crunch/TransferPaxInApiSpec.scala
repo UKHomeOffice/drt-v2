@@ -60,7 +60,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
       airportConfig = lhrAirportConfig
     ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
     val expected = 1
 
@@ -117,7 +117,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
       airportConfig = lhrAirportConfig
     ))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights,AclFeedSource))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = 1

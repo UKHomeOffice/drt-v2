@@ -69,7 +69,7 @@ case class GlaFeed(uri: String,
       .filter(_.DepartureArrivalType == "A")
       .map(GlaFeed.toArrival)
     )
-    .map(as => ArrivalsFeedSuccess(Flights(as),LiveFeedSource))
+    .map(as => ArrivalsFeedSuccess(Flights(as)))
     .recover {
       case e: Exception =>
         log.warn(s"Failed to get Arrivals from GLA Live Feed", e)

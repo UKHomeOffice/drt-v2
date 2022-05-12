@@ -73,13 +73,13 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def receiveCommand: Receive = {
-    case ArrivalsFeedSuccess(Flights(incomingArrivals), feedSource, createdAt) =>
+    case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
 //      log.info(s"ArrivalsFeedSuccess incomingArrivals  $incomingArrivals")
-      val amendIncomingArrivalsSource = incomingArrivals.map { arrival =>
-          arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), feedSource, None)))
-        }
+//      val amendIncomingArrivalsSource = incomingArrivals.map { arrival =>
+//          arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0)-arrival.TranPax.getOrElse(0), feedSource, None)))
+//        }
 //      log.info(s"ArrivalsFeedSuccess amendIncomingArrivalsSource  $amendIncomingArrivalsSource")
-      handleFeedSuccess(amendIncomingArrivalsSource, createdAt)
+      handleFeedSuccess(incomingArrivals, createdAt)
 
     case ArrivalsFeedFailure(message, createdAt) => handleFeedFailure(message, createdAt)
 

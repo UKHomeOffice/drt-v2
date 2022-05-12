@@ -35,7 +35,7 @@ case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem
             log.debug(s"Got ${fs.size} arrivals from Cirium")
             fs.map(a => toArrival(a, portCode))
           })
-          .map(as => ArrivalsFeedSuccess(Flights(as),LiveBaseFeedSource))
+          .map(as => ArrivalsFeedSuccess(Flights(as)))
           .recover {
             case throwable: Throwable =>
               log.error("Failed to connect to Cirium", throwable)

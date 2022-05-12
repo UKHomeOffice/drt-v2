@@ -65,9 +65,7 @@ object DynamicRunnableDeskRecs {
       .via(updatePaxNos(splitsSink))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits updated"))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
-      .wireTap { crWithFlights =>
-        log.info(s"${crWithFlights._1.localDate} crunch request processing splits added")
-      }
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits added"))
       .via(updateSplits(splitsSink))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits persisted"))
       .via(toDeskRecs(maxDesksProviders, portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider))

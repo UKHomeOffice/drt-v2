@@ -139,7 +139,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
   }
 
   private def offerAndCheckResult(arrivals: Seq[Arrival], queues: Seq[Queue] = Seq()): Unit = {
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(arrivals),LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(arrivals)))
 
     crunch.portStateTestProbe.fishForMessage(5.second) {
       case ps: PortState => paxLoadsAreCorrect(ps, arrivals, queues)

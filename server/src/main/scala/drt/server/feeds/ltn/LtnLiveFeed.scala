@@ -76,7 +76,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
     entity.toStrict(10.seconds).map {
       case Strict(_, data) =>
         Try(data.utf8String.parseJson.convertTo[Seq[LtnLiveFlight]].filter(_.DepartureArrivalType == Option("A"))) match {
-          case Success(flights) => ArrivalsFeedSuccess(Flights(flights.map(toArrival)),LiveFeedSource)
+          case Success(flights) => ArrivalsFeedSuccess(Flights(flights.map(toArrival)))
           case Failure(t) =>
             log.warn(s"Failed to parse ltn arrivals response", t)
             ArrivalsFeedFailure(t.getMessage)

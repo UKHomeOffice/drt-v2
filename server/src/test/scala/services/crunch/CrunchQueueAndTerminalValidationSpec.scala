@@ -43,7 +43,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
               queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk))
               )))
 
-          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
+          offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
           val expected = Set(Queues.EeaDesk)
 
@@ -80,7 +80,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
         )
       ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
     val expected = Map(T1 -> Map(Queues.EeaDesk -> List(15.0)))
 

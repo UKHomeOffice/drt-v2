@@ -29,7 +29,7 @@ object StreamingChromaFlow {
     source.mapAsync(1) { _ =>
       chromaFetcher.currentFlights
         .map {
-          case Success(flights) => ArrivalsFeedSuccess(Flights(toDrtArrival(flights)),LiveFeedSource)
+          case Success(flights) => ArrivalsFeedSuccess(Flights(toDrtArrival(flights)))
           case Failure(t) => ArrivalsFeedFailure(t.getMessage)
         }
         .recoverWith { case t =>

@@ -336,7 +336,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     Feed(Feed.actorRefSource
       .map { _ =>
         system.log.info(s"No op arrivals feed")
-        ArrivalsFeedSuccess(Flights(Seq()), ForecastFeedSource,SDate.now()) //todo confirm feedSource
+        ArrivalsFeedSuccess(Flights(Seq()),SDate.now())
       }, 100.days, 100.days)
   }
 

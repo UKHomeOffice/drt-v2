@@ -9,7 +9,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.server.feeds.Feed.FeedTick
 import drt.shared.FlightsApi.Flights
-import manifests.passengers.HistoricManifestPax
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -52,7 +51,7 @@ case class EdiFeed(ediClient: EdiClient)
       response.status match {
         case OK => unMarshalResponseToEdiFlightDetails(response).map { flights =>
           log.info(s"$feedSource Edi feed status ${response.status} with api call for ${flights.size} flights")
-          ArrivalsFeedSuccess(Flights(ediFlightDetailsToArrival(flights, feedSource)),feedSource)
+          ArrivalsFeedSuccess(Flights(ediFlightDetailsToArrival(flights, feedSource)))
         }
         case _ => log.warn(s"Edi feed status ${response.status} while api call with response ${response.entity}")
           Future.successful(ArrivalsFeedFailure(s"$feedSource Response with status ${response.status} from edi ${response.entity}"))

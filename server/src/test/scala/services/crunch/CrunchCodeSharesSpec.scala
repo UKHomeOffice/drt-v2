@@ -39,7 +39,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
         )))
 
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
@@ -72,7 +72,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk), T2 -> Seq(Queues.EeaDesk)))
         ))
 
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map(
         T1 -> Map(Queues.EeaDesk -> Seq(

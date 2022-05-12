@@ -6,7 +6,7 @@ import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues._
@@ -44,11 +44,11 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         val inputFlightsAfter = Flights(List(updatedArrival))
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore,LiveFeedSource))
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter,LiveFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
 
         val expectedFlights = Set(ApiFlightWithSplits(
-          updatedArrival.copy(FeedSources = Set(LiveFeedSource)),
+          updatedArrival.copy(FeedSources = Set(LiveFeedSource),TotalPax = Set(TotalPaxSource(updatedArrival.ActPax.getOrElse(0),LiveFeedSource,None))),
           Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
@@ -74,12 +74,12 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         val inputFlightsAfter = Flights(List(updatedArrival))
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore,LiveFeedSource))
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore,LiveFeedSource))
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter,LiveFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
 
         val expectedFlights = Set(ApiFlightWithSplits(
-          updatedArrival.copy(FeedSources = Set(LiveFeedSource)),
+          updatedArrival.copy(FeedSources = Set(LiveFeedSource),TotalPax = Set(TotalPaxSource(updatedArrival.ActPax.getOrElse(0),LiveFeedSource,None))),
           Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
@@ -104,7 +104,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
 
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(oneFlight,AclFeedSource))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(oneFlight))
 
         crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(_, cms, _) if cms.nonEmpty =>
@@ -114,7 +114,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
           case _ => false
         }
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(zeroFlights,AclFeedSource))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(zeroFlights))
 
         crunch.portStateTestProbe.fishForMessage(1.seconds) {
           case PortState(_, cms, _) if cms.nonEmpty =>

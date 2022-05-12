@@ -41,7 +41,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk)))
     ))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq),AclFeedSource))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
     Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 
@@ -86,7 +86,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk)))
     ))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq),AclFeedSource))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
     Thread.sleep(1500)
     offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 

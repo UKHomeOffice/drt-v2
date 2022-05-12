@@ -55,7 +55,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
         cruncher = OptimiserWithFlexibleProcessors.crunch
       ))
 
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map(T1 -> Map(
         Queues.EeaDesk -> Seq.fill(15)(7),
@@ -86,7 +86,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
         maybeEgatesProvider = Option(egatesProvider),
       ))
 
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights,LiveFeedSource))
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map(T1 -> Map(
         Queues.EeaDesk -> Seq.fill(15)(7),

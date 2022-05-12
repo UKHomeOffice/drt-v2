@@ -7,7 +7,6 @@ import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, GetFeedImportArrivals}
 import services.SDate
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -20,10 +19,10 @@ case class ManualUploadArrivalFeed(arrivalsActor: ActorRef)(implicit timeout: Ti
       .map {
         case Some(Flights(arrivals)) =>
           log.info(s"Got ${arrivals.size} port arrivals")
-          ArrivalsFeedSuccess(Flights(arrivals), LiveFeedSource,SDate.now()) //TODO to confirm source
+          ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
         case x =>
           log.info(s"Got no port arrivals: $x")
-          ArrivalsFeedSuccess(Flights(Seq()), LiveFeedSource,SDate.now())
+          ArrivalsFeedSuccess(Flights(Seq()), SDate.now())
       }
       .recoverWith {
         case e => Future(ArrivalsFeedFailure(e.getMessage, SDate.now()))

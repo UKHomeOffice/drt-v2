@@ -186,7 +186,7 @@ object LGWForecastFeed {
         feed.getArrivals match {
           case Success(arrivals) =>
             log.info(s"Got forecast Arrivals ${arrivals.size}.")
-            ArrivalsFeedSuccess(Flights(arrivals), LiveFeedSource, SDate.now())
+            ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
           case Failure(e: BoxAPIResponseException) =>
             log.error(s"BOX API Exception: ${e.getResponse}", e)
             ArrivalsFeedFailure(e.toString, SDate.now())

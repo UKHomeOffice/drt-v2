@@ -49,7 +49,7 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
   "Given a request for a full refresh of all flights success , it keeps polling for update" >> {
     val lcyClient = mock[LCYClient]
 
-    val arrivalsSuccess = ArrivalsFeedSuccess(Flights(List()),LiveFeedSource)
+    val arrivalsSuccess = ArrivalsFeedSuccess(Flights(List()))
 
     lcyClient.initialFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)
     lcyClient.updateFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)

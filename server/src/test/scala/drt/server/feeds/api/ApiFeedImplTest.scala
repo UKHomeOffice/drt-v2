@@ -45,7 +45,7 @@ class ApiFeedImplTest extends CrunchTestLike {
           case 1 => "1 yes"
           case 3 => "3 yes"
         }
-        .map { c => println(s"got: $c")}
+//        .map { c => println(s"got: $c")}
         .run()
 
       Await.ready(c, 1.second)

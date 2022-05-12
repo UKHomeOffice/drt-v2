@@ -27,9 +27,6 @@ class OptimiserSimulationSpec extends Specification {
     "I want to see what the memory usage difference is" >> {
     skipped("exploratory")
 
-    println(s"$randomWorkload")
-    println(s"$randomDesks")
-
     memUsage(randomWorkload, randomDesks)
     memUsage(randomWorkload, zeroDesks)
 

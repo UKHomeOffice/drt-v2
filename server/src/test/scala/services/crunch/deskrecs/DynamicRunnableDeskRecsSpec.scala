@@ -35,7 +35,7 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.collection.SortedSet
+import scala.collection.{SortedSet, immutable}
 import scala.collection.immutable.Map
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -176,7 +176,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, deskRecs).run()
     queue ! request
 
-    probe.fishForMessage(1.second) {
+    probe.fishForMessage(5.second) {
       case DeskRecMinutes(drms) =>
         val tqPax = drms
           .groupBy(drm => (drm.terminal, drm.queue))
@@ -271,12 +271,12 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
                              expectedPaxSources: Set[TotalPaxSource]) = {
     val flow = DynamicRunnableDeskRecs.addPax(mockHistoricManifestsPaxProvider(maybeHistoricArrivalManifestPax))
 
-    val value1 = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(ApiFlightWithSplits(arrival, Set())))))
-    val result = Await.result(value1.via(flow).runWith(Sink.seq), 1.second)
+    val crunchRequestSource = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(ApiFlightWithSplits(arrival, Set())))))
+    val result: immutable.Seq[(CrunchRequest, List[ApiFlightWithSplits])] = Await.result(crunchRequestSource.via(flow).runWith(Sink.seq), 1.second)
 
-    println(s"result: $result")
-
-    result.head._2.exists(_.bestSplits.nonEmpty) && result.head._2.exists(_.splits.map(_.source) === expectedPaxSources)
+//    result.head._2.exists(_.bestSplits.nonEmpty) &&
+//      result.head._2.exists(_.splits.map(_.source) contains  expectedPaxSources.head.splitSource) &&
+      result.head._2.exists(_.apiFlight.TotalPax === expectedPaxSources)
   }
 
   def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =

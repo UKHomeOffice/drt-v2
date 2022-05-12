@@ -38,7 +38,7 @@ class QueueDiversionSpec extends CrunchTestLike {
           airportConfig = config,
           now = () => dateNow))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival)),LiveFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
         expectPaxByQueue(Map(EeaDesk -> 75, EGate -> 25))
         crunch.shutdown()
 
@@ -52,7 +52,7 @@ class QueueDiversionSpec extends CrunchTestLike {
           maybeEgatesProvider = Option(() => Future.successful(allGatesClosed))
         ))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival)),LiveFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
         expectPaxByQueue(Map(EeaDesk -> 100))
         crunch.shutdown()
 
@@ -70,7 +70,7 @@ class QueueDiversionSpec extends CrunchTestLike {
           maybeEgatesProvider = Option(() => Future.successful(allGatesClosed))
         ))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival)),LiveFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
         expectPaxByQueue(Map(NonEeaDesk -> 100))
         crunch.shutdown()
 

@@ -66,7 +66,7 @@ class TouchdownPredictionSpec extends CrunchTestLike {
           addTouchdownPredictions = touchdownPrediction.addTouchdownPredictions
         ))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival)),LiveFeedSource))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival))))
 
         crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for a predicted time") {
           case ps: PortState => ps.flights.values.exists(_.apiFlight.PredictedTouchdown.nonEmpty)

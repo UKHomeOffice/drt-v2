@@ -84,12 +84,15 @@ object FlightsApi {
               .map(fws => (fws, newSplits.diff(fws.splits)))
               .collect {
                 case (fws, updatedSplits) if updatedSplits.nonEmpty =>
+//                  println(s"here updatedSplits ...$updatedSplits")
                   val updatedSources = updatedSplits.map(_.source)
                   val mergedSplits = fws.splits.filterNot(s => updatedSources.contains(s.source)) ++ updatedSplits
                   val updatedArrival = mergedSplits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages) match {
                     case None =>
+//                      println(s"None updatedArrival ...")
                       fws.apiFlight
                     case Some(liveSplit) =>
+//                      println(s"Some liveSplit ...$liveSplit")
                       fws.apiFlight.copy(
                         ApiPax = Option(Math.round(liveSplit.totalExcludingTransferPax).toInt),
                         FeedSources = fws.apiFlight.FeedSources + ApiFeedSource)
@@ -100,6 +103,7 @@ object FlightsApi {
         }
         .collect { case Some(flight) => flight }
 
+//      println(s"updatedFlights ... $updatedFlights")
       FlightsWithSplitsDiff(updatedFlights, List())
     }
 
@@ -117,12 +121,14 @@ object FlightsApi {
 
     def applyTo(flightsWithSplits: FlightsWithSplits,
                 nowMillis: MillisSinceEpoch): (FlightsWithSplits, Iterable[MillisSinceEpoch]) = {
+//      println(s"...flightsWithSplits....$flightsWithSplits")
       val updated = flightsWithSplits.flights ++ flightsToUpdate.map(f => (f.apiFlight.unique, f.copy(lastUpdated = Option(nowMillis))))
 
       val minusRemovals: Map[UniqueArrival, ApiFlightWithSplits] = ArrivalsRemoval.removeArrivals(arrivalsToRemove, updated)
 
       val asMap: IMap[UniqueArrival, ApiFlightWithSplits] = flightsWithSplits.flights
 
+//      println(s"...asMap...$asMap")
       val minutesFromRemovalsInExistingState: Iterable[MillisSinceEpoch] = arrivalsToRemove
         .flatMap {
           case r: UniqueArrival =>
@@ -131,6 +137,7 @@ object FlightsApi {
             asMap.collect { case (ua, a) if ua.equalsLegacy(r) => a }.flatMap(_.apiFlight.pcpRange)
         }
 
+//      println(s"FlightsWithSplitsDiff .....$flightsToUpdate")
       val minutesFromExistingStateUpdatedFlights = flightsToUpdate
         .flatMap { fws =>
           asMap.get(fws.unique) match {

@@ -7,7 +7,6 @@ import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
-import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 
 import scala.util.{Failure, Success, Try}
 
@@ -23,7 +22,7 @@ object BHXForecastFeedLegacy extends BHXFeedConfig {
       } match {
         case Success(arrivals) =>
           log.info(s"Got ${arrivals.size} BHX forecast arrivals.")
-          ArrivalsFeedSuccess(Flights(arrivals), ForecastFeedSource, SDate.now())
+          ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
         case Failure(t) =>
           log.info(s"Failed to fetch BHX forecast arrivals.", t)
           ArrivalsFeedFailure(t.toString, SDate.now())

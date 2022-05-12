@@ -81,6 +81,7 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long) extends Ac
 class MockSplitsSinkActor() extends Actor {
   override def receive: Receive = {
     case _: SplitsForArrivals => sender() ! UpdatedMillis.empty
+    case _: ArrivalsDiff => sender() ! UpdatedMillis.empty
   }
 }
 
@@ -369,7 +370,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       initialPortState = Option(initialPortState)
     ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis)))),LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis))))))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(_, cms, _) =>
@@ -410,7 +411,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val noonMillis = SDate(noon).millisSinceEpoch
     val noon30Millis = SDate(noon30).millisSinceEpoch
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2)),LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2))))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(_, cms, _) =>
@@ -421,7 +422,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         nonZeroAtNoon
     }
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis)))),LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival.copy(Estimated = Option(noon30Millis))))))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(_, cms, _) =>
@@ -459,7 +460,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val noonMillis = SDate(noon).millisSinceEpoch
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2)),AclFeedSource))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival, arrival2))))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(_, cms, _) =>
@@ -470,7 +471,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
         nonZeroAtNoon
     }
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival)),AclFeedSource))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival))))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(_, cms, _) =>

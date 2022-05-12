@@ -95,7 +95,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
     ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights,LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
     testProbe.expectMsg(UpdateHandled)
 
@@ -130,7 +130,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
     ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights,LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
     testProbe.expectMsg(UpdateHandled)
 
@@ -166,14 +166,14 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       maxDaysToCrunch = 10
     ))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(descheduledArrival)),LiveFeedSource))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(descheduledArrival))))
     testProbe.expectMsg(UpdateHandled)
 
     val arrivalsResult1 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
       case ag: AggregatedArrivals => ag.arrivals.toSet
     }
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List()),LiveFeedSource))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
     testProbe.expectMsg(RemovalHandled)
 
     val arrivalsResult2 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {

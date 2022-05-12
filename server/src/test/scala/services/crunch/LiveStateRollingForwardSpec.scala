@@ -34,12 +34,12 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(now = myNow, maxDaysToCrunch = 5))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival)),LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival))))
 
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival))
 
     nowDate = SDate(wednesday)
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2)),LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2))))
 
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2))
 
@@ -62,11 +62,11 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(now = myNow, maxDaysToCrunch = 5))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival)),LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival))))
 
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2)),LiveFeedSource))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2))))
 
     stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2))
 

@@ -111,9 +111,10 @@ class TerminalDayFlightActor(
       updateAndPersistDiffAndAck(stateDiff)
 
     case splits: SplitsForArrivals =>
-//      log.info(s"SplitsForArrivals...")
+//      println(s"SplitsForArrivals...")
       val diff = splits.diff(state, now().millisSinceEpoch)
-      updateAndPersistDiffAndAck(FlightsWithSplitsDiff.empty)
+//      println(s"SplitsForArrivals...$diff")
+      updateAndPersistDiffAndAck(diff)
 
     case GetState =>
       log.debug(s"Received GetState")
@@ -128,8 +129,9 @@ class TerminalDayFlightActor(
   def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit = {
     val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch)
     state = updatedState
-//    log.info(s"................updateAndPersistDiffAndAck updatedState ${updatedState.flights.map{case (k,v) => k + " => " + v}}")
+//    println(s"................updateAndPersistDiffAndAck updatedState ${updatedState.flights.map{case (k,v) => k + " => " + v}}")
     val replyToAndMessage = Option((sender(), UpdatedMillis(minutesToUpdate)))
+//    println(s".....diff $diff")
     persistAndMaybeSnapshotWithAck(FlightMessageConversion.flightWithSplitsDiffToMessage(diff), replyToAndMessage)
   }
 
