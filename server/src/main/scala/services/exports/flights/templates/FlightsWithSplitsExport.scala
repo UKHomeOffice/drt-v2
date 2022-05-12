@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 
 
 trait FlightsWithSplitsExport extends FlightsExport {
-  val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP,Total Pax"
+  val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP,Total Pax"
 
   val actualApiHeadings: Seq[String] = List(
     PaxTypeAndQueue(B5JPlusNational, EeaDesk),
@@ -40,20 +40,19 @@ trait FlightsWithSplitsExport extends FlightsExport {
 
   def flightWithSplitsToCsvFields(fws: ApiFlightWithSplits,
                                   millisToDateOnly: MillisSinceEpoch => String,
-                                  millisToHoursAndMinutes: MillisSinceEpoch => String): List[String] =
+                                  millisToLocalDateTimeString: MillisSinceEpoch => String): List[String] =
     List(fws.apiFlight.flightCodeString,
       fws.apiFlight.flightCodeString,
       fws.apiFlight.Origin.toString,
       fws.apiFlight.Gate.getOrElse("") + "/" + fws.apiFlight.Stand.getOrElse(""),
       fws.apiFlight.displayStatus.description,
-      millisToDateOnly(fws.apiFlight.Scheduled),
-      millisToHoursAndMinutes(fws.apiFlight.Scheduled),
-      fws.apiFlight.Estimated.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      fws.apiFlight.Actual.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      fws.apiFlight.EstimatedChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
-      fws.apiFlight.ActualChox.map(millisToHoursAndMinutes(_)).getOrElse(""),
+      millisToLocalDateTimeString(fws.apiFlight.Scheduled),
+      fws.apiFlight.Estimated.map(millisToLocalDateTimeString(_)).getOrElse(""),
+      fws.apiFlight.Actual.map(millisToLocalDateTimeString(_)).getOrElse(""),
+      fws.apiFlight.EstimatedChox.map(millisToLocalDateTimeString(_)).getOrElse(""),
+      fws.apiFlight.ActualChox.map(millisToLocalDateTimeString(_)).getOrElse(""),
       fws.apiFlight.differenceFromScheduled.map(_.toMinutes.toString).getOrElse(""),
-      fws.apiFlight.PcpTime.map(millisToHoursAndMinutes(_)).getOrElse(""),
+      fws.apiFlight.PcpTime.map(millisToLocalDateTimeString(_)).getOrElse(""),
       fws.totalPax.map(_.toString).getOrElse(""),
     )
 
@@ -61,7 +60,7 @@ trait FlightsWithSplitsExport extends FlightsExport {
     val apiIsInvalid = fws.hasApi && !fws.hasValidApi
     val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
     val pcpPax = if (fws.apiFlight.Origin.isDomesticOrCta) "-" else fws.pcpPaxEstimate.toString
-    flightWithSplitsToCsvFields(fws, millisToDateStringFn, millisToTimeStringFn) ++
+    flightWithSplitsToCsvFields(fws, millisToDateStringFn, millisToLocalDateTimeStringFn) ++
       List(pcpPax, if (apiIsInvalid) "Y" else "") ++ splitsForSources
   }
 

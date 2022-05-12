@@ -48,6 +48,8 @@ trait FlightsExport {
 
   def millisToTimeStringFn: MillisSinceEpoch => String = SDate.millisToLocalHoursAndMinutes(timeZone)
 
+  def millisToLocalDateTimeStringFn: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toLocalDateTimeString()
+
   val splitSources = List(ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage)
 
   def queueSplits(queueNames: Seq[Queue],
