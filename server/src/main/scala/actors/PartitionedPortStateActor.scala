@@ -12,13 +12,13 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.DataUpdates.FlightUpdates
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared._
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -46,7 +46,7 @@ object PartitionedPortStateActor {
 
   type FlightsRequester = PortStateRequest => Future[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
-  type FlightUpdatesRequester = PortStateRequest => Future[FlightsWithSplits]
+  type FlightUpdatesRequester = PortStateRequest => Future[FlightsWithSplitsDiff]
 
   type PortStateUpdatesRequester = (MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, ActorRef) => Future[Option[PortStateUpdates]]
 
@@ -72,7 +72,7 @@ object PartitionedPortStateActor {
 
   def requestFlightUpdatesFn(actor: ActorRef)
                             (implicit timeout: Timeout, ec: ExecutionContext): FlightUpdatesRequester =
-    request => actor.ask(request).mapTo[FlightsWithSplits].recoverWith {
+    request => actor.ask(request).mapTo[FlightsWithSplitsDiff].recoverWith {
       case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
     }
 
@@ -107,36 +107,26 @@ object PartitionedPortStateActor {
         .pipeTo(replyTo)
     }
 
-  def stateAsTuple(eventualFlights: Future[FlightsWithSplits],
-                   eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
-                   eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
-                  (implicit ec: ExecutionContext): Future[(Iterable[ApiFlightWithSplits], Iterable[CrunchMinute], Iterable[StaffMinute])] =
-    for {
-      flights <- eventualFlights
-      queueMinutes <- eventualQueueMinutes
-      staffMinutes <- eventualStaffMinutes
-    } yield {
-      val fs = flights.flights.values
-      val cms = queueMinutes.minutes.map(_.toMinute)
-      val sms = staffMinutes.minutes.map(_.toMinute)
-      (fs, cms, sms)
-    }
-
-  def combineToPortStateUpdates(eventualFlights: Future[FlightsWithSplits],
+  def combineToPortStateUpdates(eventualFlightsDiff: Future[FlightsWithSplitsDiff],
                                 eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
                                 eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
                                (implicit ec: ExecutionContext): Future[Option[PortStateUpdates]] =
-    stateAsTuple(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).map {
-      case (fs, cms, sms) =>
-        val flightUpdates = fs.map(_.lastUpdated.getOrElse(0L))
-        val queueUpdates = cms.map(_.lastUpdated.getOrElse(0L))
-        val staffUpdates = sms.map(_.lastUpdated.getOrElse(0L))
-        flightUpdates ++ queueUpdates ++ staffUpdates match {
-          case noUpdates if noUpdates.isEmpty =>
-            None
-          case millis =>
-            Option(PortStateUpdates(millis.max, fs.toSet, cms.toSet, sms.toSet))
-        }
+    for {
+      flightsDiff <- eventualFlightsDiff
+      queueMinutes <- eventualQueueMinutes
+      staffMinutes <- eventualStaffMinutes
+    } yield {
+      val fs = flightsDiff.flightsToUpdate
+      val ua = flightsDiff.arrivalsToRemove.collect {
+        case ua: UniqueArrival => ua
+      }
+      println(s"flights: $flightsDiff")
+      val cms = queueMinutes.minutes.map(_.toMinute)
+      val sms = staffMinutes.minutes.map(_.toMinute)
+      val latestMillis = Seq(flightsDiff.latestUpdateMillis, queueMinutes.latestUpdateMillis, staffMinutes.latestUpdateMillis).max
+      if (fs.nonEmpty || ua.nonEmpty || cms.nonEmpty || sms.nonEmpty)
+        Option(PortStateUpdates(latestMillis, fs, ua, cms, sms))
+      else None
     }
 
   def combineToPortState(flightsStream: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]],
@@ -148,9 +138,12 @@ object PartitionedPortStateActor {
         .log(getClass.getName)
         .runWith(Sink.seq)
         .map(x => x.foldLeft(FlightsWithSplits.empty)(_ ++ _._2)))
-
-    stateAsTuple(eventualFlights, eventualQueueMinutes, eventualStaffMinutes).map {
-      case (fs, cms, sms) => PortState(fs, cms, sms)
+    for {
+      flights <- eventualFlights
+      queueMinutes <- eventualQueueMinutes
+      staffMinutes <- eventualStaffMinutes
+    } yield {
+      PortState(flights.flights.values, queueMinutes.minutes.map(_.toMinute), staffMinutes.minutes.map(_.toMinute))
     }
   }
 

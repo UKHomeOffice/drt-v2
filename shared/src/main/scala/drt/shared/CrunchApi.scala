@@ -1,7 +1,7 @@
 package drt.shared
 
 import drt.shared.DataUpdates.MinuteUpdates
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, WithLastUpdated, WithTimeAccessor}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival, WithLastUpdated, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
@@ -9,6 +9,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{macroRW, _}
 
 import scala.collection.immutable.{Map => IMap}
+import scala.util.Try
 
 object CrunchApi {
   type MillisSinceEpoch = Long
@@ -240,6 +241,8 @@ object CrunchApi {
   }
 
   case class MinutesContainer[A, B <: WithTimeAccessor](minutes: Iterable[MinuteLike[A, B]]) extends MinuteUpdates {
+    def latestUpdateMillis: MillisSinceEpoch = Try(minutes.map(_.lastUpdated.getOrElse(0L)).max).getOrElse(0L)
+
     def window(start: SDateLike, end: SDateLike): MinutesContainer[A, B] = {
       val startMillis = start.millisSinceEpoch
       val endMillis = end.millisSinceEpoch
@@ -261,9 +264,10 @@ object CrunchApi {
   case class CrunchMinutes(minutes: Set[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
 
   case class PortStateUpdates(latest: MillisSinceEpoch,
-                              flights: Set[ApiFlightWithSplits],
-                              queueMinutes: Set[CrunchMinute],
-                              staffMinutes: Set[StaffMinute])
+                              flights: Iterable[ApiFlightWithSplits],
+                              flightRemovals: Iterable[UniqueArrival],
+                              queueMinutes: Iterable[CrunchMinute],
+                              staffMinutes: Iterable[StaffMinute])
 
   object PortStateUpdates {
     implicit val rw: ReadWriter[PortStateUpdates] = macroRW

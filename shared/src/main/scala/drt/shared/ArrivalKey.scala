@@ -62,11 +62,12 @@ case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: 
       .map {
         case (key, incomingArrival) =>
           flights.flights.get(key) match {
-            case Some(existingFws) if existingFws.apiFlight == incomingArrival =>
-              None
             case Some(existingFws) =>
-              val incomingWithRedListPaxRetained = incomingArrival.copy(RedListPax = existingFws.apiFlight.RedListPax)
-              Some(existingFws.copy(apiFlight = incomingWithRedListPaxRetained, lastUpdated = Option(nowMillis)))
+              val updatedArrival = existingFws.apiFlight.update(incomingArrival)
+              if (updatedArrival.isEqualTo(existingFws.apiFlight))
+                None
+              else
+                Some(existingFws.copy(apiFlight = updatedArrival, lastUpdated = Option(nowMillis)))
             case None =>
               Some(ApiFlightWithSplits(incomingArrival, Set(), Option(nowMillis)))
           }

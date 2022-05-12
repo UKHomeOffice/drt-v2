@@ -7,12 +7,9 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait HttpClient {
-  def sendRequest(httpRequest: HttpRequest)
-                 (implicit system: ActorSystem): Future[HttpResponse]
+  def sendRequest(httpRequest: HttpRequest): Future[HttpResponse]
 }
 
-class ProdHttpClient extends HttpClient {
-  def sendRequest(httpRequest: HttpRequest)
-                 (implicit system: ActorSystem): Future[HttpResponse] =
-    Http().singleRequest(httpRequest)
+case class ProdHttpClient()(implicit system: ActorSystem) extends HttpClient {
+  def sendRequest(httpRequest: HttpRequest): Future[HttpResponse] = Http().singleRequest(httpRequest)
 }

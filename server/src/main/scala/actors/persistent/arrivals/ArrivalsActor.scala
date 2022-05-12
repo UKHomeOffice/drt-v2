@@ -10,11 +10,11 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import scalapb.GeneratedMessage
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import services.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.FeedSource
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.SortedMap
@@ -28,7 +28,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
-  override def initialState: ArrivalsState = ArrivalsState(SortedMap(), feedSource, None)
+  override def initialState: ArrivalsState = ArrivalsState.empty(feedSource)
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case stateMessage: FlightStateSnapshotMessage =>
@@ -86,9 +86,6 @@ abstract class ArrivalsActor(now: () => SDateLike,
       log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
 
-    case ua: UniqueArrival =>
-      sender() ! state.arrivals.get(ua).map(a => FeedSourceArrival(feedSource, a))
-
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
 
@@ -113,9 +110,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     val updatedArrivals = incomingArrivals.toSet
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size)
 
-    state = state.copy(
-      arrivals = state.arrivals ++ incomingArrivals.map(a => (a.unique, a)),
-      maybeSourceStatuses = Option(state.addStatus(newStatus)))
+    state = state ++ (incomingArrivals, Option(state.addStatus(newStatus)))
 
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)

@@ -12,4 +12,15 @@ case class ArrivalsState(arrivals: SortedMap[UniqueArrival, Arrival],
   def clear(): ArrivalsState = {
     copy(arrivals = SortedMap(), maybeSourceStatuses = None)
   }
+
+  def ++(incoming: Iterable[Arrival]): ArrivalsState = {
+    copy(arrivals = arrivals ++ incoming.map(a => (a.unique, arrivals.get(a.unique).map(_.update(a)).getOrElse(a))))
+  }
+
+  def ++(incoming: Iterable[Arrival], statuses: Option[FeedSourceStatuses]): ArrivalsState =
+    ++(incoming).copy(maybeSourceStatuses = statuses)
+}
+
+object ArrivalsState {
+  def empty(feedSource: FeedSource): ArrivalsState = ArrivalsState(SortedMap(), feedSource, None)
 }

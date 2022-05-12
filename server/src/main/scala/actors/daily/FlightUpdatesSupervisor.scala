@@ -9,7 +9,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -82,7 +82,7 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
 
       terminalsAndDaysUpdatesSource(terminalDays, sinceMillis)
         .log(getClass.getName)
-        .runWith(Sink.fold(FlightsWithSplits.empty)(_ ++ _))
+        .runWith(Sink.fold(FlightsWithSplitsDiff.empty)(_ ++ _))
         .pipeTo(replyTo)
 
     case UpdateLastRequest(terminal, day, lastRequestMillis) =>
@@ -108,13 +108,13 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
     }
 
   def terminalsAndDaysUpdatesSource(terminalDays: List[(Terminal, MillisSinceEpoch)],
-                                    sinceMillis: MillisSinceEpoch): Source[FlightsWithSplits, NotUsed] =
+                                    sinceMillis: MillisSinceEpoch): Source[FlightsWithSplitsDiff, NotUsed] =
     Source(terminalDays)
       .mapAsync(1) {
         case (terminal, day) =>
           updatesActor(terminal, day)
             .ask(GetAllUpdatesSince(sinceMillis))
-            .mapTo[FlightsWithSplits]
+            .mapTo[FlightsWithSplitsDiff]
             .map { container =>
               self ! UpdateLastRequest(terminal, day, now().millisSinceEpoch)
               container
@@ -122,10 +122,10 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
             .recoverWith {
               case t: AskTimeoutException =>
                 log.warn(s"Timed out waiting for updates. Actor may have already been terminated", t)
-                Future(FlightsWithSplits.empty)
+                Future(FlightsWithSplitsDiff.empty)
               case t =>
                 log.error(s"Failed to fetch updates from streaming updates actor: ${SDate(day).toISOString()}", t)
-                Future(FlightsWithSplits.empty)
+                Future(FlightsWithSplitsDiff.empty)
             }
       }
 }

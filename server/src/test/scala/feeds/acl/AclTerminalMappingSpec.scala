@@ -23,7 +23,7 @@ class AclTerminalMappingSpec extends Specification {
             "1I" -> T1,
           ),
           "EDI" -> Map(
-            "1I" -> A1
+            "1I" -> A2
           ),
           "EMA" -> Map(
             "1I" -> T1,
@@ -67,7 +67,7 @@ class AclTerminalMappingSpec extends Specification {
           case (portCode, terminalMap) =>
             terminalMap.map {
               case (mapFrom, mapTo) =>
-                s"$portCode ${AclFeed.aclToPortMapping(PortCode(portCode))(Terminal(mapFrom))}" === s"$portCode ${mapTo}"
+                s"$portCode ${AclFeed.aclToPortMapping(PortCode(portCode))(Terminal(mapFrom))}" === s"$portCode $mapTo"
             }
         }
         success
@@ -114,12 +114,12 @@ class AclTerminalMappingSpec extends Specification {
             "CTA" -> T1,
           )
         )
-        
+
         portAclTerminalToExpectedTerminal.map {
           case (portCode, terminalMap) =>
             terminalMap.map {
               case (mapFrom, mapTo) =>
-                s"$portCode ${AclFeed.aclToPortMapping(PortCode(portCode))(Terminal(mapFrom))}" === s"$portCode ${mapTo}"
+                s"$portCode ${AclFeed.aclToPortMapping(PortCode(portCode))(Terminal(mapFrom))}" === s"$portCode $mapTo"
             }
         }
         success

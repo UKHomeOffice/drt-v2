@@ -248,7 +248,6 @@ object AclFeed {
   }
 
   object AclColIndex {
-
     val allFields: Map[String, Int] = List(
       "A/C", "ACReg", "Airport", "ArrDep", "CreDate",
       "Date", "DOOP", "EditDate", "Icao Aircraft Type", "Icao Last/Next Station",
@@ -277,7 +276,8 @@ object AclFeed {
         T1 -> S,
         T2 -> N,
       ).getOrElse(tIn, tIn)
-    case PortCode("EDI") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> A1).getOrElse(tIn, tIn)
+    case PortCode("EDI") => (tIn: Terminal) =>
+      Map[Terminal, Terminal](T1 -> A2).getOrElse(tIn, tIn)
     case PortCode("LCY") => (tIn: Terminal) =>
       Map[Terminal, Terminal](
         ACLTER -> T1,

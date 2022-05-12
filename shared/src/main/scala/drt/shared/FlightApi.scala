@@ -10,6 +10,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.{Map => IMap}
 import scala.language.postfixOps
+import scala.util.Try
 
 object FlightsApi {
 
@@ -20,6 +21,8 @@ object FlightsApi {
   }
 
   case class FlightsWithSplits(flights: Map[UniqueArrival, ApiFlightWithSplits]) {
+    def latestUpdateMillis: MillisSinceEpoch = Try(flights.map(_._2.lastUpdated.getOrElse(0L)).max).getOrElse(0L)
+
     val isEmpty: Boolean = flights.isEmpty
     val nonEmpty: Boolean = !isEmpty
 
@@ -104,6 +107,8 @@ object FlightsApi {
   }
 
   case class FlightsWithSplitsDiff(flightsToUpdate: Iterable[ApiFlightWithSplits], arrivalsToRemove: Iterable[UniqueArrivalLike]) extends FlightUpdates {
+    def latestUpdateMillis: MillisSinceEpoch = Try(flightsToUpdate.map(_.lastUpdated.getOrElse(0L)).max).getOrElse(0L)
+
     def isEmpty: Boolean = flightsToUpdate.isEmpty && arrivalsToRemove.isEmpty
 
     def nonEmpty: Boolean = !isEmpty
@@ -166,13 +171,14 @@ object FlightsApi {
 
 }
 
-class ArrivalsRestorer[A <: WithUnique[UniqueArrival]] {
+class ArrivalsRestorer[A <: WithUnique[UniqueArrival] with Updatable[A]] {
   var arrivals: Map[UniqueArrival, A] = Map()
 
   def removeHashLegacies(removals: Iterable[Int]): Unit = removals.foreach(keyToRemove => arrivals = arrivals.filterKeys(_.legacyUniqueId != keyToRemove))
 
   def applyUpdates(updates: Iterable[A]): Unit = updates.foreach { update =>
-    arrivals = arrivals + ((update.unique, update))
+    val updated = arrivals.get(update.unique).map(_.update(update)).getOrElse(update)
+    arrivals = arrivals + ((update.unique, updated))
   }
 
   def remove(removals: Iterable[UniqueArrivalLike]): Unit =
