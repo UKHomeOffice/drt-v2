@@ -46,7 +46,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
           val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
           val scheduledUpdateRequests = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
 
-          val newOriginCodes = crunchUpdates.flights.map(_.apiFlight.Origin) -- existingState.flights.map { case (_, fws) => fws.apiFlight.Origin }
+          val newOriginCodes = crunchUpdates.flights.map(_.apiFlight.Origin).toSet -- existingState.flights.map { case (_, fws) => fws.apiFlight.Origin }
           val effects = if (newOriginCodes.nonEmpty)
             scheduledUpdateRequests + Effect(Future(GetAirportInfos(newOriginCodes)))
           else
@@ -81,7 +81,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
   }
 
   def updateStateFromUpdates(startMillis: MillisSinceEpoch, crunchUpdates: PortStateUpdates, existingState: PortState): PortState = {
-    val flights = updateAndTrimFlights(crunchUpdates, existingState, startMillis)
+    val flights = updateAndTrimFlights(crunchUpdates, existingState, startMillis) -- crunchUpdates.flightRemovals
     val minutes = updateAndTrimCrunch(crunchUpdates, existingState, startMillis)
     val staff = updateAndTrimStaff(crunchUpdates, existingState, startMillis)
     PortState(flights, minutes, staff)
