@@ -15,7 +15,7 @@ import services.SDate
 import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.ports.Terminals.{A1, InvalidTerminal, T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{A1, InvalidTerminal, T1, Terminal, A2}
 import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -54,7 +54,7 @@ object CiriumFeed {
     case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" | "PIK" =>
       T1
     case "EDI" =>
-      A1
+      A2
     case "LHR" | "MAN" =>
       terminal.map(t => Terminal(s"T$t")).getOrElse(InvalidTerminal)
     case _ => Terminal(terminal.getOrElse(""))
