@@ -12,7 +12,7 @@ import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import org.slf4j.{Logger, LoggerFactory}
-import services.{SDate, StreamSupervision}
+import services.StreamSupervision
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
@@ -86,9 +86,12 @@ class TerminalDayFlightUpdatesActor(year: Int,
   }
 
   def updatesSince(sinceMillis: MillisSinceEpoch): FlightsWithSplitsDiff =
-    FlightsWithSplitsDiff(updates.values.filter(_.lastUpdated.getOrElse(0L) > sinceMillis), removals.collect {
-      case (updated, removal) if updated > sinceMillis => removal
-    })
+    FlightsWithSplitsDiff(
+      updates.values.filter(_.lastUpdated.getOrElse(0L) > sinceMillis),
+      removals.collect {
+        case (updated, removal) if updated > sinceMillis => removal
+      }
+    )
 
   override def persistenceId: String = f"terminal-flights-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 

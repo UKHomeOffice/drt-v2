@@ -84,7 +84,7 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
     updates = updates.filter(_._2.lastUpdated.getOrElse(0L) >= thresholdExpiryMillis)
   }
 
-  def updatesSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = updates.values.filter(_.lastUpdated.getOrElse(0L) >= sinceMillis) match {
+  def updatesSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = updates.values.filter(_.lastUpdated.getOrElse(0L) > sinceMillis) match {
     case someMinutes if someMinutes.nonEmpty => MinutesContainer(someMinutes)
     case _ => MinutesContainer.empty[A, B]
   }
