@@ -16,7 +16,7 @@ object FlightComponents {
 
   def paxComp(flightWithSplits: ApiFlightWithSplits, directRedListFlight: DirectRedListFlight, noPcpPax: Boolean): TagMod = {
     val isNotApiData = if (flightWithSplits.hasValidApi) "" else "notApiData"
-    val noPcpPaxClass = if (noPcpPax || directRedListFlight.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else ""
+    val noPcpPaxClass = if (noPcpPax || directRedListFlight.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else s"arrivals__table__flight__no-${flightWithSplits.pcpPaxEstimate.feedSource}"
     val diversionClass =
       if (directRedListFlight.incomingDiversion) "arrivals__table__flight__pcp-pax__incoming"
       else if (directRedListFlight.outgoingDiversion) "arrivals__table__flight__pcp-pax__outgoing"
@@ -24,7 +24,7 @@ object FlightComponents {
     <.div(
       ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",
       <.div(^.className := "arrivals__table__flight__pcp-pax__container",
-        <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", flightWithSplits.pcpPaxEstimate + "-" + flightWithSplits.apiFlight.TotalPax)))
+        <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", flightWithSplits.pcpPaxEstimate.pax)))
       ),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =
@@ -33,10 +33,6 @@ object FlightComponents {
         Tippy.describe(<.span(incomingTip), MuiIcons(TrendingFlat)())
       } else <.span(),
     )
-  }
-
-  def classNameForTotalPax(flightWithSplits:ApiFlightWithSplits) = {
-    flightWithSplits.apiFlight.FeedSources
   }
 
   def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = {

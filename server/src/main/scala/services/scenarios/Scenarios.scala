@@ -76,6 +76,7 @@ object Scenarios {
         case _ => Unit
       }
     }
+
     val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
 
     val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch, SortedSet())

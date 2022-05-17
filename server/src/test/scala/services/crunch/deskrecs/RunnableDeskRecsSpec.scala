@@ -26,7 +26,7 @@ import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefa
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
@@ -171,7 +171,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "When I ask for the workload " +
     "Then I should see the workload associated with the best splits for that flight" >> {
     val scheduled = "2019-10-10T23:05:00Z"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25), feedSources = Set(LiveFeedSource))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25), feedSources = Set(LiveFeedSource) ,
+      totalPax = Set(TotalPaxSource(25,LiveFeedSource,None)))
 
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
@@ -205,7 +206,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "When I ask for the workload " +
     "Then I should see the workload associated with the best splits for that flight" >> {
     val scheduled = "2019-10-10T23:05:00Z"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(75), tranPax = Option(50), feedSources = Set(LiveFeedSource))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(75), tranPax = Option(50), feedSources = Set(LiveFeedSource),
+      totalPax = Set(TotalPaxSource(75-50,LiveFeedSource,None)))
 
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
@@ -241,8 +243,10 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "Then I should see the combined workload for those flights" >> {
     val scheduled = "2018-01-01T00:05"
     val scheduled2 = "2018-01-01T00:06"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25), feedSources = Set(LiveFeedSource))
-    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = scheduled2, actPax = Option(25), feedSources = Set(LiveFeedSource))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25), feedSources = Set(LiveFeedSource),
+      totalPax = Set(TotalPaxSource(25,LiveFeedSource,None)))
+    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = scheduled2, actPax = Option(25), feedSources = Set(LiveFeedSource),
+      totalPax = Set(TotalPaxSource(25,LiveFeedSource,None)))
 
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None), ApiFlightWithSplits(arrival2, Set(historicSplits), None))
 
@@ -286,7 +290,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val pcpOne = "2018-01-01T00:15"
     val pcpUpdated = "2018-01-01T00:05"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = pcpOne, actPax = Option(25), feedSources = Set(LiveFeedSource))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = pcpOne, actPax = Option(25), feedSources = Set(LiveFeedSource),
+      totalPax = Set(TotalPaxSource(25,LiveFeedSource,None)))
 
     val historicSplits = Splits(
       Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100, None, None)),

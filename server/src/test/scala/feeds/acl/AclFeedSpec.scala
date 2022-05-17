@@ -247,7 +247,7 @@ class AclFeedSpec extends CrunchTestLike {
         "When I ask for a crunch " +
         "Then I should see that flight in the PortState" >> {
         val scheduled = "2017-01-01T00:00Z"
-        val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(10))
+        val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(10), totalPax = Set(TotalPaxSource(10,AclFeedSource,None)))
         val aclFlight = Flights(List(arrival))
 
         val fiveMinutes = 600d / 60
@@ -258,7 +258,7 @@ class AclFeedSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
-        val expected = Set(arrival.copy(FeedSources = Set(AclFeedSource),TotalPax = Set(TotalPaxSource(arrival.ActPax.getOrElse(0),AclFeedSource,None))))
+        val expected = Set(arrival.copy(FeedSources = Set(AclFeedSource)))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>

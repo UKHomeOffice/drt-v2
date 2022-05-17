@@ -179,7 +179,7 @@ object DynamicRunnableDeskRecs {
       }
 
   def addPax(historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxLike]])
-                    (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[(CrunchRequest, List[ApiFlightWithSplits]), (CrunchRequest, List[ApiFlightWithSplits]), NotUsed] =
+            (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[(CrunchRequest, List[ApiFlightWithSplits]), (CrunchRequest, List[ApiFlightWithSplits]), NotUsed] =
     Flow[(CrunchRequest, List[ApiFlightWithSplits])]
       .mapAsync(1) { case (cr, flights) =>
         Source(flights)
@@ -292,12 +292,16 @@ object DynamicRunnableDeskRecs {
       }
       .map { flight =>
         flight.splits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages) match {
-          case None => flight
+          case None =>
+            flight
           case Some(liveSplits) =>
+            val apiPax = liveSplits.totalExcludingTransferPax.toInt
             val arrival = flight.apiFlight.copy(
-              ApiPax = Option(liveSplits.totalExcludingTransferPax.toInt),
+              ApiPax = Option(apiPax),
               FeedSources = flight.apiFlight.FeedSources + ApiFeedSource,
+              TotalPax = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(apiPax, ApiFeedSource, Option(ApiSplitsWithHistoricalEGateAndFTPercentages)))
             )
+
             flight.copy(apiFlight = arrival)
         }
       }

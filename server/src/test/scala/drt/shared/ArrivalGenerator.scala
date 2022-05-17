@@ -1,7 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Prediction}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Prediction, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -29,7 +29,8 @@ object ArrivalGenerator {
                baggageReclaimId: Option[String] = None,
                airportId: PortCode = PortCode(""),
                feedSources: Set[FeedSource] = Set(),
-               pcpTime: Option[MillisSinceEpoch] = None
+               pcpTime: Option[MillisSinceEpoch] = None,
+              totalPax : Set[TotalPaxSource] = Set.empty[TotalPaxSource]
              ): Arrival =
     Arrival(
       Operator = operator,
@@ -53,7 +54,8 @@ object ArrivalGenerator {
       Origin = origin,
       PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (sch != 0L) Some(sch) else None,
       Scheduled = sch,
-      FeedSources = feedSources
+      FeedSources = feedSources,
+      TotalPax = totalPax
     )
 
   def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): ApiFlightWithSplits = ApiFlightWithSplits(

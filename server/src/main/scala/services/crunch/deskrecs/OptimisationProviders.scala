@@ -54,7 +54,6 @@ object OptimisationProviders {
           log.error(s"Failed to get historic manifest for ${arrival.unique}")
           None
       }
-//      .collect { case Some(bam) => Option(bam) }
 
   def arrivalsProvider(arrivalsActor: ActorRef)
                       (crunchRequest: CrunchRequest)

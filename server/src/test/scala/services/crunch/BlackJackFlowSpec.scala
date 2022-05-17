@@ -6,7 +6,8 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.PortState
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
-import uk.gov.homeoffice.drt.ports.AclFeedSource
+import uk.gov.homeoffice.drt.arrivals.TotalPaxSource
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -23,7 +24,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
     "Then the updated blackjack numbers should appear in the PortState" >> {
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
+    val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21), totalPax = Set(TotalPaxSource(21, AclFeedSource, None)))
     val initialBaseArrivals = Set(flight)
     val deskStats = ActualDeskStats(Map(
       T1 -> Map(

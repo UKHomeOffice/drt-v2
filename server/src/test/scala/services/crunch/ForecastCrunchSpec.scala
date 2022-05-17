@@ -180,7 +180,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
 
-    val expectedForecastArrivals = Set(baseArrival.copy(FeedSources = Set(AclFeedSource),TotalPax = Set(TotalPaxSource(baseArrival.ActPax.getOrElse(0),AclFeedSource,None))))
+    val expectedForecastArrivals = Set(baseArrival.copy(FeedSources = Set(AclFeedSource),
+      TotalPax = Set(TotalPaxSource(baseArrival.ActPax.getOrElse(0),AclFeedSource,None))))
 
     crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>

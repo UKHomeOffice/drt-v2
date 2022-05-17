@@ -18,7 +18,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource, VoyageNumber}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -46,7 +46,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap))
 
   val splitsCalculator: SplitsCalculator = SplitsCalculator(testPaxTypeAllocator, defaultAirportConfig.terminalPaxSplits, ChildEGateAdjustments(1.0))
-  private val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(100), schDt = "2021-03-08T00:00")
+  private val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(100), schDt = "2021-03-08T00:00",totalPax = Set(TotalPaxSource(100,LiveFeedSource,None)))
   val arrivals = List(
     arrival
   )

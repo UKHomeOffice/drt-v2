@@ -19,7 +19,7 @@ object MyMacros {
     val routes = help.getAllRoutesForClass(pt, target, topClass, topClass.typeSymbol.fullName.toString.split('.').toSeq, Nil).toList
 
     val res = q"{case ..$routes}: autowire.Core.Router[$pt]"
-//    println(("FAFA", res))
+    println(("FAFA", res))
     c.Expr(res)
   }
 }

@@ -40,7 +40,7 @@ trait FlightsWithSplitsExport extends FlightsExport {
 
   def flightWithSplitsToCsvFields(fws: ApiFlightWithSplits,
                                   millisToDateOnly: MillisSinceEpoch => String,
-                                  millisToLocalDateTimeString: MillisSinceEpoch => String): List[String] =
+                                  millisToLocalDateTimeString: MillisSinceEpoch => String): List[String] = {
     List(fws.apiFlight.flightCodeString,
       fws.apiFlight.flightCodeString,
       fws.apiFlight.Origin.toString,
@@ -55,6 +55,7 @@ trait FlightsWithSplitsExport extends FlightsExport {
       fws.apiFlight.PcpTime.map(millisToLocalDateTimeString(_)).getOrElse(""),
       fws.totalPax.map(_.toString).getOrElse(""),
     )
+  }
 
   protected def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
     val apiIsInvalid = fws.hasApi && !fws.hasValidApi

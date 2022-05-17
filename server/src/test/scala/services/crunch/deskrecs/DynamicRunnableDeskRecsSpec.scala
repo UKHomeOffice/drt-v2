@@ -35,8 +35,8 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.collection.{SortedSet, immutable}
 import scala.collection.immutable.Map
+import scala.collection.{SortedSet, immutable}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -186,13 +186,12 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
           .collect {
             case (tq, pax) if pax > 0 => (tq, pax)
           }
-
         tqPax === expectedQueuePax
     }
   }
 
   "Given a flight and a mock splits calculator" >> {
-    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), totalPax = Set(TotalPaxSource(100, LiveFeedSource, None)))
     val flights = Seq(ApiFlightWithSplits(arrival, Set()))
     val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
     val mockSplits: SplitsForArrival = (_, _) => splits
@@ -203,7 +202,9 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         val manifestsForArrival = manifestsByKey(manifest)
         val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
 
-        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1), FeedSources = arrival.FeedSources + ApiFeedSource), Set(splits)))
+        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1), FeedSources = arrival.FeedSources + ApiFeedSource,
+          TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(1, ApiFeedSource, Option(ApiSplitsWithHistoricalEGateAndFTPercentages)))
+        ), Set(splits)))
       }
 
       "When I have no manifests matching the arrival I should get no splits added to the arrival" >> {
@@ -222,7 +223,10 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
         val updatePax = updatePaxNos(mockSplitsSink)
 
-        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1), FeedSources = arrival.FeedSources + ApiFeedSource), Set(splits)))
+        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1),
+          FeedSources = arrival.FeedSources + ApiFeedSource,
+          TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(1, ApiFeedSource, Some(ApiSplitsWithHistoricalEGateAndFTPercentages)))),
+          Set(splits)))
       }
     }
 
@@ -246,7 +250,8 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     "add historic API pax" >> {
       "When I have live manifests matching the arrival where the live manifest is within the trust threshold I should get some pax from historic API" >> {
-        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(10, ApiFeedSource, Option(Historical))))
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(100, LiveFeedSource, None),
+          TotalPaxSource(10, ApiFeedSource, Option(Historical))))
       }
     }
   }
@@ -273,10 +278,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     val crunchRequestSource = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(ApiFlightWithSplits(arrival, Set())))))
     val result: immutable.Seq[(CrunchRequest, List[ApiFlightWithSplits])] = Await.result(crunchRequestSource.via(flow).runWith(Sink.seq), 1.second)
-
-//    result.head._2.exists(_.bestSplits.nonEmpty) &&
-//      result.head._2.exists(_.splits.map(_.source) contains  expectedPaxSources.head.splitSource) &&
-      result.head._2.exists(_.apiFlight.TotalPax === expectedPaxSources)
+    result.head._2.exists(_.apiFlight.TotalPax === expectedPaxSources)
   }
 
   def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =
@@ -287,7 +289,8 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   "Given an arrival with 100 pax " >> {
 
-    val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = s"2021-06-01T12:00", origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
+    val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = s"2021-06-01T12:00", origin = PortCode("JFK"), feedSources = Set(LiveFeedSource),
+      totalPax = Set(TotalPaxSource(100, LiveFeedSource, None)))
 
     "When I provide no live and no historic manifests, terminal splits should be applied (50% desk, 50% egates)" >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EGate) -> 50, (T1, EeaDesk) -> 50)

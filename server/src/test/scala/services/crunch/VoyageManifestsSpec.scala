@@ -12,7 +12,7 @@ import services.SDate
 import services.crunch.VoyageManifestGenerator._
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.CI
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, EventTypes, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, EventTypes, TotalPaxSource, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues._
@@ -72,6 +72,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     crunch.portStateTestProbe.fishForMessage(3 seconds) {
       case ps: PortState =>
         val nonZeroQueues = ps.crunchMinutes.values.filter(_.paxLoad > 0).groupBy(_.queue).keys.toSet
+
         nonZeroQueues == expectedNonZeroQueues
     }
 
@@ -357,7 +358,8 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = PortCode("LHR")
 
-    val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = None, tranPax = Option(6))
+    val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = None, tranPax = Option(6),
+      totalPax = Set(TotalPaxSource(0,AclFeedSource,None)))
     val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
       VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber(1), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
         euPassport,

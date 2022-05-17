@@ -104,7 +104,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Set(TotalPaxSource(arrival_v2_with_chox_time.ActPax.getOrElse(0),LiveFeedSource,None))))))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
-//      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time)))
       expectFeedSources(Set(LiveFeedSource))
 
       success
@@ -297,7 +296,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(Flights(List(forecastArrival))))
 
         val expected = forecastArrival.copy(FeedSources = Set(AclFeedSource, ForecastFeedSource), TotalPax = Set(
-          //          TotalPaxSource(ciriumArrival.ActPax.getOrElse(0),LiveFeedSource,None),
           TotalPaxSource(aclArrival.ActPax.getOrElse(0), AclFeedSource, None)))
 
         crunch.portStateTestProbe.fishForMessage(1.second) {
