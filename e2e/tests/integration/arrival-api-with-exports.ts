@@ -1,6 +1,7 @@
 import moment from "moment-timezone";
 import {manifestForDateTime, passengerList} from '../support/manifest-helpers'
 import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
+import {Moment} from "moment/moment";
 
 moment.locale("en-gb");
 
@@ -17,17 +18,19 @@ describe('Arrival API with exports', () => {
         cy.deleteData();
     });
 
-    const manifest = (passengerList): object => manifestForDateTime(scheduledDateTime, passengerList)
+    function dateTimeString(mDate: Moment) {
+      return mDate.tz("Europe/London").format("YYYY-MM-DD HH:mm")
+    }
 
-    const schDateLocal = scheduledDateTime.tz("Europe/London").format("YYYY-MM-DD");
-    const schTimeLocal = scheduledDateTime.tz("Europe/London").format("HH:mm");
-    const estTimeLocal = estTime.tz("Europe/London").format("HH:mm");
-    const actTimeLocal = actTime.tz("Europe/London").format("HH:mm");
-    const estChoxTimeLocal = estChoxTime.tz("Europe/London").format("HH:mm");
-    const actChoxTimeLocal = actChoxTime.tz("Europe/London").format("HH:mm");
-    const pcpTimeLocal = actChoxTime.add(13, "minutes").tz("Europe/London").format("HH:mm");
+    const manifest = (passengerList): object => manifestForDateTime(scheduledDateTime, passengerList)
+    const schDateTimeLocal = dateTimeString(scheduledDateTime)
+    const estDateTimeLocal = dateTimeString(estTime)
+    const actDateTimeLocal = dateTimeString(actTime)
+    const estChoxDateTimeLocal = dateTimeString(estChoxTime)
+    const actChoxDateTimeLocal = dateTimeString(actChoxTime)
+    const pcpDateTimeLocal = dateTimeString(actChoxTime.add(13, "minutes"))
     const headersWithoutActApi = "IATA,ICAO,Origin,Gate/Stand,Status," +
-        "Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP," +
+        "Scheduled,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP," +
         "Total Pax,PCP Pax,Invalid API," +
         "API e-Gates,API EEA,API Non-EEA,API Fast Track," +
         "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
@@ -48,7 +51,7 @@ describe('Arrival API with exports', () => {
     const invalidApi = "";
 
     const csvRow = (diffFromScheduled: string, totalPax: string, apiEGates: string, terminalAverageEgates: string = "13") =>
-        `TS0123,TS0123,AMS,46/44R,On Chocks,${schDateLocal},${schTimeLocal},${estTimeLocal},${actTimeLocal},${estChoxTimeLocal},${actChoxTimeLocal},${diffFromScheduled},${pcpTimeLocal},` +
+        `TS0123,TS0123,AMS,46/44R,On Chocks,${schDateTimeLocal},${estDateTimeLocal},${actDateTimeLocal},${estChoxDateTimeLocal},${actChoxDateTimeLocal},${diffFromScheduled},${pcpDateTimeLocal},` +
         `${totalPax},${totalPax},${invalidApi},` +
         `${apiEGates},${eeaDesk},${nonEEADesk},,` +
         ",,,," +

@@ -75,7 +75,7 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
         ArrivalToCsv.arrivalWithTransferToCsvFields(
           a,
           Exports.millisToLocalIsoDateOnly,
-          Exports.millisToLocalHoursAndMinutes
+          Exports.millisToLocalDateTimeString
         )
       )
     csvData
