@@ -136,7 +136,7 @@ case class ManifestLookup(tables: Tables)
 
   private def maybeManifestPaxFromProfiles(uniqueArrivalKey: UniqueArrivalKey, profiles: immutable.Seq[ManifestPassengerProfile]) = {
     if (profiles.nonEmpty) {
-      Option(HistoricManifestPax(SplitSources.Historical, uniqueArrivalKey, profiles.toList.size))
+      Option(HistoricManifestPax(SplitSources.Historical, uniqueArrivalKey, profiles.toSet.size))
     } else None
   }
 

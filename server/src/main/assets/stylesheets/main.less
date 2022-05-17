@@ -1663,15 +1663,23 @@ th h2 {
   text-decoration-line: line-through;
 }
 
-.arrivals__table__flight__no-LiveFeedSource {
+.arrivals__table__flight__no-LiveFeedSource-None {
+    border-bottom: 3px solid @reliability-quite-high;
+}
+
+.arrivals__table__flight__no-ApiFeedSource--ApiSplitsWithHistoricalEGateAndFTPercentages {
     border-bottom: 3px solid @reliability-high;
 }
 
-.arrivals__table__flight__no-ApiFeedSource {
+.arrivals__table__flight__no-ApiFeedSource--Historical {
     border-bottom: 3px solid @reliability-medium;
 }
 
-.arrivals__table__flight__no-AclFeedSource {
+.arrivals__table__flight__no-ApiFeedSource-None {
+    border-bottom: 3px solid @reliability-low;
+}
+
+.arrivals__table__flight__no-AclFeedSource-None {
     border-bottom: 3px solid @reliability-low;
 }
 

@@ -16,7 +16,7 @@ object FlightComponents {
 
   def paxComp(flightWithSplits: ApiFlightWithSplits, directRedListFlight: DirectRedListFlight, noPcpPax: Boolean): TagMod = {
     val isNotApiData = if (flightWithSplits.hasValidApi) "" else "notApiData"
-    val noPcpPaxClass = if (noPcpPax || directRedListFlight.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else s"arrivals__table__flight__no-${flightWithSplits.pcpPaxEstimate.feedSource}"
+    val noPcpPaxClass = if (noPcpPax || directRedListFlight.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else s"arrivals__table__flight__no-${flightWithSplits.pcpPaxEstimate.feedSource}-${flightWithSplits.pcpPaxEstimate.splitSource.map(a=>s"-$a").getOrElse("None")}"
     val diversionClass =
       if (directRedListFlight.incomingDiversion) "arrivals__table__flight__pcp-pax__incoming"
       else if (directRedListFlight.outgoingDiversion) "arrivals__table__flight__pcp-pax__outgoing"
