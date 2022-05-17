@@ -10,15 +10,11 @@ import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, S
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import org.slf4j.{Logger, LoggerFactory}
-import services.{SDate, StreamSupervision}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import services.StreamSupervision
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
-
-import scala.collection.immutable.{Map, Set}
 
 
 class TerminalDayFlightUpdatesActor(year: Int,
@@ -32,8 +28,7 @@ class TerminalDayFlightUpdatesActor(year: Int,
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
 
-  var updates: Map[UniqueArrival, ApiFlightWithSplits] = Map()
-  var removals: Set[(MillisSinceEpoch, UniqueArrival)] = Set()
+  var updatesAndRemovals: FlightUpdatesAndRemovals = FlightUpdatesAndRemovals.empty
 
   val startUpdatesStream: MillisSinceEpoch => Unit = (sequenceNumber: Long) => if (maybeKillSwitch.isEmpty) {
     val (_, killSwitch) = PersistenceQuery(context.system)
@@ -55,7 +50,7 @@ class TerminalDayFlightUpdatesActor(year: Int,
       self ! PoisonPill
 
     case GetAllUpdatesSince(sinceMillis) =>
-      sender() ! updatesSince(sinceMillis)
+      sender() ! updatesAndRemovals.updatesSince(sinceMillis)
 
     case StopUpdates =>
       stopUpdatesStream()
@@ -78,18 +73,6 @@ class TerminalDayFlightUpdatesActor(year: Int,
 
   def expireBeforeMillis: MillisSinceEpoch = now().millisSinceEpoch - MilliTimes.oneMinuteMillis
 
-  def purgeOldUpdates(): Unit = {
-    updates = updates.filter(_._2.lastUpdated.getOrElse(0L) >= expireBeforeMillis)
-    removals = removals.filter {
-      case (updated, _) => updated >= expireBeforeMillis
-    }
-  }
-
-  def updatesSince(sinceMillis: MillisSinceEpoch): FlightsWithSplitsDiff =
-    FlightsWithSplitsDiff(updates.values.filter(_.lastUpdated.getOrElse(0L) > sinceMillis), removals.collect {
-      case (updated, removal) if updated > sinceMillis => removal
-    })
-
   override def persistenceId: String = f"terminal-flights-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
   val log: Logger = LoggerFactory.getLogger(s"$persistenceId-updates")
@@ -98,8 +81,12 @@ class TerminalDayFlightUpdatesActor(year: Int,
 
   def myReceiveCommand: Receive = {
     case EventEnvelope(_, _, _, diffMessage: FlightsWithSplitsDiffMessage) =>
-      updateStateFromDiffMessage(diffMessage)
-      purgeOldUpdates()
+      val diff = FlightMessageConversion.flightWithSplitsDiffFromMessage(diffMessage)
+
+      updatesAndRemovals = updatesAndRemovals
+        .apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
+        .purgeOldUpdates(expireBeforeMillis)
+
       sender() ! Ack
   }
 
@@ -108,24 +95,10 @@ class TerminalDayFlightUpdatesActor(year: Int,
   def myReceiveRecover: Receive = {
     case SnapshotOffer(SnapshotMetadata(_, _, ts), m: FlightsWithSplitsMessage) =>
       val flights = m.flightWithSplits.map(FlightMessageConversion.flightWithSplitsFromMessage)
-      updates = updates ++ flights.map(f => (f.unique, f))
+      updatesAndRemovals = updatesAndRemovals ++ flights
 
-    case m: FlightsWithSplitsDiffMessage =>
-      updateStateFromDiffMessage(m)
-  }
-
-  private def updateStateFromDiffMessage(m: FlightsWithSplitsDiffMessage): Unit = {
-    val diff = FlightMessageConversion.flightWithSplitsDiffFromMessage(m)
-    val incomingRemovals = diff.arrivalsToRemove
-    updates = incomingRemovals.foldLeft(updates) {
-      case (updatesAcc, removalKey: UniqueArrival) =>
-        if (updates.contains(removalKey)) updatesAcc - removalKey else updatesAcc
-      case (updatesAcc, _) =>
-        log.warn(s"LegacyUniqueArrival is unsupported for streaming updates")
-        updatesAcc
-    } ++ diff.flightsToUpdate.map(f => (f.unique, f))
-    removals = removals ++ incomingRemovals.collect {
-      case ua: UniqueArrival => (m.createdAt.getOrElse(Long.MaxValue), ua)
-    }
+    case diffMessage: FlightsWithSplitsDiffMessage =>
+      val diff = FlightMessageConversion.flightWithSplitsDiffFromMessage(diffMessage)
+      updatesAndRemovals = updatesAndRemovals.apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
   }
 }
