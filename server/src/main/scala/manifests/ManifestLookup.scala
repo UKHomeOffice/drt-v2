@@ -71,21 +71,21 @@ case class ManifestLookup(tables: Tables)
     }
   }
 
-  def manifestSizeForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
-                              (implicit mat: Materializer): Future[Int] = {
+  def manifestPaxForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
+                             (implicit mat: Materializer): Future[Int] = {
     val eventualMaybePaxProfiles = Source(paxForArrivalQuery(flightKeys))
       .mapAsync(1)(paxProfilesFromQuery)
       .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .runWith(Sink.seq)
 
-    val paxProfilesSize = eventualMaybePaxProfiles.map { tries =>
+    val paxProfilesCount = eventualMaybePaxProfiles.map { tries =>
       tries.collect {
         case Failure(t) => log.warn(s"Failed to get manifests", t)
       }
       tries.collect { case Success(paxProfiles) => paxProfiles }
-    }.map(_.map(_.size))
+    }.map(_.map(_.toSet.size))
 
-    paxProfilesSize.map(ps => ps.sum / ps.size)
+    paxProfilesCount.map(ps => ps.sum / ps.size)
 
   }
 
@@ -135,7 +135,7 @@ case class ManifestLookup(tables: Tables)
         .run(nextQuery(uniqueArrivalKey))
         .flatMap {
           case flightsFound if flightsFound.nonEmpty =>
-            manifestSizeForScheduled(flightsFound).map { profiles =>
+            manifestPaxForScheduled(flightsFound).map { profiles =>
               (uniqueArrivalKey, maybeManifestPaxFromProfiles(uniqueArrivalKey, profiles))
             }
           case _ =>
