@@ -46,19 +46,18 @@ object PcpPaxSummariesComponent {
       val now = SDate.now()
       val fiveMinutes = 5
       val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
-      <.div(^.className := "pcp-pax-summaries",
+      <.div(
+        ^.className := "pcp-pax-summaries",
         if (props.viewMode.isLive) {
-          props.portStatePot.render { cs =>
+          props.portStatePot.render { portState =>
             val boxes = Seq("next 5 minutes", "5-10 minutes", "10-15 minutes")
-            <.div(
-              boxes.zipWithIndex.map {
-                case (label, box) =>
-                  val start = now.addMinutes(box * 5)
-                  val crunchMinutes = cs.window(start, start.addMinutes(5)).crunchMinutes
-                  val summary = PcpPaxSummary(start, fiveMinutes, crunchMinutes, props.terminalName, queues.toSet)
-                  summaryBox(box, label, start, queues, summary)
-              }.toTagMod
-            )
+            boxes.zipWithIndex.map {
+              case (label, box) =>
+                val start = now.addMinutes(box * 5)
+                val crunchMinutes = portState.window(start, start.addMinutes(5)).crunchMinutes
+                val summary = PcpPaxSummary(start, fiveMinutes, crunchMinutes, props.terminalName, queues.toSet)
+                summaryBox(box, label, start, queues, summary)
+            }.toVdomArray
           }
         } else ""
       )

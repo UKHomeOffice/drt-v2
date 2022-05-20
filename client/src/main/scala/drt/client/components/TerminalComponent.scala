@@ -188,19 +188,24 @@ object TerminalComponent {
                     ),
                     <.div(^.id := "current", ^.className := s"tab-pane $currentContentClass", {
                       if (props.terminalPageTab.mode == "current") <.div(
-                        <.h2(props.terminalPageTab.dateFromUrlOrNow match {
-                          case date: SDateLike if date.ddMMyyString == SDate.now().ddMMyyString => "Live View"
-                          case date: SDateLike if date.millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
-                          case date: SDateLike if date.millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
-                          case _ => "Live View"
-                        }),
-                        <.div(^.className := "content-head",
-                          PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
-                          DaySelectorComponent(DaySelectorComponent.Props(props.router,
-                            props.terminalPageTab,
-                            model.loadingState,
-                            model.minuteTicker
-                          ))
+                        <.div(
+                          ^.className := "current-view-header",
+                          <.div(
+                            <.h2(props.terminalPageTab.dateFromUrlOrNow match {
+                              case date: SDateLike if date.ddMMyyString == SDate.now().ddMMyyString => "Live View"
+                              case date: SDateLike if date.millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
+                              case date: SDateLike if date.millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
+                              case _ => "Live View"
+                            }),
+                            DaySelectorComponent(DaySelectorComponent.Props(props.router,
+                              props.terminalPageTab,
+                              model.loadingState,
+                              model.minuteTicker
+                            ))
+                          ),
+                          <.div(^.className := "content-head",
+                            PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
+                          )
                         ),
                         TerminalContentComponent(terminalContentProps)
                       ) else ""

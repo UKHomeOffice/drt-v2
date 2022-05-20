@@ -298,28 +298,6 @@ a:hover {
   width: auto;
 }
 
-.date-view-picker-container {
-  display: flex;
-  padding: 10px 17px 0 0;
-  color: #333;
-  font-size: 16px;
-  margin-bottom: 20px;
-}
-
-.date-view-picker-container .time-range {
-  padding-top: 10px;
-}
-
-.date-view-picker-container select {
-  color: black;
-}
-
-.date-time-picker-container {
-  position: relative;
-  display: inline-block;
-}
-
-
 #staffing div .row {
   margin: 0px;
 }
@@ -588,11 +566,6 @@ table.headlines tr:nth-child(odd) {
   padding: 4px;
 }
 
-.content-head {
-  clear: both;
-  overflow: auto;
-}
-
 @media (max-width: 800px) {
     .tab-content {
       display: flex ;
@@ -650,12 +623,17 @@ table.headlines tr:nth-child(odd) {
 .tabs-with-export {
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
 }
 
 .nav-tabs {
-  min-width: 64%;
   display: flex;
-  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.current-view-header {
+  display: flex;
+  justify-content: space-between;
 }
 
 .muiButton {
@@ -669,15 +647,10 @@ table.headlines tr:nth-child(odd) {
 .exports {
   display: flex;
   padding-top: 5px;
-  border-bottom: 1px solid #ddd;
 }
 
 .planning-export {
   margin-left: 10px
-}
-
-.arrival-export {
-  margin: 0 10px 0 0;
 }
 
 .exports a {
@@ -1183,24 +1156,50 @@ p {
   color: #7E8588;
 }
 
+.date-component-wrapper{
+  display: flex;
+  align-content: flex-start;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.date-select-wrapper {
+  display: flex;
+  justify-content: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.date-quick-days {
+  white-space: nowrap;
+}
+
+.time-view-selector-container {
+  display: flex;
+  justify-content: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.time-view-selector-container .time-range {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 5px;
+}
+
 .pcp-pax-summaries {
+  display: flex;
+  justify-content: space-evenly;
+  margin-top: 10px;
+  margin-bottom: 10px;
   min-height: 228px;
-  position: relative;
-  float: right;
+  gap: 10px;
 }
 
 .pcp-pax-summary {
-  float: left;
-  width: 32%;
   padding: 5px;
-  margin-right: 5px;
-}
-
-.pcp-pax-summary.last {
-  border: 0px;
-  margin-right: 0px;
-  float: none;
-  clear: left;
 }
 
 .pcp-pax-summary .total {
