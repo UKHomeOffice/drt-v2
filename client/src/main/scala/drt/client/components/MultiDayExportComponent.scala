@@ -113,14 +113,17 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
         scope.modState(_.copy(showDialogue = true))
       }
 
-      MuiButton(color = Color.default, variant = "outlined", size = "medium")(
-        MuiIcons(GetApp)(fontSize = "small"),
-        "Multi Day Export",
-        ^.className := "btn btn-default",
-        VdomAttr("data-toggle") := "modal",
-        VdomAttr("data-target") := "#multi-day-export",
-        ^.href := "#",
-        ^.onClick ==> showDialogue,
+      <.div(
+        ^.className := "export-button-wrapper",
+        MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+          MuiIcons(GetApp)(fontSize = "small"),
+          "Multi Day Export",
+          ^.className := "btn btn-default",
+          VdomAttr("data-toggle") := "modal",
+          VdomAttr("data-target") := "#multi-day-export",
+          ^.href := "#",
+          ^.onClick ==> showDialogue,
+        ),
         <.div(^.className := "multi-day-export modal " + showClass, ^.id := "#multi-day-export", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
             ^.className := "modal-dialog modal-dialog-centered",
@@ -173,8 +176,6 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
             )
           ))
       )
-      ,
-
     })
     .build
 

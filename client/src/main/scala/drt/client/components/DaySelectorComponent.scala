@@ -123,6 +123,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
             <.div(^.id := "tomorrow", ^.className := s"btn btn-primary $tomorrowActive end-spacer", "Tomorrow", ^.onClick ==> selectTomorrow)
           ),
           <.div(
+            ^.className := "date-picker",
             MuiTextField()(
               DefaultFormFieldsStyle.datePicker,
               ^.`type` := "date",

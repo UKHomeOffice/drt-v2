@@ -46,14 +46,17 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
         scope.modState(_.copy(showDialogue = true))
       }
 
-      MuiButton(color = Color.default, variant = "outlined", size = "medium")(
-        MuiIcons(GetApp)(fontSize = "small"),
-        "Arrivals",
-        ^.className := "btn btn-default",
-        ^.href := "#",
-        VdomAttr("data-toggle") := "modal",
-        VdomAttr("data-target") := "#arrivals-export",
-        ^.onClick ==> showDialogue,
+      <.div(
+        ^.className := "export-button-wrapper",
+        MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+          MuiIcons(GetApp)(fontSize = "small"),
+          "Arrivals",
+          ^.className := "btn btn-default",
+          ^.href := "#",
+          VdomAttr("data-toggle") := "modal",
+          VdomAttr("data-target") := "#arrivals-export",
+          ^.onClick ==> showDialogue,
+        ),
         <.div(^.className := "arrivals-export modal " + showClass, ^.id := "#arrivals-export", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
             ^.className := "modal-dialog modal-dialog-centered",
@@ -75,12 +78,16 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
                   <.button(
                     ^.className := "btn btn-link",
                     VdomAttr("data-dismiss") := "modal", "Close",
-                    ^.onClick --> scope.modState(_.copy(showDialogue = false))
+                    ^.onClick --> {
+                      log.info("closing dialogue")
+                      scope.modState(_.copy(showDialogue = false))
+                    }
                   )
                 )
               )
             )
-          ))
+          )
+        )
       )
     })
     .build

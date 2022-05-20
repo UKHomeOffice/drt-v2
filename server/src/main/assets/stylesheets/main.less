@@ -647,14 +647,18 @@ table.headlines tr:nth-child(odd) {
 .exports {
   display: flex;
   padding-top: 5px;
+  gap: 3px;
 }
 
 .planning-export {
   margin-left: 10px
 }
 
+.export-button-wrapper {
+  display: inline-flex;
+}
+
 .exports a {
-  margin: 0 10px 4px 0;
   padding: 2px 7px;
   width: 149px;
 }
@@ -1172,6 +1176,11 @@ p {
 
 .date-quick-days {
   white-space: nowrap;
+}
+
+.date-picker {
+  display: flex;
+  gap: 10px;
 }
 
 .time-view-selector-container {
