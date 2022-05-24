@@ -43,7 +43,6 @@ object Layout {
                 <.div(
                   <.div(
                     Navbar(Navbar.Props(props.ctl, props.currentLoc.page, user, airportConfig)),
-                    <.div(^.className := "container", buildFeedBackNavBar(user)),
                     <.div(^.className := "container",
                       <.div(<.div(props.currentLoc.render()))
                     ),
@@ -56,14 +55,6 @@ object Layout {
         })
       }
     }).build
-
-  def buildFeedBackNavBar(user: LoggedInUser) = {
-      <.div(^.className := "nav navbar-nav navbar-right" ,
-      <.span(^.className := "feedback", "Is this page useful?"),
-      <.span(^.className:= "feedback-negative" ,PositiveFeedbackComponent(dom.window.location.toString, user.email)),
-      <.span(^.className:= "feedback-negative", NegativeFeedbackComponent(dom.window.location.toString, user.email)))
-
-  }
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]): VdomElement = component(Props(ctl, currentLoc))
 }

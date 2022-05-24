@@ -31,7 +31,6 @@ object Navbar {
     Callback(SPACircuit.dispatch(SetSnackbarMessage(Empty)))
   }
 
-
   val component = ScalaComponent.builder[Props]("NavBar")
     .initialState(if (dom.window.innerWidth > 800) State(true) else State(false))
     .renderPS((scope, props, state) => {
