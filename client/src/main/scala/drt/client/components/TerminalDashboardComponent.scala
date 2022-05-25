@@ -69,7 +69,6 @@ object TerminalDashboardComponent {
       val terminal = p.terminalPageTabLoc.terminal
 
       <.div(^.className := "terminal-dashboard",
-
         if (p.terminalPageTabLoc.queryParams.contains("showArrivals")) {
           val closeArrivalsPopupLink = p.terminalPageTabLoc.copy(
             queryParams = p.terminalPageTabLoc.queryParams - "showArrivals"
@@ -110,9 +109,8 @@ object TerminalDashboardComponent {
 
         } else <.div(),
         <.div(^.className := "terminal-dashboard-queues",
-          <.div(^.className := "pax-bar row", s"$terminalPax passengers presenting at the PCP"),
-
-          <.div(^.className := "row queue-boxes",
+          <.div(^.className := "pax-bar", s"$terminalPax passengers presenting at the PCP"),
+          <.div(^.className := "queue-boxes",
             p.airportConfig.nonTransferQueues(terminal).filterNot(_ == Queues.FastTrack).map(q => {
               val qCMs = cmsForTerminalAndQueue(ps, q, terminal)
               val prevSlotCMs = cmsForTerminalAndQueue(prevSlotPortState, q, terminal)
@@ -135,14 +133,14 @@ object TerminalDashboardComponent {
               )
             }).toTagMod
           ),
-
-          <.div(^.className := "tb-bar row", ^.aria.label := "Change time by selected time slot hours",
+          <.div(^.className := "tb-bar-wrapper",
             p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlPrevTime")))(^.aria.label := s"View previous $slotSize minutes", ^.className := "dashboard-time-switcher prev-bar col", Icon.angleDoubleLeft),
-            <.div(^.className := "time-label col", ^.aria.label := s"current display time range", s"${start.prettyTime()} - ${end.prettyTime()}"),
+            <.div(^.className := "tb-bar", ^.aria.label := "current display time range",
+              s"${start.prettyTime()} - ${end.prettyTime()}",
+            ),
             p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlNextTime")))(^.aria.label := s"View next $slotSize minutes", ^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
           )
-        )
-        ,
+        ),
         <.div(^.className := "terminal-dashboard-side",
           p.router
             .link(p.terminalPageTabLoc.copy(

@@ -40,6 +40,10 @@
   }
 }
 
+dl {
+  margin: 0;
+}
+
 ul.dropdown-menu > li.dropdown-item > span.non-selectable {
   color: @colDefault;
   font-weight: bold;
@@ -224,6 +228,11 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   background-image: url(../images/logo_colour.png);
   background-repeat: no-repeat;
   background-position: 0px 15px;
+}
+
+.main-container {
+  width: 96%;
+  margin: 15px auto;
 }
 
 .popover.flights-popover .popover__content > tr td {
@@ -632,6 +641,10 @@ table.headlines tr:nth-child(odd) {
   flex-grow: 4;
 }
 
+.nav-tabs li {
+  white-space: nowrap;
+}
+
 .current-view-header {
   display: flex;
   justify-content: space-between;
@@ -916,8 +929,6 @@ rect.bordered {
     width: 96%;
   }
 }
-
-//@import "~elemental/less/elemental.less";
 
 // Site Explicit Variables
 // ------------------------------
@@ -1264,6 +1275,9 @@ p {
   @media (max-width: 800px) {
     font-size: 1.75rem;
   };
+  display: flex;
+  justify-content: space-between;
+  gap: 25px;
 }
 
 .pcp-pax-summary .queues .queue .queue-name div {
@@ -1405,7 +1419,6 @@ th h2 {
   display: inline-block;
   color: black;
   font-weight: 400;
-  //text-shadow: 0px 0px 4px white;
 }
 
 .pax-cell div {
@@ -2086,12 +2099,16 @@ div.access-restricted {
     @media (max-width: 800px) {
        font-size: 1.75rem
     }
+  display: flex;
+  flex-wrap: wrap;
 }
 
 .terminal-dashboard-queues {
   width: 73%;
   padding-top: 3%;
-  display:inline-block;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
   @media (max-width: 800px) {
     width: 100%;
   }
@@ -2127,16 +2144,12 @@ div.access-restricted {
   padding: 25px;
   border-radius: 15px;
   background-color: #eee;
-  position: relative;
-  top: 20%;
   font-size: 1.75rem;
   font-weight: bold;
   text-align: center;
   height: 4.5em;
-  margin-bottom: 5%;
   @media (max-width: 800px){
      padding: 5%;
-     margin-bottom: 12%;
   }
 }
 
@@ -2200,35 +2213,19 @@ div.access-restricted {
   color: #fff;
 }
 
-.queue-box i {
-  height: 55px;
-  position: relative;
-  padding-right: 10px;
-}
-
-.queue-box:last-child {
-  margin-right: 0px;
-}
-
 .queue-box {
   padding: 10px;
   height: 250px;
   border-style: solid;
   border-radius: 15px;
   background-color: #eee;
-  transform: translateY(-10%);
-  position: relative;
   @media (max-width: 800px){
      font-size: 1.70rem;
   }
   font-weight: bold;
   text-align: center;
-  display: inline-block;
-  float: left;
-  margin-right: 3%;
-  margin-top: 3%;
-  min-width: 14%;
-  width: 31.3%;
+  display: block;
+  width: 100%;
 }
 
 .queue-box.red {
@@ -2256,22 +2253,29 @@ div.access-restricted {
   }
 }
 
+.tb-bar-wrapper {
+  display: flex;
+  justify-content: space-between;
+  gap: 25px;
+}
+
 .tb-bar {
   background-color: #d5e8fe;
-  font-size: 1.45rem;
+  font-size: 1.75rem;
   font-weight: bold;
   text-align: center;
   border-style: solid;
   border-radius: 15px;
   height: 4.5em;
+  padding: 25px;
+  flex-grow: 1;
+  width: 100%;
 }
 
 .time-label {
   width: 60%;
-  display: inline-block;
   height: 100%;
   vertical-align: middle;
-  margin: 5;
   padding: 1.5em 0.5em 0.5em 0.5em;
 }
 
@@ -2284,16 +2288,11 @@ div.access-restricted {
   width: 8%;
   border-radius: 15px;
   background-color: #eee;
-  position: relative;
   font-size: 27px;
   font-weight: bold;
   text-align: center;
-  height: 108%;
-  display: inline-block;
-  border-top: solid;
-  border-bottom: solid;
+  border: solid;
   color: black;
-  margin-top: -0.25%;
 }
 
 .terminal-dashboard-side__sidebar_widget {
@@ -2318,18 +2317,6 @@ div.access-restricted {
 
 .time-slot-changer {
   font-size: 14px;
-}
-
-.prev-bar {
-  left: 0px;
-  border-right: solid;
-  float: left;
-}
-
-.next-bar {
-  left: 0px;
-  border-left: solid 3px;
-  float: right;
 }
 
 .terminal-dashboard__arrivals_popup_table {

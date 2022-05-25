@@ -211,7 +211,7 @@ object TerminalComponent {
 
     <.ul(^.className := "nav nav-tabs",
       <.li(^.className := terminalDashboardClass,
-        <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", "Terminal Dashboard"), ^.onClick --> {
+        <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", s"$terminalName Dashboard"), ^.onClick --> {
           GoogleEventTracker.sendEvent(terminalName, "click", "Terminal Dashboard")
           props.router.set(
             props.terminalPageTab.copy(

@@ -43,7 +43,7 @@ object Layout {
                 <.div(
                   <.div(
                     Navbar(Navbar.Props(props.ctl, props.currentLoc.page, user, airportConfig)),
-                    <.div(^.className := "container",
+                    <.div(^.className := "main-container",
                       <.div(<.div(props.currentLoc.render()))
                     ),
                     VersionUpdateNotice()
