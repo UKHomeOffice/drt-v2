@@ -112,7 +112,7 @@ object TerminalComponent {
                 <.div(
                   <.div(^.className := "terminal-nav-wrapper",
                     terminalTabs(props, loggedInUser),
-                    buildFeedBackNavBar(loggedInUser)
+                    feedBackNavBar(loggedInUser)
                   ),
                   <.div(^.className := "tab-content",
                     <.div(^.id := "dashboard", ^.className := s"tab-pane terminal-dashboard-container $dashboardContentClass",
@@ -189,7 +189,7 @@ object TerminalComponent {
     })
     .build
 
-  def buildFeedBackNavBar(user: LoggedInUser): VdomTagOf[Div] =
+  def feedBackNavBar(user: LoggedInUser): VdomTagOf[Div] =
     <.div(^.className := "feedback-widget", //nav navbar-nav navbar-right
       <.span(^.className := "feedback", "Is this page useful?"),
       <.span(^.className:= "feedback-negative" ,PositiveFeedbackComponent(dom.window.location.toString, user.email)),
