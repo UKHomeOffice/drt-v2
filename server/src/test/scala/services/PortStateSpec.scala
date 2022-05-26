@@ -14,6 +14,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, Queues}
 
+import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -130,7 +131,7 @@ class PortStateSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(newArrival))))
 
-        val expected = newArrival.copy(FeedSources = Set(AclFeedSource),TotalPax = Set(TotalPaxSource(newArrival.ActPax.getOrElse(0),AclFeedSource,None)))
+        val expected = newArrival.copy(FeedSources = Set(AclFeedSource),TotalPax = SortedSet(TotalPaxSource(newArrival.ActPax.getOrElse(0),AclFeedSource,None)))
         crunch.portStateTestProbe.fishForMessage(1.seconds) {
           case PortState(flights, _, _) =>
             flights.size == 1 && flights.values.head.apiFlight == expected

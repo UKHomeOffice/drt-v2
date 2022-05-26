@@ -10,6 +10,8 @@ import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.LocalDate
 
+import scala.collection.SortedSet
+
 class SimulationParamsSpec extends Specification {
 
   val testConfig: AirportConfig = DrtPortConfigs.confByPort(PortCode("TEST"))
@@ -127,7 +129,7 @@ class SimulationParamsSpec extends Specification {
   "Given I am applying a passenger weighting of 1 to some flights then the passenger numbers should be the same" >> {
     val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
 
-    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50), totalPax = Set(TotalPaxSource(100-50,ScenarioSimulationSource,None))), Set())
+    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50), totalPax = SortedSet(TotalPaxSource(100-50,ScenarioSimulationSource,None))), Set())
     val flights = FlightsWithSplits(List(
       flightWithSplits
     ).map(a => a.apiFlight.unique -> a).toMap)
@@ -155,7 +157,7 @@ class SimulationParamsSpec extends Specification {
       ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50)), Set())
     ).map(a => a.apiFlight.unique -> a).toMap)
 
-    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(200), tranPax = Option(100), totalPax = Set(TotalPaxSource(100,ScenarioSimulationSource,None))),Set())
+    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(200), tranPax = Option(100), totalPax = SortedSet(TotalPaxSource(100,ScenarioSimulationSource,None))),Set())
     val result = weightingOfTwo.applyPassengerWeighting(fws)
 
     result.flights.values.head.apiFlight.bestPcpPaxEstimate === flightWithSplits.apiFlight.bestPcpPaxEstimate

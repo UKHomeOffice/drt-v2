@@ -6,6 +6,8 @@ import uk.gov.homeoffice.drt.ports.PaxTypes.{Transit, VisaNational}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiPaxTypeAndQueueCount, FeedSource, LiveFeedSource, Queues}
 
+import scala.collection.SortedSet
+
 class PassengerNumberEstSpec extends Specification {
 
   "When estimating PCP Pax" >> {
@@ -168,7 +170,7 @@ class PassengerNumberEstSpec extends Specification {
       actPax = Option(actPax),
       tranPax = Option(transferPax),
       feedSources = sources,
-      totalPax = sources.map(TotalPaxSource(actPax - transferPax, _ , None))
+      totalPax = SortedSet(sources.map(TotalPaxSource(actPax - transferPax, _, None)).toList: _*)
     )
 
     ApiFlightWithSplits(flight, splits)

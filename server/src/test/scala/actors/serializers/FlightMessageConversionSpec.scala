@@ -11,6 +11,8 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
 
+import scala.collection.SortedSet
+
 class FlightMessageConversionSpec extends Specification {
 
   val arrival: Arrival = Arrival(
@@ -41,7 +43,7 @@ class FlightMessageConversionSpec extends Specification {
     ApiPax = Option(96),
     ScheduledDeparture = Option(8L),
     RedListPax = Option(26),
-    TotalPax = Set.empty[TotalPaxSource]
+    TotalPax = SortedSet.empty[TotalPaxSource]
   )
 
   "Given an Arrival with no suffix" >> {

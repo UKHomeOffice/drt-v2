@@ -7,6 +7,8 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHist
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypes, Queues}
 import utest.{TestSuite, _}
 
+import scala.collection.SortedSet
+
 
 object PaxSplitsDisplayTests extends TestSuite {
 
@@ -216,7 +218,7 @@ object PaxSplitsDisplayTests extends TestSuite {
       }
 
       "Given a flight with percentage splits, when I ask for pax per queue I should see the total pax broken down per queue" - {
-        val flight = ArrivalGenerator.apiFlight(actPax = Option(152))
+        val flight = ArrivalGenerator.apiFlight(actPax = Option(152), totalPax = SortedSet(TotalPaxSource(152, LiveFeedSource, None)))
         val splits = Splits(
           Set(
             ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 11.399999999999999, None, None),
@@ -240,7 +242,7 @@ object PaxSplitsDisplayTests extends TestSuite {
       }
 
       "Given a flight with PaxNumbers splits when I ask for pax per queue I should see the total broken down per queue" - {
-        val flight = ArrivalGenerator.apiFlight(actPax = Option(100))
+        val flight = ArrivalGenerator.apiFlight(actPax = Option(100), totalPax = SortedSet(TotalPaxSource(100, LiveFeedSource, None)))
         val splits = Splits(Set(
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 15, None, None),
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 5, None, None)),

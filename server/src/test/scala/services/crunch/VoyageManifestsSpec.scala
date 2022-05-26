@@ -20,6 +20,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHisto
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
 
+import scala.collection.SortedSet
 import scala.collection.immutable.{List, Map, Seq, SortedMap}
 import scala.concurrent.duration._
 
@@ -359,7 +360,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val portCode = PortCode("LHR")
 
     val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = None, tranPax = Option(6),
-      totalPax = Set(TotalPaxSource(0,AclFeedSource,None)))
+      totalPax = SortedSet(TotalPaxSource(0,AclFeedSource,None)))
     val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
       VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber(1), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
         euPassport,

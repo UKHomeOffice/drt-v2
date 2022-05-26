@@ -191,7 +191,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   }
 
   "Given a flight and a mock splits calculator" >> {
-    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), totalPax = Set(TotalPaxSource(100, LiveFeedSource, None)))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), totalPax = SortedSet(TotalPaxSource(100, LiveFeedSource, None)))
     val flights = Seq(ApiFlightWithSplits(arrival, Set()))
     val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
     val mockSplits: SplitsForArrival = (_, _) => splits
@@ -290,7 +290,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   "Given an arrival with 100 pax " >> {
 
     val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = s"2021-06-01T12:00", origin = PortCode("JFK"), feedSources = Set(LiveFeedSource),
-      totalPax = Set(TotalPaxSource(100, LiveFeedSource, None)))
+      totalPax = SortedSet(TotalPaxSource(100, LiveFeedSource, None)))
 
     "When I provide no live and no historic manifests, terminal splits should be applied (50% desk, 50% egates)" >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EGate) -> 50, (T1, EeaDesk) -> 50)

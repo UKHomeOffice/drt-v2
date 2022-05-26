@@ -14,6 +14,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
 
+import scala.collection.SortedSet
 import scala.collection.immutable.{Map, Seq, SortedMap}
 import scala.concurrent.duration._
 
@@ -48,7 +49,9 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
 
         val expectedFlights = Set(ApiFlightWithSplits(
-          updatedArrival.copy(FeedSources = Set(LiveFeedSource),TotalPax = Set(TotalPaxSource(updatedArrival.ActPax.getOrElse(0),LiveFeedSource,None))),
+          updatedArrival.copy(FeedSources = Set(LiveFeedSource),TotalPax =
+            SortedSet(TotalPaxSource(updatedArrival.ActPax.getOrElse(0),LiveFeedSource,None),
+              TotalPaxSource(flight.ActPax.getOrElse(0),LiveFeedSource,None))),
           Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
@@ -79,7 +82,9 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
 
         val expectedFlights = Set(ApiFlightWithSplits(
-          updatedArrival.copy(FeedSources = Set(LiveFeedSource),TotalPax = Set(TotalPaxSource(updatedArrival.ActPax.getOrElse(0),LiveFeedSource,None))),
+          updatedArrival.copy(FeedSources = Set(LiveFeedSource),TotalPax =
+            SortedSet(TotalPaxSource(updatedArrival.ActPax.getOrElse(0),LiveFeedSource,None),
+            TotalPaxSource(flight.ActPax.getOrElse(0),LiveFeedSource,None))),
           Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {

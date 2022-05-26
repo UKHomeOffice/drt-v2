@@ -28,6 +28,7 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.LocalDate
 
+import scala.collection.SortedSet
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
@@ -46,7 +47,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap))
 
   val splitsCalculator: SplitsCalculator = SplitsCalculator(testPaxTypeAllocator, defaultAirportConfig.terminalPaxSplits, ChildEGateAdjustments(1.0))
-  private val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(100), schDt = "2021-03-08T00:00",totalPax = Set(TotalPaxSource(100,LiveFeedSource,None)))
+  private val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(100), schDt = "2021-03-08T00:00",totalPax = SortedSet(TotalPaxSource(100,LiveFeedSource,None)))
   val arrivals = List(
     arrival
   )

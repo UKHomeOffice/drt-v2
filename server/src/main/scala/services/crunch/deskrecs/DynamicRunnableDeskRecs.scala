@@ -28,6 +28,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.{A2, Terminal}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
+import scala.collection.SortedSet
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -187,7 +188,7 @@ object DynamicRunnableDeskRecs {
             if (!flight.apiFlight.FeedSources.contains(ApiFeedSource)) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxLike) =>
-                  val totalPax: Set[TotalPaxSource] = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(manifestPaxLike.pax.getOrElse(0), ApiFeedSource, Option(Historical)))
+                  val totalPax: SortedSet[TotalPaxSource] = flight.apiFlight.TotalPax ++ SortedSet(TotalPaxSource(manifestPaxLike.pax.getOrElse(0), ApiFeedSource, Option(Historical)))
                   val updatedArrival = flight.apiFlight.copy(TotalPax = totalPax)
                  flight.copy(apiFlight = updatedArrival)
                 case None => flight

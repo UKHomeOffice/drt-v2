@@ -13,6 +13,7 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.N
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
+import scala.collection.SortedSet
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.io.Source
@@ -52,7 +53,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       Origin = PortCode("LHR"),
       FeedSources = Set(LiveFeedSource),
       Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None,
-      TotalPax = Set(TotalPaxSource(120, LiveFeedSource, None)))
+      TotalPax = SortedSet(TotalPaxSource(120, LiveFeedSource, None)))
 
   }
 
@@ -86,7 +87,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       FeedSources = Set(LiveFeedSource),
       Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch,
       PcpTime = None,
-      TotalPax = Set(TotalPaxSource(0, LiveFeedSource, None)))
+      TotalPax = SortedSet(TotalPaxSource(0, LiveFeedSource, None)))
 
   }
 

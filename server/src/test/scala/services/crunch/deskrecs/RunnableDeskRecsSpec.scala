@@ -99,7 +99,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
   val flexDesks = false
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
-  private def getDeskRecsGraph(mockPortStateActor: ActorRef, historicManifests: HistoricManifestsProvider, historicManifestsPaxProvider:HistoricManifestsPaxProvider,airportConfig: AirportConfig = defaultAirportConfig) = {
+  private def getDeskRecsGraph(mockPortStateActor: ActorRef, historicManifests: HistoricManifestsProvider, historicManifestsPaxProvider: HistoricManifestsPaxProvider, airportConfig: AirportConfig = defaultAirportConfig) = {
     val paxAllocation = PaxTypeQueueAllocation(
       B5JPlusTypeAllocator,
       TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
@@ -135,7 +135,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "I should see a request for flights for 2019-01-01 00:00 to 00:30" >> {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop,mockHistoricManifestsPaxProviderNoop)
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop, mockHistoricManifestsPaxProviderNoop)
 
     val midnight20190101 = SDate("2019-01-01T00:00")
     daysQueueSource ! crunchRequest(midnight20190101)
@@ -157,7 +157,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, longDelay)))
 
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop,mockHistoricManifestsPaxProviderNoop)
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop, mockHistoricManifestsPaxProviderNoop)
 
     val midnight20190101 = SDate("2019-01-01T00:00")
     daysQueueSource ! crunchRequest(midnight20190101)
@@ -171,8 +171,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "When I ask for the workload " +
     "Then I should see the workload associated with the best splits for that flight" >> {
     val scheduled = "2019-10-10T23:05:00Z"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25), feedSources = Set(LiveFeedSource) ,
-      totalPax = Set(TotalPaxSource(25,LiveFeedSource,None)))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25), feedSources = Set(LiveFeedSource),
+      totalPax = SortedSet(TotalPaxSource(25, LiveFeedSource, None)))
 
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
@@ -181,7 +181,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     mockPortStateActor ! SetFlights(flight)
 
     val arrivalPax = Map(arrival -> Option(List(euPassport, visa)))
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(arrivalPax),mockHistoricManifestsPaxProvider(arrivalPax))
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(arrivalPax), mockHistoricManifestsPaxProvider(arrivalPax))
 
     daysQueueSource ! crunchRequest(SDate(scheduled))
 
@@ -207,7 +207,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "Then I should see the workload associated with the best splits for that flight" >> {
     val scheduled = "2019-10-10T23:05:00Z"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(75), tranPax = Option(50), feedSources = Set(LiveFeedSource),
-      totalPax = Set(TotalPaxSource(75-50,LiveFeedSource,None)))
+      totalPax = SortedSet(TotalPaxSource(75 - 50, LiveFeedSource, None)))
 
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
@@ -215,7 +215,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(Map(arrival -> Option(List(euPassport, visa)))),mockHistoricManifestsPaxProvider(Map(arrival -> Option(List(euPassport, visa)))))
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(Map(arrival -> Option(List(euPassport, visa)))), mockHistoricManifestsPaxProvider(Map(arrival -> Option(List(euPassport, visa)))))
 
     val scheduledDate = SDate(scheduled)
 
@@ -244,9 +244,9 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val scheduled = "2018-01-01T00:05"
     val scheduled2 = "2018-01-01T00:06"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25), feedSources = Set(LiveFeedSource),
-      totalPax = Set(TotalPaxSource(25,LiveFeedSource,None)))
+      totalPax = SortedSet(TotalPaxSource(25, LiveFeedSource, None)))
     val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = scheduled2, actPax = Option(25), feedSources = Set(LiveFeedSource),
-      totalPax = Set(TotalPaxSource(25,LiveFeedSource,None)))
+      totalPax = SortedSet(TotalPaxSource(25, LiveFeedSource, None)))
 
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None), ApiFlightWithSplits(arrival2, Set(historicSplits), None))
 
@@ -257,7 +257,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(Map(
       arrival -> Option(List(euPassport, visa)),
       arrival2 -> Option(List(euPassport, visa)),
-    )),mockHistoricManifestsPaxProvider(Map(
+    )), mockHistoricManifestsPaxProvider(Map(
       arrival -> Option(List(euPassport, visa)),
       arrival2 -> Option(List(euPassport, visa)),
     )))
@@ -291,7 +291,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val pcpOne = "2018-01-01T00:15"
     val pcpUpdated = "2018-01-01T00:05"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = pcpOne, actPax = Option(25), feedSources = Set(LiveFeedSource),
-      totalPax = Set(TotalPaxSource(25,LiveFeedSource,None)))
+      totalPax = SortedSet(TotalPaxSource(25, LiveFeedSource, None)))
 
     val historicSplits = Splits(
       Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100, None, None)),
@@ -300,7 +300,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
 
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop,mockHistoricManifestsPaxProviderNoop)
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop, mockHistoricManifestsPaxProviderNoop)
 
     val noonMillis = SDate(pcpOne).millisSinceEpoch
     val onePmMillis = SDate(pcpUpdated).millisSinceEpoch
@@ -503,7 +503,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val minsInADay = 1440
     val airportConfig = defaultAirportConfig.copy(minutesToCrunch = minsInADay)
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop,mockHistoricManifestsPaxProviderNoop ,airportConfig)
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop, mockHistoricManifestsPaxProviderNoop, airportConfig)
 
     daysQueueSource ! crunchRequest(SDate(scheduled), airportConfig)
 

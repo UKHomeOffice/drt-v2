@@ -6,6 +6,8 @@ import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.collection.SortedSet
+
 object ArrivalGenerator {
   def arrival(
                iata: String = "",
@@ -30,7 +32,7 @@ object ArrivalGenerator {
                airportId: PortCode = PortCode(""),
                feedSources: Set[FeedSource] = Set(),
                pcpTime: Option[MillisSinceEpoch] = None,
-              totalPax : Set[TotalPaxSource] = Set.empty[TotalPaxSource]
+              totalPax : SortedSet[TotalPaxSource] = SortedSet.empty[TotalPaxSource]
              ): Arrival =
     Arrival(
       Operator = operator,

@@ -21,6 +21,7 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.{A2, InvalidTerminal, T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSource, PortCode}
 
+import scala.collection.SortedSet
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -143,7 +144,7 @@ case class EdiFeed(ediClient: EdiClient)
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax =  Set(TotalPaxSource(flight.Passengers.getOrElse(0),feedSource,None))
+        TotalPax =  SortedSet(TotalPaxSource(flight.Passengers.getOrElse(0),feedSource,None))
       )
     } match {
       case Success(a) => Option(a)
