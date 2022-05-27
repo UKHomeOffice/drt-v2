@@ -10,7 +10,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
 import org.scalajs.dom.console
-import org.scalajs.dom.html.UList
+import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.AirportConfig
 
@@ -43,6 +43,35 @@ object Layout {
                   <.div(
                     Navbar(Navbar.Props(props.ctl, props.currentLoc.page, user, airportConfig)),
                     <.div(^.className := "main-container",
+                      <.div(^.className := "sub-nav-bar",
+                        <.div(^.className := "status-bar",
+                          <.div({
+                            val value = SPACircuit.connect(m => m.portStatePot)
+                            value { portStatePot =>
+                              <.div(
+                                portStatePot().renderReady { ps =>
+                                  val landedArrivals = ps.flights.values.filter(fws => fws.apiFlight.Actual.nonEmpty)
+                                  val apiFlightCount = landedArrivals.count(_.hasApi)
+                                  val receivedPct = apiFlightCount.toDouble / landedArrivals.size
+                                  val validPct = landedArrivals.count(_.hasValidApi).toDouble / apiFlightCount
+
+                                  def ragClass(pct: Double): String = pct match {
+                                    case red if red < 0.8 => "red"
+                                    case amber if amber < 0.9 => "amber"
+                                    case _ => "green"
+                                  }
+
+                                  <.div(^.className := "status-bar-item", "API",
+                                    <.div(^.className := s"api-status ${ragClass(receivedPct)}", s"${(receivedPct * 100).toInt}% received"),
+                                    <.div(^.className := s"api-status ${ragClass(validPct)}", s"${(validPct * 100).toInt}% valid"),
+                                  )
+                                })
+                            }
+                          }
+                          )
+                        ),
+                        feedBackNavBar(user)
+                      ),
                       <.div(<.div(props.currentLoc.render()))
                     ),
                     VersionUpdateNotice()
@@ -54,6 +83,13 @@ object Layout {
         })
       }
     }).build
+
+  def feedBackNavBar(user: LoggedInUser): VdomTagOf[Div] =
+    <.div(^.className := "feedback-widget",
+      <.span(^.className := "feedback", "Is this page useful?"),
+      <.span(^.className := "feedback-negative", PositiveFeedbackComponent(dom.window.location.toString, user.email)),
+      <.span(^.className := "feedback-negative", NegativeFeedbackComponent(dom.window.location.toString, user.email)))
+
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]): VdomElement = component(Props(ctl, currentLoc))
 }

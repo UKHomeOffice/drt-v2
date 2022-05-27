@@ -234,6 +234,52 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   margin: 15px auto;
 }
 
+.sub-nav-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.status-bar {
+  display: flex;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.status-bar-item {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 15px;
+  border-radius: 5px;
+  font-weight: bold;
+  background-color: #d2d2d2;
+}
+
+.api-status {
+  padding: 5px 15px;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.api-status.red {
+  color: #000;
+  background-color: #fb999a;
+}
+
+.api-status.amber {
+  color: #fff;
+  background-color: #f47738;
+}
+
+.api-status.green {
+  color: #000;
+  background-color: #b3cfc0;
+}
+
 .popover.flights-popover .popover__content > tr td {
   color: #000;
 }

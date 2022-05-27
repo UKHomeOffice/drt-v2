@@ -110,10 +110,7 @@ object TerminalComponent {
                   redListUpdates = model.redListUpdates,
                 )
                 <.div(
-                  <.div(^.className := "terminal-nav-wrapper",
-                    terminalTabs(props, loggedInUser),
-                    feedBackNavBar(loggedInUser)
-                  ),
+                  <.div(^.className := "terminal-nav-wrapper", terminalTabs(props, loggedInUser)),
                   <.div(^.className := "tab-content",
                     <.div(^.id := "dashboard", ^.className := s"tab-pane terminal-dashboard-container $dashboardContentClass",
                       if (props.terminalPageTab.mode == "dashboard") {
@@ -188,12 +185,6 @@ object TerminalComponent {
       )
     })
     .build
-
-  def feedBackNavBar(user: LoggedInUser): VdomTagOf[Div] =
-    <.div(^.className := "feedback-widget",
-      <.span(^.className := "feedback", "Is this page useful?"),
-      <.span(^.className:= "feedback-negative", PositiveFeedbackComponent(dom.window.location.toString, user.email)),
-      <.span(^.className:= "feedback-negative", NegativeFeedbackComponent(dom.window.location.toString, user.email)))
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser): VdomTagOf[UList] = {
     val terminalName = props.terminalPageTab.terminal.toString
