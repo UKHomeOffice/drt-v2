@@ -223,8 +223,7 @@ ul.dropdown-menu > li.dropdown-item > span.port {
 
 .main-logo {
   height: 70px;
-  width: 220px;
-  float: left;
+  width: 225px;
   background-image: url(../images/logo_colour.png);
   background-repeat: no-repeat;
   background-position: 0px 15px;
@@ -2026,11 +2025,9 @@ a i.fa.fa-remove {
 .topbar {
   height: 70px;
   width: 96%;
-  overflow: hidden;
   margin: auto;
-  padding-left: 15px;
-  box-sizing: border-box;
-  display: block;
+  display: flex;
+  gap: 25px;
 }
 
 .alerts {
@@ -2045,6 +2042,7 @@ a i.fa.fa-remove {
   box-sizing: border-box;
   text-decoration: none;
   overflow: auto;
+  flex-grow: 1;
 }
 
 .has-alerts > span > div > p {
@@ -2052,7 +2050,7 @@ a i.fa.fa-remove {
 }
 
 .grow {
-  flex-grow: 4
+  flex-grow: 1;
 }
 
 .alert-class-notice {

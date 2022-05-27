@@ -37,7 +37,6 @@ object Layout {
               <.div(
                 <.div(^.className := "topbar",
                   <.div(^.className := "main-logo"),
-                  EnvironmentWarningComponent(),
                   <.div(^.className := "alerts", AlertsComponent())
                 ),
                 <.div(

@@ -190,9 +190,9 @@ object TerminalComponent {
     .build
 
   def buildFeedBackNavBar(user: LoggedInUser): VdomTagOf[Div] =
-    <.div(^.className := "feedback-widget", //nav navbar-nav navbar-right
+    <.div(^.className := "feedback-widget",
       <.span(^.className := "feedback", "Is this page useful?"),
-      <.span(^.className:= "feedback-negative" ,PositiveFeedbackComponent(dom.window.location.toString, user.email)),
+      <.span(^.className:= "feedback-negative", PositiveFeedbackComponent(dom.window.location.toString, user.email)),
       <.span(^.className:= "feedback-negative", NegativeFeedbackComponent(dom.window.location.toString, user.email)))
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser): VdomTagOf[UList] = {
