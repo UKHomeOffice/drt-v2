@@ -121,7 +121,6 @@ class SimulationParamsSpec extends Specification {
 
       result === expected
     }
-
   }
 
   "Given I am applying a passenger weighting of 1 to some flights then the passenger numbers should be the same" >> {
