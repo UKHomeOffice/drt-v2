@@ -24,7 +24,7 @@ case class ArrivalsFeedSuccess(arrivals: Flights, createdAt: SDateLike) extends 
 case object ArrivalsFeedSuccessAck
 
 object ArrivalsFeedSuccess {
-  def apply(arrivals: Flights): ArrivalsFeedResponse = ArrivalsFeedSuccess(Flights(arrivals.flights), SDate.now())
+  def apply(arrivals: Flights): ArrivalsFeedResponse = ArrivalsFeedSuccess(arrivals, SDate.now())
 }
 
 case class ArrivalsFeedFailure(responseMessage: String, createdAt: SDateLike) extends ArrivalsFeedResponse {

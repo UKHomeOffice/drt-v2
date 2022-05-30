@@ -13,6 +13,7 @@ import uk.gov.homeoffice.drt.arrivals.{TotalPaxSource, _}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PortCode, UnknownFeedSource}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
 
 import scala.collection.SortedSet
 
@@ -149,12 +150,18 @@ object FlightMessageConversion {
       apiPax = apiFlight.ApiPax,
       redListPax = apiFlight.RedListPax,
       scheduledDeparture = apiFlight.ScheduledDeparture,
-      totalPax = apiFlight.TotalPax.map(tp => uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.TotalPaxSource(
-        pax = Option(tp.pax),
-        feedSource = Option(tp.feedSource.name),
-        splitSource = tp.splitSource.map(_.toString))).toSeq
+      totalPax = convertTotalPaxToMessage(apiFlight)
     )
   }
+
+  def convertTotalPaxToMessage(arrival: Arrival): Seq[FlightsMessage.TotalPaxSource] = arrival
+    .TotalPax
+    .map(tp =>
+      uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
+        .TotalPaxSource(
+          pax = Option(tp.pax),
+          feedSource = Option(tp.feedSource.name),
+          splitSource = tp.splitSource.map(_.toString))).toSeq
 
   def predictionToMessage(maybePred: Option[Prediction[Long]]): Option[PredictionLongMessage] =
     maybePred.map(pred => PredictionLongMessage(Option(pred.updatedAt), Option(pred.value)))

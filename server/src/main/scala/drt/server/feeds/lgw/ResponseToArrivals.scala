@@ -62,7 +62,7 @@ case class ResponseToArrivals(data: String) {
       ApiPax = None,
       ScheduledDeparture = None,
       RedListPax = None,
-      TotalPax = SortedSet(TotalPaxSource(actPax.getOrElse(0) - transPax.getOrElse(0), LiveFeedSource, None)),
+      TotalPax = SortedSet(TotalPaxSource(actPax.getOrElse(0), LiveFeedSource, None)),
     )
     log.debug(s"parsed arrival: $arrival")
     arrival

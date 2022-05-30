@@ -9,7 +9,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
 import drt.shared._
-import manifests.passengers.{ManifestLike, ManifestPaxLike}
+import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import org.slf4j.{Logger, LoggerFactory}
@@ -39,7 +39,7 @@ object DynamicRunnableDeskRecs {
 
   type HistoricManifestsProvider = Iterable[Arrival] => Source[ManifestLike, NotUsed]
 
-  type HistoricManifestsPaxProvider = Arrival => Future[Option[ManifestPaxLike]]
+  type HistoricManifestsPaxProvider = Arrival => Future[Option[ManifestPaxCount]]
 
   type LoadsToQueueMinutes = (NumericRange[MillisSinceEpoch], Map[TQM, Crunch.LoadMinute], Map[Terminal, TerminalDeskLimitsLike]) => Future[PortStateQueueMinutes]
 
@@ -64,7 +64,7 @@ object DynamicRunnableDeskRecs {
       .via(addPax(historicManifestsPaxProvider))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing pax added"))
       .via(updatePaxNos(splitsSink))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits updated"))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing pax updated"))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits added"))
       .via(updateSplits(splitsSink))
@@ -106,7 +106,7 @@ object DynamicRunnableDeskRecs {
             .map(_ => (crunchRequest, flights))
             .recover {
               case t =>
-                log.error(s"Failed to updates total pax for arrivals", t)
+                log.error(s"Failed to update total pax for arrivals", t)
                 (crunchRequest, flights)
             }
       }
@@ -179,7 +179,7 @@ object DynamicRunnableDeskRecs {
             .map(flights => (crunchRequest, flights))
       }
 
-  def addPax(historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxLike]])
+  def addPax(historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxCount]])
             (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[(CrunchRequest, List[ApiFlightWithSplits]), (CrunchRequest, List[ApiFlightWithSplits]), NotUsed] =
     Flow[(CrunchRequest, List[ApiFlightWithSplits])]
       .mapAsync(1) { case (cr, flights) =>
@@ -187,7 +187,7 @@ object DynamicRunnableDeskRecs {
           .mapAsync(10) { flight =>
             if (!flight.apiFlight.FeedSources.contains(ApiFeedSource)) {
               historicManifestsPaxProvider(flight.apiFlight).map {
-                case Some(manifestPaxLike: ManifestPaxLike) =>
+                case Some(manifestPaxLike: ManifestPaxCount) =>
                   val totalPax: SortedSet[TotalPaxSource] = flight.apiFlight.TotalPax ++ SortedSet(TotalPaxSource(manifestPaxLike.pax.getOrElse(0), ApiFeedSource, Option(Historical)))
                   val updatedArrival = flight.apiFlight.copy(TotalPax = totalPax)
                  flight.copy(apiFlight = updatedArrival)

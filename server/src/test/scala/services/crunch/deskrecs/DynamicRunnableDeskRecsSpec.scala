@@ -10,7 +10,7 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared._
-import manifests.passengers.{BestAvailableManifest, HistoricManifestPax}
+import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
@@ -28,7 +28,7 @@ import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
@@ -95,7 +95,7 @@ object OptimiserMocks {
         (key, maybeManifest)
       }, (arrivalsWithMaybePax.map { case (arrival, maybePax) =>
         val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-        val maybeManifest = maybePax.map(pax => HistoricManifestPax.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
+        val maybeManifest = maybePax.map(pax => ManifestPaxCount(VoyageManifestGenerator.manifestForArrival(arrival, pax), SplitSources.Historical))
         (key, maybeManifest)
       }), PortCode("STN"))
     )
@@ -111,14 +111,14 @@ object OptimiserMocks {
         (key, maybeManifest)
       }, arrivalsWithMaybePax.map { case (arrival, maybePax) =>
         val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-        val maybeManifest = maybePax.map(pax => HistoricManifestPax.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
+        val maybeManifest = maybePax.map(pax => ManifestPaxCount(VoyageManifestGenerator.manifestForArrival(arrival, pax), SplitSources.Historical))
         (key, maybeManifest)
       }, PortCode("STN"))
     )
   }
 }
 
-case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]], historicManifestsPax: Map[UniqueArrivalKey, Option[HistoricManifestPax]], destinationPort: PortCode)
+case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]], historicManifestsPax: Map[UniqueArrivalKey, Option[ManifestPaxCount]], destinationPort: PortCode)
                                     (implicit mat: Materializer) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
@@ -128,7 +128,7 @@ case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKe
     Future.successful((key, bestAvailableManifests.get(key).flatten))
   }
 
-  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[HistoricManifestPax])] = {
+  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
     val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
     Future.successful((key, historicManifestsPax.get(key).flatten))
   }

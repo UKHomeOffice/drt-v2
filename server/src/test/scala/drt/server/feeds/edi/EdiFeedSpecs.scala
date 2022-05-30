@@ -115,7 +115,7 @@ class EdiFeedSpecs extends CrunchTestLike {
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = SortedSet(TotalPaxSource(0,LiveFeedSource,None))))
+        TotalPax = SortedSet.empty))
 
     val arrival = ediFeed.ediFlightDetailsToArrival(List(ediFlightDetail), LiveFeedSource)
     arrival mustEqual expectedArrival

@@ -144,7 +144,7 @@ case class EdiFeed(ediClient: EdiClient)
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax =  SortedSet(TotalPaxSource(flight.Passengers.getOrElse(0),feedSource,None))
+        TotalPax = SortedSet.empty
       )
     } match {
       case Success(a) => Option(a)

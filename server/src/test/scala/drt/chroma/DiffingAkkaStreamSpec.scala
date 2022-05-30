@@ -68,7 +68,7 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
       source
         .map(content => content.parseJson.convertTo[List[ChromaLiveFlight]])
         .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), date))
-        .via(new ArrivalsDiffingStage(SortedMap(), LiveFeedSource, () => SDate.now().millisSinceEpoch))
+        .via(new ArrivalsDiffingStage(SortedMap(), () => SDate.now().millisSinceEpoch))
         .runWith(TestSink.probe[FeedResponse])
         .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
           ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
@@ -92,7 +92,7 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
     "we really can diff it and parse it" in {
       source
         .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), date))
-        .via(new ArrivalsDiffingStage(SortedMap(), LiveFeedSource, () => SDate.now().millisSinceEpoch))
+        .via(new ArrivalsDiffingStage(SortedMap(), () => SDate.now().millisSinceEpoch))
         .runWith(TestSink.probe[FeedResponse])
         .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
           ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
@@ -101,7 +101,7 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
             "",
             "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
             1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-          )))),  date))
+          )))), date))
         .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
           ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
             "2016-08-04T04:40:00Z",
@@ -109,7 +109,7 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
             "",
             "2016-08-04T04:54:00Z", "", "207", 0, 0, 0, "24", "",
             1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-          )))),  date))
+          )))), date))
         .expectComplete()
     }
   }

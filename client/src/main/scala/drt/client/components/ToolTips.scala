@@ -55,8 +55,8 @@ object ToolTips {
 
   val totalPaxTooltip = Tippy.info(<.div(<.p("RAG colours are used to indicate DRT's confidence levels in the accuracy of its passenger number forecasts. Confidence levels depend on the source of data being displayed."),
     <.p("green -> live API or Port data is available for the flight and we have high confidence levels"),
-    <.p("amber-> We derive from historic API data"),
-    <.p("red -> We rely on ACL Forecast data")))
+    <.p("amber-> either derived from historic API data or port forecast pax is available"),
+    <.p("red ->  acl Forecast data is available")))
 
 
   val staffMovementsTabTooltip = Tippy.infoHover("The Staff Movements tab provides more information about adjustments.")

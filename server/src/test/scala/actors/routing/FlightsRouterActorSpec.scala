@@ -21,12 +21,11 @@ import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
-import uk.gov.homeoffice.drt.ports.FeedSource.feedSources
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaNonMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals._
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, ApiPaxTypeAndQueueCount, PortCode}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PortCode}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.concurrent.duration._
@@ -270,19 +269,19 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, terminal = T1)
       val requestForFlights = GetFlights(SDate(scheduled).millisSinceEpoch, SDate(scheduled).addHours(6).millisSinceEpoch)
 
-     "When I send it a flight with no splits" >> {
-       val eventualFlights = router
-         .ask(ArrivalsDiff(Iterable(arrival), Iterable()))
-         .flatMap(_ => runAndCombine(
-           router
-             .ask(requestForFlights)
-             .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
-           .map(_.flights.values.headOption))
+      "When I send it a flight with no splits" >> {
+        val eventualFlights = router
+          .ask(ArrivalsDiff(Iterable(arrival), Iterable()))
+          .flatMap(_ => runAndCombine(
+            router
+              .ask(requestForFlights)
+              .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
+            .map(_.flights.values.headOption))
 
-       val result = Await.result(eventualFlights, 5.second)
+        val result = Await.result(eventualFlights, 5.second)
 
-       result === Option(ApiFlightWithSplits(arrival, Set(), lastUpdated = Option(myNow().millisSinceEpoch)))
-     }
+        result === Option(ApiFlightWithSplits(arrival, Set(), lastUpdated = Option(myNow().millisSinceEpoch)))
+      }
 
       "When I send it a flight with no splits, followed by its splits" >> {
         val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 1, None, None)), Historical, None, PaxNumbers)
@@ -385,7 +384,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       }
 
     }
-}
+  }
 
   "Concerning multi-terminal queries" >> {
     val terminals: Seq[Terminal] = List(T2, T3, T4, T5)

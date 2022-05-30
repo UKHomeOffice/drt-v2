@@ -31,7 +31,7 @@ object ArrivalGenerator {
               baggageReclaimId: Option[String] = None,
               airportId: PortCode = PortCode(""),
               feedSources: Set[FeedSource] = Set(),
-              apiPax: Option[Int] = None ,
+              apiPax: Option[Int] = None,
               totalPax: SortedSet[TotalPaxSource] = SortedSet.empty[TotalPaxSource]
              ): Arrival = {
     val pcpTime = if (pcpDt.nonEmpty) Option(SDate(pcpDt).millisSinceEpoch) else if (schDt.nonEmpty) Option(SDate(schDt).millisSinceEpoch) else None

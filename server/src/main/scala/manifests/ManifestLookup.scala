@@ -2,7 +2,7 @@ package manifests
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import manifests.passengers.{BestAvailableManifest, HistoricManifestPax, ManifestPassengerProfile}
+import manifests.passengers.{BestAvailableManifest, ManifestPaxCount, ManifestPassengerProfile}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import services.{SDate, StreamSupervision}
@@ -21,6 +21,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
+
+
 trait ManifestLookupLike {
   def maybeBestAvailableManifest(arrivalPort: PortCode,
                                  departurePort: PortCode,
@@ -30,7 +32,7 @@ trait ManifestLookupLike {
   def historicManifestPax(arrivalPort: PortCode,
                           departurePort: PortCode,
                           voyageNumber: VoyageNumber,
-                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[HistoricManifestPax])]
+                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])]
 }
 
 case class UniqueArrivalKey(arrivalPort: PortCode,
@@ -83,7 +85,9 @@ case class ManifestLookup(tables: Tables)
         case Failure(t) => log.warn(s"Failed to get manifests", t)
       }
       tries.collect { case Success(paxProfiles) => paxProfiles }
-    }.map(_.map(_.toSet.size))
+    }.map { paxProfile => paxProfile
+        .map { passengers => passengers.toSet.size }
+    }
 
     paxProfilesCount.map(ps => ps.sum / ps.size)
 
@@ -127,7 +131,7 @@ case class ManifestLookup(tables: Tables)
 
   private def historicManifestSearchForPaxCount(uniqueArrivalKey: UniqueArrivalKey,
                                                 queries: List[(String, QueryFunction)])
-                                               (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[HistoricManifestPax])] = queries.zipWithIndex match {
+                                               (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = queries.zipWithIndex match {
     case Nil => Future((uniqueArrivalKey, None))
     case ((_, nextQuery), queryNumber) :: tail =>
       val startTime = SDate.now()
@@ -145,19 +149,18 @@ case class ManifestLookup(tables: Tables)
           val timeTaken = SDate.now().millisSinceEpoch - startTime.millisSinceEpoch
           if (timeTaken > 1000)
             log.warn(s"Historic manifest query $queryNumber for $uniqueArrivalKey took ${timeTaken}ms")
-
           res
         }
   }
 
   private def maybeManifestFromProfiles(uniqueArrivalKey: UniqueArrivalKey, profiles: immutable.Seq[ManifestPassengerProfile]) = {
     if (profiles.nonEmpty)
-      Option(BestAvailableManifest(SplitSources.Historical, uniqueArrivalKey, profiles.toList))
+      Some(BestAvailableManifest(SplitSources.Historical, uniqueArrivalKey, profiles.toList))
     else None
   }
 
   private def maybeManifestPaxFromProfiles(uniqueArrivalKey: UniqueArrivalKey, profiles: Int) = {
-    Option(HistoricManifestPax(SplitSources.Historical, uniqueArrivalKey, profiles))
+    Option(ManifestPaxCount(SplitSources.Historical, uniqueArrivalKey, profiles))
   }
 
   type QueryFunction = UniqueArrivalKey => SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), tables.profile.api.Effect]
@@ -295,7 +298,7 @@ case class ManifestLookup(tables: Tables)
       ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(PaxAge(age.toInt)).toOption, transit, maybeIdentifier)
   }
 
-  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[HistoricManifestPax])] = {
+  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
     historicManifestSearchForPaxCount(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
   }
 }

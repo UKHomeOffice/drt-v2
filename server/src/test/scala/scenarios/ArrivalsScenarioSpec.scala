@@ -8,7 +8,7 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import manifests.UniqueArrivalKey
-import manifests.passengers.{HistoricManifestPax, ManifestLike, ManifestPaxLike}
+import manifests.passengers.{ManifestPaxCount, ManifestLike}
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import queueus.{B5JPlusTypeAllocator, ChildEGateAdjustments, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
@@ -59,8 +59,8 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
 
   def historicManifestsProvider(arrivals: Iterable[Arrival]): Source[ManifestLike, NotUsed] = Source(List())
 
-  def historicManifestsPaxProvider(arrival:Arrival): Future[Option[ManifestPaxLike]] = Future.successful(
-    Option(HistoricManifestPax(SplitSource("ApiSplitsWithHistoricalEGateAndFTPercentages"),
+  def historicManifestsPaxProvider(arrival:Arrival): Future[Option[ManifestPaxCount]] = Future.successful(
+    Option(ManifestPaxCount(SplitSource("ApiSplitsWithHistoricalEGateAndFTPercentages"),
       UniqueArrivalKey(PortCode("LHR"),departurePort = arrival.Origin,voyageNumber = arrival.VoyageNumber,SDate(arrival.Scheduled)),10)))
 
   "Given some arrivals and simlution config I should get back DeskRecMinutes containing all the passengers from the arrivals" >> {
