@@ -16,12 +16,13 @@ case class ApiFeedStatus(totalLanded: Int, withApi: Int, withValidApi: Int) {
 
 object ApiFeedStatus {
   def apply(flights: Iterable[ApiFlightWithSplits], nowMillis: MillisSinceEpoch, timeToChox: Int, considerPredictions: Boolean): ApiFeedStatus = {
-    val landedWithPax = flights
+    val landedInternationalWithPax = flights
       .filter(fws => fws.apiFlight.bestArrivalTime(timeToChox, considerPredictions) <= nowMillis)
+      .filterNot(fws => fws.apiFlight.Origin.isDomesticOrCta)
       .filter(fws => fws.apiFlight.ActPax.exists(_ > 0))
-    val apiFlightCount = landedWithPax.count(_.hasApi)
-    val validApiCount = landedWithPax.count(_.hasValidApi)
-    ApiFeedStatus(landedWithPax.size, apiFlightCount, validApiCount)
+    val apiFlightCount = landedInternationalWithPax.count(_.hasApi)
+    val validApiCount = landedInternationalWithPax.count(_.hasValidApi)
+    ApiFeedStatus(landedInternationalWithPax.size, apiFlightCount, validApiCount)
   }
 }
 

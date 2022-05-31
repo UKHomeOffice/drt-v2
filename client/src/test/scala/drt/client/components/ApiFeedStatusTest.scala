@@ -5,7 +5,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -20,6 +20,8 @@ class ApiFeedStatusTest extends AnyWordSpec with Matchers {
     val landedWithNoSources = ArrivalGenerator.apiFlight(schDt = beforeNow, actPax = Option(100))
     val landedWithLiveSource = ArrivalGenerator.apiFlight(schDt = beforeNow, actPax = Option(100), feedSources = Set(LiveFeedSource))
     val notLanded = ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = afterNow, actPax = Option(100)), Set())
+    val ctaLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("ORK")), Set())
+    val domesticLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("EMA")), Set())
     val landedWithValidApi = ApiFlightWithSplits(landedWithNoSources, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
     val landedWithInvalidApi = ApiFlightWithSplits(landedWithLiveSource, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
 
@@ -70,6 +72,24 @@ class ApiFeedStatusTest extends AnyWordSpec with Matchers {
 
     "given two flights, one landed with with valid live API and one not landed, give Option(100) for received and Option(100) for valid and 1 for total landed" in {
       val oneLandedWithInvalidAPI = Seq(notLanded, landedWithValidApi)
+      val status = ApiFeedStatus(oneLandedWithInvalidAPI, now.millisSinceEpoch, timeToChox, considerPredictions)
+
+      status.receivedPct should ===(Option(100))
+      status.validPct should ===(Option(100))
+      status.totalLanded should ===(1)
+    }
+
+    "given two landed flights, one international with valid live API and one CTA, give Option(100) for received and Option(100) for valid and 1 for total landed" in {
+      val oneLandedWithInvalidAPI = Seq(ctaLanded, landedWithValidApi)
+      val status = ApiFeedStatus(oneLandedWithInvalidAPI, now.millisSinceEpoch, timeToChox, considerPredictions)
+
+      status.receivedPct should ===(Option(100))
+      status.validPct should ===(Option(100))
+      status.totalLanded should ===(1)
+    }
+
+    "given two landed flights, one international with valid live API and one domestic, give Option(100) for received and Option(100) for valid and 1 for total landed" in {
+      val oneLandedWithInvalidAPI = Seq(ctaLanded, landedWithValidApi)
       val status = ApiFeedStatus(oneLandedWithInvalidAPI, now.millisSinceEpoch, timeToChox, considerPredictions)
 
       status.receivedPct should ===(Option(100))
