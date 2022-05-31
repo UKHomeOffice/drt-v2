@@ -46,27 +46,7 @@ object Layout {
                       <.div(^.className := "sub-nav-bar",
                         <.div(^.className := "status-bar",
                           <.div({
-                            val value = SPACircuit.connect(m => m.portStatePot)
-                            value { portStatePot =>
-                              <.div(
-                                portStatePot().renderReady { ps =>
-                                  val landedArrivals = ps.flights.values.filter(fws => fws.apiFlight.Actual.nonEmpty)
-                                  val apiFlightCount = landedArrivals.count(_.hasApi)
-                                  val receivedPct = apiFlightCount.toDouble / landedArrivals.size
-                                  val validPct = landedArrivals.count(_.hasValidApi).toDouble / apiFlightCount
-
-                                  def ragClass(pct: Double): String = pct match {
-                                    case red if red < 0.8 => "red"
-                                    case amber if amber < 0.9 => "amber"
-                                    case _ => "green"
-                                  }
-
-                                  <.div(^.className := "status-bar-item", "API",
-                                    <.div(^.className := s"api-status ${ragClass(receivedPct)}", s"${(receivedPct * 100).toInt}% received"),
-                                    <.div(^.className := s"api-status ${ragClass(validPct)}", s"${(validPct * 100).toInt}% valid"),
-                                  )
-                                })
-                            }
+                            ApiStatusComponent(ApiStatusComponent.Props(airportConfig.timeToChoxMillis.toInt, airportConfig.useTimePredictions))
                           }
                           )
                         ),
