@@ -14,8 +14,8 @@ class KeyCloakApiSpec extends CrunchTestLike {
 
   val keyCloakUrl = "https://keycloak"
 
-  val userId1: UUID = UUID.fromString("e25f2a14-bdaa-11e8-a355-529269fb1459")
-  val userId2: UUID = UUID.fromString("e25f2dfc-bdaa-11e8-a355-529269fb1459")
+  val userId1= "e25f2a14-bdaa-11e8-a355-529269fb1459"
+  val userId2= "e25f2dfc-bdaa-11e8-a355-529269fb1459"
 
   val usersJson: String =
     s"""[{

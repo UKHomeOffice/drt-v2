@@ -12,7 +12,6 @@ import play.api.mvc.{Headers, Session}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
-import java.util.UUID
 import scala.collection.immutable.Map
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -84,11 +83,11 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def getKeyCloakGroups(): Future[List[KeyCloakGroup]]
 
-  def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]]
+  def getKeyCloakUserGroups(userId: String): Future[Set[KeyCloakGroup]]
 
-  def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit]
+  def addUserToGroups(userId: String, groups: Set[String]): Future[Unit]
 
-  def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit]
+  def removeUserFromGroups(userId: String, groups: Set[String]): Future[Unit]
 
   def getShowAlertModalDialog(): Boolean
 }

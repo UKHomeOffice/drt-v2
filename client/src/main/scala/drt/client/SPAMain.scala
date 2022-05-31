@@ -18,7 +18,6 @@ import uk.gov.homeoffice.drt.Urls
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
-import java.util.UUID
 import scala.collection.immutable.Seq
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 
@@ -140,7 +139,7 @@ object SPAMain {
 
   case object DeskAndQueuesLoc extends Loc
 
-  case class KeyCloakUserEditLoc(userId: UUID) extends Loc
+  case class KeyCloakUserEditLoc(userId: String) extends Loc
 
   case object AlertLoc extends Loc
 
@@ -228,7 +227,7 @@ object SPAMain {
   def keyCloakUserEditRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
-    dynamicRouteCT(("#editUser" / uuid).caseClass[KeyCloakUserEditLoc]) ~>
+    dynamicRouteCT(("#editUser" / string(".+")).caseClass[KeyCloakUserEditLoc]) ~>
       dynRenderR((page: KeyCloakUserEditLoc, _) => {
         EditKeyCloakUserPage(page.userId)
       })

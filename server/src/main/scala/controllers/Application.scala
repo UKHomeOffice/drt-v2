@@ -260,7 +260,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         } else throw new Exception(permissionDeniedMessage)
       }
 
-      def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]] = {
+      def getKeyCloakUserGroups(userId: String): Future[Set[KeyCloakGroup]] = {
         if (getLoggedInUser().roles.contains(ManageUsers)) {
           keyCloakClient.getUserGroups(userId).map(_.toSet)
         } else throw new Exception(permissionDeniedMessage)
@@ -269,7 +269,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       case class KeyCloakGroups(groups: List[KeyCloakGroup])
 
 
-      def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit] =
+      def addUserToGroups(userId: String, groups: Set[String]): Future[Unit] =
         if (getLoggedInUser().roles.contains(ManageUsers)) {
           val futureGroupIds: Future[KeyCloakGroups] = keyCloakClient
             .getGroups
@@ -288,7 +288,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
           }
         } else throw new Exception(permissionDeniedMessage)
 
-      def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit] =
+      def removeUserFromGroups(userId: String, groups: Set[String]): Future[Unit] =
         keyCloakClient
           .getGroups
           .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))

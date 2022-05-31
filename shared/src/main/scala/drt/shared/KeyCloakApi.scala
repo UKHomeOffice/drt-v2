@@ -1,11 +1,9 @@
 package drt.shared
 
-import java.util.UUID
-
 object KeyCloakApi {
 
   case class KeyCloakUser(
-                           id: UUID,
+                           id: String,
                            username: String,
                            enabled: Boolean,
                            emailVerified: Boolean,

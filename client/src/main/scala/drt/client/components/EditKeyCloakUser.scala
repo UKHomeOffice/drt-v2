@@ -10,8 +10,6 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 
-import java.util.UUID
-
 
 object EditKeyCloakUser {
 
@@ -79,7 +77,7 @@ object EditKeyCloakUser {
 
 object EditKeyCloakUserPage {
 
-  case class Props(userId: UUID) extends UseValueEq
+  case class Props(userId: String) extends UseValueEq
 
   case class UsersAndGroups(usersPot: Pot[List[KeyCloakUser]], groupsPot: Pot[Set[KeyCloakGroup]]) extends UseValueEq
 
@@ -107,5 +105,5 @@ object EditKeyCloakUserPage {
     )
     .build
 
-  def apply(userId: UUID): VdomElement = component(Props(userId))
+  def apply(userId: String): VdomElement = component(Props(userId))
 }

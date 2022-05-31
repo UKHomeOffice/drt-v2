@@ -16,9 +16,8 @@ import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
-import java.util.UUID
 import scala.collection.immutable.HashSet
 import scala.concurrent.duration.FiniteDuration
 
@@ -162,9 +161,9 @@ object Actions {
 
   case class SetKeyCloakUsers(users: List[KeyCloakUser]) extends Action
 
-  case class SaveUserGroups(userId: UUID, groupsToAdd: Set[String], groupsToRemove: Set[String]) extends Action
+  case class SaveUserGroups(userId: String, groupsToAdd: Set[String], groupsToRemove: Set[String]) extends Action
 
-  case class GetUserGroups(userId: UUID) extends Action
+  case class GetUserGroups(userId: String) extends Action
 
   case class SetSelectedUserGroups(groups: Set[KeyCloakGroup]) extends Action
 

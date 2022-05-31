@@ -3,10 +3,10 @@ package drt.shared
 import java.lang.{Long => JLong}
 import java.util.Random
 
-final class UUID private (
-                           private val i1: Int, private val i2: Int,
-                           private val i3: Int, private val i4: Int,
-                           private[this] var l1: JLong, private[this] var l2: JLong)
+case class UUID(
+                 val i1: Int, val i2: Int,
+                 val i3: Int, val i4: Int,
+                 var l1: JLong, var l2: JLong)
   extends AnyRef with java.io.Serializable with Comparable[UUID] {
 
   import UUID._
@@ -153,7 +153,7 @@ object UUID {
     import Integer.parseInt
 
     def fail(): Nothing =
-      throw new IllegalArgumentException("Invalid UUID string: "+name)
+      throw new IllegalArgumentException("Invalid UUID string: " + name)
 
     @inline def parseHex8(his: String, los: String): Int =
       (parseInt(his, 16) << 16) | parseInt(los, 16)
