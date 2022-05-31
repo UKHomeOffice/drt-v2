@@ -18,7 +18,7 @@ import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageMa
 import queueus._
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider, addManifests, updatePaxNos}
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider, addManifests}
 import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
@@ -28,8 +28,8 @@ import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -57,6 +57,17 @@ object OptimiserMocks {
         sender() ! Ack
     }
   }
+
+  def getMockManifestLookupService(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]], portCode: PortCode)(implicit ec: ExecutionContext, mat: Materializer) =
+    MockManifestLookupService(arrivalsWithMaybePax.map { case (arrival, maybePax) =>
+      val key = UniqueArrivalKey(portCode, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+      val maybeManifest = maybePax.map(pax => BestAvailableManifest.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
+      (key, maybeManifest)
+    }, arrivalsWithMaybePax.map { case (arrival, maybePax) =>
+      val key = UniqueArrivalKey(portCode, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+      val maybeManifest = maybePax.map(pax => ManifestPaxCount(VoyageManifestGenerator.manifestForArrival(arrival, pax), SplitSources.Historical))
+      (key, maybeManifest)
+    }, portCode)
 
   def mockFlightsProvider(arrivals: List[Arrival])
                          (implicit ec: ExecutionContext): CrunchRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]] =
@@ -87,33 +98,18 @@ object OptimiserMocks {
 
   def mockHistoricManifestsProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
                                    (implicit ec: ExecutionContext, mat: Materializer): HistoricManifestsProvider = {
+    val portCode = PortCode("STN")
     OptimisationProviders.historicManifestsProvider(
-      PortCode("STN"),
-      MockManifestLookupService(arrivalsWithMaybePax.map { case (arrival, maybePax) =>
-        val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-        val maybeManifest = maybePax.map(pax => BestAvailableManifest.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
-        (key, maybeManifest)
-      }, (arrivalsWithMaybePax.map { case (arrival, maybePax) =>
-        val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-        val maybeManifest = maybePax.map(pax => ManifestPaxCount(VoyageManifestGenerator.manifestForArrival(arrival, pax), SplitSources.Historical))
-        (key, maybeManifest)
-      }), PortCode("STN"))
-    )
+      portCode,
+      getMockManifestLookupService(arrivalsWithMaybePax, portCode))
   }
 
   def mockHistoricManifestsPaxProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
                                       (implicit ec: ExecutionContext, mat: Materializer): HistoricManifestsPaxProvider = {
+    val portCode = PortCode("STN")
     OptimisationProviders.historicManifestsPaxProvider(
-      PortCode("STN"),
-      MockManifestLookupService(arrivalsWithMaybePax.map { case (arrival, maybePax) =>
-        val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-        val maybeManifest = maybePax.map(pax => BestAvailableManifest.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
-        (key, maybeManifest)
-      }, arrivalsWithMaybePax.map { case (arrival, maybePax) =>
-        val key = UniqueArrivalKey(PortCode("STN"), arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-        val maybeManifest = maybePax.map(pax => ManifestPaxCount(VoyageManifestGenerator.manifestForArrival(arrival, pax), SplitSources.Historical))
-        (key, maybeManifest)
-      }, PortCode("STN"))
+      portCode,
+      getMockManifestLookupService(arrivalsWithMaybePax, portCode)
     )
   }
 }
@@ -216,20 +212,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       }
     }
 
-    "updateArrival" >> {
-      "When I have a manifest matching the arrival I should get the mock splits added to the arrival" >> {
-        val manifest = VoyageManifestGenerator.manifestForArrival(arrival, List(euIdCard))
-        val manifestsForArrival = manifestsByKey(manifest)
-        val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
-        val updatePax = updatePaxNos(mockSplitsSink)
-
-        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1),
-          FeedSources = arrival.FeedSources + ApiFeedSource,
-          TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(1, ApiFeedSource, Some(ApiSplitsWithHistoricalEGateAndFTPercentages)))),
-          Set(splits)))
-      }
-    }
-
     "addSplits" >> {
       "When I have live manifests matching the arrival where the live manifest is within the trust threshold I should get the live splits" >> {
         checkSplitsSource(arrival, Option(xOfPaxType(100, visa)), Map(), Set(ApiSplitsWithHistoricalEGateAndFTPercentages))
@@ -252,6 +234,26 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       "When I have live manifests matching the arrival where the live manifest is within the trust threshold I should get some pax from historic API" >> {
         checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(100, LiveFeedSource, None),
           TotalPaxSource(10, ApiFeedSource, Option(Historical))))
+      }
+
+      "When I have ACL pax number I should get some pax from historic API" >> {
+        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(AclFeedSource),
+          totalPax = SortedSet(TotalPaxSource(100, AclFeedSource, None)))
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(100, AclFeedSource, None),
+          TotalPaxSource(10, ApiFeedSource, Option(Historical))))
+      }
+
+      "When I have ForecastPortFeed pax number I should get some pax from historic API" >> {
+        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(ForecastFeedSource),
+          totalPax = SortedSet(TotalPaxSource(100, ForecastFeedSource, None)))
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(100, ForecastFeedSource, None),
+          TotalPaxSource(10, ApiFeedSource, Option(Historical))))
+      }
+
+      "When I have no Feed I should get some pax from historic API" >> {
+        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(),
+          totalPax = SortedSet.empty)
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(10, ApiFeedSource, Option(Historical))))
       }
     }
   }

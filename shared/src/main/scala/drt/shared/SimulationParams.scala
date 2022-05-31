@@ -60,7 +60,7 @@ case class SimulationParams(
             ActPax = actualPax,
             TranPax = tranPax,
             FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource,
-            TotalPax = SortedSet(TotalPaxSource(actualPax.flatMap(a => tranPax.map(t => a - t)).getOrElse(0), ScenarioSimulationSource, None))
+            TotalPax = SortedSet(TotalPaxSource(actualPax.getOrElse(0), ScenarioSimulationSource, None))
           ))
     })
 }
