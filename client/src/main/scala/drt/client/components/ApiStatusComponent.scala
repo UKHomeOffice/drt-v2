@@ -40,14 +40,14 @@ object ApiStatusComponent {
             val apiFeedStatus = ApiFeedStatus(ps.flights.values, SDate.now().millisSinceEpoch, props.timeToChox, props.considerPredictions)
 
             def ragClass(pct: Option[Double]): String = pct match {
-              case Some(red) if red < 0.8 => "red"
-              case Some(amber) if amber < 0.9 => "amber"
+              case Some(red) if red < 80 => "red"
+              case Some(amber) if amber < 90 => "amber"
               case Some(_) => "green"
               case None => "grey"
             }
 
             def statToString(maybeStat: Option[Double]): String = maybeStat match {
-              case Some(stat) => s"${(stat * 100).toInt}%"
+              case Some(stat) => s"${stat.toInt}%"
               case None => "n/a"
             }
 

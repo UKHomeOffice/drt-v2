@@ -22,7 +22,7 @@ class ApiFeedStatusTest extends AnyWordSpec with Matchers {
     val notLanded = ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = afterNow, actPax = Option(100)), Set())
     val landedWithValidApi = ApiFlightWithSplits(landedWithNoSources, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
     val landedWithInvalidApi = ApiFlightWithSplits(landedWithLiveSource, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
-    
+
     "given no flights, give None for stats and zero for total landed" in {
       val noFlights = Seq()
       val status = ApiFeedStatus(noFlights, now.millisSinceEpoch, timeToChox, considerPredictions)
