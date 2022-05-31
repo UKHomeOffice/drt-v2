@@ -20,7 +20,7 @@ case class StaffMovement(terminal: Terminal,
                          reason: String,
                          time: MilliDate,
                          delta: Int,
-                         uUID: UUID,
+                         uUID: String,
                          queue: Option[Queue] = None,
                          createdBy: Option[String]) extends Expireable {
   def isExpired(expiresBeforeMillis: MillisSinceEpoch): Boolean = time.millisSinceEpoch < expiresBeforeMillis

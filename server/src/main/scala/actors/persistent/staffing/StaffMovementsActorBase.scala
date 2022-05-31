@@ -11,13 +11,12 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{MilliDate, StaffMovement, StaffMovements}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import services.OfferHandler
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
@@ -26,16 +25,16 @@ case class StaffMovementsState(staffMovements: StaffMovements) {
 
   def +(movementsToAdd: Seq[StaffMovement]): StaffMovementsState = copy(staffMovements = staffMovements + movementsToAdd)
 
-  def -(movementsToRemove: Seq[UUID]): StaffMovementsState = copy(staffMovements = staffMovements - movementsToRemove)
+  def -(movementsToRemove: Seq[String]): StaffMovementsState = copy(staffMovements = staffMovements - movementsToRemove)
 }
 
 case class AddStaffMovements(movementsToAdd: Seq[StaffMovement])
 
 case class AddStaffMovementsAck(movementsToAdd: Seq[StaffMovement])
 
-case class RemoveStaffMovements(movementUuidsToRemove: UUID)
+case class RemoveStaffMovements(movementUuidsToRemove: String)
 
-case class RemoveStaffMovementsAck(movementUuidsToRemove: UUID)
+case class RemoveStaffMovementsAck(movementUuidsToRemove: String)
 
 case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]])
 
@@ -102,7 +101,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   }
 
   def removeFromState(uuidToRemove: String): StaffMovements =
-    state.staffMovements - Seq(UUID.fromString(uuidToRemove))
+    state.staffMovements - Seq(uuidToRemove)
 
   def addToState(movements: Seq[StaffMovementMessage]): StaffMovements =
     state.staffMovements + staffMovementMessagesToStaffMovements(movements.toList).movements
@@ -151,7 +150,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
     reason = sm.reason.getOrElse(""),
     time = MilliDate(sm.time.getOrElse(0L)),
     delta = sm.delta.getOrElse(0),
-    uUID = UUID.fromString(sm.uUID.getOrElse("")),
+    uUID = sm.uUID.getOrElse(""),
     queue = sm.queueName.map(Queue(_)),
     createdBy = sm.createdBy
   )

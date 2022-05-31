@@ -217,7 +217,7 @@ case class StaffMovementsService(movements: Seq[StaffMovement])
 object StaffMovementsHelper {
   def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]): Seq[StaffMovement] = {
     staffAssignments.flatMap(assignment => {
-      val uuid: UUID = UUID.randomUUID()
+      val uuid = UUID.randomUUID().toString()
       StaffMovement(assignment.terminal, assignment.name + " start", time = assignment.startDt, assignment.numberOfStaff, uuid, createdBy = None) ::
         StaffMovement(assignment.terminal, assignment.name + " end", time = assignment.endDt, -assignment.numberOfStaff, uuid, createdBy = None) :: Nil
     }).sortBy(_.time.millisSinceEpoch)

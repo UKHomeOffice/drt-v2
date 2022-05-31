@@ -17,13 +17,12 @@ import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import java.util.UUID
 import scala.collection.immutable.{HashSet, Map}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
 sealed trait ViewMode {
-  val uUID: UUID = UUID.randomUUID()
+  val uUID: String = UUID.randomUUID().toString()
 
   def isDifferentTo(viewMode: ViewMode): Boolean = viewMode.uUID != uUID
 
@@ -180,8 +179,7 @@ object PollDelay {
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
-  override protected def initialModel = RootModel()
-
+  override protected def initialModel: RootModel = RootModel()
 
   def currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
 

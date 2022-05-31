@@ -89,7 +89,7 @@ POST          /logging                                                          
 POST          /data/staff                                                             controllers.Application.saveStaff
 GET           /staff-movements                                                        controllers.Application.getStaffMovements(pointInTime: Option[Long])
 POST          /staff-movements                                                        controllers.Application.addStaffMovements()
-DELETE        /staff-movements/:uuid                                                  controllers.Application.removeStaffMovements(uuid: java.util.UUID)
+DELETE        /staff-movements/:uuid                                                  controllers.Application.removeStaffMovements(uuid: String)
 
 # Feed import
 POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts()

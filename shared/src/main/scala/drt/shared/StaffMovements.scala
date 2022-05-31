@@ -4,13 +4,10 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import java.util.UUID
-
-
 object StaffMovements {
   def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]): Seq[StaffMovement] = {
     staffAssignments.flatMap(assignment => {
-      val uuid: UUID = UUID.randomUUID()
+      val uuid = UUID.randomUUID().toString()
       StaffMovement(assignment.terminal, assignment.name + " start", time = assignment.startDt, assignment.numberOfStaff, uuid, createdBy = assignment.createdBy) ::
         StaffMovement(assignment.terminal, assignment.name + " end", time = assignment.endDt, -assignment.numberOfStaff, uuid, createdBy = assignment.createdBy) :: Nil
     }).sortBy(_.time.millisSinceEpoch)
@@ -32,7 +29,7 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
   def +(movementsToAdd: Seq[StaffMovement]): StaffMovements =
     copy(movements = movements ++ movementsToAdd)
 
-  def -(movementsToRemove: Seq[UUID]): StaffMovements =
+  def -(movementsToRemove: Seq[String]): StaffMovements =
     copy(movements = movements.filterNot(sm => movementsToRemove.contains(sm.uUID)))
 
   def purgeExpired(expireBefore: () => SDateLike): StaffMovements = {
