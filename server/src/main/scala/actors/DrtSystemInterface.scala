@@ -18,7 +18,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{Deskstats, PaxFlow, UserRoleProviderLike}
+import controllers.{PaxFlow, UserRoleProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}
@@ -64,7 +64,7 @@ import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpda
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -153,7 +153,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         host <- params.aclHost
         username <- params.aclUsername
         keyPath <- params.aclKeyPath
-      } yield AclFeed(host, username, keyPath, airportConfig.feedPortCode, AclFeed.aclToPortMapping(airportConfig.portCode))
+      } yield AclFeed(host, username, keyPath, airportConfig.portCode, AclFeed.aclToPortMapping(airportConfig.portCode))
 
   val maxDaysToConsider: Int = 14
   val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, now)), name = "passengers-actor")
@@ -311,9 +311,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       initialLiveBaseArrivals = initialLiveBaseArrivals.getOrElse(SortedMap()),
       initialLiveArrivals = initialLiveArrivals.getOrElse(SortedMap()),
       arrivalsForecastBaseFeed = baseArrivalsSource(maybeAclFeed),
-      arrivalsForecastFeed = forecastArrivalsSource(airportConfig.feedPortCode),
-      arrivalsLiveBaseFeed = liveBaseArrivalsSource(airportConfig.feedPortCode),
-      arrivalsLiveFeed = liveArrivalsSource(airportConfig.feedPortCode),
+      arrivalsForecastFeed = forecastArrivalsSource(airportConfig.portCode),
+      arrivalsLiveBaseFeed = liveBaseArrivalsSource(airportConfig.portCode),
+      arrivalsLiveFeed = liveArrivalsSource(airportConfig.portCode),
       passengersActorProvider = passengersActorProvider,
       initialShifts = initialState[ShiftAssignments](shiftsActor).getOrElse(ShiftAssignments(Seq())),
       initialFixedPoints = initialState[FixedPointAssignments](fixedPointsActor).getOrElse(FixedPointAssignments(Seq())),
@@ -360,13 +360,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       millisToCrunchStart(today.addDays(d)).millisSinceEpoch
     })
     crunchQueueActor ! UpdatedMillis(daysToReCrunch)
-  }
-
-  def startScheduledFeedImports(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
-    if (airportConfig.feedPortCode == PortCode("LHR")) params.maybeBlackJackUrl.map(csvUrl => {
-      val requestIntervalMillis = 5 * MilliTimes.oneMinuteMillis
-      Deskstats.startBlackjack(csvUrl, crunchInputs.actualDeskStats, requestIntervalMillis milliseconds, () => SDate.now().addDays(-1))
-    })
   }
 
   def subscribeStaffingActors(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {

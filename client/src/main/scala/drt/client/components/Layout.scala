@@ -46,9 +46,8 @@ object Layout {
                       <.div(^.className := "sub-nav-bar",
                         <.div(^.className := "status-bar",
                           <.div({
-                            ApiStatusComponent(ApiStatusComponent.Props(airportConfig.timeToChoxMillis.toInt, airportConfig.useTimePredictions))
-                          }
-                          )
+                            ApiStatusComponent(ApiStatusComponent.Props(!airportConfig.noLivePortFeed, airportConfig.timeToChoxMillis.toInt, airportConfig.useTimePredictions))
+                          })
                         ),
                         feedBackNavBar(user)
                       ),

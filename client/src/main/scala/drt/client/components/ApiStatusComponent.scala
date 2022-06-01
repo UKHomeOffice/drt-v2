@@ -30,7 +30,7 @@ object ApiStatusComponent {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(timeToChox: Int, considerPredictions: Boolean)
+  case class Props(canValidate: Boolean, timeToChox: Int, considerPredictions: Boolean)
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ApiStatus")
     .render_P { props =>
@@ -54,7 +54,9 @@ object ApiStatusComponent {
 
             <.div(^.className := "status-bar-item", "API",
               <.div(^.className := s"api-status ${ragClass(apiFeedStatus.receivedPct)}", s"received: ${statToString(apiFeedStatus.receivedPct)}"),
-              <.div(^.className := s"api-status ${ragClass(apiFeedStatus.validPct)}", s"valid: ${statToString(apiFeedStatus.validPct)}"),
+              if (props.canValidate)
+                <.div(^.className := s"api-status ${ragClass(apiFeedStatus.validPct)}", s"valid: ${statToString(apiFeedStatus.validPct)}")
+              else EmptyVdom,
             )
           })
       }

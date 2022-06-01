@@ -77,13 +77,16 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def useTimePredictions: Boolean = config.get[Boolean]("feature-flags.use-time-predictions")
 
+  def noLivePortFeed: Boolean = config.get[Boolean]("feature-flags.no-live-port-feed")
+
   private def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
 
   lazy val airportConfig: AirportConfig = {
     val configForPort = getPortConfFromEnvVar.copy(
       contactEmail = contactEmail,
       outOfHoursContactPhone = oohPhone,
-      useTimePredictions = useTimePredictions
+      useTimePredictions = useTimePredictions,
+      noLivePortFeed = noLivePortFeed,
     )
 
     configForPort.assertValid()
