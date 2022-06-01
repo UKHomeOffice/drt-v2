@@ -16,7 +16,6 @@ import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource, PortCode}
 
-import scala.collection.SortedSet
 import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration.DurationInt
 
@@ -259,7 +258,7 @@ class AclFeedSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
-        val expected = Set(arrival.copy(FeedSources = Set(AclFeedSource), TotalPax = SortedSet(TotalPaxSource(10, AclFeedSource, None))))
+        val expected = Set(arrival.copy(FeedSources = Set(AclFeedSource), TotalPax = Set(TotalPaxSource(10, AclFeedSource, None))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
@@ -333,7 +332,7 @@ class AclFeedSpec extends CrunchTestLike {
           .map(il => il.copy(FeedSources = Set(LiveFeedSource),
           )) ++
           newAcl.map(na => na.copy(FeedSources = Set(AclFeedSource),
-            TotalPax = na.TotalPax ++ SortedSet(TotalPaxSource(na.ActPax.getOrElse(0), AclFeedSource, None))))
+            TotalPax = na.TotalPax ++ Set(TotalPaxSource(na.ActPax.getOrElse(0), AclFeedSource, None))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
@@ -371,7 +370,7 @@ class AclFeedSpec extends CrunchTestLike {
         val expected = newLive.map(_.copy(CarrierCode = CarrierCode("BA"),
           VoyageNumber = VoyageNumber(1),
           FeedSources = Set(LiveFeedSource, AclFeedSource),
-          TotalPax = SortedSet(TotalPaxSource(liveArrival.ActPax.getOrElse(0), LiveFeedSource, None),
+          TotalPax = Set(TotalPaxSource(liveArrival.ActPax.getOrElse(0), LiveFeedSource, None),
             TotalPaxSource(initialAcl1.ActPax.getOrElse(0), AclFeedSource, None))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
@@ -437,7 +436,7 @@ class AclFeedSpec extends CrunchTestLike {
           case PortState(f, _, _) => f.values.map(_.apiFlight)
         }
 
-        val nonEmptyFlightsList = List(aclArrival.copy(FeedSources = Set(AclFeedSource), TotalPax = SortedSet(TotalPaxSource(aclArrival.ActPax.getOrElse(0), AclFeedSource, None))))
+        val nonEmptyFlightsList = List(aclArrival.copy(FeedSources = Set(AclFeedSource), TotalPax = Set(TotalPaxSource(aclArrival.ActPax.getOrElse(0), AclFeedSource, None))))
         val expected = List(nonEmptyFlightsList)
 
         portStateFlightLists.distinct === expected

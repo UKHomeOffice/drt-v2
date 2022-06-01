@@ -172,7 +172,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "Then I should see the workload associated with the best splits for that flight" >> {
     val scheduled = "2019-10-10T23:05:00Z"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25), feedSources = Set(LiveFeedSource),
-      totalPax = SortedSet(TotalPaxSource(25, LiveFeedSource, None)))
+      totalPax = Set(TotalPaxSource(25, LiveFeedSource, None)))
 
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
@@ -207,7 +207,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "Then I should see the workload associated with the best splits for that flight" >> {
     val scheduled = "2019-10-10T23:05:00Z"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(75), tranPax = Option(50), feedSources = Set(LiveFeedSource),
-      totalPax = SortedSet(TotalPaxSource(75 - 50, LiveFeedSource, None)))
+      totalPax = Set(TotalPaxSource(75 - 50, LiveFeedSource, None)))
 
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
@@ -244,9 +244,9 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val scheduled = "2018-01-01T00:05"
     val scheduled2 = "2018-01-01T00:06"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25), feedSources = Set(LiveFeedSource),
-      totalPax = SortedSet(TotalPaxSource(25, LiveFeedSource, None)))
+      totalPax = Set(TotalPaxSource(25, LiveFeedSource, None)))
     val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = scheduled2, actPax = Option(25), feedSources = Set(LiveFeedSource),
-      totalPax = SortedSet(TotalPaxSource(25, LiveFeedSource, None)))
+      totalPax = Set(TotalPaxSource(25, LiveFeedSource, None)))
 
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None), ApiFlightWithSplits(arrival2, Set(historicSplits), None))
 
@@ -291,7 +291,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val pcpOne = "2018-01-01T00:15"
     val pcpUpdated = "2018-01-01T00:05"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = pcpOne, actPax = Option(25), feedSources = Set(LiveFeedSource),
-      totalPax = SortedSet(TotalPaxSource(25, LiveFeedSource, None)))
+      totalPax = Set(TotalPaxSource(25, LiveFeedSource, None)))
 
     val historicSplits = Splits(
       Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100, None, None)),

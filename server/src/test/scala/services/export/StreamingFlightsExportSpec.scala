@@ -13,7 +13,6 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
 
-import scala.collection.SortedSet
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
@@ -35,7 +34,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(LiveFeedSource),
-      totalPax = SortedSet(TotalPaxSource(98, LiveFeedSource, None), TotalPaxSource(100, ApiFeedSource, None))
+      totalPax = Set(TotalPaxSource(98, LiveFeedSource, None), TotalPaxSource(100, ApiFeedSource, None))
     ),
     Set(Splits(
       Set(
@@ -73,7 +72,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(LiveFeedSource),
-      totalPax = SortedSet(TotalPaxSource(100, LiveFeedSource, None))
+      totalPax = Set(TotalPaxSource(100, LiveFeedSource, None))
     ),
     Set(Splits(
       Set(
@@ -110,7 +109,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(LiveFeedSource),
-      totalPax = SortedSet(TotalPaxSource(100, LiveFeedSource, None))
+      totalPax = Set(TotalPaxSource(100, LiveFeedSource, None))
     ),
     Set(Splits(
       Set(
@@ -136,7 +135,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         operator = Option(Operator("SA")),
         status = ArrivalStatus("UNK"),
         estDt = "2017-01-01T20:00:00Z",
-        totalPax = SortedSet(TotalPaxSource(100, AclFeedSource, None))
+        totalPax = Set(TotalPaxSource(100, AclFeedSource, None))
       ),
 
       Set(Splits(
@@ -165,7 +164,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         status = ArrivalStatus("UNK"),
         estDt = "2017-01-01T20:00:00Z",
         feedSources = Set(LiveFeedSource),
-        totalPax = SortedSet(TotalPaxSource(100, LiveFeedSource, None))
+        totalPax = Set(TotalPaxSource(100, LiveFeedSource, None))
       ),
       Set(Splits(
         Set(
@@ -193,7 +192,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         status = ArrivalStatus("UNK"),
         estDt = "2017-01-01T20:00:00Z",
         feedSources = Set(LiveFeedSource),
-        totalPax = SortedSet(TotalPaxSource(105, LiveFeedSource, None))
+        totalPax = Set(TotalPaxSource(105, LiveFeedSource, None))
       ),
       Set(Splits(
         Set(
@@ -408,25 +407,25 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   }
 
   "Given a flight with API pax count within the 5% threshold of the feed pax count, and no live feed, then the 'Invalid API' column should be blank" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(AclFeedSource),totalPax = SortedSet(TotalPaxSource(100,AclFeedSource,None),
+    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(AclFeedSource),totalPax = Set(TotalPaxSource(100,AclFeedSource,None),
       TotalPaxSource(98,ApiFeedSource,None))) === ""
   }
 
   "Given a flight with API pax count within the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be blank" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(LiveFeedSource, AclFeedSource),totalPax = SortedSet(TotalPaxSource(100,LiveFeedSource,None),
+    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(LiveFeedSource, AclFeedSource),totalPax = Set(TotalPaxSource(100,LiveFeedSource,None),
       TotalPaxSource(75,ApiFeedSource,None))) === ""
   }
 
   "Given a flight with API pax count outside the 5% threshold of the feed pax count, but with no live feed, then the 'Invalid API' column should be blank" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(AclFeedSource),totalPax = SortedSet(TotalPaxSource(100,LiveFeedSource,None))) === ""
+    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(AclFeedSource),totalPax = Set(TotalPaxSource(100,LiveFeedSource,None))) === ""
   }
 
   "Given a flight with API pax count outside the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be 'Y'" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(LiveFeedSource, AclFeedSource) ,totalPax = SortedSet(TotalPaxSource(100,LiveFeedSource,None),
+    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(LiveFeedSource, AclFeedSource) ,totalPax = Set(TotalPaxSource(100,LiveFeedSource,None),
       TotalPaxSource(75,ApiFeedSource,None))) === "Y"
   }
 
-  private def invalidApiFieldValue(actPax: Int, apiPax: Int, feedSources: Set[FeedSource], totalPax :SortedSet[TotalPaxSource]): String = {
+  private def invalidApiFieldValue(actPax: Int, apiPax: Int, feedSources: Set[FeedSource], totalPax :Set[TotalPaxSource]): String = {
     val arrival = ArrivalGenerator.arrival(actPax = Option(actPax), feedSources = feedSources ,totalPax = totalPax)
     val splits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, apiPax, None, None)),
       SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))

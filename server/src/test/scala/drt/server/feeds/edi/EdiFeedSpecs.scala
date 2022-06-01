@@ -8,7 +8,6 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
-import scala.collection.SortedSet
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -115,7 +114,7 @@ class EdiFeedSpecs extends CrunchTestLike {
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = SortedSet.empty))
+        TotalPax = Set.empty))
 
     val arrival = ediFeed.ediFlightDetailsToArrival(List(ediFlightDetail), LiveFeedSource)
     arrival mustEqual expectedArrival

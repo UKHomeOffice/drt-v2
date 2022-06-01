@@ -8,17 +8,16 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import manifests.UniqueArrivalKey
-import manifests.passengers.{ManifestPaxCount, ManifestLike}
+import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
-import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.{B5JPlusTypeAllocator, ChildEGateAdjustments, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
 import services.SDate
 import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
-import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -28,9 +27,8 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.LocalDate
 
-import scala.collection.SortedSet
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 class ArrivalsScenarioSpec extends CrunchTestLike {
   val crunchDate: LocalDate = LocalDate(2021, 3, 8)
@@ -47,7 +45,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap))
 
   val splitsCalculator: SplitsCalculator = SplitsCalculator(testPaxTypeAllocator, defaultAirportConfig.terminalPaxSplits, ChildEGateAdjustments(1.0))
-  private val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(100), schDt = "2021-03-08T00:00",totalPax = SortedSet(TotalPaxSource(100,LiveFeedSource,None)))
+  private val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(100), schDt = "2021-03-08T00:00",totalPax = Set(TotalPaxSource(100,LiveFeedSource,None)))
   val arrivals = List(
     arrival
   )

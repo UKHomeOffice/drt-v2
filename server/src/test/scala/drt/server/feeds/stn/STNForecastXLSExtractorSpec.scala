@@ -7,8 +7,6 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, Voya
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
-import scala.collection.SortedSet
-
 class STNForecastXLSExtractorSpec extends Specification {
 
   "Given an excel file with the STN forecast format for BST flights then I should get forecast flights for terminal" >> {
@@ -66,7 +64,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = SortedSet.empty),
+        TotalPax = Set.empty),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -95,7 +93,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax= SortedSet.empty),
+        TotalPax= Set.empty),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -124,7 +122,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax= SortedSet.empty),
+        TotalPax= Set.empty),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -153,7 +151,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = SortedSet.empty))
+        TotalPax = Set.empty))
 
     result === expected
   }

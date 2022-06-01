@@ -5,7 +5,6 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Prediction, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
-import scala.collection.SortedSet
 
 object ArrivalGenerator {
   def apiFlight(
@@ -31,7 +30,7 @@ object ArrivalGenerator {
                  airportId: PortCode = PortCode(""),
                  feedSources: Set[FeedSource] = Set(),
                  pcpTime: Option[MillisSinceEpoch] = None,
-                 totalPax : SortedSet[TotalPaxSource] = SortedSet.empty
+                 totalPax : Set[TotalPaxSource] = Set.empty
                ): Arrival =
     Arrival(
       Operator = operator,

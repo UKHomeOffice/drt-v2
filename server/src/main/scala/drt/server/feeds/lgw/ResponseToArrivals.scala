@@ -8,7 +8,6 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, Operator, TotalPaxS
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Terminals}
 
-import scala.collection.immutable.SortedSet
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 import scala.xml.Node
@@ -62,7 +61,7 @@ case class ResponseToArrivals(data: String) {
       ApiPax = None,
       ScheduledDeparture = None,
       RedListPax = None,
-      TotalPax = SortedSet(TotalPaxSource(actPax.getOrElse(0), LiveFeedSource, None)),
+      TotalPax = Set(TotalPaxSource(actPax.getOrElse(0), LiveFeedSource, None)),
     )
     log.debug(s"parsed arrival: $arrival")
     arrival

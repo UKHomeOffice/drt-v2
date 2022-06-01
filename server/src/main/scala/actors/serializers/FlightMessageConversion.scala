@@ -15,8 +15,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PortCode, UnknownFeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
 
-import scala.collection.SortedSet
-
 object FlightMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass.toString)
 
@@ -200,7 +198,7 @@ object FlightMessageConversion {
     ApiPax = flightMessage.apiPax,
     RedListPax = flightMessage.redListPax,
     ScheduledDeparture = flightMessage.scheduledDeparture,
-    TotalPax = SortedSet(flightMessage.totalPax.map(a => uk.gov.homeoffice.drt.arrivals.TotalPaxSource(a.pax.getOrElse(0),
+    TotalPax = Set(flightMessage.totalPax.map(a => uk.gov.homeoffice.drt.arrivals.TotalPaxSource(a.pax.getOrElse(0),
       a.feedSource.flatMap(FeedSource.findByName).getOrElse(UnknownFeedSource),
       a.splitSource.map(SplitSource(_)))): _*)
 

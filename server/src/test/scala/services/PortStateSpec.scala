@@ -131,7 +131,7 @@ class PortStateSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(newArrival))))
 
-        val expected = newArrival.copy(FeedSources = Set(AclFeedSource),TotalPax = SortedSet(TotalPaxSource(newArrival.ActPax.getOrElse(0),AclFeedSource,None)))
+        val expected = newArrival.copy(FeedSources = Set(AclFeedSource),TotalPax = Set(TotalPaxSource(newArrival.ActPax.getOrElse(0),AclFeedSource,None)))
         crunch.portStateTestProbe.fishForMessage(1.seconds) {
           case PortState(flights, _, _) =>
             flights.size == 1 && flights.values.head.apiFlight == expected

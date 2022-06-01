@@ -11,8 +11,6 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHist
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
 
-import scala.collection.SortedSet
-
 class SplitsForArrivalsSpec extends Specification {
 
   val now: MillisSinceEpoch = 10L
@@ -81,7 +79,7 @@ class SplitsForArrivalsSpec extends Specification {
         val updated = splitsForArrivals.diff(flights, now)
 
         updated === FlightsWithSplitsDiff(Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(ApiFeedSource), ApiPax = Option(1) ,
-          TotalPax = SortedSet(TotalPaxSource(1,ApiFeedSource,Some(ApiSplitsWithHistoricalEGateAndFTPercentages)))
+          TotalPax = Set(TotalPaxSource(1,ApiFeedSource,Some(ApiSplitsWithHistoricalEGateAndFTPercentages)))
         ), Set(newSplits, existingSplits), Option(now))), Seq())
       }
     }
@@ -98,7 +96,7 @@ class SplitsForArrivalsSpec extends Specification {
         val updated = splitsForArrivals.diff(flights, now)
 
         updated === FlightsWithSplitsDiff(Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(ApiFeedSource), ApiPax = Option(1) ,
-          TotalPax = SortedSet(TotalPaxSource(1,ApiFeedSource,Some(ApiSplitsWithHistoricalEGateAndFTPercentages)))), Set(newSplits, existingSplits1), Option(now))), Seq())
+          TotalPax = Set(TotalPaxSource(1,ApiFeedSource,Some(ApiSplitsWithHistoricalEGateAndFTPercentages)))), Set(newSplits, existingSplits1), Option(now))), Seq())
       }
     }
 

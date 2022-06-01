@@ -24,11 +24,8 @@ import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.Terminals.{A2, Terminal}
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
-import scala.collection.SortedSet
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -188,9 +185,9 @@ object DynamicRunnableDeskRecs {
             if (!flight.apiFlight.FeedSources.contains(ApiFeedSource)) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxCount) =>
-                  val totalPax: SortedSet[TotalPaxSource] = flight.apiFlight.TotalPax ++ SortedSet(TotalPaxSource(manifestPaxLike.pax.getOrElse(0), ApiFeedSource, Option(Historical)))
+                  val totalPax: Set[TotalPaxSource] = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(manifestPaxLike.pax.getOrElse(0), ApiFeedSource, Option(Historical)))
                   val updatedArrival = flight.apiFlight.copy(TotalPax = totalPax)
-                 flight.copy(apiFlight = updatedArrival)
+                  flight.copy(apiFlight = updatedArrival)
                 case None => flight
               }.recover { case e =>
                 log.error(s"DynamicRunnableDeskRecs error while addArrivals ${e.getMessage}")

@@ -12,7 +12,6 @@ import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, 
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 
-import scala.collection.SortedSet
 import scala.collection.immutable.{Seq, SortedMap}
 import scala.concurrent.duration._
 
@@ -25,7 +24,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
     "Then the updated blackjack numbers should appear in the PortState" >> {
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21), totalPax = SortedSet(TotalPaxSource(21, AclFeedSource, None)))
+    val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21), totalPax = Set(TotalPaxSource(21, AclFeedSource, None)))
     val initialBaseArrivals = Set(flight)
     val deskStats = ActualDeskStats(Map(
       T1 -> Map(

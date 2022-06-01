@@ -8,7 +8,6 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default.{ReadWriter, macroRW}
 
-import scala.collection.SortedSet
 import scala.util.{Success, Try}
 
 case class SimulationParams(
@@ -60,7 +59,7 @@ case class SimulationParams(
             ActPax = actualPax,
             TranPax = tranPax,
             FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource,
-            TotalPax = SortedSet(TotalPaxSource(actualPax.getOrElse(0), ScenarioSimulationSource, None))
+            TotalPax = Set(TotalPaxSource(actualPax.getOrElse(0), ScenarioSimulationSource, None))
           ))
     })
 }

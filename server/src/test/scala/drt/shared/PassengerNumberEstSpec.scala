@@ -6,8 +6,6 @@ import uk.gov.homeoffice.drt.ports.PaxTypes.{Transit, VisaNational}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiPaxTypeAndQueueCount, FeedSource, LiveFeedSource, Queues}
 
-import scala.collection.SortedSet
-
 class PassengerNumberEstSpec extends Specification {
 
   "When estimating PCP Pax" >> {
@@ -87,10 +85,21 @@ class PassengerNumberEstSpec extends Specification {
 
 
   "When calculating total pax" >> {
+    "Given an arrival with 100 total pax, no transfer , no API data and also no source of data" >> {
+      "Then the total pax should be 0" >> {
+
+        val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, sources = Set())
+
+        val result = flightWithSplits.totalPax.map(_.pax).getOrElse(0)
+
+        result === 0
+      }
+    }
+
     "Given an arrival with 100 total pax, no transfer and no API data" >> {
       "Then the total pax should be 100" >> {
 
-        val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100)
+        val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, sources = Set(AclFeedSource))
 
         val result = flightWithSplits.totalPax.map(_.pax).getOrElse(0)
 
@@ -170,7 +179,7 @@ class PassengerNumberEstSpec extends Specification {
       actPax = Option(actPax),
       tranPax = Option(transferPax),
       feedSources = sources,
-      totalPax = SortedSet(sources.map(TotalPaxSource(actPax - transferPax, _, None)).toList: _*)
+      totalPax = Set(sources.map(TotalPaxSource(actPax - transferPax, _, None)).toList: _*)
     )
 
     ApiFlightWithSplits(flight, splits)

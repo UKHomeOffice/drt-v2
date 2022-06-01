@@ -6,8 +6,6 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, Voya
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
-import scala.collection.SortedSet
-
 class LGWForecastXLSExtractorSpec extends Specification {
 
   "Given an excel file with the LGW forecast format for UTC flights then I should get forecast flights for terminal" >> {
@@ -61,7 +59,7 @@ class LGWForecastXLSExtractorSpec extends Specification {
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = SortedSet.empty),
+        TotalPax = Set.empty),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TA"),
@@ -90,7 +88,7 @@ class LGWForecastXLSExtractorSpec extends Specification {
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = SortedSet.empty),
+        TotalPax = Set.empty),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TA"),
@@ -119,7 +117,7 @@ class LGWForecastXLSExtractorSpec extends Specification {
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = SortedSet.empty))
+        TotalPax = Set.empty))
     result === expected
   }
 
