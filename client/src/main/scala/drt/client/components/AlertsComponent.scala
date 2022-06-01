@@ -41,8 +41,7 @@ object AlertsComponent {
     nonProdEnvFromUrl(dom.document.location.href)
       .map(msg => Alert(msg, "this is not production", "warning", 0L, 0L))
 
-  def renderAlerts(alerts: List[Alert]): VdomTagOf[Div] = {
-    println(s"env alert: $nonProdAlert")
+  def renderAlerts(alerts: List[Alert]): VdomTagOf[Div] =
     <.div(^.className := "has-alerts grow",
       (nonProdAlert.toList ++ alerts).map(alert => {
         val message = if (alert.title.nonEmpty) s"${alert.title} - ${alert.message}" else alert.message
@@ -51,7 +50,6 @@ object AlertsComponent {
         )
       }).toVdomArray
     )
-  }
 
   def apply(): VdomElement = component(Props())
 }
