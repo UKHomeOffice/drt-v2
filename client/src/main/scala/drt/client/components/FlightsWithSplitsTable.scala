@@ -157,6 +157,9 @@ object FlightsWithSplitsTable {
         case (label, _) => label != redListHeading || (props.displayRedListInfo && redListPaxExist)
       }
       .map {
+        case (label, Some(className)) if label == "Est PCP Pax" => <.th(
+          <.div(^.cls := className, label, " ", totalPaxTooltip)
+        )
         case (label, None) if label == "Flight" => <.th(
           <.div(^.cls := "arrivals__table__flight-code-wrapper", label, " ", wbrFlightColorTooltip)
         )

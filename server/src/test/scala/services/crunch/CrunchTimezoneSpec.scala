@@ -11,7 +11,7 @@ import services.graphstages.Crunch._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, Queues}
 
 import scala.collection.immutable.List
 import scala.concurrent.duration._

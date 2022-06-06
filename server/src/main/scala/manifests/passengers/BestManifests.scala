@@ -44,6 +44,7 @@ trait ManifestLike {
   }
 }
 
+
 case class BestAvailableManifest(source: SplitSource,
                                  arrivalPortCode: PortCode,
                                  departurePortCode: PortCode,

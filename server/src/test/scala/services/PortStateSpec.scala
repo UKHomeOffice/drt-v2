@@ -8,12 +8,13 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.crunch.{CrunchTestLike, TestConfig}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival}
+import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, Queues}
 
+import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -130,9 +131,8 @@ class PortStateSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(newArrival))))
 
-        val expected = newArrival.copy(FeedSources = Set(AclFeedSource))
-
-        crunch.portStateTestProbe.fishForMessage(5.seconds) {
+        val expected = newArrival.copy(FeedSources = Set(AclFeedSource),TotalPax = Set(TotalPaxSource(newArrival.ActPax.getOrElse(0),AclFeedSource,None)))
+        crunch.portStateTestProbe.fishForMessage(1.seconds) {
           case PortState(flights, _, _) =>
             flights.size == 1 && flights.values.head.apiFlight == expected
         }

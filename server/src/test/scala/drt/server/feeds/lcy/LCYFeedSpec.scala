@@ -13,6 +13,7 @@ import org.mockito.Mockito.{times, verify}
 import org.specs2.mock.Mockito
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

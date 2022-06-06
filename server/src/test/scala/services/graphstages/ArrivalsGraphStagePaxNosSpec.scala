@@ -10,6 +10,7 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.arrivals.ArrivalStatus
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource, LiveFeedSource}
 
 import scala.concurrent.duration._
 
@@ -143,7 +144,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     "Given an arrival with a zero pax, undefined trans pax, and max pax of 100" >> {
       val arrival = ArrivalGenerator.arrival(actPax = Option(0), tranPax = None, maxPax = Option(100))
       "When I ask for the best pax" >> {
-        val bestPax = arrival.bestPcpPaxEstimate
+        val bestPax = arrival.bestPcpPaxEstimate.pax
         "I should see 0" >> {
           bestPax === 0
         }
@@ -169,4 +170,5 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
                           actChoxDt: String = ""): QueueOfferResult = {
     val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, actPax = actPax, tranPax = tranPax, maxPax = maxPax, status = ArrivalStatus(status), actChoxDt = actChoxDt)
     offerAndWait(input, ArrivalsFeedSuccess(Flights(Seq(arrivalLive))))
-  }}
+  }
+}

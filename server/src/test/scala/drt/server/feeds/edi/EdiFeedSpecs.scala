@@ -109,7 +109,12 @@ class EdiFeedSpecs extends CrunchTestLike {
         Origin = PortCode("PSA"),
         Scheduled = 1630450800000L,
         PcpTime = None,
-        FeedSources = Set(LiveFeedSource), CarrierScheduled = None, ApiPax = None, ScheduledDeparture = None, RedListPax = None))
+        FeedSources = Set(LiveFeedSource),
+        CarrierScheduled = None,
+        ApiPax = None,
+        ScheduledDeparture = None,
+        RedListPax = None,
+        TotalPax = Set.empty))
 
     val arrival = ediFeed.ediFlightDetailsToArrival(List(ediFlightDetail), LiveFeedSource)
     arrival mustEqual expectedArrival

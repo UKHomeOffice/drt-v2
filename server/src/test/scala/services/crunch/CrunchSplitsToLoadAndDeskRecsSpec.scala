@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
-import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Queues}
 
 import scala.collection.immutable.{List, Map, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -89,7 +89,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)),
             T2 -> Map(
               Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
-              Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)))
+              Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0))
+          )
 
           crunch.portStateTestProbe.fishForMessage(5.seconds) {
             case ps: PortState =>

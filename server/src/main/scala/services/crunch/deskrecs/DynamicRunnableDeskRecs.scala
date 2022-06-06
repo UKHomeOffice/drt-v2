@@ -9,7 +9,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
 import drt.shared._
-import manifests.passengers.ManifestLike
+import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import org.slf4j.{Logger, LoggerFactory}
@@ -19,10 +19,10 @@ import services.TimeLogger
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
@@ -36,6 +36,8 @@ object DynamicRunnableDeskRecs {
 
   type HistoricManifestsProvider = Iterable[Arrival] => Source[ManifestLike, NotUsed]
 
+  type HistoricManifestsPaxProvider = Arrival => Future[Option[ManifestPaxCount]]
+
   type LoadsToQueueMinutes = (NumericRange[MillisSinceEpoch], Map[TQM, Crunch.LoadMinute], Map[Terminal, TerminalDeskLimitsLike]) => Future[PortStateQueueMinutes]
 
   type FlightsToLoads = (FlightsWithSplits, RedListUpdates) => Map[TQM, Crunch.LoadMinute]
@@ -43,6 +45,7 @@ object DynamicRunnableDeskRecs {
   def crunchRequestsToQueueMinutes(arrivalsProvider: CrunchRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                                    liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
                                    historicManifestsProvider: HistoricManifestsProvider,
+                                   historicManifestsPaxProvider: HistoricManifestsPaxProvider,
                                    splitsCalculator: SplitsCalculator,
                                    splitsSink: ActorRef,
                                    portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,
@@ -54,11 +57,13 @@ object DynamicRunnableDeskRecs {
     Flow[CrunchRequest]
       .wireTap(cr => log.info(s"${cr.localDate} crunch request processing started"))
       .via(addArrivals(arrivalsProvider))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing got flights"))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing arrivals added"))
+      .via(addPax(historicManifestsPaxProvider))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing pax added"))
+      .via(updatePaxNos(splitsSink))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing pax updated"))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
-      .wireTap { crWithFlights =>
-        log.info(s"${crWithFlights._1.localDate} crunch request processing splits added")
-      }
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits added"))
       .via(updateSplits(splitsSink))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits persisted"))
       .via(toDeskRecs(maxDesksProviders, portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider))
@@ -73,8 +78,8 @@ object DynamicRunnableDeskRecs {
     } else 100
   }
 
-  private def updateSplits(splitsSink: ActorRef)
-                          (implicit ec: ExecutionContext, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+  def updateSplits(splitsSink: ActorRef)
+                  (implicit ec: ExecutionContext, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
@@ -84,6 +89,21 @@ object DynamicRunnableDeskRecs {
             .recover {
               case t =>
                 log.error(s"Failed to updates splits for arrivals", t)
+                (crunchRequest, flights)
+            }
+      }
+
+  def updatePaxNos(splitsSink: ActorRef)
+                  (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+    Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
+      .mapAsync(1) {
+        case (crunchRequest, flights) =>
+          splitsSink
+            .ask(ArrivalsDiff(flights.map(fws => fws.apiFlight), Seq()))
+            .map(_ => (crunchRequest, flights))
+            .recover {
+              case t =>
+                log.error(s"Failed to update total pax for arrivals", t)
                 (crunchRequest, flights)
             }
       }
@@ -132,7 +152,7 @@ object DynamicRunnableDeskRecs {
     })
 
   private def addArrivals(flightsProvider: CrunchRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]])
-                         (implicit ec: ExecutionContext): Flow[CrunchRequest, (CrunchRequest, List[ApiFlightWithSplits]), NotUsed] =
+                         (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[CrunchRequest, (CrunchRequest, List[ApiFlightWithSplits]), NotUsed] =
     Flow[CrunchRequest]
       .mapAsync(1) { crunchRequest =>
         flightsProvider(crunchRequest)
@@ -152,14 +172,42 @@ object DynamicRunnableDeskRecs {
       .flatMapConcat {
         case (crunchRequest, flightsStream) =>
           log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: folding arrivals")
-          flightsStream.fold(List[ApiFlightWithSplits]())(_ ++ _).map(flights => (crunchRequest, flights))
+          flightsStream.fold(List[ApiFlightWithSplits]())(_ ++ _)
+            .map(flights => (crunchRequest, flights))
+      }
+
+  def addPax(historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxCount]])
+            (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[(CrunchRequest, List[ApiFlightWithSplits]), (CrunchRequest, List[ApiFlightWithSplits]), NotUsed] =
+    Flow[(CrunchRequest, List[ApiFlightWithSplits])]
+      .mapAsync(1) { case (cr, flights) =>
+        Source(flights)
+          .mapAsync(10) { flight =>
+            if (!flight.apiFlight.FeedSources.contains(ApiFeedSource)) {
+              historicManifestsPaxProvider(flight.apiFlight).map {
+                case Some(manifestPaxLike: ManifestPaxCount) =>
+                  val totalPax: Set[TotalPaxSource] = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(manifestPaxLike.pax.getOrElse(0), ApiFeedSource, Option(Historical)))
+                  val updatedArrival = flight.apiFlight.copy(TotalPax = totalPax)
+                  flight.copy(apiFlight = updatedArrival)
+                case None => flight
+              }.recover { case e =>
+                log.error(s"DynamicRunnableDeskRecs error while addArrivals ${e.getMessage}")
+                flight
+              }
+            } else {
+              Future.successful(flight)
+            }
+          }.map { updatedFlight =>
+          updatedFlight
+        }.runWith(Sink.seq).map { updatedFlights =>
+          (cr, updatedFlights.toList)
+        }
       }
 
   def addSplits(liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifests, NotUsed]],
                 historicManifestsProvider: Iterable[Arrival] => Source[ManifestLike, NotUsed],
                 splitsCalculator: SplitsCalculator)
-               (implicit ec: ExecutionContext, mat: Materializer): Flow[(CrunchRequest, List[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
-    Flow[(CrunchRequest, List[ApiFlightWithSplits])]
+               (implicit ec: ExecutionContext, mat: Materializer): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+    Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flightsSource) =>
           liveManifestsProvider(crunchRequest)
@@ -242,12 +290,16 @@ object DynamicRunnableDeskRecs {
       }
       .map { flight =>
         flight.splits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages) match {
-          case None => flight
+          case None =>
+            flight
           case Some(liveSplits) =>
+            val apiPax = liveSplits.totalExcludingTransferPax.toInt
             val arrival = flight.apiFlight.copy(
-              ApiPax = Option(liveSplits.totalExcludingTransferPax.toInt),
+              ApiPax = Option(apiPax),
               FeedSources = flight.apiFlight.FeedSources + ApiFeedSource,
+              TotalPax = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(apiPax, ApiFeedSource, Option(ApiSplitsWithHistoricalEGateAndFTPercentages)))
             )
+
             flight.copy(apiFlight = arrival)
         }
       }

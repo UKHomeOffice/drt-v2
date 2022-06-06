@@ -63,7 +63,8 @@ class STNForecastXLSExtractorSpec extends Specification {
         CarrierScheduled = None,
         ApiPax = None,
         ScheduledDeparture = None,
-        RedListPax = None),
+        RedListPax = None,
+        TotalPax = Set.empty),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -91,7 +92,8 @@ class STNForecastXLSExtractorSpec extends Specification {
         CarrierScheduled = None,
         ApiPax = None,
         ScheduledDeparture = None,
-        RedListPax = None),
+        RedListPax = None,
+        TotalPax= Set.empty),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -119,7 +121,8 @@ class STNForecastXLSExtractorSpec extends Specification {
         CarrierScheduled = None,
         ApiPax = None,
         ScheduledDeparture = None,
-        RedListPax = None),
+        RedListPax = None,
+        TotalPax= Set.empty),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -147,7 +150,8 @@ class STNForecastXLSExtractorSpec extends Specification {
         CarrierScheduled = None,
         ApiPax = None,
         ScheduledDeparture = None,
-        RedListPax = None))
+        RedListPax = None,
+        TotalPax = Set.empty))
 
     result === expected
   }

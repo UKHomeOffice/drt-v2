@@ -16,7 +16,7 @@ object FlightComponents {
 
   def paxComp(flightWithSplits: ApiFlightWithSplits, directRedListFlight: DirectRedListFlight, noPcpPax: Boolean): TagMod = {
     val isNotApiData = if (flightWithSplits.hasValidApi) "" else "notApiData"
-    val noPcpPaxClass = if (noPcpPax || directRedListFlight.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else ""
+    val noPcpPaxClass = if (noPcpPax || directRedListFlight.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else s"arrivals__table__flight__no-${flightWithSplits.pcpPaxEstimate.feedSource}-${flightWithSplits.pcpPaxEstimate.splitSource.map(a => s"-$a").getOrElse("None")}"
     val diversionClass =
       if (directRedListFlight.incomingDiversion) "arrivals__table__flight__pcp-pax__incoming"
       else if (directRedListFlight.outgoingDiversion) "arrivals__table__flight__pcp-pax__outgoing"
@@ -24,7 +24,7 @@ object FlightComponents {
     <.div(
       ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",
       <.div(^.className := "arrivals__table__flight__pcp-pax__container",
-        <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", flightWithSplits.pcpPaxEstimate)))
+        <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", flightWithSplits.pcpPaxEstimate.pax)))
       ),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =
@@ -52,7 +52,7 @@ object FlightComponents {
     val paxNos = List(
       <.p(s"Pax: $portDirectPax (${flight.apiFlight.ActPax.getOrElse(0)} - ${flight.apiFlight.TranPax.getOrElse(0)} transfer)"),
       <.p(s"Max: $max")
-    ) :+ flight.totalPaxFromApiExcludingTransfer.map(p => <.span(s"API: $p")).getOrElse(EmptyVdom)
+    ) :+ flight.totalPaxFromApiExcludingTransfer.map(p => <.span(s"API: ${p.pax}")).getOrElse(EmptyVdom)
     <.span(paxNos.toVdomArray)
   }
 

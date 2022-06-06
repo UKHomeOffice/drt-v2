@@ -9,9 +9,11 @@ import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage._
 import uk.gov.homeoffice.drt.protobuf.messages.Prediction.PredictionLongMessage
 import services.SDate
-import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.arrivals.{TotalPaxSource, _}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PortCode, UnknownFeedSource}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
 
 object FlightMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass.toString)
@@ -145,9 +147,19 @@ object FlightMessageConversion {
       carrierScheduled = apiFlight.CarrierScheduled,
       apiPax = apiFlight.ApiPax,
       redListPax = apiFlight.RedListPax,
-      scheduledDeparture = apiFlight.ScheduledDeparture
+      scheduledDeparture = apiFlight.ScheduledDeparture,
+      totalPax = convertTotalPaxToMessage(apiFlight.TotalPax)
     )
   }
+
+  def convertTotalPaxToMessage(totalPax: Set[TotalPaxSource]): Seq[FlightsMessage.TotalPaxSource] =
+    totalPax
+      .map(tp =>
+        uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
+          .TotalPaxSource(
+            pax = Option(tp.pax),
+            feedSource = Option(tp.feedSource.name),
+            splitSource = tp.splitSource.map(_.toString))).toSeq
 
   def predictionToMessage(maybePred: Option[Prediction[Long]]): Option[PredictionLongMessage] =
     maybePred.map(pred => PredictionLongMessage(Option(pred.updatedAt), Option(pred.value)))
@@ -159,36 +171,38 @@ object FlightMessageConversion {
       value <- predMsg.value
     } yield Prediction(updatedAt, value)
 
-  def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = {
-    Arrival(
-      Operator = flightMessage.operator.map(Operator),
-      Status = ArrivalStatus(flightMessage.status.getOrElse("")),
-      Estimated = flightMessage.estimated,
-      PredictedTouchdown = predictionFromMessage(flightMessage.predictedTouchdown),
-      Actual = flightMessage.touchdown,
-      EstimatedChox = flightMessage.estimatedChox,
-      ActualChox = flightMessage.actualChox,
-      Gate = flightMessage.gate,
-      Stand = flightMessage.stand,
-      MaxPax = flightMessage.maxPax,
-      ActPax = flightMessage.actPax,
-      TranPax = flightMessage.tranPax,
-      RunwayID = flightMessage.runwayID,
-      BaggageReclaimId = flightMessage.baggageReclaimId,
-      AirportID = PortCode(flightMessage.airportID.getOrElse("")),
-      Terminal = Terminal(flightMessage.terminal.getOrElse("")),
-      rawICAO = flightMessage.iCAO.getOrElse(""),
-      rawIATA = flightMessage.iATA.getOrElse(""),
-      Origin = PortCode(flightMessage.origin.getOrElse("")),
-      PcpTime = flightMessage.pcpTime,
-      Scheduled = flightMessage.scheduled.getOrElse(0L),
-      FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet,
-      CarrierScheduled = flightMessage.carrierScheduled,
-      ApiPax = flightMessage.apiPax,
-      RedListPax = flightMessage.redListPax,
-      ScheduledDeparture = flightMessage.scheduledDeparture,
-    )
-  }
+  def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = Arrival(
+    Operator = flightMessage.operator.map(Operator),
+    Status = ArrivalStatus(flightMessage.status.getOrElse("")),
+    Estimated = flightMessage.estimated,
+    PredictedTouchdown = predictionFromMessage(flightMessage.predictedTouchdown),
+    Actual = flightMessage.touchdown,
+    EstimatedChox = flightMessage.estimatedChox,
+    ActualChox = flightMessage.actualChox,
+    Gate = flightMessage.gate,
+    Stand = flightMessage.stand,
+    MaxPax = flightMessage.maxPax,
+    ActPax = flightMessage.actPax,
+    TranPax = flightMessage.tranPax,
+    RunwayID = flightMessage.runwayID,
+    BaggageReclaimId = flightMessage.baggageReclaimId,
+    AirportID = PortCode(flightMessage.airportID.getOrElse("")),
+    Terminal = Terminal(flightMessage.terminal.getOrElse("")),
+    rawICAO = flightMessage.iCAO.getOrElse(""),
+    rawIATA = flightMessage.iATA.getOrElse(""),
+    Origin = PortCode(flightMessage.origin.getOrElse("")),
+    PcpTime = flightMessage.pcpTime,
+    Scheduled = flightMessage.scheduled.getOrElse(0L),
+    FeedSources = flightMessage.feedSources.flatMap(FeedSource(_)).toSet,
+    CarrierScheduled = flightMessage.carrierScheduled,
+    ApiPax = flightMessage.apiPax,
+    RedListPax = flightMessage.redListPax,
+    ScheduledDeparture = flightMessage.scheduledDeparture,
+    TotalPax = Set(flightMessage.totalPax.map(a => uk.gov.homeoffice.drt.arrivals.TotalPaxSource(a.pax.getOrElse(0),
+      a.feedSource.flatMap(FeedSource.findByName).getOrElse(UnknownFeedSource),
+      a.splitSource.map(SplitSource(_)))): _*)
+
+  )
 
   def flightsToMessage(flights: Iterable[ApiFlightWithSplits]): FlightsWithSplitsMessage =
     FlightsWithSplitsMessage(flights.map(FlightMessageConversion.flightWithSplitsToMessage).toSeq)

@@ -90,9 +90,12 @@ object FlightsApi {
                     case None =>
                       fws.apiFlight
                     case Some(liveSplit) =>
+                      val totalPax = Math.round(liveSplit.totalExcludingTransferPax).toInt
                       fws.apiFlight.copy(
-                        ApiPax = Option(Math.round(liveSplit.totalExcludingTransferPax).toInt),
-                        FeedSources = fws.apiFlight.FeedSources + ApiFeedSource)
+                        ApiPax = Option(totalPax),
+                        FeedSources = fws.apiFlight.FeedSources + ApiFeedSource,
+                        TotalPax = fws.apiFlight.TotalPax ++
+                          Set(TotalPaxSource(totalPax, ApiFeedSource, Option(ApiSplitsWithHistoricalEGateAndFTPercentages))))
                   }
 
                   fws.copy(apiFlight = updatedArrival, splits = mergedSplits, lastUpdated = Option(nowMillis))

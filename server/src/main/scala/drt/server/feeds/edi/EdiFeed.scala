@@ -15,10 +15,11 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSucc
 import services.SDate
 import services.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, FlightCodeSuffix, Operator, TotalPaxSource, VoyageNumber}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.{A2, InvalidTerminal, T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSource, PortCode}
-
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -140,7 +141,8 @@ case class EdiFeed(ediClient: EdiClient)
         CarrierScheduled = None,
         ApiPax = None,
         ScheduledDeparture = None,
-        RedListPax = None
+        RedListPax = None,
+        TotalPax = Set.empty
       )
     } match {
       case Success(a) => Option(a)
