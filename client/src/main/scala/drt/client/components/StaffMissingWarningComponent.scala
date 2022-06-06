@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
+import drt.client.SPAMain.TerminalPageModes.Staffing
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.shared.CrunchApi.StaffMinute
@@ -35,11 +36,7 @@ object StaffMissingWarningComponent {
             " for the time period you are viewing, please enter staff on the ",
             if (p.loggedInUser.hasRole(StaffEdit))
               p.router.link(
-                p.terminalPageTab.copy(
-                  mode = "staffing",
-                  subMode = "15",
-                  queryParams = Map()
-                )
+                p.terminalPageTab.update(mode = Staffing, subMode = "15")
               )("Monthly Staffing")
             else
               <.strong("Monthly Staffing"),

@@ -78,10 +78,7 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
                   <.button(
                     ^.className := "btn btn-link",
                     VdomAttr("data-dismiss") := "modal", "Close",
-                    ^.onClick --> {
-                      log.info("closing dialogue")
-                      scope.modState(_.copy(showDialogue = false))
-                    }
+                    ^.onClick --> scope.modState(_.copy(showDialogue = false))
                   )
                 )
               )
