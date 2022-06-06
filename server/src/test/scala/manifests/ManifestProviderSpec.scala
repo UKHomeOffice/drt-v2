@@ -33,7 +33,7 @@ class ManifestProviderSpec extends CrunchTestLike {
   val arrival: Arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2021-06-01T12:00Z")
   val manifestForArrival: BestAvailableManifest = BestAvailableManifest(VoyageManifestGenerator.manifestForArrival(arrival, List(euPassport)))
   val manifestHistoricForArrival: ManifestPaxCount = ManifestPaxCount(VoyageManifestGenerator.manifestForArrival(arrival, List(euPassport)),
-    SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
+    SplitSources.Historical)
 
   val mockLookupService: MockManifestLookupService = MockManifestLookupService(manifestForArrival, manifestHistoricForArrival)
   val probe: TestProbe = TestProbe("manifests")
