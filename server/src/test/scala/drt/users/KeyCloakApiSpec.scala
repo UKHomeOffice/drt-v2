@@ -1,7 +1,5 @@
 package drt.users
 
-import java.util.UUID
-
 import akka.http.scaladsl.model._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.users.KeyCloakUserParserProtocol._
@@ -14,92 +12,92 @@ class KeyCloakApiSpec extends CrunchTestLike {
 
   val keyCloakUrl = "https://keycloak"
 
-  val userId1= "e25f2a14-bdaa-11e8-a355-529269fb1459"
-  val userId2= "e25f2dfc-bdaa-11e8-a355-529269fb1459"
+  val userId1 = "e25f2a14-bdaa-11e8-a355-529269fb1459"
+  val userId2 = "e25f2dfc-bdaa-11e8-a355-529269fb1459"
 
   val usersJson: String =
     s"""[{
-      |        "id": "$userId1",
-      |        "createdTimestamp": 1516283371483,
-      |        "username": "test1@digital.homeoffice.gov.uk",
-      |        "enabled": true,
-      |        "totp": false,
-      |        "emailVerified": true,
-      |        "firstName": "Man",
-      |        "lastName": "One",
-      |        "email": "test1@digital.homeoffice.gov.uk",
-      |        "disableableCredentialTypes": [
-      |            "password"
-      |        ],
-      |        "requiredActions": [],
-      |        "notBefore": 0,
-      |        "access": {
-      |            "manageGroupMembership": true,
-      |            "view": true,
-      |            "mapRoles": true,
-      |            "impersonate": true,
-      |            "manage": true
-      |        }
-      |    },
-      |    {
-      |        "id": "$userId2",
-      |        "createdTimestamp": 1516967531289,
-      |        "username": "test2@homeoffice.gsi.gov.uk",
-      |        "enabled": true,
-      |        "totp": false,
-      |        "emailVerified": true,
-      |        "firstName": "Man",
-      |        "lastName": "Two",
-      |        "email": "test2@digital.homeoffice.gov.uk",
-      |        "disableableCredentialTypes": [
-      |            "password"
-      |        ],
-      |        "requiredActions": [],
-      |        "notBefore": 0,
-      |        "access": {
-      |            "manageGroupMembership": true,
-      |            "view": true,
-      |            "mapRoles": true,
-      |            "impersonate": true,
-      |            "manage": true
-      |        }
-      |    }]""".stripMargin
+       |        "id": "$userId1",
+       |        "createdTimestamp": 1516283371483,
+       |        "username": "test1@digital.homeoffice.gov.uk",
+       |        "enabled": true,
+       |        "totp": false,
+       |        "emailVerified": true,
+       |        "firstName": "Man",
+       |        "lastName": "One",
+       |        "email": "test1@digital.homeoffice.gov.uk",
+       |        "disableableCredentialTypes": [
+       |            "password"
+       |        ],
+       |        "requiredActions": [],
+       |        "notBefore": 0,
+       |        "access": {
+       |            "manageGroupMembership": true,
+       |            "view": true,
+       |            "mapRoles": true,
+       |            "impersonate": true,
+       |            "manage": true
+       |        }
+       |    },
+       |    {
+       |        "id": "$userId2",
+       |        "createdTimestamp": 1516967531289,
+       |        "username": "test2@homeoffice.gsi.gov.uk",
+       |        "enabled": true,
+       |        "totp": false,
+       |        "emailVerified": true,
+       |        "firstName": "Man",
+       |        "lastName": "Two",
+       |        "email": "test2@digital.homeoffice.gov.uk",
+       |        "disableableCredentialTypes": [
+       |            "password"
+       |        ],
+       |        "requiredActions": [],
+       |        "notBefore": 0,
+       |        "access": {
+       |            "manageGroupMembership": true,
+       |            "view": true,
+       |            "mapRoles": true,
+       |            "impersonate": true,
+       |            "manage": true
+       |        }
+       |    }]""".stripMargin
 
-val usersMissingOptionalFieldsJson: String =
+  val usersMissingOptionalFieldsJson: String =
     s"""[{
-      |        "id": "$userId1",
-      |        "username": "test1@digital.homeoffice.gov.uk",
-      |        "enabled": true,
-      |        "emailVerified": true,
-      |        "firstName": "Man",
-      |        "lastName": "One",
-      |        "email": "test1@digital.homeoffice.gov.uk",
-      |        "requiredActions": [],
-      |        "notBefore": 0
-      |    },
-      |    {
-      |        "id": "$userId2",
-      |        "createdTimestamp": 1516967531289,
-      |        "username": "test2@homeoffice.gsi.gov.uk",
-      |        "enabled": true,
-      |        "totp": false,
-      |        "emailVerified": true,
-      |        "firstName": "Man",
-      |        "lastName": "Two",
-      |        "email": "test2@digital.homeoffice.gov.uk",
-      |        "disableableCredentialTypes": [
-      |            "password"
-      |        ],
-      |        "requiredActions": [],
-      |        "notBefore": 0,
-      |        "access": {
-      |            "manageGroupMembership": true,
-      |            "view": true,
-      |            "mapRoles": true,
-      |            "impersonate": true,
-      |            "manage": true
-      |        }
-      |    }]""".stripMargin
+       |        "id": "$userId1",
+       |        "username": "test1@digital.homeoffice.gov.uk",
+       |        "enabled": true,
+       |        "emailVerified": true,
+       |        "firstName": "Man",
+       |        "lastName": "One",
+       |        "email": "test1@digital.homeoffice.gov.uk",
+       |        "requiredActions": [],
+       |        "notBefore": 0
+       |    },
+       |    {
+       |        "id": "$userId2",
+       |        "createdTimestamp": 1516967531289,
+       |        "username": "test2@homeoffice.gsi.gov.uk",
+       |        "enabled": true,
+       |        "totp": false,
+       |        "emailVerified": true,
+       |        "firstName": "Man",
+       |        "lastName": "Two",
+       |        "email": "test2@digital.homeoffice.gov.uk",
+       |        "disableableCredentialTypes": [
+       |            "password"
+       |        ],
+       |        "requiredActions": [],
+       |        "notBefore": 0,
+       |        "access": {
+       |            "manageGroupMembership": true,
+       |            "view": true,
+       |            "mapRoles": true,
+       |            "impersonate": true,
+       |            "manage": true
+       |        }
+       |    }]""".stripMargin
 
   private val user1 = KeyCloakUser(
     userId1,
@@ -224,30 +222,31 @@ val usersMissingOptionalFieldsJson: String =
     res.status === StatusCodes.NoContent
   }
 
-  val lhrUsers: String = s"""
-    | [{
-    |        "id": "$userId2",
-    |        "createdTimestamp": 1516967531289,
-    |        "username": "test2@homeoffice.gsi.gov.uk",
-    |        "enabled": true,
-    |        "totp": false,
-    |        "emailVerified": true,
-    |        "firstName": "Man",
-    |        "lastName": "Two",
-    |        "email": "test2@digital.homeoffice.gov.uk",
-    |        "disableableCredentialTypes": [
-    |            "password"
-    |        ],
-    |        "requiredActions": [],
-    |        "notBefore": 0,
-    |        "access": {
-    |            "manageGroupMembership": true,
-    |            "view": true,
-    |            "mapRoles": true,
-    |            "impersonate": true,
-    |            "manage": true
-    |        }
-    |  }]
+  val lhrUsers: String =
+    s"""
+       | [{
+       |        "id": "$userId2",
+       |        "createdTimestamp": 1516967531289,
+       |        "username": "test2@homeoffice.gsi.gov.uk",
+       |        "enabled": true,
+       |        "totp": false,
+       |        "emailVerified": true,
+       |        "firstName": "Man",
+       |        "lastName": "Two",
+       |        "email": "test2@digital.homeoffice.gov.uk",
+       |        "disableableCredentialTypes": [
+       |            "password"
+       |        ],
+       |        "requiredActions": [],
+       |        "notBefore": 0,
+       |        "access": {
+       |            "manageGroupMembership": true,
+       |            "view": true,
+       |            "mapRoles": true,
+       |            "impersonate": true,
+       |            "manage": true
+       |        }
+       |  }]
   """.stripMargin
 
   trait MockServerForUsersInGroup {
