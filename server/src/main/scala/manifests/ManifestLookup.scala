@@ -56,42 +56,26 @@ case class ManifestLookup(tables: Tables)
                                           scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
     historicManifestSearch(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
 
-  private def manifestTriesForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
-                                       (implicit mat: Materializer): Future[immutable.Seq[ManifestPassengerProfile]] = {
+  private def manifestsForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
+                                   (implicit mat: Materializer): Future[immutable.Seq[List[ManifestPassengerProfile]]] = {
     val eventualMaybePaxProfiles = Source(paxForArrivalQuery(flightKeys))
       .mapAsync(1)(paxProfilesFromQuery)
       .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .runWith(Sink.seq)
 
     eventualMaybePaxProfiles.map { tries =>
-      tries.collect {
-        case Failure(t) => log.warn(s"Failed to get manifests", t)
-      }
-
-      tries.collect { case Success(paxProfiles) => paxProfiles }.flatten
+      tries.collect { case Failure(t) => log.warn(s"Failed to get manifests", t) }
+      tries.collect { case Success(paxProfiles) => paxProfiles }
     }
   }
+
+  private def manifestTriesForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
+                                       (implicit mat: Materializer): Future[immutable.Seq[ManifestPassengerProfile]] =
+    manifestsForScheduled(flightKeys).map(_.flatten)
 
   def manifestPaxForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
-                             (implicit mat: Materializer): Future[Int] = {
-    val eventualMaybePaxProfiles = Source(paxForArrivalQuery(flightKeys))
-      .mapAsync(1)(paxProfilesFromQuery)
-      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
-      .runWith(Sink.seq)
-
-    val paxProfilesCount = eventualMaybePaxProfiles.map { tries =>
-      tries.collect {
-        case Failure(t) => log.warn(s"Failed to get manifests", t)
-      }
-      tries.collect { case Success(paxProfiles) => paxProfiles }
-    }.map { paxProfile =>
-      paxProfile
-        .map { passengers => passengers.toSet.size }
-    }
-
-    paxProfilesCount.map(ps => ps.sum / ps.size)
-
-  }
+                             (implicit mat: Materializer): Future[Int] =
+    manifestsForScheduled(flightKeys).map { manifests => manifests.flatten.size / manifests.size }
 
   private def paxProfilesFromQuery(builder: SQLActionBuilder): Future[Try[List[ManifestPassengerProfile]]] =
     tables
