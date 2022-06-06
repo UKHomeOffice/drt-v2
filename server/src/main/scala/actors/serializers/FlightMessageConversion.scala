@@ -148,18 +148,18 @@ object FlightMessageConversion {
       apiPax = apiFlight.ApiPax,
       redListPax = apiFlight.RedListPax,
       scheduledDeparture = apiFlight.ScheduledDeparture,
-      totalPax = convertTotalPaxToMessage(apiFlight)
+      totalPax = convertTotalPaxToMessage(apiFlight.TotalPax)
     )
   }
 
-  def convertTotalPaxToMessage(arrival: Arrival): Seq[FlightsMessage.TotalPaxSource] = arrival
-    .TotalPax
-    .map(tp =>
-      uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
-        .TotalPaxSource(
-          pax = Option(tp.pax),
-          feedSource = Option(tp.feedSource.name),
-          splitSource = tp.splitSource.map(_.toString))).toSeq
+  def convertTotalPaxToMessage(totalPax: Set[TotalPaxSource]): Seq[FlightsMessage.TotalPaxSource] =
+    totalPax
+      .map(tp =>
+        uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
+          .TotalPaxSource(
+            pax = Option(tp.pax),
+            feedSource = Option(tp.feedSource.name),
+            splitSource = tp.splitSource.map(_.toString))).toSeq
 
   def predictionToMessage(maybePred: Option[Prediction[Long]]): Option[PredictionLongMessage] =
     maybePred.map(pred => PredictionLongMessage(Option(pred.updatedAt), Option(pred.value)))
