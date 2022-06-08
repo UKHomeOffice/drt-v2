@@ -295,7 +295,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
                 .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
               .map(_.flights.values.headOption)))
 
-        val result = Await.result(eventualFlights, 1.second)
+        val result = Await.result(eventualFlights, 5.second)
 
         result === Option(ApiFlightWithSplits(arrival, Set(splits), lastUpdated = Option(myNow().millisSinceEpoch)))
       }

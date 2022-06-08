@@ -10,7 +10,7 @@ import services.crunch.VoyageManifestGenerator._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, EventTypes}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
-import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Queues}
 
 import scala.collection.immutable.{List, Map, SortedMap}
 import scala.concurrent.Await

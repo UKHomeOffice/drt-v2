@@ -109,7 +109,7 @@ describe('Simulation export', () => {
                     const nonEeaDeskPaxCount = sumColumn(csvData, nonEeaDeskPaxCsvIndex)
                     const eGatePaxCount = sumColumn(csvData, eGatePaxCsvIndex)
 
-                    expect(eeaDeskPxCount).to.equal(4, "expected 2 passengers in EEA with weighting of 2")
+                    expect(eeaDeskPxCount).to.equal(4, "expected 4 passengers in EEA with weighting of 2")
                     expect(nonEeaDeskPaxCount).to.equal(40, "expected 20 passengers in Non EEA with weighting of 2")
                     expect(eGatePaxCount).to.equal(16, "expected 8 passengers in EGate with weighting of 2")
 

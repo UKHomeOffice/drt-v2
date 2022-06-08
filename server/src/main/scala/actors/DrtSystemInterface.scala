@@ -217,6 +217,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
       liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
       historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
+      historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, manifestLookupService),
       splitsCalculator = splitsCalculator,
       splitsSink = portStateActor,
       portDesksAndWaitsProvider = portDeskRecs,
@@ -335,7 +336,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     Feed(Feed.actorRefSource
       .map { _ =>
         system.log.info(s"No op arrivals feed")
-        ArrivalsFeedSuccess(Flights(Seq()), SDate.now())
+        ArrivalsFeedSuccess(Flights(Seq()),SDate.now())
       }, 100.days, 100.days)
   }
 

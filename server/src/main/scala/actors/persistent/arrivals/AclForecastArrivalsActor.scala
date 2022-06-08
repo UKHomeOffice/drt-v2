@@ -4,7 +4,7 @@ import drt.shared.FeedStatusSuccess
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, TotalPaxSource, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.AclFeedSource
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -32,7 +32,8 @@ class AclForecastArrivalsActor(initialSnapshotBytesThreshold: Int,
 
   override def handleFeedSuccess(incomingArrivals: Iterable[Arrival], createdAt: SDateLike): Unit = {
     log.info(s"Received arrivals (base)")
-    val incomingArrivalsWithKeys = incomingArrivals.map(a => (a.unique, a)).toMap
+    val incomingArrivalsWithKeys = incomingArrivals.map(a => (a.unique,
+      a.copy(TotalPax = a.TotalPax ++ Set(TotalPaxSource(a.ActPax.getOrElse(0), AclFeedSource, None))))).toMap
     val (removals, updates) = Crunch.baseArrivalsRemovalsAndUpdates(incomingArrivalsWithKeys, state.arrivals)
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size)
 

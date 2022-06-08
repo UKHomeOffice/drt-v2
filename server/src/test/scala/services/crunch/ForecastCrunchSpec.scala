@@ -8,7 +8,7 @@ import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.graphstages.CrunchMocks
 import services.{OptimiserWithFlexibleProcessors, SDate}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, TotalPaxSource, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource, LiveFeedSource, Queues}
@@ -180,12 +180,12 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
 
-    val expectedForecastArrivals = Set(baseArrival.copy(FeedSources = Set(AclFeedSource)))
+    val expectedForecastArrivals = Set(baseArrival.copy(FeedSources = Set(AclFeedSource),
+      TotalPax = Set(TotalPaxSource(baseArrival.ActPax.getOrElse(0),AclFeedSource,None))))
 
     crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>
         val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
-
         crunchForecastArrivals == expectedForecastArrivals
     }
 
@@ -209,7 +209,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
 
-    val expectedForecastArrivals = Set(baseArrival.copy(ActPax = Some(50), TranPax = Some(25), FeedSources = Set(ForecastFeedSource, AclFeedSource)))
+    val expectedForecastArrivals = Set(baseArrival.copy(ActPax = Some(50), TranPax = Some(25), FeedSources = Set(ForecastFeedSource, AclFeedSource),
+      TotalPax = Set(TotalPaxSource(baseArrival.ActPax.getOrElse(0),AclFeedSource,None))))
 
     crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>
@@ -241,7 +242,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveArrivals))
 
-    val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax, TranPax = forecastArrival.TranPax, Estimated = Some(SDate(liveScheduled).millisSinceEpoch), FeedSources = Set(AclFeedSource, ForecastFeedSource, LiveFeedSource)))
+    val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax,
+      TranPax = forecastArrival.TranPax, Estimated = Some(SDate(liveScheduled).millisSinceEpoch),
+      FeedSources = Set(AclFeedSource, ForecastFeedSource, LiveFeedSource),
+      TotalPax = Set(TotalPaxSource(baseArrival.ActPax.getOrElse(0),AclFeedSource,None),TotalPaxSource(liveArrival.ActPax.getOrElse(0),LiveFeedSource,None))))
 
     crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>
@@ -277,8 +281,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals2nd))
 
     val expectedForecastArrivals = Set(
-      baseArrival1.copy(ActPax = Some(51), Status = ArrivalStatus("Port Forecast"), FeedSources = Set(ForecastFeedSource, AclFeedSource)),
-      baseArrival2.copy(ActPax = Some(52), Status = ArrivalStatus("Port Forecast"), FeedSources = Set(ForecastFeedSource, AclFeedSource)))
+      baseArrival1.copy(ActPax = Some(51), Status = ArrivalStatus("Port Forecast"), FeedSources = Set(ForecastFeedSource, AclFeedSource),TotalPax = Set(TotalPaxSource(baseArrival1.ActPax.getOrElse(0),AclFeedSource,None))),
+      baseArrival2.copy(ActPax = Some(52), Status = ArrivalStatus("Port Forecast"), FeedSources = Set(ForecastFeedSource, AclFeedSource),TotalPax = Set(TotalPaxSource(baseArrival2.ActPax.getOrElse(0),AclFeedSource,None))))
 
     crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>

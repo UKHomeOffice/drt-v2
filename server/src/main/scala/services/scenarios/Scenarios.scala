@@ -14,7 +14,7 @@ import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
 import queueus.DynamicQueueStatusProvider
 import services.crunch.desklimits.PortDeskLimits
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.deskrecs.{DynamicRunnableDeskRecs, PortDesksAndWaitsProvider, RunnableOptimisation}
 import services.graphstages.FlightFilter
@@ -36,6 +36,7 @@ object Scenarios {
                        flightsProvider: CrunchRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                        liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
                        historicManifestsProvider: HistoricManifestsProvider,
+                       historicManifestsPaxProvider: HistoricManifestsPaxProvider,
                        flightsActor: ActorRef,
                        portStateActor: ActorRef,
                        redListUpdatesProvider: () => Future[RedListUpdates],
@@ -61,6 +62,7 @@ object Scenarios {
       arrivalsProvider = flightsProvider,
       liveManifestsProvider = liveManifestsProvider,
       historicManifestsProvider = historicManifestsProvider,
+      historicManifestsPaxProvider = historicManifestsPaxProvider,
       splitsCalculator = splitsCalculator,
       splitsSink = flightsActor,
       portDesksAndWaitsProvider = portDesksAndWaitsProvider,
@@ -74,6 +76,7 @@ object Scenarios {
         case _ => Unit
       }
     }
+
     val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
 
     val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch, SortedSet())

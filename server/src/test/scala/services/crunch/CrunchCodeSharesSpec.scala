@@ -6,7 +6,7 @@ import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PortCode, Queues}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 
 import scala.collection.immutable.{List, Seq, SortedMap}

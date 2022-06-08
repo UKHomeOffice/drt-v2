@@ -11,7 +11,7 @@ import akka.util.Timeout
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.Enable
 import drt.shared.coachTime.CoachWalkTime
-import manifests.passengers.BestAvailableManifest
+import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
@@ -37,6 +37,10 @@ case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Mater
                                           voyageNumber: VoyageNumber,
                                           scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
     Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+
+  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+  }
 }
 
 case class TestDrtSystem(airportConfig: AirportConfig)

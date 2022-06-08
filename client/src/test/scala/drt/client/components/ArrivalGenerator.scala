@@ -2,10 +2,9 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Prediction}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Prediction, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
-
 
 object ArrivalGenerator {
   def apiFlight(
@@ -30,7 +29,8 @@ object ArrivalGenerator {
                  baggageReclaimId: Option[String] = None,
                  airportId: PortCode = PortCode(""),
                  feedSources: Set[FeedSource] = Set(),
-                 pcpTime: Option[MillisSinceEpoch] = None
+                 pcpTime: Option[MillisSinceEpoch] = None,
+                 totalPax : Set[TotalPaxSource] = Set.empty
                ): Arrival =
     Arrival(
       Operator = operator,
@@ -54,6 +54,7 @@ object ArrivalGenerator {
       Origin = origin,
       PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (schDt.nonEmpty) Some(SDate(schDt).millisSinceEpoch) else None,
       Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0L,
-      FeedSources = feedSources
+      FeedSources = feedSources,
+      TotalPax = totalPax
     )
 }

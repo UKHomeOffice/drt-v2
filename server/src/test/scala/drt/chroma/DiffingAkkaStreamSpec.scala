@@ -9,6 +9,7 @@ import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 import services.crunch.CrunchTestLike
 import spray.json._
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.collection.immutable.{Seq, SortedMap}
 
@@ -103,12 +104,12 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
           )))), date))
         .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
           ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
-          "2016-08-04T04:40:00Z",
-          "2016-08-04T09:11:00Z",
-          "",
-          "2016-08-04T04:54:00Z", "", "207", 0, 0, 0, "24", "",
-          1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-        )))), date))
+            "2016-08-04T04:40:00Z",
+            "2016-08-04T09:11:00Z",
+            "",
+            "2016-08-04T04:54:00Z", "", "207", 0, 0, 0, "24", "",
+            1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
+          )))), date))
         .expectComplete()
     }
   }

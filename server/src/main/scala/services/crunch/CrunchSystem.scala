@@ -17,7 +17,7 @@ import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike}
 import services.graphstages.Crunch._
 import services.graphstages._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
-import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.{AirportConfig, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 import uk.gov.homeoffice.drt.time.SDateLike
 

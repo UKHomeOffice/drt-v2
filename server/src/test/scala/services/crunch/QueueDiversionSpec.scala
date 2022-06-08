@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpda
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PortCode}
 
 import scala.collection.immutable.List
 import scala.concurrent.Future
