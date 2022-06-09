@@ -21,6 +21,7 @@ object FlightComponents {
     case (ForecastFeedSource, _) => "pax-rag-amber"
     case (ApiFeedSource, _) => "pax-rag-red"
     case (AclFeedSource, _) => "pax-rag-red"
+    case _ => "pax-rag-red"
   }
 
   def paxComp(flightWithSplits: ApiFlightWithSplits, directRedListFlight: DirectRedListFlight, noPcpPax: Boolean): TagMod = {
