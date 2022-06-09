@@ -69,10 +69,10 @@ object LHRForecastCSVExtractor {
       0
   }
 
-  val ddMMYYYHHMMFormat: DateTimeFormatter = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm")
+  val yyyyMMddHHmmssFormat: DateTimeFormatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
 
   def asDate(dateField: String) = {
-    val dateWithoutTZ = ddMMYYYHHMMFormat.parseDateTime(asString(dateField))
+    val dateWithoutTZ = yyyyMMddHHmmssFormat.parseDateTime(asString(dateField))
       .toString(ISODateTimeFormat.dateHourMinuteSecond)
 
     SDate(dateWithoutTZ, Crunch.europeLondonTimeZone)
