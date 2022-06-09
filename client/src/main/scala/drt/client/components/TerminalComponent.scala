@@ -50,6 +50,8 @@ object TerminalComponent {
                            redListUpdates: Pot[RedListUpdates],
                           ) extends UseValueEq
 
+  private val activeClass = "active"
+
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Terminal")
     .render_P(props => {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
@@ -83,11 +85,11 @@ object TerminalComponent {
 
             val timeRangeHours = if (model.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
 
-            val currentContentClass = if (props.terminalPageTab.mode == Current) "fade in active" else "fade out"
-            val snapshotContentClass = if (props.terminalPageTab.mode == Snapshot) "fade in active" else "fade out"
-            val planningContentClass = if (props.terminalPageTab.mode == Planning) "fade in active" else "fade out"
-            val staffingContentClass = if (props.terminalPageTab.mode == Staffing) "fade in active" else "fade out"
-            val dashboardContentClass = if (props.terminalPageTab.mode == Dashboard) "fade in active" else "fade out"
+            val currentContentClass = if (props.terminalPageTab.mode == Current) "fade in " + activeClass else "fade out"
+            val snapshotContentClass = if (props.terminalPageTab.mode == Snapshot) "fade in " + activeClass else "fade out"
+            val planningContentClass = if (props.terminalPageTab.mode == Planning) "fade in " + activeClass else "fade out"
+            val staffingContentClass = if (props.terminalPageTab.mode == Staffing) "fade in " + activeClass else "fade out"
+            val dashboardContentClass = if (props.terminalPageTab.mode == Dashboard) "fade in " + activeClass else "fade out"
 
             model.loggedInUserPot.render { loggedInUser =>
               model.redListUpdates.render { redListUpdates =>
@@ -194,11 +196,11 @@ object TerminalComponent {
     else
       props.terminalPageTab.subMode
 
-    val currentClass = if (props.terminalPageTab.mode == Current) "active" else ""
-    val snapshotDataClass = if (props.terminalPageTab.mode == Snapshot) "active" else ""
-    val planningClass = if (props.terminalPageTab.mode == Planning) "active" else ""
-    val staffingClass = if (props.terminalPageTab.mode == Staffing) "active" else ""
-    val terminalDashboardClass = if (props.terminalPageTab.mode == Dashboard) "active" else ""
+    val currentClass = if (props.terminalPageTab.mode == Current) activeClass else ""
+    val snapshotDataClass = if (props.terminalPageTab.mode == Snapshot) activeClass else ""
+    val planningClass = if (props.terminalPageTab.mode == Planning) activeClass else ""
+    val staffingClass = if (props.terminalPageTab.mode == Staffing) activeClass else ""
+    val terminalDashboardClass = if (props.terminalPageTab.mode == Dashboard) activeClass else ""
 
     <.ul(^.className := "nav nav-tabs",
       <.li(^.className := terminalDashboardClass,
