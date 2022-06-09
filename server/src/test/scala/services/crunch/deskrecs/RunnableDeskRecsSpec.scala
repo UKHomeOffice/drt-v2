@@ -11,7 +11,7 @@ import akka.util.Timeout
 import controllers.ArrivalGenerator
 import dispatch.Future
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes}
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits, SplitsForArrivals}
+import drt.shared.FlightsApi.{Flights, FlightsWithSplits, PaxForArrivals, SplitsForArrivals}
 import drt.shared._
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
@@ -81,6 +81,7 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long) extends Ac
 class MockSplitsSinkActor() extends Actor {
   override def receive: Receive = {
     case _: SplitsForArrivals => sender() ! UpdatedMillis.empty
+    case _: PaxForArrivals => sender() ! UpdatedMillis.empty
     case _: ArrivalsDiff => sender() ! UpdatedMillis.empty
   }
 }

@@ -9,7 +9,7 @@ import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, PaxForArrivals, SplitsForArrivals}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
@@ -110,6 +110,10 @@ class TerminalDayFlightActor(
 
     case splits: SplitsForArrivals =>
       val diff = splits.diff(state, now().millisSinceEpoch)
+      updateAndPersistDiffAndAck(diff)
+
+    case pax: PaxForArrivals =>
+      val diff = pax.diff(state, now().millisSinceEpoch)
       updateAndPersistDiffAndAck(diff)
 
     case GetState =>
