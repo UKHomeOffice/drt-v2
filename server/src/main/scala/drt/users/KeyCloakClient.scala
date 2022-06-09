@@ -58,7 +58,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
     if (users.isEmpty) Nil else users ++ getAllUsers(offset + 50)
   }
 
-  def getUserGroups(userId: UUID): Future[List[KeyCloakGroup]] = {
+  def getUserGroups(userId: String): Future[List[KeyCloakGroup]] = {
     val uri = keyCloakUrl + s"/users/$userId/groups"
     log.info(s"Calling key cloak: $uri")
     pipeline(HttpMethods.GET, uri, "getUserGroups").flatMap { r => Unmarshal(r).to[List[KeyCloakGroup]] }
@@ -92,13 +92,13 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
     } yield allUsers.filterNot(usersInGroup.toSet)
   }
 
-  def addUserToGroup(userId: UUID, groupId: String): Future[HttpResponse] = {
+  def addUserToGroup(userId: String, groupId: String): Future[HttpResponse] = {
     log.info(s"Adding $userId to $groupId")
     val uri = s"$keyCloakUrl/users/$userId/groups/$groupId"
     pipeline(HttpMethods.PUT, uri, "addUserToGroup")
   }
 
-  def removeUserFromGroup(userId: UUID, groupId: String): Future[HttpResponse] = {
+  def removeUserFromGroup(userId: String, groupId: String): Future[HttpResponse] = {
     log.info(s"Removing $userId from $groupId")
     val uri = s"$keyCloakUrl/users/$userId/groups/$groupId"
     pipeline(HttpMethods.DELETE, uri, "removeUserFromGroup")
@@ -114,7 +114,7 @@ trait KeyCloakUserParserProtocol extends DefaultJsonProtocol with SprayJsonSuppo
     override def read(json: JsValue): KeyCloakUser = json match {
       case JsObject(fields) =>
         KeyCloakUser(
-          UUID.fromString(fields.get("id").map(_.convertTo[String]).getOrElse("")),
+          fields.get("id").map(_.convertTo[String]).getOrElse(""),
           fields.get("username").map(_.convertTo[String]).getOrElse(""),
           fields.get("enabled").exists(_.convertTo[Boolean]),
           fields.get("emailVerified").exists(_.convertTo[Boolean]),

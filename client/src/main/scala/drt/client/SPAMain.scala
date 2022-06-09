@@ -1,6 +1,7 @@
 package drt.client
 
 import diode.Action
+import drt.client.SPAMain.TerminalPageModes.{Current, Dashboard, Planning, Snapshot, Staffing}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
 import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle}
@@ -18,7 +19,6 @@ import uk.gov.homeoffice.drt.Urls
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
-import java.util.UUID
 import scala.collection.immutable.Seq
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 
@@ -69,8 +69,52 @@ object SPAMain {
 
   case class PortConfigPageLoc()
 
+  sealed trait TerminalPageMode {
+    val asString: String
+  }
+
+  object TerminalPageModes {
+    def fromString(modeStr: String): TerminalPageMode = modeStr.toLowerCase match {
+      case "dashboard" => Dashboard
+      case "current" => Current
+      case "snapshot" => Snapshot
+      case "planning" => Planning
+      case "staffing" => Staffing
+      case unknown =>
+        throw new Exception(s"Unknown terminal page mode '$unknown'")
+    }
+
+    case object Dashboard extends TerminalPageMode {
+      override val asString: String = "dashboard"
+    }
+
+    case object Current extends TerminalPageMode {
+      override val asString: String = "current"
+    }
+
+    case object Snapshot extends TerminalPageMode {
+      override val asString: String = "snapshot"
+    }
+
+    case object Planning extends TerminalPageMode {
+      override val asString: String = "planning"
+    }
+
+    case object Staffing extends TerminalPageMode {
+      override val asString: String = "staffing"
+    }
+  }
+
+  object TerminalPageTabLoc {
+    def apply(terminalName: String,
+              mode: TerminalPageMode,
+              subMode: String,
+              queryParams: Map[String, String]): TerminalPageTabLoc =
+      TerminalPageTabLoc(terminalName, mode.toString, subMode, queryParams)
+  }
+
   case class TerminalPageTabLoc(terminalName: String,
-                                mode: String = "dashboard",
+                                modeStr: String = "dashboard",
                                 subMode: String = "summary",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
@@ -79,11 +123,12 @@ object SPAMain {
     val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+"))
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+"))
     val viewType: ViewType = queryParams.get(UrlViewType.paramName).map(vt => if (ViewRecs.queryParamsValue == vt) ViewRecs else ViewDeps).getOrElse(ViewDeps)
+    val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
 
     def viewMode: ViewMode = {
       (mode, date) match {
-        case ("current", Some(dateString)) => ViewDay(parseDateString(dateString))
-        case ("snapshot", dateStringOption) =>
+        case (Current, Some(dateString)) => ViewDay(parseDateString(dateString))
+        case (Snapshot, dateStringOption) =>
           val pointInTimeMillis = dateStringOption.map(parseDateString).getOrElse(SDate.midnightThisMorning())
           ViewPointInTime(pointInTimeMillis)
         case _ => ViewLive
@@ -111,13 +156,16 @@ object SPAMain {
     def updateRequired(p: TerminalPageTabLoc): Boolean = (terminal != p.terminal) || (date != p.date) || (mode != p.mode)
 
     def loadAction: Action = mode match {
-      case "planning" =>
+      case Planning =>
         GetForecastWeek(TerminalPlanningComponent.defaultStartDate(dateFromUrlOrNow), terminal)
-      case "staffing" =>
+      case Staffing =>
         GetShiftsForMonth(dateFromUrlOrNow, terminal)
 
       case _ => SetViewMode(viewMode)
     }
+
+    def update(mode: TerminalPageMode, subMode: String, queryParams: Map[String, String] = Map[String, String]()): TerminalPageTabLoc =
+      copy(modeStr = mode.asString, subMode = subMode, queryParams = queryParams)
   }
 
   def serverLogEndpoint: String = absoluteUrl("logging")
@@ -140,7 +188,7 @@ object SPAMain {
 
   case object DeskAndQueuesLoc extends Loc
 
-  case class KeyCloakUserEditLoc(userId: UUID) extends Loc
+  case class KeyCloakUserEditLoc(userId: String) extends Loc
 
   case object AlertLoc extends Loc
 
@@ -228,7 +276,7 @@ object SPAMain {
   def keyCloakUserEditRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
-    dynamicRouteCT(("#editUser" / uuid).caseClass[KeyCloakUserEditLoc]) ~>
+    dynamicRouteCT(("#editUser" / string(".+")).caseClass[KeyCloakUserEditLoc]) ~>
       dynRenderR((page: KeyCloakUserEditLoc, _) => {
         EditKeyCloakUserPage(page.userId)
       })
@@ -270,10 +318,10 @@ object SPAMain {
 
     dynamicRouteCT(
       ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap).caseClass[TerminalPageTabLoc]) ~>
-      dynRenderR((page: TerminalPageTabLoc, router) => {
+      dynRenderR { (page: TerminalPageTabLoc, router) =>
         val props = TerminalComponent.Props(terminalPageTab = page, router)
         TerminalComponent(props)
-      })
+      }
   }
 
   val pathToThisApp: String = dom.document.location.pathname

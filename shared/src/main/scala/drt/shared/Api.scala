@@ -11,7 +11,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PortCode}
 import upickle.default._
 
-import java.util.UUID
 import scala.concurrent.Future
 import scala.language.postfixOps
 
@@ -204,11 +203,11 @@ trait Api {
 
   def getKeyCloakGroups(): Future[List[KeyCloakGroup]]
 
-  def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]]
+  def getKeyCloakUserGroups(userId: String): Future[Set[KeyCloakGroup]]
 
-  def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit]
+  def addUserToGroups(userId: String, groups: Set[String]): Future[Unit]
 
-  def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit]
+  def removeUserFromGroups(userId: String, groups: Set[String]): Future[Unit]
 
   def getShowAlertModalDialog(): Boolean
 }

@@ -2,49 +2,41 @@ package drt.client.components
 
 import utest.{TestSuite, _}
 
-object EnvironmentWarningTests extends TestSuite {
+object AlertsComponentTests extends TestSuite {
 
 
-  def tests = Tests {
+  def tests: Tests = Tests {
     "When testing the URL for DRT to determine the environment" - {
       "Given a prod-like URL the environment should be PROD" - {
         val url = "http://test.drt.homeoffice.gov.uk"
 
-        val result = EnvironmentWarningComponent.envFromUrl(url)
+        val result = AlertsComponent.nonProdEnvFromUrl(url)
 
-        val expected = "PROD"
-
-        assert(result == expected)
+        assert(result.isEmpty)
       }
 
       "Given a preprod-like URL the environment should be PROD" - {
         val url = "http://test.drt-preprod.homeoffice.gov.uk"
 
-        val result = EnvironmentWarningComponent.envFromUrl(url)
+        val result = AlertsComponent.nonProdEnvFromUrl(url)
 
-        val expected = "PREPROD"
-
-        assert(result == expected)
+        assert(result == Option("PREPROD"))
       }
 
       "Given a staging-like URL the environment should be PROD" - {
         val url = "http://test.drt-staging.homeoffice.gov.uk"
 
-        val result = EnvironmentWarningComponent.envFromUrl(url)
+        val result = AlertsComponent.nonProdEnvFromUrl(url)
 
-        val expected = "STAGING"
-
-        assert(result == expected)
+        assert(result == Option("STAGING"))
       }
 
       "Given a test-like URL the environment should be PROD" - {
         val url = "http://localhost"
 
-        val result = EnvironmentWarningComponent.envFromUrl(url)
+        val result = AlertsComponent.nonProdEnvFromUrl(url)
 
-        val expected = "TEST"
-
-        assert(result == expected)
+        assert(result == Option("TEST"))
       }
 
     }

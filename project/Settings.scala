@@ -70,7 +70,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "186"
-    val drtLib = "v219"
+    val drtLib = "v220"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "1.2.0"
@@ -80,6 +80,7 @@ object Settings {
     val janinoVersion = "3.1.6"
     val scalaJsReactMaterialUi = "0.2.1"
     val sprayJsonScalaJs = "1.3.5-7"
+    val scalaTestVersion = "3.2.12"
   }
 
   import versions._
@@ -112,6 +113,7 @@ object Settings {
     "io.suzaku" %%% "diode" % diode,
     "io.suzaku" %%% "diode-react" % diode,
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
+    "org.scala-js" %%% "scalajs-java-securerandom" % "1.0.0",
 
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
@@ -122,7 +124,9 @@ object Settings {
     "io.kinoplan" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
     "io.kinoplan" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
 
-    "io.crashbox" %% "spray-json" % sprayJsonScalaJs
+    "io.crashbox" %% "spray-json" % sprayJsonScalaJs,
+
+    "org.scalatest" %%% "scalatest" % scalaTestVersion % "test",
   ))
 
   val clientNpmDevDependencies: (String, String) = "expose-loader" -> exposeLoader

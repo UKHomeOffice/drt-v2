@@ -188,7 +188,7 @@ object TerminalStaffing {
       }
   }
 
-  def sortedMovements(terminalMovements: Seq[StaffMovement]): Seq[(UUID, Seq[StaffMovement])] = terminalMovements
+  def sortedMovements(terminalMovements: Seq[StaffMovement]): Seq[(String, Seq[StaffMovement])] = terminalMovements
     .groupBy(_.uUID)
     .toSeq
     .sortBy {

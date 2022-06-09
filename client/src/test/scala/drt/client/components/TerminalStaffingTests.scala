@@ -1,10 +1,8 @@
 package drt.client.components
 
-import java.util.UUID
-
 import drt.client.services.JSDateConversions._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import drt.shared.{StaffMovement, StaffMovements}
+import drt.shared.{StaffMovement, StaffMovements, UUID}
 import utest.{TestSuite, _}
 
 import scala.collection.immutable._
@@ -14,8 +12,8 @@ object TerminalStaffingTests extends TestSuite {
   def tests = Tests {
     "Staff Movements" - {
       "should only display movements for the day provided" - {
-        val uid1 = UUID.randomUUID()
-        val uid2 = UUID.randomUUID()
+        val uid1 = newUuidString
+        val uid2 = newUuidString
         val yesterday = StaffMovement(T1, "reason", SDate(2017, 7, 20, 12, 0), 1, uid1, None, None)
         val today = StaffMovement(T1, "reason", SDate(2017, 7, 21, 12, 0), 1, uid2, None, None)
         val sm = StaffMovements(Seq(
@@ -30,8 +28,8 @@ object TerminalStaffingTests extends TestSuite {
       }
 
       "should display movements for the day provided, including movement pairs that begin or end during that day" - {
-        val uidLast = UUID.randomUUID()
-        val uidNext = UUID.randomUUID()
+        val uidLast = newUuidString
+        val uidNext = newUuidString
         val crossingLastMidnight = Seq(
           StaffMovement(T1, "before last midnight", SDate("2017-07-21T22:00"), 1, uidLast, None, None),
           StaffMovement(T1, "after last midnight", SDate("2017-07-22T02:00"), 1, uidLast, None, None))
@@ -47,9 +45,9 @@ object TerminalStaffingTests extends TestSuite {
       }
 
       "should not display pairs of movements that lie completely outside of the day provided" - {
-        val uidYesterday = UUID.randomUUID()
-        val uidToday = UUID.randomUUID()
-        val uidTomorrow = UUID.randomUUID()
+        val uidYesterday = newUuidString
+        val uidToday = newUuidString
+        val uidTomorrow = newUuidString
         val pairYesterday = Seq(
           StaffMovement(T1, "reason start", SDate("2017-07-21" + T1 + "0:00"), 1, uidYesterday, None, None),
           StaffMovement(T1, "reason end", SDate("2017-07-21" + T1 + "2:00"), 1, uidYesterday, None, None))
@@ -67,5 +65,9 @@ object TerminalStaffingTests extends TestSuite {
         assert(expected.toSet == result.toSet)
       }
     }
+  }
+
+  private def newUuidString = {
+    UUID.randomUUID().toString()
   }
 }

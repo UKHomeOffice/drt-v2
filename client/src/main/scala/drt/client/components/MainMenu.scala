@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.SPAMain
+import drt.client.SPAMain.TerminalPageModes.Dashboard
 import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
@@ -57,8 +58,8 @@ object MainMenu {
     def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = airportConfig.terminals.map { tn =>
       val terminalName = tn.toString
       val targetLoc = currentLoc match {
-        case tptl: TerminalPageTabLoc if tptl.mode == "dashboard" =>
-          TerminalPageTabLoc(terminalName, tptl.mode, tptl.subMode)
+        case tptl: TerminalPageTabLoc if tptl.mode == Dashboard =>
+          TerminalPageTabLoc(terminalName, tptl.mode, tptl.subMode, Map[String, String]())
         case tptl: TerminalPageTabLoc =>
           TerminalPageTabLoc(terminalName, tptl.mode, tptl.subMode,
             tptl.withUrlParameters(UrlDateParameter(tptl.date),

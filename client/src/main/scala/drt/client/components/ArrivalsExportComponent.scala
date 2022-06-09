@@ -6,20 +6,21 @@ import drt.client.components.TerminalContentComponent.exportLink
 import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services._
-import uk.gov.homeoffice.drt.time.SDateLike
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import io.kinoplan.scalajs.react.material.ui.icons._
 import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.vdom.all.onClick.Event
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object ArrivalsExportComponent extends WithScalaCssImplicits {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -34,19 +35,28 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
 
   case class State(showDialogue: Boolean = false)
 
+
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
     .initialStateFromProps(p => State(false))
     .renderPS((scope, props, state) => {
       val showClass = if (state.showDialogue) "show" else "fade"
-      <.div(^.className := "arrival-export",
+
+      def showDialogue(event: Event): Callback = {
+        event.preventDefault()
+        scope.modState(_.copy(showDialogue = true))
+      }
+
+      <.div(
+        ^.className := "export-button-wrapper",
         MuiButton(color = Color.default, variant = "outlined", size = "medium")(
           MuiIcons(GetApp)(fontSize = "small"),
           "Arrivals",
-          ^.className := "btn btn-default muiButton",
+          ^.className := "btn btn-default",
+          ^.href := "#",
           VdomAttr("data-toggle") := "modal",
           VdomAttr("data-target") := "#arrivals-export",
-          ^.onClick --> scope.modState(_.copy(showDialogue = true)))
-        ,
+          ^.onClick ==> showDialogue,
+        ),
         <.div(^.className := "arrivals-export modal " + showClass, ^.id := "#arrivals-export", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
             ^.className := "modal-dialog modal-dialog-centered",
@@ -73,7 +83,9 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
                 )
               )
             )
-          )))
+          )
+        )
+      )
     })
     .build
 

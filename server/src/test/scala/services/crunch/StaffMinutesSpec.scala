@@ -61,7 +61,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val endDate2 = MilliDate(SDate("2017-01-01T00:09").millisSinceEpoch)
     val assignment2 = StaffAssignment("shift b", T1, startDate2, endDate2, 2, None)
     val initialShifts = ShiftAssignments(Seq(assignment1, assignment2))
-    val uuid = UUID.randomUUID()
+    val uuid = UUID.randomUUID().toString()
     val initialMovements = Seq(
       StaffMovement(T1, "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid, createdBy = None),
       StaffMovement(T1, "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid, createdBy = None)
@@ -107,7 +107,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val startDate = SDate("2017-01-01T00:00")
     val endDate = SDate("2017-01-01T00:05")
 
-    val uuid = UUID.randomUUID()
+    val uuid = UUID.randomUUID().toString()
     val initialMovements = Seq(
       StaffMovement(T1, "lunch start", MilliDate(startDate.millisSinceEpoch), -1, uuid, createdBy = None),
       StaffMovement(T1, "lunch end", MilliDate(endDate.millisSinceEpoch), 1, uuid, createdBy = None)
@@ -146,7 +146,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val initialShifts = ShiftAssignments(Seq(shift))
 
-    val uuid = UUID.randomUUID()
+    val uuid = UUID.randomUUID().toString()
     val initialMovements = Seq(
       StaffMovement(T1, "lunch start", MilliDate(startDate.millisSinceEpoch), -1, uuid, createdBy = None),
       StaffMovement(T1, "lunch end", MilliDate(endDate.addMinutes(1).millisSinceEpoch), 1, uuid, createdBy = None)
@@ -181,8 +181,8 @@ class StaffMinutesSpec extends CrunchTestLike {
     "Then I should see the sum of the movements for the minute they cover" >> {
     val shiftStart = SDate("2017-01-01T00:00Z")
 
-    val uuid1 = UUID.randomUUID()
-    val uuid2 = UUID.randomUUID()
+    val uuid1 = UUID.randomUUID().toString()
+    val uuid2 = UUID.randomUUID().toString()
     val initialMovements = Seq(
       StaffMovement(T1, "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid1, createdBy = None),
       StaffMovement(T1, "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid1, createdBy = None),
@@ -433,7 +433,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val now = SDate(nowString)
     val startDate1 = MilliDate(SDate("2017-01-01T00:00:15").millisSinceEpoch)
     val endDate1 = MilliDate(SDate("2017-01-01T00:02:15").millisSinceEpoch)
-    val uuid = UUID.randomUUID()
+    val uuid = UUID.randomUUID().toString()
     val staffMovement1 = StaffMovement(T1, "some reason", startDate1, 1, uuid, None, None)
     val staffMovement2 = StaffMovement(T1, "some reason", endDate1, -1, uuid, None, None)
 

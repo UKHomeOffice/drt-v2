@@ -8,7 +8,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.LoadingState
 import drt.client.util.DateUtil.isNotValidDate
-import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiTextField}
+import io.kinoplan.scalajs.react.material.ui.core.MuiTextField
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{^, _}
@@ -112,34 +112,29 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         WholeDayWindow()
 
 
-      MuiGrid(container = true, spacing = MuiGrid.Spacing.`0`)(^.className := "date-selector",
-        DefaultFormFieldsStyle.daySelector,
-        MuiGrid(item = true, xs = 4)(
-          <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
+      <.div(
+        ^.className := "date-component-wrapper",
+        <.div(
+          ^.className := "date-select-wrapper",
+          DefaultFormFieldsStyle.daySelector,
+          <.div(^.className := "btn-group no-gutters date-quick-days", VdomAttr("data-toggle") := "buttons",
             <.div(^.id := "yesterday", ^.className := s"btn btn-primary $yesterdayActive", "Yesterday", ^.onClick ==> selectYesterday),
             <.div(^.id := "today", ^.className := s"btn btn-primary $todayActive", "Today", ^.onClick ==> selectToday),
-            <.div(^.id := "tomorrow", ^.className := s"btn btn-primary $tomorrowActive end-spacer", "Tomorrow", ^.onClick ==> selectTomorrow)),
-        ),
-        MuiGrid(item = true, xs = 8)(
-          MuiGrid(container = true, spacing = MuiGrid.Spacing.`0`)(
-            MuiGrid(item = true, xs = 4)(
-              MuiTextField()(
-                DefaultFormFieldsStyle.datePicker,
-                ^.`type` := "date",
-                ^.defaultValue := s"${state.stateDate.date.toISOString}",
-                ^.onChange ==> updateState,
-              )
+            <.div(^.id := "tomorrow", ^.className := s"btn btn-primary $tomorrowActive end-spacer", "Tomorrow", ^.onClick ==> selectTomorrow)
+          ),
+          <.div(
+            ^.className := "date-picker",
+            MuiTextField()(
+              DefaultFormFieldsStyle.datePicker,
+              ^.`type` := "date",
+              ^.defaultValue := s"${state.stateDate.date.toISOString}",
+              ^.onChange ==> updateState,
             ),
-            MuiGrid(item = true, xs = 4)(
-              DefaultFormFieldsStyle.goButton,
-              goButton(props.loadingState.isLoading, isCurrentSelection, state.stateDate.isNotValid),
-            )
+            goButton(props.loadingState.isLoading, isCurrentSelection, state.stateDate.isNotValid),
           )
         ),
-        MuiGrid(item = true, xs = 6)(
-          TimeRangeFilter(
-            TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isTodayActive, props.minuteTicker)
-          )
+        TimeRangeFilter(
+          TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isTodayActive, props.minuteTicker)
         )
       )
     })

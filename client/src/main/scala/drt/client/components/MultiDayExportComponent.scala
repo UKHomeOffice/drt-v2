@@ -15,9 +15,10 @@ import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiFormLabel, MuiG
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.vdom.all.onClick.Event
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CallbackTo, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
 import uk.gov.homeoffice.drt.ports.PortCode
@@ -106,14 +107,22 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       }
 
       val gridXs = 4
+
+      def showDialogue(event: Event): Callback = {
+        event.preventDefault()
+        scope.modState(_.copy(showDialogue = true))
+      }
+
       <.div(
+        ^.className := "export-button-wrapper",
         MuiButton(color = Color.default, variant = "outlined", size = "medium")(
           MuiIcons(GetApp)(fontSize = "small"),
           "Multi Day Export",
           ^.className := "btn btn-default",
           VdomAttr("data-toggle") := "modal",
           VdomAttr("data-target") := "#multi-day-export",
-          ^.onClick --> scope.modState(_.copy(showDialogue = true))
+          ^.href := "#",
+          ^.onClick ==> showDialogue,
         ),
         <.div(^.className := "multi-day-export modal " + showClass, ^.id := "#multi-day-export", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
@@ -165,7 +174,8 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                 )
               )
             )
-          )))
+          ))
+      )
     })
     .build
 

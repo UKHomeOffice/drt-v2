@@ -24,7 +24,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
 
   "StaffMovementsActor" should {
     "remember a movement added before a shutdown" in {
-      val movementUuid1: UUID = UUID.randomUUID()
+      val movementUuid1 = newUuidString
       val staffMovements = StaffMovements(Seq(StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
@@ -48,8 +48,8 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
     }
 
     "correctly remove a movement after a restart" in {
-      val movementUuid1: UUID = UUID.randomUUID()
-      val movementUuid2: UUID = UUID.randomUUID()
+      val movementUuid1 = newUuidString
+      val movementUuid2 = newUuidString
 
       val movement1 = StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))
       val movement2 = StaffMovement(T1, "coffee start", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), -1, movementUuid2, createdBy = Some("robin"))
@@ -80,10 +80,10 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
     }
 
     "remember multiple added movements and correctly forget removed movements after a restart" in {
-      val movementUuid1: UUID = UUID.randomUUID()
-      val movementUuid2: UUID = UUID.randomUUID()
-      val movementUuid3: UUID = UUID.randomUUID()
-      val movementUuid4: UUID = UUID.randomUUID()
+      val movementUuid1 = newUuidString
+      val movementUuid2 = newUuidString
+      val movementUuid3 = newUuidString
+      val movementUuid4 = newUuidString
 
       val movement1 = StaffMovement(T1, "lunch start", MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))
       val movement2 = StaffMovement(T1, "coffee start", MilliDate(SDate("2017-01-01T01:15").millisSinceEpoch), -1, movementUuid2, createdBy = Some("robin"))
@@ -122,10 +122,10 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
     }
 
     "purge movements created more than the specified expiry period ago" in {
-      val movementUuid1: UUID = UUID.randomUUID()
-      val movementUuid2: UUID = UUID.randomUUID()
-      val movementUuid3: UUID = UUID.randomUUID()
-      val movementUuid4: UUID = UUID.randomUUID()
+      val movementUuid1 = newUuidString
+      val movementUuid2 = newUuidString
+      val movementUuid3 = newUuidString
+      val movementUuid4 = newUuidString
 
       val expiredMovement1 = StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, movementUuid1, createdBy = Some("batman"))
       val expiredMovement2 = StaffMovement(T1, "coffee start", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), -1, movementUuid2, createdBy = Some("robin"))
@@ -154,10 +154,10 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
     }
 
     "purge movements created more than the specified expiry period ago when requested via a point in time actor" in {
-      val expiredMovement1 = StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("batman"))
-      val expiredMovement2 = StaffMovement(T1, "coffee start", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("robin"))
-      val unexpiredMovement1 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("bruce"))
-      val unexpiredMovement2 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), -1, UUID.randomUUID(), createdBy = Some("bruce"))
+      val expiredMovement1 = StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, newUuidString, createdBy = Some("batman"))
+      val expiredMovement2 = StaffMovement(T1, "coffee start", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), -1, newUuidString, createdBy = Some("robin"))
+      val unexpiredMovement1 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, newUuidString, createdBy = Some("bruce"))
+      val unexpiredMovement2 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), -1, newUuidString, createdBy = Some("bruce"))
 
       val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T02:00")
       val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
@@ -185,10 +185,10 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
     }
 
     "keep pairs of movements when only one was created more than the specified expiry period ago when requested via a point in time actor" in {
-      val pair1 = UUID.randomUUID()
+      val pair1 = newUuidString
       val expiredMovement1 = StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, pair1, createdBy = Some("batman"))
       val expiredMovement2 = StaffMovement(T1, "lunch end", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), 1, pair1, createdBy = Some("robin"))
-      val pair2 = UUID.randomUUID()
+      val pair2 = newUuidString
       val unexpiredMovement1 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, pair2, createdBy = Some("bruce"))
       val unexpiredMovement2 = StaffMovement(T1, "supper enmd", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), 1, pair2, createdBy = Some("ed"))
 
@@ -218,10 +218,10 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
     }
 
     "purge pairs of movements where both were created more than the specified expiry period ago when requested via a point in time actor" in {
-      val pair1 = UUID.randomUUID()
+      val pair1 = newUuidString
       val expiredMovement1 = StaffMovement(T1, "lunch start", MilliDate(SDate(s"2017-01-01T00:00").millisSinceEpoch), -1, pair1, createdBy = Some("batman"))
       val expiredMovement2 = StaffMovement(T1, "lunch end", MilliDate(SDate(s"2017-01-01T01:15").millisSinceEpoch), 1, pair1, createdBy = Some("robin"))
-      val pair2 = UUID.randomUUID()
+      val pair2 = newUuidString
       val unexpiredMovement1 = StaffMovement(T1, "supper start", MilliDate(SDate(s"2017-01-01T21:30").millisSinceEpoch), -1, pair2, createdBy = Some("bruce"))
       val unexpiredMovement2 = StaffMovement(T1, "supper end", MilliDate(SDate(s"2017-01-01T21:40").millisSinceEpoch), 1, pair2, createdBy = Some("ed"))
 
@@ -251,4 +251,5 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
     }
   }
 
+  private def newUuidString = UUID.randomUUID().toString
 }

@@ -54,7 +54,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
     val existingMovements = Set[StaffMovement]()
     val movementStart = MilliDate(SDate("2018-01-01T00:05").millisSinceEpoch)
     val movementEnd = MilliDate(SDate("2018-01-01T00:10").millisSinceEpoch)
-    val uuid = UUID.randomUUID()
+    val uuid = newUuidString
     val incomingMovements = Seq(
       StaffMovement(T1, "", movementStart, -1, uuid, None, createdBy = None),
       StaffMovement(T1, "", movementEnd, 1, uuid, None, createdBy = None)
@@ -67,12 +67,14 @@ class StaffGraphStageSpec extends CrunchTestLike {
     result === expected
   }
 
+  private def newUuidString = UUID.randomUUID().toString
+
   "Given a pair of existing staff movements and empty incoming staff movements " +
     "When I ask for the update criteria " +
     "Then I should see the terminal from the existing movements and a start and end time matching the existing pair" >> {
     val movementStart = MilliDate(SDate("2018-01-01T00:05").millisSinceEpoch)
     val movementEnd = MilliDate(SDate("2018-01-01T00:10").millisSinceEpoch)
-    val uuid = UUID.randomUUID()
+    val uuid = newUuidString
     val existingMovements = Set(
       StaffMovement(T1, "", movementStart, -1, uuid, None, createdBy = None),
       StaffMovement(T1, "", movementEnd, 1, uuid, None, createdBy = None)
@@ -122,7 +124,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
     val staffGraphStage = new StaffGraphStage(ShiftAssignments.empty, FixedPointAssignments.empty, None, () => SDate(date), oneDayMillis, numDays)
     val probe = TestProbe("staff")
     val (sh, fp, mm) = TestableStaffGraphStage(probe, staffGraphStage).run
-    val movementUuid = UUID.randomUUID()
+    val movementUuid = newUuidString
     val movements = Seq(
       StaffMovement(T1, "lunch start", MilliDate(SDate(s"${date}T00:00").millisSinceEpoch), -1, movementUuid, createdBy = None),
       StaffMovement(T1, "lunch end", MilliDate(SDate(s"${date}T00:01").millisSinceEpoch), 1, movementUuid, createdBy = None)
@@ -195,7 +197,7 @@ class StaffGraphStageSpec extends CrunchTestLike {
     val probe = TestProbe("staff")
     val (_, _, mm) = TestableStaffGraphStage(probe, staffGraphStage).run
 
-    val movementUuid = UUID.randomUUID()
+    val movementUuid = newUuidString
     val movements = Seq(
       StaffMovement(T1, "lunch start", MilliDate(SDate(s"${date}T00:01").millisSinceEpoch), -1, movementUuid, createdBy = None),
       StaffMovement(T1, "lunch end", MilliDate(SDate(s"${date}T00:03").millisSinceEpoch), 1, movementUuid, createdBy = None)

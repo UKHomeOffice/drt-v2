@@ -15,7 +15,7 @@ object ToolTips {
 
   val availTooltip = Tippy.info("Use the + or - buttons to make adjustments to staff available (eg due to sickness and lunch breaks). You can select from a list of reasons when making the adjustment.")
 
-  val availableStaffDeploymentsTooltip = Tippy.infoHover("In the Available staff deployment view, DRT allocates the minimum number of staff needed to help you avoid breaching SLAs within the constraints of staff available.")
+  val availableStaffDeploymentsTooltip = Tippy.infoHover("This view shows the minimum number of staff needed to help avoid breaching SLAs within the constraints of staff available.")
 
   val countryTooltip = Tippy.info(<.span("Countries on COVID-19 red list are now underlined in red. This is an interim change to quickly highlight this information. We welcome your feedback."))
 
@@ -39,7 +39,7 @@ object ToolTips {
 
   val recDesksTooltip = Tippy.info("The values under Rec desks represent the number of desks DRT recommends are deployed to avoid an SLA breach without taking available staff into consideration.")
 
-  val recommendationsTooltip = Tippy.infoHover("In the Recommendations view DRT uses the ideal number of staff. It's not constrained by staff available.")
+  val recommendationsTooltip = Tippy.infoHover("This view shows the ideal number of staff needed to help avoid breaching SLAs. It's not constrained by staff available.")
 
   val recToolTip = Tippy.info(<.div(
     <.p("The values under Rec in the PCP area represent the number of staff DRT recommends to avoid breaching SLAs. If a recommended number of staff is equal to, or greater than the maximum number of staff that are actually available, DRT will colour code it red to warn you (because it could result in SLA breaches)."),

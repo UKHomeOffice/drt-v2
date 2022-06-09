@@ -160,32 +160,31 @@ object TerminalDesksAndQueues {
         )
       }
 
-      def viewTypeControls(viewDepsClass: String, viewRecsClass: String): TagMod = {
-        List(
-          <.div(^.className := s"selector-control view-type-control $viewRecsClass",
+      def viewTypeControls(displayWaitTimesToggle: Boolean): TagMod = {
+        val controls = List(
+          <.div(^.className := s"controls-radio-wrapper",
             <.input.radio(^.checked := state.viewType == ViewRecs, ^.onChange ==> toggleViewType(ViewRecs), ^.id := "show-recs"),
-            <.label(^.`for` := "show-recs", "Recommendations", " ", recommendationsTooltip)
+            <.label(^.`for` := "show-recs", "Ideal staff", " ", recommendationsTooltip)
           ),
-          <.div(^.className := s"selector-control view-type-control $viewDepsClass",
+          <.div(^.className := s"controls-radio-wrapper",
             <.input.radio(^.checked := state.viewType == ViewDeps, ^.onChange ==> toggleViewType(ViewDeps), ^.id := "show-deps"),
-            <.label(^.`for` := "show-deps", "Available staff deployments", " ", availableStaffDeploymentsTooltip)
-          )).toTagMod
-      }
+            <.label(^.`for` := "show-deps", "Available staff", " ", availableStaffDeploymentsTooltip)
+          ))
 
+        val allControls = if (displayWaitTimesToggle) controls :+ viewWaitTimeControls else controls
+
+        <.div(^.className := "selector-control2",
+          allControls.toTagMod
+        )
+      }
 
       def viewWaitTimeControls: TagMod = {
         List(
-          <.div(^.className := s"selector-control view-type-control $viewRecsClass",
+          <.div(^.className := s"controls-radio-wrapper",
             <.input.checkbox(^.checked := state.showWaitColumn, ^.onChange ==> toggleWaitColumn, ^.id := "toggle-showWaitingTime"),
             <.label(^.`for` := "toggle-showWaitingTime", "Display wait times")
           )).toTagMod
       }
-
-      def showActualsClass = if (state.showActuals) "active-control" else ""
-
-      def viewRecsClass = if (state.viewType == ViewRecs) "active-control" else ""
-
-      def viewDepsClass = if (state.viewType == ViewDeps) "active-control" else ""
 
       val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
 
@@ -203,16 +202,9 @@ object TerminalDesksAndQueues {
 
       <.div(
         floatingHeader(state.showWaitColumn),
-        <.div(
-          if (props.airportConfig.hasActualDeskStats) {
-            <.div(^.className := s"selector-control deskstats-control $showActualsClass",
-              <.input.checkbox(^.checked := state.showActuals, ^.onChange ==> toggleShowActuals, ^.id := "show-actuals"),
-              <.label(^.`for` := "show-actuals", "Show BlackJack Data")
-            )
-          } else "",
-          StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab),
-          viewTypeControls(viewDepsClass, viewRecsClass),
-          if (props.featureFlags.displayWaitTimesToggle) viewWaitTimeControls else ""
+        <.div(^.className := "desks-and-queues-top",
+          viewTypeControls(props.featureFlags.displayWaitTimesToggle),
+          StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab)
         ),
         <.table(
           ^.id := "sticky",

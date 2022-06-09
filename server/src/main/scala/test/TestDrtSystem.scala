@@ -184,7 +184,6 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponse)
 
     subscribeStaffingActors(crunchInputs)
-    startScheduledFeedImports(crunchInputs)
 
     crunchInputs.killSwitches
   }
