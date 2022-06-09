@@ -4,7 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
-import drt.client.components.FlightComponents.SplitsGraph
+import drt.client.components.FlightComponents.{SplitsGraph, paxFeedSourceClass}
 import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -139,7 +139,7 @@ object FlightTableRow {
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
         <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
-        <.td(flight.displayStatus.description),
+        <.td(^.className := "no-wrap", flight.displayStatus.description),
         <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
         <.td(estimatedContent),
         <.td(maybeLocalTimeWithPopup(flight.Actual)),
@@ -148,7 +148,7 @@ object FlightTableRow {
       val lastCells = List[TagMod](
         <.td(maybeLocalTimeWithPopup(flight.ActualChox)),
         <.td(pcpTimeRange(flightWithSplits), ^.className := "arrivals__table__flight-est-pcp"),
-        <.td(FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
+        <.td(^.className := paxFeedSourceClass(flightWithSplits.pcpPaxEstimate), FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
       )
       val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells
 
@@ -165,7 +165,7 @@ object FlightTableRow {
       val queueTagMod = props.splitsQueueOrder.map { q =>
         val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
         <.td(^.className := s"queue-split $paxClass right",
-          <.span(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax"))
+          <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax"))
       }.toTagMod
 
       if (props.hasTransfer) {
@@ -193,7 +193,7 @@ object FlightTableRow {
     .build
 
   private def gateOrStand(arrival: Arrival, airportConfig: AirportConfig, paxAreDiverted: Boolean): VdomTagOf[Span] = {
-    val gateOrStand = <.span(s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
+    val gateOrStand = <.span(^.className := "no-wrap", s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
     arrival.walkTime(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions).map { wt =>
       val description = (paxAreDiverted, arrival.Stand.isDefined, arrival.Gate.isDefined) match {
         case (true, _, _) => "walk time including transfer bus"
@@ -202,7 +202,7 @@ object FlightTableRow {
         case _ => "default walk time"
       }
       val walkTimeString = MinuteAsAdjective(millisToMinutes(wt)).display + " " + description
-      <.span(Tippy.interactive(<.span(walkTimeString), gateOrStand))
+      <.span(^.className := "no-wrap", Tippy.interactive(<.span(walkTimeString), gateOrStand))
     }.getOrElse(gateOrStand)
   }
 

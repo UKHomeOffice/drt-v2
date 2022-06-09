@@ -7,25 +7,35 @@ import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.TrendingFlat
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray}
 import org.scalajs.dom.html.{Div, Span}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
-import uk.gov.homeoffice.drt.ports.PaxTypeAndQueue
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
+import uk.gov.homeoffice.drt.ports._
 
 
 object FlightComponents {
+  def paxFeedSourceClass(paxSource: TotalPaxSource): String = (paxSource.feedSource, paxSource.splitSource) match {
+    case (ApiFeedSource, Some(ApiSplitsWithHistoricalEGateAndFTPercentages)) => "pax-rag-green"
+    case (LiveFeedSource, _) => "pax-rag-green"
+    case (ApiFeedSource, Some(Historical)) => "pax-rag-amber"
+    case (ForecastFeedSource, _) => "pax-rag-amber"
+    case (ApiFeedSource, _) => "pax-rag-red"
+    case (AclFeedSource, _) => "pax-rag-red"
+  }
 
   def paxComp(flightWithSplits: ApiFlightWithSplits, directRedListFlight: DirectRedListFlight, noPcpPax: Boolean): TagMod = {
     val isNotApiData = if (flightWithSplits.hasValidApi) "" else "notApiData"
-    val noPcpPaxClass = if (noPcpPax || directRedListFlight.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else s"arrivals__table__flight__no-${flightWithSplits.pcpPaxEstimate.feedSource}-${flightWithSplits.pcpPaxEstimate.splitSource.map(a => s"-$a").getOrElse("None")}"
+    val noPcpPaxClass = if (noPcpPax || directRedListFlight.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else ""
+
     val diversionClass =
       if (directRedListFlight.incomingDiversion) "arrivals__table__flight__pcp-pax__incoming"
       else if (directRedListFlight.outgoingDiversion) "arrivals__table__flight__pcp-pax__outgoing"
       else ""
+
     <.div(
-      ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",
-      <.div(^.className := "arrivals__table__flight__pcp-pax__container",
-        <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", flightWithSplits.pcpPaxEstimate.pax)))
-      ),
+      ^.className := s"right arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",
+
+      <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", flightWithSplits.pcpPaxEstimate.pax))),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =
           if (directRedListFlight.incomingDiversion) s"Passengers diverted from ${flightWithSplits.apiFlight.Terminal}"
@@ -39,9 +49,9 @@ object FlightComponents {
     if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
       "pax-no-splits"
     else flightWithSplits.bestSplits.map(_.source) match {
-      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if flightWithSplits.hasApi => "pax-api"
-      case Some(SplitSources.Historical) => "pax-portfeed"
-      case _ => "pax-unknown"
+      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if flightWithSplits.hasApi => "pax-rag-green"
+      case Some(SplitSources.Historical) => "pax-rag-amber"
+      case _ => "pax-rag-red"
     }
   }
 

@@ -1239,7 +1239,11 @@ p {
 
 #arrivals .right {
   text-align: right;
-  padding-right: 13px;
+  padding-right: 10%;
+}
+
+.no-wrap {
+  white-space: nowrap;
 }
 
 .arrival-cancelled {
@@ -1762,36 +1766,6 @@ th h2 {
   text-decoration-line: line-through;
 }
 
-.arrivals__table__flight__no-LiveFeedSource-None {
-    border-bottom: 3px solid @reliability-high;
-    padding-bottom : 0.7125rem;
-}
-
-.arrivals__table__flight__no-ApiFeedSource--ApiSplitsWithHistoricalEGateAndFTPercentages {
-    border-bottom: 3px solid @reliability-high;
-    padding-bottom : 0.7125rem;
-}
-
-.arrivals__table__flight__no-ApiFeedSource--Historical {
-    border-bottom: 3px solid @reliability-medium;
-    padding-bottom : 0.7125rem;
-}
-
-.arrivals__table__flight__no-ForecastFeedSource--None {
-    border-bottom: 3px solid @reliability-medium;
-    padding-bottom : 0.7125rem;
-}
-
-.arrivals__table__flight__no-ApiFeedSource-None {
-    border-bottom: 3px solid @reliability-low;
-    padding-bottom : 0.7125rem;
-}
-
-.arrivals__table__flight__no-AclFeedSource-None {
-    border-bottom: 3px solid @reliability-low;
-    padding-bottom : 0.7125rem;
-}
-
 .arrivals__table__flight-code-value {
   min-width: 53px;
 }
@@ -1802,25 +1776,20 @@ th h2 {
   margin-right: 2px;
 }
 
-.arrivals__table__flight__pcp-pax__header {
-  width: 85px;
+.arrivals__table__flight__pcp-pax svg {
+  font-size: inherit;
+  color: red;
+  margin-left: 5px;
 }
 
-.arrivals__table__flight__pcp-pax {
-  width: 85px;
-  text-align: left;
-}
+//.arrivals__table__flight__pcp-pax__header {
+//  width: 85px;
+//}
 
 .arrivals__table__flight__pcp-pax__container {
   width: 50px;
   text-align: right;
   display: inline-block;
-}
-
-.arrivals__table__flight__pcp-pax svg {
-  font-size: inherit;
-  color: red;
-  margin-left: 5px;
 }
 
 .arrivals__table__flight__pcp-pax__incoming svg {
@@ -1909,24 +1878,24 @@ th h2 {
   padding: 0px;
 }
 
-.queue-split span {
+.queue-split div {
   padding: 8px 20px 5px 10px;
   display: block;
 }
 
-.pax-api span {
+.pax-rag-green  {
   border-bottom: 3px solid @reliability-high;
 }
 
-.pax-portfeed span {
+.pax-rag-amber  {
   border-bottom: 3px solid @reliability-medium;
 }
 
-.pax-unknown span {
+.pax-rag-red  {
   border-bottom: 3px solid @reliability-low;
 }
 
-.pax-no-splits span {
+.pax-no-splits  {
   border-bottom: 0px;
 }
 
