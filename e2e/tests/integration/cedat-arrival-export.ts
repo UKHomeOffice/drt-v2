@@ -1,5 +1,6 @@
 import {todayAtUtc, todayAtUtcString} from "../support/time-helpers";
 import {manifestForDateTime, passengerList} from "../support/manifest-helpers";
+import {paxRagGreenSelector} from "../support/commands";
 
 
 describe("CEDAT arrival exports", () => {
@@ -62,7 +63,7 @@ describe("CEDAT arrival exports", () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(manifest(passengerList(24, 10, 7, 10)))
-            .get('.pax-api')
+            .get(paxRagGreenSelector)
             .asABorderForceOfficerWithRoles(["cedat-staff"])
             .get('#export-day-arrivals')
             .then((el) => {
@@ -92,7 +93,7 @@ describe("CEDAT arrival exports", () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(manifest(passengerList(23, 10, 7, 10)))
-            .get('.pax-api')
+            .get(paxRagGreenSelector)
             .asABorderForceOfficerWithRoles(["cedat-staff"])
             .get('#export-day-arrivals')
             .then((el) => {

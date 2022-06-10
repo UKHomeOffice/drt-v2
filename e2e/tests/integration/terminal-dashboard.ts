@@ -9,7 +9,9 @@ describe('Terminal dashboard', () => {
         cy.deleteData();
     });
 
-    it("should display a box for every queue in the terminal", () => {
+  let timeRangeSelector = ".tb-bar-wrapper";
+
+  it("should display a box for every queue in the terminal", () => {
         const viewWindowHour = todayAtUtc(14, 0).tz("Europe/London").format("HH")
 
         cy
@@ -23,7 +25,7 @@ describe('Terminal dashboard', () => {
             .visit("/#terminal/T1/dashboard/15/?start=" + todayAtString(14, 15))
             .get(".pax-bar")
             .contains("51 passengers")
-            .get(".time-label")
+            .get(timeRangeSelector)
             .contains(viewWindowHour + ":15 - " + viewWindowHour + ":30")
             .get(".eeadesk")
             .contains("38 pax joining")
@@ -33,7 +35,7 @@ describe('Terminal dashboard', () => {
             .should('have.class', 'fa-arrow-up')
             .get(".next-bar")
             .click()
-            .get(".time-label")
+            .get(timeRangeSelector)
             .contains(viewWindowHour + ":30 - " + viewWindowHour + ":45")
             .get(".eeadesk")
             .contains("22 minute wait")
@@ -43,7 +45,7 @@ describe('Terminal dashboard', () => {
             .click()
             .get(".prev-bar")
             .click()
-            .get(".time-label")
+            .get(timeRangeSelector)
             .contains(viewWindowHour + ":00 - " + viewWindowHour + ":15")
             .get(".eeadesk")
             .contains("0 minute wait")
@@ -89,7 +91,7 @@ describe('Terminal dashboard', () => {
             .get("select")
             .select('30')
             .url().should('include', 'dashboard/30')
-            .get(".time-label")
+            .get(timeRangeSelector)
             .contains(viewWindowHourStart + ":30 - " + viewWindowHourEnd + ":00")
             .get('select')
             .should('have.value', '30')

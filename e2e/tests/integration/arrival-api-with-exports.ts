@@ -2,6 +2,7 @@ import moment from "moment-timezone";
 import {manifestForDateTime, passengerList} from '../support/manifest-helpers'
 import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
 import {Moment} from "moment/moment";
+import {paxRagGreenSelector} from "../support/commands";
 
 moment.locale("en-gb");
 
@@ -76,7 +77,7 @@ describe('Arrival API with exports', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(manifest(passengerList(24, 10, 7, 10)))
-            .get('.pax-api')
+            .get(paxRagGreenSelector)
             .get('#export-day-arrivals')
             .then((el) => {
                 const href = el.prop('href')
@@ -108,7 +109,7 @@ describe('Arrival API with exports', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(manifest(passengerList(24, 10, 7, 10)))
-            .get('.pax-api')
+            .get(paxRagGreenSelector)
             .asABorderForceOfficerWithRoles(["api:view"])
             .get('#export-day-arrivals')
             .then((el) => {
@@ -142,7 +143,7 @@ describe('Arrival API with exports', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .addManifest(manifest(passengerList(23, 10, 7, 10)))
-            .get('.pax-api')
+            .get(paxRagGreenSelector)
             .asABorderForceOfficerWithRoles(["api:view"])
             .get('#export-day-arrivals')
             .then((el) => {

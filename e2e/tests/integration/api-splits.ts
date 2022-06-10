@@ -1,6 +1,7 @@
 import moment from "moment-timezone";
 import {manifestForDateTime, passengerProfiles, ukAdultWithId} from '../support/manifest-helpers'
 import {todayAtUtc} from '../support/time-helpers'
+import {paxRagGreenSelector} from "../support/commands";
 
 moment.locale("en-gb");
 
@@ -35,14 +36,10 @@ describe('API splits', () => {
       .waitForFlightToAppear("TS0123")
       .addManifest(apiManifest)
       .get('.egate-queue-pax')
-      .get('span')
       .contains("8")
       .get('.eeadesk-queue-pax')
-      .get('span')
       .contains("2");
-
   });
-
 
   it('should ignore the API splits if they are more than 5% different in passenger numbers to the live feed and flight charts option not exist', () => {
     const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 12));
@@ -94,7 +91,7 @@ describe('API splits', () => {
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .addManifest(apiManifest)
-      .get('.pax-api')
+      .get(paxRagGreenSelector)
       .request({
         method: 'GET',
         url: "/manifest/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
@@ -143,13 +140,11 @@ describe('API splits', () => {
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .addManifest(apiManifest)
-      .get('.pax-api', {timeout: 5000})
+      .get(paxRagGreenSelector, {timeout: 5000})
       .get('.egate-queue-pax')
-      .get('span')
       .contains("7")
       .get('.eeadesk-queue-pax')
-      .get('span')
-      .contains("3")
+      .contains("4")
       .request({
         method: 'GET',
         url: "/manifest/" + scheduledTime.format("YYYY-MM-DD") + "/summary",

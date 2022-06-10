@@ -21,11 +21,7 @@ object AlertsComponent {
       val modelRCP = SPACircuit.connect(_.alerts)
 
       modelRCP { modelMP =>
-        val alertsPot = modelMP()
-
-        <.div(^.id := "alerts",
-          renderAlerts(alertsPot.getOrElse(List())),
-        )
+        <.div(^.id := "alerts", renderAlerts(modelMP().getOrElse(List())))
       }
     }
     .build

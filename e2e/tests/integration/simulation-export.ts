@@ -2,6 +2,7 @@ import moment from "moment"
 import papa from "papaparse"
 import {manifestForDateTime, passengerList} from '../support/manifest-helpers'
 import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
+import {paxRagGreenSelector} from "../support/commands";
 
 moment.locale("en-gb");
 
@@ -54,7 +55,7 @@ describe('Simulation export', () => {
             .asABorderForceOfficerWithRoles(["arrival-simulation-upload"])
             .waitForFlightToAppear("TS0123")
             .addManifest(manifest(passengerList(10, 10, 10, 0)))
-            .get('.pax-api')
+            .get(paxRagGreenSelector)
             .get('#simulationDayTab')
             .click()
             .get("#adjust_processing_times")
