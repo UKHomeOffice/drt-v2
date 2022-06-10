@@ -262,7 +262,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         refreshArrivalsOnStart: Boolean,
-                        refreshManifestsOnStart: Boolean,
                         startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
 
@@ -320,7 +319,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       initialFixedPoints = initialState[FixedPointAssignments](fixedPointsActor).getOrElse(FixedPointAssignments(Seq())),
       initialStaffMovements = initialState[StaffMovements](staffMovementsActor).map(_.movements).getOrElse(Seq[StaffMovement]()),
       refreshArrivalsOnStart = refreshArrivalsOnStart,
-      refreshManifestsOnStart = refreshManifestsOnStart,
       optimiser = optimiser,
       aclPaxAdjustmentDays = aclPaxAdjustmentDays,
       startDeskRecs = startDeskRecs,

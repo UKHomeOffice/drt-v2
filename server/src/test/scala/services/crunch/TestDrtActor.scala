@@ -255,7 +255,6 @@ class TestDrtActor extends Actor {
         initialFixedPoints = tc.initialFixedPoints,
         initialStaffMovements = tc.initialStaffMovements,
         refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
-        refreshManifestsOnStart = tc.refreshManifestsOnStart,
         optimiser = tc.cruncher,
         aclPaxAdjustmentDays = aclPaxAdjustmentDays,
         startDeskRecs = startDeskRecs,

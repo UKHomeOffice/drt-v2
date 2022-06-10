@@ -1,6 +1,6 @@
 package actors
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
+import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
@@ -16,7 +16,6 @@ import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookup
@@ -25,16 +24,15 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services.SDate
 import services.crunch.CrunchSystem
-import services.crunch.deskrecs.DynamicRunnableDeskRecs
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
-import services.metrics.{ApiValidityReporter, Metrics}
+import services.metrics.ApiValidityReporter
 import slick.dbio.{DBIOAction, NoStream}
 import slickdb.{ArrivalTable, Tables}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.time.{MilliTimes, UtcDate}
+import uk.gov.homeoffice.drt.time.MilliTimes
 
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -157,7 +155,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           initialLiveBaseArrivals = Option(SortedMap[UniqueArrival, Arrival]()),
           initialLiveArrivals = maybeLiveArrivals,
           refreshArrivalsOnStart = params.refreshArrivalsOnStart,
-          refreshManifestsOnStart = params.refreshManifestsOnStart,
           startDeskRecs = startDeskRecs(crunchQueue, deploymentQueue),
         )
 

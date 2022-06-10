@@ -19,10 +19,10 @@ object ApiFeedStatus {
             nowMillis: MillisSinceEpoch,
             timeToChox: Int,
             considerPredictions: Boolean,
-            canValidate: Boolean): ApiFeedStatus = {
+            hasLiveFeed: Boolean): ApiFeedStatus = {
     val landed = flights.filter(fws => fws.apiFlight.bestArrivalTime(timeToChox, considerPredictions) <= nowMillis)
     val international = landed.filterNot(fws => fws.apiFlight.Origin.isDomesticOrCta)
-    val withNonZeroPax = international.filter(fws => fws.apiFlight.ActPax.exists(_ > 0) || !canValidate)
+    val withNonZeroPax = international.filter(fws => fws.apiFlight.ActPax.exists(_ > 0) || !hasLiveFeed)
     val apiFlightCount = withNonZeroPax.count(_.hasApi)
     val validApiCount = withNonZeroPax.count(_.hasValidApi)
     ApiFeedStatus(withNonZeroPax.size, apiFlightCount, validApiCount)

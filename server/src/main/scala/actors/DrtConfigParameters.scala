@@ -2,7 +2,6 @@ package actors
 
 import actors.persistent.Sizes.oneMegaByte
 import com.amazonaws.auth.AWSCredentials
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 
@@ -34,10 +33,6 @@ case class DrtConfigParameters(config: Configuration) {
   val refreshArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.refresh-arrivals-on-start").getOrElse(false)
   val flushArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.flush-arrivals-on-start").getOrElse(false)
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
-  val refreshManifestsOnStart: Boolean = if (refreshArrivalsOnStart) {
-    log.warn("Refresh arrivals flag is active. Turning on historic manifest refresh")
-    true
-  } else config.getOptional[Boolean]("crunch.manifests.reset-registered-arrivals-on-start").getOrElse(false)
 
   val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
 
