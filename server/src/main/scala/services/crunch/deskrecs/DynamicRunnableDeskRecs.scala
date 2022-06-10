@@ -20,10 +20,10 @@ import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource}
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, HistoricApiFeedSource}
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, HistoricApiFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{Map, NumericRange}
@@ -100,10 +100,10 @@ object DynamicRunnableDeskRecs {
         case (crunchRequest, flights) =>
           val historicApiPax = flights
             .map { fws =>
-              val histApiPax = fws.apiFlight.TotalPax.filter { tp => tp.feedSource == ApiFeedSource && tp.splitSource == Option(ApiSplitsWithHistoricalEGateAndFTPercentages) }
+              val histApiPax = fws.apiFlight.TotalPax.filter(_.feedSource == ApiFeedSource)
               (fws.unique, histApiPax)
             }
-            .collect { case (key, nonEmptyPax) if nonEmptyPax.nonEmpty => (key, nonEmptyPax)}
+            .collect { case (key, nonEmptyPax) if nonEmptyPax.nonEmpty => (key, nonEmptyPax) }
             .toMap
 
           splitsSink
