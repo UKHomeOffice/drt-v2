@@ -15,14 +15,17 @@ case class ApiFeedStatus(totalLanded: Int, withApi: Int, withValidApi: Int) {
 }
 
 object ApiFeedStatus {
-  def apply(flights: Iterable[ApiFlightWithSplits], nowMillis: MillisSinceEpoch, timeToChox: Int, considerPredictions: Boolean): ApiFeedStatus = {
-    val landedInternationalWithPax = flights
-      .filter(fws => fws.apiFlight.bestArrivalTime(timeToChox, considerPredictions) <= nowMillis)
-      .filterNot(fws => fws.apiFlight.Origin.isDomesticOrCta)
-      .filter(fws => fws.apiFlight.ActPax.exists(_ > 0))
-    val apiFlightCount = landedInternationalWithPax.count(_.hasApi)
-    val validApiCount = landedInternationalWithPax.count(_.hasValidApi)
-    ApiFeedStatus(landedInternationalWithPax.size, apiFlightCount, validApiCount)
+  def apply(flights: Iterable[ApiFlightWithSplits],
+            nowMillis: MillisSinceEpoch,
+            timeToChox: Int,
+            considerPredictions: Boolean,
+            hasLiveFeed: Boolean): ApiFeedStatus = {
+    val landed = flights.filter(fws => fws.apiFlight.bestArrivalTime(timeToChox, considerPredictions) <= nowMillis)
+    val international = landed.filterNot(fws => fws.apiFlight.Origin.isDomesticOrCta)
+    val withNonZeroPax = international.filter(fws => fws.apiFlight.ActPax.exists(_ > 0) || !hasLiveFeed)
+    val apiFlightCount = withNonZeroPax.count(_.hasApi)
+    val validApiCount = withNonZeroPax.count(_.hasValidApi)
+    ApiFeedStatus(withNonZeroPax.size, apiFlightCount, validApiCount)
   }
 }
 
@@ -38,7 +41,7 @@ object ApiStatusComponent {
       value { portStatePot =>
         <.div(
           portStatePot().renderReady { ps =>
-            val apiFeedStatus = ApiFeedStatus(ps.flights.values, SDate.now().millisSinceEpoch, props.timeToChox, props.considerPredictions)
+            val apiFeedStatus = ApiFeedStatus(ps.flights.values, SDate.now().millisSinceEpoch, props.timeToChox, props.considerPredictions, props.canValidate)
 
             def ragClass(pct: Option[Double]): String = pct match {
               case Some(red) if red < 80 => "red"

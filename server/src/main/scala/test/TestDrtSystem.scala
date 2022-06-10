@@ -171,7 +171,6 @@ case class TestDrtSystem(airportConfig: AirportConfig)
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
       refreshArrivalsOnStart = false,
-      refreshManifestsOnStart = false,
       startDeskRecs = startDeskRecs(SortedSet(), SortedSet()))
 
     liveActor ! Enable(crunchInputs.liveArrivalsResponse)
