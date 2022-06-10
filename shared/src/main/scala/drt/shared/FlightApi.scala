@@ -69,13 +69,30 @@ object FlightsApi {
 
   case object NoFlightUpdates extends FlightUpdates
 
+  case class PaxForArrivals(pax: Map[UniqueArrival, Set[TotalPaxSource]]) extends FlightUpdates {
+    def diff(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
+      val updatedFlights = pax.map {
+        case (key, newPax) =>
+          flights.flights.get(key)
+            .map(fws => (fws, newPax.diff(fws.apiFlight.TotalPax)))
+            .collect {
+              case (fws, updatedPax) if updatedPax.nonEmpty =>
+                val updatedSources = updatedPax.map(_.feedSource)
+                val mergedPax = fws.apiFlight.TotalPax.filterNot(s => updatedSources.contains(s.feedSource)) ++ updatedPax
+                val updatedArrival = fws.apiFlight.copy(TotalPax = mergedPax)
+                fws.copy(apiFlight = updatedArrival, lastUpdated = Option(nowMillis))
+            }
+      }.collect { case Some(flight) => flight }
+
+      FlightsWithSplitsDiff(updatedFlights, List())
+    }
+  }
+
   object SplitsForArrivals {
     val empty: SplitsForArrivals = SplitsForArrivals(Map())
   }
 
   case class SplitsForArrivals(splits: Map[UniqueArrival, Set[Splits]]) extends FlightUpdates {
-    val updatedMillis: Iterable[MillisSinceEpoch] = splits.keys.map(_.scheduled)
-
     def diff(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
       val updatedFlights = splits
         .map {

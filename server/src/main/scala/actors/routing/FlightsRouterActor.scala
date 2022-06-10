@@ -178,6 +178,15 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
           case (terminalDay, allSplits) => (terminalDay, SplitsForArrivals(allSplits))
         }
 
+    case container: PaxForArrivals =>
+      container.pax
+        .groupBy {
+          case (uniqueArrival, _) => (uniqueArrival.terminal, SDate(uniqueArrival.scheduled).toUtcDate)
+        }
+        .map {
+          case (terminalDay, allPax) => (terminalDay, PaxForArrivals(allPax))
+        }
+
     case container: ArrivalsDiff =>
       val updates: Map[(Terminal, UtcDate), Iterable[Arrival]] = container.toUpdate.values
         .groupBy(arrivals => (arrivals.Terminal, SDate(arrivals.Scheduled).toUtcDate))

@@ -7,7 +7,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
+import drt.shared.FlightsApi.{FlightsWithSplits, PaxForArrivals, SplitsForArrivals}
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
@@ -60,7 +60,7 @@ object DynamicRunnableDeskRecs {
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing arrivals added"))
       .via(addPax(historicManifestsPaxProvider))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing pax added"))
-      .via(updatePaxNos(splitsSink))
+      .via(updateHistoricApiPaxNos(splitsSink))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing pax updated"))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits added"))
@@ -93,13 +93,21 @@ object DynamicRunnableDeskRecs {
             }
       }
 
-  def updatePaxNos(splitsSink: ActorRef)
-                  (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+  def updateHistoricApiPaxNos(splitsSink: ActorRef)
+                             (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[(CrunchRequest, Iterable[ApiFlightWithSplits]), (CrunchRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
+          val historicApiPax = flights
+            .map { fws =>
+              val histApiPax = fws.apiFlight.TotalPax.filter { tp => tp.feedSource == ApiFeedSource && tp.splitSource == Option(ApiSplitsWithHistoricalEGateAndFTPercentages) }
+              (fws.unique, histApiPax)
+            }
+            .collect { case (key, nonEmptyPax) if nonEmptyPax.nonEmpty => (key, nonEmptyPax)}
+            .toMap
+
           splitsSink
-            .ask(ArrivalsDiff(flights.map(fws => fws.apiFlight), Seq()))
+            .ask(PaxForArrivals(historicApiPax))
             .map(_ => (crunchRequest, flights))
             .recover {
               case t =>

@@ -41,6 +41,7 @@ const bfRoles = [
   "staff-movements:edit",
   "staff-movements:export",
   "enhanced-api-view",
+  "create-alerts",
   "test"
 ];
 const bfReadOnlyRoles = [
@@ -61,6 +62,13 @@ const cedatRoles = ["cedat-staff",
   "arrivals-and-splits:view",
   "api:view-port-arrivals"
 ]
+export const paxRagGreenSelector = '.pax-rag-green'
+export const paxRagAmberSelector = '.pax-rag-amber'
+export const paxRagRedSelector = '.pax-rag-red'
+
+export const eGatesCellSelector = '.egate-queue-pax';
+export const eeaCellSelector = '.eeadesk-queue-pax';
+export const nonEeaCellSelector = '.noneeadesk-queue-pax';
 
 Cypress.Commands.add('asABorderForceOfficer', () => {
   cy.request("POST", '/test/mock-roles', { "roles": portRole.concat(bfRoles) });
@@ -169,7 +177,7 @@ Cypress.Commands.add('findAndClick', (toFind) => {
 });
 
 Cypress.Commands.add('choose24Hours', () => {
-  cy.get('#current .date-selector .date-view-picker-container')
+  cy.get('#current .time-view-selector-container')
     .contains('24 hours')
     .click()
 });

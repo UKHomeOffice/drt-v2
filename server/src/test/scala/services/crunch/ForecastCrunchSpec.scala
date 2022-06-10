@@ -286,8 +286,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>
-        val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
-        crunchForecastArrivals == expectedForecastArrivals
+        ps.flights.values.map(_.apiFlight).toSet == expectedForecastArrivals
     }
 
     success

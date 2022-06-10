@@ -8,8 +8,8 @@ import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, PaxForArrivals, SplitsForArrivals}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
@@ -50,8 +50,22 @@ class PartitionedPortStateTestActor(probe: ActorRef,
   override val askThenAck: AckingAsker = (actor: ActorRef, message: Any, replyTo: ActorRef) => {
     actor.ask(message).foreach { _ =>
       message match {
-        case splits: SplitsForArrivals if splits.updatedMillis.nonEmpty =>
-          val query = GetStateForDateRange(splits.updatedMillis.min, splits.updatedMillis.max)
+        case splits: SplitsForArrivals if splits.splits.keys.nonEmpty =>
+          val updatedMillis: Iterable[MillisSinceEpoch] = splits.splits.keys.map(_.scheduled)
+          val query = GetStateForDateRange(updatedMillis.min, updatedMillis.max)
+          val eventualSource = actor.ask(query).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
+          FlightsRouterActor
+            .runAndCombine(eventualSource)
+            .foreach {
+              case FlightsWithSplits(flights) =>
+                val updatedFlights = state.flights ++ flights
+                state = state.copy(flights = updatedFlights)
+                sendStateToProbe()
+            }
+
+        case pax: PaxForArrivals if pax.pax.keys.nonEmpty =>
+          val updatedMillis: Iterable[MillisSinceEpoch] = pax.pax.keys.map(_.scheduled)
+          val query = GetStateForDateRange(updatedMillis.min, updatedMillis.max)
           val eventualSource = actor.ask(query).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
           FlightsRouterActor
             .runAndCombine(eventualSource)
