@@ -60,7 +60,7 @@ object BigSummaryBoxes {
         splits.find { case Splits(_, _, _, t) => t == Percentage } match {
           case None => Set()
           case Some(apiSplits) => apiSplits.splits.map {
-            s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * fws.pcpPaxEstimate.pax)
+            s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * fws.pcpPaxEstimate.pax.getOrElse(0))
           }
         }
       }

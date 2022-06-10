@@ -52,7 +52,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       Origin = PortCode("LHR"),
       FeedSources = Set(LiveFeedSource),
       Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None,
-      TotalPax = Set(TotalPaxSource(120, LiveFeedSource, None)))
+      TotalPax = Set(TotalPaxSource(Option(120), LiveFeedSource)))
 
   }
 
@@ -86,7 +86,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       FeedSources = Set(LiveFeedSource),
       Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch,
       PcpTime = None,
-      TotalPax = Set(TotalPaxSource(0, LiveFeedSource, None)))
+      TotalPax = Set(TotalPaxSource(Option(0), LiveFeedSource)))
 
   }
 

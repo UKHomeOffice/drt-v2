@@ -187,7 +187,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   }
 
   "Given a flight and a mock splits calculator" >> {
-    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), totalPax = Set(TotalPaxSource(100, LiveFeedSource, None)))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), totalPax = Set(TotalPaxSource(Option(100), LiveFeedSource)))
     val flights = Seq(ApiFlightWithSplits(arrival, Set()))
     val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
     val mockSplits: SplitsForArrival = (_, _) => splits
@@ -199,7 +199,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
 
         withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1), FeedSources = arrival.FeedSources + ApiFeedSource,
-          TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(1, ApiFeedSource, Option(ApiSplitsWithHistoricalEGateAndFTPercentages)))
+          TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(Option(1), ApiFeedSource))
         ), Set(splits)))
       }
 
@@ -232,28 +232,28 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     "add historic API pax" >> {
       "When I have live manifests matching the arrival where the live manifest is within the trust threshold I should get some pax from historic API" >> {
-        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(100, LiveFeedSource, None),
-          TotalPaxSource(10, ApiFeedSource, Option(Historical))))
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(100), LiveFeedSource),
+          TotalPaxSource(Option(10), HistoricApiFeedSource)))
       }
 
       "When I have ACL pax number I should get some pax from historic API" >> {
         val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(AclFeedSource),
-          totalPax = Set(TotalPaxSource(100, AclFeedSource, None)))
-        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(100, AclFeedSource, None),
-          TotalPaxSource(10, ApiFeedSource, Option(Historical))))
+          totalPax = Set(TotalPaxSource(Option(100), AclFeedSource)))
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(100), AclFeedSource),
+          TotalPaxSource(Option(10), HistoricApiFeedSource)))
       }
 
       "When I have ForecastPortFeed pax number I should get some pax from historic API" >> {
         val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(ForecastFeedSource),
-          totalPax = Set(TotalPaxSource(100, ForecastFeedSource, None)))
-        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(100, ForecastFeedSource, None),
-          TotalPaxSource(10, ApiFeedSource, Option(Historical))))
+          totalPax = Set(TotalPaxSource(Option(100), ForecastFeedSource)))
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(100), ForecastFeedSource),
+          TotalPaxSource(Option(10), HistoricApiFeedSource)))
       }
 
       "When I have no Feed I should get some pax from historic API" >> {
         val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(),
           totalPax = Set.empty)
-        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(10, ApiFeedSource, Option(Historical))))
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(10), HistoricApiFeedSource)))
       }
     }
   }
@@ -292,7 +292,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   "Given an arrival with 100 pax " >> {
 
     val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = s"2021-06-01T12:00", origin = PortCode("JFK"), feedSources = Set(LiveFeedSource),
-      totalPax = Set(TotalPaxSource(100, LiveFeedSource, None)))
+      totalPax = Set(TotalPaxSource(Option(100), LiveFeedSource)))
 
     "When I provide no live and no historic manifests, terminal splits should be applied (50% desk, 50% egates)" >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EGate) -> 50, (T1, EeaDesk) -> 50)

@@ -157,9 +157,8 @@ object FlightMessageConversion {
       .map(tp =>
         uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
           .TotalPaxSource(
-            pax = Option(tp.pax),
-            feedSource = Option(tp.feedSource.name),
-            splitSource = tp.splitSource.map(_.toString))).toSeq
+            pax = tp.pax,
+            feedSource = Option(tp.feedSource.name))).toSeq
 
   def predictionToMessage(maybePred: Option[Prediction[Long]]): Option[PredictionLongMessage] =
     maybePred.map(pred => PredictionLongMessage(Option(pred.updatedAt), Option(pred.value)))
@@ -198,9 +197,8 @@ object FlightMessageConversion {
     ApiPax = flightMessage.apiPax,
     RedListPax = flightMessage.redListPax,
     ScheduledDeparture = flightMessage.scheduledDeparture,
-    TotalPax = Set(flightMessage.totalPax.map(a => uk.gov.homeoffice.drt.arrivals.TotalPaxSource(a.pax.getOrElse(0),
-      a.feedSource.flatMap(FeedSource.findByName).getOrElse(UnknownFeedSource),
-      a.splitSource.map(SplitSource(_)))): _*)
+    TotalPax = Set(flightMessage.totalPax.map(a => uk.gov.homeoffice.drt.arrivals.TotalPaxSource(a.pax,
+      a.feedSource.flatMap(FeedSource.findByName).getOrElse(UnknownFeedSource))): _*)
 
   )
 

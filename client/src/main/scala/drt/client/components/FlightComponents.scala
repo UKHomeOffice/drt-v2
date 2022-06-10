@@ -9,18 +9,17 @@ import japgolly.scalajs.react.vdom.{TagOf, VdomArray}
 import org.scalajs.dom.html.{Div, Span}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
 import uk.gov.homeoffice.drt.ports._
 
 
 object FlightComponents {
-  def paxFeedSourceClass(paxSource: TotalPaxSource): String = (paxSource.feedSource, paxSource.splitSource) match {
-    case (ApiFeedSource, Some(ApiSplitsWithHistoricalEGateAndFTPercentages)) => "pax-rag-green"
-    case (LiveFeedSource, _) => "pax-rag-green"
-    case (ApiFeedSource, Some(Historical)) => "pax-rag-amber"
-    case (ForecastFeedSource, _) => "pax-rag-amber"
-    case (ApiFeedSource, _) => "pax-rag-red"
-    case (AclFeedSource, _) => "pax-rag-red"
+  def paxFeedSourceClass(paxSource: TotalPaxSource): String = (paxSource.feedSource) match {
+    case (ApiFeedSource) => "pax-rag-green"
+    case (LiveFeedSource) => "pax-rag-green"
+    case (HistoricApiFeedSource) => "pax-rag-amber"
+    case (ForecastFeedSource) => "pax-rag-amber"
+    case (ApiFeedSource) => "pax-rag-red"
+    case (AclFeedSource) => "pax-rag-red"
     case _ => "pax-rag-red"
   }
 

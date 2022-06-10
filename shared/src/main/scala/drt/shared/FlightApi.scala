@@ -112,7 +112,7 @@ object FlightsApi {
                         ApiPax = Option(totalPax),
                         FeedSources = fws.apiFlight.FeedSources + ApiFeedSource,
                         TotalPax = fws.apiFlight.TotalPax ++
-                          Set(TotalPaxSource(totalPax, ApiFeedSource, Option(ApiSplitsWithHistoricalEGateAndFTPercentages))))
+                          Set(TotalPaxSource(Some(totalPax), ApiFeedSource)))
                   }
 
                   fws.copy(apiFlight = updatedArrival, splits = mergedSplits, lastUpdated = Option(nowMillis))

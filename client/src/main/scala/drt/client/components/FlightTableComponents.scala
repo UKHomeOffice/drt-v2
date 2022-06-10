@@ -32,7 +32,7 @@ object FlightTableComponents {
   def pcpTimeRange(fws: ApiFlightWithSplits): TagOf[Div] =
     fws.apiFlight.PcpTime.map { pcpTime: MillisSinceEpoch =>
       val sdateFrom = SDate(MilliDate(pcpTime))
-      val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(fws.pcpPaxEstimate.pax)))
+      val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(fws.pcpPaxEstimate.pax.getOrElse(0))))
       <.div(^.display := "flex", ^.flexWrap := "nowrap",
         sdateLocalTimePopup(sdateFrom),
         " \u2192 ",

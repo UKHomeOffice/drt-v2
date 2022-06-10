@@ -258,7 +258,7 @@ class AclFeedSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
-        val expected = Set(arrival.copy(FeedSources = Set(AclFeedSource), TotalPax = Set(TotalPaxSource(10, AclFeedSource, None))))
+        val expected = Set(arrival.copy(FeedSources = Set(AclFeedSource), TotalPax = Set(TotalPaxSource(Option(10), AclFeedSource))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
@@ -289,8 +289,8 @@ class AclFeedSpec extends CrunchTestLike {
 
         val expected = Set(liveFlight.copy(CarrierCode = aclFlight.CarrierCode,
           VoyageNumber = aclFlight.VoyageNumber, FeedSources = Set(AclFeedSource, LiveFeedSource),
-          TotalPax = liveFlight.TotalPax ++ Set(TotalPaxSource(aclFlight.ActPax.getOrElse(0), AclFeedSource, None),
-            TotalPaxSource(liveFlight.ActPax.getOrElse(0), LiveFeedSource, None))))
+          TotalPax = liveFlight.TotalPax ++ Set(TotalPaxSource(aclFlight.ActPax, AclFeedSource),
+            TotalPaxSource(liveFlight.ActPax, LiveFeedSource))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
@@ -332,7 +332,7 @@ class AclFeedSpec extends CrunchTestLike {
           .map(il => il.copy(FeedSources = Set(LiveFeedSource),
           )) ++
           newAcl.map(na => na.copy(FeedSources = Set(AclFeedSource),
-            TotalPax = na.TotalPax ++ Set(TotalPaxSource(na.ActPax.getOrElse(0), AclFeedSource, None))))
+            TotalPax = na.TotalPax ++ Set(TotalPaxSource(na.ActPax, AclFeedSource))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
@@ -370,8 +370,8 @@ class AclFeedSpec extends CrunchTestLike {
         val expected = newLive.map(_.copy(CarrierCode = CarrierCode("BA"),
           VoyageNumber = VoyageNumber(1),
           FeedSources = Set(LiveFeedSource, AclFeedSource),
-          TotalPax = Set(TotalPaxSource(liveArrival.ActPax.getOrElse(0), LiveFeedSource, None),
-            TotalPaxSource(initialAcl1.ActPax.getOrElse(0), AclFeedSource, None))))
+          TotalPax = Set(TotalPaxSource(liveArrival.ActPax, LiveFeedSource),
+            TotalPaxSource(initialAcl1.ActPax, AclFeedSource))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
@@ -436,7 +436,7 @@ class AclFeedSpec extends CrunchTestLike {
           case PortState(f, _, _) => f.values.map(_.apiFlight)
         }
 
-        val nonEmptyFlightsList = List(aclArrival.copy(FeedSources = Set(AclFeedSource), TotalPax = Set(TotalPaxSource(aclArrival.ActPax.getOrElse(0), AclFeedSource, None))))
+        val nonEmptyFlightsList = List(aclArrival.copy(FeedSources = Set(AclFeedSource), TotalPax = Set(TotalPaxSource(aclArrival.ActPax, AclFeedSource))))
         val expected = List(nonEmptyFlightsList)
 
         portStateFlightLists.distinct === expected
