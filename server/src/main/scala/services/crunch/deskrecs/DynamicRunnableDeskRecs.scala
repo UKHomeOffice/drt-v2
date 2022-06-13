@@ -98,16 +98,8 @@ object DynamicRunnableDeskRecs {
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
-          val historicApiPax = flights
-            .map { fws =>
-              val histApiPax = fws.apiFlight.TotalPax.filter(_.feedSource == ApiFeedSource)
-              (fws.unique, histApiPax)
-            }
-            .collect { case (key, nonEmptyPax) if nonEmptyPax.nonEmpty => (key, nonEmptyPax) }
-            .toMap
-
           splitsSink
-            .ask(PaxForArrivals(historicApiPax))
+            .ask(PaxForArrivals.from(flights.map(_.apiFlight), HistoricApiFeedSource))
             .map(_ => (crunchRequest, flights))
             .recover {
               case t =>
