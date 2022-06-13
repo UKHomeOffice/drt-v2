@@ -152,11 +152,11 @@ object FlightMessageConversion {
     )
   }
 
-  def convertTotalPaxToMessage(totalPax: Set[TotalPaxSource]): Seq[FlightsMessage.TotalPaxSource] =
+  def convertTotalPaxToMessage(totalPax: Set[TotalPaxSource]): Seq[FlightsMessage.TotalPaxSourceMessage] =
     totalPax
       .map(tp =>
         uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
-          .TotalPaxSource(
+          .TotalPaxSourceMessage(
             pax = tp.pax,
             feedSource = Option(tp.feedSource.name))).toSeq
 
