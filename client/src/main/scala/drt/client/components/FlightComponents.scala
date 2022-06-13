@@ -18,7 +18,6 @@ object FlightComponents {
     case (LiveFeedSource) => "pax-rag-green"
     case (HistoricApiFeedSource) => "pax-rag-amber"
     case (ForecastFeedSource) => "pax-rag-amber"
-    case (ApiFeedSource) => "pax-rag-red"
     case (AclFeedSource) => "pax-rag-red"
     case _ => "pax-rag-red"
   }
@@ -32,10 +31,11 @@ object FlightComponents {
       else if (directRedListFlight.outgoingDiversion) "arrivals__table__flight__pcp-pax__outgoing"
       else ""
 
+    val pcpPaxNumber = flightWithSplits.pcpPaxEstimate.pax.map(_.toString).getOrElse("n/a")
+
     <.div(
       ^.className := s"right arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",
-
-      <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", flightWithSplits.pcpPaxEstimate.pax))),
+      <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", pcpPaxNumber))),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =
           if (directRedListFlight.incomingDiversion) s"Passengers diverted from ${flightWithSplits.apiFlight.Terminal}"
@@ -61,8 +61,9 @@ object FlightComponents {
 
     val paxNos = List(
       <.p(s"Pax: $portDirectPax (${flight.apiFlight.ActPax.getOrElse(0)} - ${flight.apiFlight.TranPax.getOrElse(0)} transfer)"),
-      <.p(s"Max: $max")
-    ) :+ flight.totalPaxFromApiExcludingTransfer.map(p => <.span(s"API: ${p.pax}")).getOrElse(EmptyVdom)
+      <.p(s"Max: $max"),
+      flight.totalPaxFromApiExcludingTransfer.map(p => <.p(s"API: ${p.pax}")).getOrElse(EmptyVdom),
+    )
     <.span(paxNos.toVdomArray)
   }
 
