@@ -26,7 +26,7 @@ class PaxForArrivalsTest extends Specification {
     "Given an arrival with live & historic api passenger totals" >> {
       val arrival = ArrivalGenerator.arrival(iata = "BA0001", sch = 0L, terminal = T1, origin = PortCode("ABC"),
         totalPax = Set(TotalPaxSource(Option(100), ApiFeedSource), TotalPaxSource(Option(100), HistoricApiFeedSource)))
-      "I should get an empty PaxForArrivals" >> {
+      "I should get a PaxForArrivals with HistoricApiFeedSource with 100 passengers" >> {
         PaxForArrivals.from(Seq(arrival), HistoricApiFeedSource) === PaxForArrivals(Map(
           arrival.unique -> Set(TotalPaxSource(Option(100), HistoricApiFeedSource))
         ))
