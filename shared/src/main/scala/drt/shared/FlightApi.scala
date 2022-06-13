@@ -3,9 +3,9 @@ package drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.{Map => IMap}
@@ -68,6 +68,20 @@ object FlightsApi {
   }
 
   case object NoFlightUpdates extends FlightUpdates
+
+  object PaxForArrivals {
+    val empty: PaxForArrivals = PaxForArrivals(Map())
+
+    def from(arrivals: Iterable[Arrival], feedSource: FeedSource): PaxForArrivals =
+      PaxForArrivals(arrivals
+        .map { arrival =>
+          val histApiPax = arrival.TotalPax.filter(_.feedSource == feedSource)
+          (arrival.unique, histApiPax)
+        }
+        .collect { case (key, nonEmptyPax) if nonEmptyPax.nonEmpty => (key, nonEmptyPax) }
+        .toMap
+      )
+  }
 
   case class PaxForArrivals(pax: Map[UniqueArrival, Set[TotalPaxSource]]) extends FlightUpdates {
     def diff(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
