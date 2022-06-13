@@ -152,7 +152,7 @@ describe('Arrivals page', () => {
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .get(totalPaxSelector)
-      .contains("0")
+      .contains("n/a")
       .addManifest(manifest(
         [
           ukPassport,
@@ -192,7 +192,7 @@ describe('Arrivals page', () => {
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .get(totalPaxSelector)
-      .contains("0")
+      .contains("n/a")
       .addManifest(manifest(
         [
           ukPassportWithIdentifier("id1"),
@@ -215,7 +215,7 @@ describe('Arrivals page', () => {
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
       .get(totalPaxSelector)
-      .contains("0")
+      .contains("n/a")
       .addManifest(manifest(
         [
           ukPassport,
