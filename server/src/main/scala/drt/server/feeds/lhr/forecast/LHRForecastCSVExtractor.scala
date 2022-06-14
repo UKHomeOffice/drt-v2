@@ -5,13 +5,14 @@ import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeForma
 import org.slf4j.LoggerFactory
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
 
 object LHRForecastCSVExtractor {
-
-  val log = LoggerFactory.getLogger(getClass)
+  private val log = LoggerFactory.getLogger(getClass)
 
   object FieldIndex {
     val terminal = 0
@@ -23,15 +24,16 @@ object LHRForecastCSVExtractor {
     val transferPax = 7
   }
 
-  def apply(filePath: String) = {
-    val file = Source.fromFile(filePath).getLines.mkString("\n")
+  def apply(filePath: String): Seq[Arrival] = {
+    val source = Source.fromFile(filePath)
+    val file = source.getLines.mkString("\n")
+    source.close()
     parse(file).map(LHRForecastFeed.lhrFieldsToArrival).collect {
       case Success(arrival) => arrival
     }
   }
 
-  def parse(lhrCsvFixture: String) = {
-
+  def parse(lhrCsvFixture: String): Seq[LHRForecastFlightRow] = {
     val rows = lhrCsvFixture.split("\n").drop(1)
 
     rows
@@ -50,9 +52,9 @@ object LHRForecastCSVExtractor {
 
           LHRForecastFlightRow(scheduledDate, flightCode, origin, intOrDom, totalPax, transfer, terminal)
         } match {
-          case Failure(e) =>
-            log.info(s"Failed to parse CSV row $rowFields for LHR forecast CSV", e)
-            Failure(e)
+          case Failure(t) =>
+            log.warn(s"Failed to parse CSV row $rowFields for LHR forecast CSV", t.getMessage)
+            Failure(t)
           case s => s
         }
       }).collect {
@@ -60,19 +62,20 @@ object LHRForecastCSVExtractor {
     }.toList
   }
 
-  def asString(stringField: String) = stringField.replace("\"", "").trim()
+  def asString(stringField: String): String = stringField.replace("\"", "").trim()
 
-  def asNumber(intField: String) = Try(asString(intField).toInt) match {
+  def asNumber(intField: String): Int = Try(asString(intField).toInt) match {
     case Success(number) => number
     case Failure(exception) =>
       log.warn(s"Invalid number value for numeric CSV field: $intField", exception)
       0
   }
 
-  val ddMMYYYHHMMFormat: DateTimeFormatter = DateTimeFormat.forPattern("dd/MM/yyyy HH:mm")
+  val yyyyMMddHHmmssFormat: DateTimeFormatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
 
-  def asDate(dateField: String) = {
-    val dateWithoutTZ = ddMMYYYHHMMFormat.parseDateTime(asString(dateField))
+  def asDate(dateField: String): SDateLike = {
+    val dateWithoutTZ = yyyyMMddHHmmssFormat
+      .parseDateTime(asString(dateField))
       .toString(ISODateTimeFormat.dateHourMinuteSecond)
 
     SDate(dateWithoutTZ, Crunch.europeLondonTimeZone)
