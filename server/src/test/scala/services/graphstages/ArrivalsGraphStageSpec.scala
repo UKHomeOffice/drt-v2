@@ -17,7 +17,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, T3}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, _}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -291,8 +291,12 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
         offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(Flights(List(forecastArrival))))
 
-        val expected = forecastArrival.copy(FeedSources = Set(AclFeedSource, ForecastFeedSource), TotalPax = Set(
-          TotalPaxSource(aclArrival.ActPax, AclFeedSource)))
+        val expected = forecastArrival.copy(
+          FeedSources = Set(AclFeedSource, ForecastFeedSource),
+          TotalPax = Set(
+            TotalPaxSource(aclArrival.ActPax, AclFeedSource),
+            TotalPaxSource(forecastArrival.ActPax, ForecastFeedSource),
+          ))
 
         crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(flights, _, _) =>

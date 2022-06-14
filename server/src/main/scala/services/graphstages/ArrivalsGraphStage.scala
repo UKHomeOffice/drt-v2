@@ -9,7 +9,7 @@ import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, Arrival
 import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone, mergeApproxIfFoundElseOriginal}
 import services.metrics.{Metrics, StageTimer}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, TotalPaxSource, UniqueArrival}
-import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -290,8 +290,8 @@ class ArrivalsGraphStage(name: String = "",
 
     def updateFilteredIncomingWithTotalPaxSource(filteredIncoming: SortedMap[UniqueArrival, Arrival], feedSource: FeedSource): SortedMap[UniqueArrival, Arrival] =
       filteredIncoming.map { case (k, arrival) =>
-      (k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax, feedSource))))
-    }
+        k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax, feedSource)))
+      }
 
     def changedArrivals(existingArrivals: SortedMap[UniqueArrival, Arrival],
                         newArrivals: SortedMap[UniqueArrival, Arrival]): immutable.Iterable[UniqueArrival] = newArrivals.collect {
@@ -342,7 +342,7 @@ class ArrivalsGraphStage(name: String = "",
         case (_, f) if !isFlightRelevant(f) =>
           log.debug(s"Filtering out irrelevant arrival: ${f.flightCodeString}, ${SDate(f.Scheduled).toISOString()}, ${f.Origin}")
           true
-        case (_, f) => false
+        case (_, _) => false
       }.keys
 
       val minusRemovals = arrivals -- toRemove
@@ -385,7 +385,10 @@ class ArrivalsGraphStage(name: String = "",
 
     def mergeBaseArrival(baseArrival: Arrival): Arrival = {
       val merged = mergeBestFields(baseArrival, mergeArrivalWithMaybeBase(baseArrival.unique, Option(baseArrival)).getOrElse(baseArrival))
-      merged.copy(FeedSources = merged.FeedSources + AclFeedSource)
+      merged.copy(
+        FeedSources = merged.FeedSources + AclFeedSource,
+        TotalPax = merged.TotalPax + TotalPaxSource(baseArrival.ActPax, AclFeedSource)
+      )
     }
 
     def mergeArrivalWithMaybeBase(key: UniqueArrival, maybeBaseArrival: Option[Arrival]): Option[Arrival] = {
@@ -436,7 +439,7 @@ class ArrivalsGraphStage(name: String = "",
         Status = bestStatus(key, Option(baseArrival.Status)),
         FeedSources = feedSources(key),
         ScheduledDeparture = if (bestArrival.ScheduledDeparture.isEmpty) baseArrival.ScheduledDeparture else bestArrival.ScheduledDeparture,
-        TotalPax = baseArrival.TotalPax ++ bestArrival.TotalPax
+        TotalPax = totalPaxSources(key),
       )
     }
 
@@ -459,22 +462,23 @@ class ArrivalsGraphStage(name: String = "",
         case _ => ArrivalStatus("Unknown")
       }
 
-    def feedSources(uniqueArrival: UniqueArrival): Set[FeedSource] = {
-      List(
-        liveArrivals.get(uniqueArrival).map(_ => LiveFeedSource),
-        forecastArrivals.get(uniqueArrival).map(_ => ForecastFeedSource),
-        forecastBaseArrivals.get(uniqueArrival).map(_ => AclFeedSource),
-        ciriumArrivals.get(uniqueArrival).map(_ => LiveBaseFeedSource)
-      ).flatten.toSet
-    }
+    def feedSources(uniqueArrival: UniqueArrival): Set[FeedSource] = List(
+      liveArrivals.get(uniqueArrival).map(_ => LiveFeedSource),
+      forecastArrivals.get(uniqueArrival).map(_ => ForecastFeedSource),
+      forecastBaseArrivals.get(uniqueArrival).map(_ => AclFeedSource),
+      ciriumArrivals.get(uniqueArrival).map(_ => LiveBaseFeedSource)
+    ).flatten.toSet
+
+    def totalPaxSources(uniqueArrival: UniqueArrival): Set[TotalPaxSource] = List(
+      liveArrivals.get(uniqueArrival).map(a => TotalPaxSource(a.ActPax, LiveFeedSource)),
+      forecastArrivals.get(uniqueArrival).map(a => TotalPaxSource(a.ActPax, ForecastFeedSource)),
+      forecastBaseArrivals.get(uniqueArrival).map(a => TotalPaxSource(a.ActPax, AclFeedSource)),
+      ciriumArrivals.get(uniqueArrival).map(a => TotalPaxSource(a.ActPax, LiveBaseFeedSource))
+    ).flatten.toSet
   }
 
   private def reportUnmatchedArrivals(forecastBaseArrivals: Iterable[UniqueArrival], filteredArrivals: Iterable[UniqueArrival]): Unit =
     Metrics.counter(s"arrivals-forecast-unmatched-percentage", unmatchedArrivalsPercentage(forecastBaseArrivals, filteredArrivals))
-
-  private def filterArrivalsBeforeToday(removedArrivals: Set[Arrival]) = {
-    removedArrivals.filterNot(_.Scheduled < now().getUtcLastMidnight.millisSinceEpoch)
-  }
 
   private def paxDefined(baseArrival: Arrival): Boolean = baseArrival.ActPax.isDefined
 }
