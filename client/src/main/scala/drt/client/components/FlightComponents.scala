@@ -62,7 +62,7 @@ object FlightComponents {
     val paxNos = List(
       <.p(s"Pax: $portDirectPax (${flight.apiFlight.ActPax.getOrElse(0)} - ${flight.apiFlight.TranPax.getOrElse(0)} transfer)"),
       <.p(s"Max: $max"),
-      flight.totalPaxFromApiExcludingTransfer.map(p => <.p(s"API: ${p.pax}")).getOrElse(EmptyVdom),
+      flight.totalPaxFromApiExcludingTransfer.map(p => <.p(s"API: ${p.pax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
     )
     <.span(paxNos.toVdomArray)
   }
