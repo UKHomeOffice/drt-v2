@@ -12,7 +12,7 @@ class LHRForecastCSVSpec extends Specification {
     "then I should get a list of one arrival containing a flight for T1" >> {
     val lhrCsvFixture =
       """"Terminal","Schedule Date","Flight Num","Airport","Int or Dom","Total","Direct","Transfer"
-        |"2","04/02/2019 06:00","TS 0001","TST","I",290,200,90""".stripMargin
+        |"2","2019-02-04 06:00:00","TS 0001","TST","I",290,200,90""".stripMargin
 
     val result = LHRForecastCSVExtractor.parse(lhrCsvFixture)
 
@@ -33,11 +33,11 @@ class LHRForecastCSVSpec extends Specification {
     "then I should get those flights back with their scheduled dates parsed correctly" >> {
     val lhrCsvFixture =
       """"Terminal","Schedule Date","Flight Num","Airport","Int or Dom","Total","Direct","Transfer"
-        |"2","04/04/2019 06:00","TS 0001","TST","I",290,200,90
-        |"2","04/05/2019 06:00","TS 0002","TST","I",290,200,90
-        |"2","04/04/2019 23:10","TS 0003","TST","I",290,200,90
-        |"2","03/05/2019 00:00","TS 0004","TST","I",290,200,90
-        |"2","01/05/2019 23:10","TS 0005","TST","I",290,200,90""".stripMargin
+        |"2","2019-04-04 06:00:00","TS 0001","TST","I",290,200,90
+        |"2","2019-05-04 06:00:00","TS 0002","TST","I",290,200,90
+        |"2","2019-04-04 23:10:00","TS 0003","TST","I",290,200,90
+        |"2","2019-05-03 00:00:00","TS 0004","TST","I",290,200,90
+        |"2","2019-05-01 23:10:00","TS 0005","TST","I",290,200,90""".stripMargin
 
     val result = LHRForecastCSVExtractor.parse(lhrCsvFixture)
 
@@ -56,11 +56,11 @@ class LHRForecastCSVSpec extends Specification {
     "then I should get those flights back with terminal allocated correctly" >> {
     val lhrCsvFixture =
       """"Terminal","Schedule Date","Flight Num","Airport","Int or Dom","Total","Direct","Transfer"
-        |"2","04/04/2019 06:00","TS 0001","TST","I",290,200,90
-        |"3","04/05/2019 06:00","TS 0002","TST","I",290,200,90
-        |"3","04/04/2019 23:10","TS 0003","TST","I",290,200,90
-        |"4","03/05/2019 00:00","TS 0004","TST","I",290,200,90
-        |"5","01/05/2019 23:10","TS 0005","TST","I",290,200,90""".stripMargin
+        |"2","2019-04-04 06:00:00","TS 0001","TST","I",290,200,90
+        |"3","2019-05-04 06:00:00","TS 0002","TST","I",290,200,90
+        |"3","2019-04-04 23:10:00","TS 0003","TST","I",290,200,90
+        |"4","2019-05-03 00:00:00","TS 0004","TST","I",290,200,90
+        |"5","2019-05-01 23:10:00","TS 0005","TST","I",290,200,90""".stripMargin
 
     val result = LHRForecastCSVExtractor.parse(lhrCsvFixture)
 
@@ -79,11 +79,11 @@ class LHRForecastCSVSpec extends Specification {
     "then those should be excluded from the final result" >> {
     val lhrCsvFixture =
       """"Terminal","Schedule Date","Flight Num","Airport","Int or Dom","Total","Direct","Transfer"
-        |"2","04/04/2019 06:00","TS 0001","TST","I",290,200,90
-        |"3","04/05/2019 06:00","TS 0002","TST","D",290,200,90
-        |"3","04/04/2019 23:10","TS 0003","TST","D",290,200,90
-        |"4","03/05/2019 00:00","TS 0004","TST","D",290,200,90
-        |"5","01/05/2019 23:10","TS 0005","TST","D",290,200,90""".stripMargin
+        |"2","2019-04-04 06:00:00","TS 0001","TST","I",290,200,90
+        |"3","2019-05-04 06:00:00","TS 0002","TST","D",290,200,90
+        |"3","2019-04-04 23:10:00","TS 0003","TST","D",290,200,90
+        |"4","2019-05-03 00:00:00","TS 0004","TST","D",290,200,90
+        |"5","2019-05-01 23:10:00","TS 0005","TST","D",290,200,90""".stripMargin
 
     val result = LHRForecastCSVExtractor.parse(lhrCsvFixture)
 
@@ -96,10 +96,10 @@ class LHRForecastCSVSpec extends Specification {
     "then those should be excluded from the final result and we should still get the correctly foratted ones" >> {
     val lhrCsvFixture =
       """"Terminal","Schedule Date","Flight Num","Airport","Int or Dom","Total","Direct","Transfer"
-        |"2","04/04/2019 06:00","TS 0001","TST","I",290,200,90
+        |"2","2019-04-04 06:00:00","TS 0001","TST","I",290,200,90
         |"3","bad date","TS 0002","TST","I",290,200,90
-        |"3","04/04/2019 23:10","TS 0003","TST","I",bad number,200,90
-        |"5","01/05/2019 23:10","TS 0005","TST","I",290,200,bad number""".stripMargin
+        |"3","2019-04-04 23:10:00","TS 0003","TST","I",bad number,200,90
+        |"5","2019-05-01 23:10:00","TS 0005","TST","I",290,200,bad number""".stripMargin
 
     val result = LHRForecastCSVExtractor.parse(lhrCsvFixture)
 
