@@ -68,7 +68,7 @@ case class CedatFlightsExport(start: SDateLike, end: SDateLike, terminal: Termin
       fws.apiFlight,
       millisToDateStringFn,
       millisToTimeStringFn
-    ) ++ List(fws.apiFlight.bestPcpPaxEstimate.pax.getOrElse("").toString) ++ splitsForSources
+    ) ++ List(fws.apiFlight.bestPcpPaxEstimate.pax.map(_.toString).getOrElse("")) ++ splitsForSources
   }
 
   override def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Seq[String] = (flightWithSplitsToCsvRow(fws) :::
