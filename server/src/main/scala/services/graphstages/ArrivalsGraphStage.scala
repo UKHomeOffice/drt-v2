@@ -290,7 +290,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def updateFilteredIncomingWithTotalPaxSource(filteredIncoming: SortedMap[UniqueArrival, Arrival], feedSource: FeedSource): SortedMap[UniqueArrival, Arrival] =
       filteredIncoming.map { case (k, arrival) =>
-      (k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax.getOrElse(0) - arrival.TranPax.getOrElse(0), feedSource, None))))
+      (k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax, feedSource))))
     }
 
     def changedArrivals(existingArrivals: SortedMap[UniqueArrival, Arrival],

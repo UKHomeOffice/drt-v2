@@ -5,15 +5,14 @@ import actors.serializers.PortStateMessageConversion.splitMessageToApiSplits
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage._
-import uk.gov.homeoffice.drt.protobuf.messages.Prediction.PredictionLongMessage
 import services.SDate
-import uk.gov.homeoffice.drt.arrivals.{TotalPaxSource, _}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PortCode, UnknownFeedSource}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage._
+import uk.gov.homeoffice.drt.protobuf.messages.Prediction.PredictionLongMessage
 
 object FlightMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass.toString)
@@ -152,14 +151,10 @@ object FlightMessageConversion {
     )
   }
 
-  def convertTotalPaxToMessage(totalPax: Set[TotalPaxSource]): Seq[FlightsMessage.TotalPaxSource] =
-    totalPax
-      .map(tp =>
-        uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
-          .TotalPaxSource(
-            pax = Option(tp.pax),
-            feedSource = Option(tp.feedSource.name),
-            splitSource = tp.splitSource.map(_.toString))).toSeq
+  def convertTotalPaxToMessage(totalPax: Set[TotalPaxSource]): Seq[TotalPaxSourceMessage] =
+    totalPax.map(tp =>
+      TotalPaxSourceMessage(pax = tp.pax, feedSource = Option(tp.feedSource.name))
+    ).toSeq
 
   def predictionToMessage(maybePred: Option[Prediction[Long]]): Option[PredictionLongMessage] =
     maybePred.map(pred => PredictionLongMessage(Option(pred.updatedAt), Option(pred.value)))
@@ -198,11 +193,13 @@ object FlightMessageConversion {
     ApiPax = flightMessage.apiPax,
     RedListPax = flightMessage.redListPax,
     ScheduledDeparture = flightMessage.scheduledDeparture,
-    TotalPax = Set(flightMessage.totalPax.map(a => uk.gov.homeoffice.drt.arrivals.TotalPaxSource(a.pax.getOrElse(0),
-      a.feedSource.flatMap(FeedSource.findByName).getOrElse(UnknownFeedSource),
-      a.splitSource.map(SplitSource(_)))): _*)
-
+    TotalPax = flightMessage.totalPax.map(totalPaxSourceFromMessage).toSet
   )
+
+  def totalPaxSourceFromMessage(message: TotalPaxSourceMessage): TotalPaxSource = {
+    val feedSource = message.feedSource.flatMap(FeedSource.findByName).getOrElse(UnknownFeedSource)
+    TotalPaxSource(message.pax, feedSource)
+  }
 
   def flightsToMessage(flights: Iterable[ApiFlightWithSplits]): FlightsWithSplitsMessage =
     FlightsWithSplitsMessage(flights.map(FlightMessageConversion.flightWithSplitsToMessage).toSeq)

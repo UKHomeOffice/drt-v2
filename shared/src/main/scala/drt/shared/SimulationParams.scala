@@ -59,7 +59,7 @@ case class SimulationParams(
             ActPax = actualPax,
             TranPax = tranPax,
             FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource,
-            TotalPax = Set(TotalPaxSource(actualPax.getOrElse(0), ScenarioSimulationSource, None))
+            TotalPax = Set(TotalPaxSource(actualPax, ScenarioSimulationSource))
           ))
     })
 }

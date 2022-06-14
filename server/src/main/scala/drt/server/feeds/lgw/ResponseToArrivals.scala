@@ -61,7 +61,7 @@ case class ResponseToArrivals(data: String) {
       ApiPax = None,
       ScheduledDeparture = None,
       RedListPax = None,
-      TotalPax = Set(TotalPaxSource(actPax.getOrElse(0), LiveFeedSource, None)),
+      TotalPax = Set(TotalPaxSource(actPax, LiveFeedSource)),
     )
     log.debug(s"parsed arrival: $arrival")
     arrival

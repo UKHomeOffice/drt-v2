@@ -20,10 +20,10 @@ import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource}
-import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, HistoricApiFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{Map, NumericRange}
@@ -98,16 +98,8 @@ object DynamicRunnableDeskRecs {
     Flow[(CrunchRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
-          val historicApiPax = flights
-            .map { fws =>
-              val histApiPax = fws.apiFlight.TotalPax.filter { tp => tp.feedSource == ApiFeedSource && tp.splitSource == Option(ApiSplitsWithHistoricalEGateAndFTPercentages) }
-              (fws.unique, histApiPax)
-            }
-            .collect { case (key, nonEmptyPax) if nonEmptyPax.nonEmpty => (key, nonEmptyPax)}
-            .toMap
-
           splitsSink
-            .ask(PaxForArrivals(historicApiPax))
+            .ask(PaxForArrivals.from(flights.map(_.apiFlight), HistoricApiFeedSource))
             .map(_ => (crunchRequest, flights))
             .recover {
               case t =>
@@ -193,7 +185,7 @@ object DynamicRunnableDeskRecs {
             if (!flight.apiFlight.FeedSources.contains(ApiFeedSource)) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxCount) =>
-                  val totalPax: Set[TotalPaxSource] = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(manifestPaxLike.pax.getOrElse(0), ApiFeedSource, Option(Historical)))
+                  val totalPax: Set[TotalPaxSource] = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(manifestPaxLike.pax, HistoricApiFeedSource))
                   val updatedArrival = flight.apiFlight.copy(TotalPax = totalPax)
                   flight.copy(apiFlight = updatedArrival)
                 case None => flight
@@ -305,7 +297,7 @@ object DynamicRunnableDeskRecs {
             val arrival = flight.apiFlight.copy(
               ApiPax = Option(apiPax),
               FeedSources = flight.apiFlight.FeedSources + ApiFeedSource,
-              TotalPax = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(apiPax, ApiFeedSource, Option(ApiSplitsWithHistoricalEGateAndFTPercentages)))
+              TotalPax = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(Option(apiPax), ApiFeedSource))
             )
 
             flight.copy(apiFlight = arrival)

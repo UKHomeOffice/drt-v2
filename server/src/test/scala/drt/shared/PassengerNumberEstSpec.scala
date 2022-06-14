@@ -14,7 +14,7 @@ class PassengerNumberEstSpec extends Specification {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, sources = Set(LiveFeedSource))
 
-        val result = flightWithSplits.pcpPaxEstimate.pax
+        val result = flightWithSplits.pcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
 
         result === 100
       }
@@ -25,7 +25,7 @@ class PassengerNumberEstSpec extends Specification {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, sources = Set(LiveFeedSource))
 
-        val result = flightWithSplits.pcpPaxEstimate.pax
+        val result = flightWithSplits.pcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
 
         result === 99
       }
@@ -36,7 +36,7 @@ class PassengerNumberEstSpec extends Specification {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, splits = liveApiSplits(directPax = 96), sources = Set(LiveFeedSource))
 
-        val result = flightWithSplits.pcpPaxEstimate.pax
+        val result = flightWithSplits.pcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
 
         result === 96
       }
@@ -48,7 +48,7 @@ class PassengerNumberEstSpec extends Specification {
         val splits = liveApiSplits(directPax = 95, transferPax = 0)
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, splits = splits, sources = Set(LiveFeedSource))
 
-        val result = flightWithSplits.pcpPaxEstimate.pax
+        val result = flightWithSplits.pcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
 
         result === 95
       }
@@ -62,7 +62,7 @@ class PassengerNumberEstSpec extends Specification {
         val sources: Set[FeedSource] = Set(LiveFeedSource)
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, splits = splits, sources = sources)
 
-        val result = flightWithSplits.pcpPaxEstimate.pax
+        val result = flightWithSplits.pcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
 
         result === 99
       }
@@ -76,7 +76,7 @@ class PassengerNumberEstSpec extends Specification {
         val sources: Set[FeedSource] = Set(AclFeedSource)
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, splits = splits, sources = sources)
 
-        val result = flightWithSplits.pcpPaxEstimate.pax
+        val result = flightWithSplits.pcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
 
         result === 50
       }
@@ -90,7 +90,7 @@ class PassengerNumberEstSpec extends Specification {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, sources = Set())
 
-        val result = flightWithSplits.totalPax.map(_.pax).getOrElse(0)
+        val result = flightWithSplits.totalPax.flatMap(_.pax.map(_.toInt)).getOrElse(0)
 
         result === 0
       }
@@ -101,7 +101,7 @@ class PassengerNumberEstSpec extends Specification {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, sources = Set(AclFeedSource))
 
-        val result = flightWithSplits.totalPax.map(_.pax).getOrElse(0)
+        val result = flightWithSplits.totalPax.flatMap(_.pax.map(_.toInt)).getOrElse(0)
 
         result === 100
       }
@@ -112,7 +112,7 @@ class PassengerNumberEstSpec extends Specification {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, Set(), Set(LiveFeedSource))
 
-        val result = flightWithSplits.totalPax.map(_.pax).getOrElse(0)
+        val result = flightWithSplits.totalPax.flatMap(_.pax.map(_.toInt)).getOrElse(0)
 
         result === 100
       }
@@ -123,7 +123,7 @@ class PassengerNumberEstSpec extends Specification {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, splits = liveApiSplits(directPax = 96), sources = Set(LiveFeedSource))
 
-        val result = flightWithSplits.totalPax.map(_.pax).getOrElse(0)
+        val result = flightWithSplits.totalPax.flatMap(_.pax.map(_.toInt)).getOrElse(0)
 
         result === 96
       }
@@ -135,7 +135,7 @@ class PassengerNumberEstSpec extends Specification {
         val splits = liveApiSplits(directPax = 95, transferPax = 1)
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, splits = splits, sources = Set(LiveFeedSource))
 
-        val result = flightWithSplits.totalPax.map(_.pax).getOrElse(0)
+        val result = flightWithSplits.totalPax.flatMap(_.pax.map(_.toInt)).getOrElse(0)
 
         result === 96
       }
@@ -149,7 +149,7 @@ class PassengerNumberEstSpec extends Specification {
         val sources: Set[FeedSource] = Set(LiveFeedSource)
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, splits = splits, sources = sources)
 
-        val result = flightWithSplits.totalPax.map(_.pax).getOrElse(0)
+        val result = flightWithSplits.totalPax.flatMap(_.pax.map(_.toInt)).getOrElse(0)
 
         result === 100
       }
@@ -163,7 +163,7 @@ class PassengerNumberEstSpec extends Specification {
         val sources: Set[FeedSource] = Set()
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, splits = splits, sources = sources)
 
-        val result = flightWithSplits.totalPax.map(_.pax).getOrElse(0)
+        val result = flightWithSplits.totalPax.flatMap(_.pax.map(_.toInt)).getOrElse(0)
 
         result === 51
       }
@@ -179,7 +179,7 @@ class PassengerNumberEstSpec extends Specification {
       actPax = Option(actPax),
       tranPax = Option(transferPax),
       feedSources = sources,
-      totalPax = Set(sources.map(TotalPaxSource(actPax - transferPax, _, None)).toList: _*)
+      totalPax = Set(sources.map(TotalPaxSource(Option(actPax), _)).toList: _*)
     )
 
     ApiFlightWithSplits(flight, splits)

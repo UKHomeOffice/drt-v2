@@ -53,14 +53,14 @@ trait FlightsWithSplitsExport extends FlightsExport {
       fws.apiFlight.ActualChox.map(millisToLocalDateTimeString(_)).getOrElse(""),
       fws.apiFlight.differenceFromScheduled.map(_.toMinutes.toString).getOrElse(""),
       fws.apiFlight.PcpTime.map(millisToLocalDateTimeString(_)).getOrElse(""),
-      fws.totalPax.map(_.pax.toString).getOrElse(""),
+      fws.totalPax.flatMap(_.pax).map(_.toString).getOrElse(""),
     )
   }
 
   protected def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
     val apiIsInvalid = fws.hasApi && !fws.hasValidApi
     val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
-    val pcpPax = if (fws.apiFlight.Origin.isDomesticOrCta) "-" else fws.pcpPaxEstimate.pax.toString
+    val pcpPax = if (fws.apiFlight.Origin.isDomesticOrCta) "-" else fws.pcpPaxEstimate.pax.map(_.toString).getOrElse("0")
     flightWithSplitsToCsvFields(fws, millisToDateStringFn, millisToLocalDateTimeStringFn) ++
       List(pcpPax, if (apiIsInvalid) "Y" else "") ++ splitsForSources
   }
