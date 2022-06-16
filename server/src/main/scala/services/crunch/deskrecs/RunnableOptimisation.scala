@@ -12,6 +12,7 @@ import drt.shared.PortStateQueueMinutes
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.europeLondonTimeZone
 import services.{SDate, StreamSupervision, TimeLogger}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.NumericRange
@@ -31,7 +32,16 @@ object RunnableOptimisation {
       else 0
   }
 
-  case class RemoveCrunchRequest(crunchRequest: CrunchRequest)
+  case class TerminalUpdateRequest(terminal: Terminal, localDate: LocalDate, offsetMinutes: Int, durationMinutes: Int) extends Ordered[CrunchRequest] {
+    lazy val start: SDateLike = SDate(localDate).addMinutes(offsetMinutes)
+    lazy val end: SDateLike = start.addMinutes(durationMinutes)
+    lazy val minutesInMillis: NumericRange[MillisSinceEpoch] = start.millisSinceEpoch until end.millisSinceEpoch by 60000
+
+    override def compare(that: CrunchRequest): Int =
+      if (localDate < that.localDate) -1
+      else if (localDate > that.localDate) 1
+      else 0
+  }
 
   object CrunchRequest {
     def apply(millis: MillisSinceEpoch, offsetMinutes: Int, durationMinutes: Int): CrunchRequest = {
@@ -44,6 +54,8 @@ object RunnableOptimisation {
       CrunchRequest(localDate, offsetMinutes, durationMinutes)
     }
   }
+
+  case class RemoveCrunchRequest(crunchRequest: CrunchRequest)
 
   def createGraph(crunchRequestSource: SortedActorRefSource,
                   deskRecsSinkActor: ActorRef,

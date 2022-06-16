@@ -31,7 +31,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 object DynamicRunnableDeskRecs {
-  val log: Logger = LoggerFactory.getLogger(getClass)
+  private val log: Logger = LoggerFactory.getLogger(getClass)
+
   val timeLogger: TimeLogger = TimeLogger("DeskRecs", 1000, log)
 
   type HistoricManifestsProvider = Iterable[Arrival] => Source[ManifestLike, NotUsed]

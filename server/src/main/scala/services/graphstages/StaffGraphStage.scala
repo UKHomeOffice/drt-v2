@@ -40,6 +40,8 @@ class StaffGraphStage(initialShifts: ShiftAssignments,
 
     val expireBefore: MillisSinceEpoch = now().millisSinceEpoch - expireAfterMillis
 
+    import SDate.implicits.sdateFromMilliDateLocal
+
     def staffSources: StaffSources = Staffing.staffAvailableByTerminalAndQueue(expireBefore, shifts, fixedPoints, movementsOption)
 
     override def preStart(): Unit = {
@@ -155,16 +157,9 @@ class StaffGraphStage(initialShifts: ShiftAssignments,
     def applyUpdatesFromSources(staff: StaffSources, updateCriteria: UpdateCriteria): Unit = {
       log.info(s"about to update ${updateCriteria.minuteMillis.size} staff minutes for ${updateCriteria.terminalNames}")
 
-      import SDate.implicits.sdateFromMilliDateLocal
-
       val updatedMinutes = SortedMap[TM, StaffMinute]() ++ updateCriteria.minuteMillis
         .flatMap(m => {
-          updateCriteria.terminalNames.map { tn =>
-            val shifts = staff.shifts.terminalStaffAt(tn, SDate(m))
-            val fixedPoints = staff.fixedPoints.terminalStaffAt(tn, SDate(m, Crunch.europeLondonTimeZone))
-            val movements = staff.movements.terminalStaffAt(tn, m)
-            (TM(tn, m), StaffMinute(tn, m, shifts, fixedPoints, movements, lastUpdated = Option(SDate.now().millisSinceEpoch)))
-          }
+          updateCriteria.terminalNames.map(tn => (TM(tn, m), staff.staffMinute(tn, SDate(m))))
         })
 
       staffMinuteUpdates = staffMinuteUpdates ++ updatedMinutes

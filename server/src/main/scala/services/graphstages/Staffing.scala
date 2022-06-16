@@ -23,7 +23,8 @@ object Staffing {
   def staffAvailableByTerminalAndQueue(dropBeforeMillis: MillisSinceEpoch,
                                        shifts: ShiftAssignments,
                                        fixedPoints: FixedPointAssignments,
-                                       optionalMovements: Option[Seq[StaffMovement]]): StaffSources = {
+                                       optionalMovements: Option[Seq[StaffMovement]])
+                                      (implicit m: MilliDate => SDateLike): StaffSources = {
     val movements = optionalMovements.getOrElse(Seq())
 
     val relevantShifts = removeOldShifts(dropBeforeMillis, shifts)
@@ -202,6 +203,15 @@ case class StaffSources(shifts: ShiftAssignmentsLike,
                         fixedPoints: FixedPointAssignmentsLike,
                         movements: StaffAssignmentService,
                         available: (MillisSinceEpoch, Terminal) => Int)
+                       (implicit mdToSd: MilliDate => SDateLike) {
+  def staffMinute(terminal: Terminal, minute: SDateLike): StaffMinute = {
+    val millis = minute.millisSinceEpoch
+    val sh = shifts.terminalStaffAt(terminal, minute)
+    val fp = fixedPoints.terminalStaffAt(terminal, SDate(millis, Crunch.europeLondonTimeZone))
+    val mm = movements.terminalStaffAt(terminal, millis)
+    StaffMinute(terminal, minute.millisSinceEpoch, sh, fp, mm, lastUpdated = Option(SDate.now().millisSinceEpoch))
+  }
+}
 
 trait StaffAssignmentService {
   def terminalStaffAt(terminalName: Terminal, dateMillis: MillisSinceEpoch): Int

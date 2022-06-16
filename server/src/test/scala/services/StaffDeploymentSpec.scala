@@ -43,6 +43,8 @@ class StaffDeploymentSpec extends CrunchTestLike {
       Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(10))),
       Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(10)))))
 
+  import SDate.implicits.sdateFromMilliDateLocal
+
   private val staffAvailable = 25
   "Given a set of CrunchMinutes representing a single terminal with 3 queues at one minute " +
   "When I ask to add deployments to them " +
