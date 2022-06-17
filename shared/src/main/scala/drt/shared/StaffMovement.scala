@@ -6,7 +6,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{ReadWriter, macroRW}
 
-import java.util.UUID
 
 trait HasExpireables[A] {
   def purgeExpired(expireBefore: () => SDateLike): A
