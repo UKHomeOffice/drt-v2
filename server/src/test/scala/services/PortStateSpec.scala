@@ -1,6 +1,6 @@
 package services
 
-import actors.persistent.staffing.GetState
+import actors.persistent.staffing.{GetState, UpdateShifts}
 import akka.actor.Actor
 import akka.pattern.after
 import controllers.ArrivalGenerator
@@ -30,7 +30,7 @@ class PortStateSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(initialPortState = Option(portState), now = () => SDate(minute).addMinutes(-60)))
 
-    offerAndWait(crunch.shiftsInput, ShiftAssignments(Seq(StaffAssignment("", T1, MilliDate(SDate(minute).addMinutes(-15).millisSinceEpoch), MilliDate(SDate(minute).addMinutes(15).millisSinceEpoch), 1, None))))
+    offerAndWait(crunch.shiftsInput, UpdateShifts(Seq(StaffAssignment("", T1, MilliDate(SDate(minute).addMinutes(-15).millisSinceEpoch), MilliDate(SDate(minute).addMinutes(15).millisSinceEpoch), 1, None))))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>

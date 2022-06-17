@@ -31,9 +31,9 @@ object RunnableCrunch {
                                            liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                            liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
                                            manifestsLiveSource: Source[ManifestsFeedResponse, MS],
-                                           shiftsSource: Source[ShiftAssignments, SS],
-                                           fixedPointsSource: Source[FixedPointAssignments, SFP],
-                                           staffMovementsSource: Source[Seq[StaffMovement], SMM],
+//                                           shiftsSource: Source[ShiftAssignments, SS],
+//                                           fixedPointsSource: Source[FixedPointAssignments, SFP],
+//                                           staffMovementsSource: Source[Seq[StaffMovement], SMM],
                                            actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
                                            redListUpdatesSource: Source[List[RedListUpdateCommand], RL],
                                            addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff],
@@ -60,7 +60,7 @@ object RunnableCrunch {
 
                                            forecastMaxMillis: () => MillisSinceEpoch
                                           )
-                                          (implicit ec: ExecutionContext): RunnableGraph[(FR, FR, FR, FR, MS, SS, SFP, SMM, SAD, RL, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                          (implicit ec: ExecutionContext): RunnableGraph[(FR, FR, FR, FR, MS, SAD, RL, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsFeedResponse]
     val manifestsLiveKillSwitch = KillSwitches.single[ManifestsFeedResponse]
@@ -76,9 +76,9 @@ object RunnableCrunch {
       liveBaseArrivalsSource,
       liveArrivalsSource,
       manifestsLiveSource,
-      shiftsSource,
-      fixedPointsSource,
-      staffMovementsSource,
+//      shiftsSource,
+//      fixedPointsSource,
+//      staffMovementsSource,
       actualDesksAndWaitTimesSource,
       redListUpdatesSource.async,
       arrivalsKillSwitch,
@@ -86,7 +86,7 @@ object RunnableCrunch {
       shiftsKillSwitch,
       fixedPointsKillSwitch,
       movementsKillSwitch
-    )((_, _, _, _, _, _, _, _, _, _, _, _, _, _, _)) {
+    )((_, _, _, _, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
@@ -95,9 +95,9 @@ object RunnableCrunch {
           liveBaseArrivalsSourceSync,
           liveArrivalsSourceSync,
           manifestsLiveSourceSync,
-          shiftsSourceAsync,
-          fixedPointsSourceAsync,
-          staffMovementsSourceAsync,
+//          shiftsSourceAsync,
+//          fixedPointsSourceAsync,
+//          staffMovementsSourceAsync,
           actualDesksAndWaitTimesSourceSync,
           redListUpdatesSourceAsync,
           arrivalsKillSwitchSync,
@@ -188,9 +188,9 @@ object RunnableCrunch {
               ManifestsFeedSuccess(manifests, createdAt)
           } ~> manifestsLiveKillSwitchSync ~> manifestsSink
 
-          shiftsSourceAsync ~> shiftsKillSwitchSync ~> staff.in0
-          fixedPointsSourceAsync ~> fixedPointsKillSwitchSync ~> staff.in1
-          staffMovementsSourceAsync ~> movementsKillSwitchSync ~> staff.in2
+//          shiftsSourceAsync ~> shiftsKillSwitchSync ~> staff.in0
+//          fixedPointsSourceAsync ~> fixedPointsKillSwitchSync ~> staff.in1
+//          staffMovementsSourceAsync ~> movementsKillSwitchSync ~> staff.in2
 
           arrivals.out
             .mapAsync(1) { diff =>

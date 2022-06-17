@@ -1,23 +1,22 @@
 package actors.persistent.staffing
 
-import actors.persistent.Sizes.oneMegaByte
-import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import actors.ExpiryActorLike
-import akka.actor.Scheduler
+import actors.acking.AckingReceiver.StreamCompleted
+import actors.persistent.Sizes.oneMegaByte
+import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
+import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
-import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
+import services.SDate
+import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import services.graphstages.Crunch
-import services.{OfferHandler, SDate}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
 
 
@@ -37,30 +36,34 @@ case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment])
 
 case class UpdateShiftsAck(shiftsToUpdate: Seq[StaffAssignment])
 
-case class AddShiftSubscribers(subscribers: List[SourceQueueWithComplete[ShiftAssignments]])
-
-case class AddFixedPointSubscribers(subscribers: List[SourceQueueWithComplete[FixedPointAssignments]])
+//case class AddShiftSubscribers(subscribers: List[SourceQueueWithComplete[ShiftAssignments]])
+//
+//case class AddFixedPointSubscribers(subscribers: List[SourceQueueWithComplete[FixedPointAssignments]])
 
 case object SaveSnapshot
 
 
 class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends ShiftsActorBase(now, expireBefore) {
-  var subscribers: List[SourceQueueWithComplete[ShiftAssignments]] = List()
+  var subscribers: List[ActorRef] = List()
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
-  override def onUpdateState(shifts: ShiftAssignments): Unit = {
-    log.info(s"Telling subscribers ($subscribers) about updated shifts")
+  override def onUpdateDiff(shifts: ShiftAssignments): Unit = {
 
-    subscribers.foreach(s => OfferHandler.offerWithRetries(s, shifts, 5))
+    log.info(s"Telling subscribers ($subscribers) about updated shifts")
+    shifts.assignments.groupBy(_.terminal).foreach { case (terminal, assignments) =>
+      if (shifts.assignments.nonEmpty) {
+        val earliest = SDate(assignments.map(_.startDt.millisSinceEpoch).min).millisSinceEpoch
+        val latest = SDate(assignments.map(_.endDt.millisSinceEpoch).max).millisSinceEpoch
+        val updateRequests = (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, 1440)
+        }
+        subscribers.foreach(sub => updateRequests.foreach(sub ! _))
+      }
+    }
   }
 
   val subsReceive: Receive = {
-    case AddShiftSubscribers(newSubscribers) =>
-      subscribers = newSubscribers.foldLeft(subscribers) {
-        case (soFar, newSub) =>
-          log.info(s"Adding shifts subscriber $newSub")
-          newSub :: soFar
-      }
+    case actor: ActorRef => subscribers = actor :: subscribers
   }
 
   override def receiveCommand: Receive = {
@@ -91,6 +94,8 @@ class ShiftsActorBase(val now: () => SDateLike,
 
   def onUpdateState(data: ShiftAssignments): Unit = {}
 
+  def onUpdateDiff(diff: ShiftAssignments): Unit = {}
+
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: ShiftStateSnapshotMessage =>
       log.info(s"Processing a snapshot message")
@@ -119,6 +124,8 @@ class ShiftsActorBase(val now: () => SDateLike,
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
       persistAndMaybeSnapshotWithAck(shiftsMessage, Option((sender(), UpdateShiftsAck(shiftsToUpdate))))
 
+      onUpdateDiff(ShiftAssignments(shiftsToUpdate))
+
     case SetShifts(newShiftAssignments) =>
       if (newShiftAssignments != state) {
         log.info(s"Replacing shifts state with $newShiftAssignments")
@@ -127,6 +134,7 @@ class ShiftsActorBase(val now: () => SDateLike,
         val createdAt = now()
         val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(newShiftAssignments), createdAt), Option(createdAt.millisSinceEpoch))
         persistAndMaybeSnapshotWithAck(shiftsMessage, Option((sender(), SetShiftsAck(newShiftAssignments))))
+        onUpdateDiff(ShiftAssignments(newShiftAssignments))
       } else {
         log.info(s"No change. Nothing to persist")
         sender() ! SetShiftsAck(newShiftAssignments)
@@ -168,7 +176,7 @@ object ShiftsMessageParser {
     startTimestamp = Option(assignment.startDt.millisSinceEpoch),
     endTimestamp = Option(assignment.endDt.millisSinceEpoch),
     createdAt = Option(createdAt.millisSinceEpoch)
-    )
+  )
 
   def shiftMessageToStaffAssignmentv1(shiftMessage: ShiftMessage): Option[StaffAssignment] = {
     val maybeSt: Option[SDateLike] = parseDayAndTimeToSdate(shiftMessage.startDayOLD, shiftMessage.startTimeOLD)
@@ -184,7 +192,7 @@ object ShiftsMessageParser {
         endDt = MilliDate(endDt.roundToMinute().millisSinceEpoch),
         numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
         createdBy = None
-        )
+      )
     }
   }
 
@@ -211,7 +219,7 @@ object ShiftsMessageParser {
     endDt = MilliDate(shiftMessage.endTimestamp.getOrElse(0L)),
     numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
     createdBy = None
-    ))
+  ))
 
   def staffAssignmentsToShiftsMessages(shiftStaffAssignments: ShiftAssignments,
                                        createdAt: SDateLike): Seq[ShiftMessage] =

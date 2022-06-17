@@ -1,5 +1,6 @@
 package services
 
+import actors.persistent.staffing.SetFixedPoints
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
@@ -159,7 +160,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
       val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
       val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
       val assignment2 = StaffAssignment("egate monitor", T1, startDate2, endDate2, 2, None)
-      val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
+      val initialFixedPoints = SetFixedPoints(Seq(assignment2))
 
       val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(

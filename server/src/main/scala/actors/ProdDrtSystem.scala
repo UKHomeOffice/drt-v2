@@ -191,7 +191,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         manifestsRouterActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
         queuesActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
 
-        subscribeStaffingActors(crunchInputs)
+//        subscribeStaffingActors(crunchInputs)
 
         system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(flightsActor))
 

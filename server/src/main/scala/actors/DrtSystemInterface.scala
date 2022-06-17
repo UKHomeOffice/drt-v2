@@ -208,61 +208,64 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
-  val startDeskRecs: (SortedSet[ProcessingRequest], SortedSet[ProcessingRequest], SortedSet[ProcessingRequest]) => () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch) = (cq, dq, sq) => () => {
-    val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
+  val startDeskRecs: (SortedSet[ProcessingRequest], SortedSet[ProcessingRequest], SortedSet[ProcessingRequest]) =>
+    () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch) =
+    (cq, dq, sq) => () => {
+      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
 
-    implicit val timeout: Timeout = new Timeout(10.seconds)
+      implicit val timeout: Timeout = new Timeout(10.seconds)
 
-    val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
+      val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
 
-    val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-      arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-      liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
-      historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
-      historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, manifestLookupService),
-      splitsCalculator = splitsCalculator,
-      splitsSink = portStateActor,
-      portDesksAndWaitsProvider = portDeskRecs,
-      maxDesksProviders = deskLimitsProviders,
-      redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-      DynamicQueueStatusProvider(airportConfig, egatesProvider)
-    )
+      val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+        arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
+        liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
+        historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
+        historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, manifestLookupService),
+        splitsCalculator = splitsCalculator,
+        splitsSink = portStateActor,
+        portDesksAndWaitsProvider = portDeskRecs,
+        maxDesksProviders = deskLimitsProviders,
+        redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+        DynamicQueueStatusProvider(airportConfig, egatesProvider)
+      )
 
-    log.info(s"Initial crunch queue: ${cq.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
-    val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor, cq)
+      val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor, cq)
 
-    val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
-      OptimisationProviders.loadsProvider(minuteLookups.queueMinutesActor),
-      OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, airportConfig.terminals),
-      staffToDeskLimits,
-      portDeskRecs.loadsToSimulations
-    )
+      val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
+        OptimisationProviders.loadsProvider(minuteLookups.queueMinutesActor),
+        OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, airportConfig.terminals),
+        staffToDeskLimits,
+        portDeskRecs.loadsToSimulations
+      )
 
-    val staffProvider = (r: ProcessingRequest) => staffActor.ask(r).mapTo[ShiftAssignments]
-    val fixedPointsProvider = (r: ProcessingRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
-    val movementsProvider = (r: ProcessingRequest) => staffMovementsActor.ask(r).mapTo[StaffMovements]
+      val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, dq)
 
-    val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(staffProvider, fixedPointsProvider, movementsProvider, now)
-    val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = startOptimisationGraph(staffMinutesProducer, persistentStaffingUpdateQueueActor, sq)
+      val staffProvider = (r: ProcessingRequest) => staffActor.ask(r).mapTo[ShiftAssignments]
+      val fixedPointsProvider = (r: ProcessingRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
+      val movementsProvider = (r: ProcessingRequest) => staffMovementsActor.ask(r).mapTo[StaffMovements]
 
-    log.info(s"Initial deployment queue: ${dq.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
-    val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, dq)
+      val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(staffProvider, fixedPointsProvider, movementsProvider, now)
+      val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = startOptimisationGraph(staffMinutesProducer, persistentStaffingUpdateQueueActor, sq)
+      staffActor ! staffingUpdateRequestQueue
+      fixedPointsActor ! staffingUpdateRequestQueue
+      staffMovementsActor ! staffingUpdateRequestQueue
 
-    egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
+      egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
 
-    if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor)
+      if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor)
 
-    (crunchRequestQueueActor, deploymentRequestQueue, deskRecsKillSwitch, deploymentsKillSwitch)
-  }
+      (crunchRequestQueueActor, deploymentRequestQueue, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+    }
 
 
-  private def startOptimisationGraph[A, B <: WithTimeAccessor](deskRecsProducer: Flow[ProcessingRequest, PortStateMinutes[A, B], NotUsed],
+  private def startOptimisationGraph[A, B <: WithTimeAccessor](minutesProducer: Flow[ProcessingRequest, PortStateMinutes[A, B], NotUsed],
                                                                persistentQueueActor: ActorRef,
                                                                initialQueue: SortedSet[ProcessingRequest]): (ActorRef, UniqueKillSwitch) = {
-    val crunchGraphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, initialQueue)
-    val (crunchRequestQueueActor, deskRecsKillSwitch) =
-      RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, deskRecsProducer).run()
-    (crunchRequestQueueActor, deskRecsKillSwitch)
+    val graphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, initialQueue)
+    val (requestQueueActor, deskRecsKillSwitch) =
+      RunnableOptimisation.createGraph(graphSource, portStateActor, minutesProducer).run()
+    (requestQueueActor, deskRecsKillSwitch)
   }
 
   def startCrunchSystem(initialPortState: Option[PortState],
@@ -271,7 +274,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         refreshArrivalsOnStart: Boolean,
-                        startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch),
+                        startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
 
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
@@ -370,11 +373,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     crunchQueueActor ! UpdatedMillis(daysToReCrunch)
   }
 
-  def subscribeStaffingActors(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
-    shiftsActor ! AddShiftSubscribers(List(crunchInputs.shifts))
-    fixedPointsActor ! AddFixedPointSubscribers(List(crunchInputs.fixedPoints))
-    staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
-  }
+//  def subscribeStaffingActors(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
+//    shiftsActor ! AddShiftSubscribers(List(crunchInputs.shifts))
+//    fixedPointsActor ! AddFixedPointSubscribers(List(crunchInputs.fixedPoints))
+//    staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
+//  }
 
   def liveBaseArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] = {
     if (config.get[Boolean]("feature-flags.use-cirium-feed")) {

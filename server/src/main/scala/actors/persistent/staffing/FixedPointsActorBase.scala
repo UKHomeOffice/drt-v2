@@ -3,17 +3,18 @@ package actors.persistent.staffing
 import actors.acking.AckingReceiver.StreamCompleted
 import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
-import akka.actor.Scheduler
+import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{FixedPointAssignments, MilliDate, StaffAssignment}
+import drt.shared.{FixedPointAssignments, MilliDate, ShiftAssignments, StaffAssignment}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
+import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
-import services.OfferHandler
+import services.{OfferHandler, SDate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -23,22 +24,26 @@ case class SetFixedPoints(newFixedPoints: Seq[StaffAssignment])
 case class SetFixedPointsAck(newFixedPoints: Seq[StaffAssignment])
 
 class FixedPointsActor(val now: () => SDateLike) extends FixedPointsActorBase(now) {
-  var subscribers: List[SourceQueueWithComplete[FixedPointAssignments]] = List()
+  var subscribers: List[ActorRef] = List()
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
-  override def onUpdateState(fixedPoints: FixedPointAssignments): Unit = {
+  override def onUpdateDiff(fixedPoints: FixedPointAssignments): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated fixed points: $fixedPoints")
 
-    subscribers.foreach(s => OfferHandler.offerWithRetries(s, fixedPoints, 5))
+    fixedPoints.assignments.groupBy(_.terminal).foreach { case (terminal, assignments) =>
+      if (fixedPoints.assignments.nonEmpty) {
+        val earliest = now().millisSinceEpoch
+        val latest = now().addDays(180).millisSinceEpoch
+        val updateRequests = (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, 1440)
+        }
+        subscribers.foreach(sub => updateRequests.foreach(sub ! _))
+      }
+    }
   }
 
   val subsReceive: Receive = {
-    case AddFixedPointSubscribers(newSubscribers) =>
-      subscribers = newSubscribers.foldLeft(subscribers) {
-        case (soFar, newSub) =>
-          log.info(s"Adding fixed points subscriber $newSub")
-          newSub :: soFar
-      }
+    case actor: ActorRef => subscribers = actor :: subscribers
   }
 
   override def receiveCommand: Receive = {
@@ -65,7 +70,7 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
 
   def updateState(fixedPoints: FixedPointAssignments): Unit = state = fixedPoints
 
-  def onUpdateState(data: FixedPointAssignments): Unit
+  def onUpdateDiff(diff: FixedPointAssignments): Unit = {}
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: FixedPointsStateSnapshotMessage =>
@@ -88,11 +93,13 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
       if (fixedPointStaffAssignments != state) {
         log.info(s"Replacing fixed points state with $fixedPointStaffAssignments")
         updateState(FixedPointAssignments(fixedPointStaffAssignments))
-        onUpdateState(FixedPointAssignments(fixedPointStaffAssignments))
+//        onUpdateState(FixedPointAssignments(fixedPointStaffAssignments))
 
         val createdAt = now()
         val fixedPointsMessage = FixedPointsMessage(fixedPointsToFixedPointsMessages(state, createdAt), Option(createdAt.millisSinceEpoch))
         persistAndMaybeSnapshotWithAck(fixedPointsMessage, Option(sender(), SetFixedPointsAck(fixedPointStaffAssignments)))
+
+        onUpdateDiff(FixedPointAssignments(fixedPointStaffAssignments))
       } else {
         log.info(s"No change. Nothing to persist")
         sender() ! SetFixedPointsAck(fixedPointStaffAssignments)
