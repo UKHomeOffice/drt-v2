@@ -8,7 +8,7 @@ import drt.shared.CrunchApi.{StaffMinute, StaffMinutes}
 import drt.shared.{FixedPointAssignments, PortStateStaffMinutes, ShiftAssignments, StaffMovements}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
-import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
+import services.crunch.deskrecs.RunnableOptimisation.{ProcessingRequest, TerminalUpdateRequest}
 import services.graphstages.{Crunch, Staffing}
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -19,22 +19,22 @@ object RunnableStaffing {
 
   import SDate.implicits.sdateFromMilliDateLocal
 
-  def staffMinutesFlow(shiftsProvider: TerminalUpdateRequest => Future[ShiftAssignments],
-                       fixedPointsProvider: TerminalUpdateRequest => Future[FixedPointAssignments],
-                       movementsProvider: TerminalUpdateRequest => Future[StaffMovements],
+  def staffMinutesFlow(shiftsProvider: ProcessingRequest => Future[ShiftAssignments],
+                       fixedPointsProvider: ProcessingRequest => Future[FixedPointAssignments],
+                       movementsProvider: ProcessingRequest => Future[StaffMovements],
                        now: () => SDateLike,
                       )
-                      (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[TerminalUpdateRequest, PortStateStaffMinutes, NotUsed] =
-    Flow[TerminalUpdateRequest]
+                      (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[ProcessingRequest, PortStateStaffMinutes, NotUsed] =
+    Flow[ProcessingRequest]
       .wireTap(cr => log.info(s"${cr.localDate} staffing crunch request started"))
       .mapAsync(1)(cr => shiftsProvider(cr).map(sa => (cr, sa)))
       .mapAsync(1) { case (cr, sa) => fixedPointsProvider(cr).map(fp => (cr, sa, fp)) }
       .mapAsync(1) { case (cr, sa, fp) => movementsProvider(cr).map(sm => (cr, sa, fp, sm)) }
       .via(toStaffMinutes(now))
 
-  def toStaffMinutes(now: () => SDateLike): Flow[(TerminalUpdateRequest, ShiftAssignments, FixedPointAssignments, StaffMovements), PortStateStaffMinutes, NotUsed] =
-    Flow[(TerminalUpdateRequest, ShiftAssignments, FixedPointAssignments, StaffMovements)]
-      .map { case (cr, sa, fp, sm) =>
+  def toStaffMinutes(now: () => SDateLike): Flow[(ProcessingRequest, ShiftAssignments, FixedPointAssignments, StaffMovements), PortStateStaffMinutes, NotUsed] =
+    Flow[(ProcessingRequest, ShiftAssignments, FixedPointAssignments, StaffMovements)]
+      .collect { case (cr: TerminalUpdateRequest, sa, fp, sm) =>
         val staff = Staffing.staffAvailableByTerminalAndQueue(cr.end.millisSinceEpoch, sa, fp, Option(sm.movements))
 
         StaffMinutes(cr.minutesInMillis.map { minute =>

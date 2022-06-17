@@ -11,7 +11,7 @@ import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest}
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -22,7 +22,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
   val myNow: () => SDateLike = () => SDate("2020-05-06", Crunch.europeLondonTimeZone)
 
   val durationMinutes = 60
-  def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int, initialQueue: SortedSet[CrunchRequest]): ActorRef = {
+  def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int, initialQueue: SortedSet[ProcessingRequest]): ActorRef = {
     val source = new SortedActorRefSource(TestProbe().ref, crunchOffsetMinutes, durationMinutes, initialQueue)
     val graph = GraphDSL.create(source) {
       implicit builder =>
@@ -42,7 +42,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
     "When I set a zero offset and an initial queue with crunch request for 2022-06-01" >> {
       "Then I should see a CrunchRequest for that day" >> {
         val daysSourceProbe: TestProbe = TestProbe()
-        val initialQueue = SortedSet(CrunchRequest(LocalDate(2022, 6, 1), zeroOffset, durationMinutes))
+        val initialQueue = SortedSet[ProcessingRequest](CrunchRequest(LocalDate(2022, 6, 1), zeroOffset, durationMinutes))
         startQueueActor(daysSourceProbe, zeroOffset, initialQueue)
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2022, 6, 1), zeroOffset, durationMinutes))
         success

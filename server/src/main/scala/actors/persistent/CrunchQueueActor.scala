@@ -14,3 +14,9 @@ class DeploymentQueueActor(now: () => SDateLike,
                            durationMinutes: Int) extends QueueLikeActor(now, crunchOffsetMinutes, durationMinutes) {
   override val persistenceId: String = "deployment-queue"
 }
+
+class StaffingUpdateQueueActor(now: () => SDateLike,
+                               crunchOffsetMinutes: Int,
+                               durationMinutes: Int) extends QueueLikeActor(now, crunchOffsetMinutes, durationMinutes) {
+  override val persistenceId: String = "staffing-update-queue"
+}

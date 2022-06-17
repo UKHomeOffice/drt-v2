@@ -67,6 +67,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
 
   override val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
   override val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentStaffingUpdateQueueActor: ActorRef = system.actorOf(Props(new TestStaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
@@ -171,7 +172,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
       refreshArrivalsOnStart = false,
-      startDeskRecs = startDeskRecs(SortedSet(), SortedSet()))
+      startDeskRecs = startDeskRecs(SortedSet(), SortedSet(), SortedSet()))
 
     liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 

@@ -6,9 +6,10 @@ import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchRequestsMessage, DaysMessage, RemoveCrunchRequestMessage, RemoveDayMessage}
 import services.SDate
-import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, RemoveCrunchRequest}
+import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, RemoveCrunchRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchRequestsMessage, DaysMessage, RemoveCrunchRequestMessage, RemoveDayMessage}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.mutable
@@ -45,18 +46,21 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
-  val state: mutable.SortedSet[CrunchRequest] = mutable.SortedSet()
+  val state: mutable.SortedSet[ProcessingRequest] = mutable.SortedSet()
 
-  def crunchRequestFromMillis(millis: MillisSinceEpoch): CrunchRequest =
+  def crunchRequestFromMillis(millis: MillisSinceEpoch): ProcessingRequest =
     CrunchRequest(SDate(millis).toLocalDate, crunchOffsetMinutes, durationMinutes)
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
       state ++= crunchRequestsFromMessages(requests)
-    case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day)) =>
-      state.find(_.localDate == LocalDate(year, month, day)).foreach {
-        state -= _
-      }
+
+    case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day), maybeTerminal) => state.find {
+      case TerminalUpdateRequest(terminal, localDate, _, _) =>
+        localDate == LocalDate(year, month, day) && Option(terminal) == maybeTerminal.map(Terminal(_))
+      case CrunchRequest(localDate, _, _) =>
+        localDate == LocalDate(year, month, day)
+    }.foreach(state -= _)
 
     case DaysMessage(days) => state ++= days.map(crunchRequestFromMillis)
     case RemoveDayMessage(Some(day)) => state -= crunchRequestFromMillis(day)

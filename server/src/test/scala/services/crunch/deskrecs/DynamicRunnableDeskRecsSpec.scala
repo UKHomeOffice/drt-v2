@@ -20,7 +20,7 @@ import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, vi
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider, addManifests}
 import services.crunch.deskrecs.OptimiserMocks._
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest}
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunch}
@@ -58,7 +58,7 @@ object OptimiserMocks {
     }
   }
 
-  def getMockManifestLookupService(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]], portCode: PortCode)(implicit ec: ExecutionContext, mat: Materializer) =
+  def getMockManifestLookupService(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]], portCode: PortCode)(implicit ec: ExecutionContext, mat: Materializer): MockManifestLookupService =
     MockManifestLookupService(arrivalsWithMaybePax.map { case (arrival, maybePax) =>
       val key = UniqueArrivalKey(portCode, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
       val maybeManifest = maybePax.map(pax => BestAvailableManifest.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
@@ -70,11 +70,11 @@ object OptimiserMocks {
     }, portCode)
 
   def mockFlightsProvider(arrivals: List[Arrival])
-                         (implicit ec: ExecutionContext): CrunchRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]] =
+                         (implicit ec: ExecutionContext): ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]] =
     _ => Future.successful(Source(List(arrivals.map(a => ApiFlightWithSplits(a, Set())))))
 
 
-  def mockLiveManifestsProviderNoop(implicit ec: ExecutionContext): CrunchRequest => Future[Source[VoyageManifests, NotUsed]] = {
+  def mockLiveManifestsProviderNoop(implicit ec: ExecutionContext): ProcessingRequest => Future[Source[VoyageManifests, NotUsed]] = {
     _ => Future.successful(Source(List()))
   }
 
@@ -87,7 +87,7 @@ object OptimiserMocks {
   }
 
   def mockLiveManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]])
-                               (implicit ec: ExecutionContext): CrunchRequest => Future[Source[VoyageManifests, NotUsed]] = {
+                               (implicit ec: ExecutionContext): ProcessingRequest => Future[Source[VoyageManifests, NotUsed]] = {
     val manifests = maybePax match {
       case Some(pax) => VoyageManifests(Set(manifestForArrival(arrival, pax)))
       case None => VoyageManifests(Set())
@@ -154,7 +154,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val request = CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440)
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
 
-    val deskRecs: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+    val deskRecs: Flow[ProcessingRequest, PortStateQueueMinutes, NotUsed] = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
       arrivalsProvider = mockFlightsProvider(List(arrival)),
       liveManifestsProvider = mockLiveManifestsProvider(arrival, livePax),
       historicManifestsProvider = mockHistoricManifestsProvider(Map(arrival -> historicPax)),
@@ -279,7 +279,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val flow = DynamicRunnableDeskRecs.addPax(mockHistoricManifestsPaxProvider(maybeHistoricArrivalManifestPax))
 
     val crunchRequestSource = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(ApiFlightWithSplits(arrival, Set())))))
-    val result: immutable.Seq[(CrunchRequest, List[ApiFlightWithSplits])] = Await.result(crunchRequestSource.via(flow).runWith(Sink.seq), 1.second)
+    val result: immutable.Seq[(ProcessingRequest, List[ApiFlightWithSplits])] = Await.result(crunchRequestSource.via(flow).runWith(Sink.seq), 1.second)
     result.head._2.exists(_.apiFlight.TotalPax === expectedPaxSources)
   }
 

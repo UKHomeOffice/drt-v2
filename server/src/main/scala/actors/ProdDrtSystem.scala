@@ -5,7 +5,7 @@ import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdat
 import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing._
-import actors.persistent.{ApiFeedState, CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
+import actors.persistent._
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.ask
@@ -24,7 +24,7 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services.SDate
 import services.crunch.CrunchSystem
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.metrics.ApiValidityReporter
 import slick.dbio.{DBIOAction, NoStream}
 import slickdb.{ArrivalTable, Tables}
@@ -80,6 +80,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
   override val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
   override val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentStaffingUpdateQueueActor: ActorRef = system.actorOf(Props(new StaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
   val flightLookups: FlightLookups = FlightLookups(
     system,
@@ -130,8 +131,9 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         Option[SortedMap[UniqueArrival, Arrival]],
         Option[SortedMap[UniqueArrival, Arrival]],
         Option[FeedSourceStatuses],
-        SortedSet[CrunchRequest],
-        SortedSet[CrunchRequest],
+        SortedSet[ProcessingRequest],
+        SortedSet[ProcessingRequest],
+        SortedSet[ProcessingRequest],
         )] = {
       for {
         lps <- initialFlightsPortState(portStateActor, params.forecastMaxDays)
@@ -139,13 +141,14 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         fa <- initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
         la <- initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
         aclStatus <- forecastBaseArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
-        crunchQueue <- persistentCrunchQueueActor.ask(GetState).mapTo[SortedSet[CrunchRequest]]
-        deploymentQueue <- persistentCrunchQueueActor.ask(GetState).mapTo[SortedSet[CrunchRequest]]
-      } yield (lps, ba, fa, la, aclStatus, crunchQueue, deploymentQueue)
+        crunchQueue <- persistentCrunchQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
+        deploymentQueue <- persistentDeploymentQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
+        staffingUpdateQueue <- persistentStaffingUpdateQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
+      } yield (lps, ba, fa, la, aclStatus, crunchQueue, deploymentQueue, staffingUpdateQueue)
     }
 
     futurePortStates.onComplete {
-      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeAclStatus, crunchQueue, deploymentQueue)) =>
+      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeAclStatus, crunchQueue, deploymentQueue, staffingUpdateQueue)) =>
         system.log.info(s"Successfully restored initial state for App")
 
         val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
@@ -155,7 +158,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           initialLiveBaseArrivals = Option(SortedMap[UniqueArrival, Arrival]()),
           initialLiveArrivals = maybeLiveArrivals,
           refreshArrivalsOnStart = params.refreshArrivalsOnStart,
-          startDeskRecs = startDeskRecs(crunchQueue, deploymentQueue),
+          startDeskRecs = startDeskRecs(crunchQueue, deploymentQueue, staffingUpdateQueue),
         )
 
         fcstBaseActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)

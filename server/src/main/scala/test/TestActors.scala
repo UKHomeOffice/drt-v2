@@ -6,7 +6,7 @@ import actors.daily._
 import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
-import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
+import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor, StaffingUpdateQueueActor}
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
@@ -107,6 +107,13 @@ object TestActors {
 
   class TestDeploymentQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
     extends DeploymentQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+    override def resetState(): Unit = state.clear()
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
+  class TestStaffingUpdateQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
+    extends StaffingUpdateQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

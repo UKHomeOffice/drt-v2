@@ -4,14 +4,15 @@ import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, Stream
 import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.scaladsl.GraphDSL.Implicits.{SourceShapeArrow, port2flow}
+import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
 import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink}
 import akka.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.PortStateQueueMinutes
+import drt.shared.PortStateMinutes
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.europeLondonTimeZone
 import services.{SDate, StreamSupervision, TimeLogger}
+import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -21,27 +22,23 @@ object RunnableOptimisation {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val timeLogger: TimeLogger = TimeLogger("Optimisation", 1000, log)
 
-  case class CrunchRequest(localDate: LocalDate, offsetMinutes: Int, durationMinutes: Int) extends Ordered[CrunchRequest] {
+  sealed trait ProcessingRequest extends Ordered[ProcessingRequest] {
+    val localDate: LocalDate
+    val offsetMinutes: Int
+    val durationMinutes: Int
     lazy val start: SDateLike = SDate(localDate).addMinutes(offsetMinutes)
     lazy val end: SDateLike = start.addMinutes(durationMinutes)
     lazy val minutesInMillis: NumericRange[MillisSinceEpoch] = start.millisSinceEpoch until end.millisSinceEpoch by 60000
 
-    override def compare(that: CrunchRequest): Int =
+    override def compare(that: ProcessingRequest): Int =
       if (localDate < that.localDate) -1
       else if (localDate > that.localDate) 1
       else 0
   }
 
-  case class TerminalUpdateRequest(terminal: Terminal, localDate: LocalDate, offsetMinutes: Int, durationMinutes: Int) extends Ordered[CrunchRequest] {
-    lazy val start: SDateLike = SDate(localDate).addMinutes(offsetMinutes)
-    lazy val end: SDateLike = start.addMinutes(durationMinutes)
-    lazy val minutesInMillis: NumericRange[MillisSinceEpoch] = start.millisSinceEpoch until end.millisSinceEpoch by 60000
+  case class CrunchRequest(localDate: LocalDate, offsetMinutes: Int, durationMinutes: Int) extends ProcessingRequest
 
-    override def compare(that: CrunchRequest): Int =
-      if (localDate < that.localDate) -1
-      else if (localDate > that.localDate) 1
-      else 0
-  }
+  case class TerminalUpdateRequest(terminal: Terminal, localDate: LocalDate, offsetMinutes: Int, durationMinutes: Int) extends ProcessingRequest
 
   object CrunchRequest {
     def apply(millis: MillisSinceEpoch, offsetMinutes: Int, durationMinutes: Int): CrunchRequest = {
@@ -55,14 +52,14 @@ object RunnableOptimisation {
     }
   }
 
-  case class RemoveCrunchRequest(crunchRequest: CrunchRequest)
+  case class RemoveCrunchRequest(crunchRequest: ProcessingRequest)
 
-  def createGraph(crunchRequestSource: SortedActorRefSource,
-                  deskRecsSinkActor: ActorRef,
-                  crunchRequestsToQueueMinutes: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed])
-                 (implicit system: ActorSystem): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
+  def createGraph[A, B <: WithTimeAccessor](crunchRequestSource: SortedActorRefSource,
+                                            deskRecsSinkActor: ActorRef,
+                                            crunchRequestsToQueueMinutes: Flow[ProcessingRequest, PortStateMinutes[A, B], NotUsed])
+                                           (implicit system: ActorSystem): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     val deskRecsSink = Sink.actorRefWithAck(deskRecsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
-    val ks = KillSwitches.single[PortStateQueueMinutes]
+    val ks = KillSwitches.single[PortStateMinutes[A, B]]
 
     val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {
       implicit builder =>

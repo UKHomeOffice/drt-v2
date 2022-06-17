@@ -8,7 +8,7 @@ import drt.shared.CrunchApi.{StaffMinute, StaffMinutes}
 import drt.shared.{FixedPointAssignments, MilliDate, ShiftAssignments, StaffAssignment, StaffMovement, StaffMovements}
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
+import services.crunch.deskrecs.RunnableOptimisation.{ProcessingRequest, TerminalUpdateRequest}
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
@@ -64,9 +64,9 @@ class RunnableStaffingTest extends CrunchTestLike {
                          fixedPoints: FixedPointAssignments,
                          movements: StaffMovements): SourceQueueWithComplete[TerminalUpdateRequest] = {
 
-    val someShifts: TerminalUpdateRequest => Future[ShiftAssignments] = (_: TerminalUpdateRequest) => Future.successful(shifts)
-    val someFixedPoints: TerminalUpdateRequest => Future[FixedPointAssignments] = (_: TerminalUpdateRequest) => Future.successful(fixedPoints)
-    val someMovements: TerminalUpdateRequest => Future[StaffMovements] = (_: TerminalUpdateRequest) => Future.successful(movements)
+    val someShifts: ProcessingRequest => Future[ShiftAssignments] = (_: ProcessingRequest) => Future.successful(shifts)
+    val someFixedPoints: ProcessingRequest => Future[FixedPointAssignments] = (_: ProcessingRequest) => Future.successful(fixedPoints)
+    val someMovements: ProcessingRequest => Future[StaffMovements] = (_: ProcessingRequest) => Future.successful(movements)
 
     val staffFlow = RunnableStaffing.staffMinutesFlow(someShifts, someFixedPoints, someMovements, () => updateDate)
     val source = Source.queue[TerminalUpdateRequest](1, OverflowStrategy.fail)
