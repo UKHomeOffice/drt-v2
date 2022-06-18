@@ -118,6 +118,15 @@ class StaffMovementsActorBase(val now: () => SDateLike,
       val movements = state.staffMovements.purgeExpired(expireBefore)
       sender() ! movements
 
+    case TerminalUpdateRequest(terminal, localDate, _, _) =>
+      sender() ! StaffMovements(state.staffMovements.movements.filter { movement =>
+        val sdate = SDate(localDate)
+        movement.terminal == terminal && (
+          sdate.millisSinceEpoch <= movement.time.millisSinceEpoch ||
+            movement.time.millisSinceEpoch < sdate.getLocalNextMidnight.millisSinceEpoch
+          )
+      })
+
     case AddStaffMovements(movementsToAdd) =>
       val updatedStaffMovements = state.staffMovements + movementsToAdd
       purgeExpiredAndUpdateState(updatedStaffMovements)

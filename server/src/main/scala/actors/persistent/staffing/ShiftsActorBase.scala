@@ -11,7 +11,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.SDate
-import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
+import services.crunch.deskrecs.RunnableOptimisation.{ProcessingRequest, TerminalUpdateRequest}
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
@@ -115,6 +115,15 @@ class ShiftsActorBase(val now: () => SDateLike,
       log.debug(s"GetState received")
       val assignments = state.purgeExpired(expireBefore)
       sender() ! assignments
+
+    case TerminalUpdateRequest(terminal, localDate, _, _) =>
+      sender() ! ShiftAssignments(state.assignments.filter { assignment =>
+        val sdate = SDate(localDate)
+        assignment.terminal == terminal && (
+          sdate.millisSinceEpoch < assignment.endDt.millisSinceEpoch ||
+            assignment.startDt.millisSinceEpoch < sdate.getLocalNextMidnight.millisSinceEpoch
+          )
+      })
 
     case UpdateShifts(shiftsToUpdate) =>
       val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToUpdate)

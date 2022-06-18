@@ -89,6 +89,15 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
       log.debug(s"GetState received")
       sender() ! state
 
+    case TerminalUpdateRequest(terminal, localDate, _, _) =>
+      sender() ! FixedPointAssignments(state.assignments.filter { assignment =>
+        val sdate = SDate(localDate)
+        assignment.terminal == terminal && (
+          sdate.millisSinceEpoch < assignment.endDt.millisSinceEpoch  ||
+            assignment.startDt.millisSinceEpoch < sdate.getLocalNextMidnight.millisSinceEpoch
+          )
+      })
+
     case SetFixedPoints(fixedPointStaffAssignments) =>
       if (fixedPointStaffAssignments != state) {
         log.info(s"Replacing fixed points state with $fixedPointStaffAssignments")
