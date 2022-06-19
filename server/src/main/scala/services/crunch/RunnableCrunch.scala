@@ -60,13 +60,13 @@ object RunnableCrunch {
 
                                            forecastMaxMillis: () => MillisSinceEpoch
                                           )
-                                          (implicit ec: ExecutionContext): RunnableGraph[(FR, FR, FR, FR, MS, SAD, RL, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch)] = {
+                                          (implicit ec: ExecutionContext): RunnableGraph[(FR, FR, FR, FR, MS, SAD, RL, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsFeedResponse]
     val manifestsLiveKillSwitch = KillSwitches.single[ManifestsFeedResponse]
-    val shiftsKillSwitch = KillSwitches.single[ShiftAssignments]
-    val fixedPointsKillSwitch = KillSwitches.single[FixedPointAssignments]
-    val movementsKillSwitch = KillSwitches.single[Seq[StaffMovement]]
+//    val shiftsKillSwitch = KillSwitches.single[ShiftAssignments]
+//    val fixedPointsKillSwitch = KillSwitches.single[FixedPointAssignments]
+//    val movementsKillSwitch = KillSwitches.single[Seq[StaffMovement]]
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
@@ -83,10 +83,10 @@ object RunnableCrunch {
       redListUpdatesSource.async,
       arrivalsKillSwitch,
       manifestsLiveKillSwitch,
-      shiftsKillSwitch,
-      fixedPointsKillSwitch,
-      movementsKillSwitch
-    )((_, _, _, _, _, _, _, _, _, _, _, _)) {
+//      shiftsKillSwitch,
+//      fixedPointsKillSwitch,
+//      movementsKillSwitch
+    )((_, _, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
@@ -102,9 +102,9 @@ object RunnableCrunch {
           redListUpdatesSourceAsync,
           arrivalsKillSwitchSync,
           manifestsLiveKillSwitchSync,
-          shiftsKillSwitchSync,
-          fixedPointsKillSwitchSync,
-          movementsKillSwitchSync
+//          shiftsKillSwitchSync,
+//          fixedPointsKillSwitchSync,
+//          movementsKillSwitchSync
         ) =>
           def ackingActorSink(actorRef: ActorRef): SinkShape[Any] =
             builder.add(Sink.actorRefWithAck(actorRef, StreamInitialized, Ack, StreamCompleted, StreamFailure).async)
@@ -113,11 +113,11 @@ object RunnableCrunch {
             builder.add(Sink.actorRef(actorRef, StreamCompleted).async)
 
           val arrivals = builder.add(arrivalsGraphStage)
-          val staff = builder.add(staffGraphStage)
-          val deploymentRequestSink = builder.add(Sink.actorRef(deploymentRequestActor, StreamCompleted))
+//          val staff = builder.add(staffGraphStage)
+//          val deploymentRequestSink = builder.add(Sink.actorRef(deploymentRequestActor, StreamCompleted))
           val deskStatsSink = ackingActorSink(portStateActor)
 
-          val staffSink = ackingActorSink(portStateActor)
+//          val staffSink = ackingActorSink(portStateActor)
           val fcstArrivalsDiffing = builder.add(forecastArrivalsDiffStage)
           val liveBaseArrivalsDiffing = builder.add(liveBaseArrivalsDiffStage)
           val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage)
@@ -128,7 +128,7 @@ object RunnableCrunch {
           val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
 
           val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
-          val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
+//          val staffFanOut = builder.add(Broadcast[StaffMinutes](2))
 
           val baseArrivalsSink = simpleActorSink(forecastBaseArrivalsActor)
           val fcstArrivalsSink = simpleActorSink(forecastArrivalsActor)
@@ -213,8 +213,8 @@ object RunnableCrunch {
 
           actualDesksAndWaitTimesSourceSync ~> deskStatsSink
 
-          staff.out ~> staffFanOut ~> staffSink
-          staffFanOut.map(staffMinutes => UpdatedMillis(staffMinutes.millis)) ~> deploymentRequestSink
+//          staff.out ~> staffFanOut ~> staffSink
+//          staffFanOut.map(staffMinutes => UpdatedMillis(staffMinutes.millis)) ~> deploymentRequestSink
 
           // @formatter:on
 

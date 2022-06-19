@@ -159,9 +159,9 @@ object CrunchSystem {
       setPcpTimes = props.setPcpTimes,
     )
 
-    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn/*, shiftsIn, fixedPointsIn, movementsIn*/, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
+    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn/*, shiftsIn, fixedPointsIn, movementsIn*/, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch/*, shiftsKS, fixedPKS, movementsKS*/) = crunchSystem.run
 
-    val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+    val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
 
     CrunchSystem(
 //      shifts = shiftsIn,
