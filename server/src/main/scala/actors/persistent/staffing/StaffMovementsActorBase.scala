@@ -40,7 +40,8 @@ case class RemoveStaffMovementsAck(movementUuidsToRemove: String)
 //case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]])
 
 class StaffMovementsActor(now: () => SDateLike,
-                          expireBeforeMillis: () => SDateLike) extends StaffMovementsActorBase(now, expireBeforeMillis) {
+                          expireBeforeMillis: () => SDateLike,
+                          minutesToCrunch: Int) extends StaffMovementsActorBase(now, expireBeforeMillis) {
   var subscribers: List[ActorRef] = List()
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
@@ -51,7 +52,7 @@ class StaffMovementsActor(now: () => SDateLike,
         val earliest = SDate(movements.map(_.time.millisSinceEpoch).min).millisSinceEpoch
         val latest = SDate(movements.map(_.time.millisSinceEpoch).max).millisSinceEpoch
         val updateRequests = (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
-          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, 1440)
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
         }
         subscribers.foreach(sub => updateRequests.foreach(sub ! _))
       }
@@ -59,7 +60,9 @@ class StaffMovementsActor(now: () => SDateLike,
   }
 
   val subsReceive: Receive = {
-    case actor: ActorRef => subscribers = actor :: subscribers
+    case actor: ActorRef =>
+      log.info(s"received a subscriber")
+      subscribers = actor :: subscribers
   }
 
   override def receiveCommand: Receive = {

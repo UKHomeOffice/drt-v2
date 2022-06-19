@@ -108,10 +108,10 @@ class TestDrtActor extends Actor {
       val liveBaseArrivalsProbe = testProbe("live-base-arrivals")
       val liveArrivalsProbe = testProbe("live-arrivals")
 
-      val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(tc.now, DrtStaticParameters.timeBeforeThisMonth(tc.now))))
+      val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(tc.now, DrtStaticParameters.timeBeforeThisMonth(tc.now), tc.airportConfig.minutesToCrunch)))
 
-      val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(tc.now)))
-      val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now))))
+      val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(tc.now, tc.airportConfig.minutesToCrunch)))
+      val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now), tc.airportConfig.minutesToCrunch)))
       val manifestLookups = ManifestLookups(system)
 
       val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)))
@@ -193,13 +193,17 @@ class TestDrtActor extends Actor {
         val deploymentGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
         val (deploymentRequestActor, deploymentsKillSwitch) = RunnableOptimisation.createGraph(deploymentGraphSource, portStateActor, deploymentsProducer).run()
 
-        val staffProvider = (r: ProcessingRequest) => staffActor.ask(r).mapTo[ShiftAssignments]
+        val shiftsProvider = (r: ProcessingRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
         val fixedPointsProvider = (r: ProcessingRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
         val movementsProvider = (r: ProcessingRequest) => staffMovementsActor.ask(r).mapTo[StaffMovements]
 
-        val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(staffProvider, fixedPointsProvider, movementsProvider, tc.now)
+        val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, tc.now)
         val staffingGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
         val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = RunnableOptimisation.createGraph(staffingGraphSource, portStateActor, staffMinutesProducer).run()
+
+        shiftsActor ! staffingUpdateRequestQueue
+        fixedPointsActor ! staffingUpdateRequestQueue
+        staffMovementsActor ! staffingUpdateRequestQueue
 
         flightsActor ! SetCrunchRequestQueue(crunchRequestActor)
         manifestsRouterActor ! SetCrunchRequestQueue(crunchRequestActor)

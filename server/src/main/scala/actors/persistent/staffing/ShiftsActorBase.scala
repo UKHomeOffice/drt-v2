@@ -43,12 +43,9 @@ case class UpdateShiftsAck(shiftsToUpdate: Seq[StaffAssignment])
 case object SaveSnapshot
 
 
-class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends ShiftsActorBase(now, expireBefore) {
-  var subscribers: List[ActorRef] = List()
-  implicit val scheduler: Scheduler = this.context.system.scheduler
+class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike, minutesToCrunch: Int) extends ShiftsActorBase(now, expireBefore) {
 
   override def onUpdateDiff(shifts: ShiftAssignments): Unit = {
-
     log.info(s"Telling subscribers ($subscribers) about updated shifts")
     shifts.assignments.groupBy(_.terminal).foreach { case (terminal, assignments) =>
       if (shifts.assignments.nonEmpty) {
@@ -63,7 +60,9 @@ class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends S
   }
 
   val subsReceive: Receive = {
-    case actor: ActorRef => subscribers = actor :: subscribers
+    case actor: ActorRef =>
+      log.info(s"received a subscriber")
+      subscribers = actor :: subscribers
   }
 
   override def receiveCommand: Receive = {
@@ -74,6 +73,9 @@ class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends S
 class ShiftsActorBase(val now: () => SDateLike,
                       val expireBefore: () => SDateLike) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  var subscribers: List[ActorRef] = List()
+  implicit val scheduler: Scheduler = this.context.system.scheduler
 
   val snapshotInterval = 5000
   override val snapshotBytesThreshold: Int = oneMegaByte
@@ -131,7 +133,10 @@ class ShiftsActorBase(val now: () => SDateLike,
 
       val createdAt = now()
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(shiftsMessage, Option((sender(), UpdateShiftsAck(shiftsToUpdate))))
+      
+      persistAndMaybeSnapshotWithAck(shiftsMessage, List(
+        (sender(), UpdateShiftsAck(shiftsToUpdate)),
+      ))
 
       onUpdateDiff(ShiftAssignments(shiftsToUpdate))
 

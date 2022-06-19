@@ -33,5 +33,12 @@ object DrtPortConfigs {
 
   def portGroups: List[String] = allPortConfigs.filterNot(testPorts.contains).map(_.portCode.toString.toUpperCase).sorted
 
-  val confByPort: Map[PortCode, AirportConfig] = allPortConfigs.map(c => (c.portCode, c)).toMap
+  val confByPort: Map[PortCode, AirportConfig] = {
+    allPortConfigs
+      .map(
+        c =>
+          (c.portCode, c)
+      )
+      .toMap
+  }
 }

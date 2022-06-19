@@ -241,13 +241,13 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
       val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, dq)
 
-      val staffProvider = (r: ProcessingRequest) => staffActor.ask(r).mapTo[ShiftAssignments]
+      val shiftsProvider = (r: ProcessingRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
       val fixedPointsProvider = (r: ProcessingRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
       val movementsProvider = (r: ProcessingRequest) => staffMovementsActor.ask(r).mapTo[StaffMovements]
 
-      val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(staffProvider, fixedPointsProvider, movementsProvider, now)
+      val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now)
       val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = startOptimisationGraph(staffMinutesProducer, persistentStaffingUpdateQueueActor, sq)
-      staffActor ! staffingUpdateRequestQueue
+      shiftsActor ! staffingUpdateRequestQueue
       fixedPointsActor ! staffingUpdateRequestQueue
       staffMovementsActor ! staffingUpdateRequestQueue
 
