@@ -70,6 +70,9 @@ case class ShiftAssignments(assignments: Seq[StaffAssignment]) extends ShiftAssi
   def terminalStaffAt(terminalName: Terminal, date: SDateLike): Int = {
     val dateMillis = date.millisSinceEpoch
 
+//    println(s"minute: $dateMillis")
+//    println(s"starts: ${assignments.map(_.startDt.millisSinceEpoch)}")
+//    println(s"ends: ${assignments.map(_.endDt.millisSinceEpoch)}")
     assignments
       .filter { assignment =>
         assignment.startDt.millisSinceEpoch <= dateMillis && dateMillis <= assignment.endDt.millisSinceEpoch && assignment.terminal == terminalName

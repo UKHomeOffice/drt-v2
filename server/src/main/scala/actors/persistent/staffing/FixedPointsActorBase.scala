@@ -92,8 +92,8 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
       sender() ! FixedPointAssignments(state.assignments.filter { assignment =>
         val sdate = SDate(localDate)
         assignment.terminal == terminal && (
-          sdate.millisSinceEpoch < assignment.endDt.millisSinceEpoch  ||
-            assignment.startDt.millisSinceEpoch < sdate.getLocalNextMidnight.millisSinceEpoch
+          sdate.millisSinceEpoch <= assignment.endDt.millisSinceEpoch  ||
+            assignment.startDt.millisSinceEpoch <= sdate.getLocalNextMidnight.millisSinceEpoch
           )
       })
 

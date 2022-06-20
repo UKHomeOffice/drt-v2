@@ -30,12 +30,20 @@ object RunnableStaffing {
       .mapAsync(1)(cr => shiftsProvider(cr).map(sa => (cr, sa)))
       .mapAsync(1) { case (cr, sa) => fixedPointsProvider(cr).map(fp => (cr, sa, fp)) }
       .mapAsync(1) { case (cr, sa, fp) => movementsProvider(cr).map(sm => (cr, sa, fp, sm)) }
+      .wireTap(_ => println("got here"))
       .via(toStaffMinutes(now))
+//      .wireTap { m =>
+//        m match {
+//          case StaffMinutes(minutes) =>
+//            println(s"minutes: ${minutes.map(m => (SDate(m.minute).toISOString(), m.shifts, m.fixedPoints, m.movements)).sorted.mkString("\n")}")
+//          case u => println(s"unexpected ${u.getClass}")
+//        }
+//      }
 
   def toStaffMinutes(now: () => SDateLike): Flow[(ProcessingRequest, ShiftAssignments, FixedPointAssignments, StaffMovements), PortStateStaffMinutes, NotUsed] =
     Flow[(ProcessingRequest, ShiftAssignments, FixedPointAssignments, StaffMovements)]
       .collect { case (cr: TerminalUpdateRequest, sa, fp, sm) =>
-        val staff = Staffing.staffAvailableByTerminalAndQueue(cr.end.millisSinceEpoch, sa, fp, Option(sm.movements))
+        val staff = Staffing.staffAvailableByTerminalAndQueue(cr.start.millisSinceEpoch, sa, fp, Option(sm.movements))
 
         StaffMinutes(cr.minutesInMillis.map { minute =>
           val m = SDate(minute)

@@ -123,7 +123,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
         val sdate = SDate(localDate)
         movement.terminal == terminal && (
           sdate.millisSinceEpoch <= movement.time.millisSinceEpoch ||
-            movement.time.millisSinceEpoch < sdate.getLocalNextMidnight.millisSinceEpoch
+            movement.time.millisSinceEpoch <= sdate.getLocalNextMidnight.millisSinceEpoch
           )
       })
 
