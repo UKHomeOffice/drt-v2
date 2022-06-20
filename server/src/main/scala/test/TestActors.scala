@@ -127,9 +127,8 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestShiftsActor(now: () => SDateLike,
-                        expireBefore: () => SDateLike,
-                        minutesToCrunch: Int) extends ShiftsActor(now, expireBefore, minutesToCrunch) with Resettable {
+  class TestShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike)
+    extends ShiftsActor(now, expireBefore) with Resettable {
     override def resetState(): Unit = {
       state = initialState
       subscribers = List()

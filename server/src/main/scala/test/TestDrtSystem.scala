@@ -59,7 +59,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
-  override val shiftsActor: ActorRef = restartOnStop.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now), airportConfig.minutesToCrunch)), "staff-shifts")
+  override val shiftsActor: ActorRef = restartOnStop.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
   override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new TestFixedPointsActor(now, airportConfig.minutesToCrunch)), "staff-fixed-points")
   override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()))

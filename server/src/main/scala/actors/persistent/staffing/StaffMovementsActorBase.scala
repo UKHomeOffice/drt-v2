@@ -6,19 +6,16 @@ import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
-import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{MilliDate, ShiftAssignments, StaffMovement, StaffMovements}
+import drt.shared.{MilliDate, StaffMovement, StaffMovements}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
+import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
-import services.{OfferHandler, SDate}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 
 case class StaffMovementsState(staffMovements: StaffMovements) {
@@ -137,7 +134,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
       log.info(s"Added $movementsToAdd. We have ${state.staffMovements.movements.length} movements after purging")
       val movements: StaffMovements = StaffMovements(movementsToAdd)
       val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements), Option(now().millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(messagesToPersist, Option((sender(), AddStaffMovementsAck(movementsToAdd))))
+      persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), AddStaffMovementsAck(movementsToAdd))))
 
       onUpdateDiff(StaffMovements(movementsToAdd))
 
@@ -147,7 +144,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
       log.info(s"Removed $uuidToRemove. We have ${state.staffMovements.movements.length} movements after purging")
       val messagesToPersist: RemoveStaffMovementMessage = RemoveStaffMovementMessage(Option(uuidToRemove.toString), Option(now().millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(messagesToPersist, Option((sender(), RemoveStaffMovementsAck(uuidToRemove))))
+      persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), RemoveStaffMovementsAck(uuidToRemove))))
 
       val updates = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
       if (updates.nonEmpty) {

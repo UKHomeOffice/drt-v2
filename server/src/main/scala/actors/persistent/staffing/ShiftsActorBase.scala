@@ -11,7 +11,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.SDate
-import services.crunch.deskrecs.RunnableOptimisation.{ProcessingRequest, TerminalUpdateRequest}
+import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
@@ -36,14 +36,10 @@ case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment])
 
 case class UpdateShiftsAck(shiftsToUpdate: Seq[StaffAssignment])
 
-//case class AddShiftSubscribers(subscribers: List[SourceQueueWithComplete[ShiftAssignments]])
-//
-//case class AddFixedPointSubscribers(subscribers: List[SourceQueueWithComplete[FixedPointAssignments]])
-
 case object SaveSnapshot
 
 
-class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike, minutesToCrunch: Int) extends ShiftsActorBase(now, expireBefore) {
+class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends ShiftsActorBase(now, expireBefore) {
 
   override def onUpdateDiff(shifts: ShiftAssignments): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated shifts")
@@ -133,7 +129,7 @@ class ShiftsActorBase(val now: () => SDateLike,
 
       val createdAt = now()
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
-      
+
       persistAndMaybeSnapshotWithAck(shiftsMessage, List(
         (sender(), UpdateShiftsAck(shiftsToUpdate)),
       ))
@@ -147,7 +143,7 @@ class ShiftsActorBase(val now: () => SDateLike,
 
         val createdAt = now()
         val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(newShiftAssignments), createdAt), Option(createdAt.millisSinceEpoch))
-        persistAndMaybeSnapshotWithAck(shiftsMessage, Option((sender(), SetShiftsAck(newShiftAssignments))))
+        persistAndMaybeSnapshotWithAck(shiftsMessage, List((sender(), SetShiftsAck(newShiftAssignments))))
         onUpdateDiff(ShiftAssignments(newShiftAssignments))
       } else {
         log.info(s"No change. Nothing to persist")

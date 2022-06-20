@@ -108,7 +108,7 @@ class TestDrtActor extends Actor {
       val liveBaseArrivalsProbe = testProbe("live-base-arrivals")
       val liveArrivalsProbe = testProbe("live-arrivals")
 
-      val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(tc.now, DrtStaticParameters.timeBeforeThisMonth(tc.now), tc.airportConfig.minutesToCrunch)))
+      val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(tc.now, DrtStaticParameters.timeBeforeThisMonth(tc.now))))
 
       val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(tc.now, tc.airportConfig.minutesToCrunch)))
       val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now), tc.airportConfig.minutesToCrunch)))

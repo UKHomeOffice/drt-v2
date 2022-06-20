@@ -5,18 +5,15 @@ import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
-import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{FixedPointAssignments, MilliDate, ShiftAssignments, StaffAssignment}
+import drt.shared.{FixedPointAssignments, MilliDate, StaffAssignment}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
+import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
-import services.{OfferHandler, SDate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 
 case class SetFixedPoints(newFixedPoints: Seq[StaffAssignment])
@@ -108,7 +105,7 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
 
         val createdAt = now()
         val fixedPointsMessage = FixedPointsMessage(fixedPointsToFixedPointsMessages(state, createdAt), Option(createdAt.millisSinceEpoch))
-        persistAndMaybeSnapshotWithAck(fixedPointsMessage, Option(sender(), SetFixedPointsAck(fixedPointStaffAssignments)))
+        persistAndMaybeSnapshotWithAck(fixedPointsMessage, List((sender(), SetFixedPointsAck(fixedPointStaffAssignments))))
 
         onUpdateDiff(FixedPointAssignments(fixedPointStaffAssignments))
       } else {
