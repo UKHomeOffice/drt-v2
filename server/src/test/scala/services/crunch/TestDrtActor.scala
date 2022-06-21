@@ -110,7 +110,7 @@ class TestDrtActor extends Actor {
 
       val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(tc.now, DrtStaticParameters.timeBeforeThisMonth(tc.now))))
 
-      val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(tc.now, tc.airportConfig.minutesToCrunch)))
+      val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(tc.now, tc.airportConfig.minutesToCrunch, tc.maxDaysToCrunch)))
       val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now), tc.airportConfig.minutesToCrunch)))
       val manifestLookups = ManifestLookups(system)
 
@@ -208,6 +208,7 @@ class TestDrtActor extends Actor {
         flightsActor ! SetCrunchRequestQueue(crunchRequestActor)
         manifestsRouterActor ! SetCrunchRequestQueue(crunchRequestActor)
         queuesActor ! SetCrunchRequestQueue(deploymentRequestActor)
+        staffActor ! SetCrunchRequestQueue(deploymentRequestActor)
 
         if (tc.recrunchOnStart) queueDaysToReCrunch(crunchRequestActor)
 

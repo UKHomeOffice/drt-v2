@@ -137,7 +137,7 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestFixedPointsActor(now: () => SDateLike, minutesToCrunch: Int) extends FixedPointsActor(now, minutesToCrunch) with Resettable {
+  class TestFixedPointsActor(now: () => SDateLike, minutesToCrunch: Int) extends FixedPointsActor(now, minutesToCrunch, 5) with Resettable {
     override def resetState(): Unit = {
       state = initialState
       subscribers = List()

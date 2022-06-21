@@ -20,17 +20,17 @@ case class SetFixedPoints(newFixedPoints: Seq[StaffAssignment])
 
 case class SetFixedPointsAck(newFixedPoints: Seq[StaffAssignment])
 
-class FixedPointsActor(val now: () => SDateLike, minutesToCrunch: Int) extends FixedPointsActorBase(now) {
+class FixedPointsActor(val now: () => SDateLike, minutesToCrunch: Int, forecastLengthDays: Int) extends FixedPointsActorBase(now) {
   var subscribers: List[ActorRef] = List()
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
   override def onUpdateDiff(fixedPoints: FixedPointAssignments): Unit = {
-    log.info(s"Telling subscribers ($subscribers) about updated fixed points: $fixedPoints")
+    log.info(s"Telling subscribers")
 
     fixedPoints.assignments.groupBy(_.terminal).foreach { case (terminal, assignments) =>
       if (fixedPoints.assignments.nonEmpty) {
         val earliest = now().millisSinceEpoch
-        val latest = now().addDays(180).millisSinceEpoch
+        val latest = now().addDays(forecastLengthDays).millisSinceEpoch
         val updateRequests = (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
           TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
         }
@@ -99,9 +99,8 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
 
     case SetFixedPoints(fixedPointStaffAssignments) =>
       if (fixedPointStaffAssignments != state) {
-        log.info(s"Replacing fixed points state with $fixedPointStaffAssignments")
+        log.info(s"Replacing fixed points state")
         updateState(FixedPointAssignments(fixedPointStaffAssignments))
-//        onUpdateState(FixedPointAssignments(fixedPointStaffAssignments))
 
         val createdAt = now()
         val fixedPointsMessage = FixedPointsMessage(fixedPointsToFixedPointsMessages(state, createdAt), Option(createdAt.millisSinceEpoch))

@@ -180,10 +180,11 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
     manifestsRouterActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
     queuesActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
+    staffActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
 
     testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponse)
 
-//    subscribeStaffingActors(crunchInputs)
+    //    subscribeStaffingActors(crunchInputs)
 
     crunchInputs.killSwitches
   }

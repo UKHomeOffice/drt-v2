@@ -374,16 +374,16 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     offerAndWait(crunch.shiftsInput, shifts)
 
-    val expectedIsoMinutes = Seq(
-      "2017-01-01T00:00:00Z",
-      "2017-01-01T00:01:00Z",
-      "2017-01-01T00:02:00Z"
+    val expectedIsoMinutes = Set(
+      ("2017-01-01T00:00:00Z", 50),
+      ("2017-01-01T00:01:00Z", 50),
+      ("2017-01-01T00:02:00Z", 50)
     )
 
     crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
-        val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
-        isoMinutes == expectedIsoMinutes
+        val minutes = staffMinutes.values.map(m => (SDate(m.minute).toISOString(), m.shifts)).toSet
+        minutes.intersect(expectedIsoMinutes) == expectedIsoMinutes
     }
 
     success
@@ -411,16 +411,16 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     offerAndWait(crunch.fixedPointsInput, fixedPoints)
 
-    val expectedIsoMinutes = Seq(
-      "2017-01-01T00:00:00Z",
-      "2017-01-01T00:01:00Z",
-      "2017-01-01T00:02:00Z"
+    val expectedIsoMinutes = Set(
+      ("2017-01-01T00:00:00Z", 50),
+      ("2017-01-01T00:01:00Z", 50),
+      ("2017-01-01T00:02:00Z", 50)
     )
 
     crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
-        val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
-        isoMinutes == expectedIsoMinutes
+        val minutes = staffMinutes.values.map(m => (SDate(m.minute).toISOString(), m.fixedPoints)).toSet
+        minutes.intersect(expectedIsoMinutes) == expectedIsoMinutes
     }
 
     success
@@ -449,15 +449,15 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     offerAndWait(crunch.staffMovementsInput, AddStaffMovements(Seq(staffMovement1, staffMovement2)))
 
-    val expectedIsoMinutes = Seq(
-      "2017-01-01T00:00:00Z",
-      "2017-01-01T00:01:00Z"
+    val expectedIsoMinutes = Set(
+      ("2017-01-01T00:00:00Z", 1),
+      ("2017-01-01T00:01:00Z", 1)
     )
 
     crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
-        val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
-        isoMinutes == expectedIsoMinutes
+        val minutes = staffMinutes.values.map(m => (SDate(m.minute).toISOString(), m.movements)).toSet
+        minutes.intersect(expectedIsoMinutes) == expectedIsoMinutes
     }
 
     success
