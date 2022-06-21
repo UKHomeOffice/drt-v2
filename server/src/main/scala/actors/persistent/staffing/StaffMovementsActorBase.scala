@@ -34,7 +34,6 @@ case class RemoveStaffMovements(movementUuidsToRemove: String)
 
 case class RemoveStaffMovementsAck(movementUuidsToRemove: String)
 
-//case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]])
 
 class StaffMovementsActor(now: () => SDateLike,
                           expireBeforeMillis: () => SDateLike,
