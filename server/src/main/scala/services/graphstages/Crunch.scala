@@ -277,18 +277,6 @@ object Crunch {
       .toSeq
   }
 
-  def movementsUpdateCriteria(existingMovements: Set[StaffMovement],
-                              incomingMovements: Seq[StaffMovement]): UpdateCriteria = {
-    val updatedMovements = incomingMovements.toSet -- existingMovements
-    val deletedMovements = existingMovements -- incomingMovements.toSet
-    val affectedMovements = updatedMovements ++ deletedMovements
-    log.info(s"affected movements: $affectedMovements")
-    val minutesToUpdate = allMinuteMillis(affectedMovements.toSeq)
-    val terminalsToUpdate = affectedMovements.map(_.terminal)
-
-    UpdateCriteria(minutesToUpdate, terminalsToUpdate)
-  }
-
   def allMinuteMillis(movements: Seq[StaffMovement]): Seq[MillisSinceEpoch] = movements
     .groupBy(_.uUID)
     .flatMap {
