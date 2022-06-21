@@ -54,7 +54,7 @@ import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
+import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, TerminalUpdateRequest}
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.crunch.{CrunchProps, CrunchSystem}
@@ -65,7 +65,7 @@ import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpda
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike, UtcDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -251,6 +251,17 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       fixedPointsActor ! staffingUpdateRequestQueue
       staffMovementsActor ! staffingUpdateRequestQueue
 
+      val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
+      log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow/1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString()}")
+
+      system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day) { () =>
+        val dateToCalculate = SDate.now().addDays(params.forecastMaxDays).toLocalDate
+        airportConfig.terminals.foreach { terminal =>
+          val request = TerminalUpdateRequest(terminal, dateToCalculate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+          staffingUpdateRequestQueue ! request
+        }
+      }
+
       egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
 
       if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor)
@@ -372,12 +383,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     })
     crunchQueueActor ! UpdatedMillis(daysToReCrunch)
   }
-
-//  def subscribeStaffingActors(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
-//    shiftsActor ! AddShiftSubscribers(List(crunchInputs.shifts))
-//    fixedPointsActor ! AddFixedPointSubscribers(List(crunchInputs.fixedPoints))
-//    staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
-//  }
 
   def liveBaseArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] = {
     if (config.get[Boolean]("feature-flags.use-cirium-feed")) {

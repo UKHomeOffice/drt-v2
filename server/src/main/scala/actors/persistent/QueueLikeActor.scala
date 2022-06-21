@@ -87,9 +87,18 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
       updateState(Seq(cr))
       persistAndMaybeSnapshot(CrunchRequestsMessage(List(crunchRequestToMessage(cr))))
 
+    case tur: TerminalUpdateRequest =>
+      updateState(Seq(tur))
+      persistAndMaybeSnapshot(CrunchRequestsMessage(List(crunchRequestToMessage(tur))))
+
     case RemoveCrunchRequest(cr) =>
+      log.info(s"Removing ${cr.localDate} from queue. Queue now contains ${state.size} days")
       state -= cr
-      persistAndMaybeSnapshot(CrunchRequestsMessage(List(crunchRequestToMessage(cr))))
+      persistAndMaybeSnapshot(RemoveCrunchRequestMessage(
+        year = Option(cr.localDate.year),
+        month = Option(cr.localDate.month),
+        day = Option(cr.localDate.day),
+        terminalName = None))
 
     case _: SaveSnapshotSuccess =>
       log.info(s"Successfully saved snapshot")
@@ -101,9 +110,9 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
       log.warn(s"Unexpected message: ${u.getClass}")
   }
 
-  def updateState(days: Iterable[CrunchRequest]): Unit = {
+  def updateState(days: Iterable[ProcessingRequest]): Unit = {
     state ++= days
-    log.info(s"Adding ${days.size} days to queue. Queue now contains ${state.size} days")
+    log.info(s"Adding ${days.size} $days days to queue. Queue now contains ${state.size} days")
   }
 
 }

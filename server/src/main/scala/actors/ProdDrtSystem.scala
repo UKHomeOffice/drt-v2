@@ -3,11 +3,11 @@ package actors
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.RedListUpdatesActor.AddSubscriber
+import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing._
-import actors.persistent._
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, Props, typed}
+import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown, PoisonPill, Props, typed}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
@@ -24,7 +24,7 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services.SDate
 import services.crunch.CrunchSystem
-import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
+import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest}
 import services.metrics.ApiValidityReporter
 import slick.dbio.{DBIOAction, NoStream}
 import slickdb.{ArrivalTable, Tables}
@@ -191,8 +191,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         manifestsRouterActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
         queuesActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
         staffActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
-
-//        subscribeStaffingActors(crunchInputs)
 
         system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(flightsActor))
 
