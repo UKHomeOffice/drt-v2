@@ -281,8 +281,8 @@ object Crunch {
     .groupBy(_.uUID)
     .flatMap {
       case (_, mmPair) =>
-        val startMillis = mmPair.map(_.time.millisSinceEpoch).min
-        val endMillis = mmPair.map(_.time.millisSinceEpoch).max
+        val startMillis = mmPair.map(_.time).min
+        val endMillis = mmPair.map(_.time).max
         startMillis until endMillis by 60000
     }
     .toSeq

@@ -14,8 +14,8 @@ import scala.concurrent.duration._
 
 object StaffAssignmentGenerator {
   def generateStaffAssignment(name: String, terminal: Terminal, startTime: String, endTime: String, staff: Int): StaffAssignment = {
-    val start = MilliDate(SDate(startTime).millisSinceEpoch)
-    val end = MilliDate(SDate(endTime).millisSinceEpoch)
+    val start = SDate(startTime).millisSinceEpoch
+    val end = SDate(endTime).millisSinceEpoch
     StaffAssignment(name, terminal, start, end, staff, None)
   }
 }
@@ -28,8 +28,8 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
   "Shifts actor" should {
     "remember a shift staff assignment added before a shutdown" in {
-      val startTime = MilliDate(SDate(s"2017-01-01T07:00").millisSinceEpoch)
-      val endTime = MilliDate(SDate(s"2017-01-01T15:00").millisSinceEpoch)
+      val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T15:00").millisSinceEpoch
       val shifts = ShiftAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
@@ -102,7 +102,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       newActor ! GetState
       val expected = Set(updatedShift1, shift2, updatedShift3, shift4)
 
-      val result = expectMsgPF(1 second) {
+      val result = expectMsgPF(1.second) {
         case ShiftAssignments(sa) => sa.toSet
       }
 
@@ -138,7 +138,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       actorPit2006 ! GetState
       val expected = Set(shift1, shift2)
 
-      val result = expectMsgPF(1 second) {
+      val result = expectMsgPF(1.second) {
         case ShiftAssignments(sa) => sa.toSet
       }
 

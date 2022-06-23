@@ -5,8 +5,9 @@ import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.testkit.TestProbe
 import dispatch.Future
 import drt.shared.CrunchApi.{StaffMinute, StaffMinutes}
-import drt.shared.{FixedPointAssignments, MilliDate, ShiftAssignments, StaffAssignment, StaffMovement, StaffMovements}
+import drt.shared._
 import services.SDate
+import services.SDate.implicits.sdateFromMillisLocal
 import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.{ProcessingRequest, TerminalUpdateRequest}
 import services.graphstages.Crunch
@@ -16,8 +17,8 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 class RunnableStaffingTest extends CrunchTestLike {
   val date: SDateLike = SDate("2022-06-17", Crunch.europeLondonTimeZone)
 
-  val startTime: MilliDate = MilliDate(date.millisSinceEpoch)
-  val endTime: MilliDate = MilliDate(date.addMinutes(15).millisSinceEpoch)
+  val startTime: Long = date.millisSinceEpoch
+  val endTime: Long = date.addMinutes(15).millisSinceEpoch
 
   "Given some mock providers" >> {
     val updateDate = SDate("2022-06-17T12:00:00")

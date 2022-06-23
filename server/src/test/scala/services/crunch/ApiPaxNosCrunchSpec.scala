@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaChildToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, PaxAge, PaxTypeAndQueue, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{PaxAge, PaxTypeAndQueue, PortCode, Queues}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._

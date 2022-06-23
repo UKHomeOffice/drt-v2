@@ -7,7 +7,7 @@ import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{MilliDate, StaffMovement, StaffMovements}
+import drt.shared.{StaffMovement, StaffMovements}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.SDate
@@ -45,8 +45,8 @@ class StaffMovementsActor(now: () => SDateLike,
     log.info(s"Telling subscribers ($subscribers) about updated staff movements")
     data.movements.groupBy(_.terminal).foreach { case (terminal, movements) =>
       if (data.movements.nonEmpty) {
-        val earliest = SDate(movements.map(_.time.millisSinceEpoch).min).millisSinceEpoch
-        val latest = SDate(movements.map(_.time.millisSinceEpoch).max).millisSinceEpoch
+        val earliest = SDate(movements.map(_.time).min).millisSinceEpoch
+        val latest = SDate(movements.map(_.time).max).millisSinceEpoch
         val updateRequests = (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
           TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
         }
@@ -121,8 +121,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
       sender() ! StaffMovements(state.staffMovements.movements.filter { movement =>
         val sdate = SDate(localDate)
         movement.terminal == terminal && (
-          sdate.millisSinceEpoch <= movement.time.millisSinceEpoch ||
-            movement.time.millisSinceEpoch <= sdate.getLocalNextMidnight.millisSinceEpoch
+          sdate.millisSinceEpoch <= movement.time || movement.time <= sdate.getLocalNextMidnight.millisSinceEpoch
           )
       })
 
@@ -169,7 +168,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   def staffMovementMessageToStaffMovement(sm: StaffMovementMessage): StaffMovement = StaffMovement(
     terminal = Terminal(sm.terminalName.getOrElse("")),
     reason = sm.reason.getOrElse(""),
-    time = MilliDate(sm.time.getOrElse(0L)),
+    time = sm.time.getOrElse(0L),
     delta = sm.delta.getOrElse(0),
     uUID = sm.uUID.getOrElse(""),
     queue = sm.queueName.map(Queue(_)),
@@ -182,7 +181,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   def staffMovementToStaffMovementMessage(sm: StaffMovement): StaffMovementMessage = StaffMovementMessage(
     terminalName = Some(sm.terminal.toString),
     reason = Some(sm.reason),
-    time = Some(sm.time.millisSinceEpoch),
+    time = Some(sm.time),
     delta = Some(sm.delta),
     uUID = Some(sm.uUID.toString),
     queueName = sm.queue.map(_.toString),

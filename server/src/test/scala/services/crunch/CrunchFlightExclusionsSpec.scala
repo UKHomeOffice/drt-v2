@@ -7,7 +7,7 @@ import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.ArrivalStatus
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
-import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, LiveFeedSource, Queues}
+import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
 
 import scala.collection.immutable.{List, Seq, SortedMap}

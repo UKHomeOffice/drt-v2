@@ -6,7 +6,7 @@ import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{FixedPointAssignments, MilliDate, StaffAssignment}
+import drt.shared.{FixedPointAssignments, StaffAssignment, StaffAssignmentLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.SDate
@@ -16,9 +16,9 @@ import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointMess
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 
-case class SetFixedPoints(newFixedPoints: Seq[StaffAssignment])
+case class SetFixedPoints(newFixedPoints: Seq[StaffAssignmentLike])
 
-case class SetFixedPointsAck(newFixedPoints: Seq[StaffAssignment])
+case class SetFixedPointsAck(newFixedPoints: Seq[StaffAssignmentLike])
 
 class FixedPointsActor(val now: () => SDateLike, minutesToCrunch: Int, forecastLengthDays: Int) extends FixedPointsActorBase(now) {
   var subscribers: List[ActorRef] = List()
@@ -51,6 +51,9 @@ class FixedPointsActor(val now: () => SDateLike, minutesToCrunch: Int, forecastL
 }
 
 abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[FixedPointAssignments] {
+
+  import services.SDate.implicits.sdateFromMillisLocal
+
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId = "fixedPoints-store"
@@ -92,8 +95,8 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
       sender() ! FixedPointAssignments(state.assignments.filter { assignment =>
         val sdate = SDate(localDate)
         assignment.terminal == terminal && (
-          sdate.millisSinceEpoch <= assignment.endDt.millisSinceEpoch  ||
-            assignment.startDt.millisSinceEpoch <= sdate.getLocalNextMidnight.millisSinceEpoch
+          sdate.millisSinceEpoch <= assignment.end  ||
+            assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch
           )
       })
 
@@ -132,20 +135,20 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
 object FixedPointsMessageParser {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def staffAssignmentToMessage(assignment: StaffAssignment, createdAt: SDateLike): FixedPointMessage = FixedPointMessage(
+  def staffAssignmentToMessage(assignment: StaffAssignmentLike, createdAt: SDateLike): FixedPointMessage = FixedPointMessage(
     name = Option(assignment.name),
     terminalName = Option(assignment.terminal.toString),
     numberOfStaff = Option(assignment.numberOfStaff.toString),
-    startTimestamp = Option(assignment.startDt.millisSinceEpoch),
-    endTimestamp = Option(assignment.endDt.millisSinceEpoch),
+    startTimestamp = Option(assignment.start),
+    endTimestamp = Option(assignment.end),
     createdAt = Option(createdAt.millisSinceEpoch)
   )
 
   def fixedPointMessageToStaffAssignment(fixedPointMessage: FixedPointMessage): StaffAssignment = StaffAssignment(
     name = fixedPointMessage.name.getOrElse(""),
     terminal = Terminal(fixedPointMessage.terminalName.getOrElse("")),
-    startDt = MilliDate(fixedPointMessage.startTimestamp.getOrElse(0L)),
-    endDt = MilliDate(fixedPointMessage.endTimestamp.getOrElse(0L)),
+    start = fixedPointMessage.startTimestamp.getOrElse(0L),
+    end = fixedPointMessage.endTimestamp.getOrElse(0L),
     numberOfStaff = fixedPointMessage.numberOfStaff.getOrElse("0").toInt,
     createdBy = None
   )

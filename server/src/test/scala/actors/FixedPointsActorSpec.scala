@@ -22,8 +22,8 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
 
   "FixedPoints actor" should {
     "remember a fixedPoint staff assignmesnt added before a shutdown" in {
-      val startTime = MilliDate(SDate(s"2017-01-01T07:00").millisSinceEpoch)
-      val endTime = MilliDate(SDate(s"2017-01-01T15:00").millisSinceEpoch)
+      val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T15:00").millisSinceEpoch
       val fixedPoints = FixedPointAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")

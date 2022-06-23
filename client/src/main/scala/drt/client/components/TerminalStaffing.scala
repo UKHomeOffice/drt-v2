@@ -8,6 +8,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions._
 import drt.client.services._
+import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton
@@ -23,7 +24,6 @@ import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import java.util.UUID
 import scala.collection.immutable.NumericRange
 import scala.util.Success
 
@@ -149,7 +149,7 @@ object TerminalStaffing {
 
     def staffingTableHourPerColumn(terminalName: Terminal,
                                    daysWorthOf15Minutes: NumericRange[Long],
-                                   staffWithShiftsAndMovements: (Terminal, SDateLike) => Int): VdomTagOf[Table] =
+                                   staffWithShiftsAndMovements: (Terminal, SDateLike, MillisSinceEpoch => SDateLike) => Int): VdomTagOf[Table] =
       <.table(
         ^.className := "table table-striped table-xcondensed table-sm",
         <.tbody(
@@ -165,7 +165,7 @@ object TerminalStaffing {
                 }),
                 <.tr(^.key := s"vr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}",
                   hoursWorthOf15Minutes.map(t => {
-                    <.td(^.key := t, s"${staffWithShiftsAndMovements(terminalName, SDate(t))}")
+                    <.td(^.key := t, s"${staffWithShiftsAndMovements(terminalName, SDate(t), JSDateConversions.longToSDateLocal)}")
                   }).toTagMod
                 ))
           }.toTagMod
@@ -209,7 +209,7 @@ object TerminalStaffing {
     }
 
   def removeLink(terminal: Terminal, movement: StaffMovement): VdomTagOf[Anchor] =
-    <.a(Icon.remove, ^.key := movement.uUID.toString, ^.onClick ==> ((_: ReactEventFromInput) =>
+    <.a(Icon.remove, ^.key := movement.uUID, ^.onClick ==> ((_: ReactEventFromInput) =>
       Callback {
         GoogleEventTracker.sendEvent(terminal.toString, "Remove Staff Movement", movement.copy(createdBy = None).toString)
         SPACircuit.dispatch(RemoveStaffMovements(movement.uUID))

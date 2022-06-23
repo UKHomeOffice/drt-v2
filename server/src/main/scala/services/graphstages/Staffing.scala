@@ -10,6 +10,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
+import SDate.implicits.sdateFromMillisLocal
 
 import java.util.UUID
 import scala.collection.immutable.{NumericRange, SortedMap}
@@ -20,11 +21,12 @@ import scala.util.Try
 object Staffing {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+
   def staffAvailableByTerminalAndQueue(dropBeforeMillis: MillisSinceEpoch,
                                        shifts: ShiftAssignments,
                                        fixedPoints: FixedPointAssignments,
                                        optionalMovements: Option[Seq[StaffMovement]])
-                                      (implicit m: MilliDate => SDateLike): StaffSources = {
+                                      (implicit m: MillisSinceEpoch => SDateLike): StaffSources = {
     val movements = optionalMovements.getOrElse(Seq())
 
     val relevantShifts = removeOldShifts(dropBeforeMillis, shifts)
@@ -35,11 +37,11 @@ object Staffing {
 
     val available = StaffMovementsHelper.terminalStaffAt(relevantShifts, fixedPoints)(movements) _
 
-    StaffSources(relevantShifts, fixedPoints, movementsService, available)
+    StaffSources(relevantShifts, fixedPoints, movementsService, available, sdateFromMillisLocal)
   }
 
   def removeOldShifts(dropBeforeMillis: MillisSinceEpoch, shifts: ShiftAssignments): ShiftAssignments = shifts.copy(
-    shifts.assignments.collect { case sa: StaffAssignment if sa.endDt.millisSinceEpoch > dropBeforeMillis => sa }
+    shifts.assignments.collect { case sa: StaffAssignment if sa.end.millisSinceEpoch > dropBeforeMillis => sa }
   )
 
   def removeOldMovements(dropBeforeMillis: MillisSinceEpoch,
@@ -71,12 +73,11 @@ object Staffing {
   def staffMinutesForPeriod(staff: StaffSources,
                             tn: Terminal,
                             minuteMillis: NumericRange[MillisSinceEpoch]): SortedMap[TM, StaffMinute] = {
-    import SDate.implicits.sdateFromMilliDateLocal
 
     SortedMap[TM, StaffMinute]() ++ minuteMillis
       .map { minute =>
-        val shifts = staff.shifts.terminalStaffAt(tn, SDate(minute))
-        val fixedPoints = staff.fixedPoints.terminalStaffAt(tn, SDate(minute, Crunch.europeLondonTimeZone))
+        val shifts = staff.shifts.terminalStaffAt(tn, SDate(minute), sdateFromMillisLocal)
+        val fixedPoints = staff.fixedPoints.terminalStaffAt(tn, SDate(minute, Crunch.europeLondonTimeZone), sdateFromMillisLocal)
         val movements = staff.movements.terminalStaffAt(tn, minute)
         val staffMinute = StaffMinute(tn, minute, shifts, fixedPoints, movements)
         (staffMinute.key, staffMinute)
@@ -109,7 +110,7 @@ object StaffDeploymentCalculator {
                   val maxDesks = DeskRecs.desksForHourOfDayInUKLocalTime(minute, minMaxList._2.toIndexedSeq)
                   (qn, (minDesks, maxDesks))
               }
-              val available = optionalStaffSources.map(_.available(minute, tn)).getOrElse(0)
+              val available = optionalStaffSources.map(_.available(minute, tn, sdateFromMillisLocal)).getOrElse(0)
               val deploymentsAndQueueNames: Map[Queue, Int] = deployer(deskRecAndQueueNames, available, minMaxByQueue).toMap
               mCrunchMinutes.map(cm => (cm.key, cm.copy(deployedDesks = Option(deploymentsAndQueueNames(cm.queue))))).toMap
           }
@@ -172,7 +173,7 @@ object StaffAssignmentHelper {
     } yield {
       val start = startDt
       val end = adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt)
-      StaffAssignment(name, terminalName, MilliDate(start.millisSinceEpoch), MilliDate(end.millisSinceEpoch), staffDelta, None)
+      StaffAssignment(name, terminalName, start.millisSinceEpoch, end.millisSinceEpoch, staffDelta, None)
     }
   }
 
@@ -199,15 +200,15 @@ object StaffAssignmentHelper {
   }
 }
 
-case class StaffSources(shifts: ShiftAssignmentsLike,
-                        fixedPoints: FixedPointAssignmentsLike,
+case class StaffSources(shifts: StaffAssignmentsLike,
+                        fixedPoints: StaffAssignmentsLike,
                         movements: StaffAssignmentService,
-                        available: (MillisSinceEpoch, Terminal) => Int)
-                       (implicit mdToSd: MilliDate => SDateLike) {
+                        available: (MillisSinceEpoch, Terminal, MillisSinceEpoch => SDateLike) => Int,
+                        msToSd: MillisSinceEpoch => SDateLike) {
   def staffMinute(terminal: Terminal, minute: SDateLike): StaffMinute = {
     val millis = minute.millisSinceEpoch
-    val sh = shifts.terminalStaffAt(terminal, minute)
-    val fp = fixedPoints.terminalStaffAt(terminal, SDate(millis, Crunch.europeLondonTimeZone))
+    val sh = shifts.terminalStaffAt(terminal, minute, msToSd)
+    val fp = fixedPoints.terminalStaffAt(terminal, SDate(millis, Crunch.europeLondonTimeZone), msToSd)
     val mm = movements.terminalStaffAt(terminal, millis)
     StaffMinute(terminal, minute.millisSinceEpoch, sh, fp, mm, lastUpdated = Option(SDate.now().millisSinceEpoch))
   }
@@ -228,8 +229,8 @@ object StaffMovementsHelper {
   def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]): Seq[StaffMovement] = {
     staffAssignments.flatMap(assignment => {
       val uuid = UUID.randomUUID().toString()
-      StaffMovement(assignment.terminal, assignment.name + " start", time = assignment.startDt, assignment.numberOfStaff, uuid, createdBy = None) ::
-        StaffMovement(assignment.terminal, assignment.name + " end", time = assignment.endDt, -assignment.numberOfStaff, uuid, createdBy = None) :: Nil
+      StaffMovement(assignment.terminal, assignment.name + " start", time = assignment.start, assignment.numberOfStaff, uuid, createdBy = None) ::
+        StaffMovement(assignment.terminal, assignment.name + " end", time = assignment.end, -assignment.numberOfStaff, uuid, createdBy = None) :: Nil
     }).sortBy(_.time.millisSinceEpoch)
   }
 
@@ -238,11 +239,11 @@ object StaffMovementsHelper {
 
   def terminalStaffAt(shifts: ShiftAssignments, fixedPoints: FixedPointAssignments)
                      (movements: Seq[StaffMovement])
-                     (dateTimeMillis: MillisSinceEpoch, terminalName: Terminal): Int = {
-    val baseStaff = shifts.terminalStaffAt(terminalName, SDate(dateTimeMillis))
+                     (dateTimeMillis: MillisSinceEpoch, terminalName: Terminal, msToSd: MillisSinceEpoch => SDateLike): Int = {
+    val baseStaff = shifts.terminalStaffAt(terminalName, SDate(dateTimeMillis), msToSd)
 
     import SDate.implicits.sdateFromMilliDateLocal
-    val fixedPointStaff = fixedPoints.terminalStaffAt(terminalName, SDate(dateTimeMillis, Crunch.europeLondonTimeZone))
+    val fixedPointStaff = fixedPoints.terminalStaffAt(terminalName, SDate(dateTimeMillis, Crunch.europeLondonTimeZone), msToSd)
 
     val movementAdjustments = adjustmentsAt(movements.filter(_.terminal == terminalName))(dateTimeMillis)
     val staffAvailable = baseStaff - fixedPointStaff + movementAdjustments match {

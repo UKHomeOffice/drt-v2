@@ -5,8 +5,8 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.{PortState, TQM}
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
 
 import scala.concurrent.duration._
 

@@ -28,13 +28,13 @@ case object GetFeedStatuses
 
 case object GetShifts
 
-case class SetShifts(newShifts: Seq[StaffAssignment])
+case class SetShifts(newShifts: Seq[StaffAssignmentLike])
 
-case class SetShiftsAck(newShifts: Seq[StaffAssignment])
+case class SetShiftsAck(newShifts: Seq[StaffAssignmentLike])
 
-case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment])
+case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike])
 
-case class UpdateShiftsAck(shiftsToUpdate: Seq[StaffAssignment])
+case class UpdateShiftsAck(shiftsToUpdate: Seq[StaffAssignmentLike])
 
 case object SaveSnapshot
 
@@ -45,8 +45,8 @@ class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends S
     log.info(s"Telling subscribers ($subscribers) about updated shifts")
     shifts.assignments.groupBy(_.terminal).foreach { case (terminal, assignments) =>
       if (shifts.assignments.nonEmpty) {
-        val earliest = SDate(assignments.map(_.startDt.millisSinceEpoch).min).millisSinceEpoch
-        val latest = SDate(assignments.map(_.endDt.millisSinceEpoch).max).millisSinceEpoch
+        val earliest = SDate(assignments.map(_.start).min).millisSinceEpoch
+        val latest = SDate(assignments.map(_.end).max).millisSinceEpoch
         val updateRequests = (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
           TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, 1440)
         }
@@ -117,10 +117,8 @@ class ShiftsActorBase(val now: () => SDateLike,
     case TerminalUpdateRequest(terminal, localDate, _, _) =>
       sender() ! ShiftAssignments(state.assignments.filter { assignment =>
         val sdate = SDate(localDate)
-        assignment.terminal == terminal && (
-          sdate.millisSinceEpoch <= assignment.endDt.millisSinceEpoch ||
-            assignment.startDt.millisSinceEpoch <= sdate.getLocalNextMidnight.millisSinceEpoch
-          )
+        assignment.terminal == terminal &&
+          (sdate.millisSinceEpoch <= assignment.end || assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch)
       })
 
     case UpdateShifts(shiftsToUpdate) =>
@@ -166,12 +164,12 @@ class ShiftsActorBase(val now: () => SDateLike,
     case unexpected => log.info(s"unhandled message: $unexpected")
   }
 
-  def applyUpdatedShifts(existingAssignments: Seq[StaffAssignment],
-                         shiftsToUpdate: Seq[StaffAssignment]): Seq[StaffAssignment] = shiftsToUpdate
+  def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
+                         shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = shiftsToUpdate
     .foldLeft(existingAssignments) {
       case (assignmentsSoFar, updatedAssignment) =>
         assignmentsSoFar.filterNot { existing =>
-          existing.startDt == updatedAssignment.startDt && existing.terminal == updatedAssignment.terminal
+          existing.start == updatedAssignment.start && existing.terminal == updatedAssignment.terminal
         }
     } ++ shiftsToUpdate
 }
@@ -179,12 +177,12 @@ class ShiftsActorBase(val now: () => SDateLike,
 object ShiftsMessageParser {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def staffAssignmentToMessage(assignment: StaffAssignment, createdAt: SDateLike): ShiftMessage = ShiftMessage(
+  def staffAssignmentToMessage(assignment: StaffAssignmentLike, createdAt: SDateLike): ShiftMessage = ShiftMessage(
     name = Option(assignment.name),
     terminalName = Option(assignment.terminal.toString),
     numberOfStaff = Option(assignment.numberOfStaff.toString),
-    startTimestamp = Option(assignment.startDt.millisSinceEpoch),
-    endTimestamp = Option(assignment.endDt.millisSinceEpoch),
+    startTimestamp = Option(assignment.start),
+    endTimestamp = Option(assignment.end),
     createdAt = Option(createdAt.millisSinceEpoch)
   )
 
@@ -198,8 +196,8 @@ object ShiftsMessageParser {
       StaffAssignment(
         name = shiftMessage.name.getOrElse(""),
         terminal = Terminal(shiftMessage.terminalName.getOrElse("")),
-        startDt = MilliDate(startDt.roundToMinute().millisSinceEpoch),
-        endDt = MilliDate(endDt.roundToMinute().millisSinceEpoch),
+        start = startDt.roundToMinute().millisSinceEpoch,
+        end = endDt.roundToMinute().millisSinceEpoch,
         numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
         createdBy = None
       )
@@ -225,8 +223,8 @@ object ShiftsMessageParser {
   def shiftMessageToStaffAssignmentv2(shiftMessage: ShiftMessage): Option[StaffAssignment] = Option(StaffAssignment(
     name = shiftMessage.name.getOrElse(""),
     terminal = Terminal(shiftMessage.terminalName.getOrElse("")),
-    startDt = MilliDate(shiftMessage.startTimestamp.getOrElse(0L)),
-    endDt = MilliDate(shiftMessage.endTimestamp.getOrElse(0L)),
+    start = shiftMessage.startTimestamp.getOrElse(0L),
+    end = shiftMessage.endTimestamp.getOrElse(0L),
     numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
     createdBy = None
   ))

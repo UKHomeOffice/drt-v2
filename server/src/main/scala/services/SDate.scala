@@ -87,13 +87,16 @@ object SDate {
 
   object implicits {
 
-    implicit def jodaToSDate(dateTime: DateTime): SDateLike = JodaSDate(dateTime)
+    implicit val jodaToSDate: DateTime => SDateLike = dateTime => JodaSDate(dateTime)
 
-    implicit def sdateToMilliDate(sdate: SDateLike): MilliDate = MilliDate(sdate.millisSinceEpoch)
+    implicit val sdateToMilliDate: SDateLike => MilliDate = sdate => MilliDate(sdate.millisSinceEpoch)
 
-    implicit def sdateFromMilliDate(milliDate: MilliDate): SDateLike = new DateTime(milliDate.millisSinceEpoch)
+    implicit val sdateFromMilliDate: MilliDate => SDateLike = milliDate => new DateTime(milliDate.millisSinceEpoch)
 
-    implicit def sdateFromMilliDateLocal(milliDate: MilliDate): SDateLike = new DateTime(milliDate.millisSinceEpoch, Crunch.europeLondonTimeZone)
+    implicit val sdateFromMillisLocal: MillisSinceEpoch => SDateLike = millis => SDate(millis, Crunch.europeLondonTimeZone)
+
+    implicit val sdateFromMilliDateLocal: MilliDate => SDateLike =
+      milliDate => new DateTime(milliDate.millisSinceEpoch, Crunch.europeLondonTimeZone)
   }
 
   def jodaSDateToIsoString(dateTime: SDateLike): String = {

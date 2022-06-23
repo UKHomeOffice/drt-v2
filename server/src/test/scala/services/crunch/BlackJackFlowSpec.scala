@@ -7,7 +7,7 @@ import drt.shared.PortState
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.TotalPaxSource
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.AclFeedSource
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1

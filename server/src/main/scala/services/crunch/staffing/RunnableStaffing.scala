@@ -17,7 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object RunnableStaffing {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  import SDate.implicits.sdateFromMilliDateLocal
+  import SDate.implicits.sdateFromMillisLocal
 
   def staffMinutesFlow(shiftsProvider: ProcessingRequest => Future[ShiftAssignments],
                        fixedPointsProvider: ProcessingRequest => Future[FixedPointAssignments],
@@ -39,8 +39,8 @@ object RunnableStaffing {
 
         StaffMinutes(cr.minutesInMillis.map { minute =>
           val m = SDate(minute)
-          val shifts = staff.shifts.terminalStaffAt(cr.terminal, m)
-          val fixedPoints = staff.fixedPoints.terminalStaffAt(cr.terminal, SDate(m, Crunch.europeLondonTimeZone))
+          val shifts = staff.shifts.terminalStaffAt(cr.terminal, m, sdateFromMillisLocal)
+          val fixedPoints = staff.fixedPoints.terminalStaffAt(cr.terminal, SDate(m, Crunch.europeLondonTimeZone), sdateFromMillisLocal)
           val movements = staff.movements.terminalStaffAt(cr.terminal, minute)
 
           StaffMinute(cr.terminal, minute, shifts, fixedPoints, movements, lastUpdated = Option(now().millisSinceEpoch))

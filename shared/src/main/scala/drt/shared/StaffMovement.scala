@@ -17,12 +17,12 @@ trait Expireable {
 
 case class StaffMovement(terminal: Terminal,
                          reason: String,
-                         time: MilliDate,
+                         time: MillisSinceEpoch,
                          delta: Int,
                          uUID: String,
                          queue: Option[Queue] = None,
                          createdBy: Option[String]) extends Expireable {
-  def isExpired(expiresBeforeMillis: MillisSinceEpoch): Boolean = time.millisSinceEpoch < expiresBeforeMillis
+  def isExpired(expiresBeforeMillis: MillisSinceEpoch): Boolean = time < expiresBeforeMillis
 }
 
 object StaffMovement {

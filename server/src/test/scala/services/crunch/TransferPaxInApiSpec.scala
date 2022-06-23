@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, LiveFeedSource, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
 
 import scala.collection.immutable.{Seq, SortedMap}
 import scala.concurrent.duration._

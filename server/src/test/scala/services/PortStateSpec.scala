@@ -8,13 +8,12 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig}
+import services.crunch.{CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, Queues}
 
-import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -30,7 +29,7 @@ class PortStateSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(initialPortState = Option(portState), now = () => SDate(minute).addMinutes(-60)))
 
-    offerAndWait(crunch.shiftsInput, UpdateShifts(Seq(StaffAssignment("", T1, MilliDate(SDate(minute).addMinutes(-15).millisSinceEpoch), MilliDate(SDate(minute).addMinutes(15).millisSinceEpoch), 1, None))))
+    offerAndWait(crunch.shiftsInput, UpdateShifts(Seq(StaffAssignment("", T1, SDate(minute).addMinutes(-15).millisSinceEpoch, SDate(minute).addMinutes(15).millisSinceEpoch, 1, None))))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
