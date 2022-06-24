@@ -32,5 +32,4 @@ object ShiftAssignmentsTest extends Specification {
       }
     }
   }
-
 }

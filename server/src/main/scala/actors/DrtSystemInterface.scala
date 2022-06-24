@@ -54,12 +54,13 @@ import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, TerminalUpdateRequest}
+import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
 import services.prediction.TouchdownPrediction
+import services.staffing.StaffMinutesChecker
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival, WithTimeAccessor}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -83,7 +84,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val now: () => SDateLike = () => SDate.now()
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
-
 
   val manifestLookupService: ManifestLookupLike
 
@@ -252,15 +252,12 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       staffMovementsActor ! staffingUpdateRequestQueue
 
       val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
-      log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow/1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString()}")
+      log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString()}")
 
-      system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day) { () =>
-        val dateToCalculate = SDate.now().addDays(params.forecastMaxDays).toLocalDate
-        airportConfig.terminals.foreach { terminal =>
-          val request = TerminalUpdateRequest(terminal, dateToCalculate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
-          staffingUpdateRequestQueue ! request
-        }
-      }
+      val staffChecker = StaffMinutesChecker(staffActor, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig)
+
+      staffChecker.calculateForecastStaffMinutes()
+      system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())
 
       egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
 
@@ -268,7 +265,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
       (crunchRequestQueueActor, deploymentRequestQueue, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
     }
-
 
   private def startOptimisationGraph[A, B <: WithTimeAccessor](minutesProducer: Flow[ProcessingRequest, PortStateMinutes[A, B], NotUsed],
                                                                persistentQueueActor: ActorRef,

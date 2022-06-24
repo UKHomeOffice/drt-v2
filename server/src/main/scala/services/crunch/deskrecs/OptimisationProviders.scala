@@ -38,7 +38,7 @@ object OptimisationProviders {
           .map { case (_, maybeManifest) => maybeManifest }
           .recover {
             case t =>
-              log.error(s"Failed to get historic manifest for ${arrival.unique}")
+              log.warn(s"Failed to get historic manifest for ${arrival.unique}")
               None
           }
       }
@@ -51,7 +51,7 @@ object OptimisationProviders {
       .map { case (_, maybeManifest) => maybeManifest }
       .recover {
         case t =>
-          log.error(s"Failed to get historic manifest for ${arrival.unique}")
+          log.warn(s"Failed to get historic manifest for ${arrival.unique}")
           None
       }
 
