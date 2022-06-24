@@ -2,10 +2,10 @@ package services.crunch
 
 import actors.persistent.staffing.{AddStaffMovements, SetFixedPoints, UpdateShifts}
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
-import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import java.util.UUID
 import scala.collection.immutable.{List, SortedMap}
@@ -352,44 +352,44 @@ class StaffMinutesSpec extends CrunchTestLike {
     success
   }
 
-//  "Given a shift not starting on a minute boundary " +
-//    "When I inspect the staff minutes " +
-//    "Then I should see the affected staff minutes rounded to the nearest minute" >> {
-//
-//    val nowString = "2017-01-01T00:00:15Z"
-//    val now = SDate(nowString)
-//    val startDate1 = SDate("2017-01-01T00:00:15").millisSinceEpoch
-//    val endDate1 = SDate("2017-01-01T00:02:15").millisSinceEpoch
-//    val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
-//    val shifts = UpdateShifts(Seq(assignment1))
-//
-//    val daysToCrunch = 1
-//
-//    val crunch = runCrunchGraph(TestConfig(
-//      now = () => now,
-//      airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
-//      maxDaysToCrunch = daysToCrunch,
-//      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
-//    ))
-//
-//    offerAndWait(crunch.shiftsInput, shifts)
-//
-//    val expectedIsoMinutes = Set(
-//      ("2017-01-01T00:00:00Z", 50),
-//      ("2017-01-01T00:01:00Z", 50),
-//      ("2017-01-01T00:02:00Z", 50)
-//    )
-//
-//    crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
-//      case PortState(_, _, staffMinutes) =>
-//        val minutes = staffMinutes.values.map(m => (SDate(m.minute).toISOString(), m.shifts)).toSet
-//        val tuples = minutes.intersect(expectedIsoMinutes)
-//        println(s"got $tuples")
-//        tuples == expectedIsoMinutes
-//    }
-//
-//    success
-//  }
+  "Given a shift not starting on a minute boundary " +
+    "When I inspect the staff minutes " +
+    "Then I should see the affected staff minutes rounded to the nearest minute" >> {
+
+    val nowString = "2017-01-01T00:00:15Z"
+    val now = SDate(nowString)
+    val startDate1 = SDate("2017-01-01T00:00:15").millisSinceEpoch
+    val endDate1 = SDate("2017-01-01T00:02:15").millisSinceEpoch
+    val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
+    val shifts = UpdateShifts(Seq(assignment1))
+
+    val daysToCrunch = 1
+
+    val crunch = runCrunchGraph(TestConfig(
+      now = () => now,
+      airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
+      maxDaysToCrunch = daysToCrunch,
+      initialPortState = Option(PortState.empty)
+    ))
+
+    offerAndWait(crunch.shiftsInput, shifts)
+
+    val expectedIsoMinutes = Set(
+      ("2017-01-01T00:00:00Z", 50),
+      ("2017-01-01T00:01:00Z", 50),
+      ("2017-01-01T00:02:00Z", 50)
+    )
+
+    crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
+      case PortState(_, _, staffMinutes) =>
+        val minutes = staffMinutes.values.map(m => (SDate(m.minute).toISOString(), m.shifts)).toSet
+        val tuples = minutes.intersect(expectedIsoMinutes)
+        println(s"got $tuples")
+        tuples == expectedIsoMinutes
+    }
+
+    success
+  }
 
   "Given a fixed point not starting on a minute boundary " +
     "When I inspect the staff minutes " +
@@ -428,7 +428,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     success
   }
 
-  "Given a fixed point not starting on a minute boundary " +
+  "Given a staff movement not starting on a minute boundary " +
     "When I inspect the staff minutes " +
     "Then I should see the affected staff minutes rounded to the nearest minute" >> {
 
@@ -453,13 +453,15 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val expectedIsoMinutes = Set(
       ("2017-01-01T00:00:00Z", 1),
-      ("2017-01-01T00:01:00Z", 1)
+      ("2017-01-01T00:01:00Z", 1),
     )
 
     crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
         val minutes = staffMinutes.values.map(m => (SDate(m.minute).toISOString(), m.movements)).toSet
-        minutes.intersect(expectedIsoMinutes) == expectedIsoMinutes
+        val tuples = minutes.intersect(expectedIsoMinutes)
+        println(s"tuples: ${minutes.filter(_._2 == 1)}")
+        tuples == expectedIsoMinutes
     }
 
     success

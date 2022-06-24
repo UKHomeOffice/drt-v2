@@ -1,7 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{macroRW, ReadWriter => RW}
 
@@ -14,6 +14,9 @@ sealed trait StaffAssignmentLike extends Expireable {
   val numberOfStaff: Int
   val maybeUuid: Option[String]
   val createdBy: Option[String]
+
+  val startMinutesSinceEpoch: MillisSinceEpoch = start / 60000
+  val endMinutesSinceEpoch: MillisSinceEpoch = end / 60000
 
   override def isExpired(expireBeforeMillis: MillisSinceEpoch): Boolean = end < expireBeforeMillis
 }
@@ -75,11 +78,12 @@ object ShiftAssignments {
 
 case class ShiftAssignments(assignments: Seq[StaffAssignmentLike]) extends StaffAssignmentsLike with HasExpireables[ShiftAssignments] {
   def terminalStaffAt(terminalName: Terminal, date: SDateLike, msToSd: MillisSinceEpoch => SDateLike): Int = {
-    val dateMillis = date.millisSinceEpoch
+    val dateMinutesSinceEpoch = date.millisSinceEpoch / 60000
 
     assignments
       .filter { assignment =>
-        assignment.start <= dateMillis && dateMillis <= assignment.end && assignment.terminal == terminalName
+        assignment.startMinutesSinceEpoch <= dateMinutesSinceEpoch &&
+          dateMinutesSinceEpoch <= assignment.endMinutesSinceEpoch && assignment.terminal == terminalName
       }
       .map(_.numberOfStaff)
       .sum

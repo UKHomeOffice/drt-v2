@@ -38,9 +38,9 @@ object RunnableStaffing {
         val staff = Staffing.staffAvailableByTerminalAndQueue(cr.start.millisSinceEpoch, sa, fp, Option(sm.movements))
 
         StaffMinutes(cr.minutesInMillis.map { minute =>
-          val m = SDate(minute)
+          val m = SDate(minute, Crunch.europeLondonTimeZone)
           val shifts = staff.shifts.terminalStaffAt(cr.terminal, m, sdateFromMillisLocal)
-          val fixedPoints = staff.fixedPoints.terminalStaffAt(cr.terminal, SDate(m, Crunch.europeLondonTimeZone), sdateFromMillisLocal)
+          val fixedPoints = staff.fixedPoints.terminalStaffAt(cr.terminal, m, sdateFromMillisLocal)
           val movements = staff.movements.terminalStaffAt(cr.terminal, minute)
 
           StaffMinute(cr.terminal, minute, shifts, fixedPoints, movements, lastUpdated = Option(now().millisSinceEpoch))

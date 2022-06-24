@@ -190,7 +190,7 @@ object VoyageManifestParser {
 
       def read(value: JsValue): VoyageNumberLike = value match {
         case str: JsString => VoyageNumber(str.value)
-        case unexpected => InvalidVoyageNumber
+        case _ => InvalidVoyageNumber
       }
     }
 

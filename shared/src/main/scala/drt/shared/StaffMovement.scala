@@ -23,6 +23,8 @@ case class StaffMovement(terminal: Terminal,
                          queue: Option[Queue] = None,
                          createdBy: Option[String]) extends Expireable {
   def isExpired(expiresBeforeMillis: MillisSinceEpoch): Boolean = time < expiresBeforeMillis
+
+  val minutesSinceEpoch: MillisSinceEpoch = time / 60000
 }
 
 object StaffMovement {

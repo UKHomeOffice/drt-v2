@@ -17,7 +17,7 @@ import scala.collection.immutable.List
 import scala.concurrent.duration.DurationInt
 
 case class TestStaffAssignmentService(staff: Int) extends StaffAssignmentService {
-  override def terminalStaffAt(terminalName: Terminal, dateMillis: MillisSinceEpoch): Int = staff
+  override def terminalStaffAt(terminalName: Terminal, date: SDateLike): Int = staff
 }
 
 case class TestShiftsAssignmentService(staff: Int) extends StaffAssignmentsLike {

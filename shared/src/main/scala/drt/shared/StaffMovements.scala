@@ -13,7 +13,14 @@ object StaffMovements {
     }).sortBy(_.time)
   }
 
-  def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: SDateLike): Int = movements.sortBy(_.time).takeWhile(_.time <= dateTime.millisSinceEpoch).map(_.delta).sum
+  def adjustmentsAt(movements: Seq[StaffMovement])(dateTime: SDateLike): Int = {
+    val minuteSinceEpoch = dateTime.millisSinceEpoch / 60000
+    movements
+      .sortBy(_.time)
+      .takeWhile(_.time / 60000 <= minuteSinceEpoch)
+      .map(_.delta)
+      .sum
+  }
 
   def terminalStaffAt(shiftAssignments: ShiftAssignments)
                      (movements: Seq[StaffMovement])
