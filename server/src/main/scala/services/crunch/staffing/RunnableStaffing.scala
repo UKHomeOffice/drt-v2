@@ -26,7 +26,7 @@ object RunnableStaffing {
                       )
                       (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[ProcessingRequest, PortStateStaffMinutes, NotUsed] =
     Flow[ProcessingRequest]
-      .wireTap(cr => log.info(s"${cr.localDate} staffing crunch request started"))
+      .wireTap(processingRequest => log.info(s"${processingRequest.localDate} staffing crunch request started"))
       .mapAsync(1)(cr => shiftsProvider(cr).map(sa => (cr, sa)))
       .mapAsync(1) { case (cr, sa) => fixedPointsProvider(cr).map(fp => (cr, sa, fp)) }
       .mapAsync(1) { case (cr, sa, fp) => movementsProvider(cr).map(sm => (cr, sa, fp, sm)) }
@@ -34,17 +34,16 @@ object RunnableStaffing {
 
   def toStaffMinutes(now: () => SDateLike): Flow[(ProcessingRequest, ShiftAssignments, FixedPointAssignments, StaffMovements), PortStateStaffMinutes, NotUsed] =
     Flow[(ProcessingRequest, ShiftAssignments, FixedPointAssignments, StaffMovements)]
-      .collect { case (cr: TerminalUpdateRequest, sa, fp, sm) =>
-        val staff = Staffing.staffAvailableByTerminalAndQueue(cr.start.millisSinceEpoch, sa, fp, Option(sm.movements))
+      .collect { case (processingRequest: TerminalUpdateRequest, sa, fp, sm) =>
+        val staff = Staffing.staffAvailableByTerminalAndQueue(processingRequest.start.millisSinceEpoch, sa, fp, Option(sm.movements))
 
-        StaffMinutes(cr.minutesInMillis.map { minute =>
+        StaffMinutes(processingRequest.minutesInMillis.map { minute =>
           val m = SDate(minute, Crunch.europeLondonTimeZone)
-          val shifts = staff.shifts.terminalStaffAt(cr.terminal, m, sdateFromMillisLocal)
-          val fixedPoints = staff.fixedPoints.terminalStaffAt(cr.terminal, m, sdateFromMillisLocal)
-          val movements = staff.movements.terminalStaffAt(cr.terminal, minute)
+          val shifts = staff.shifts.terminalStaffAt(processingRequest.terminal, m, sdateFromMillisLocal)
+          val fixedPoints = staff.fixedPoints.terminalStaffAt(processingRequest.terminal, m, sdateFromMillisLocal)
+          val movements = staff.movements.terminalStaffAt(processingRequest.terminal, minute)
 
-          StaffMinute(cr.terminal, minute, shifts, fixedPoints, movements, lastUpdated = Option(now().millisSinceEpoch))
+          StaffMinute(processingRequest.terminal, minute, shifts, fixedPoints, movements, lastUpdated = Option(now().millisSinceEpoch))
         })
       }
-
 }

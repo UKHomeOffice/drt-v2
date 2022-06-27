@@ -383,9 +383,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
         val minutes = staffMinutes.values.map(m => (SDate(m.minute).toISOString(), m.shifts)).toSet
-        val tuples = minutes.intersect(expectedIsoMinutes)
-        println(s"got $tuples")
-        tuples == expectedIsoMinutes
+        minutes.intersect(expectedIsoMinutes) == expectedIsoMinutes
     }
 
     success
@@ -459,9 +457,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
         val minutes = staffMinutes.values.map(m => (SDate(m.minute).toISOString(), m.movements)).toSet
-        val tuples = minutes.intersect(expectedIsoMinutes)
-        println(s"tuples: ${minutes.filter(_._2 == 1)}")
-        tuples == expectedIsoMinutes
+        minutes.intersect(expectedIsoMinutes) == expectedIsoMinutes
     }
 
     success
