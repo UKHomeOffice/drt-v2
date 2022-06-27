@@ -26,7 +26,7 @@ object CrunchRequestMessageConversion {
     .collect { case Some(cr) => cr }
 
   def maybeCrunchRequestFromMessage: CrunchRequestMessage => Option[CrunchRequest] = {
-    case CrunchRequestMessage(Some(year), Some(month), Some(day), Some(offsetMinutes), Some(durationMinutes)) =>
+    case CrunchRequestMessage(Some(year), Some(month), Some(day), Some(offsetMinutes), Some(durationMinutes), _) =>
       Some(CrunchRequest(LocalDate(year, month, day), offsetMinutes, durationMinutes))
 
     case badMessage =>

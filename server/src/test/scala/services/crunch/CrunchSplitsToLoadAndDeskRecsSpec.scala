@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
 
 import scala.collection.immutable.{List, Map, Seq, SortedMap}
 import scala.concurrent.duration._

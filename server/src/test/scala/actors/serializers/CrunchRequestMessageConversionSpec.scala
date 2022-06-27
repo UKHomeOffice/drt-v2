@@ -34,7 +34,7 @@ class CrunchRequestMessageConversionSpec extends Specification {
       "Then I should get a removal message for the same date" >> {
         val crunchRequest = CrunchRequest(LocalDate(2021, 5, 1), 120, 1440)
         val removalMessageDate = removeCrunchRequestMessage(crunchRequest) match {
-          case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day)) =>
+          case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day), _) =>
             LocalDate(year, month, day)
         }
 

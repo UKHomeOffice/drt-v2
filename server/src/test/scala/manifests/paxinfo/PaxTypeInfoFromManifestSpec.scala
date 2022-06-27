@@ -19,7 +19,7 @@ class PaxTypeInfoFromManifestSpec extends Specification {
 
     val result = PassengerInfo.manifestToPaxTypes(voyageManifest)
 
-    val expected = Map(PaxTypes.EeaMachineReadable -> 3)
+    val expected = Map(PaxTypes.GBRNational -> 3)
 
     result === expected
   }
@@ -34,8 +34,8 @@ class PaxTypeInfoFromManifestSpec extends Specification {
     val result = PassengerInfo.manifestToPaxTypes(voyageManifest)
 
     val expected = Map(
-      PaxTypes.EeaMachineReadable -> 2,
-      PaxTypes.EeaBelowEGateAge -> 1,
+      PaxTypes.GBRNational -> 2,
+      PaxTypes.GBRNationalBelowEgateAge -> 1,
     )
 
     result === expected
@@ -51,7 +51,7 @@ class PaxTypeInfoFromManifestSpec extends Specification {
     val result = PassengerInfo.manifestToPaxTypes(voyageManifest)
 
     val expected = Map(
-      PaxTypes.EeaMachineReadable -> 2,
+      PaxTypes.GBRNational -> 2,
       PaxTypes.VisaNational -> 1,
     )
 

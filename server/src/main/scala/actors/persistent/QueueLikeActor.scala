@@ -53,7 +53,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
       state ++= crunchRequestsFromMessages(requests)
-    case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day)) =>
+    case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day), _) =>
       state.find(_.localDate == LocalDate(year, month, day)).foreach {
         state -= _
       }

@@ -33,17 +33,9 @@ class SimulationParamsSpec extends Specification {
 
       val updatedConfig = simulation.applyToAirportConfig(testConfig)
 
-      val expected = Map(
-        eeaMachineReadableToDesk -> 1.0,
-        eeaMachineReadableToEGate -> 1.0,
-        eeaNonMachineReadableToDesk -> 1.0,
-        visaNationalToDesk -> 1.0,
-        nonVisaNationalToDesk -> 1.0
-      )
+      val expected = testConfig.terminalProcessingTimes(terminal).mapValues(_ => 1)
 
-      val result: Map[PaxTypeAndQueue, Double] = updatedConfig.terminalProcessingTimes(terminal)
-
-      result === expected
+      updatedConfig.terminalProcessingTimes(terminal) === expected
     }
 
     "The original airport config processing times should be used if replacements are not supplied" >> {

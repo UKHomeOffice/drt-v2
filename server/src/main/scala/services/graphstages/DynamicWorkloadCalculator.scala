@@ -136,7 +136,10 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                         apiSplitRatio: ApiPaxTypeAndQueueCount
                        ): FlightSplitMinute = {
     val splitPaxInMinute = apiSplitRatio.paxCount * flightPaxInMinute
-    val paxTypeQueueProcTime = procTimes.getOrElse(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType), 0d)
+    val paxTypeQueueProcTime = procTimes.getOrElse(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType), {
+      println(s"\n\nDidn't find proc time for ${apiSplitRatio.passengerType} -> ${apiSplitRatio.queueType}\n")
+      0d
+    })
     val defaultWorkload = splitPaxInMinute * paxTypeQueueProcTime
 
     FlightSplitMinute(CodeShareKeyOrderedBySchedule(arrival), apiSplitRatio.passengerType, arrival.Terminal, apiSplitRatio.queueType, splitPaxInMinute, defaultWorkload, minuteMillis)

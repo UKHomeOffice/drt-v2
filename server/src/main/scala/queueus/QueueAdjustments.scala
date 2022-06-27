@@ -1,7 +1,7 @@
 package queueus
 
 import uk.gov.homeoffice.drt.arrivals.Splits
-import uk.gov.homeoffice.drt.ports.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable}
+import uk.gov.homeoffice.drt.ports.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, GBRNational, GBRNationalBelowEgateAge}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
 
@@ -20,14 +20,17 @@ case class ChildEGateAdjustments(assumedAdultsPerChild: Double) extends QueueAdj
 
     val totalEEAUnderEGateAge = paxOfTypeInQueue(s, EeaBelowEGateAge, EeaDesk)
     val totalB5JUnderEGateAge = paxOfTypeInQueue(s, B5JPlusNationalBelowEGateAge, EeaDesk)
+    val totalGBRNationalUnderEGateAge = paxOfTypeInQueue(s, GBRNationalBelowEgateAge, EeaDesk)
 
-    val eeaAdjustments: Double = adjustmentsForPaxTypes(s, totalEEAUnderEGateAge, EeaMachineReadable)
+    val eeaAdjustments = adjustmentsForPaxTypes(s, totalEEAUnderEGateAge, EeaMachineReadable)
     val b5JAdjustments = adjustmentsForPaxTypes(s, totalB5JUnderEGateAge, B5JPlusNational)
+    val gbrNationalAdjustments = adjustmentsForPaxTypes(s, totalGBRNationalUnderEGateAge, GBRNational)
 
     val withEEAAdjustments = eGateToDesk(s.splits, EeaMachineReadable, eeaAdjustments)
     val withB5JAdjustments = eGateToDesk(withEEAAdjustments, B5JPlusNational, b5JAdjustments)
+    val withAllAdjustments = eGateToDesk(withB5JAdjustments, GBRNational, gbrNationalAdjustments)
 
-    s.copy(splits = withB5JAdjustments)
+    s.copy(splits = withAllAdjustments)
   }
 
   def paxOfTypeInQueue(s: Splits, paxType: PaxType, queue: Queue): Double = {
