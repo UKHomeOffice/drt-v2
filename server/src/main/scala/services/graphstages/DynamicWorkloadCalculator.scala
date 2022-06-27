@@ -61,7 +61,8 @@ trait WorkloadCalculatorLike {
 
 case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                                      fallbacksProvider: QueueFallbacks,
-                                     flightHasWorkload: FlightFilter)
+                                     flightHasWorkload: FlightFilter,
+                                     fallbackProcessingTime: Double)
   extends WorkloadCalculatorLike {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -137,8 +138,8 @@ case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxType
                        ): FlightSplitMinute = {
     val splitPaxInMinute = apiSplitRatio.paxCount * flightPaxInMinute
     val paxTypeQueueProcTime = procTimes.getOrElse(PaxTypeAndQueue(apiSplitRatio.passengerType, apiSplitRatio.queueType), {
-      println(s"\n\nDidn't find proc time for ${apiSplitRatio.passengerType} -> ${apiSplitRatio.queueType}\n")
-      0d
+      log.error(s"Didn't find proc time for ${apiSplitRatio.passengerType} -> ${apiSplitRatio.queueType}. Using default average: $fallbackProcessingTime")
+      fallbackProcessingTime
     })
     val defaultWorkload = splitPaxInMinute * paxTypeQueueProcTime
 

@@ -13,6 +13,7 @@ import uk.gov.homeoffice.drt.ports.Queues.{Open, Queue, QueueFallbacks}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
 class WorkloadSpec extends CrunchTestLike {
@@ -25,12 +26,12 @@ class WorkloadSpec extends CrunchTestLike {
         eventType,
         PaxNumbers))
 
-  private def workloadCalculator(procTimes: Map[PaxTypeAndQueue, Double], filter: FlightFilter) = {
+  private def workloadCalculator(procTimes: Map[PaxTypeAndQueue, Double], filter: FlightFilter) =
     DynamicWorkloadCalculator(
       Map(T1 -> procTimes, T2 -> procTimes, T3 -> procTimes, T4 -> procTimes, T5 -> procTimes),
       QueueFallbacks(Map()),
-      filter)
-  }
+      filter,
+      AirportConfigDefaults.fallbackProcessingTime)
 
   private val procTime = 1.5
 

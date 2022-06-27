@@ -53,10 +53,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
       val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
-        case ps: PortState =>
-          val resultSummary = paxLoadsFromPortState(ps, 15)
-          println(s"got $resultSummary")
-          resultSummary == expected
+        case ps: PortState => paxLoadsFromPortState(ps, 15) == expected
       }
 
       success
@@ -78,10 +75,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
       val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
-        case ps: PortState =>
-          val resultSummary = workLoadsFromPortState(ps, 15)
-
-          resultSummary == expected
+        case ps: PortState => workLoadsFromPortState(ps, 15) == expected
       }
 
       success
