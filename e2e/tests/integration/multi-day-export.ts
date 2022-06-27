@@ -75,7 +75,7 @@ describe('Multi day export', () => {
                       cy
                         .request(href)
                         .then((response) => {
-                          expect(response.body).to.contain(",38,10,1,,,13,0,1,,,1,0,1,,,0,0,0,3")
+                          expect(response.body).to.contain(",38,14,1,,,13,0,1,,,1,0,1,,,0,0,0,3")
                         });
                     }
                   });
