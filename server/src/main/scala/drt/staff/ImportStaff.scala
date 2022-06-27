@@ -31,7 +31,7 @@ object ImportStaff {
             val shiftStartDate = new DateTime(shift.shift_start).withZone(europeLondonTimeZone)
             val shiftsEndDate = shiftStartDate.addMinutes(14)
 
-            StaffAssignment(index.toString, shift.terminal, MilliDate(shiftStartDate.millisSinceEpoch), MilliDate(shiftsEndDate.millisSinceEpoch), shift.staff.toInt, Option("API"))
+            StaffAssignment(index.toString, shift.terminal, shiftStartDate.millisSinceEpoch, shiftsEndDate.millisSinceEpoch, shift.staff.toInt, Option("API"))
         }
     }
     maybeAssignments.map(ShiftAssignments(_))

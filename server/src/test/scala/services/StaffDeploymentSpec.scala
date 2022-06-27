@@ -1,5 +1,6 @@
 package services
 
+import actors.persistent.staffing.{SetFixedPoints, UpdateShifts}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
@@ -16,17 +17,17 @@ import scala.collection.immutable.List
 import scala.concurrent.duration.DurationInt
 
 case class TestStaffAssignmentService(staff: Int) extends StaffAssignmentService {
-  override def terminalStaffAt(terminalName: Terminal, dateMillis: MillisSinceEpoch): Int = staff
+  override def terminalStaffAt(terminalName: Terminal, date: SDateLike): Int = staff
 }
 
-case class TestShiftsAssignmentService(staff: Int) extends ShiftAssignmentsLike {
+case class TestShiftsAssignmentService(staff: Int) extends StaffAssignmentsLike {
   override val assignments: Seq[StaffAssignment] = Seq()
-  override def terminalStaffAt(terminal: Terminal, dateMillis: SDateLike): Int = staff
+  override def terminalStaffAt(terminal: Terminal, dateMillis: SDateLike, msToSDate: MillisSinceEpoch => SDateLike): Int = staff
 }
 
-case class TestFixedPointsAssignmentService(staff: Int) extends FixedPointAssignmentsLike {
+case class TestFixedPointsAssignmentService(staff: Int) extends StaffAssignmentsLike {
   override val assignments: Seq[StaffAssignment] = Seq()
-  override def terminalStaffAt(terminal: Terminal, dateMillis: SDateLike)(implicit mdToSd: MilliDate => SDateLike): Int = staff
+  override def terminalStaffAt(terminal: Terminal, dateMillis: SDateLike, msToSDate: MillisSinceEpoch => SDateLike): Int = staff
 }
 
 class StaffDeploymentSpec extends CrunchTestLike {
@@ -43,6 +44,8 @@ class StaffDeploymentSpec extends CrunchTestLike {
       Queues.NonEeaDesk -> ((List.fill[Int](24)(1), List.fill[Int](24)(10))),
       Queues.EGate -> ((List.fill[Int](24)(1), List.fill[Int](24)(10)))))
 
+  import SDate.implicits.sdateFromMillisLocal
+
   private val staffAvailable = 25
   "Given a set of CrunchMinutes representing a single terminal with 3 queues at one minute " +
   "When I ask to add deployments to them " +
@@ -53,7 +56,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
       crunchMinute(T1, Queues.EGate, 0, 12)
     ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
-    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _) => staffAvailable)
+    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _, _) => staffAvailable, sdateFromMillisLocal)
     val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
 
     val expected = Set(
@@ -74,7 +77,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
       crunchMinute(T1, Queues.EGate, 0, 0)
     ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
-    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _) => staffAvailable)
+    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _, _) => staffAvailable, sdateFromMillisLocal)
     val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
 
     val expected = Set(
@@ -96,7 +99,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
       crunchMinute(T1, Queues.NonEeaDesk, 60000, 15)
     ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
-    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _) => staffAvailable)
+    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _, _) => staffAvailable, sdateFromMillisLocal)
 
     val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
 
@@ -125,7 +128,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
     ).map(cm => (cm.key, cm)).toMap
     val deployer: Deployer = queueRecsToDeployments(_.toInt)
 
-    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _) => staffAvailable)
+    val staffSources = StaffSources(testShiftsService, testFixedPointsService, testStaffService, (_, _, _) => staffAvailable, sdateFromMillisLocal)
     val result = addDeployments(crunchMinutes, deployer, Option(staffSources), minMaxDesks).values.toSet
 
     val expected = Set(
@@ -149,15 +152,15 @@ class StaffDeploymentSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
       val shiftStart = SDate(scheduled)
 
-      val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-      val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+      val startDate1 = SDate("2017-01-01T00:00").millisSinceEpoch
+      val endDate1 = SDate("2017-01-01T00:14").millisSinceEpoch
       val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 10, None)
-      val initialShifts = ShiftAssignments(Seq(assignment1))
+      val initialShifts = UpdateShifts(Seq(assignment1))
 
-      val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-      val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+      val startDate2 = SDate("2017-01-01T00:00").millisSinceEpoch
+      val endDate2 = SDate("2017-01-01T00:14").millisSinceEpoch
       val assignment2 = StaffAssignment("egate monitor", T1, startDate2, endDate2, 2, None)
-      val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
+      val initialFixedPoints = SetFixedPoints(Seq(assignment2))
 
       val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(
@@ -181,11 +184,13 @@ class StaffDeploymentSpec extends CrunchTestLike {
       offerAndWait(crunch.shiftsInput, initialShifts)
 
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
-        case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.shifts) == Option(10)
+        case ps: PortState =>
+          ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch))
+          ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.shifts) == Option(10)
       }
       offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
 
-      crunch.portStateTestProbe.fishForMessage(5.seconds) {
+      crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.fixedPoints) == Option(2)
       }
 
@@ -204,7 +209,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
 
       crunch.portStateTestProbe.fishForMessage(5.seconds) {
         case ps: PortState =>
-          val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queue)).take(10)
+          val minutesInOrder = ps.crunchMinutes.values.toList.filter(m => shiftStart.millisSinceEpoch <= m.minute && m.minute <= shiftStart.addMinutes(4).millisSinceEpoch)
           val deployments = minutesInOrder.map(cm => (cm.queue, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
 
           deployments == expectedCrunchDeployments

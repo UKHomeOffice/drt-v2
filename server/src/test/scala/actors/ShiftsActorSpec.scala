@@ -14,8 +14,8 @@ import scala.concurrent.duration._
 
 object StaffAssignmentGenerator {
   def generateStaffAssignment(name: String, terminal: Terminal, startTime: String, endTime: String, staff: Int): StaffAssignment = {
-    val start = MilliDate(SDate(startTime).millisSinceEpoch)
-    val end = MilliDate(SDate(endTime).millisSinceEpoch)
+    val start = SDate(startTime).millisSinceEpoch
+    val end = SDate(endTime).millisSinceEpoch
     StaffAssignment(name, terminal, start, end, staff, None)
   }
 }
@@ -28,20 +28,20 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
   "Shifts actor" should {
     "remember a shift staff assignment added before a shutdown" in {
-      val startTime = MilliDate(SDate(s"2017-01-01T07:00").millisSinceEpoch)
-      val endTime = MilliDate(SDate(s"2017-01-01T15:00").millisSinceEpoch)
+      val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T15:00").millisSinceEpoch
       val shifts = ShiftAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(classOf[ShiftsActor], now, expireAfterOneDay), "shiftsActor")
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor")
 
       actor ! UpdateShifts(shifts.assignments)
       expectMsg(UpdateShiftsAck(shifts.assignments))
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(classOf[ShiftsActor], now, expireAfterOneDay), "shiftsActor2")
+      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor2")
 
       newActor ! GetState
 
@@ -57,7 +57,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(classOf[ShiftsActor], now, expireAfterOneDay), "shiftsActor1")
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor1")
 
       actor ! UpdateShifts(Seq(shift1, shift2))
       expectMsg(UpdateShiftsAck(Seq(shift1, shift2)))
@@ -67,7 +67,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       expectMsg(UpdateShiftsAck(updatedShifts))
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(classOf[ShiftsActor], now, expireAfterOneDay), "shiftsActor2")
+      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor2")
 
       newActor ! GetState
       val expected = ShiftAssignments(updatedShifts)
@@ -86,7 +86,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(classOf[ShiftsActor], now, expireAfterOneDay), "shiftsActor1")
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor1")
 
       actor ! UpdateShifts(Seq(shift1, shift2, shift3, shift4))
       expectMsg(UpdateShiftsAck(Seq(shift1, shift2, shift3, shift4)))
@@ -97,12 +97,12 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       expectMsg(UpdateShiftsAck(Seq(updatedShift1, updatedShift3)))
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(classOf[ShiftsActor], now, expireAfterOneDay), "shiftsActor2")
+      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor2")
 
       newActor ! GetState
       val expected = Set(updatedShift1, shift2, updatedShift3, shift4)
 
-      val result = expectMsgPF(1 second) {
+      val result = expectMsgPF(1.second) {
         case ShiftAssignments(sa) => sa.toSet
       }
 
@@ -138,7 +138,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       actorPit2006 ! GetState
       val expected = Set(shift1, shift2)
 
-      val result = expectMsgPF(1 second) {
+      val result = expectMsgPF(1.second) {
         case ShiftAssignments(sa) => sa.toSet
       }
 
@@ -147,8 +147,8 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
   }
 
-  def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[ShiftsActor], now, expiryDateXDaysFrom(now, 1)))
-  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[ShiftsReadActor], now(), expiryDateXDaysFrom(now, 1)))
+  def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftsActor(now, expiryDateXDaysFrom(now, 1))))
+  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftsReadActor(now(), expiryDateXDaysFrom(now, 1))))
 
   def nowAs(date: String): () => SDateLike = () => SDate(date)
 

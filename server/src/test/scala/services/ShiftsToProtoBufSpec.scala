@@ -1,10 +1,10 @@
 package services
 
-import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftsMessage}
 import actors.persistent.staffing.ShiftsMessageParser._
+import drt.shared.{ShiftAssignments, StaffAssignment}
+import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment}
+import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftsMessage}
 
 class ShiftsToProtoBufSpec extends Specification {
 
@@ -12,8 +12,8 @@ class ShiftsToProtoBufSpec extends Specification {
 
   "shiftStringToShiftMessage" should {
     "take a single shift string and return a case class representing it" in {
-      val start = MilliDate(SDate("2017-01-20T10:00").millisSinceEpoch)
-      val end = MilliDate(SDate("2017-01-20T20:00").millisSinceEpoch)
+      val start = SDate("2017-01-20T10:00").millisSinceEpoch
+      val end = SDate("2017-01-20T20:00").millisSinceEpoch
       val staffAssignment = StaffAssignment("shift name", T1, start, end, 9, None)
       val shiftMessage = staffAssignmentToMessage(staffAssignment, createdAt)
 
@@ -35,8 +35,8 @@ class ShiftsToProtoBufSpec extends Specification {
 
   "shiftsStringToShiftsMessage" should {
     "take some lines of shift strings and return a case class representing all of the shifts" in {
-      val start = MilliDate(SDate("2017-01-20T10:00").millisSinceEpoch)
-      val end = MilliDate(SDate("2017-01-20T20:00").millisSinceEpoch)
+      val start = SDate("2017-01-20T10:00").millisSinceEpoch
+      val end = SDate("2017-01-20T20:00").millisSinceEpoch
       val staffAssignments = ShiftAssignments(Seq(
         StaffAssignment("shift name", T1, start, end, 5, None),
         StaffAssignment("shift name", T1, start, end, 9, None)))
@@ -74,8 +74,8 @@ class ShiftsToProtoBufSpec extends Specification {
 
       val shiftsString = shiftMessagesToStaffAssignments(shiftsMessage.shifts)
 
-      val start = MilliDate(SDate("2017-01-20T10:00").millisSinceEpoch)
-      val end = MilliDate(SDate("2017-01-20T20:00").millisSinceEpoch)
+      val start = SDate("2017-01-20T10:00").millisSinceEpoch
+      val end = SDate("2017-01-20T20:00").millisSinceEpoch
       val expected = ShiftAssignments(Seq(
         StaffAssignment("shift name", T1, start, end, 5, None),
         StaffAssignment("shift name", T1, start, end, 9, None)))
@@ -91,8 +91,8 @@ class ShiftsToProtoBufSpec extends Specification {
 
       val shiftsString = shiftMessagesToStaffAssignments(shiftsMessage.shifts)
 
-      val start = MilliDate(SDate("2017-01-20T10:00").millisSinceEpoch)
-      val end = MilliDate(SDate("2017-01-20T20:00").millisSinceEpoch)
+      val start = SDate("2017-01-20T10:00").millisSinceEpoch
+      val end = SDate("2017-01-20T20:00").millisSinceEpoch
       val staffAssignments = ShiftAssignments(Seq(
         StaffAssignment("shift name", T1, start, end, 5, None),
         StaffAssignment("shift name", T1, start, end, 9, None)))

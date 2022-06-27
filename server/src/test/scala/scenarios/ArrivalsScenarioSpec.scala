@@ -14,7 +14,7 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.{B5JPlusTypeAllocator, ChildEGateAdjustments, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
 import services.SDate
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource}
@@ -50,10 +50,10 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     arrival
   )
 
-  def flightsProvider(cr: CrunchRequest): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
+  def flightsProvider(cr: ProcessingRequest): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
     Future.successful(Source(List(arrivals.map(a => ApiFlightWithSplits(a, Set())))))
 
-  def manifestsProvider(cr: CrunchRequest): Future[Source[VoyageManifests, NotUsed]] = Future.successful(Source(List()))
+  def manifestsProvider(cr: ProcessingRequest): Future[Source[VoyageManifests, NotUsed]] = Future.successful(Source(List()))
 
   def historicManifestsProvider(arrivals: Iterable[Arrival]): Source[ManifestLike, NotUsed] = Source(List())
 

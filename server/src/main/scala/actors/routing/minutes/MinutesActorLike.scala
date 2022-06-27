@@ -83,11 +83,10 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
     }
   }
 
-  def retrieveTerminalMinutesWithinRangeAsStream(
-                                                  terminal: Terminal,
-                                                  start: SDateLike,
-                                                  end: SDateLike,
-                                                  maybePointInTime: Option[MillisSinceEpoch]
+  def retrieveTerminalMinutesWithinRangeAsStream(terminal: Terminal,
+                                                 start: SDateLike,
+                                                 end: SDateLike,
+                                                 maybePointInTime: Option[MillisSinceEpoch]
                                                 ): Source[MinutesContainer[A, B], NotUsed] =
     Source(Crunch.utcDaysInPeriod(start, end).toList)
       .mapAsync(1) { day =>

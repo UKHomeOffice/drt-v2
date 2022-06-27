@@ -16,7 +16,7 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsPaxProvider
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.graphstages.Crunch.LoadMinute
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.PortCode
@@ -38,7 +38,7 @@ object OptimisationProviders {
           .map { case (_, maybeManifest) => maybeManifest }
           .recover {
             case t =>
-              log.error(s"Failed to get historic manifest for ${arrival.unique}")
+              log.warn(s"Failed to get historic manifest for ${arrival.unique}")
               None
           }
       }
@@ -51,12 +51,12 @@ object OptimisationProviders {
       .map { case (_, maybeManifest) => maybeManifest }
       .recover {
         case t =>
-          log.error(s"Failed to get historic manifest for ${arrival.unique}")
+          log.warn(s"Failed to get historic manifest for ${arrival.unique}")
           None
       }
 
   def arrivalsProvider(arrivalsActor: ActorRef)
-                      (crunchRequest: CrunchRequest)
+                      (crunchRequest: ProcessingRequest)
                       (implicit timeout: Timeout, ec: ExecutionContext): Future[Source[List[Arrival], NotUsed]] =
     arrivalsActor
       .ask(GetFlights(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
@@ -64,7 +64,7 @@ object OptimisationProviders {
       .map(_.map(_._2.flights.map(_._2.apiFlight).toList))
 
   def flightsWithSplitsProvider(arrivalsActor: ActorRef)
-                               (crunchRequest: CrunchRequest)
+                               (crunchRequest: ProcessingRequest)
                                (implicit timeout: Timeout, ec: ExecutionContext): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
     arrivalsActor
       .ask(GetFlights(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
@@ -72,14 +72,14 @@ object OptimisationProviders {
       .map(_.map(_._2.flights.values.toList))
 
   def liveManifestsProvider(manifestsActor: ActorRef)
-                           (crunchRequest: CrunchRequest)
+                           (crunchRequest: ProcessingRequest)
                            (implicit timeout: Timeout): Future[Source[VoyageManifests, NotUsed]] =
     manifestsActor
       .ask(GetStateForDateRange(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
       .mapTo[Source[VoyageManifests, NotUsed]]
 
   def loadsProvider(queuesActor: ActorRef)
-                   (crunchRequest: CrunchRequest)
+                   (crunchRequest: ProcessingRequest)
                    (implicit timeout: Timeout, ec: ExecutionContext): Future[Map[TQM, LoadMinute]] =
     queuesActor
       .ask(GetStateForDateRange(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
@@ -91,7 +91,7 @@ object OptimisationProviders {
       )
 
   def staffMinutesProvider(staffActor: ActorRef, terminals: Iterable[Terminal])
-                          (crunchRequest: CrunchRequest)
+                          (crunchRequest: ProcessingRequest)
                           (implicit timeout: Timeout, ec: ExecutionContext): Future[Map[Terminal, List[Int]]] = {
     val start = crunchRequest.start.millisSinceEpoch
     val end = crunchRequest.end.millisSinceEpoch

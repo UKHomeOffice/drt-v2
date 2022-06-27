@@ -6,7 +6,7 @@ import actors.daily._
 import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
-import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor}
+import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor, StaffingUpdateQueueActor}
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
@@ -112,6 +112,13 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
+  class TestStaffingUpdateQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
+    extends StaffingUpdateQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+    override def resetState(): Unit = state.clear()
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
   class TestVoyageManifestsActor(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate)
     extends ManifestRouterActor(manifestLookup, manifestsUpdate) with Resettable {
 
@@ -120,8 +127,8 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestShiftsActor(override val now: () => SDateLike,
-                        override val expireBefore: () => SDateLike) extends ShiftsActor(now, expireBefore) with Resettable {
+  class TestShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike)
+    extends ShiftsActor(now, expireBefore) with Resettable {
     override def resetState(): Unit = {
       state = initialState
       subscribers = List()
@@ -130,7 +137,7 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestFixedPointsActor(override val now: () => SDateLike) extends FixedPointsActor(now) with Resettable {
+  class TestFixedPointsActor(now: () => SDateLike, minutesToCrunch: Int) extends FixedPointsActor(now, minutesToCrunch, 5) with Resettable {
     override def resetState(): Unit = {
       state = initialState
       subscribers = List()
@@ -139,8 +146,9 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestStaffMovementsActor(override val now: () => SDateLike,
-                                override val expireBefore: () => SDateLike) extends StaffMovementsActor(now, expireBefore) with Resettable {
+  class TestStaffMovementsActor(now: () => SDateLike,
+                                expireBefore: () => SDateLike,
+                                minutesToCrunch: Int) extends StaffMovementsActor(now, expireBefore, minutesToCrunch) with Resettable {
     override def resetState(): Unit = {
       state = initialState
       subscribers = List()

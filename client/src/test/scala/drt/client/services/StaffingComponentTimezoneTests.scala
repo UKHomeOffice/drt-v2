@@ -132,8 +132,8 @@ object StaffingComponentTimezoneTests extends TestSuite {
           val expected = StaffAssignment(
             shiftStart.toISOString(),
             T1,
-            MilliDate(shiftStart.millisSinceEpoch),
-            MilliDate(shiftStart.addMinutes(14).millisSinceEpoch),
+            shiftStart.millisSinceEpoch,
+            shiftStart.addMinutes(14).millisSinceEpoch,
             1,
             None
           )
@@ -151,8 +151,8 @@ object StaffingComponentTimezoneTests extends TestSuite {
           val expected = StaffAssignment(
             shiftStart.toISOString(),
             T1,
-            MilliDate(shiftStart.millisSinceEpoch),
-            MilliDate(shiftStart.addMinutes(59).millisSinceEpoch),
+            shiftStart.millisSinceEpoch,
+            shiftStart.addMinutes(59).millisSinceEpoch,
             1,
             None
           )
@@ -170,8 +170,8 @@ object StaffingComponentTimezoneTests extends TestSuite {
           val expected = StaffAssignment(
             shiftStart.toISOString(),
             T1,
-            MilliDate(shiftStart.millisSinceEpoch),
-            MilliDate(shiftStart.addMinutes(59).millisSinceEpoch),
+            shiftStart.millisSinceEpoch,
+            shiftStart.addMinutes(59).millisSinceEpoch,
             1,
             None
           )
@@ -189,8 +189,8 @@ object StaffingComponentTimezoneTests extends TestSuite {
           val expected = StaffAssignment(
             shiftStart.toISOString(),
             T1,
-            MilliDate(shiftStart.millisSinceEpoch),
-            MilliDate(shiftStart.addMinutes(59).millisSinceEpoch),
+            shiftStart.millisSinceEpoch,
+            shiftStart.addMinutes(59).millisSinceEpoch,
             1,
             None
           )

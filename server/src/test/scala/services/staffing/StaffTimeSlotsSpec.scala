@@ -19,8 +19,8 @@ class StaffTimeSlotsSpec extends Specification {
         Seq(StaffTimeSlot(T1, startTime.millisSinceEpoch, 1, 15 * 60000))
       )
 
-      val expectedStart = MilliDate(SDate("2018-01-02T00:00").millisSinceEpoch)
-      val expectedEnd = MilliDate(SDate("2018-01-02T00:14").millisSinceEpoch)
+      val expectedStart = SDate("2018-01-02T00:00").millisSinceEpoch
+      val expectedEnd = SDate("2018-01-02T00:14").millisSinceEpoch
       val expected = ShiftAssignments(Seq(StaffAssignment("shift0120180", T1, expectedStart, expectedEnd, 1, None)))
 
       val result = replaceShiftMonthWithTimeSlotsForMonth(existingShifts, slots)
@@ -29,8 +29,8 @@ class StaffTimeSlotsSpec extends Specification {
     }
 
     "Given a shift for a previous month the new timeslots should be present in the new shifts as well as the old" >> {
-      val start = MilliDate(SDate("2017-12-02T00:00").millisSinceEpoch)
-      val end = MilliDate(SDate("2017-12-02T00:14").millisSinceEpoch)
+      val start = SDate("2017-12-02T00:00").millisSinceEpoch
+      val end = SDate("2017-12-02T00:14").millisSinceEpoch
       val existingShifts = ShiftAssignments(Seq(
         StaffAssignment("shift1220170", T1, start, end, 1, None)
       ))
@@ -41,10 +41,10 @@ class StaffTimeSlotsSpec extends Specification {
         Seq(StaffTimeSlot(T1, startTime.millisSinceEpoch, 1, 15 * 60000))
       )
 
-      val expectedStart1 = MilliDate(SDate("2017-12-02T00:00").millisSinceEpoch)
-      val expectedEnd1 = MilliDate(SDate("2017-12-02T00:14").millisSinceEpoch)
-      val expectedStart2 = MilliDate(SDate("2018-01-02T00:00").millisSinceEpoch)
-      val expectedEnd2 = MilliDate(SDate("2018-01-02T00:14").millisSinceEpoch)
+      val expectedStart1 = SDate("2017-12-02T00:00").millisSinceEpoch
+      val expectedEnd1 = SDate("2017-12-02T00:14").millisSinceEpoch
+      val expectedStart2 = SDate("2018-01-02T00:00").millisSinceEpoch
+      val expectedEnd2 = SDate("2018-01-02T00:14").millisSinceEpoch
       val expected = Set(
         StaffAssignment("shift1220170", T1, expectedStart1, expectedEnd1, 1, None),
         StaffAssignment("shift0120180", T1, expectedStart2, expectedEnd2, 1, None))
@@ -55,12 +55,12 @@ class StaffTimeSlotsSpec extends Specification {
     }
 
     "Given a shift for the same month as the new timeslots, it should be replaced by the new timeslots" >> {
-      val start1 = MilliDate(SDate("2018-01-05T00:00").millisSinceEpoch)
-      val end1 = MilliDate(SDate("2018-01-05T00:14").millisSinceEpoch)
-      val start2 = MilliDate(SDate("2018-01-06T00:00").millisSinceEpoch)
-      val end2 = MilliDate(SDate("2018-01-06T00:14").millisSinceEpoch)
-      val start3 = MilliDate(SDate("2018-01-07T00:00").millisSinceEpoch)
-      val end3 = MilliDate(SDate("2018-01-07T00:14").millisSinceEpoch)
+      val start1 = SDate("2018-01-05T00:00").millisSinceEpoch
+      val end1 = SDate("2018-01-05T00:14").millisSinceEpoch
+      val start2 = SDate("2018-01-06T00:00").millisSinceEpoch
+      val end2 = SDate("2018-01-06T00:14").millisSinceEpoch
+      val start3 = SDate("2018-01-07T00:00").millisSinceEpoch
+      val end3 = SDate("2018-01-07T00:14").millisSinceEpoch
       val existingShifts = ShiftAssignments(Seq(
         StaffAssignment("shift0120180", T1, start1, end1, 10, None),
         StaffAssignment("shift0120180", T1, start2, end2, 10, None),
@@ -74,8 +74,8 @@ class StaffTimeSlotsSpec extends Specification {
         Seq(StaffTimeSlot(T1, startTime.millisSinceEpoch, 1, 15 * 60000))
       )
 
-      val expectedStart = MilliDate(SDate("2018-01-02T00:00").millisSinceEpoch)
-      val expectedEnd = MilliDate(SDate("2018-01-02T00:14").millisSinceEpoch)
+      val expectedStart = SDate("2018-01-02T00:00").millisSinceEpoch
+      val expectedEnd = SDate("2018-01-02T00:14").millisSinceEpoch
       val expected = ShiftAssignments(Seq(StaffAssignment("shift0120180", T1, expectedStart, expectedEnd, 1, None)))
 
       val result = replaceShiftMonthWithTimeSlotsForMonth(existingShifts, slots)
@@ -84,14 +84,14 @@ class StaffTimeSlotsSpec extends Specification {
     }
 
     "Given a shift for the same month as the new timeslots but for a different terminal, it should not be replaced" >> {
-      val start1 = MilliDate(SDate("2018-01-05T00:00").millisSinceEpoch)
-      val end1 = MilliDate(SDate("2018-01-05T00:14").millisSinceEpoch)
-      val start2 = MilliDate(SDate("2018-01-06T00:00").millisSinceEpoch)
-      val end2 = MilliDate(SDate("2018-01-06T00:14").millisSinceEpoch)
-      val start3 = MilliDate(SDate("2018-01-07T00:00").millisSinceEpoch)
-      val end3 = MilliDate(SDate("2018-01-07T00:14").millisSinceEpoch)
-      val start4 = MilliDate(SDate("2018-01-07T00:00").millisSinceEpoch)
-      val end4 = MilliDate(SDate("2018-01-07T00:14").millisSinceEpoch)
+      val start1 = SDate("2018-01-05T00:00").millisSinceEpoch
+      val end1 = SDate("2018-01-05T00:14").millisSinceEpoch
+      val start2 = SDate("2018-01-06T00:00").millisSinceEpoch
+      val end2 = SDate("2018-01-06T00:14").millisSinceEpoch
+      val start3 = SDate("2018-01-07T00:00").millisSinceEpoch
+      val end3 = SDate("2018-01-07T00:14").millisSinceEpoch
+      val start4 = SDate("2018-01-07T00:00").millisSinceEpoch
+      val end4 = SDate("2018-01-07T00:14").millisSinceEpoch
       val existingShifts = ShiftAssignments(Seq(
         StaffAssignment("shift0120180", T1, start1, end1, 10, None),
         StaffAssignment("shift0120180", T1, start2, end2, 10, None),
@@ -106,10 +106,10 @@ class StaffTimeSlotsSpec extends Specification {
         Seq(StaffTimeSlot(T1, startTime.millisSinceEpoch, 1, 15 * 60000))
       )
 
-      val expectedStart1 = MilliDate(SDate("2018-01-07T00:00").millisSinceEpoch)
-      val expectedEnd1 = MilliDate(SDate("2018-01-07T00:14").millisSinceEpoch)
-      val expectedStart2 = MilliDate(SDate("2018-01-02T00:00").millisSinceEpoch)
-      val expectedEnd2 = MilliDate(SDate("2018-01-02T00:14").millisSinceEpoch)
+      val expectedStart1 = SDate("2018-01-07T00:00").millisSinceEpoch
+      val expectedEnd1 = SDate("2018-01-07T00:14").millisSinceEpoch
+      val expectedStart2 = SDate("2018-01-02T00:00").millisSinceEpoch
+      val expectedEnd2 = SDate("2018-01-02T00:14").millisSinceEpoch
       val expected = Set(
         StaffAssignment("shift0120180", T2, expectedStart1, expectedEnd1, 10, None),
         StaffAssignment("shift0120180", T1, expectedStart2, expectedEnd2, 1, None))
@@ -122,8 +122,8 @@ class StaffTimeSlotsSpec extends Specification {
 
   "When getting all shifts for a specific month" >> {
     "Given a month for which there is no shifts then the result should be empty" >> {
-      val start = MilliDate(SDate("2018-01-05T00:00").millisSinceEpoch)
-      val end = MilliDate(SDate("2018-01-05T00:14").millisSinceEpoch)
+      val start = SDate("2018-01-05T00:00").millisSinceEpoch
+      val end = SDate("2018-01-05T00:14").millisSinceEpoch
       val shifts = ShiftAssignments(Seq(StaffAssignment("shift1220170", T1, start, end, 10, None)))
       val month = SDate("2019-01-02T00:00")
 
@@ -135,8 +135,8 @@ class StaffTimeSlotsSpec extends Specification {
     }
 
     "Given shifts for the month requested then those shifts should be returned" >> {
-      val start = MilliDate(SDate("2018-01-05T00:00").millisSinceEpoch)
-      val end = MilliDate(SDate("2018-01-05T00:14").millisSinceEpoch)
+      val start = SDate("2018-01-05T00:00").millisSinceEpoch
+      val end = SDate("2018-01-05T00:14").millisSinceEpoch
       val shifts = ShiftAssignments(Seq(StaffAssignment("shift1220170", T1, start, end, 10, None)))
       val month = SDate("2018-01-02T00:00")
 
@@ -148,17 +148,17 @@ class StaffTimeSlotsSpec extends Specification {
     }
 
     "Given shifts for both the month requested and another month then only the requested month should be returned" >> {
-      val start1 = MilliDate(SDate("2018-01-05T00:00").millisSinceEpoch)
-      val end1 = MilliDate(SDate("2018-01-05T00:14").millisSinceEpoch)
-      val start2 = MilliDate(SDate("2018-02-05T00:00").millisSinceEpoch)
-      val end2 = MilliDate(SDate("2018-02-05T00:14").millisSinceEpoch)
+      val start1 = SDate("2018-01-05T00:00").millisSinceEpoch
+      val end1 = SDate("2018-01-05T00:14").millisSinceEpoch
+      val start2 = SDate("2018-02-05T00:00").millisSinceEpoch
+      val end2 = SDate("2018-02-05T00:14").millisSinceEpoch
       val shifts = ShiftAssignments(Seq(
         StaffAssignment("shift0120180", T1, start1, end1, 10, None),
         StaffAssignment("shift0120180", T1, start2, end2, 10, None)))
       val month = SDate("2018-01-02T00:00")
 
-      val expectedStart = MilliDate(SDate("2018-01-05T00:00").millisSinceEpoch)
-      val expectedEnd = MilliDate(SDate("2018-01-05T00:14").millisSinceEpoch)
+      val expectedStart = SDate("2018-01-05T00:00").millisSinceEpoch
+      val expectedEnd = SDate("2018-01-05T00:14").millisSinceEpoch
       val expected = ShiftAssignments(Seq(
         StaffAssignment("shift0120180", T1, expectedStart, expectedEnd, 10, None)
       ))

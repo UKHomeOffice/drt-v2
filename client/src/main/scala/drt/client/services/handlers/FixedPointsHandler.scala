@@ -18,6 +18,8 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class FixedPointsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, Pot[FixedPointAssignments]]) extends LoggingActionHandler(modelRW) {
   def scheduledRequest(viewMode: ViewMode): Effect = Effect(Future(GetFixedPoints(viewMode))).after(2 seconds)
 
+  import JSDateConversions.longToSDateLocal
+
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetFixedPoints(viewMode, fixedPoints, _) =>
       val isFirstLoad = value.isEmpty

@@ -92,12 +92,11 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
           UpdatedMillis(differences.map(_.minute))
         else UpdatedMillis.empty
 
-        val replyToAndMessage = Option((sender(), updatedMillis))
+        val replyToAndMessage = List((sender(), updatedMillis))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)
     }
 
-  def shouldSendEffectsToSubscriber(container: MinutesContainer[VAL, INDEX]): Boolean =
-    container.contains(classOf[DeskRecMinute])
+  def shouldSendEffectsToSubscriber(container: MinutesContainer[VAL, INDEX]): Boolean
 
   def containerToMessage(differences: Iterable[VAL]): GeneratedMessage
 

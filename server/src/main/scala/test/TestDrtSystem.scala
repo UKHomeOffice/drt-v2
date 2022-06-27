@@ -60,13 +60,14 @@ case class TestDrtSystem(airportConfig: AirportConfig)
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
   override val shiftsActor: ActorRef = restartOnStop.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
-  override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new TestFixedPointsActor(now)), "staff-fixed-points")
-  override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
+  override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new TestFixedPointsActor(now, airportConfig.minutesToCrunch)), "staff-fixed-points")
+  override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()))
   override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
   override val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
   override val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentStaffingUpdateQueueActor: ActorRef = system.actorOf(Props(new TestStaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
@@ -171,7 +172,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
       refreshArrivalsOnStart = false,
-      startDeskRecs = startDeskRecs(SortedSet(), SortedSet()))
+      startDeskRecs = startDeskRecs(SortedSet(), SortedSet(), SortedSet()))
 
     liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
@@ -179,10 +180,9 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
     manifestsRouterActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
     queuesActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
+    staffActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
 
     testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponse)
-
-    subscribeStaffingActors(crunchInputs)
 
     crunchInputs.killSwitches
   }

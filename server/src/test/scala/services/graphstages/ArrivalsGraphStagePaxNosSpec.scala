@@ -10,7 +10,7 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.arrivals.{ArrivalStatus, TotalPaxSource}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.AclFeedSource
 
 import scala.concurrent.duration._
 

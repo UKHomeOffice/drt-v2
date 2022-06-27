@@ -25,7 +25,9 @@ object JSDateConversions {
 
   implicit def longToMilliDate(millis: MillisSinceEpoch): MilliDate = MilliDate(millis)
 
-  implicit def milliDateToSDate(milliDate: MilliDate): SDateLike = SDate(milliDate)
+  implicit val longToSDateLocal: MillisSinceEpoch => SDateLike = millis => JSSDate(Moment.tz(millis, europeLondon))
+
+  implicit val milliDateToSDate: MilliDate => SDateLike = milliDate => SDate(milliDate)
 
   implicit def jsDateToSDate(date: Date): SDateLike = JSSDate(Moment.tz(date.getTime(), europeLondon))
 
@@ -81,7 +83,7 @@ object JSDateConversions {
 
       override def getTimeZoneOffsetMillis(): MillisSinceEpoch = date.utcOffset().toLong * 60000L
 
-      def startOfTheMonth(): SDateLike = SDate(date.getFullYear(), date.getMonth(), 1, 0, 0)
+      def startOfTheMonth(): SDateLike = SDate(date.getFullYear(), date.getMonth(), 1)
 
       def getUtcLastMidnight: SDateLike = Moment.tz(date.millisSinceEpoch, utc)
 
