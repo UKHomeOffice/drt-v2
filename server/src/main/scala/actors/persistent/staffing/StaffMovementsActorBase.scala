@@ -4,20 +4,18 @@ import actors._
 import actors.acking.AckingReceiver.StreamCompleted
 import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
-import akka.actor.Scheduler
+import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
-import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{MilliDate, StaffMovement, StaffMovements}
+import drt.shared.{StaffMovement, StaffMovements}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.OfferHandler
+import services.SDate
+import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
-import uk.gov.homeoffice.drt.time.SDateLike
-
-import scala.concurrent.ExecutionContext.Implicits.global
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 
 case class StaffMovementsState(staffMovements: StaffMovements) {
@@ -36,26 +34,31 @@ case class RemoveStaffMovements(movementUuidsToRemove: String)
 
 case class RemoveStaffMovementsAck(movementUuidsToRemove: String)
 
-case class AddStaffMovementsSubscribers(subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]])
 
 class StaffMovementsActor(now: () => SDateLike,
-                          expireBeforeMillis: () => SDateLike) extends StaffMovementsActorBase(now, expireBeforeMillis) {
-  var subscribers: List[SourceQueueWithComplete[Seq[StaffMovement]]] = List()
+                          expireBeforeMillis: () => SDateLike,
+                          minutesToCrunch: Int) extends StaffMovementsActorBase(now, expireBeforeMillis) {
+  var subscribers: List[ActorRef] = List()
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
-  override def onUpdateState(data: StaffMovements): Unit = {
+  override def onUpdateDiff(data: StaffMovements): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated staff movements")
-
-    subscribers.foreach(s => OfferHandler.offerWithRetries(s, data.movements, 5))
+    data.movements.groupBy(_.terminal).foreach { case (terminal, movements) =>
+      if (data.movements.nonEmpty) {
+        val earliest = SDate(movements.map(_.time).min).millisSinceEpoch
+        val latest = SDate(movements.map(_.time).max).millisSinceEpoch
+        val updateRequests = (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
+        }
+        subscribers.foreach(sub => updateRequests.foreach(sub ! _))
+      }
+    }
   }
 
   val subsReceive: Receive = {
-    case AddStaffMovementsSubscribers(newSubscribers) =>
-      subscribers = newSubscribers.foldLeft(subscribers) {
-        case (soFar, newSub: SourceQueueWithComplete[Seq[StaffMovement]]) =>
-          log.info(s"Adding staff movements subscriber $newSub")
-          newSub :: soFar
-      }
+    case actor: ActorRef =>
+      log.info(s"received a subscriber")
+      subscribers = actor :: subscribers
   }
 
   override def receiveCommand: Receive = {
@@ -83,6 +86,8 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   def updateState(data: StaffMovements): Unit = state = state.updated(data)
 
   def onUpdateState(newState: StaffMovements): Unit = {}
+
+  def onUpdateDiff(diff: StaffMovements): Unit = {}
 
   def staffMovementMessagesToStaffMovements(messages: Seq[StaffMovementMessage]): StaffMovements = StaffMovements(messages.map(staffMovementMessageToStaffMovement))
 
@@ -112,6 +117,14 @@ class StaffMovementsActorBase(val now: () => SDateLike,
       val movements = state.staffMovements.purgeExpired(expireBefore)
       sender() ! movements
 
+    case TerminalUpdateRequest(terminal, localDate, _, _) =>
+      sender() ! StaffMovements(state.staffMovements.movements.filter { movement =>
+        val sdate = SDate(localDate)
+        movement.terminal == terminal && (
+          sdate.millisSinceEpoch <= movement.time || movement.time <= sdate.getLocalNextMidnight.millisSinceEpoch
+          )
+      })
+
     case AddStaffMovements(movementsToAdd) =>
       val updatedStaffMovements = state.staffMovements + movementsToAdd
       purgeExpiredAndUpdateState(updatedStaffMovements)
@@ -119,7 +132,9 @@ class StaffMovementsActorBase(val now: () => SDateLike,
       log.info(s"Added $movementsToAdd. We have ${state.staffMovements.movements.length} movements after purging")
       val movements: StaffMovements = StaffMovements(movementsToAdd)
       val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements), Option(now().millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(messagesToPersist, Option((sender(), AddStaffMovementsAck(movementsToAdd))))
+      persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), AddStaffMovementsAck(movementsToAdd))))
+
+      onUpdateDiff(StaffMovements(movementsToAdd))
 
     case RemoveStaffMovements(uuidToRemove) =>
       val updatedStaffMovements = state.staffMovements - Seq(uuidToRemove)
@@ -127,7 +142,12 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
       log.info(s"Removed $uuidToRemove. We have ${state.staffMovements.movements.length} movements after purging")
       val messagesToPersist: RemoveStaffMovementMessage = RemoveStaffMovementMessage(Option(uuidToRemove.toString), Option(now().millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(messagesToPersist, Option((sender(), RemoveStaffMovementsAck(uuidToRemove))))
+      persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), RemoveStaffMovementsAck(uuidToRemove))))
+
+      val updates = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
+      if (updates.nonEmpty) {
+        onUpdateDiff(StaffMovements(updates))
+      }
 
     case SaveSnapshotSuccess(md) =>
       log.info(s"Save snapshot success: $md")
@@ -148,7 +168,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   def staffMovementMessageToStaffMovement(sm: StaffMovementMessage): StaffMovement = StaffMovement(
     terminal = Terminal(sm.terminalName.getOrElse("")),
     reason = sm.reason.getOrElse(""),
-    time = MilliDate(sm.time.getOrElse(0L)),
+    time = sm.time.getOrElse(0L),
     delta = sm.delta.getOrElse(0),
     uUID = sm.uUID.getOrElse(""),
     queue = sm.queueName.map(Queue(_)),
@@ -161,7 +181,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
   def staffMovementToStaffMovementMessage(sm: StaffMovement): StaffMovementMessage = StaffMovementMessage(
     terminalName = Some(sm.terminal.toString),
     reason = Some(sm.reason),
-    time = Some(sm.time.millisSinceEpoch),
+    time = Some(sm.time),
     delta = Some(sm.delta),
     uUID = Some(sm.uUID.toString),
     queueName = sm.queue.map(_.toString),

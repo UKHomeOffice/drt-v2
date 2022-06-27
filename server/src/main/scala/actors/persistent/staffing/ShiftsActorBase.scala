@@ -1,23 +1,22 @@
 package actors.persistent.staffing
 
-import actors.persistent.Sizes.oneMegaByte
-import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import actors.ExpiryActorLike
-import akka.actor.Scheduler
+import actors.acking.AckingReceiver.StreamCompleted
+import actors.persistent.Sizes.oneMegaByte
+import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
+import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
-import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
+import services.SDate
+import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import services.graphstages.Crunch
-import services.{OfferHandler, SDate}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Try
 
 
@@ -29,38 +28,37 @@ case object GetFeedStatuses
 
 case object GetShifts
 
-case class SetShifts(newShifts: Seq[StaffAssignment])
+case class SetShifts(newShifts: Seq[StaffAssignmentLike])
 
-case class SetShiftsAck(newShifts: Seq[StaffAssignment])
+case class SetShiftsAck(newShifts: Seq[StaffAssignmentLike])
 
-case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment])
+case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike])
 
-case class UpdateShiftsAck(shiftsToUpdate: Seq[StaffAssignment])
-
-case class AddShiftSubscribers(subscribers: List[SourceQueueWithComplete[ShiftAssignments]])
-
-case class AddFixedPointSubscribers(subscribers: List[SourceQueueWithComplete[FixedPointAssignments]])
+case class UpdateShiftsAck(shiftsToUpdate: Seq[StaffAssignmentLike])
 
 case object SaveSnapshot
 
 
 class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends ShiftsActorBase(now, expireBefore) {
-  var subscribers: List[SourceQueueWithComplete[ShiftAssignments]] = List()
-  implicit val scheduler: Scheduler = this.context.system.scheduler
 
-  override def onUpdateState(shifts: ShiftAssignments): Unit = {
+  override def onUpdateDiff(shifts: ShiftAssignments): Unit = {
     log.info(s"Telling subscribers ($subscribers) about updated shifts")
-
-    subscribers.foreach(s => OfferHandler.offerWithRetries(s, shifts, 5))
+    shifts.assignments.groupBy(_.terminal).foreach { case (terminal, assignments) =>
+      if (shifts.assignments.nonEmpty) {
+        val earliest = SDate(assignments.map(_.start).min).millisSinceEpoch
+        val latest = SDate(assignments.map(_.end).max).millisSinceEpoch
+        val updateRequests = (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, 1440)
+        }
+        subscribers.foreach(sub => updateRequests.foreach(sub ! _))
+      }
+    }
   }
 
   val subsReceive: Receive = {
-    case AddShiftSubscribers(newSubscribers) =>
-      subscribers = newSubscribers.foldLeft(subscribers) {
-        case (soFar, newSub) =>
-          log.info(s"Adding shifts subscriber $newSub")
-          newSub :: soFar
-      }
+    case actor: ActorRef =>
+      log.info(s"received a subscriber")
+      subscribers = actor :: subscribers
   }
 
   override def receiveCommand: Receive = {
@@ -71,6 +69,9 @@ class ShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike) extends S
 class ShiftsActorBase(val now: () => SDateLike,
                       val expireBefore: () => SDateLike) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  var subscribers: List[ActorRef] = List()
+  implicit val scheduler: Scheduler = this.context.system.scheduler
 
   val snapshotInterval = 5000
   override val snapshotBytesThreshold: Int = oneMegaByte
@@ -90,6 +91,8 @@ class ShiftsActorBase(val now: () => SDateLike,
   def updateState(shifts: ShiftAssignments): Unit = state = shifts
 
   def onUpdateState(data: ShiftAssignments): Unit = {}
+
+  def onUpdateDiff(diff: ShiftAssignments): Unit = {}
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: ShiftStateSnapshotMessage =>
@@ -111,13 +114,25 @@ class ShiftsActorBase(val now: () => SDateLike,
       val assignments = state.purgeExpired(expireBefore)
       sender() ! assignments
 
+    case TerminalUpdateRequest(terminal, localDate, _, _) =>
+      sender() ! ShiftAssignments(state.assignments.filter { assignment =>
+        val sdate = SDate(localDate)
+        assignment.terminal == terminal &&
+          (sdate.millisSinceEpoch <= assignment.end || assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch)
+      })
+
     case UpdateShifts(shiftsToUpdate) =>
       val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToUpdate)
       purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
 
       val createdAt = now()
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(shiftsMessage, Option((sender(), UpdateShiftsAck(shiftsToUpdate))))
+
+      persistAndMaybeSnapshotWithAck(shiftsMessage, List(
+        (sender(), UpdateShiftsAck(shiftsToUpdate)),
+      ))
+
+      onUpdateDiff(ShiftAssignments(shiftsToUpdate))
 
     case SetShifts(newShiftAssignments) =>
       if (newShiftAssignments != state) {
@@ -126,7 +141,8 @@ class ShiftsActorBase(val now: () => SDateLike,
 
         val createdAt = now()
         val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(newShiftAssignments), createdAt), Option(createdAt.millisSinceEpoch))
-        persistAndMaybeSnapshotWithAck(shiftsMessage, Option((sender(), SetShiftsAck(newShiftAssignments))))
+        persistAndMaybeSnapshotWithAck(shiftsMessage, List((sender(), SetShiftsAck(newShiftAssignments))))
+        onUpdateDiff(ShiftAssignments(newShiftAssignments))
       } else {
         log.info(s"No change. Nothing to persist")
         sender() ! SetShiftsAck(newShiftAssignments)
@@ -148,12 +164,12 @@ class ShiftsActorBase(val now: () => SDateLike,
     case unexpected => log.info(s"unhandled message: $unexpected")
   }
 
-  def applyUpdatedShifts(existingAssignments: Seq[StaffAssignment],
-                         shiftsToUpdate: Seq[StaffAssignment]): Seq[StaffAssignment] = shiftsToUpdate
+  def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
+                         shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = shiftsToUpdate
     .foldLeft(existingAssignments) {
       case (assignmentsSoFar, updatedAssignment) =>
         assignmentsSoFar.filterNot { existing =>
-          existing.startDt == updatedAssignment.startDt && existing.terminal == updatedAssignment.terminal
+          existing.start == updatedAssignment.start && existing.terminal == updatedAssignment.terminal
         }
     } ++ shiftsToUpdate
 }
@@ -161,14 +177,14 @@ class ShiftsActorBase(val now: () => SDateLike,
 object ShiftsMessageParser {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def staffAssignmentToMessage(assignment: StaffAssignment, createdAt: SDateLike): ShiftMessage = ShiftMessage(
+  def staffAssignmentToMessage(assignment: StaffAssignmentLike, createdAt: SDateLike): ShiftMessage = ShiftMessage(
     name = Option(assignment.name),
     terminalName = Option(assignment.terminal.toString),
     numberOfStaff = Option(assignment.numberOfStaff.toString),
-    startTimestamp = Option(assignment.startDt.millisSinceEpoch),
-    endTimestamp = Option(assignment.endDt.millisSinceEpoch),
+    startTimestamp = Option(assignment.start),
+    endTimestamp = Option(assignment.end),
     createdAt = Option(createdAt.millisSinceEpoch)
-    )
+  )
 
   def shiftMessageToStaffAssignmentv1(shiftMessage: ShiftMessage): Option[StaffAssignment] = {
     val maybeSt: Option[SDateLike] = parseDayAndTimeToSdate(shiftMessage.startDayOLD, shiftMessage.startTimeOLD)
@@ -180,11 +196,11 @@ object ShiftsMessageParser {
       StaffAssignment(
         name = shiftMessage.name.getOrElse(""),
         terminal = Terminal(shiftMessage.terminalName.getOrElse("")),
-        startDt = MilliDate(startDt.roundToMinute().millisSinceEpoch),
-        endDt = MilliDate(endDt.roundToMinute().millisSinceEpoch),
+        start = startDt.roundToMinute().millisSinceEpoch,
+        end = endDt.roundToMinute().millisSinceEpoch,
         numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
         createdBy = None
-        )
+      )
     }
   }
 
@@ -207,11 +223,11 @@ object ShiftsMessageParser {
   def shiftMessageToStaffAssignmentv2(shiftMessage: ShiftMessage): Option[StaffAssignment] = Option(StaffAssignment(
     name = shiftMessage.name.getOrElse(""),
     terminal = Terminal(shiftMessage.terminalName.getOrElse("")),
-    startDt = MilliDate(shiftMessage.startTimestamp.getOrElse(0L)),
-    endDt = MilliDate(shiftMessage.endTimestamp.getOrElse(0L)),
+    start = shiftMessage.startTimestamp.getOrElse(0L),
+    end = shiftMessage.endTimestamp.getOrElse(0L),
     numberOfStaff = shiftMessage.numberOfStaff.getOrElse("0").toInt,
     createdBy = None
-    ))
+  ))
 
   def staffAssignmentsToShiftsMessages(shiftStaffAssignments: ShiftAssignments,
                                        createdAt: SDateLike): Seq[ShiftMessage] =

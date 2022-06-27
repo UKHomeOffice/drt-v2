@@ -23,7 +23,7 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
     case AddStaffMovements(staffMovements) =>
       value match {
         case Ready(sms) =>
-          val updatedStaffMovements = StaffMovements((sms.movements ++ staffMovements).sortBy(_.time.millisSinceEpoch))
+          val updatedStaffMovements = StaffMovements((sms.movements ++ staffMovements).sortBy(_.time))
           effectOnly(Effect(DrtApi.post("staff-movements", write(staffMovements))
             .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
             case _ =>
@@ -36,7 +36,7 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
     case RemoveStaffMovements(movementsPairUuid) =>
       value match {
         case Ready(sms) =>
-          val updatedStaffMovements = StaffMovements(sms.movements.filterNot(_.uUID == movementsPairUuid).sortBy(_.time.millisSinceEpoch))
+          val updatedStaffMovements = StaffMovements(sms.movements.filterNot(_.uUID == movementsPairUuid).sortBy(_.time))
           effectOnly(Effect(DrtApi.delete(s"staff-movements/$movementsPairUuid")
             .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
             case _ =>

@@ -19,7 +19,7 @@ object AjaxClient extends autowire.Client[ByteBuffer, Pickler, Pickler] {
 
   implicit val sDatePickler: CompositePickler[SDateLike] = compositePickler[SDateLike]
   implicit val staffAssignmentPickler: CompositePickler[StaffAssignment] = compositePickler[StaffAssignment]
-  implicit val staffAssignmentsPickler: CompositePickler[StaffAssignments] = compositePickler[StaffAssignments].addConcreteType[FixedPointAssignments].addConcreteType[ShiftAssignments]
+  implicit val staffAssignmentsPickler: CompositePickler[StaffAssignmentsLike] = compositePickler[StaffAssignmentsLike].addConcreteType[FixedPointAssignments].addConcreteType[ShiftAssignments]
 
   override def doCall(req: Request): Future[ByteBuffer] = {
     dom.ext.Ajax.post(

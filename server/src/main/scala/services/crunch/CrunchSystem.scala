@@ -17,7 +17,7 @@ import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike}
 import services.graphstages.Crunch._
 import services.graphstages._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -25,10 +25,7 @@ import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future}
 
 
-case class CrunchSystem[FT](shifts: SourceQueueWithComplete[ShiftAssignments],
-                            fixedPoints: SourceQueueWithComplete[FixedPointAssignments],
-                            staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
-                            forecastBaseArrivalsResponse: EnabledFeedWithFrequency[FT],
+case class CrunchSystem[FT](forecastBaseArrivalsResponse: EnabledFeedWithFrequency[FT],
                             forecastArrivalsResponse: EnabledFeedWithFrequency[FT],
                             liveBaseArrivalsResponse: EnabledFeedWithFrequency[FT],
                             liveArrivalsResponse: EnabledFeedWithFrequency[FT],
@@ -72,7 +69,7 @@ case class CrunchProps[FT](logLabel: String = "",
                            refreshArrivalsOnStart: Boolean,
                            optimiser: TryCrunch,
                            aclPaxAdjustmentDays: Int,
-                           startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch),
+                           startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                            arrivalsAdjustments: ArrivalsAdjustmentsLike,
                            addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                            setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
@@ -84,10 +81,6 @@ object CrunchSystem {
 
   def apply[FT](props: CrunchProps[FT])
                (implicit materializer: Materializer, ec: ExecutionContext): CrunchSystem[FT] = {
-
-    val shiftsSource: Source[ShiftAssignments, SourceQueueWithComplete[ShiftAssignments]] = Source.queue[ShiftAssignments](10, OverflowStrategy.backpressure)
-    val fixedPointsSource: Source[FixedPointAssignments, SourceQueueWithComplete[FixedPointAssignments]] = Source.queue[FixedPointAssignments](10, OverflowStrategy.backpressure)
-    val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.backpressure)
     val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](10, OverflowStrategy.backpressure)
 
     val initialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState)
@@ -119,15 +112,7 @@ object CrunchSystem {
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
 
-    val staffGraphStage = new StaffGraphStage(
-      initialShifts = props.initialShifts,
-      initialFixedPoints = props.initialFixedPoints,
-      optionalInitialMovements = Option(props.initialStaffMovements),
-      now = props.now,
-      expireAfterMillis = props.expireAfterMillis,
-      numberOfDays = props.maxDaysToCrunch)
-
-    val (crunchQueueActor, deploymentQueueActor, deskRecsKillSwitch, deploymentsKillSwitch) = props.startDeskRecs()
+    val (crunchQueueActor, deploymentQueueActor, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch) = props.startDeskRecs()
 
     val crunchSystem = RunnableCrunch(
       forecastBaseArrivalsSource = props.arrivalsForecastBaseFeed.source,
@@ -135,12 +120,8 @@ object CrunchSystem {
       liveBaseArrivalsSource = props.arrivalsLiveBaseFeed.source,
       liveArrivalsSource = props.arrivalsLiveFeed.source,
       manifestsLiveSource = props.manifestsLiveSource,
-      shiftsSource = shiftsSource,
-      fixedPointsSource = fixedPointsSource,
-      staffMovementsSource = staffMovementsSource,
       actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
       arrivalsGraphStage = arrivalsStage,
-      staffGraphStage = staffGraphStage,
       forecastArrivalsDiffStage = forecastArrivalsDiffingStage,
       liveBaseArrivalsDiffStage = liveBaseArrivalsDiffingStage,
       liveArrivalsDiffStage = liveArrivalsDiffingStage,
@@ -152,21 +133,17 @@ object CrunchSystem {
       manifestsActor = props.voyageManifestsActor,
       portStateActor = props.portStateActor,
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
-      deploymentRequestActor = deploymentQueueActor,
       forecastMaxMillis = forecastMaxMillis,
       redListUpdatesSource = props.redListUpdatesSource,
       addTouchdownPredictions = props.addTouchdownPredictions,
       setPcpTimes = props.setPcpTimes,
     )
 
-    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
+    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run
 
-    val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS, deskRecsKillSwitch, deploymentsKillSwitch)
+    val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
 
     CrunchSystem(
-      shifts = shiftsIn,
-      fixedPoints = fixedPointsIn,
-      staffMovements = movementsIn,
       forecastBaseArrivalsResponse = EnabledFeedWithFrequency(forecastBaseIn, props.arrivalsForecastBaseFeed.initialDelay, props.arrivalsForecastBaseFeed.interval),
       forecastArrivalsResponse = EnabledFeedWithFrequency(forecastIn, props.arrivalsForecastFeed.initialDelay, props.arrivalsForecastFeed.interval),
       liveBaseArrivalsResponse = EnabledFeedWithFrequency(liveBaseIn, props.arrivalsLiveBaseFeed.initialDelay, props.arrivalsLiveBaseFeed.interval),

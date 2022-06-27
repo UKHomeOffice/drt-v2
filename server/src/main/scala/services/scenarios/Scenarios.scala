@@ -15,11 +15,11 @@ import passengersplits.parsing.VoyageManifestParser
 import queueus.DynamicQueueStatusProvider
 import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest}
 import services.crunch.deskrecs.{DynamicRunnableDeskRecs, PortDesksAndWaitsProvider, RunnableOptimisation}
 import services.graphstages.FlightFilter
 import services.{OptimiserWithFlexibleProcessors, SDate}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -33,8 +33,8 @@ object Scenarios {
   def simulationResult(simulationParams: SimulationParams,
                        simulationAirportConfig: AirportConfig,
                        splitsCalculator: SplitsCalculator,
-                       flightsProvider: CrunchRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
-                       liveManifestsProvider: CrunchRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
+                       flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
+                       liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
                        historicManifestsProvider: HistoricManifestsProvider,
                        historicManifestsPaxProvider: HistoricManifestsPaxProvider,
                        flightsActor: ActorRef,

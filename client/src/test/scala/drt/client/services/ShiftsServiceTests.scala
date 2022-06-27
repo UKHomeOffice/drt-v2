@@ -1,7 +1,8 @@
 package drt.client.services
 
-import uk.gov.homeoffice.drt.ports.Terminals.T1
+import drt.client.services.JSDateConversions.SDate
 import drt.shared._
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import utest._
 
 import scala.scalajs.js.Date
@@ -9,133 +10,131 @@ import scala.util.{Failure, Success, Try}
 
 object ShiftsServiceTests extends TestSuite {
 
-  import drt.client.services.JSDateConversions._
-
-  def tests = Tests {
-    'StaffShifts - {
-      "As an HO, either in planning or at start of shift, " +
+  def tests: Tests = Tests {
+    test("StaffShifts") - {
+      test("As an HO, either in planning or at start of shift, " +
         "I want to be able tell DRT about staff available by shift for a given period" +
-        "So that I can easily get an initial state for the system" - {
+        "So that I can easily get an initial state for the system") - {
 
-        "Given a shift of 10 people, if we ask how many staff are available" - {
-          val shifts = StaffAssignment("alpha", T1, SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10, None)
+        test("Given a shift of 10 people, if we ask how many staff are available") - {
+          val shifts = StaffAssignment("alpha", T1, SDate(2016, 12, 10, 10).millisSinceEpoch, SDate(2016, 12, 10, 19).millisSinceEpoch, 10, None)
           val shiftService = ShiftAssignments(shifts :: Nil)
 
-          "at its first bound, then we get 10" - {
-            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 10, 0))
+          test("at its first bound, then we get 10") - {
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 10), JSDateConversions.longToSDateLocal)
             assert(result == 10)
           }
-          "at its upper bound, then we get 10" - {
-            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 19, 0))
+          test("at its upper bound, then we get 10") - {
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 19), JSDateConversions.longToSDateLocal)
             assert(result == 10)
           }
-          "can compare dates" - {
+          test("can compare dates") - {
             assert(SDate(2015, 10, 10, 10, 10) < SDate(2016, 12, 12, 12, 12))
             assert(SDate(2015, 10, 10, 10, 10) <= SDate(2016, 12, 12, 12, 12))
           }
         }
 
-        "some implicits make things nicer whether we're server side or client side " - {
-          val startDt = SDate(2016, 12, 10, 10, 0)
-          val endDate = SDate(2016, 12, 19, 12, 0)
-          val shifts = StaffAssignment("alpha", T1, startDt, endDate, 10, None)
+        test("some implicits make things nicer whether we're server side or client side ") - {
+          val startDt = SDate(2016, 12, 10, 10)
+          val endDate = SDate(2016, 12, 19, 12)
+          val shifts = StaffAssignment("alpha", T1, startDt.millisSinceEpoch, endDate.millisSinceEpoch, 10, None)
 
           val result = StaffAssignment("alpha", T1, 1481364000000L, 1482148800000L, 10, createdBy = None)
           assert(shifts == result)
         }
 
-        "Given two overlapping assignments" - {
-          val shifts = StaffAssignment("alpha", T1, SDate(2016, 12, 10, 10, 0), SDate(2016, 12, 10, 19, 0), 10, None) ::
-            StaffAssignment("beta", T1, SDate(2016, 12, 10, 18, 0), SDate(2016, 12, 10, 23, 0), 5, None) :: Nil
+        test("Given two overlapping assignments") - {
+          val shifts = StaffAssignment("alpha", T1, SDate(2016, 12, 10, 10).millisSinceEpoch, SDate(2016, 12, 10, 19).millisSinceEpoch, 10, None) ::
+            StaffAssignment("beta", T1, SDate(2016, 12, 10, 18).millisSinceEpoch, SDate(2016, 12, 10, 23).millisSinceEpoch, 5, None) :: Nil
           val shiftService = ShiftAssignments(shifts)
-          "on the overlap the staff is the sum of both" - {
-            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 18, 30))
+          test("on the overlap the staff is the sum of both") - {
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 18, 30), JSDateConversions.longToSDateLocal)
             assert(result == 15)
           }
-          "on the lower bound of the second shift the staff is the sum of both (15)" - {
-            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 18, 0))
+          test("on the lower bound of the second shift the staff is the sum of both (15)") - {
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 18), JSDateConversions.longToSDateLocal)
             assert(result == 15)
           }
-          "on the upper bound of the second shift the staff the number of the second shift (5)" - {
-            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 23, 0))
+          test("on the upper bound of the second shift the staff the number of the second shift (5)") - {
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 23), JSDateConversions.longToSDateLocal)
             assert(result == 5)
           }
-          "after the upper bound of the second shift the staff is 0" - {
-            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 23, 1))
+          test("after the upper bound of the second shift the staff is 0") - {
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 23, 1), JSDateConversions.longToSDateLocal)
             assert(result == 0)
           }
-          "before the lower bound of the first shift the staff is 0" - {
-            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 9, 59))
+          test("before the lower bound of the first shift the staff is 0") - {
+            val result = shiftService.terminalStaffAt(T1, SDate(2016, 12, 10, 9, 59), JSDateConversions.longToSDateLocal)
             assert(result == 0)
           }
         }
 
-        "StaffAssignment parsing " - {
-          "Parse a single shift line" - {
+        test("StaffAssignment parsing ") - {
+          test("Parse a single shift line") - {
             val shiftsRawCsv =
               """
                 |StaffAssignment 1,T1,01/12/16,06:30,15:18,2
-              """.stripMargin
+                  """.stripMargin
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
-            assert(shifts == Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2, None)) :: Nil)
+            assert(shifts == Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30).millisSinceEpoch, SDate(2016, 12, 1, 15, 18).millisSinceEpoch, 2, None)) :: Nil)
           }
 
-          " Parse a couple of shift lines" - {
+          test("Parse a couple of shift lines") - {
             val shiftsRawCsv =
               """
                 |StaffAssignment 1,T1,01/12/16,06:30,15:18,2
                 |StaffAssignment 2,T1,01/12/16,19:00,22:24,4
-              """.stripMargin
+                  """.stripMargin
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
-            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), 2, None)) ::
-              Success(StaffAssignment("StaffAssignment 2", T1, SDate(2016, 12, 1, 19, 0), SDate(2016, 12, 1, 22, 24), 4, None)) ::
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30).millisSinceEpoch, SDate(2016, 12, 1, 15, 18).millisSinceEpoch, 2, None)) ::
+              Success(StaffAssignment("StaffAssignment 2", T1, SDate(2016, 12, 1, 19).millisSinceEpoch, SDate(2016, 12, 1, 22, 24).millisSinceEpoch, 4, None)) ::
               Nil
             assert(shifts == expectedShifts
             )
           }
 
-          "-ve numbers are fine in movements" - {
+          test("-ve numbers are fine in movements") - {
             val shiftsRawCsv =
               """
                 |StaffAssignment 1,T1,01/12/16,06:30,15:18,-2
-              """.stripMargin
+                  """.stripMargin
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
-            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2, None)) :: Nil
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30).millisSinceEpoch, SDate(2016, 12, 1, 15, 18).millisSinceEpoch, -2, None)) :: Nil
             assert(shifts == expectedShifts)
           }
 
-          "We can make comments by not using commas" - {
+          test("We can make comments by not using commas") - {
             val shiftsRawCsv =
               """
                 |# here be a comment - not because of the hash but because no commas
                 |StaffAssignment 1,T1,01/12/16,06:30,15:18,-2
-              """.stripMargin
+                  """.stripMargin
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
-            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2, None)) :: Nil
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30).millisSinceEpoch, SDate(2016, 12, 1, 15, 18).millisSinceEpoch, -2, None)) :: Nil
             assert(shifts == expectedShifts)
           }
 
-          "empty lines are ignored" - {
+          test("empty lines are ignored") - {
             val shiftsRawCsv =
               """
                 |
                 |StaffAssignment 1,T1,01/12/16,06:30,15:18,-2
-              """.stripMargin
+                  """.stripMargin
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
-            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30), SDate(2016, 12, 1, 15, 18), -2, None)) :: Nil
+            val expectedShifts = Success(StaffAssignment("StaffAssignment 1", T1, SDate(2016, 12, 1, 6, 30).millisSinceEpoch, SDate(2016, 12, 1, 15, 18).millisSinceEpoch, -2, None)) :: Nil
             assert(shifts == expectedShifts)
           }
 
-          "failure to read a date will return an error for that line" - {
+          test("failure to read a date will return an error for that line") - {
             val shiftsRawCsv =
               """
                 |Bad line,T1,01/1b/16,06:30,15:18,-2
-              """.stripMargin
+                  """.stripMargin
 
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
             shifts match {
@@ -147,8 +146,8 @@ object ShiftsServiceTests extends TestSuite {
           }
         }
 
-        "StaffAssignment to csv string representation" - {
-          "Given a shift when I ask for a csv string then I should get a string with the fields separated by commas" - {
+        test("StaffAssignment to csv string representation") - {
+          test("Given a shift when I ask for a csv string then I should get a string with the fields separated by commas") - {
             val shiftTry: Try[StaffAssignment] = StaffAssignmentHelper.tryStaffAssignment("My shift", T1.toString, "01/01/17", "08:00", "11:59", "2", None)
             val shift = shiftTry.get
 
@@ -160,13 +159,13 @@ object ShiftsServiceTests extends TestSuite {
           }
         }
 
-        "Given all the assignments" - {
-          "Staff movements" - {
-            "escaped commas are allowed in shift name" - {
+        test("Given all the assignments") - {
+          test("Staff movements") - {
+            test("escaped commas are allowed in shift name") - {
               val shiftsRawCsv =
                 """
                   |Alpha\, 1 ODM,T1,01/12/16,06:30,15:18,1
-                """.stripMargin
+                    """.stripMargin
               val parsedShift: Try[StaffAssignment] = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.head
 
               parsedShift match {
@@ -176,25 +175,25 @@ object ShiftsServiceTests extends TestSuite {
             }
           }
 
-          "Staff for a terminal should" - {
+          test("Staff for a terminal should") - {
             import StaffMovements._
             val shiftsRaw =
               """
                 |Alpha,T1,10/12/16,08:00,16:00,10
-              """.stripMargin
+                  """.stripMargin
 
             val shiftService = ShiftAssignments(StaffAssignmentParser(shiftsRaw).parsedAssignments.collect { case Success(sa) => sa })
 
-            "Contain staff for a terminal shift" - {
-              val sDate = SDate(2016, 12, 10, 10, 0)
-              val result = terminalStaffAt(shiftService)(Nil)(T1, sDate)
+            test("Contain staff for a terminal shift") - {
+              val sDate = SDate(2016, 12, 10, 10)
+              val result = terminalStaffAt(shiftService)(Nil)(T1, sDate, JSDateConversions.longToSDateLocal)
 
               assert(result == 10)
             }
 
-            "Fixed Points should only be included for the time specified" - {
-              val sDate = SDate(2016, 12, 10, 15, 0)
-              val result = terminalStaffAt(shiftService)(Nil)(T1, sDate)
+            test("Fixed Points should only be included for the time specified") - {
+              val sDate = SDate(2016, 12, 10, 15)
+              val result = terminalStaffAt(shiftService)(Nil)(T1, sDate, JSDateConversions.longToSDateLocal)
 
               assert(result == 10)
             }
@@ -210,20 +209,5 @@ object ShiftsServiceTests extends TestSuite {
       .filter(_.length == 5)
       .map(pl => StaffAssignmentHelper.tryStaffAssignment(pl(0), pl(1), pl(2), pl(3), pl(4), "1", None))
     parsedShifts
-  }
-}
-
-object TestTimer {
-  def timeIt(name: String)(times: Int)(f: => Unit): Unit = {
-    val start = new Date()
-    println(s"$name: Starting timer at $start")
-    (1 to times).foreach(n => {
-      println(n)
-      f
-    })
-    val end = new Date()
-    println(s"$name Trial done at $end")
-    val timeTaken = end.getTime() - start.getTime()
-    println(s"$name Time taken in $times runs ${timeTaken}ms, ${timeTaken.toDouble / times} per run")
   }
 }

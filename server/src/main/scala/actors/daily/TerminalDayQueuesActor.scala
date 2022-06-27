@@ -1,8 +1,8 @@
 package actors.daily
 
 import akka.actor.Props
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import drt.shared.TQM
+import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MillisSinceEpoch}
+import drt.shared.{CrunchApi, TQM}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -52,4 +52,7 @@ class TerminalDayQueuesActor(year: Int,
 
   override def containerToMessage(differences: Iterable[CrunchMinute]): GeneratedMessage =
     CrunchMinutesMessage(differences.map(m => crunchMinuteToMessage(m.toMinute)).toSeq)
+
+  override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[CrunchMinute, TQM]): Boolean =
+    container.contains(classOf[DeskRecMinute])
 }

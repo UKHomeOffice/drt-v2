@@ -2,10 +2,10 @@ package actors.daily
 
 import akka.actor.Props
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import drt.shared.TM
+import drt.shared.{CrunchApi, TM}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 
@@ -37,18 +37,22 @@ class TerminalDayStaffActor(year: Int,
       state = state ++ updatesToApply(minuteMessagesToKeysAndMinutes(minuteMessages))
   }
 
-  private def minuteMessagesToKeysAndMinutes(messages: Seq[StaffMinuteMessage]): Iterable[(TM, StaffMinute)] = messages
-    .filter { cmm =>
-      val minuteMillis = cmm.minute.getOrElse(0L)
-      firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
-    }
-    .map { cmm =>
-      val cm = staffMinuteFromMessage(cmm)
-      (cm.key, cm)
-    }
+  private def minuteMessagesToKeysAndMinutes(messages: Seq[StaffMinuteMessage]): Iterable[(TM, StaffMinute)] =
+    messages
+      .filter { cmm =>
+        val minuteMillis = cmm.minute.getOrElse(0L)
+        firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
+      }
+      .map { cmm =>
+        val cm = staffMinuteFromMessage(cmm)
+        (cm.key, cm)
+      }
 
   override def stateToMessage: GeneratedMessage = StaffMinutesMessage(state.values.map(staffMinuteToMessage).toSeq)
 
   override def containerToMessage(differences: Iterable[StaffMinute]): GeneratedMessage =
     StaffMinutesMessage(differences.map(m => staffMinuteToMessage(m.toMinute)).toSeq)
+
+  override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[StaffMinute, TM]): Boolean =
+    container.contains(classOf[StaffMinute])
 }

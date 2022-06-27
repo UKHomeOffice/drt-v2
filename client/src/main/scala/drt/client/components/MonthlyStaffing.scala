@@ -6,7 +6,7 @@ import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.SPACircuit
+import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiGrid
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -243,8 +243,8 @@ object MonthlyStaffing {
       val timeSlots = daysInMonthByTimeSlot((startOfMonthMidnight, timeSlotMinutes))
 
       timeSlots(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
-        val startMd = MilliDate(slotStart.millisSinceEpoch)
-        val endMd = MilliDate(slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch)
+        val startMd = slotStart.millisSinceEpoch
+        val endMd = slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch
         StaffAssignment(slotStart.toISOString(), terminalName, startMd, endMd, staff, None)
       })
   }.collect {
@@ -288,7 +288,7 @@ object MonthlyStaffing {
     val daysInMonth: Seq[SDateLike] = consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
 
     val staffTimeSlots: Seq[Seq[Any]] = daysInMonthByTimeSlot((viewingDate, props.timeSlotMinutes)).map(_.map {
-      case Some(slotDateTime) => shiftAssignments.terminalStaffAt(terminal, slotDateTime)
+      case Some(slotDateTime) => shiftAssignments.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
       case None => "-"
     })
 

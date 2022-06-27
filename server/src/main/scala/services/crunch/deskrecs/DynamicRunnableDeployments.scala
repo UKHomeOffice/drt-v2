@@ -7,7 +7,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.TimeLogger
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.LoadsToQueueMinutes
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.graphstages.Crunch.LoadMinute
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -19,12 +19,12 @@ object DynamicRunnableDeployments {
   val log: Logger = LoggerFactory.getLogger(getClass)
   val timeLogger: TimeLogger = TimeLogger("Deployment", 1000, log)
 
-  def crunchRequestsToDeployments(loadsProvider: CrunchRequest => Future[Map[TQM, LoadMinute]],
-                                  staffProvider: CrunchRequest => Future[Map[Terminal, List[Int]]],
+  def crunchRequestsToDeployments(loadsProvider: ProcessingRequest => Future[Map[TQM, LoadMinute]],
+                                  staffProvider: ProcessingRequest => Future[Map[Terminal, List[Int]]],
                                   staffToDeskLimits: StaffToDeskLimits,
                                   loadsToQueueMinutes: LoadsToQueueMinutes)
-                                 (implicit executionContext: ExecutionContext): Flow[CrunchRequest, PortStateQueueMinutes, NotUsed] = {
-    Flow[CrunchRequest]
+                                 (implicit executionContext: ExecutionContext): Flow[ProcessingRequest, PortStateQueueMinutes, NotUsed] = {
+    Flow[ProcessingRequest]
       .mapAsync(1) { request =>
         loadsProvider(request)
           .map { minutes => Option((request, minutes)) }

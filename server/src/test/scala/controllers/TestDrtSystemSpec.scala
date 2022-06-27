@@ -11,8 +11,8 @@ import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 
-import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 class TestDrtSystemSpec extends CrunchTestLike {
   sequential
@@ -23,7 +23,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
     "When I send its port state actor an arrival" >> {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly)
-      Await.ready(drtSystem.portStateActor.ask(ArrivalsDiff(List(arrival), List())), 1 second)
+      Await.ready(drtSystem.portStateActor.ask(ArrivalsDiff(List(arrival), List())), 1.second)
 
       "Then I should see the arrival when I check its port state" >> {
         val flightExists = doesFlightExist(drtSystem, arrival) === true
@@ -45,7 +45,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
     "When I send its port state actor a DeskRecMinute" >> {
       val minute = drtSystem.now().getUtcLastMidnight.addMinutes(10)
       val drm = DeskRecMinute(T1, EeaDesk, minute.millisSinceEpoch, 1, 2, 3, 4)
-      Await.ready(drtSystem.portStateActor.ask(DeskRecMinutes(List(drm))), 1 second)
+      Await.ready(drtSystem.portStateActor.ask(DeskRecMinutes(List(drm))), 1.second)
 
       "Then I should see the corresponding CrunchMinute when I check its port state" >> {
         val minuteExists = doesCrunchMinuteExist(drtSystem, drm) === true
@@ -56,8 +56,8 @@ class TestDrtSystemSpec extends CrunchTestLike {
       "Then I should see no crunch minutes after sending a Reset message to the reset actor" >> {
         val existsBeforeReset = doesCrunchMinuteExist(drtSystem, drm) === true
         resetData(drtSystem)
-        val emptyAfterReset = getPortState(drtSystem).crunchMinutes.isEmpty
-        val noUpdatesAfterReset = getUpdates(drtSystem).toList.flatMap(_.queueMinutes).isEmpty
+        val emptyAfterReset = getPortState(drtSystem).staffMinutes.values.forall(_.available == 0)
+        val noUpdatesAfterReset = getUpdates(drtSystem).toList.forall(_.staffMinutes.forall(_.available == 0))
 
         existsBeforeReset && emptyAfterReset && noUpdatesAfterReset
       }
@@ -66,7 +66,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
     "When I send its port state actor a StaffMinute" >> {
       val minute = drtSystem.now().getLocalLastMidnight.addMinutes(10)
       val sm = StaffMinute(T1, minute.millisSinceEpoch, 1, 2, 3)
-      Await.ready(drtSystem.portStateActor.ask(StaffMinutes(List(sm))), 1 second)
+      Await.ready(drtSystem.portStateActor.ask(StaffMinutes(List(sm))), 1.second)
 
       "Then I should see the corresponding StaffMinute when I check its port state" >> {
         val minuteExists = doesStaffMinuteExist(drtSystem, sm) === true
@@ -77,23 +77,23 @@ class TestDrtSystemSpec extends CrunchTestLike {
       "Then I should see no staff minutes after sending a Reset message to the reset actor" >> {
         val existsBeforeReset = doesStaffMinuteExist(drtSystem, sm) === true
         resetData(drtSystem)
-        val emptyAfterReset = getPortState(drtSystem).staffMinutes.isEmpty
-        val noUpdatesAfterReset = getUpdates(drtSystem).toList.flatMap(_.staffMinutes).isEmpty
+        val emptyAfterReset = getPortState(drtSystem).staffMinutes.values.forall(_.available == 0)
+        val noUpdatesAfterReset = getUpdates(drtSystem).toList.forall(_.staffMinutes.forall(_.available == 0))
 
         existsBeforeReset && emptyAfterReset && noUpdatesAfterReset
       }
     }
   }
 
-  private def resetData(drtSystem: TestDrtSystem) = {
-    Await.ready(drtSystem.restartActor.ask(ResetData), 5 seconds)
+  private def resetData(drtSystem: TestDrtSystem): Future[Any] = {
+    Await.ready(drtSystem.restartActor.ask(ResetData), 5.seconds)
   }
 
   private def getPortState(drtSystem: TestDrtSystem) = {
     Thread.sleep(100)
     val lastMidnight = drtSystem.now().getLocalLastMidnight
     val nextMidnight = lastMidnight.addDays(1)
-    Await.result(drtSystem.portStateActor.ask(GetStateForDateRange(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1 second)
+    Await.result(drtSystem.portStateActor.ask(GetStateForDateRange(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1.second)
   }
 
   private def doesFlightExist(drtSystem: TestDrtSystem, arrival: Arrival): Boolean =
@@ -114,6 +114,6 @@ class TestDrtSystemSpec extends CrunchTestLike {
     val lastMidnight = drtSystem.now().getLocalLastMidnight
     val nextMidnight = lastMidnight.addDays(1)
     val sinceMillis = drtSystem.now().addMinutes(-1).millisSinceEpoch
-    Await.result(drtSystem.portStateActor.ask(GetUpdatesSince(sinceMillis, lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortStateUpdates]], 1 second)
+    Await.result(drtSystem.portStateActor.ask(GetUpdatesSince(sinceMillis, lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortStateUpdates]], 1.second)
   }
 }

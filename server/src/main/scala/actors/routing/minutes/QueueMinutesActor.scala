@@ -12,7 +12,8 @@ import scala.language.postfixOps
 class QueueMinutesActor(terminals: Iterable[Terminal],
                         lookup: MinutesLookup[CrunchMinute, TQM],
                         updateMinutes: MinutesUpdate[CrunchMinute, TQM])
-  extends MinutesActorLike(terminals, lookup, updateMinutes) with RouterActorLikeWithSubscriber[MinutesContainer[CrunchMinute, TQM], (Terminal, UtcDate)] {
-
-  override def shouldSendEffectsToSubscriber: MinutesContainer[CrunchMinute, TQM] => Boolean = _.contains(classOf[DeskRecMinute])
+  extends MinutesActorLike(terminals, lookup, updateMinutes)
+    with RouterActorLikeWithSubscriber[MinutesContainer[CrunchMinute, TQM], (Terminal, UtcDate)] {
+  override def shouldSendEffectsToSubscriber: MinutesContainer[CrunchMinute, TQM] => Boolean =
+    _.contains(classOf[DeskRecMinute])
 }

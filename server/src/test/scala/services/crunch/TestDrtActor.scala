@@ -7,12 +7,14 @@ import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ManifestRouterActor, SortedActorRefSource}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.pattern.ask
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.server.feeds.Feed
+import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovements}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
@@ -21,7 +23,9 @@ import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
+import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.crunch.deskrecs._
+import services.crunch.staffing.RunnableStaffing
 import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
@@ -106,8 +110,8 @@ class TestDrtActor extends Actor {
 
       val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(tc.now, DrtStaticParameters.timeBeforeThisMonth(tc.now))))
 
-      val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(tc.now)))
-      val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now))))
+      val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(tc.now, tc.airportConfig.minutesToCrunch, tc.maxDaysToCrunch)))
+      val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(tc.now, DrtStaticParameters.time48HoursAgo(tc.now), tc.airportConfig.minutesToCrunch)))
       val manifestLookups = ManifestLookups(system)
 
       val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)))
@@ -152,7 +156,7 @@ class TestDrtActor extends Actor {
         crunchQueueActor ! UpdatedMillis(daysToReCrunch)
       }
 
-      val startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch) = () => {
+      val startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch) = () => {
         implicit val timeout: Timeout = new Timeout(1 second)
         val ptqa = paxTypeQueueAllocator(tc.airportConfig)
 
@@ -189,13 +193,26 @@ class TestDrtActor extends Actor {
         val deploymentGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
         val (deploymentRequestActor, deploymentsKillSwitch) = RunnableOptimisation.createGraph(deploymentGraphSource, portStateActor, deploymentsProducer).run()
 
+        val shiftsProvider = (r: ProcessingRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
+        val fixedPointsProvider = (r: ProcessingRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
+        val movementsProvider = (r: ProcessingRequest) => staffMovementsActor.ask(r).mapTo[StaffMovements]
+
+        val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, tc.now)
+        val staffingGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
+        val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = RunnableOptimisation.createGraph(staffingGraphSource, portStateActor, staffMinutesProducer).run()
+
+        shiftsActor ! staffingUpdateRequestQueue
+        fixedPointsActor ! staffingUpdateRequestQueue
+        staffMovementsActor ! staffingUpdateRequestQueue
+
         flightsActor ! SetCrunchRequestQueue(crunchRequestActor)
         manifestsRouterActor ! SetCrunchRequestQueue(crunchRequestActor)
         queuesActor ! SetCrunchRequestQueue(deploymentRequestActor)
+        staffActor ! SetCrunchRequestQueue(deploymentRequestActor)
 
         if (tc.recrunchOnStart) queueDaysToReCrunch(crunchRequestActor)
 
-        (crunchRequestActor, deploymentRequestActor, deskRecsKillSwitch, deploymentsKillSwitch)
+        (crunchRequestActor, deploymentRequestActor, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
       }
 
       val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
@@ -271,10 +288,9 @@ class TestDrtActor extends Actor {
         liveArrivalsInput = crunchInputs.liveArrivalsResponse.feedSource,
         ciriumArrivalsInput = crunchInputs.liveBaseArrivalsResponse.feedSource,
         manifestsLiveInput = crunchInputs.manifestsLiveResponse,
-        shiftsInput = crunchInputs.shifts,
-        fixedPointsInput = crunchInputs.fixedPoints,
-        liveStaffMovementsInput = crunchInputs.staffMovements,
-        forecastStaffMovementsInput = crunchInputs.staffMovements,
+        shiftsInput = shiftsActor,
+        fixedPointsInput = fixedPointsActor,
+        staffMovementsInput = staffMovementsActor,
         actualDesksAndQueuesInput = crunchInputs.actualDeskStats,
         portStateTestProbe = portStateProbe,
         baseArrivalsTestProbe = forecastBaseArrivalsProbe,

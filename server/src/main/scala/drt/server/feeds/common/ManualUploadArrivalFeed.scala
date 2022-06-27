@@ -20,8 +20,7 @@ case class ManualUploadArrivalFeed(arrivalsActor: ActorRef)(implicit timeout: Ti
         case Some(Flights(arrivals)) =>
           log.info(s"Got ${arrivals.size} port arrivals")
           ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
-        case x =>
-          log.info(s"Got no port arrivals: $x")
+        case _ =>
           ArrivalsFeedSuccess(Flights(Seq()), SDate.now())
       }
       .recoverWith {

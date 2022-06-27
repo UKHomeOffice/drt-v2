@@ -25,6 +25,9 @@ import scala.concurrent.Future
 
 trait WithStaffing {
   self: Application =>
+
+  import services.SDate.implicits.sdateFromMillisLocal
+
   def getFixedPoints: Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
 

@@ -2,15 +2,15 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import uk.gov.homeoffice.drt.time.SDateLike
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
-import services.crunch.TestDefaults.{airportConfig, airportConfigForSplits}
+import services.crunch.TestDefaults.airportConfigForSplits
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PortCode}
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.List
 import scala.concurrent.Future
@@ -62,9 +62,9 @@ class QueueDiversionSpec extends CrunchTestLike {
       "When the Egates and Eea desks are closed I should see all pax in the Non-Eea queue" >> {
         implicit val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
           airportConfig = config.copy(minMaxDesksByTerminalQueue24Hrs = config.minMaxDesksByTerminalQueue24Hrs.updated(T1, Map(
-            EeaDesk -> (List.fill(24)(0), List.fill(24)(0)),
-            NonEeaDesk -> (List.fill(24)(0), List.fill(24)(5)),
-            EGate -> (List.fill(24)(0), List.fill(24)(0)),
+            EeaDesk -> ((List.fill(24)(0), List.fill(24)(0))),
+            NonEeaDesk -> ((List.fill(24)(0), List.fill(24)(5))),
+            EGate -> ((List.fill(24)(0), List.fill(24)(0))),
           ))),
           now = () => dateNow,
           maybeEgatesProvider = Option(() => Future.successful(allGatesClosed))

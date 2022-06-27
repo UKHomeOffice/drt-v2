@@ -2,25 +2,17 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
-import diode.react.ModelProxy
-import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime, RemoveArrivalSources}
+import drt.client.actions.Actions.RemoveArrivalSources
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.ToolTips._
-import drt.client.components.styles.ArrivalsPageStylesDefault
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.TimeUtil.millisToMinutes
 import drt.shared._
-import drt.shared.api.PassengerInfoSummary
-import drt.shared.redlist._
-import drt.shared.splits.ApiSplitsToSplitRatio
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
-import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
+import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import japgolly.scalajs.react.{CtorType, _}
-import org.scalajs.dom.html.{Div, Span, TableSection}
-import scalacss.ScalaCssReact
+import org.scalajs.dom.html.TableSection
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
@@ -28,9 +20,8 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
-import scala.collection.immutable.{HashSet, Map}
+import scala.collection.immutable.HashSet
 
 object FlightsWithSplitsTable {
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],

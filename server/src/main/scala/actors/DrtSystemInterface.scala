@@ -54,17 +54,19 @@ import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.crunch.deskrecs._
+import services.crunch.staffing.RunnableStaffing
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.{Crunch, FlightFilter}
 import services.prediction.TouchdownPrediction
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import services.staffing.StaffMinutesChecker
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival, WithTimeAccessor}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike, UtcDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -82,7 +84,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val now: () => SDateLike = () => SDate.now()
   val purgeOldLiveSnapshots = false
   val purgeOldForecastSnapshots = true
-
 
   val manifestLookupService: ManifestLookupLike
 
@@ -110,6 +111,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val persistentCrunchQueueActor: ActorRef
   val persistentDeploymentQueueActor: ActorRef
+  val persistentStaffingUpdateQueueActor: ActorRef
 
   val minuteLookups: MinuteLookupsLike
 
@@ -198,7 +200,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff => {
     redListUpdatesActor.ask(GetState).mapTo[RedListUpdates]
-      .map{ redListUpdates =>
+      .map { redListUpdates =>
         val calc = pcpArrivalTimeCalculator(redListUpdates)
         diff.copy(toUpdate = diff.toUpdate.mapValues(arrival => arrival.copy(PcpTime = Option(calc(arrival).millisSinceEpoch))))
       }
@@ -206,54 +208,71 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
-  val startDeskRecs: (SortedSet[CrunchRequest], SortedSet[CrunchRequest]) => () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch) = (cq, dq) => () => {
-    val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
+  val startDeskRecs: (SortedSet[ProcessingRequest], SortedSet[ProcessingRequest], SortedSet[ProcessingRequest]) =>
+    () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch) =
+    (cq, dq, sq) => () => {
+      val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
 
-    implicit val timeout: Timeout = new Timeout(10.seconds)
+      implicit val timeout: Timeout = new Timeout(10.seconds)
 
-    val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
+      val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
 
-    val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-      arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-      liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
-      historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
-      historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, manifestLookupService),
-      splitsCalculator = splitsCalculator,
-      splitsSink = portStateActor,
-      portDesksAndWaitsProvider = portDeskRecs,
-      maxDesksProviders = deskLimitsProviders,
-      redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-      DynamicQueueStatusProvider(airportConfig, egatesProvider)
-    )
+      val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+        arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
+        liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
+        historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
+        historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, manifestLookupService),
+        splitsCalculator = splitsCalculator,
+        splitsSink = portStateActor,
+        portDesksAndWaitsProvider = portDeskRecs,
+        maxDesksProviders = deskLimitsProviders,
+        redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+        DynamicQueueStatusProvider(airportConfig, egatesProvider)
+      )
 
-    log.info(s"Initial crunch queue: ${cq.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
-    val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor, cq)
+      val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor, cq)
 
-    val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
-      OptimisationProviders.loadsProvider(minuteLookups.queueMinutesActor),
-      OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, airportConfig.terminals),
-      staffToDeskLimits,
-      portDeskRecs.loadsToSimulations
-    )
+      val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
+        OptimisationProviders.loadsProvider(minuteLookups.queueMinutesActor),
+        OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, airportConfig.terminals),
+        staffToDeskLimits,
+        portDeskRecs.loadsToSimulations
+      )
 
-    log.info(s"Initial deployment queue: ${dq.map(cr => s"${cr.localDate.year}-${cr.localDate.month}-${cr.localDate.day}").mkString(", ")}")
-    val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, dq)
+      val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, dq)
 
-    egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
+      val shiftsProvider = (r: ProcessingRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
+      val fixedPointsProvider = (r: ProcessingRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
+      val movementsProvider = (r: ProcessingRequest) => staffMovementsActor.ask(r).mapTo[StaffMovements]
 
-    if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor)
+      val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now)
+      val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = startOptimisationGraph(staffMinutesProducer, persistentStaffingUpdateQueueActor, sq)
+      shiftsActor ! staffingUpdateRequestQueue
+      fixedPointsActor ! staffingUpdateRequestQueue
+      staffMovementsActor ! staffingUpdateRequestQueue
 
-    (crunchRequestQueueActor, deploymentRequestQueue, deskRecsKillSwitch, deploymentsKillSwitch)
-  }
+      val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
+      log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString()}")
 
+      val staffChecker = StaffMinutesChecker(staffActor, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig)
 
-  private def startOptimisationGraph(deskRecsProducer: Flow[CrunchRequest, PortStateQueueMinutes, NotUsed],
-                                     persistentQueueActor: ActorRef,
-                                     initialQueue: SortedSet[CrunchRequest]): (ActorRef, UniqueKillSwitch) = {
-    val crunchGraphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, initialQueue)
-    val (crunchRequestQueueActor, deskRecsKillSwitch) =
-      RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, deskRecsProducer).run()
-    (crunchRequestQueueActor, deskRecsKillSwitch)
+      staffChecker.calculateForecastStaffMinutes()
+      system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())
+
+      egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
+
+      if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor)
+
+      (crunchRequestQueueActor, deploymentRequestQueue, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+    }
+
+  private def startOptimisationGraph[A, B <: WithTimeAccessor](minutesProducer: Flow[ProcessingRequest, PortStateMinutes[A, B], NotUsed],
+                                                               persistentQueueActor: ActorRef,
+                                                               initialQueue: SortedSet[ProcessingRequest]): (ActorRef, UniqueKillSwitch) = {
+    val graphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, initialQueue)
+    val (requestQueueActor, deskRecsKillSwitch) =
+      RunnableOptimisation.createGraph(graphSource, portStateActor, minutesProducer).run()
+    (requestQueueActor, deskRecsKillSwitch)
   }
 
   def startCrunchSystem(initialPortState: Option[PortState],
@@ -262,7 +281,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         refreshArrivalsOnStart: Boolean,
-                        startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch),
+                        startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
 
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
@@ -334,7 +353,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     Feed(Feed.actorRefSource
       .map { _ =>
         system.log.info(s"No op arrivals feed")
-        ArrivalsFeedSuccess(Flights(Seq()),SDate.now())
+        ArrivalsFeedSuccess(Flights(Seq()), SDate.now())
       }, 100.days, 100.days)
   }
 
@@ -359,12 +378,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       millisToCrunchStart(today.addDays(d)).millisSinceEpoch
     })
     crunchQueueActor ! UpdatedMillis(daysToReCrunch)
-  }
-
-  def subscribeStaffingActors(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
-    shiftsActor ! AddShiftSubscribers(List(crunchInputs.shifts))
-    fixedPointsActor ! AddFixedPointSubscribers(List(crunchInputs.fixedPoints))
-    staffMovementsActor ! AddStaffMovementsSubscribers(List(crunchInputs.staffMovements))
   }
 
   def liveBaseArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] = {

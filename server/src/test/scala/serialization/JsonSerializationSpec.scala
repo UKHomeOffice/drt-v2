@@ -176,7 +176,7 @@ class JsonSerializationSpec extends Specification {
 
     "FixedPointAssignments" >> {
       val fpa = FixedPointAssignments(
-        Seq(StaffAssignment("test", T1, MilliDate(0L), MilliDate(0L), 0, None))
+        Seq(StaffAssignment("test", T1, 0L, 0L, 0, None))
       )
 
       val json = write(fpa)

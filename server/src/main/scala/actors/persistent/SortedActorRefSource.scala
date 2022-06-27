@@ -4,7 +4,7 @@ import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream._
 import akka.stream.stage._
-import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, RemoveCrunchRequest}
+import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, RemoveCrunchRequest}
 
 import scala.collection.{SortedSet, mutable}
 
@@ -14,15 +14,15 @@ private object SortedActorRefSource {
   }
 }
 
-final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes: Int, durationMinutes: Int, initialQueue: SortedSet[CrunchRequest])
+final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes: Int, durationMinutes: Int, initialQueue: SortedSet[ProcessingRequest])
                                 (implicit system: ActorSystem)
-  extends GraphStageWithMaterializedValue[SourceShape[CrunchRequest], ActorRef] {
+  extends GraphStageWithMaterializedValue[SourceShape[ProcessingRequest], ActorRef] {
 
   import SortedActorRefSource._
 
-  val out: Outlet[CrunchRequest] = Outlet[CrunchRequest]("actorRefSource.out")
+  val out: Outlet[ProcessingRequest] = Outlet[ProcessingRequest]("actorRefSource.out")
 
-  override val shape: SourceShape[CrunchRequest] = SourceShape.of(out)
+  override val shape: SourceShape[ProcessingRequest] = SourceShape.of(out)
 
   def createLogicAndMaterializedValue(inheritedAttributes: Attributes): (GraphStageLogic, ActorRef) =
     throw new IllegalStateException("Not supported")
@@ -33,13 +33,13 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
       with ActorRefStage {
       override protected def logSource: Class[_] = classOf[SortedActorRefSource]
 
-      private val buffer: mutable.SortedSet[CrunchRequest] = mutable.SortedSet[CrunchRequest]() ++ initialQueue
+      private val buffer: mutable.SortedSet[ProcessingRequest] = mutable.SortedSet[ProcessingRequest]() ++ initialQueue
 
       override protected def stageActorName: String =
         inheritedAttributes.get[Attributes.Name].map(_.n).getOrElse(super.stageActorName)
 
       val ref: ActorRef = getEagerStageActor(eagerMaterializer) {
-        case (_, m: CrunchRequest @unchecked) =>
+        case (_, m: ProcessingRequest @unchecked) =>
           buffer += m
           persistentActor ! m
           tryPushElement()

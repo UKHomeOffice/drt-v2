@@ -24,13 +24,13 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   val maybeSnapshotInterval: Option[Int]
   var messagesPersistedSinceSnapshotCounter = 0
   var bytesSinceSnapshotCounter = 0
-  var maybeAckAfterSnapshot: Option[(ActorRef, Any)] = None
+  var maybeAckAfterSnapshot: List[(ActorRef, Any)] = List()
 
   def ackIfRequired(): Unit = {
     maybeAckAfterSnapshot.foreach {
       case (replyTo, msg) => replyTo ! msg
     }
-    maybeAckAfterSnapshot = None
+    maybeAckAfterSnapshot = List()
   }
 
   def unknownMessage: PartialFunction[Any, Unit] = {
@@ -51,9 +51,9 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   def stateToMessage: GeneratedMessage
 
-  def persistAndMaybeSnapshot(message: GeneratedMessage): Unit = persistAndMaybeSnapshotWithAck(message, None)
+  def persistAndMaybeSnapshot(message: GeneratedMessage): Unit = persistAndMaybeSnapshotWithAck(message, List())
 
-  def persistAndMaybeSnapshotWithAck(messageToPersist: GeneratedMessage, maybeAck: Option[(ActorRef, Any)]): Unit = {
+  def persistAndMaybeSnapshotWithAck(messageToPersist: GeneratedMessage, acks: List[(ActorRef, Any)]): Unit = {
     persist(messageToPersist) { message =>
       val messageBytes = message.serializedSize
       log.debug(s"Persisting $messageBytes bytes of ${message.getClass}")
@@ -65,10 +65,11 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
       if (shouldTakeSnapshot) {
         takeSnapshot(stateToMessage)
-        maybeAckAfterSnapshot = maybeAck
+        maybeAckAfterSnapshot = acks
       } else {
-        maybeAck.foreach {
-          case (replyTo, ackMsg) => replyTo ! ackMsg
+        acks.foreach {
+          case (replyTo, ackMsg) =>
+            replyTo ! ackMsg
         }
       }
     }

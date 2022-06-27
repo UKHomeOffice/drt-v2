@@ -75,11 +75,11 @@ class ForecastCrunchSpec extends CrunchTestLike {
     )
     val baseFlights = Flights(baseArrivals)
 
-    val startDate1 = MilliDate(SDate("2017-01-04T00:00").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-04T00:14").millisSinceEpoch)
+    val startDate1 = SDate("2017-01-04T00:00").millisSinceEpoch
+    val endDate1 = SDate("2017-01-04T00:14").millisSinceEpoch
     val assignment1 = StaffAssignment("shift s", T1, startDate1, endDate1, 1, None)
-    val startDate2 = MilliDate(SDate("2017-01-04T00:15").millisSinceEpoch)
-    val endDate2 = MilliDate(SDate("2017-01-04T00:29").millisSinceEpoch)
+    val startDate2 = SDate("2017-01-04T00:15").millisSinceEpoch
+    val endDate2 = SDate("2017-01-04T00:29").millisSinceEpoch
     val assignment2 = StaffAssignment("shift s", T1, startDate2, endDate2, 2, None)
 
     val crunch = runCrunchGraph(TestConfig(

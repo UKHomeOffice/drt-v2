@@ -130,7 +130,7 @@ class TerminalDayFlightActor(
     val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch)
     state = updatedState
 
-    val replyToAndMessage = Option((sender(), UpdatedMillis(minutesToUpdate)))
+    val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
     persistAndMaybeSnapshotWithAck(FlightMessageConversion.flightWithSplitsDiffToMessage(diff), replyToAndMessage)
   }
 

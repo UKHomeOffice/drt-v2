@@ -26,6 +26,4 @@ class FixedPointsReadActor(pointInTime: SDateLike, val now: () => SDateLike) ext
     val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime.millisSinceEpoch)
     Recovery(fromSnapshot = criteria, replayMax = 250)
   }
-
-  override def onUpdateState(data: FixedPointAssignments): Unit = {}
 }
