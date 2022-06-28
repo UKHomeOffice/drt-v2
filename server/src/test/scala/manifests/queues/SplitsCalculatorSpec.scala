@@ -71,7 +71,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
 
       val splitsCalculator = SplitsCalculator(testPaxTypeAllocator, config.terminalPaxSplits, ChildEGateAdjustments(1.0))
 
-      "Given 4 EEA adults and 1 EEA child with a 1.0 adjustment per child" >> {
+      "Given 4 EEA adults and 1 EEA child with a 1.0 adjustment per child and a 50% split to the egates" >> {
         "Then I should expect 3 EEA Adults to Desk, 1 EEA child to desk and 1 EEA Adult to eGates" >> {
           val manifest = apiManifest(List(
             ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), inTransit = false, None),
@@ -114,8 +114,8 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         }
       }
 
-      "Given 0 EEA adults, 4 B5J Nationals and 1 B5J child with a 1.0 adjustment per child" >> {
-        "Then I should expect 3 EEA Adults to Desk, 1 B5J child to desk and 1 B5J Adult to eGates" >> {
+      "Given 0 EEA adults, 4 B5J Nationals and 1 B5J child with a 1.0 adjustment per child and a 50% split to the egates" >> {
+        "Then I should expect 3 B5J Adults to Desk, 1 B5J child to desk and 1 B5J Adult to eGates" >> {
           val manifest = apiManifest(List(
             ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), inTransit = false, None),
             ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), inTransit = false, None),
@@ -157,7 +157,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         }
       }
 
-      "Given 2 EEA adults, 3 EEA children with a 1.0 adjustment per child" >> {
+      "Given 2 EEA adults, 3 EEA children with a 1.0 adjustment per child and 50% split to the egates" >> {
         "Then I should expect 2 EEA Adults to Desk, 3 EEA child to desk and 0 EEA Adults to eGates" >> {
           val manifest = apiManifest(List(
             ManifestPassengerProfile(Nationality(CountryCodes.UK), Option(DocumentType.Passport), Option(PaxAge(35)), inTransit = false, None),
@@ -200,7 +200,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
         }
       }
 
-      "Given 2 B5J adults, 3 B5J children with a 1.0 adjustment per child" >> {
+      "Given 2 B5J adults, 3 B5J children with a 1.0 adjustment per child and a 50% split to the egates" >> {
         "Then I should expect 2 B5J Adults to Desk, 3 B5J child to desk and 0 B5J Adults to eGates" >> {
           val manifest = apiManifest(List(
             ManifestPassengerProfile(Nationality(CountryCodes.USA), Option(DocumentType.Passport), Option(PaxAge(35)), inTransit = false, None),
