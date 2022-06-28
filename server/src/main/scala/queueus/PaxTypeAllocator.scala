@@ -2,22 +2,34 @@ package queueus
 
 import manifests.passengers.ManifestPassengerProfile
 import passengersplits.core.PassengerTypeCalculator.{isB5JPlus, isEea, isVisaNational}
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
+import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.ports.PaxType
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 
 trait PaxTypeAllocator {
   val b5JPlus: PartialFunction[ManifestPassengerProfile, PaxType] = {
-    case ManifestPassengerProfile(country, _, Some(age), _, _) if isB5JPlus(country) && age.isUnder(12) => B5JPlusNationalBelowEGateAge
-    case ManifestPassengerProfile(country, _, _, _, _) if isB5JPlus(country) => B5JPlusNational
+    case ManifestPassengerProfile(country, _, Some(age), _, _)
+      if isB5JPlus(country) && age.isUnder(12) => B5JPlusNationalBelowEGateAge
+    case ManifestPassengerProfile(country, _, _, _, _)
+      if isB5JPlus(country) => B5JPlusNational
   }
 
   val countryAndDocumentTypes: PartialFunction[ManifestPassengerProfile, PaxType] = {
-    case ManifestPassengerProfile(country, Some(docType), Some(age), _, _) if isEea(country) && docType == DocumentType.Passport && age.isUnder(12) => EeaBelowEGateAge
-    case ManifestPassengerProfile(country, Some(docType), _, _, _) if isEea(country) && docType == DocumentType.Passport => EeaMachineReadable
-    case ManifestPassengerProfile(country, _, _, _, _) if isEea(country) => EeaNonMachineReadable
-    case ManifestPassengerProfile(country, _, _, _, _) if !isEea(country) && isVisaNational(country) => VisaNational
-    case ManifestPassengerProfile(country, _, _, _, _) if !isEea(country) => NonVisaNational
+    case ManifestPassengerProfile(Nationality(CountryCodes.UK), _, Some(age), _, _)
+      if age.isUnder(12) => GBRNationalBelowEgateAge
+    case ManifestPassengerProfile(Nationality(CountryCodes.UK), _, _, _, _) =>
+      GBRNational
+    case ManifestPassengerProfile(country, Some(docType), Some(age), _, _)
+      if isEea(country) && docType == DocumentType.Passport && age.isUnder(12) => EeaBelowEGateAge
+    case ManifestPassengerProfile(country, Some(docType), _, _, _)
+      if isEea(country) && docType == DocumentType.Passport => EeaMachineReadable
+    case ManifestPassengerProfile(country, _, _, _, _)
+      if isEea(country) => EeaNonMachineReadable
+    case ManifestPassengerProfile(country, _, _, _, _)
+      if !isEea(country) && isVisaNational(country) => VisaNational
+    case ManifestPassengerProfile(country, _, _, _, _)
+      if !isEea(country) => NonVisaNational
   }
 
   val transit: PartialFunction[ManifestPassengerProfile, PaxType] = {

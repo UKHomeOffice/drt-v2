@@ -1,7 +1,7 @@
 const passengerProfiles = {
 
-    ukPassport: {
-        "DocumentIssuingCountryCode": "GBR",
+    euPassport: {
+        "DocumentIssuingCountryCode": "FRA",
         "PersonType": "P",
         "DocumentLevel": "Primary",
         "Age": "30",
@@ -12,11 +12,11 @@ const passengerProfiles = {
         "PassengerIdentifier": "",
         "DocumentType": "Passport",
         "PoavKey": "1",
-        "NationalityCountryCode": "GBR"
+        "NationalityCountryCode": "FRA"
     },
 
-    ukChild: {
-        "DocumentIssuingCountryCode": "GBR",
+    euChild: {
+        "DocumentIssuingCountryCode": "ITA",
         "PersonType": "P",
         "DocumentLevel": "Primary",
         "Age": "11",
@@ -27,7 +27,7 @@ const passengerProfiles = {
         "PassengerIdentifier": "",
         "DocumentType": "Passport",
         "PoavKey": "1",
-        "NationalityCountryCode": "GBR"
+        "NationalityCountryCode": "ITA"
     },
 
     visaNational: {
@@ -138,7 +138,7 @@ const manifestForDateTime = (scheduled: moment.Moment, passengerList): object =>
 
 const passengerList = (euPax: number, visaNationals: number, nonVisaNationals: number, b5JNationals: number): object[] => {
 
-    return Array(euPax).fill(passengerProfiles.ukPassport)
+    return Array(euPax).fill(passengerProfiles.euPassport)
         .concat(Array(visaNationals).fill(passengerProfiles.visaNational))
         .concat(Array(nonVisaNationals).fill(passengerProfiles.nonVisaNational))
         .concat(Array(b5JNationals).fill(passengerProfiles.b5JNational))

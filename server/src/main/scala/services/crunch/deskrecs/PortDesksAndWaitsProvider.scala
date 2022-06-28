@@ -13,7 +13,8 @@ import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCa
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
@@ -110,6 +111,7 @@ object PortDesksAndWaitsProvider {
       airportConfig.terminalProcessingTimes,
       QueueFallbacks(airportConfig.queuesByTerminal),
       flightFilter,
+      AirportConfigDefaults.fallbackProcessingTime
     )
 
     PortDesksAndWaitsProvider(

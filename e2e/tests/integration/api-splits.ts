@@ -23,8 +23,8 @@ describe('API splits', () => {
     return Array(qty).fill(passengerProfile);
   }
 
-  it('should have 8 egates pax and 2 EEA queue pax when there are 10 UK Adults on board a flight', () => {
-    const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 10));
+  it('should have 8 egates pax and 2 EEA queue pax when there are 10 EU Adults on board a flight', () => {
+    const apiManifest = manifest(ofPassengerProfile(passengerProfiles.euPassport, 10));
     cy
       .addFlight(
         {
@@ -42,7 +42,7 @@ describe('API splits', () => {
   });
 
   it('should ignore the API splits if they are more than 5% different in passenger numbers to the live feed and flight charts option not exist', () => {
-    const apiManifest = manifest(ofPassengerProfile(passengerProfiles.ukPassport, 12));
+    const apiManifest = manifest(ofPassengerProfile(passengerProfiles.euPassport, 12));
 
     cy
       .addFlight(
@@ -78,7 +78,7 @@ describe('API splits', () => {
         },
         "ageRanges": [["25-49", 2]],
         "nationalities": [[{"code": "GBR"}, 2]],
-        "paxTypes": [["EeaMachineReadable", 2]]
+        "paxTypes": [["GBRNational", 2]]
       }]
 
     cy
@@ -103,8 +103,8 @@ describe('API splits', () => {
   });
 
   it('should have 7 egates pax and 4 EEA queue pax when there are 10 UK Adults and 1 uk child on board a flight', () => {
-    const ukAdults = ofPassengerProfile(passengerProfiles.ukPassport, 10);
-    const ukChildren = ofPassengerProfile(passengerProfiles.ukChild, 1);
+    const ukAdults = ofPassengerProfile(passengerProfiles.euPassport, 10);
+    const ukChildren = ofPassengerProfile(passengerProfiles.euChild, 1);
     const apiManifest = manifest(ukAdults.concat(ukChildren));
 
     const expectedNationalitySummary = [
@@ -121,7 +121,7 @@ describe('API splits', () => {
         ],
 
         "nationalities": [
-          [{"code": "GBR"}, 11]
+          [{"code": "FRA"}, 10], [{"code": "ITA"}, 1]
         ],
 
         "paxTypes": [

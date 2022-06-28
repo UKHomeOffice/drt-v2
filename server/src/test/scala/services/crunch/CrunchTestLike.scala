@@ -59,10 +59,15 @@ object TestDefaults {
     ))).toMap,
     terminalProcessingTimes = Map(
       T1 -> Map(
+        gbrNationalToDesk -> 25d / 60,
+        gbrNationalChildToDesk -> 25d / 60,
+        eeaMachineReadableToDesk -> 25d / 60,
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
       ),
       T2 -> Map(
+        gbrNationalToDesk -> 25d / 60,
+        gbrNationalChildToDesk -> 25d / 60,
         eeaMachineReadableToDesk -> 25d / 60,
         eeaNonMachineReadableToDesk -> 25d / 60
       )
@@ -84,6 +89,8 @@ object TestDefaults {
     role = STN,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> Map(
+        GBRNational -> List(Queues.EeaDesk -> 1.0),
+        GBRNationalBelowEgateAge -> List(Queues.EeaDesk -> 1.0),
         EeaMachineReadable -> List(Queues.EeaDesk -> 1.0),
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
         EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
@@ -93,6 +100,8 @@ object TestDefaults {
         B5JPlusNationalBelowEGateAge -> List(Queues.EeaDesk -> 1)
       ),
       T2 -> Map(
+        GBRNational -> List(Queues.EeaDesk -> 1.0),
+        GBRNationalBelowEgateAge -> List(Queues.EeaDesk -> 1.0),
         EeaMachineReadable -> List(Queues.EeaDesk -> 1),
         EeaBelowEGateAge -> List(Queues.EeaDesk -> 1.0),
         EeaNonMachineReadable -> List(Queues.EeaDesk -> 1.0),
