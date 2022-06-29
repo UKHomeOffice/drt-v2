@@ -9,7 +9,7 @@ import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, Ma
 import services.SDate
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
-import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaChildToDesk
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.gbrNationalChildToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{PaxAge, PaxTypeAndQueue, PortCode, Queues}
 
@@ -21,7 +21,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
   isolated
 
   val tenMinutes: Double = 600d / 60
-  val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaChildToDesk -> tenMinutes))
+  val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(gbrNationalChildToDesk -> tenMinutes))
 
   val scheduled = "2019-11-20T00:00Z"
 
@@ -38,52 +38,47 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
         ))
     )))
 
-  "Given a flight with no pax numbers and a Manifest of 2 passengers " +
+  "Given a flight with no pax numbers and a Manifest of 2 passengers " >> {
     "Then we should get 2 passengers in PCP Pax" >> {
+      val crunch = runCrunchGraph(TestConfig(
+        now = () => SDate(scheduled),
+        airportConfig = defaultAirportConfig.copy(
+          terminalProcessingTimes = procTimes,
+          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
+        )))
 
-    val crunch = runCrunchGraph(TestConfig(
-      now = () => SDate(scheduled),
-      airportConfig = defaultAirportConfig.copy(
-        terminalProcessingTimes = procTimes,
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-      )))
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
+      offerAndWait(crunch.manifestsLiveInput, manifests)
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
-    offerAndWait(crunch.manifestsLiveInput, manifests)
+      val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
-    val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+      crunch.portStateTestProbe.fishForMessage(2.seconds) {
+        case ps: PortState => paxLoadsFromPortState(ps, 15) == expected
+      }
 
-    crunch.portStateTestProbe.fishForMessage(2.seconds) {
-      case ps: PortState =>
-        val resultSummary = paxLoadsFromPortState(ps, 15)
-        resultSummary == expected
+      success
     }
-
-    success
   }
 
-  "Given a flight with no pax numbers and a Manifest of 2 passengers " +
+  "Given a flight with no pax numbers and a Manifest of 2 passengers " >> {
     "Then we should get workload for the 2 passengers Port State" >> {
+      val crunch = runCrunchGraph(TestConfig(
+        now = () => SDate(scheduled),
+        airportConfig = defaultAirportConfig.copy(
+          terminalProcessingTimes = procTimes,
+          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
+        )))
 
-    val crunch = runCrunchGraph(TestConfig(
-      now = () => SDate(scheduled),
-      airportConfig = defaultAirportConfig.copy(
-        terminalProcessingTimes = procTimes,
-        queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-      )))
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
+      offerAndWait(crunch.manifestsLiveInput, manifests)
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
-    offerAndWait(crunch.manifestsLiveInput, manifests)
+      val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
-    val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+      crunch.portStateTestProbe.fishForMessage(2.seconds) {
+        case ps: PortState => workLoadsFromPortState(ps, 15) == expected
+      }
 
-    crunch.portStateTestProbe.fishForMessage(2.seconds) {
-      case ps: PortState =>
-        val resultSummary = workLoadsFromPortState(ps, 15)
-
-        resultSummary == expected
+      success
     }
-
-    success
   }
 }

@@ -10,26 +10,26 @@ import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 object VoyageManifestGenerator {
   val euPassport: PassengerInfoJson = PassengerInfoJson(
     Option(DocumentType("P")),
-    Nationality("GBR"),
+    Nationality("FRA"),
     EeaFlag("EEA"),
     Option(PaxAge(22)),
     Option(PortCode("LHR")),
     InTransit("N"),
     Option(Nationality("GBR")),
-    Option(Nationality("GBR")),
+    Option(Nationality("FRA")),
     None
   )
 
   def euPassportWithIdentifier(id: String): PassengerInfoJson =
     PassengerInfoJson(
       Option(DocumentType("P")),
-      Nationality("GBR"),
+      Nationality("FRA"),
       EeaFlag("EEA"),
       Option(PaxAge(22)),
       Option(PortCode("LHR")),
       InTransit("N"),
       Option(Nationality("GBR")),
-      Option(Nationality("GBR")),
+      Option(Nationality("FRA")),
       Option(id)
     )
 

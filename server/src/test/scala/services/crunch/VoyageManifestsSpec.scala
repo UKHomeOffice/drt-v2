@@ -11,7 +11,7 @@ import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import services.SDate
 import services.crunch.VoyageManifestGenerator._
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.EventTypes.CI
+import uk.gov.homeoffice.drt.arrivals.EventTypes.{CI, DC}
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, EventTypes, TotalPaxSource, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
@@ -181,7 +181,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
   }
 
   "When converting a VoyageManifest to a BestAvailableManifest I should get passenger profiles that match the manifest" >> {
-    val vm = VoyageManifest(EventTypes.CI, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
+    val vm = VoyageManifest(EventTypes.DC, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
       inTransitFlag,
       inTransitCountry,
       euPassport,
@@ -195,14 +195,14 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val expected = BestAvailableManifest(
       ApiSplitsWithHistoricalEGateAndFTPercentages, PortCode("LHR"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), SDate("2017-01-01"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType("P")), Option(PaxAge(22)), true, None),
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType("P")), Option(PaxAge(22)), true, None),
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType("P")), Option(PaxAge(22)), false, None),
-        ManifestPassengerProfile(Nationality("ITA"), Option(DocumentType("I")), Option(PaxAge(22)), false, None),
-        ManifestPassengerProfile(Nationality("AFG"), Option(DocumentType("P")), Option(PaxAge(22)), false, None),
-        ManifestPassengerProfile(Nationality("AFG"), Option(DocumentType("P")), Option(PaxAge(22)), false, None)
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType("P")), Option(PaxAge(22)), inTransit = true, None),
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType("P")), Option(PaxAge(22)), inTransit = true, None),
+        ManifestPassengerProfile(Nationality("FRA"), Option(DocumentType("P")), Option(PaxAge(22)), inTransit = false, None),
+        ManifestPassengerProfile(Nationality("ITA"), Option(DocumentType("I")), Option(PaxAge(22)), inTransit = false, None),
+        ManifestPassengerProfile(Nationality("AFG"), Option(DocumentType("P")), Option(PaxAge(22)), inTransit = false, None),
+        ManifestPassengerProfile(Nationality("AFG"), Option(DocumentType("P")), Option(PaxAge(22)), inTransit = false, None)
       ),
-      Option(CI)
+      Option(DC)
     )
 
     result === expected
