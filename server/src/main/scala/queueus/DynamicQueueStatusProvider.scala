@@ -16,10 +16,10 @@ case class DynamicQueueStatusProvider(airportConfig: AirportConfig, egatesProvid
   def allStatusesForPeriod: NumericRange[MillisSinceEpoch] => Future[Map[Terminal, Map[Queue, Map[MillisSinceEpoch, QueueStatus]]]] =
     period => {
       egatesProvider().map { egatePortUpdates =>
-        airportConfig.queuesByTerminal.map { case (terminal, queues) =>
+        airportConfig.queuesByTerminalWithDiversions.map { case (terminal, queues) =>
           val byQueue = queues.map {
-            case EGate => (EGate, egateStatuses(period, egatePortUpdates, terminal))
-            case queue => (queue, deskStatuses(airportConfig.maxDesksByTerminalAndQueue24Hrs, period, terminal, queue))
+            case (EGate, _) => (EGate, egateStatuses(period, egatePortUpdates, terminal))
+            case (from, to) => (from, deskStatuses(airportConfig.maxDesksByTerminalAndQueue24Hrs, period, terminal, to))
           }.toMap
           (terminal, byQueue)
         }
