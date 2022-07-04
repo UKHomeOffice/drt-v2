@@ -22,8 +22,7 @@ trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
 
   def maxProcessors(minuteMillis: NumericRange[Long],
                     queue: Queue,
-                    allocatedDesks: Map[Queue, List[Int]])
-                   (implicit ec: ExecutionContext): Future[WorkloadProcessorsProvider] =
+                    allocatedDesks: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] =
     if (flexedQueues.contains(queue)) {
       val deployedByQueue = allocatedDesks.values.toList
       val totalDeployed = if (deployedByQueue.nonEmpty) reduceIterables[Int](deployedByQueue)(_ + _) else List()

@@ -95,7 +95,7 @@ object DynamicRunnableDeskRecs {
       }
 
   def updateHistoricApiPaxNos(splitsSink: ActorRef)
-                             (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+                             (implicit ec: ExecutionContext, timeout: Timeout): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
@@ -153,7 +153,7 @@ object DynamicRunnableDeskRecs {
     })
 
   private def addArrivals(flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]])
-                         (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[ProcessingRequest, (ProcessingRequest, List[ApiFlightWithSplits]), NotUsed] =
+                         (implicit ec: ExecutionContext): Flow[ProcessingRequest, (ProcessingRequest, List[ApiFlightWithSplits]), NotUsed] =
     Flow[ProcessingRequest]
       .mapAsync(1) { crunchRequest =>
         flightsProvider(crunchRequest)
@@ -178,7 +178,7 @@ object DynamicRunnableDeskRecs {
       }
 
   def addPax(historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxCount]])
-            (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[(ProcessingRequest, List[ApiFlightWithSplits]), (ProcessingRequest, List[ApiFlightWithSplits]), NotUsed] =
+            (implicit ec: ExecutionContext, mat: Materializer): Flow[(ProcessingRequest, List[ApiFlightWithSplits]), (ProcessingRequest, List[ApiFlightWithSplits]), NotUsed] =
     Flow[(ProcessingRequest, List[ApiFlightWithSplits])]
       .mapAsync(1) { case (cr, flights) =>
         Source(flights)

@@ -17,8 +17,7 @@ object EmptyCapacityProvider extends QueueCapacityProvider {
     Future.successful(WorkloadProcessorsProvider(timeRange.map(_ => WorkloadProcessors(Seq()))))
 }
 
-case class DeskCapacityProvider(maxPerHour: IndexedSeq[Int])
-                               (implicit ec: ExecutionContext) extends QueueCapacityProvider {
+case class DeskCapacityProvider(maxPerHour: IndexedSeq[Int]) extends QueueCapacityProvider {
   assert(maxPerHour.length == 24, s"There must be 24 hours worth of max desks defined. ${maxPerHour.length} found")
 
   override def capacityForPeriod(timeRange: NumericRange[Long]): Future[WorkloadProcessorsProvider] = {
