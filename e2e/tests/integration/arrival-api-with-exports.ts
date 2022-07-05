@@ -62,7 +62,7 @@ describe('Arrival API with exports', () => {
     const nonEEADesk = "17";
     const invalidApi = "";
 
-  const csvRow = (diffFromScheduled: string, totalPax: string, apiEGates: string, terminalAverageEgates: string = "13") =>
+    const csvRow = (diffFromScheduled: string, totalPax: string, apiEGates: string, terminalAverageEgates: string = "13") =>
         `TS0123,TS0123,AMS,46/44R,On Chocks,${schDateTimeLocal},${estDateTimeLocal},${actDateTimeLocal},${estChoxDateTimeLocal},${actChoxDateTimeLocal},${diffFromScheduled},${pcpDateTimeLocal},` +
         `${totalPax},${totalPax},${invalidApi},` +
         `${apiEGates},${eeaDesk},${nonEEADesk},,` +
