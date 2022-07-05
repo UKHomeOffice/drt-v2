@@ -30,7 +30,7 @@ object OptimisationProviders {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def historicManifestsProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
-                               (implicit mat: Materializer, ec: ExecutionContext): HistoricManifestsProvider = arrivals =>
+                               (implicit ec: ExecutionContext): HistoricManifestsProvider = arrivals =>
     Source(arrivals.toList)
       .mapAsync(1) { arrival =>
         manifestLookupService
@@ -38,20 +38,20 @@ object OptimisationProviders {
           .map { case (_, maybeManifest) => maybeManifest }
           .recover {
             case t =>
-              log.warn(s"Failed to get historic manifest for ${arrival.unique}")
+              log.warn(s"Failed to get historic manifest for ${arrival.unique}", t.getMessage)
               None
           }
       }
       .collect { case Some(bam) => bam }
 
   def historicManifestsPaxProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
-                                  (implicit mat: Materializer, ec: ExecutionContext): HistoricManifestsPaxProvider = arrival =>
+                                  (implicit ec: ExecutionContext): HistoricManifestsPaxProvider = arrival =>
     manifestLookupService
       .historicManifestPax(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
       .map { case (_, maybeManifest) => maybeManifest }
       .recover {
         case t =>
-          log.warn(s"Failed to get historic manifest for ${arrival.unique}")
+          log.warn(s"Failed to get historic manifest for ${arrival.unique}", t.getMessage)
           None
       }
 
