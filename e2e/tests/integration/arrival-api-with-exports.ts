@@ -46,12 +46,12 @@ describe('Arrival API with exports', () => {
 
     const headersWithActApi = headersWithoutActApi + "," + actApiHeaders;
 
-    const eGatePax = "25";
-    const eeaDesk = "9";
+    const eGatePax = "26";
+    const eeaDesk = "8";
     const nonEEADesk = "17";
     const invalidApi = "";
 
-    const csvRow = (diffFromScheduled: string, totalPax: string, apiEGates: string, terminalAverageEgates: string = "13") =>
+  const csvRow = (diffFromScheduled: string, totalPax: string, apiEGates: string, terminalAverageEgates: string = "13") =>
         `TS0123,TS0123,AMS,46/44R,On Chocks,${schDateTimeLocal},${estDateTimeLocal},${actDateTimeLocal},${estChoxDateTimeLocal},${actChoxDateTimeLocal},${diffFromScheduled},${pcpDateTimeLocal},` +
         `${totalPax},${totalPax},${invalidApi},` +
         `${apiEGates},${eeaDesk},${nonEEADesk},,` +
@@ -92,7 +92,7 @@ describe('Arrival API with exports', () => {
 
     it('Allows you to view API splits in the flights export for users with api:view permission', () => {
         const dataWithoutActApi = csvRow("12","51", eGatePax);
-        const actApiData = "4.0,6.0,0.0,5.0,19.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0,\"FRA:24,AUS:10,ZWE:10,MRU:7\",\"25-49:51\"";
+        const actApiData = "3.0,7.0,0.0,5.0,19.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0,\"FRA:24,AUS:10,ZWE:10,MRU:7\",\"25-49:51\"";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
@@ -124,8 +124,8 @@ describe('Arrival API with exports', () => {
     });
 
     it('uses API splits for passenger numbers if they are within 5% of the port feed', () => {
-        const dataWithoutActApi = csvRow("12","50", "24", "12");
-        const actApiData = "4.0,6.0,0.0,5.0,18.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0,\"FRA:23,AUS:10,ZWE:10,MRU:7\",\"25-49:50\"";
+        const dataWithoutActApi = csvRow("12","50", "25", "12");
+        const actApiData = "3.0,7.0,0.0,5.0,18.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0,\"FRA:23,AUS:10,ZWE:10,MRU:7\",\"25-49:50\"";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";

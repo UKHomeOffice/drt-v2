@@ -27,8 +27,7 @@ describe("CEDAT arrival exports", () => {
     const actChoxTime = todayAtUtc(1, 12);
 
     const totalPax = "51";
-    const apiEgatePax = "25";
-    const eeaDesk = "9";
+    const eeaDesk = "8";
     const nonEEADesk = "17";
 
     const estTimeLocal = estTime.tz("Europe/London").format("HH:mm");
@@ -44,12 +43,15 @@ describe("CEDAT arrival exports", () => {
         ",,,," +
         terminalAverageEGates + ",37,1,,4.0,6.0,5.0,0.0,0.0,0.0,7.0,10.0,0.0," + eGateApiActual + "\n";
 
+    //1IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track,API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable),API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates
+    //TS0123,TS0123,AMS,46/44R,On Chocks,2022-07-05,01:55,02:05,02:07,02:11,02:12,02:25,51,51,25,8,17,,,,,,12,37,1,,3.0,7.0,5.0,0.0,0.0,0.0,7.0,10.0,0.0,18.0\n
+
 
     const manifest = (passengerList): object => manifestForDateTime(scheduledDateTime, passengerList)
 
     it('Exports CEDAT data in the format they expect', () => {
         const cedatCsv = cedatExportHeaders + "\n" +
-            csvRow("25", "19.0", "13");
+            csvRow("25", "18.0", "13");
         cy
             .addFlight(
                 {
