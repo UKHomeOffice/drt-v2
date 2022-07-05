@@ -6,7 +6,7 @@ import services.exports.Exports.actualAPISplitsAndHeadingsFromFlight
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.ApiPaxTypeAndQueueCount
-import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, UndefinedPaxType}
+import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 
@@ -15,12 +15,11 @@ class ExportsSpec extends Specification {
     "When I ask for the API splits and headings" >> {
       "I should see both pax types" >> {
         val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100))
-        val undefined = ApiPaxTypeAndQueueCount(UndefinedPaxType, EeaDesk, 1.0, None, None)
         val eeaMr = ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)
-        val fws = ApiFlightWithSplits(arrival, Set(Splits(Set(undefined, eeaMr), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)))
+        val fws = ApiFlightWithSplits(arrival, Set(Splits(Set(eeaMr), ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers)))
         val result = actualAPISplitsAndHeadingsFromFlight(fws)
 
-        result === Set(("API Actual - Undefined to EEA", 1.0), ("API Actual - EEA Machine Readable to EEA", 1.0))
+        result === Set(("API Actual - EEA Machine Readable to EEA", 1.0))
       }
     }
   }

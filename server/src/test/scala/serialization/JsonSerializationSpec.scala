@@ -53,8 +53,7 @@ class JsonSerializationSpec extends Specification {
         EeaBelowEGateAge,
         NonVisaNational,
         B5JPlusNational,
-        B5JPlusNationalBelowEGateAge,
-        UndefinedPaxType
+        B5JPlusNationalBelowEGateAge
       )
 
       val asJson: Seq[String] = allPaxTypes.map((pt: PaxType) => write(pt))
