@@ -69,7 +69,7 @@ object FlightsWithSplitsTable {
             case (true, Some((_, sourcesPot))) =>
               <.div(^.tabIndex := 0,
                 <.div(^.className := "popover-overlay", ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))),
-                <.div(^.className := "dashboard-arrivals-popup", ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot)))
+                <.div(^.className := "dashboard-arrivals-popup", ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot, props.portCode)))
               )
             case _ => <.div()
           },

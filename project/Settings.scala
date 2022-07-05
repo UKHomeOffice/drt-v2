@@ -70,7 +70,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "186"
-    val drtLib = "v258"
+    val drtLib = "v268"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "2.0.0"
@@ -166,7 +166,7 @@ object Settings {
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test" force(),
     "com.typesafe.akka" %% "akka-persistence" % akka force(),
     "com.typesafe.akka" %% "akka-persistence-query" % akka force(),
-    "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib ,
+    "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib,
     "com.typesafe.akka" %% "akka-slf4j" % akka force(),
     "com.typesafe.akka" %% "akka-http" % akkaHttp force(),
     "com.typesafe.akka" %% "akka-http-caching" % akkaHttp force(),
