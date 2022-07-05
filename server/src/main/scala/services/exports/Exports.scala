@@ -1,7 +1,6 @@
 package services.exports
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import services.graphstages.Crunch
@@ -27,7 +26,8 @@ object Exports {
         s.splits
           .map(s => (PaxTypesAndQueues.cedatDisplayName.get(s.paxTypeAndQueue), s.paxCount))
           .collect {
-            case (Some(displayName), paxCount) => (s"API Actual - $displayName", paxCount)
+            case (Some(displayName), paxCount) =>
+              (s"API Actual - $displayName", paxCount)
           }
     }
     .flatten
