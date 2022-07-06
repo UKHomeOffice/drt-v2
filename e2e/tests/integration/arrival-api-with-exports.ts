@@ -37,21 +37,32 @@ describe('Arrival API with exports', () => {
         "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
         "Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track";
 
-    const actApiHeaders = "API Actual - B5J+ National to EEA,API Actual - B5J+ National to e-Gates," +
-      "API Actual - B5J+ Child to EEA,API Actual - EEA Machine Readable to EEA," +
-      "API Actual - EEA Machine Readable to e-Gates,API Actual - EEA Non-Machine Readable to EEA," +
-      "API Actual - EEA Child to EEA,API Actual - Non-Visa National to Fast Track," +
-      "API Actual - Visa National to Fast Track,API Actual - Non-Visa National to Non-EEA," +
-      "API Actual - Visa National to Non-EEA,API Actual - Transit to Tx,Nationalities,Ages"
+    const actApiHeaders =
+      "API Actual - EEA Machine Readable to e-Gates," +
+      "API Actual - EEA Machine Readable to EEA," +
+      "API Actual - EEA Non-Machine Readable to EEA," +
+      "API Actual - EEA Child to EEA," +
+      "API Actual - GBR National to e-Gates," +
+      "API Actual - GBR National to EEA," +
+      "API Actual - GBR National Child to EEA," +
+      "API Actual - B5J+ National to e-Gates," +
+      "API Actual - B5J+ National to EEA," +
+      "API Actual - B5J+ Child to EEA," +
+      "API Actual - Visa National to Non-EEA," +
+      "API Actual - Non-Visa National to Non-EEA," +
+      "API Actual - Visa National to Fast Track," +
+      "API Actual - Non-Visa National to Fast Track," +
+      "Nationalities," +
+      "Ages"
 
     const headersWithActApi = headersWithoutActApi + "," + actApiHeaders;
 
-    const eGatePax = "25";
-    const eeaDesk = "9";
+    const eGatePax = "26";
+    const eeaDesk = "8";
     const nonEEADesk = "17";
     const invalidApi = "";
 
-    const csvRow = (diffFromScheduled: string, totalPax: string, apiEGates: string, terminalAverageEgates: string = "13") =>
+  const csvRow = (diffFromScheduled: string, totalPax: string, apiEGates: string, terminalAverageEgates: string = "13") =>
         `TS0123,TS0123,AMS,46/44R,On Chocks,${schDateTimeLocal},${estDateTimeLocal},${actDateTimeLocal},${estChoxDateTimeLocal},${actChoxDateTimeLocal},${diffFromScheduled},${pcpDateTimeLocal},` +
         `${totalPax},${totalPax},${invalidApi},` +
         `${apiEGates},${eeaDesk},${nonEEADesk},,` +
@@ -92,7 +103,7 @@ describe('Arrival API with exports', () => {
 
     it('Allows you to view API splits in the flights export for users with api:view permission', () => {
         const dataWithoutActApi = csvRow("12","51", eGatePax);
-        const actApiData = "4.0,6.0,0.0,5.0,19.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0,\"FRA:24,AUS:10,ZWE:10,MRU:7\",\"25-49:51\"";
+        const actApiData = "19.0,5.0,0.0,0.0,0.0,0.0,0.0,7.0,3.0,0.0,10.0,7.0,0.0,0.0,\"FRA:24,AUS:10,ZWE:10,MRU:7\",\"25-49:51\"";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
@@ -124,8 +135,8 @@ describe('Arrival API with exports', () => {
     });
 
     it('uses API splits for passenger numbers if they are within 5% of the port feed', () => {
-        const dataWithoutActApi = csvRow("12","50", "24", "12");
-        const actApiData = "4.0,6.0,0.0,5.0,18.0,0.0,0.0,0.0,0.0,7.0,10.0,0.0,\"FRA:23,AUS:10,ZWE:10,MRU:7\",\"25-49:50\"";
+        const dataWithoutActApi = csvRow("12","50", "25", "12");
+        const actApiData = "18.0,5.0,0.0,0.0,0.0,0.0,0.0,7.0,3.0,0.0,10.0,7.0,0.0,0.0,\"FRA:23,AUS:10,ZWE:10,MRU:7\",\"25-49:50\"";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
