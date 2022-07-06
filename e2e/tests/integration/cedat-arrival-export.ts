@@ -26,7 +26,8 @@ describe("CEDAT arrival exports", () => {
     "API Actual - Visa National to Non-EEA," +
     "API Actual - Non-Visa National to Non-EEA," +
     "API Actual - Visa National to Fast Track," +
-    "API Actual - Non-Visa National to Fast Track"
+    "API Actual - Non-Visa National to Fast Track," +
+    "API Actual - Transit to Transfer"
 
   const schDateLocal = scheduledDateTime.tz("Europe/London").format("YYYY-MM-DD");
   const schTimeLocal = scheduledDateTime.tz("Europe/London").format("HH:mm");
@@ -51,7 +52,7 @@ describe("CEDAT arrival exports", () => {
     totalPax + "," + totalPax + "," +
     apiEgatePax + "," + eeaDesk + "," + nonEEADesk + ",," +
     ",,,," +
-    terminalAverageEGates + ",37,1,," + eGateApiActual + ",5.0,0.0,0.0,0.0,0.0,0.0,7.0,3.0,0.0,10.0,7.0,0.0,0.0\n";
+    terminalAverageEGates + ",37,1,," + eGateApiActual + ",5.0,0.0,0.0,0.0,0.0,0.0,7.0,3.0,0.0,10.0,7.0,0.0,0.0,0.0\n";
 
   const manifest = (passengerList): object => manifestForDateTime(scheduledDateTime, passengerList)
   it('Exports CEDAT data in the format they expect', () => {
