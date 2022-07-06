@@ -300,15 +300,15 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       }
 
       val expected = List(
-        List(0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 0.0, 6.0, 7.0, 4.0, 5.0, 0.0),
-        List(0.0, 0.0, 0.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
-        List(0.0, 0.0, 0.0, 30.0, 30.0, 30.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0))
+        List(2.0, 1.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0, 4.0, 7.0, 6.0),
+        List(3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+        List(30.0, 30.0, 30.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 10.0, 0.0, 0.0))
 
       result === expected
     }
   }
 
-  private val actualApiHeadings = """API Actual - B5J+ National to EEA,API Actual - B5J+ National to e-Gates,API Actual - B5J+ Child to EEA,API Actual - EEA Machine Readable to EEA,API Actual - EEA Machine Readable to e-Gates,API Actual - EEA Non-Machine Readable to EEA,API Actual - EEA Child to EEA,API Actual - Non-Visa National to Fast Track,API Actual - Visa National to Fast Track,API Actual - Non-Visa National to Non-EEA,API Actual - Visa National to Non-EEA,API Actual - Transit to Tx,Nationalities,Ages"""
+  private val actualApiHeadings = """API Actual - EEA Machine Readable to e-Gates,API Actual - EEA Machine Readable to EEA,API Actual - EEA Non-Machine Readable to EEA,API Actual - EEA Child to EEA,API Actual - GBR National to e-Gates,API Actual - GBR National to EEA,API Actual - GBR National Child to EEA,API Actual - B5J+ National to e-Gates,API Actual - B5J+ National to EEA,API Actual - B5J+ Child to EEA,API Actual - Visa National to Non-EEA,API Actual - Non-Visa National to Non-EEA,API Actual - Visa National to Fast Track,API Actual - Non-Visa National to Fast Track,Nationalities,Ages"""
 
   "Given a list of Flights With Splits then I should get all the data for with API numbers when live numbers are missing" >> {
     val resultStream = withActualApiExport
@@ -318,9 +318,9 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,28,28,,2,4,9,13,3,7,8,10,,,,,0.0,0.0,0.0,1.0,2.0,3.0,0.0,6.0,7.0,4.0,5.0,0.0,"",""
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
-          |SA0326,SA0326,JHD,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,100,100,,30,60,10,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,28,28,,2,4,9,13,3,7,8,10,,,,,2.0,1.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.0,4.0,7.0,6.0,"",""
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,100,100,Y,30,60,10,,,,,,,,,,3.0,3.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
+          |SA0326,SA0326,JHD,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,100,100,,30,60,10,,,,,,,,,,30.0,30.0,30.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
           |""".stripMargin
 
     result === expected
@@ -341,7 +341,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,98,98,Y,7,15,32,44,11,23,29,35,,,,,0.0,0.0,0.0,1.0,2.0,3.0,0.0,6.0,7.0,4.0,5.0,0.0,"FRA:2,GBR:1,USA:1","0-11:1,25-49:2,50-65:1"
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,98,98,Y,7,15,32,44,11,23,29,35,,,,,2.0,1.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.0,4.0,7.0,6.0,"FRA:2,GBR:1,USA:1","0-11:1,25-49:2,50-65:1"
           |""".stripMargin
 
     result === expected
@@ -355,8 +355,8 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
-          |SA0326,SA0326,JHB,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,105,105,Y,32,62,11,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,100,100,Y,30,60,10,,,,,,,,,,3.0,3.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
+          |SA0326,SA0326,JHB,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,105,105,Y,32,62,11,,,,,,,,,,30.0,30.0,30.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
           |""".stripMargin
 
     result === expected
@@ -374,8 +374,8 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,100,100,Y,30,60,10,,,,,,,,,,0.0,0.0,0.0,3.0,3.0,3.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
-          |SA0326,SA0326,JHB,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,105,105,Y,32,62,11,,,,,,,,,,0.0,0.0,0.0,30.0,30.0,30.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,100,100,Y,30,60,10,,,,,,,,,,3.0,3.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
+          |SA0326,SA0326,JHB,/,Expected,2017-01-01 20:00,2017-01-01 20:00,,,,,2017-01-01 20:00,105,105,Y,32,62,11,,,,,,,,,,30.0,30.0,30.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
           |""".stripMargin
 
     result === expected
@@ -384,8 +384,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   "Concerning CEDAT" >> {
     val cedatFlightHeadings = """IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax,PCP Pax"""
     val cedatApiHeadings = """API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track"""
-    val cedatActualApiHeadings = """API Actual - B5JSSK to Desk,API Actual - B5JSSK to eGates,API Actual - EEA (Machine Readable),API Actual - EEA (Non Machine Readable),API Actual - Fast Track (Non Visa),API Actual - Fast Track (Visa),API Actual - Non EEA (Non Visa),API Actual - Non EEA (Visa),API Actual - Transfer,API Actual - eGates"""
-
+    val cedatActualApiHeadings = """API Actual - EEA Machine Readable to e-Gates,API Actual - EEA Machine Readable to EEA,API Actual - EEA Non-Machine Readable to EEA,API Actual - EEA Child to EEA,API Actual - GBR National to e-Gates,API Actual - GBR National to EEA,API Actual - GBR National Child to EEA,API Actual - B5J+ National to e-Gates,API Actual - B5J+ National to EEA,API Actual - B5J+ Child to EEA,API Actual - Visa National to Non-EEA,API Actual - Non-Visa National to Non-EEA,API Actual - Visa National to Fast Track,API Actual - Non-Visa National to Fast Track"""
     "Given a source of flights containing empty days and days with flights, then I should still get a CSV result" >> {
       val resultStream = cedatFlightExport
         .csvStream(Source(List(
@@ -398,8 +397,8 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
       val expected =
         s"""|$cedatFlightHeadings,$cedatApiHeadings,$cedatActualApiHeadings
-            |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,0.0,0.0,3.0,3.0,0.0,0.0,1.0,0.0,0.0,3.0
-            |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,,0.0,0.0,30.0,30.0,0.0,0.0,10.0,0.0,0.0,30.0
+            |SA0325,SA0325,JHC,/,Expected,2017-01-01,20:00,20:00,,,,20:00,100,100,30,60,10,,,,,,,,,,3.0,3.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0
+            |SA0326,SA0326,JHB,/,Expected,2017-01-01,20:00,20:00,,,,20:00,105,105,32,62,11,,,,,,,,,,30.0,30.0,30.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10.0,0.0,0.0
             |""".stripMargin
 
       result === expected

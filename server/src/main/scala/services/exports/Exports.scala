@@ -19,19 +19,6 @@ object Exports {
 
   def millisToUtcHoursAndMinutes: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes
 
-  def cedatActualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
-    .splits
-    .collect {
-      case s: Splits if s.source == SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages =>
-        s.splits
-          .map(s => (PaxTypesAndQueues.cedatDisplayName.get(s.paxTypeAndQueue), s.paxCount))
-          .collect {
-            case (Some(displayName), paxCount) =>
-              (s"API Actual - $displayName", paxCount)
-          }
-    }
-    .flatten
-
   def actualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
     .splits
     .collect {

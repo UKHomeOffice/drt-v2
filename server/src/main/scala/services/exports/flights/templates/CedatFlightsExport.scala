@@ -3,11 +3,9 @@ package services.exports.flights.templates
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import services.exports.Exports
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
-import uk.gov.homeoffice.drt.ports.{PaxTypesAndQueues, Queues}
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -20,26 +18,7 @@ case class CedatFlightsExport(start: SDateLike, end: SDateLike, terminal: Termin
 
   val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
 
-//  val actualApiHeadings: Seq[String] = Seq(
-//    "API Actual - B5JSSK to Desk",
-//    "API Actual - B5JSSK to eGates",
-//    "API Actual - EEA (Machine Readable)",
-//    "API Actual - EEA (Non Machine Readable)",
-//    "API Actual - Fast Track (Non Visa)",
-//    "API Actual - Fast Track (Visa)",
-//    "API Actual - Non EEA (Non Visa)",
-//    "API Actual - Non EEA (Visa)",
-//    "API Actual - Transfer",
-//    "API Actual - eGates"
-//  )
-
-  val actualApiHeadings: immutable.Seq[String] = PaxTypesAndQueues.inOrder.map(PaxTypesAndQueues.cedatDisplayName.get).collect {
-    case Some(heading) => s"API Actual - $heading"
-  }
-
-  def headingsForSplitSource(queueNames: Seq[Queue], source: String): String = queueNames
-    .map(q => s"$source ${Queues.displayName(q)}")
-    .mkString(",")
+  val actualApiHeadings: immutable.Seq[String] = PaxTypesAndQueues.inOrder.map(heading => s"API Actual - ${heading.displayName}")
 
   def arrivalHeadings(queueNames: Seq[Queue]): String =
     arrivalHeadings + ",PCP Pax," +
@@ -70,20 +49,15 @@ case class CedatFlightsExport(start: SDateLike, end: SDateLike, terminal: Termin
   override val headings: String = allHeadings(queueNames)
 
   def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
-    val splitsForSources = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
     arrivalAsRawCsvValues(
       fws.apiFlight,
       millisToDateStringFn,
       millisToTimeStringFn
-    ) ++ List(fws.apiFlight.bestPcpPaxEstimate.pax.map(_.toString).getOrElse("")) ++ splitsForSources
+    ) ++ List(fws.apiFlight.bestPcpPaxEstimate.pax.map(_.toString).getOrElse("")) ++ splitsForSources(fws)
   }
 
   override def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Iterable[String] = (flightWithSplitsToCsvRow(fws) :::
     actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList).map(s => s"$s")
-
-  override def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Iterable[String]): Iterable[Double] =
-    headings.map(h => Exports.cedatActualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
-      .map(n => Math.round(n).toDouble)
 
   override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean = standardFilter
 }
