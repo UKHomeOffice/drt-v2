@@ -13,7 +13,7 @@ import services.SDate
 import services.exports.Exports
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
-import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues
+import uk.gov.homeoffice.drt.ports.{PaxTypesAndQueues, Queues}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
@@ -52,6 +52,12 @@ trait FlightsExport {
 
   val splitSources = List(ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage)
 
+  def splitsForSources(fws: ApiFlightWithSplits): List[String] = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
+
+  def headingsForSplitSource(queueNames: Seq[Queue], source: String): String = queueNames
+    .map(q => s"$source ${Queues.displayName(q)}")
+    .mkString(",")
+
   def queueSplits(queueNames: Seq[Queue],
                   fws: ApiFlightWithSplits,
                   splitSource: SplitSource): Seq[String] =
@@ -65,7 +71,8 @@ trait FlightsExport {
       .getOrElse(Map())
 
   def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Iterable[String]): Iterable[Double] =
-    headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap.getOrElse(h, 0.0))
+    headings.map(h => Exports.actualAPISplitsAndHeadingsFromFlight(flight).toMap
+      .getOrElse(h, 0.0))
       .map(n => Math.round(n).toDouble)
 
   def csvStream(flightsStream: Source[(FlightsWithSplits, VoyageManifests), NotUsed]): Source[String, NotUsed] =
