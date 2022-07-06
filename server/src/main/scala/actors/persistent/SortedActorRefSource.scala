@@ -34,12 +34,13 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
       override protected def logSource: Class[_] = classOf[SortedActorRefSource]
 
       private val buffer: mutable.SortedSet[ProcessingRequest] = mutable.SortedSet[ProcessingRequest]() ++ initialQueue
+      private var getHead: Boolean = true
 
       override protected def stageActorName: String =
         inheritedAttributes.get[Attributes.Name].map(_.n).getOrElse(super.stageActorName)
 
       val ref: ActorRef = getEagerStageActor(eagerMaterializer) {
-        case (_, m: ProcessingRequest @unchecked) =>
+        case (_, m: ProcessingRequest@unchecked) =>
           buffer += m
           persistentActor ! m
           tryPushElement()
@@ -54,10 +55,12 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
 
       private def tryPushElement(): Unit = {
         if (isAvailable(out)) {
-          buffer.headOption.foreach { e =>
+          val maybeNextElement = if (getHead || buffer.size == 1) buffer.headOption else buffer.drop(1).headOption
+          maybeNextElement.foreach { e =>
             persistentActor ! RemoveCrunchRequest(e)
             buffer -= e
             push(out, e)
+            getHead = !getHead
           }
         }
       }
