@@ -4,12 +4,11 @@ import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDa
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
-import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.transitToTransfer
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PaxTypesAndQueues}
 import uk.gov.homeoffice.drt.time.SDateLike
-
-import scala.collection.immutable
 
 
 case class CedatFlightsExport(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsExport {
@@ -18,7 +17,8 @@ case class CedatFlightsExport(start: SDateLike, end: SDateLike, terminal: Termin
 
   val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
 
-  val actualApiHeadings: immutable.Seq[String] = PaxTypesAndQueues.inOrder.map(heading => s"API Actual - ${heading.displayName}")
+  private val queuesIncTransit: List[PaxTypeAndQueue] = PaxTypesAndQueues.inOrder :+ transitToTransfer
+  val actualApiHeadings = queuesIncTransit.map(heading => s"API Actual - ${heading.displayName}")
 
   def arrivalHeadings(queueNames: Seq[Queue]): String =
     arrivalHeadings + ",PCP Pax," +
