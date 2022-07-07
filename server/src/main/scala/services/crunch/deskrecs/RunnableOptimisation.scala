@@ -64,7 +64,7 @@ object RunnableOptimisation {
     val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {
       implicit builder =>
         (crunchRequests, killSwitch) =>
-          crunchRequests ~> crunchRequestsToQueueMinutes ~> killSwitch ~> deskRecsSink
+          crunchRequests ~> crunchRequestsToQueueMinutes.withAttributes(Attributes.inputBuffer(initial = 1, max = 1)) ~> killSwitch ~> deskRecsSink
           ClosedShape
     }
 
