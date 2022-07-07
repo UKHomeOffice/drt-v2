@@ -3,7 +3,7 @@ package services.crunch.deskrecs
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask
-import akka.stream.Materializer
+import akka.stream.{Attributes, Materializer}
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -57,17 +57,17 @@ object DynamicRunnableDeskRecs {
                                   (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[ProcessingRequest, PortStateQueueMinutes, NotUsed] =
     Flow[ProcessingRequest]
       .wireTap(cr => log.info(s"${cr.localDate} crunch request processing started"))
-      .via(addArrivals(arrivalsProvider))
+      .via(addArrivals(arrivalsProvider)).withAttributes(Attributes.inputBuffer(initial = 1, max = 1))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing arrivals added"))
-      .via(addPax(historicManifestsPaxProvider))
+      .via(addPax(historicManifestsPaxProvider)).withAttributes(Attributes.inputBuffer(initial = 1, max = 1))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing pax added"))
-      .via(updateHistoricApiPaxNos(splitsSink))
+      .via(updateHistoricApiPaxNos(splitsSink)).withAttributes(Attributes.inputBuffer(initial = 1, max = 1))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing pax updated"))
-      .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
+      .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator)).withAttributes(Attributes.inputBuffer(initial = 1, max = 1))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits added"))
-      .via(updateSplits(splitsSink))
+      .via(updateSplits(splitsSink)).withAttributes(Attributes.inputBuffer(initial = 1, max = 1))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits persisted"))
-      .via(toDeskRecs(maxDesksProviders, portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider))
+      .via(toDeskRecs(maxDesksProviders, portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider)).withAttributes(Attributes.inputBuffer(initial = 1, max = 1))
 
   def validApiPercentage(flights: Iterable[ApiFlightWithSplits]): Double = {
     val totalLiveSplits = flights.count(_.hasApi)
