@@ -23,7 +23,7 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSou
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, HistoricApiFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, ForecastFeedSource, HistoricApiFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{Map, NumericRange}
@@ -208,11 +208,7 @@ object DynamicRunnableDeskRecs {
           }
       }
 
-  private def noReliablePax(f: ApiFlightWithSplits): Boolean =
-    !f.apiFlight.TotalPax.exists(tp => {
-      val sources = List(ApiFeedSource, HistoricApiFeedSource, LiveFeedSource)
-      sources.contains(tp.feedSource)
-    })
+  private def noReliablePax(f: ApiFlightWithSplits): Boolean = f.apiFlight.TotalPax.isEmpty
 
   def addSplits(liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifests, NotUsed]],
                 historicManifestsProvider: Iterable[Arrival] => Source[ManifestLike, NotUsed],
