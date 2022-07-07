@@ -51,7 +51,7 @@ object StatusPage {
 
           val allFeedStatusesSeq = allFeedStatuses.filter(_.feedSource == ApiFeedSource) ++ allFeedStatuses.filterNot(_.feedSource == ApiFeedSource)
 
-          val isCiriumAsPortLive = airportConfig.portCode.isCiriumAsPortLive
+          val isCiriumAsPortLive = airportConfig.noLivePortFeed && airportConfig.aclDisabled
           allFeedStatusesSeq.map(feed => {
             val ragStatus = FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, feed.feedSource.maybeLastUpdateThreshold, feed.feedStatuses)
 
