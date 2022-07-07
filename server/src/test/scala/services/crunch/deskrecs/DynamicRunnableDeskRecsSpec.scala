@@ -58,7 +58,8 @@ object OptimiserMocks {
     }
   }
 
-  def getMockManifestLookupService(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]], portCode: PortCode)(implicit ec: ExecutionContext, mat: Materializer): MockManifestLookupService =
+  def getMockManifestLookupService(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]], portCode: PortCode)
+                                  (implicit mat: Materializer): MockManifestLookupService =
     MockManifestLookupService(arrivalsWithMaybePax.map { case (arrival, maybePax) =>
       val key = UniqueArrivalKey(portCode, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
       val maybeManifest = maybePax.map(pax => BestAvailableManifest.historic(VoyageManifestGenerator.manifestForArrival(arrival, pax)))
@@ -69,25 +70,23 @@ object OptimiserMocks {
       (key, maybeManifest)
     }, portCode)
 
-  def mockFlightsProvider(arrivals: List[Arrival])
-                         (implicit ec: ExecutionContext): ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]] =
+  def mockFlightsProvider(arrivals: List[Arrival]): ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]] =
     _ => Future.successful(Source(List(arrivals.map(a => ApiFlightWithSplits(a, Set())))))
 
 
-  def mockLiveManifestsProviderNoop(implicit ec: ExecutionContext): ProcessingRequest => Future[Source[VoyageManifests, NotUsed]] = {
+  def mockLiveManifestsProviderNoop: ProcessingRequest => Future[Source[VoyageManifests, NotUsed]] = {
     _ => Future.successful(Source(List()))
   }
 
-  def mockHistoricManifestsProviderNoop(implicit ec: ExecutionContext): HistoricManifestsProvider = {
+  def mockHistoricManifestsProviderNoop: HistoricManifestsProvider = {
     _: Iterable[Arrival] => Source(List())
   }
 
-  def mockHistoricManifestsPaxProviderNoop(implicit ec: ExecutionContext): HistoricManifestsPaxProvider = {
+  def mockHistoricManifestsPaxProviderNoop: HistoricManifestsPaxProvider = {
     _: Arrival => Future.successful(None)
   }
 
-  def mockLiveManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]])
-                               (implicit ec: ExecutionContext): ProcessingRequest => Future[Source[VoyageManifests, NotUsed]] = {
+  def mockLiveManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]]): ProcessingRequest => Future[Source[VoyageManifests, NotUsed]] = {
     val manifests = maybePax match {
       case Some(pax) => VoyageManifests(Set(manifestForArrival(arrival, pax)))
       case None => VoyageManifests(Set())
@@ -231,19 +230,12 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     }
 
     "add historic API pax" >> {
-      "When I have ACL pax number I should get some pax from historic API" >> {
-        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(AclFeedSource),
-          totalPax = Set(TotalPaxSource(Option(100), AclFeedSource)))
-        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(100), AclFeedSource),
-          TotalPaxSource(Option(10), HistoricApiFeedSource)))
-      }
-
-      "When I have ForecastPortFeed pax number I should get some pax from historic API" >> {
-        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(ForecastFeedSource),
-          totalPax = Set(TotalPaxSource(Option(100), ForecastFeedSource)))
-        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(100), ForecastFeedSource),
-          TotalPaxSource(Option(10), HistoricApiFeedSource)))
-      }
+//      "When I have ACL pax number I should get some pax from historic API" >> {
+//        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(AclFeedSource),
+//          totalPax = Set(TotalPaxSource(Option(100), AclFeedSource)))
+//        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(100), AclFeedSource),
+//          TotalPaxSource(Option(10), HistoricApiFeedSource)))
+//      }
 
       "When I have no Feed I should get some pax from historic API" >> {
         val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(),
