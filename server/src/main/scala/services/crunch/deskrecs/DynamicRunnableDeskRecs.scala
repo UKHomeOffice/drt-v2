@@ -183,7 +183,7 @@ object DynamicRunnableDeskRecs {
       .mapAsync(1) { case (cr, flights) =>
         val startTime = SDate.now()
         Source(flights)
-          .mapAsync(10) { flight =>
+          .mapAsync(1) { flight =>
             if (!flight.apiFlight.FeedSources.contains(ApiFeedSource)) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxCount) =>
