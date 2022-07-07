@@ -67,6 +67,7 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
 
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
+          log.info(s"SortedActorRefSource Pulled (with ${buffer.size} elements). isAvailable: ${isAvailable(out)}")
           tryPushElement()
         }
       })
