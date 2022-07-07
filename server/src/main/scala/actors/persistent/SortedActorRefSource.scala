@@ -34,7 +34,7 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
       override protected def logSource: Class[_] = classOf[SortedActorRefSource]
 
       private val buffer: mutable.SortedSet[ProcessingRequest] = mutable.SortedSet[ProcessingRequest]() ++ initialQueue
-      private var getHead: Boolean = true
+      private var nextElementPosition: Int = 0
 
       override protected def stageActorName: String =
         inheritedAttributes.get[Attributes.Name].map(_.n).getOrElse(super.stageActorName)
@@ -55,19 +55,19 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
 
       private def tryPushElement(): Unit = {
         if (isAvailable(out)) {
-          val maybeNextElement = if (getHead || buffer.size == 1) buffer.headOption else buffer.drop(1).headOption
+          val maybeNextElement = if (buffer.size > nextElementPosition) buffer.drop(nextElementPosition).headOption else buffer.headOption
           maybeNextElement.foreach { e =>
             persistentActor ! RemoveCrunchRequest(e)
             buffer -= e
             push(out, e)
-            getHead = !getHead
+            nextElementPosition = if (nextElementPosition <= 4) nextElementPosition + 1 else 0
           }
         }
       }
 
       setHandler(out, new OutHandler {
         override def onPull(): Unit = {
-          log.info(s"SortedActorRefSource Pulled (with ${buffer.size} elements). isAvailable: ${isAvailable(out)}")
+          log.info  (s"SortedActorRefSource Pulled (with ${buffer.size} elements). isAvailable: ${isAvailable(out)}")
           tryPushElement()
         }
       })
