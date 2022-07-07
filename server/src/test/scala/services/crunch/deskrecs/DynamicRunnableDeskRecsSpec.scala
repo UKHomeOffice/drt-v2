@@ -231,11 +231,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     }
 
     "add historic API pax" >> {
-      "When I have live manifests matching the arrival where the live manifest is within the trust threshold I should get some pax from historic API" >> {
-        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(100), LiveFeedSource),
-          TotalPaxSource(Option(10), HistoricApiFeedSource)))
-      }
-
       "When I have ACL pax number I should get some pax from historic API" >> {
         val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(AclFeedSource),
           totalPax = Set(TotalPaxSource(Option(100), AclFeedSource)))
