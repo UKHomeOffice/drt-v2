@@ -23,7 +23,7 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSou
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, ForecastFeedSource, HistoricApiFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, HistoricApiFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{Map, NumericRange}
@@ -73,9 +73,7 @@ object DynamicRunnableDeskRecs {
     val totalLiveSplits = flights.count(_.hasApi)
     val validLiveSplits = flights.count(_.hasValidApi)
     if (totalLiveSplits > 0) {
-      val percentage = (validLiveSplits.toDouble / totalLiveSplits) * 100
-      log.info(s"Valid API: 100 * $validLiveSplits / $totalLiveSplits = $percentage")
-      percentage
+      (validLiveSplits.toDouble / totalLiveSplits) * 100
     } else 100
   }
 
@@ -184,11 +182,11 @@ object DynamicRunnableDeskRecs {
         val startTime = SDate.now()
         val flightsWithNoApiFeedSource = flights.count(!_.apiFlight.FeedSources.contains(ApiFeedSource))
         log.info(s"DynamicRunnableDeskRecs: Existing logic has $flightsWithNoApiFeedSource pax lookups")
-        val flightsToLookUp = flights.count(noReliablePax)
+        val flightsToLookUp = flights.count(hasNoPaxSources)
         log.info(s"DynamicRunnableDeskRecs: New logic has $flightsToLookUp pax lookups")
         Source(flights)
           .mapAsync(1) { flight =>
-            if (noReliablePax(flight)) {
+            if (hasNoPaxSources(flight)) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxCount) =>
                   val totalPax: Set[TotalPaxSource] = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(manifestPaxLike.pax, HistoricApiFeedSource))
@@ -208,7 +206,7 @@ object DynamicRunnableDeskRecs {
           }
       }
 
-  private def noReliablePax(f: ApiFlightWithSplits): Boolean = f.apiFlight.TotalPax.isEmpty
+  private def hasNoPaxSources(f: ApiFlightWithSplits): Boolean = f.apiFlight.TotalPax.isEmpty
 
   def addSplits(liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifests, NotUsed]],
                 historicManifestsProvider: Iterable[Arrival] => Source[ManifestLike, NotUsed],
