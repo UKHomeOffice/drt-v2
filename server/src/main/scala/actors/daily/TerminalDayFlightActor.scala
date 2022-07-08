@@ -116,7 +116,6 @@ class TerminalDayFlightActor(year: Int,
       updateAndPersistDiffAndAck(diff)
 
     case RemoveSplits =>
-      println(s"Removing splits for $terminal and $year-$month-$day")
       val diff = FlightsWithSplitsDiff(state.flights.values.map(_.copy(splits = Set(), lastUpdated = Option(now().millisSinceEpoch))), Seq())
       updateAndPersistDiffAndAck(diff)
 
