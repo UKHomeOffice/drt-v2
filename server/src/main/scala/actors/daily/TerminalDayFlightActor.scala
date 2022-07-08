@@ -9,14 +9,14 @@ import akka.actor.Props
 import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, PaxForArrivals, SplitsForArrivals}
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, PaxForArrivals, RemoveSplits, SplitsForArrivals}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightCode, VoyageNumberLike}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.concurrent.duration.FiniteDuration
@@ -32,14 +32,13 @@ object TerminalDayFlightActor {
     Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), None))
 }
 
-class TerminalDayFlightActor(
-                              year: Int,
-                              month: Int,
-                              day: Int,
-                              terminal: Terminal,
-                              val now: () => SDateLike,
-                              maybePointInTime: Option[MillisSinceEpoch],
-                              maybeRemovalMessageCutOff: Option[FiniteDuration]
+class TerminalDayFlightActor(year: Int,
+                             month: Int,
+                             day: Int,
+                             terminal: Terminal,
+                             val now: () => SDateLike,
+                             maybePointInTime: Option[MillisSinceEpoch],
+                             maybeRemovalMessageCutOff: Option[FiniteDuration],
                             ) extends RecoveryActorLike {
 
   val loggerSuffix: String = maybePointInTime match {
@@ -116,8 +115,12 @@ class TerminalDayFlightActor(
       val diff = pax.diff(state, now().millisSinceEpoch)
       updateAndPersistDiffAndAck(diff)
 
+    case RemoveSplits =>
+      println(s"Removing splits for $terminal and $year-$month-$day")
+      val diff = FlightsWithSplitsDiff(state.flights.values.map(_.copy(splits = Set(), lastUpdated = Option(now().millisSinceEpoch))), Seq())
+      updateAndPersistDiffAndAck(diff)
+
     case GetState =>
-      log.debug(s"Received GetState")
       sender() ! state
 
     case _: SaveSnapshotSuccess =>

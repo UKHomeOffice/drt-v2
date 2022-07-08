@@ -210,4 +210,6 @@ object Actions {
   case object GetGateStandWalktime extends Action
 
   case class UpdateGateStandWalktime(walkTimes:WalkTimes) extends Action
+
+  case class RequestForecastRecrunch(recalculateSplits: Boolean) extends Action
 }

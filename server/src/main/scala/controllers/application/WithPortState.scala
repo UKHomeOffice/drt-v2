@@ -3,10 +3,11 @@ package controllers.application
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince, PointInTimeQuery}
 import akka.pattern.ask
 import controllers.Application
-import uk.gov.homeoffice.drt.auth.Roles.DesksAndQueuesView
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, Request}
+import services.crunch.CrunchManager.{queueDaysToReCrunch, queueDaysToReCrunchWithUpdatedSplits}
+import uk.gov.homeoffice.drt.auth.Roles.{DesksAndQueuesView, SuperAdmin}
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -66,6 +67,19 @@ trait WithPortState {
             log.error(t, "Error processing request for port state")
             Future(InternalServerError)
         }
+    }
+  }
+
+  def reCrunch: Action[AnyContent] = authByRole(SuperAdmin) {
+    Action.async { request: Request[AnyContent] =>
+      request.body.asText match {
+        case Some("true") =>
+          queueDaysToReCrunchWithUpdatedSplits(ctrl.flightsActor, ctrl.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now)
+          Future.successful(Ok("Re-crunching with updated splits"))
+        case _ =>
+          queueDaysToReCrunch(ctrl.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now)
+          Future.successful(Ok("Re-crunching without updating splits"))
+      }
     }
   }
 }
