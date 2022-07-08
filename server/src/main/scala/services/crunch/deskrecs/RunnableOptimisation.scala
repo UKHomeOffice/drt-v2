@@ -6,7 +6,7 @@ import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
 import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink}
-import akka.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
+import akka.stream.{Attributes, ClosedShape, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.PortStateMinutes
 import org.slf4j.{Logger, LoggerFactory}
