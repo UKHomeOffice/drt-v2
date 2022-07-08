@@ -18,7 +18,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.PortFeedUpload
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, FeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, ApiFeedSource, FeedSource, LiveFeedSource}
 
 
 object StatusPage {
@@ -26,12 +26,13 @@ object StatusPage {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props()
-  case class Model(statuses: Pot[Seq[FeedSourceStatuses]], user: Pot[LoggedInUser])
+
+  case class Model(statuses: Pot[Seq[FeedSourceStatuses]], user: Pot[LoggedInUser], airportConfig: Pot[AirportConfig])
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StatusPage")
     .render_P { _ =>
 
-      val modelRcp = SPACircuit.connect(rm => Model(rm.feedStatuses, rm.loggedInUserPot))
+      val modelRcp = SPACircuit.connect(rm => Model(rm.feedStatuses, rm.loggedInUserPot, rm.airportConfig))
 
       def checkFeed(feedSource: FeedSource): Callback = Callback {
         SPACircuit.dispatch(CheckFeed(feedSource))
@@ -44,10 +45,13 @@ object StatusPage {
         val statusContentPot = for {
           allFeedStatuses <- model.statuses
           user <- model.user
+          airportConfig <- model.airportConfig
         } yield {
           val isLiveFeedAvailable = allFeedStatuses.count(_.feedSource == LiveFeedSource) > 0
 
           val allFeedStatusesSeq = allFeedStatuses.filter(_.feedSource == ApiFeedSource) ++ allFeedStatuses.filterNot(_.feedSource == ApiFeedSource)
+
+          val isCiriumAsPortLive = airportConfig.noLivePortFeed && airportConfig.aclDisabled
 
           allFeedStatusesSeq.map(feed => {
             val ragStatus = FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, feed.feedSource.maybeLastUpdateThreshold, feed.feedStatuses)
@@ -59,10 +63,14 @@ object StatusPage {
                 <.h3(feed.feedSource.name, " ", apiDataTooltip)
               else if (manualCheckAllowed)
                 <.h3(feed.feedSource.name, " ", MuiButton(variant = "outlined", size = "medium", color = Color.default)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
+              else if (isCiriumAsPortLive)
+                <.h3(feed.feedSource.displayName(Option("Live arrival feed")))
               else
-                <.h3(feed.feedSource.name)
-              ,
-              <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isLiveFeedAvailable))),
+                <.h3(feed.feedSource.name),
+              if (isCiriumAsPortLive)
+                <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isCiriumAsPortLive)))
+              else
+                <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isLiveFeedAvailable))),
               {
                 val times = Seq(
                   (("Updated", "When we last received new data"), feed.feedStatuses.lastUpdatesAt),
