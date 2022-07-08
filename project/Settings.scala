@@ -166,7 +166,7 @@ object Settings {
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test" force(),
     "com.typesafe.akka" %% "akka-persistence" % akka force(),
     "com.typesafe.akka" %% "akka-persistence-query" % akka force(),
-    "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib ,
+    "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib,
     "com.typesafe.akka" %% "akka-slf4j" % akka force(),
     "com.typesafe.akka" %% "akka-http" % akkaHttp force(),
     "com.typesafe.akka" %% "akka-http-caching" % akkaHttp force(),
