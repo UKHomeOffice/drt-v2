@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.data.Pot
+import drt.client.actions.Actions.RequestForecastRecrunch
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -9,8 +10,8 @@ import drt.client.services.SPACircuit
 import drt.client.services.handlers.CheckFeed
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
 import japgolly.scalajs.react.component.Scala.Component
@@ -19,6 +20,8 @@ import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.PortFeedUpload
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, ApiFeedSource, FeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.auth.Roles.{PortFeedUpload, SuperAdmin}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, FeedSource, LiveFeedSource}
 
 
 object StatusPage {
@@ -37,6 +40,15 @@ object StatusPage {
       def checkFeed(feedSource: FeedSource): Callback = Callback {
         SPACircuit.dispatch(CheckFeed(feedSource))
       }
+
+      def requestForecastRecrunch(): Callback = Callback {
+        SPACircuit.dispatch(RequestForecastRecrunch(recalculateSplits = false))
+      }
+
+      def requestSplitsRefresh(): Callback = Callback {
+        SPACircuit.dispatch(RequestForecastRecrunch(recalculateSplits = true))
+      }
+
 
       modelRcp { proxy =>
 
@@ -100,9 +112,25 @@ object StatusPage {
           }).toVdomArray
         }
 
+        val crunchControlsPot = for {
+          user <- model.user
+        } yield {
+          if (user.hasRole(SuperAdmin)) <.div(
+            <.br(),
+            <.h2("Crunch"),
+            <.div(^.className := "crunch-actions-container",
+              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Request forecast re-crunch", ^.onClick --> requestForecastRecrunch())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Request splits refresh", ^.onClick --> requestSplitsRefresh())),
+            )
+          ) else EmptyVdom
+        }
+
         <.div(
           <.h2("Feeds status"),
-          statusContentPot.getOrElse(EmptyVdom)
+          <.div(^.className := "feed-status-container",
+            statusContentPot.getOrElse(EmptyVdom)
+          ),
+          crunchControlsPot.getOrElse(EmptyVdom)
         )
       }
     }

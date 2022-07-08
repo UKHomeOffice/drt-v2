@@ -227,6 +227,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new SnackbarHandler(zoomRW(_.snackbarMessage)((m, v) => m.copy(snackbarMessage = v))),
       new RedListPortsHandler(zoomRW(_.redListPorts)((m, v) => m.copy(redListPorts = v))),
       new GateStandWalkTimePortsHandler(zoomRW(_.gateStandWalkTime)((m, v) => m.copy(gateStandWalkTime = v))),
+      new CrunchHandler(zoomRW(identity)((m, _) => m))
     )
 
     composedHandlers
