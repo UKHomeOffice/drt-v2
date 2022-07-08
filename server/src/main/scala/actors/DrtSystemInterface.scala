@@ -3,7 +3,6 @@ package actors
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.GetFlights
 import actors.daily.PassengersActor
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
 import actors.persistent.prediction.TouchdownPredictionActor
@@ -52,13 +51,14 @@ import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedRes
 import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
+import services.crunch.CrunchManager.queueDaysToReCrunch
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.crunch.{CrunchProps, CrunchSystem}
-import services.graphstages.{Crunch, FlightFilter}
+import services.graphstages.FlightFilter
 import services.prediction.TouchdownPrediction
 import services.staffing.StaffMinutesChecker
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival, WithTimeAccessor}
@@ -119,6 +119,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val fcstActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-forecast")
   val liveBaseActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-live-base")
   val liveActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-live")
+  val crunchManagerActor: ActorRef = system.actorOf(Props(new CrunchManagerActor), name = "crunch-manager-actor")
 
   val portStateActor: ActorRef
   val shiftsActor: ActorRef
@@ -261,7 +262,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
       egateBanksUpdatesActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
 
-      if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor)
+      crunchManagerActor ! SetCrunchRequestQueue(crunchRequestQueueActor)
+
+      if (params.recrunchOnStart) queueDaysToReCrunch(crunchRequestQueueActor, portDeskRecs.crunchOffsetMinutes, params.forecastMaxDays, now)
 
       (crunchRequestQueueActor, deploymentRequestQueue, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
     }
@@ -369,15 +372,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         system.log.info(s"Requesting ACL feed")
         aclFeed.requestArrivals
       }, initialDelay, 1.day)
-  }
-
-  def queueDaysToReCrunch(crunchQueueActor: ActorRef): Unit = {
-    val today = now()
-    val millisToCrunchStart = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes) _
-    val daysToReCrunch = (0 until params.forecastMaxDays).map(d => {
-      millisToCrunchStart(today.addDays(d)).millisSinceEpoch
-    })
-    crunchQueueActor ! UpdatedMillis(daysToReCrunch)
   }
 
   def liveBaseArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] = {
