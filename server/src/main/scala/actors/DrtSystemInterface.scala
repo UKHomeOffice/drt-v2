@@ -373,7 +373,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         aclFeed.requestArrivals
       }, initialDelay, 1.day)
   }
-  
+
   def liveBaseArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] = {
     if (config.get[Boolean]("feature-flags.use-cirium-feed")) {
       log.info(s"Using Cirium Live Base Feed")
