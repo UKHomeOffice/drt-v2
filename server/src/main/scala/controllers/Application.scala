@@ -79,6 +79,8 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def noLivePortFeed: Boolean = config.get[Boolean]("feature-flags.no-live-port-feed")
 
+  def aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)
+
   private def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
 
   lazy val airportConfig: AirportConfig = {
@@ -87,6 +89,7 @@ trait AirportConfProvider extends AirportConfiguration {
       outOfHoursContactPhone = oohPhone,
       useTimePredictions = useTimePredictions,
       noLivePortFeed = noLivePortFeed,
+      aclDisabled = aclDisabled
     )
 
     configForPort.assertValid()
@@ -114,6 +117,7 @@ trait UserRoleProviderLike {
     )
   }
 }
+
 @Singleton
 class Application @Inject()(implicit val config: Configuration, env: Environment)
   extends InjectedController

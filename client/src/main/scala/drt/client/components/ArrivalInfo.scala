@@ -9,10 +9,11 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.TableSection
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
 
 object ArrivalInfo {
 
-  case class Props(arrivalSources: Pot[List[Option[FeedSourceArrival]]]) extends UseValueEq
+  case class Props(arrivalSources: Pot[List[Option[FeedSourceArrival]]], airportConfig: AirportConfig) extends UseValueEq
 
   def SourcesTable: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalSourcesTable")
     .render_P(props => {
@@ -24,7 +25,7 @@ object ArrivalInfo {
               tableHead,
               <.tbody(
                 sources.collect { case Some(sourceArrival) =>
-                  FeedSourceRow.component(FeedSourceRow.Props(sourceArrival))
+                  FeedSourceRow.component(FeedSourceRow.Props(sourceArrival, props.airportConfig))
                 }.toTagMod
               )))
         case Pending(_) => <.div("Waiting for sources")
@@ -63,17 +64,20 @@ object ArrivalInfo {
 
 object FeedSourceRow {
 
-  case class Props(feedSourceArrival: FeedSourceArrival) extends UseValueEq
+  case class Props(feedSourceArrival: FeedSourceArrival, airportConfig: AirportConfig) extends UseValueEq
+
+  def feedDisplayName(isCiriumAsPortLive: Boolean, feedSource: FeedSource) = if (isCiriumAsPortLive)
+    feedSource.displayName(Option("Live arrival feed")) else feedSource.name
 
   val component = ScalaComponent.builder[Props](displayName = "TableRow")
     .render_P(props => {
       val feedSource = props.feedSourceArrival.feedSource
       val arrival = props.feedSourceArrival.arrival
-
+      val isCiriumAsPortLive = props.airportConfig.noLivePortFeed && props.airportConfig.aclDisabled
       val paxTotal: String = arrival.ActPax.map(_.toString).getOrElse("-")
       val paxTrans: String = arrival.TranPax.map(_.toString).getOrElse("-")
       val flightFields = List[TagMod](
-        <.td(feedSource.name),
+        <.td(feedDisplayName(isCiriumAsPortLive, feedSource)),
         <.td(arrival.flightCodeString),
         <.td(arrival.Origin.toString),
         <.td(arrival.Terminal.toString),
