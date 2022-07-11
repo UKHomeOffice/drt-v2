@@ -77,6 +77,8 @@ object StatusPage {
                 <.h3(feed.feedSource.displayName(None), " ", apiDataTooltip)
               else if (manualCheckAllowed)
                 <.h3(feed.feedSource.displayName(None), " ", MuiButton(variant = "outlined", size = "medium", color = Color.default)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
+              else if (isCiriumAsPortLive)
+                <.h3(feed.feedSource.displayName(Option("Live arrival")))
               else
                 <.h3(feed.feedSource.displayName(None)),
               if (isCiriumAsPortLive)
