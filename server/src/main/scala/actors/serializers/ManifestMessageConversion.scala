@@ -1,9 +1,10 @@
 package actors.serializers
 
 import drt.shared._
+import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
-import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{PassengerInfoJsonMessage, VoyageManifestMessage, VoyageManifestsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{ManifestLikeMessage, ManifestPassengerProfileMessage, PassengerInfoJsonMessage, VoyageManifestMessage, VoyageManifestsMessage}
 import services.SDate
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumber}
@@ -66,6 +67,20 @@ object ManifestMessageConversion {
     )
   }
 
+  def manifestLikeToMessage(vm: ManifestLike): ManifestLikeMessage = {
+    ManifestLikeMessage(
+      createdAt = Option(SDate.now().millisSinceEpoch),
+      eventCode = Option(vm.maybeEventType.map(_.toString).getOrElse("")),
+      arrivalPortCode = Option(vm.arrivalPortCode.iata),
+      departurePortCode = Option(vm.departurePortCode.iata),
+      voyageNumber = Option(vm.voyageNumber.toString),
+      carrierCode = Option(vm.carrierCode.code),
+      scheduledDateOfArrival = Option(vm.scheduled.toISODateOnly),
+      scheduledTimeOfArrival = Option(vm.scheduled.toHoursAndMinutes),
+      passengerList = vm.uniquePassengers.map(manifestPassengerProfileToMessage)
+    )
+  }
+
   def passengerInfoToMessage(pi: PassengerInfoJson): PassengerInfoJsonMessage = {
     PassengerInfoJsonMessage(
       documentType = pi.DocumentType.map(_.toString),
@@ -77,6 +92,16 @@ object ManifestMessageConversion {
       disembarkationPortCountryCode = pi.DisembarkationPortCountryCode.map(_.toString),
       nationalityCountryCode = pi.NationalityCountryCode.map(_.toString),
       passengerIdentifier = pi.PassengerIdentifier
+    )
+  }
+
+  def manifestPassengerProfileToMessage(pi: ManifestPassengerProfile): ManifestPassengerProfileMessage = {
+    ManifestPassengerProfileMessage(
+      nationality = Option(pi.nationality.toString),
+      documentType = Option(pi.documentType.toString),
+      age = pi.age.map(_.toString()),
+      inTransit = Option(pi.inTransit),
+      passengerIdentifier = pi.passengerIdentifier
     )
   }
 }

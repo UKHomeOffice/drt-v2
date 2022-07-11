@@ -152,4 +152,6 @@ object SDate {
     val zoneDate = SDate(date, dateTimeZone)
     (zoneDate.getFullYear(), zoneDate.getMonth(), zoneDate.getDate())
   }
+
+  def weekOfYear(date: SDateLike): Int = new DateTime(date.millisSinceEpoch, DateTimeZone.UTC).getWeekOfWeekyear
 }
