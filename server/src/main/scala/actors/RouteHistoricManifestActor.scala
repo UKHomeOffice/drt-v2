@@ -23,6 +23,8 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.concurrent.{ExecutionContext, Future}
 
 object RouteHistoricManifestActor {
+  private val log = LoggerFactory.getLogger(getClass)
+
   val manifestCacheLookup = (destination: PortCode, now: () => SDateLike, system: ActorSystem, timeout: Timeout, ec: ExecutionContext) =>
     (arrival: Arrival) => {
       val key = UniqueArrivalKey(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
@@ -45,6 +47,11 @@ object RouteHistoricManifestActor {
         actor ! PoisonPill
         maybeManifestLike
       }
+      .recover { case t =>
+        actor ! PoisonPill
+        log.error(s"Failed to get cached historic manifest for $uniqueArrivalKey", t)
+        None
+      }
   }
 
   def updateForUniqueArrival(uniqueArrivalKey: UniqueArrivalKey, manifestLike: ManifestLike, now: () => SDateLike)
@@ -54,6 +61,11 @@ object RouteHistoricManifestActor {
     actor
       .ask(manifestLike)
       .mapTo[Ack.type]
+      .recover { case t =>
+        actor ! PoisonPill
+        log.error(s"Historic manifest cache storage request for $uniqueArrivalKey failed to respond", t)
+        Ack
+      }
   }
 
   private def props(uniqueArrivalKey: UniqueArrivalKey, now: () => SDateLike, maybePointInTime: Option[MillisSinceEpoch]) =
