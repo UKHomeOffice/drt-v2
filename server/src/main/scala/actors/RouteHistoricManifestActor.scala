@@ -17,7 +17,7 @@ import scalapb.GeneratedMessage
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{MaybeManifestLikeMessage, VoyageManifestMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{ManifestLikeMessage, MaybeManifestLikeMessage, VoyageManifestMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -72,7 +72,7 @@ class RouteHistoricManifestActor(origin: String, destination: String, voyageNumb
   extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override def persistenceId: String = s"route-historic-manifest-$origin-$destination-$voyageNumber-$dayOfWeek-$weekOfYear"
+  override def persistenceId: String = s"route-manifest-$origin-$destination-$voyageNumber-$dayOfWeek-$weekOfYear"
 
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
@@ -90,22 +90,21 @@ class RouteHistoricManifestActor(origin: String, destination: String, voyageNumb
   var state: Option[ManifestLike] = None
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case vmm: VoyageManifestMessage =>
+    case vmm: ManifestLikeMessage =>
       maybePointInTime match {
         case Some(pit) if pit < vmm.createdAt.getOrElse(0L) => // ignore messages from after the recovery point.
         case _ =>
-          state = Option(ManifestMessageConversion.voyageManifestFromMessage(vmm))
+          state = Option(ManifestMessageConversion.manifestLikeFromMessage(vmm))
       }
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case vmm: VoyageManifestMessage =>
-      state = Option(ManifestMessageConversion.voyageManifestFromMessage(vmm))
+    case vmm: MaybeManifestLikeMessage =>
+      state = ManifestMessageConversion.maybeManifestLikeFromMessage(vmm)
   }
 
-
   override def stateToMessage: GeneratedMessage =
-    MaybeManifestLikeMessage(state.map(ManifestMessageConversion.manifestLikeToMessage))
+    MaybeManifestLikeMessage(Option(now().millisSinceEpoch), state.map(ManifestMessageConversion.manifestLikeToMessage))
 
   override def receiveCommand: Receive = {
     case manifest: ManifestLike =>

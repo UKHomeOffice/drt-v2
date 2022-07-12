@@ -50,6 +50,7 @@ object OptimisationProviders {
                   log.info(s"storing manifest in cache")
                   cacheStore(arrival, manifestLike).map(_ => Option(manifestLike))
                 case (_, None) =>
+                  log.info(s"no manifest to store in cache")
                   Future.successful(None)
               }
               .recover {
