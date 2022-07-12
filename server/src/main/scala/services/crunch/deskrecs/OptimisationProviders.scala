@@ -18,6 +18,7 @@ import services.SDate
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.graphstages.Crunch.LoadMinute
+import services.metrics.Metrics
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -39,18 +40,17 @@ object OptimisationProviders {
       .mapAsync(1) { arrival =>
         cacheLookup(arrival).flatMap {
           case Some(manifestLike) =>
-            log.info(s"cache hit for ${arrival.unique}")
+            Metrics.counter("deskrecs.historic.cache.hit", 1)
             Future.successful(Option(manifestLike))
           case None =>
-            log.info(s"cache miss for ${arrival.unique}")
+            Metrics.counter("deskrecs.historic.cache.miss", 1)
             manifestLookupService
               .maybeBestAvailableManifest(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
               .flatMap {
                 case (_, Some(manifestLike)) =>
-                  log.info(s"storing manifest in cache")
+                  Metrics.counter("deskrecs.historic.cache.store", 1)
                   cacheStore(arrival, manifestLike).map(_ => Option(manifestLike))
                 case (_, None) =>
-                  log.info(s"no manifest to store in cache")
                   Future.successful(None)
               }
               .recover {
