@@ -74,13 +74,13 @@ object StatusPage {
 
             <.div(^.className := s"feed-status $ragStatus",
               if (feed.feedSource.name == "API")
-                <.h3(feed.feedSource.name, " ", apiDataTooltip)
+                <.h3(feed.feedSource.displayName(None), " ", apiDataTooltip)
               else if (manualCheckAllowed)
-                <.h3(feed.feedSource.name, " ", MuiButton(variant = "outlined", size = "medium", color = Color.default)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
+                <.h3(feed.feedSource.displayName(None), " ", MuiButton(variant = "outlined", size = "medium", color = Color.default)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
               else if (isCiriumAsPortLive)
-                <.h3(feed.feedSource.displayName(Option("Live arrival feed")))
+                <.h3(feed.feedSource.displayName(Option("Live arrival")))
               else
-                <.h3(feed.feedSource.name),
+                <.h3(feed.feedSource.displayName(None)),
               if (isCiriumAsPortLive)
                 <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isCiriumAsPortLive)))
               else
