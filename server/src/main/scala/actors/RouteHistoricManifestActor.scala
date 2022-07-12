@@ -15,12 +15,26 @@ import manifests.passengers.ManifestLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{MaybeManifestLikeMessage, VoyageManifestMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object RouteHistoricManifestActor {
+  val manifestCacheLookup = (destination: PortCode, now: () => SDateLike, system: ActorSystem, timeout: Timeout, ec: ExecutionContext) =>
+    (arrival: Arrival) => {
+      val key = UniqueArrivalKey(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+      RouteHistoricManifestActor.forUniqueArrival(key, now, None)(system, timeout, ec)
+    }
+
+  val manifestCacheStore = (destination: PortCode, now: () => SDateLike, system: ActorSystem, timeout: Timeout, ec: ExecutionContext) =>
+    (arrival: Arrival, manifest: ManifestLike) => {
+      val key = UniqueArrivalKey(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+      RouteHistoricManifestActor.updateForUniqueArrival(key, manifest, now)(system, timeout, ec)
+    }
+
   def forUniqueArrival(uniqueArrivalKey: UniqueArrivalKey, now: () => SDateLike, maybePointInTime: Option[Long])
                       (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): Future[Option[ManifestLike]] = {
     val actor = system.actorOf(props(uniqueArrivalKey, now, maybePointInTime))
@@ -33,9 +47,9 @@ object RouteHistoricManifestActor {
       }
   }
 
-  def updateForUniqueArrival(uniqueArrivalKey: UniqueArrivalKey, manifestLike: ManifestLike, now: () => SDateLike, maybePointInTime: Option[Long])
+  def updateForUniqueArrival(uniqueArrivalKey: UniqueArrivalKey, manifestLike: ManifestLike, now: () => SDateLike)
                             (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): Future[AckingReceiver.Ack.type] = {
-    val actor = system.actorOf(props(uniqueArrivalKey, now, maybePointInTime))
+    val actor = system.actorOf(props(uniqueArrivalKey, now, None))
 
     actor
       .ask(manifestLike)
@@ -78,7 +92,7 @@ class RouteHistoricManifestActor(origin: String, destination: String, voyageNumb
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case vmm: VoyageManifestMessage =>
       maybePointInTime match {
-        case Some(pit) if pit < vmm.createdAt => // ignore messages from after the recovery point.
+        case Some(pit) if pit < vmm.createdAt.getOrElse(0L) => // ignore messages from after the recovery point.
         case _ =>
           state = Option(ManifestMessageConversion.voyageManifestFromMessage(vmm))
       }

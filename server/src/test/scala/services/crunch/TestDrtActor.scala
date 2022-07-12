@@ -2,6 +2,7 @@ package services.crunch
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
+import actors.acking.AckingReceiver.Ack
 import actors.daily.{FlightUpdatesSupervisor, PassengersActor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
@@ -15,7 +16,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.server.feeds.Feed
 import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovements}
-import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
+import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
@@ -29,7 +30,7 @@ import services.crunch.staffing.RunnableStaffing
 import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
 import test.TestMinuteLookups
-import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
@@ -166,10 +167,13 @@ class TestDrtActor extends Actor {
 
         val historicManifestLookups: ManifestLookupLike = MockManifestLookupService()
 
+        val mockCacheLookup: Arrival => Future[Option[ManifestLike]] = _ => Future.successful(None)
+        val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(Ack)
+
         val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
           arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
           liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
-          historicManifestsProvider = OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups),
+          historicManifestsProvider = OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups, mockCacheLookup, mockCacheStore),
           historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(tc.airportConfig.portCode, historicManifestLookups),
           splitsCalculator = splitsCalculator,
           splitsSink = portStateActor,

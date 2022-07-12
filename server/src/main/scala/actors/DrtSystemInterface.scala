@@ -42,7 +42,8 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import drt.shared.coachTime.CoachWalkTime
-import manifests.ManifestLookupLike
+import manifests.passengers.ManifestLike
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
 import play.api.Configuration
@@ -218,10 +219,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
       val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
 
+      val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, now, system, timeout, ec)
+
+      val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
+
       val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
         liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
-        historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService),
+        historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService, manifestCacheLookup, manifestCacheStore),
         historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, manifestLookupService),
         splitsCalculator = splitsCalculator,
         splitsSink = portStateActor,

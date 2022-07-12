@@ -10,7 +10,7 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared._
-import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
+import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.queues.SplitsCalculator.SplitsForArrival
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
@@ -98,9 +98,16 @@ object OptimiserMocks {
   def mockHistoricManifestsProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
                                    (implicit ec: ExecutionContext, mat: Materializer): HistoricManifestsProvider = {
     val portCode = PortCode("STN")
+
+    val mockCacheLookup: Arrival => Future[Option[ManifestLike]] = _ => Future.successful(None)
+    val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(Ack)
+
     OptimisationProviders.historicManifestsProvider(
       portCode,
-      getMockManifestLookupService(arrivalsWithMaybePax, portCode))
+      getMockManifestLookupService(arrivalsWithMaybePax, portCode),
+      mockCacheLookup,
+      mockCacheStore,
+    )
   }
 
   def mockHistoricManifestsPaxProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
