@@ -47,6 +47,7 @@ object OptimisationProviders {
               .maybeBestAvailableManifest(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
               .flatMap {
                 case (_, Some(manifestLike)) =>
+                  log.info(s"storing manifest in cache")
                   cacheStore(arrival, manifestLike).map(_ => Option(manifestLike))
                 case (_, None) =>
                   Future.successful(None)
