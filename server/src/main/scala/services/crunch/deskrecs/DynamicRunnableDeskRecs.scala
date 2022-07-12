@@ -239,20 +239,20 @@ object DynamicRunnableDeskRecs {
         val manifestsByKey = arrivalKeysToManifests(manifests.manifests)
         (crunchRequest, addManifests(arrivals, manifestsByKey, splitsCalculator.splitsForArrival))
       }
-//      .mapAsync(1) { case (crunchRequest, flights) =>
-//        val startTime = SDate.now()
-//        val arrivalsToLookup = flights.filter(_.bestSplits.isEmpty).map(_.apiFlight)
-//        historicManifestsProvider(arrivalsToLookup)
-//          .runWith(Sink.seq)
-//          .map { manifests =>
-//            log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: addSplits historic took ${SDate.now().millisSinceEpoch - startTime.millisSinceEpoch} ms")
-//            (crunchRequest, flights, manifests)
-//          }
-//      }
-//      .map { case (crunchRequest, flights, manifests) =>
-//        val manifestsByKey = arrivalKeysToManifests(manifests)
-//        (crunchRequest, addManifests(flights, manifestsByKey, splitsCalculator.splitsForArrival))
-//      }
+      .mapAsync(1) { case (crunchRequest, flights) =>
+        val startTime = SDate.now()
+        val arrivalsToLookup = flights.filter(_.bestSplits.isEmpty).map(_.apiFlight)
+        historicManifestsProvider(arrivalsToLookup)
+          .runWith(Sink.seq)
+          .map { manifests =>
+            log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: addSplits historic took ${SDate.now().millisSinceEpoch - startTime.millisSinceEpoch} ms")
+            (crunchRequest, flights, manifests)
+          }
+      }
+      .map { case (crunchRequest, flights, manifests) =>
+        val manifestsByKey = arrivalKeysToManifests(manifests)
+        (crunchRequest, addManifests(flights, manifestsByKey, splitsCalculator.splitsForArrival))
+      }
       .map {
         case (crunchRequest, flights) =>
           val allFlightsWithSplits = flights

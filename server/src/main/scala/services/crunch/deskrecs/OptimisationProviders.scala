@@ -38,8 +38,11 @@ object OptimisationProviders {
     Source(arrivals.toList)
       .mapAsync(1) { arrival =>
         cacheLookup(arrival).flatMap {
-          case Some(manifestLike) => Future.successful(Option(manifestLike))
+          case Some(manifestLike) =>
+            log.info(s"cache hit for ${arrival.unique}")
+            Future.successful(Option(manifestLike))
           case None =>
+            log.info(s"cache miss for ${arrival.unique}")
             manifestLookupService
               .maybeBestAvailableManifest(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
               .flatMap {
