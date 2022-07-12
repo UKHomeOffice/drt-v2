@@ -135,7 +135,6 @@ class RouteHistoricManifestActor(origin: String, destination: String, voyageNumb
   def updateAndPersist(vms: ManifestLike): Unit = {
     state = Option(vms)
 
-    println(s"persisting new manifest in cache")
     persistAndMaybeSnapshotWithAck(ManifestMessageConversion.manifestLikeToMessage(vms), List((sender(), Ack)))
   }
 }
