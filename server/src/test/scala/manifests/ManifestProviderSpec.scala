@@ -1,10 +1,11 @@
 package manifests
 
+import actors.acking.AckingReceiver.Ack
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
+import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import services.crunch.VoyageManifestGenerator.euPassport
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.OptimisationProviders
@@ -36,10 +37,12 @@ class ManifestProviderSpec extends CrunchTestLike {
     SplitSources.Historical)
 
   val mockLookupService: MockManifestLookupService = MockManifestLookupService(manifestForArrival, manifestHistoricForArrival)
+  val mockCacheLookup: Arrival => Future[Option[ManifestLike]] = _ => Future.successful(None)
+  val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(Ack)
   val probe: TestProbe = TestProbe("manifests")
 
   "Given a mock lookup returning a BestAvailableManifest" >> {
-    val lookup: HistoricManifestsProvider = OptimisationProviders.historicManifestsProvider(PortCode("STN"), mockLookupService)
+    val lookup: HistoricManifestsProvider = OptimisationProviders.historicManifestsProvider(PortCode("STN"), mockLookupService, mockCacheLookup, mockCacheStore)
 
     lookup(Seq(arrival)).runWith(Sink.seq).map(probe.ref ! _)
 

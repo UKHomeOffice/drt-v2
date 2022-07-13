@@ -5,12 +5,15 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.FlightsApi.RemoveSplitsForDateRange
+import org.slf4j.LoggerFactory
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.ExecutionContext
 
 object CrunchManager {
+  private val log = LoggerFactory.getLogger(getClass)
+
   def queueDaysToReCrunch(crunchManager: ActorRef, offsetMinutes: Int, forecastMaxDays: Int, now: () => SDateLike): Unit = {
     val today = now()
     val millisToCrunchStart = Crunch.crunchStartWithOffset(offsetMinutes) _
@@ -28,5 +31,10 @@ object CrunchManager {
     flightsActor
       .ask(RemoveSplitsForDateRange(start.millisSinceEpoch, endMillis))
       .map(_ => queueDaysToReCrunch(crunchManager, offsetMinutes, forecastMaxDays, now))
+      .recover {
+        case t =>
+          log.error("Failed to remove splits for date range", t)
+          queueDaysToReCrunch(crunchManager, offsetMinutes, forecastMaxDays, now)
+      }
   }
 }

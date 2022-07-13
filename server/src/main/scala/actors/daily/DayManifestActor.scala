@@ -24,11 +24,8 @@ object DayManifestActor {
 }
 
 
-class DayManifestActor(year: Int,
-                       month: Int,
-                       day: Int,
-                       maybePointInTime: Option[MillisSinceEpoch]
-                      ) extends RecoveryActorLike {
+class DayManifestActor(year: Int, month: Int, day: Int, maybePointInTime: Option[MillisSinceEpoch])
+  extends RecoveryActorLike {
 
   def now: () => SDate.JodaSDate = () => SDate.now()
 
