@@ -29,10 +29,7 @@ object ManifestMessageConversion {
 
   def manifestPassengerProfileFromMessage(m: ManifestPassengerProfileMessage): ManifestPassengerProfile = ManifestPassengerProfile(
     nationality = Nationality(correctNationalityBug(m.nationality.getOrElse(""))),
-    documentType = m.documentType.map { dt =>
-      println(s"doc type: $dt")
-      DocumentType(dt)
-    },
+    documentType = m.documentType.map(DocumentType(_)),
     age = m.age.flatMap(ageString => Try(ageString.toInt).toOption).map(a => PaxAge(a)),
     inTransit = m.inTransit.getOrElse(false),
     passengerIdentifier = m.passengerIdentifier
