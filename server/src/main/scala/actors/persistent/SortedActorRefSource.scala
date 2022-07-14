@@ -4,6 +4,7 @@ import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.{ActorRef, ActorSystem}
 import akka.stream._
 import akka.stream.stage._
+import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, RemoveCrunchRequest}
 
 import scala.collection.{SortedSet, mutable}
@@ -34,12 +35,13 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
       override protected def logSource: Class[_] = classOf[SortedActorRefSource]
 
       private val buffer: mutable.SortedSet[ProcessingRequest] = mutable.SortedSet[ProcessingRequest]() ++ initialQueue
+      private var prioritiseForecast: Boolean = false
 
       override protected def stageActorName: String =
         inheritedAttributes.get[Attributes.Name].map(_.n).getOrElse(super.stageActorName)
 
       val ref: ActorRef = getEagerStageActor(eagerMaterializer) {
-        case (_, m: ProcessingRequest @unchecked) =>
+        case (_, m: ProcessingRequest@unchecked) =>
           buffer += m
           persistentActor ! m
           tryPushElement()
@@ -54,10 +56,13 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
 
       private def tryPushElement(): Unit = {
         if (isAvailable(out)) {
-          buffer.headOption.foreach { e =>
+          val forecastRequests = buffer.filter(_.start > SDate.now())
+          val maybeNextElement = if (prioritiseForecast && forecastRequests.nonEmpty) forecastRequests.headOption else buffer.headOption
+          maybeNextElement.foreach { e =>
             persistentActor ! RemoveCrunchRequest(e)
             buffer -= e
             push(out, e)
+            prioritiseForecast = !prioritiseForecast
           }
         }
       }

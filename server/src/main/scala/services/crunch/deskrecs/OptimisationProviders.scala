@@ -4,20 +4,20 @@ import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange}
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask
-import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{TM, TQM}
 import manifests.ManifestLookupLike
+import manifests.passengers.ManifestLike
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SDate
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsPaxProvider
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.graphstages.Crunch.LoadMinute
+import services.metrics.Metrics
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -29,18 +29,35 @@ import scala.concurrent.{ExecutionContext, Future}
 object OptimisationProviders {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def historicManifestsProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
+  def historicManifestsProvider(destination: PortCode,
+                                manifestLookupService: ManifestLookupLike,
+                                cacheLookup: Arrival => Future[Option[ManifestLike]],
+                                cacheStore: (Arrival, ManifestLike) => Future[Any],
+                               )
                                (implicit ec: ExecutionContext): HistoricManifestsProvider = arrivals =>
     Source(arrivals.toList)
       .mapAsync(1) { arrival =>
-        manifestLookupService
-          .maybeBestAvailableManifest(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-          .map { case (_, maybeManifest) => maybeManifest }
-          .recover {
-            case t =>
-              log.warn(s"Failed to get historic manifest for ${arrival.unique}", t.getMessage)
-              None
-          }
+        cacheLookup(arrival).flatMap {
+          case Some(manifestLike) =>
+            Metrics.counter("deskrecs.historic.cache.hit", 1)
+            Future.successful(Option(manifestLike))
+          case None =>
+            Metrics.counter("deskrecs.historic.cache.miss", 1)
+            manifestLookupService
+              .maybeBestAvailableManifest(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+              .flatMap {
+                case (_, Some(manifestLike)) =>
+                  Metrics.counter("deskrecs.historic.cache.store", 1)
+                  cacheStore(arrival, manifestLike).map(_ => Option(manifestLike))
+                case (_, None) =>
+                  Future.successful(None)
+              }
+              .recover {
+                case t =>
+                  log.warn(s"Failed to get historic manifest for ${arrival.unique}")
+                  None
+              }
+        }
       }
       .collect { case Some(bam) => bam }
 

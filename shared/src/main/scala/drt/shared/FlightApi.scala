@@ -203,6 +203,10 @@ object FlightsApi {
     val empty: FlightsWithSplitsDiff = FlightsWithSplitsDiff(List(), List())
   }
 
+  case object RemoveSplits extends FlightUpdates
+
+  case class RemoveSplitsForDateRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch) extends FlightUpdates
+
 }
 
 class ArrivalsRestorer[A <: WithUnique[UniqueArrival] with Updatable[A]] {

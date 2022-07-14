@@ -20,7 +20,7 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.{SDate, SourceUtils}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike, UtcDate}
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.{ExecutionContext, Future}
@@ -202,6 +202,12 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
           (terminalDay, diff)
         }
         .toMap
+
+    case RemoveSplitsForDateRange(startMillis, endMillis) =>
+      val dates = (startMillis to endMillis by MilliTimes.oneHourMillis)
+        .map(millis => SDate(millis).toUtcDate)
+        .toSet
+      allTerminals.flatMap(t => dates.map(d => ((t, d), RemoveSplits))).toMap
   }
 
   def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[UpdatedMillis] =

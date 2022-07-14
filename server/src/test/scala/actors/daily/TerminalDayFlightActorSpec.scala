@@ -5,12 +5,13 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import controllers.ArrivalGenerator.arrivalForDayAndTerminal
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, RemoveSplits, SplitsForArrivals}
 import drt.shared.{ArrivalsDiff, TQM}
 import services.SDate
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
@@ -89,6 +90,30 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
       val expected = FlightsWithSplits(Map(correctTerminal.unique -> ApiFlightWithSplits(correctTerminal, Set(), lastUpdated = Option(myNow().millisSinceEpoch))))
 
       result === expected
+    }
+  }
+
+  "Given a TerminalDayFlightActor with a flight" >> {
+    "When I send it a message to remove splits" >> {
+      "I should see that the flight no longer has splits" >> {
+        val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
+        val arrival = arrivalForDayAndTerminal(date, terminal)
+        val splits = Set(Splits(Set(), Historical, None))
+        val eventualFlights = terminalDayActor.ask(ArrivalsDiff(Seq(arrival), Seq())).flatMap { _ =>
+          terminalDayActor.ask(SplitsForArrivals(Map(arrival.unique -> splits))).flatMap { _ =>
+            terminalDayActor.ask(RemoveSplits).flatMap { _ =>
+              terminalDayActor.ask(GetState).map {
+                case FlightsWithSplits(flights) =>
+                  flights
+              }
+            }
+          }
+        }
+
+        val expectedWithNoSplits = ApiFlightWithSplits(arrival, Set(), lastUpdated = Option(myNow().millisSinceEpoch))
+
+        Await.result(eventualFlights, 1.second).values.toSet === Set(expectedWithNoSplits)
+      }
     }
   }
 

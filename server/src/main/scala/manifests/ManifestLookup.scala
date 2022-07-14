@@ -91,15 +91,17 @@ case class ManifestLookup(tables: Tables)
                                      queries: List[(String, QueryFunction)])
                                     (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = {
     val startTime = SDate.now()
-    findFlights(uniqueArrivalKey, queries).flatMap { flightKeys =>
-      manifestTriesForScheduled(flightKeys)
-        .map(profiles => (uniqueArrivalKey, maybeManifestFromProfiles(uniqueArrivalKey, profiles)))
-    }.map { res =>
-      val timeTaken = SDate.now().millisSinceEpoch - startTime.millisSinceEpoch
-      if (timeTaken > 1000)
-        log.warn(s"Historic manifest pax profile for $uniqueArrivalKey took ${timeTaken}ms")
-      res
-    }
+    findFlights(uniqueArrivalKey, queries)
+      .flatMap { flightKeys =>
+        manifestTriesForScheduled(flightKeys)
+          .map(profiles => (uniqueArrivalKey, maybeManifestFromProfiles(uniqueArrivalKey, profiles)))
+      }
+      .map { res =>
+        val timeTaken = SDate.now().millisSinceEpoch - startTime.millisSinceEpoch
+        if (timeTaken > 1000)
+          log.warn(s"Historic manifest pax profile for $uniqueArrivalKey took ${timeTaken}ms")
+        res
+      }
   }
 
   private def historicManifestSearchForPaxCount(uniqueArrivalKey: UniqueArrivalKey,
