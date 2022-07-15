@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.{HashSet, Map}
 import scala.concurrent.duration._
@@ -205,7 +205,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new ViewModeHandler(zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3))),
+      new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new ShowAlertModalDialogHandler(zoomRW(_.displayAlertDialog)((m, v) => m.copy(displayAlertDialog = v))),
@@ -228,7 +228,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new SnackbarHandler(zoomRW(_.snackbarMessage)((m, v) => m.copy(snackbarMessage = v))),
       new RedListPortsHandler(zoomRW(_.redListPorts)((m, v) => m.copy(redListPorts = v))),
       new GateStandWalkTimePortsHandler(zoomRW(_.gateStandWalkTime)((m, v) => m.copy(gateStandWalkTime = v))),
-      new CrunchHandler(zoomRW(identity)((m, _) => m))
+      new CrunchHandler(zoomRW(identity)((m, _) => m)),
+      new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
     )
 
     composedHandlers

@@ -64,6 +64,8 @@ GET           /export/staff-movements/:pointInTime/:terminal                    
 GET           /export/desk-rec-simulation                                             controllers.Application.simulationExport
 GET           /desk-rec-simulation                                                    controllers.Application.simulation
 
+GET           /forecast-accuracy/:date                                                controllers.Application.getForecastAccuracy(date: String)
+
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/fonts/*file                                                     controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
 GET           /assets/images/*file                                                    controllers.Assets.at(path="/public/images", file)

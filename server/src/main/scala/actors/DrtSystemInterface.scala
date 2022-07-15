@@ -1,7 +1,7 @@
 package actors
 
 import actors.DrtStaticParameters.expireAfterMillis
-import actors.PartitionedPortStateActor.GetFlights
+import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors.daily.PassengersActor
 import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
@@ -42,8 +42,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
 import drt.shared.coachTime.CoachWalkTime
-import manifests.passengers.ManifestLike
-import manifests.{ManifestLookupLike, UniqueArrivalKey}
+import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
 import play.api.Configuration
@@ -62,12 +61,12 @@ import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.FlightFilter
 import services.prediction.TouchdownPrediction
 import services.staffing.StaffMinutesChecker
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival, WithTimeAccessor}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, WithTimeAccessor}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDateLike, UtcDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -137,6 +136,44 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val queueUpdates: ActorRef
   val staffUpdates: ActorRef
   val flightUpdates: ActorRef
+
+  val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] = (date: LocalDate, atTime: SDateLike) =>
+    paxForDay(date, Option(atTime))
+
+  val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] = (date: LocalDate) =>
+    paxForDay(date, None)
+
+  private def paxForDay(date: LocalDate, maybeAtTime: Option[SDateLike]): Future[Map[Terminal, Double]] = {
+    val start = SDate(date)
+    val end = start.addDays(1).addMinutes(-1)
+    val rangeRequest = GetStateForDateRange(start.millisSinceEpoch, end.millisSinceEpoch)
+    val request = maybeAtTime match {
+      case Some(atTime) => PointInTimeQuery(atTime.millisSinceEpoch, rangeRequest)
+      case None => rangeRequest
+    }
+
+    flightsActor.ask(request)
+      .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
+      .flatMap { source =>
+        source.mapConcat {
+          case (_, flights) =>
+            flights.flights
+              .filter { case (_, ApiFlightWithSplits(apiFlight, _, _)) =>
+                SDate(apiFlight.bestArrivalTime(airportConfig.timeToChoxMillis, airportConfig.useTimePredictions)).toLocalDate == date
+              }
+              .values
+              .groupBy(fws => fws.apiFlight.Terminal)
+              .map {
+                case (terminal, flights) =>
+                  val paxNos = flights.map(fws => fws.apiFlight.bestPcpPaxEstimate.pax.getOrElse(0)).sum
+                  (terminal, paxNos.toDouble)
+              }
+        }.runWith(Sink.seq)
+      }
+      .map(_.toMap)
+  }
+
+  val accuracy: Accuracy = Accuracy(forecastPaxNos, actualPaxNos)
 
   lazy private val feedActors: Map[FeedSource, ActorRef] = Map(
     LiveFeedSource -> liveArrivalsActor,
