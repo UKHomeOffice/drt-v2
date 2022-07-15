@@ -8,7 +8,7 @@ import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
-import drt.shared.api.{PassengerInfoSummary, WalkTimes}
+import drt.shared.api.{ForecastAccuracy, PassengerInfoSummary, WalkTimes}
 import org.scalajs.dom.FormData
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -212,4 +212,8 @@ object Actions {
   case class UpdateGateStandWalktime(walkTimes:WalkTimes) extends Action
 
   case class RequestForecastRecrunch(recalculateSplits: Boolean) extends Action
+
+  case class GetForecastAccuracy(localDate: LocalDate) extends Action
+
+  case class UpdateForecastAccuracy(forecastAccuracy: ForecastAccuracy) extends Action
 }

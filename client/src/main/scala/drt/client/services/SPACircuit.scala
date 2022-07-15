@@ -9,13 +9,13 @@ import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
-import drt.shared.api.{PassengerInfoSummary, WalkTimes}
+import drt.shared.api.{ForecastAccuracy, PassengerInfoSummary, WalkTimes}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.{HashSet, Map}
 import scala.concurrent.duration._
@@ -163,6 +163,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      redListUpdates: Pot[RedListUpdates] = Empty,
                      egateBanksUpdates: Pot[PortEgateBanksUpdates] = Empty,
                      gateStandWalkTime: Pot[WalkTimes] = Empty,
+                     passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
                     )
 
 object PollDelay {

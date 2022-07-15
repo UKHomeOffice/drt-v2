@@ -4,7 +4,7 @@ import diode._
 import diode.data.Pot
 import drt.client.actions.Actions._
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.ViewMode
+import drt.client.services.{ViewLive, ViewMode}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.PortState
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ViewModeHandler[M](viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)]) extends LoggingActionHandler(viewModePortStateMP) {
+class ViewModeHandler[M](now: () => SDateLike, viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)]) extends LoggingActionHandler(viewModePortStateMP) {
 
   def midnightThisMorning: SDateLike = SDate.midnightOf(SDate.now())
 
@@ -29,9 +29,14 @@ class ViewModeHandler[M](viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortStat
   }
 
   def initialRequests(newViewMode: ViewMode): EffectSet = {
-    Effect(Future(GetInitialPortState(newViewMode))) +
+    val effects = Effect(Future(GetInitialPortState(newViewMode))) +
       Effect(Future(GetStaffMovements(newViewMode))) +
       Effect(Future(GetShifts(newViewMode))) +
       Effect(Future(GetFixedPoints(newViewMode)))
+
+    if (newViewMode == ViewLive || newViewMode.isHistoric(now()))
+      effects + Effect(Future(GetForecastAccuracy(newViewMode.dayStart.toLocalDate)))
+    else
+      effects
   }
 }
