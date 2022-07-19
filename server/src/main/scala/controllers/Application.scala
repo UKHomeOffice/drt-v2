@@ -81,6 +81,8 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)
 
+  def idealStaffAsDefault: Boolean = config.getOptional[Boolean]("feature-flags.use-ideal-staff-default").getOrElse(false)
+
   private def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
 
   lazy val airportConfig: AirportConfig = {
@@ -89,7 +91,8 @@ trait AirportConfProvider extends AirportConfiguration {
       outOfHoursContactPhone = oohPhone,
       useTimePredictions = useTimePredictions,
       noLivePortFeed = noLivePortFeed,
-      aclDisabled = aclDisabled
+      aclDisabled = aclDisabled,
+      idealStaffAsDefault = idealStaffAsDefault
     )
 
     configForPort.assertValid()
