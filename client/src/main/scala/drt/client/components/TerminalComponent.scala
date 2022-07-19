@@ -3,7 +3,8 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.TerminalPageModes._
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlViewType}
+import drt.client.components.TerminalDesksAndQueues.ViewRecs
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -112,7 +113,7 @@ object TerminalComponent {
                   redListUpdates = model.redListUpdates,
                 )
                 <.div(
-                  <.div(^.className := "terminal-nav-wrapper", terminalTabs(props, loggedInUser)),
+                  <.div(^.className := "terminal-nav-wrapper", terminalTabs(props, loggedInUser, airportConfig)),
                   <.div(^.className := "tab-content",
                     <.div(^.id := "dashboard", ^.className := s"tab-pane terminal-dashboard-container $dashboardContentClass",
                       if (props.terminalPageTab.mode == Dashboard) {
@@ -188,7 +189,7 @@ object TerminalComponent {
     })
     .build
 
-  private def terminalTabs(props: Props, loggedInUser: LoggedInUser): VdomTagOf[UList] = {
+  private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig): VdomTagOf[UList] = {
     val terminalName = props.terminalPageTab.terminal.toString
 
     val subMode = if (props.terminalPageTab.mode != Current && props.terminalPageTab.mode != Snapshot)
@@ -201,6 +202,12 @@ object TerminalComponent {
     val planningClass = if (props.terminalPageTab.mode == Planning) activeClass else ""
     val staffingClass = if (props.terminalPageTab.mode == Staffing) activeClass else ""
     val terminalDashboardClass = if (props.terminalPageTab.mode == Dashboard) activeClass else ""
+
+    def viewTypeQueryParam =
+      if (airportConfig.idealStaffAsDefault)
+        UrlViewType(Option(ViewRecs))
+      else
+        UrlViewType(None)
 
     <.ul(^.className := "nav nav-tabs",
       <.li(^.className := terminalDashboardClass,
@@ -220,7 +227,7 @@ object TerminalComponent {
           props.router.set(props.terminalPageTab.update(
             mode = Current,
             subMode = subMode,
-            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
+            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), viewTypeQueryParam).queryParams
           ))
         }),
       <.li(^.className := snapshotDataClass,
@@ -230,7 +237,7 @@ object TerminalComponent {
           props.router.set(props.terminalPageTab.update(
             mode = Snapshot,
             subMode = subMode,
-            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None)).queryParams
+            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), viewTypeQueryParam).queryParams
           ))
         }
       ),
