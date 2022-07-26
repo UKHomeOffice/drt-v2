@@ -56,9 +56,9 @@ object ApiStatusComponent {
             }
 
             <.div(^.className := "status-bar-item", "API",
-              <.div(^.className := s"api-status ${ragClass(apiFeedStatus.receivedPct)}", s"received: ${statToString(apiFeedStatus.receivedPct)}"),
+              <.div(^.className := s"status-bar-item-value ${ragClass(apiFeedStatus.receivedPct)}", s"received: ${statToString(apiFeedStatus.receivedPct)}"),
               if (props.canValidate)
-                <.div(^.className := s"api-status ${ragClass(apiFeedStatus.validPct)}", s"valid: ${statToString(apiFeedStatus.validPct)}")
+                <.div(^.className := s"status-bar-item-value ${ragClass(apiFeedStatus.validPct)}", s"valid: ${statToString(apiFeedStatus.validPct)}")
               else EmptyVdom,
             )
           })

@@ -14,19 +14,24 @@ case class ForecastAccuracy(localDate: LocalDate, pax: Map[Terminal, SortedMap[I
 object ForecastAccuracy {
   implicit val rw: default.ReadWriter[ForecastAccuracy] = upickle.default.readwriter[Value].bimap[ForecastAccuracy](
     fa => {
-      val terminalDaysAccuracy: Map[Terminal, Map[String, Double]] = fa.pax.map { case (t, vs) => (t, vs.toMap.map {
-        case (d, acc) => (d.toString, acc)
-      }) }
+      val terminalDaysAccuracy: Map[Terminal, Map[String, Double]] = fa.pax
+        .map { case (t, vs) =>
+          val dateStringsWithAccuracies = vs.map {
+            case (d, acc) => (d.toString, acc)
+          }
+          (t, dateStringsWithAccuracies)
+        }
       ujson.Obj(mutable.LinkedHashMap(
-        "localDate" -> writeJs(fa.localDate),//ujson.Str(fa.localDate.toString),
+        "localDate" -> writeJs(fa.localDate),
         "pax" -> writeJs(terminalDaysAccuracy)))
     },
     v => ForecastAccuracy(
       read[LocalDate](v("localDate")),
       read[Map[Terminal, Map[String, Double]]](v("pax")).mapValues {
-        accs => SortedMap[Int, Double]() ++ accs.map {
-          case (dStr, acc) => (Integer.parseInt(dStr) -> acc)
-        }
+        accuracies =>
+          SortedMap[Int, Double]() ++ accuracies.map {
+            case (dStr, acc) => Integer.parseInt(dStr) -> acc
+          }
       }
     )
   )

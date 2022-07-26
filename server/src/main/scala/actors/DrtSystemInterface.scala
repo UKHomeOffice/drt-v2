@@ -173,8 +173,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       .map(_.toMap)
   }
 
-  val accuracy: Accuracy = Accuracy(forecastPaxNos, actualPaxNos)
-
   lazy private val feedActors: Map[FeedSource, ActorRef] = Map(
     LiveFeedSource -> liveArrivalsActor,
     LiveBaseFeedSource -> liveBaseArrivalsActor,

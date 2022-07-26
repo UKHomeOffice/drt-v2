@@ -1,6 +1,6 @@
 package services.accuracy
 
-import services.{Accuracy, SDate}
+import services.{AccuracyForDate, SDate}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
@@ -9,7 +9,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 
-class AccuracySpec extends CrunchTestLike {
+class AccuracyForDateSpec extends CrunchTestLike {
   "Given forecast and actual numbers of passengers and I ask for the accuracy stat" >> {
     "When forecast is 9,000 and actual is 10,000" >> {
       val forecast = 9000
@@ -42,7 +42,8 @@ class AccuracySpec extends CrunchTestLike {
   }
 
   private def accuracy(forecast: Int, actual: Int): Map[Terminal, Double] = {
-    val acc = Accuracy((_, _) => Future.successful(Map(T1 -> forecast)), _ => Future.successful(Map(T1 -> actual)))
-    Await.result(acc.accuracy(LocalDate(2022, 7, 4), SDate("2022-07-04")), 1.second)
+    val date = LocalDate(2022, 7, 4)
+    val acc = AccuracyForDate(date, (_, _) => Future.successful(Map(T1 -> forecast)), Map(T1 -> actual), () => LocalDate(2022, 7, 5))
+    Await.result(acc.accuracy(date, SDate("2022-07-04")).getOrElse(Future.successful(Map())), 1.second)
   }
 }
