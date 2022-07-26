@@ -33,6 +33,6 @@ case class AccuracyForDate(date: LocalDate,
     if (actual == 0 && forecast != 0)
       0
     else
-      (1 - (Math.abs(forecast - actual) / actual)) * 100
+      (forecast / actual) * 100
   }
 }
