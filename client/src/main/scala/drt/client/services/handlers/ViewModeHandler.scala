@@ -22,19 +22,21 @@ class ViewModeHandler[M](now: () => SDateLike, viewModePortStateMP: ModelRW[M, (
 
       (newViewMode, currentViewMode) match {
         case (newVm, oldVm) if newVm.uUID != oldVm.uUID =>
-          updated((newViewMode, Pot.empty[PortState], 0L), initialRequests(newViewMode))
+          updated((newViewMode, Pot.empty[PortState], 0L), initialRequests(currentViewMode, newViewMode))
         case _ =>
           noChange
       }
   }
 
-  def initialRequests(newViewMode: ViewMode): EffectSet = {
+  def initialRequests(currentViewMode: ViewMode, newViewMode: ViewMode): EffectSet = {
     val effects = Effect(Future(GetInitialPortState(newViewMode))) +
       Effect(Future(GetStaffMovements(newViewMode))) +
       Effect(Future(GetShifts(newViewMode))) +
       Effect(Future(GetFixedPoints(newViewMode)))
 
-    if (newViewMode == ViewLive || newViewMode.isHistoric(now()))
+    if (!newViewMode.isHistoric(now()))
+      effects + Effect(Future(ClearForecastAccuracy))
+    else if (newViewMode.dayStart != currentViewMode.dayStart)
       effects + Effect(Future(GetForecastAccuracy(newViewMode.dayStart.toLocalDate)))
     else
       effects

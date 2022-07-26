@@ -22,7 +22,7 @@ object PassengerForecastAccuracyComponent {
       accuracyProxy { accuracyPot =>
         <.div(
           accuracyPot().renderReady { accuracy =>
-            <.div(^.className := "status-bar-item", "Passenger Forecast Accuracy",
+            <.div(^.className := "status-bar-item", "Terminal Pax Forecast Accuracy",
               accuracy.pax.getOrElse(props.terminal, SortedMap[Int, Double]()).map {
                 case (daysAhead, accuracyPct) =>
                   <.div(^.className := "status-bar-item-value neutral", s"$daysAhead day${if (daysAhead != 1) "s" else ""}: ${accuracyPct.toInt}%")

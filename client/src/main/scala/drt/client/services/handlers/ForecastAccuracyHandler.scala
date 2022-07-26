@@ -27,6 +27,9 @@ class ForecastAccuracyHandler[M](modelRW: ModelRW[M, Pot[ForecastAccuracy]]) ext
           Future(UpdateForecastAccuracy(ForecastAccuracy(date, Map())))
       }))
 
+    case ClearForecastAccuracy =>
+      updated(Empty)
+
     case UpdateForecastAccuracy(accuracy) =>
       log.info(s"Received forecast accuracy stats")
       updated(Ready(accuracy))

@@ -215,5 +215,7 @@ object Actions {
 
   case class GetForecastAccuracy(localDate: LocalDate) extends Action
 
+  case object ClearForecastAccuracy extends Action
+
   case class UpdateForecastAccuracy(forecastAccuracy: ForecastAccuracy) extends Action
 }
