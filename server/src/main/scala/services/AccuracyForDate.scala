@@ -9,15 +9,16 @@ import scala.concurrent.{ExecutionContext, Future}
 case class AccuracyForDate(date: LocalDate,
                            forecast: (LocalDate, SDateLike) => Future[Map[Terminal, Double]],
                            terminalActuals: Map[Terminal, Double],
-                           today: () => LocalDate
+                           today: LocalDate
                           )
                           (implicit ec: ExecutionContext) {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def accuracy(date: LocalDate, forecastAt: SDateLike): Option[Future[Map[Terminal, Double]]] = {
-    val dateIsHistoric = SDate(date).millisSinceEpoch <= SDate(today()).millisSinceEpoch
+  def accuracy(date: LocalDate, daysBeforeDate: Int): Option[Future[Map[Terminal, Double]]] = {
+    val atDate = SDate(date).addDays(-1 * daysBeforeDate)
+    val dateIsHistoric = SDate(date).millisSinceEpoch <= SDate(today).millisSinceEpoch
     if (dateIsHistoric) {
-      val eventualAccuracy = forecast(date, forecastAt).map { terminalForecasts =>
+      val eventualAccuracy = forecast(date, atDate).map { terminalForecasts =>
         terminalActuals.map {
           case (terminal, actual) => terminal -> accuracyPercentage(terminalForecasts.getOrElse(terminal, 0), actual)
         }
