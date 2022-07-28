@@ -10,8 +10,8 @@ class ForecastAccuracySpec extends Specification {
   "Given a ForecastAccuracy class" >> {
     "I should be able to serialise and deserialise it with upickle without loss" >> {
       val acc = ForecastAccuracy(LocalDate(2022, 7, 15), Map(
-        T1 -> SortedMap(1 -> 0.9, 2 -> 0.85, 3 -> 0.7),
-        T2 -> SortedMap(1 -> 0.91, 2 -> 0.86, 3 -> 0.71),
+        T1 -> SortedMap(1 -> Option(0.9), 2 -> Option(0.85), 3 -> Option(0.7)),
+        T2 -> SortedMap(1 -> Option(0.91), 2 -> Option(0.86), 3 -> Option(0.71)),
       ))
       val json = upickle.default.write(acc)
       val acc2 = upickle.default.read[ForecastAccuracy](json)

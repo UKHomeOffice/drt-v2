@@ -38,7 +38,11 @@ object PassengerForecastAccuracyComponent {
               )),
               accuracy.pax.getOrElse(props.terminal, SortedMap[Int, Double]()).map {
                 case (daysAhead, accuracyPct) =>
-                  <.div(^.className := "status-bar-item-value neutral", s"$daysAhead day${if (daysAhead != 1) "s" else ""}: ${accuracyPct.toInt}%")
+                  val accuracyPctString = accuracyPct match {
+                    case Some(accPct) => s"$accPct%"
+                    case None => "N/A"
+                  }
+                  <.div(^.className := "status-bar-item-value neutral", s"$daysAhead day${if (daysAhead != 1) "s" else ""}: $accuracyPctString")
               }.toTagMod
             )
           })

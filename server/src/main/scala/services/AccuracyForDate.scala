@@ -14,7 +14,7 @@ case class AccuracyForDate(date: LocalDate,
                           (implicit ec: ExecutionContext) {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def accuracy(date: LocalDate, daysBeforeDate: Int): Option[Future[Map[Terminal, Double]]] = {
+  def accuracy(date: LocalDate, daysBeforeDate: Int): Option[Future[Map[Terminal, Option[Double]]]] = {
     val atDate = SDate(date).addDays(-1 * daysBeforeDate)
     val dateIsHistoric = SDate(date).millisSinceEpoch <= SDate(today).millisSinceEpoch
     if (dateIsHistoric) {
@@ -30,10 +30,10 @@ case class AccuracyForDate(date: LocalDate,
     }
   }
 
-  def accuracyPercentage(forecast: Double, actual: Double): Double = {
+  def accuracyPercentage(forecast: Double, actual: Double): Option[Double] = {
     if (actual == 0 && forecast != 0)
-      0
+      None
     else
-      (forecast / actual) * 100
+      Option(((forecast - actual) / actual) * 100)
   }
 }

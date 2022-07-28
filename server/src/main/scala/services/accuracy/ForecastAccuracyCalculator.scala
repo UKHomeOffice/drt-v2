@@ -24,7 +24,7 @@ object ForecastAccuracyCalculator {
             val acc = AccuracyForDate(dateToCalculate, forecastPaxNos, actuals, today)
             acc.accuracy(dateToCalculate, daysAgo) match {
               case Some(eventualAccuracies) => eventualAccuracies.map(terminalAccs => (daysAgo, terminalAccs))
-              case None => Future.successful((daysAgo, Map[Terminal, Double]()))
+              case None => Future.successful((daysAgo, Map[Terminal, Option[Double]]()))
             }
           }
           .mapConcat {
@@ -40,7 +40,7 @@ object ForecastAccuracyCalculator {
               .groupBy {
                 case (_, terminal, _) => terminal
               }
-              .mapValues(dta => SortedMap[Int, Double]() ++ dta.map {
+              .mapValues(dta => SortedMap[Int, Option[Double]]() ++ dta.map {
                 case (daysAgo, _, accuracy) => (daysAgo, accuracy)
               })
             ForecastAccuracy(dateToCalculate, accuraciesByTerminal)
