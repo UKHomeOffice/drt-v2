@@ -54,7 +54,7 @@ Congo (Brazzaville),COG,visa
 Congo (Kinshasa),COD,visa
 Cook Islands,COK,nonvisa
 Costa Rica,CRI,nonvisa
-Côte d'Ivoire,CIV,nonvisa
+Côte d'Ivoire,CIV,visa
 Croatia,HRV,nonvisa
 Cuba,CUB,visa
 Cyprus,CYP,nonvisa
@@ -65,7 +65,7 @@ Dominica,DMA,nonvisa
 Dominican Republic,DOM,visa
 Ecuador,ECU,visa
 Egypt,EGY,visa
-El Salvador,SLV,nonvisa
+El Salvador,SLV,visa
 Equatorial Guinea,GNQ,visa
 Eritrea,ERI,visa
 Estonia,EST,nonvisa
@@ -170,7 +170,7 @@ Norway,NOR,nonvisa
 Oman,OMN,visa
 Pakistan,PAK,visa
 Palau,PLW,nonvisa
-Palestinian Territory,PSE,visa
+Palestinian Territory,PSE,visa??
 Panama,PAN,nonvisa
 Papua New Guinea,PNG,nonvisa
 Paraguay,PRY,nonvisa
