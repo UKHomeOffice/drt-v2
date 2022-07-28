@@ -23,23 +23,25 @@ object PassengerForecastAccuracyComponent {
         <.div(
           accuracyPot().renderReady { accuracy =>
             <.div(^.className := "status-bar-item",
-              "Terminal Pax Forecast Accuracy",
+              "Pax Forecast Accuracy",
               Tippy.info(<.div(
                 "The percentage displayed here shows how close to the actual number of passengers the forecast was for the number of days ahead.",
                 <.br(),
-                "Numbers above 100% mean the forecast was too high, below means too low.",
+                "Positive means the forecast was too high, negative too low.",
                 <.br(),
                 <.br(),
                 "eg",
                 <.ul(
-                  <.li("110% means the forecast was 10% over the actual"),
-                  <.li("90% means 10% below the actual")
+                  <.li("+10% means the forecast was 10% above the actual"),
+                  <.li("-10% means the forecast was 10% below the actual")
                 )
               )),
-              accuracy.pax.getOrElse(props.terminal, SortedMap[Int, Double]()).map {
+              accuracy.pax.getOrElse(props.terminal, SortedMap[Int, Option[Double]]()).map {
                 case (daysAhead, accuracyPct) =>
                   val accuracyPctString = accuracyPct match {
-                    case Some(accPct) => s"$accPct%"
+                    case Some(accPct) =>
+                      val sign = if (accPct > 0) "+" else if (accPct < 0) "-" else ""
+                      s"$sign${Math.round(accPct).toInt}%"
                     case None => "N/A"
                   }
                   <.div(^.className := "status-bar-item-value neutral", s"$daysAhead day${if (daysAhead != 1) "s" else ""}: $accuracyPctString")
