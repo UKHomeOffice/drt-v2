@@ -40,7 +40,7 @@ object PassengerForecastAccuracyComponent {
                 case (daysAhead, accuracyPct) =>
                   val accuracyPctString = accuracyPct match {
                     case Some(accPct) =>
-                      val sign = if (accPct > 0) "+" else if (accPct < 0) "-" else ""
+                      val sign = if (accPct > 0) "+" else ""
                       s"$sign${Math.round(accPct).toInt}%"
                     case None => "N/A"
                   }
