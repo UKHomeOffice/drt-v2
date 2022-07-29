@@ -260,30 +260,35 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   border: 1px solid #e4e4e4;
 }
 
-.api-status {
+.status-bar-item-value {
   padding: 5px 15px;
   border-radius: 5px;
   font-weight: bold;
 }
 
-.api-status.red {
+.status-bar-item-value.red {
   color: #000;
   background-color: #fb999a;
 }
 
-.api-status.amber {
+.status-bar-item-value.amber {
   color: #fff;
   background-color: #f47738;
 }
 
-.api-status.green {
+.status-bar-item-value.green {
   color: #000;
   background-color: #b3cfc0;
 }
 
-.api-status.grey {
+.status-bar-item-value.grey {
   color: #000;
   background-color: #f6f6f6;
+}
+
+.status-bar-item-value.neutral {
+  color: #000;
+  background-color: #fff;
 }
 
 .popover.flights-popover .popover__content > tr td {
@@ -2458,4 +2463,10 @@ div.access-restricted {
   clip: rect(1px, 1px, 1px, 1px);
   overflow: hidden;
   position: absolute;
+}
+
+.tooltip-content ul {
+  margin-top: 10px;
+  list-style-type: none;
+  padding: 0px 10px;
 }

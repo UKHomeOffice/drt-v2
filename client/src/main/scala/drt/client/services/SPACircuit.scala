@@ -9,7 +9,7 @@ import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
-import drt.shared.api.{PassengerInfoSummary, WalkTimes}
+import drt.shared.api.{ForecastAccuracy, PassengerInfoSummary, WalkTimes}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
@@ -163,6 +163,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      redListUpdates: Pot[RedListUpdates] = Empty,
                      egateBanksUpdates: Pot[PortEgateBanksUpdates] = Empty,
                      gateStandWalkTime: Pot[WalkTimes] = Empty,
+                     passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
                     )
 
 object PollDelay {
@@ -204,7 +205,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new ViewModeHandler(zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3))),
+      new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new ShowAlertModalDialogHandler(zoomRW(_.displayAlertDialog)((m, v) => m.copy(displayAlertDialog = v))),
@@ -227,7 +228,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new SnackbarHandler(zoomRW(_.snackbarMessage)((m, v) => m.copy(snackbarMessage = v))),
       new RedListPortsHandler(zoomRW(_.redListPorts)((m, v) => m.copy(redListPorts = v))),
       new GateStandWalkTimePortsHandler(zoomRW(_.gateStandWalkTime)((m, v) => m.copy(gateStandWalkTime = v))),
-      new CrunchHandler(zoomRW(identity)((m, _) => m))
+      new CrunchHandler(zoomRW(identity)((m, _) => m)),
+      new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
     )
 
     composedHandlers

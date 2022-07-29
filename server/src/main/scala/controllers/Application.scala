@@ -143,7 +143,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithPassengerInfo
     with WithWalkTimes
     with WithDebug
-    with WithEmailFeedback {
+    with WithEmailFeedback
+    with WithForecastAccuracy {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
   implicit val mat: Materializer = DrtActorSystem.mat

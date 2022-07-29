@@ -13,6 +13,7 @@ import org.scalajs.dom.console
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object Layout {
 
@@ -44,11 +45,19 @@ object Layout {
                     Navbar(Navbar.Props(props.ctl, props.currentLoc.page, user, airportConfig)),
                     <.div(^.className := "main-container",
                       <.div(^.className := "sub-nav-bar",
-                        <.div(^.className := "status-bar",
-                          <.div({
-                            ApiStatusComponent(ApiStatusComponent.Props(!airportConfig.noLivePortFeed, airportConfig.timeToChoxMillis.toInt, airportConfig.useTimePredictions))
-                          })
-                        ),
+                        props.currentLoc.page match {
+                          case TerminalPageTabLoc(terminalName, _, _, _) =>
+                            val terminal = Terminal(terminalName)
+                            <.div(^.className := "status-bar",
+                              ApiStatusComponent(ApiStatusComponent.Props(
+                                !airportConfig.noLivePortFeed,
+                                airportConfig.timeToChoxMillis.toInt,
+                                airportConfig.useTimePredictions,
+                                terminal)),
+                              PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
+                            )
+                          case _ => EmptyVdom
+                        },
                         feedBackNavBar(user)
                       ),
                       <.div(<.div(props.currentLoc.render()))
