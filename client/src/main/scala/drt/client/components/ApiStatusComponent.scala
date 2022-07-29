@@ -8,6 +8,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 case class ApiFeedStatus(totalLanded: Int, withApi: Int, withValidApi: Int) {
   val receivedPct: Option[Double] = if (totalLanded > 0) Option((withApi.toDouble / totalLanded) * 100) else None
@@ -33,15 +34,17 @@ object ApiStatusComponent {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(canValidate: Boolean, timeToChox: Int, considerPredictions: Boolean)
+  case class Props(canValidate: Boolean, timeToChox: Int, considerPredictions: Boolean, terminal: Terminal)
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ApiStatus")
     .render_P { props =>
-      val value = SPACircuit.connect(m => m.portStatePot)
-      value { portStatePot =>
+      val terminalFlightsProxy = SPACircuit.connect(m => m.portStatePot.map(_.flights.values.filter(_.apiFlight.Terminal == props.terminal)))
+
+      terminalFlightsProxy { terminalFlightsPot =>
         <.div(
-          portStatePot().renderReady { ps =>
-            val apiFeedStatus = ApiFeedStatus(ps.flights.values, SDate.now().millisSinceEpoch, props.timeToChox, props.considerPredictions, props.canValidate)
+          terminalFlightsPot().renderReady { flights =>
+
+            val apiFeedStatus = ApiFeedStatus(flights, SDate.now().millisSinceEpoch, props.timeToChox, props.considerPredictions, props.canValidate)
 
             def ragClass(pct: Option[Double]): String = pct match {
               case Some(red) if red < 80 => "red"

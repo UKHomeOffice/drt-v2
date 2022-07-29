@@ -45,14 +45,19 @@ object Layout {
                     Navbar(Navbar.Props(props.ctl, props.currentLoc.page, user, airportConfig)),
                     <.div(^.className := "main-container",
                       <.div(^.className := "sub-nav-bar",
-                        <.div(^.className := "status-bar",
-                          ApiStatusComponent(ApiStatusComponent.Props(!airportConfig.noLivePortFeed, airportConfig.timeToChoxMillis.toInt, airportConfig.useTimePredictions)),
-                          props.currentLoc.page match {
-                            case TerminalPageTabLoc(terminalName, _, _, _) =>
-                              PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(Terminal(terminalName)))
-                            case _ => EmptyVdom
-                          }
-                        ),
+                        props.currentLoc.page match {
+                          case TerminalPageTabLoc(terminalName, _, _, _) =>
+                            val terminal = Terminal(terminalName)
+                            <.div(^.className := "status-bar",
+                              ApiStatusComponent(ApiStatusComponent.Props(
+                                !airportConfig.noLivePortFeed,
+                                airportConfig.timeToChoxMillis.toInt,
+                                airportConfig.useTimePredictions,
+                                terminal)),
+                              PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
+                            )
+                          case _ => EmptyVdom
+                        },
                         feedBackNavBar(user)
                       ),
                       <.div(<.div(props.currentLoc.render()))

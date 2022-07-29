@@ -25,12 +25,8 @@ object PassengerForecastAccuracyComponent {
             <.div(^.className := "status-bar-item",
               "Pax Forecast Accuracy",
               Tippy.info(<.div(
-                "The percentage displayed here shows how close to the actual number of passengers the forecast was for the number of days ahead.",
-                <.br(),
-                "Positive means the forecast was too high, negative too low.",
-                <.br(),
-                <.br(),
-                "eg",
+                ^.className := "tooltip-content",
+                "The percentage displayed here shows how close to the actual number of passengers the forecast was for a number of days ahead.",
                 <.ul(
                   <.li("+10% means the forecast was 10% above the actual"),
                   <.li("-10% means the forecast was 10% below the actual")
