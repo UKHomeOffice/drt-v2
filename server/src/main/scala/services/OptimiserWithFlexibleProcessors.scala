@@ -149,8 +149,10 @@ object OptimiserWithFlexibleProcessors {
                      sla: Int,
                      qstart: IndexedSeq[Double],
                      processors: WorkloadProcessorsProvider): Try[ProcessedWorkLike] = {
-    //    legacyTryProcessWork(work, capacity, sla, qstart, processors)
-    Try(QueueCapacity(capacity.to[List]).processMinutes(sla, work.to[List]))
+    val actualCapacity = capacity.zipWithIndex.map {
+      case (c, idx) => processors.forMinute(idx).capacityForServers(c)
+    }
+    Try(QueueCapacity(actualCapacity.to[List]).processMinutes(sla, work.to[List]))
   }
 
   def legacyTryProcessWork(work: IndexedSeq[Double],
