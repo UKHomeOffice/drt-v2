@@ -1,36 +1,38 @@
 package services.graphstages
 
 import drt.shared.CrunchApi._
-import drt.shared.MilliTimes._
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.Arrival
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Splits, UniqueArrival, WithTimeAccessor}
+import uk.gov.homeoffice.drt.ports.PaxType
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.MilliTimes.{minutesInADay, oneDayMillis, oneMinuteMillis}
+import uk.gov.homeoffice.drt.time.{DateLikeOrdering, MilliTimes, SDateLike, UtcDate}
 
 import scala.collection.immutable.{Map, SortedMap, SortedSet}
-import scala.collection.{immutable, mutable}
-import scala.util.{Failure, Success, Try}
+import scala.collection.mutable
 
 object Crunch {
   val paxOffPerMinute: Int = 20
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  class SplitMinutes {
-    val minutes: mutable.Map[TQM, LoadMinute] = mutable.Map()
-
-    def ++=(incoming: Seq[FlightSplitMinute]): Unit = {
-      incoming.foreach(fsm => +=(LoadMinute(fsm.terminalName, fsm.queueName, fsm.paxLoad, fsm.workLoad, fsm.minute)))
+  case class SplitMinutes(minutes: Map[TQM, LoadMinute]) {
+    def ++(incoming: Iterable[FlightSplitMinute]): SplitMinutes = {
+      incoming.foldLeft(this) {
+        case (acc, fsm) =>
+          acc + LoadMinute(fsm.terminalName, fsm.queueName, fsm.paxLoad, fsm.workLoad, fsm.minute)
+      }
     }
 
-    def +=(incoming: LoadMinute): Unit = {
+    def +(incoming: LoadMinute): SplitMinutes = {
       val key = incoming.uniqueId
       minutes.get(key) match {
-        case None => minutes += (key -> incoming)
-        case Some(existingFsm) => minutes += (key -> (existingFsm + incoming))
+        case None => SplitMinutes(minutes + (key -> incoming))
+        case Some(existingFsm) => SplitMinutes(minutes + (key -> (existingFsm + incoming)))
       }
     }
 
@@ -85,8 +87,6 @@ object Crunch {
   case class RemoveCrunchMinute(terminalName: Terminal, queueName: Queue, minute: MillisSinceEpoch) {
     lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
   }
-
-  case class CrunchRequest(flights: List[ApiFlightWithSplits], crunchStart: MillisSinceEpoch)
 
   val europeLondonId = "Europe/London"
   val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID(europeLondonId)
@@ -277,24 +277,12 @@ object Crunch {
       .toSeq
   }
 
-  def movementsUpdateCriteria(existingMovements: Set[StaffMovement],
-                              incomingMovements: Seq[StaffMovement]): UpdateCriteria = {
-    val updatedMovements = incomingMovements.toSet -- existingMovements
-    val deletedMovements = existingMovements -- incomingMovements.toSet
-    val affectedMovements = updatedMovements ++ deletedMovements
-    log.info(s"affected movements: $affectedMovements")
-    val minutesToUpdate = allMinuteMillis(affectedMovements.toSeq)
-    val terminalsToUpdate = affectedMovements.map(_.terminal)
-
-    UpdateCriteria(minutesToUpdate, terminalsToUpdate)
-  }
-
   def allMinuteMillis(movements: Seq[StaffMovement]): Seq[MillisSinceEpoch] = movements
     .groupBy(_.uUID)
     .flatMap {
       case (_, mmPair) =>
-        val startMillis = mmPair.map(_.time.millisSinceEpoch).min
-        val endMillis = mmPair.map(_.time.millisSinceEpoch).max
+        val startMillis = mmPair.map(_.time).min
+        val endMillis = mmPair.map(_.time).max
         startMillis until endMillis by 60000
     }
     .toSeq
@@ -343,14 +331,13 @@ object Crunch {
       reduceIterables(reducedHead :: tail)(combine)
   }
 
-  def utcDaysInPeriod(start: SDateLike, end: SDateLike): Seq[SDateLike] = {
+  def utcDaysInPeriod(start: SDateLike, end: SDateLike): Seq[UtcDate] = {
     val startForTimeZone = SDate(start, Crunch.utcTimeZone)
     val endForTimeZone = SDate(end, Crunch.utcTimeZone)
 
     (startForTimeZone.millisSinceEpoch to endForTimeZone.millisSinceEpoch by MilliTimes.oneHourMillis)
-      .map(SDate(_).getUtcLastMidnight)
+      .map(SDate(_).toUtcDate)
       .distinct
-      .sortBy(_.millisSinceEpoch)
       .toList
   }
 
@@ -361,7 +348,7 @@ object Crunch {
     (startForTimeZone.millisSinceEpoch to endForTimeZone.millisSinceEpoch by MilliTimes.oneHourMillis)
       .map(SDate(_).toUtcDate)
       .distinct
-      .sorted
+      .sorted(DateLikeOrdering)
       .toList
   }
 }

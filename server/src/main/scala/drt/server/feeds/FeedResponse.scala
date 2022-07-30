@@ -1,10 +1,11 @@
 package server.feeds
 
+import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
-import drt.shared.SDateLike
 import manifests.passengers.BestAvailableManifest
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.SDate
+import uk.gov.homeoffice.drt.time.SDateLike
 
 sealed trait FeedResponse {
   val createdAt: SDateLike
@@ -18,7 +19,7 @@ case class StoreFeedImportArrivals(arrivals: Flights)
 case object GetFeedImportArrivals
 
 case class ArrivalsFeedSuccess(arrivals: Flights, createdAt: SDateLike) extends ArrivalsFeedResponse {
-  override val length: Int = arrivals.flights.length
+  override val length: Int = arrivals.flights.size
 }
 case object ArrivalsFeedSuccessAck
 
@@ -54,12 +55,12 @@ case class BestManifestsFeedSuccess(manifests: Seq[BestAvailableManifest], creat
   override val length: Int = manifests.length
 }
 
-case class DqManifests(lastSeenFileName: String, manifests: Set[VoyageManifest]) {
+case class DqManifests(lastProcessedMarker: MillisSinceEpoch, manifests: Iterable[VoyageManifest]) {
   def isEmpty: Boolean = manifests.isEmpty
   def nonEmpty: Boolean = !isEmpty
   def length: Int = manifests.size
-  def update(newLastSeenFileName: String, newManifests: Set[VoyageManifest]): DqManifests = {
+  def update(newLastProcessedMarker: MillisSinceEpoch, newManifests: Set[VoyageManifest]): DqManifests = {
     val mergedManifests = manifests ++ newManifests
-    DqManifests(newLastSeenFileName, mergedManifests)
+    DqManifests(lastProcessedMarker, mergedManifests)
   }
 }

@@ -1,6 +1,6 @@
 package drt.shared
 
-import drt.shared.api.Arrival
+import uk.gov.homeoffice.drt.arrivals.Arrival
 
 object CodeShares {
   def uniqueArrivalsWithCodeShares[GenFlight](apiFlightFromGenFlight: (GenFlight) => Arrival)

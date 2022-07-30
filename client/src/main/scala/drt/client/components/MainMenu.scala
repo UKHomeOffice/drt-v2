@@ -1,6 +1,8 @@
 package drt.client.components
 
-import drt.auth.{Role, _}
+import diode.UseValueEq
+import drt.client.SPAMain
+import drt.client.SPAMain.TerminalPageModes.Dashboard
 import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
@@ -9,15 +11,22 @@ import drt.shared._
 import japgolly.scalajs.react.component.Js
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, LI}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles._
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, PortRegion}
 
 object MainMenu {
   @inline private def bss: BootstrapStyles.type = GlobalStyles.bootstrapStyles
 
-  case class Props(router: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedSourceStatuses], airportConfig: AirportConfig, roles: Set[Role])
+  case class Props(router: RouterCtl[Loc],
+                   currentLoc: Loc,
+                   feeds: Seq[FeedSourceStatuses],
+                   airportConfig: AirportConfig,
+                   user: LoggedInUser) extends UseValueEq
 
   case class MenuItem(idx: Int, label: Props => VdomNode, icon: Icon, location: Loc, classes: List[String] = List())
 
@@ -25,32 +34,32 @@ object MainMenu {
 
   def usersMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Users", Icon.users, KeyCloakUsersLoc)
 
-  def alertsMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Alerts", Icon.briefcase, AlertLoc, List("alerts-link"))
-
   def statusMenuItem(position: Int, feeds: Seq[FeedSourceStatuses]): MenuItem = MenuItem(position, _ => s"Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
 
-  def portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
+  val portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
 
-  def forecastUploadFile(position: Int): MenuItem = MenuItem(position, _ => "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
+  val forecastUploadFile: Int => MenuItem = (position: Int) => MenuItem(position, _ => "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
 
   def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
-    val rag = if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Red)) Red
-    else if (feeds.map(_.feedStatuses.ragStatus(SDate.now().millisSinceEpoch)).contains(Amber)) Amber
+    val statuses = feeds.map(f => FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, f.feedSource.maybeLastUpdateThreshold, f.feedStatuses))
+    val rag = if (statuses.contains(Red)) Red
+    else if (statuses.contains(Amber)) Amber
     else Green
 
     rag.toString
   }
 
-
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedSourceStatuses]): List[MenuItem] = {
-
-    def addFileUpload: List[(Role, Int => MenuItem)] = if (List(PortCode("LHR"), PortCode("LGW"), PortCode("STN"), PortCode("TEST")) contains airportConfig.portCode) List((PortFeedUpload, forecastUploadFile _)) else List.empty
+    val addFileUpload: List[(Role, Int => MenuItem)] =
+      if (List(PortCode("LHR"), PortCode("LGW"), PortCode("STN"), PortCode("TEST")) contains airportConfig.portCode)
+        List((PortFeedUpload, forecastUploadFile))
+      else List.empty
 
     def terminalDepsMenuItem: List[(Role, Int => MenuItem)] = airportConfig.terminals.map { tn =>
       val terminalName = tn.toString
       val targetLoc = currentLoc match {
-        case tptl: TerminalPageTabLoc if tptl.mode == "dashboard" =>
-          TerminalPageTabLoc(terminalName, tptl.mode, tptl.subMode)
+        case tptl: TerminalPageTabLoc if tptl.mode == Dashboard =>
+          TerminalPageTabLoc(terminalName, tptl.mode, tptl.subMode, Map[String, String]())
         case tptl: TerminalPageTabLoc =>
           TerminalPageTabLoc(terminalName, tptl.mode, tptl.subMode,
             tptl.withUrlParameters(UrlDateParameter(tptl.date),
@@ -63,7 +72,6 @@ object MainMenu {
 
     val restrictedMenuItems: List[(Role, Int => MenuItem)] = List(
       (ManageUsers, usersMenuItem _),
-      (CreateAlerts, alertsMenuItem _),
     ) ++ addFileUpload ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem))
 
     val nonTerminalUnrestrictedMenuItems = dashboardMenuItem :: Nil
@@ -92,7 +100,7 @@ object MainMenu {
 
   private class Backend() {
     def render(props: Props): VdomTagOf[Div] = {
-      val children: Seq[TagOf[LI]] = for (item <- menuItems(props.airportConfig, props.currentLoc, props.roles, props.feeds)) yield {
+      val children: Seq[TagOf[LI]] = for (item <- menuItems(props.airportConfig, props.currentLoc, props.user.roles, props.feeds)) yield {
         val active = (props.currentLoc, item.location) match {
           case (TerminalPageTabLoc(tn, _, _, _), TerminalPageTabLoc(tni, _, _, _)) => tn == tni
           case (current, itemLoc) => current == itemLoc
@@ -103,8 +111,8 @@ object MainMenu {
         )
       }
 
-      val navItems: Seq[VdomTagOf[LI]] = if (PortSwitcher.userCanSwitchPort(props.roles))
-        children :+ <.li(PortSwitcher(props.roles, props.airportConfig.portCode))
+      val navItems: Seq[VdomTagOf[LI]] = if (props.user.portRoles.size > 1)
+        children :+ <.li(PortSwitcher(props.user, props.airportConfig.portCode))
       else
         children
       <.div(
@@ -117,17 +125,16 @@ object MainMenu {
     .renderBackend[Backend]
     .build
 
-  def apply(ctl: RouterCtl[Loc], currentLoc: Loc, feeds: Seq[FeedSourceStatuses], airportConfig: AirportConfig, roles: Set[Role]): VdomElement
-  = component(Props(ctl, currentLoc, feeds, airportConfig, roles))
+  def apply(ctl: RouterCtl[Loc],
+            currentLoc: Loc,
+            feeds: Seq[FeedSourceStatuses],
+            airportConfig: AirportConfig,
+            user: LoggedInUser): VdomElement
+  = component(Props(ctl, currentLoc, feeds, airportConfig, user))
 }
 
 object PortSwitcher {
-
-  def userCanSwitchPort(roles: Set[Role]): Boolean = RestrictedAccessByPortPage
-    .allPortsAccessible(roles)
-    .size > 1
-
-  case class Props(loggedInUserRoles: Set[Role], portCode: PortCode)
+  case class Props(user: LoggedInUser, portCode: PortCode) extends UseValueEq
 
   case class State(showDropDown: Boolean = false)
 
@@ -136,24 +143,41 @@ object PortSwitcher {
       .initialState(State())
       .renderPS((scope, props, state) => {
         val showClass = if (state.showDropDown) "show" else ""
-        val otherPorts = RestrictedAccessByPortPage.allPortsAccessible(props.loggedInUserRoles).filter(p => {
-          p != props.portCode
-        })
-        if (otherPorts.size == 1) {
-          <.a(Icon.plane, " ", ^.href := RestrictedAccessByPortPage.url(otherPorts.head), otherPorts.head.iata)
+        val ports = props.user.portRoles.map(portRole => PortCode(portRole.name))
+        if (ports.size == 2) {
+          ports.find(_ != props.portCode).map { pc =>
+            <.a(Icon.plane, " ", ^.href := SPAMain.urls.urlForPort(pc.toString), pc.iata)
+          }.getOrElse(EmptyVdom)
         } else {
+          val regions = PortRegion.regions.collect {
+            case region if region.ports.intersect(ports).nonEmpty => (region.name -> region.ports.intersect(ports))
+          }.toList.sortBy(_._1)
           <.span(
             ^.className := "dropdown",
             <.a(Icon.plane, " ", "Switch port"),
             ^.onClick --> scope.modState(_.copy(showDropDown = !state.showDropDown)),
             if (state.showDropDown) <.div(^.className := "menu-overlay", ^.onClick --> scope.modState(_ => State())) else "",
             <.ul(^.className := s"main-menu__port-switcher dropdown-menu $showClass",
-              otherPorts.toList.sorted.map(p => <.li(^.className := "dropdown-item",
-                <.a(^.href := RestrictedAccessByPortPage.url(p), p.iata))).toTagMod
+              if (regions.size == 1) listPorts(ports, props.portCode).toTagMod
+              else listPortsByRegion(regions, props.portCode).toTagMod
             )
           )
         }
       }).build
 
-  def apply(loggedInUserRoles: Set[Role], portCode: PortCode): VdomElement = component(Props(loggedInUserRoles, portCode))
+  private def listPortsByRegion(regions: List[(String, Set[PortCode])], currentPort: PortCode): List[html_<^.VdomTagOf[LI]] =
+    regions.flatMap { case (region, regionPorts) =>
+      val regionLi = <.li(^.className := "dropdown-item", <.span(region, ^.disabled := true, ^.className := "non-selectable region"))
+      regionLi :: listPorts(regionPorts, currentPort)
+    }
+
+  private def listPorts(ports: Set[PortCode], currentPort: PortCode): List[VdomTagOf[LI]] =
+    ports.toList.sorted.map { p =>
+      <.li(^.className := "dropdown-item",
+        if (p == currentPort) <.span(p.iata, ^.disabled := true, ^.className := "non-selectable port")
+        else <.a(^.href := SPAMain.urls.urlForPort(p.toString), p.iata)
+      )
+    }
+
+  def apply(user: LoggedInUser, portCode: PortCode): VdomElement = component(Props(user, portCode))
 }

@@ -1,22 +1,23 @@
 package drt.client
 
-import java.util.UUID
-
 import diode.Action
+import drt.client.SPAMain.TerminalPageModes.{Current, Dashboard, Planning, Snapshot, Staffing}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
-import drt.client.components.{AlertsPage, ContactPage, EditKeyCloakUserPage, FaqsPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
+import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle}
+import drt.client.components.{ContactPage, EditKeyCloakUserPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
-import drt.shared.SDateLike
-import drt.shared.Terminals.Terminal
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.vdom.html_<^
 import org.scalajs.dom
+import org.scalajs.dom.console
 import scalacss.ProdDefaults._
+import uk.gov.homeoffice.drt.Urls
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
@@ -66,8 +67,54 @@ object SPAMain {
     }
   }
 
+  case class PortConfigPageLoc()
+
+  sealed trait TerminalPageMode {
+    val asString: String
+  }
+
+  object TerminalPageModes {
+    def fromString(modeStr: String): TerminalPageMode = modeStr.toLowerCase match {
+      case "dashboard" => Dashboard
+      case "current" => Current
+      case "snapshot" => Snapshot
+      case "planning" => Planning
+      case "staffing" => Staffing
+      case unknown =>
+        throw new Exception(s"Unknown terminal page mode '$unknown'")
+    }
+
+    case object Dashboard extends TerminalPageMode {
+      override val asString: String = "dashboard"
+    }
+
+    case object Current extends TerminalPageMode {
+      override val asString: String = "current"
+    }
+
+    case object Snapshot extends TerminalPageMode {
+      override val asString: String = "snapshot"
+    }
+
+    case object Planning extends TerminalPageMode {
+      override val asString: String = "planning"
+    }
+
+    case object Staffing extends TerminalPageMode {
+      override val asString: String = "staffing"
+    }
+  }
+
+  object TerminalPageTabLoc {
+    def apply(terminalName: String,
+              mode: TerminalPageMode,
+              subMode: String,
+              queryParams: Map[String, String]): TerminalPageTabLoc =
+      TerminalPageTabLoc(terminalName, mode.toString, subMode, queryParams)
+  }
+
   case class TerminalPageTabLoc(terminalName: String,
-                                mode: String = "dashboard",
+                                modeStr: String = "dashboard",
                                 subMode: String = "summary",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
@@ -76,11 +123,12 @@ object SPAMain {
     val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+"))
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+"))
     val viewType: ViewType = queryParams.get(UrlViewType.paramName).map(vt => if (ViewRecs.queryParamsValue == vt) ViewRecs else ViewDeps).getOrElse(ViewDeps)
+    val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
 
     def viewMode: ViewMode = {
       (mode, date) match {
-        case ("current", Some(dateString)) => ViewDay(parseDateString(dateString))
-        case ("snapshot", dateStringOption) =>
+        case (Current, Some(dateString)) => ViewDay(parseDateString(dateString))
+        case (Snapshot, dateStringOption) =>
           val pointInTimeMillis = dateStringOption.map(parseDateString).getOrElse(SDate.midnightThisMorning())
           ViewPointInTime(pointInTimeMillis)
         case _ => ViewLive
@@ -103,21 +151,24 @@ object SPAMain {
 
     def timeRangeEnd: Option[Int] = timeRangeEndString.map(_.toInt)
 
-    def dateFromUrlOrNow: SDateLike = date.map(parseDateString).getOrElse(SDate.now())
+    def dateFromUrlOrNow: SDateLike = date.flatMap(SDate.parse).getOrElse(SDate.now())
 
     def updateRequired(p: TerminalPageTabLoc): Boolean = (terminal != p.terminal) || (date != p.date) || (mode != p.mode)
 
     def loadAction: Action = mode match {
-      case "planning" =>
+      case Planning =>
         GetForecastWeek(TerminalPlanningComponent.defaultStartDate(dateFromUrlOrNow), terminal)
-      case "staffing" =>
-        log.info(s"dispatching get shifts for month on staffing page")
+      case Staffing =>
         GetShiftsForMonth(dateFromUrlOrNow, terminal)
+
       case _ => SetViewMode(viewMode)
     }
+
+    def update(mode: TerminalPageMode, subMode: String, queryParams: Map[String, String] = Map[String, String]()): TerminalPageTabLoc =
+      copy(modeStr = mode.asString, subMode = subMode, queryParams = queryParams)
   }
 
-  def serverLogEndpoint: String = BaseUrl.until_#(Path("/logging")).value
+  def serverLogEndpoint: String = absoluteUrl("logging")
 
   case class PortDashboardLoc(period: Option[Int]) extends Loc
 
@@ -137,15 +188,7 @@ object SPAMain {
 
   case object DeskAndQueuesLoc extends Loc
 
-  case object ArrivalsFaqsLoc extends Loc
-
-  case object PortConfigurationFaqsLoc extends Loc
-
-  case object StaffMovementsFaqsLoc extends Loc
-
-  case object MonthlyStaffingFaqsLoc extends Loc
-
-  case class KeyCloakUserEditLoc(userId: UUID) extends Loc
+  case class KeyCloakUserEditLoc(userId: String) extends Loc
 
   case object AlertLoc extends Loc
 
@@ -160,16 +203,19 @@ object SPAMain {
       UpdateMinuteTicker,
       GetFeedSourceStatuses(),
       GetAlerts(0L),
+      GetRedListUpdates,
+      GetPortEgateBanksUpdates,
       GetShowAlertModalDialog,
       GetOohStatus,
-      GetFeatureFlags
+      GetFeatureFlags,
+      GetGateStandWalktime,
     )
 
     initActions.foreach(SPACircuit.dispatch(_))
   }
 
   val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc]
-    .buildConfig { dsl =>
+    .buildConfig { dsl: RouterConfigDsl[Loc, Unit] =>
       import dsl._
 
       val rule = homeRoute(dsl) |
@@ -178,20 +224,13 @@ object SPAMain {
         statusRoute(dsl) |
         keyCloakUsersRoute(dsl) |
         keyCloakUserEditRoute(dsl) |
-        alertRoute(dsl) |
-        faqsRoute(dsl) |
-        deskAndQueuesFaqsRoute(dsl) |
-        arrivalsFaqsRoute(dsl) |
-        portConfigurationFaqsRoute(dsl) |
-        staffMovementsFaqsRoute(dsl) |
-        monthlyStaffingFaqsRoute(dsl) |
         contactRoute(dsl) |
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
 
-      rule.notFound(redirectToPage(PortDashboardLoc(None))(Redirect.Replace))
+      rule.notFound(redirectToPage(PortDashboardLoc(None))(SetRouteVia.HistoryReplace))
     }
-    .renderWith(layout)
+    .renderWith(Layout(_, _))
     .onPostRender((maybePrevLoc, currentLoc) => {
       Callback(
         (maybePrevLoc, currentLoc) match {
@@ -210,101 +249,58 @@ object SPAMain {
       )
     })
 
-  def homeRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def homeRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute(root, UserDashboardLoc) ~> renderR((router: RouterCtl[Loc]) => UserDashboardPage(router))
   }
 
-  def contactUsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def contactUsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute(root, ContactUsLoc) ~> renderR(_ => ContactPage())
   }
 
-  def statusRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def statusRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#status", StatusLoc) ~> renderR((_: RouterCtl[Loc]) => StatusPage())
   }
 
-  def keyCloakUsersRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def keyCloakUsersRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#users", KeyCloakUsersLoc) ~> renderR((router: RouterCtl[Loc]) => KeyCloakUsersPage(router))
   }
 
-  def keyCloakUserEditRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def keyCloakUserEditRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
-    dynamicRouteCT(("#editUser" / uuid).caseClass[KeyCloakUserEditLoc]) ~>
+    dynamicRouteCT(("#editUser" / string(".+")).caseClass[KeyCloakUserEditLoc]) ~>
       dynRenderR((page: KeyCloakUserEditLoc, _) => {
         EditKeyCloakUserPage(page.userId)
       })
   }
 
-  def alertRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#alerts", AlertLoc) ~> renderR((_: RouterCtl[Loc]) => AlertsPage())
-  }
-
-  def contactRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def contactRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#contact", ContactUsLoc) ~> renderR(_ => ContactPage())
   }
 
-  def faqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs", FaqsLoc) ~> renderR(_ => FaqsPage(""))
-  }
-
-  def deskAndQueuesFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/deskAndQueues", DeskAndQueuesLoc) ~> renderR(_ => FaqsPage("deskAndQueues"))
-  }
-
-  def arrivalsFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/arrivals", ArrivalsFaqsLoc) ~> renderR(_ => FaqsPage("arrivals"))
-  }
-
-  def portConfigurationFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/portConfiguration", PortConfigurationFaqsLoc) ~> renderR(_ => FaqsPage("portConfiguration"))
-  }
-
-  def staffMovementsFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/staff-movements", StaffMovementsFaqsLoc) ~> renderR(_ => FaqsPage("staff-movements"))
-  }
-
-  def monthlyStaffingFaqsRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#faqs/monthly-staffing", MonthlyStaffingFaqsLoc) ~> renderR(_ => FaqsPage("monthly-staffing"))
-  }
-
-
-  def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute("#forecastFileUpload", ForecastFileUploadLoc) ~> renderR(_ => ForecastFileUploadPage())
   }
 
-  def portConfigRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
-
-    staticRoute("#config", PortConfigLoc) ~> renderR(_ => PortConfigPage())
+    val proxy = SPACircuit.connect(m => PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.loggedInUserPot, m.airportConfig, m.gateStandWalkTime))
+    staticRoute("#config", PortConfigLoc) ~> render(proxy(x => PortConfigPage(x())))
   }
 
-  def dashboardRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def dashboardRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     dynamicRouteCT(("#portDashboard" / int.option).caseClass[PortDashboardLoc]) ~>
@@ -313,9 +309,8 @@ object SPAMain {
       })
   }
 
-  def terminalRoute(dsl: RouterConfigDsl[Loc]): dsl.Rule = {
+  def terminalRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
-    import modules.AdditionalDsl._
 
     val requiredTerminalName = string("[a-zA-Z0-9]+")
     val requiredTopLevelTab = string("[a-zA-Z0-9]+")
@@ -323,34 +318,39 @@ object SPAMain {
 
     dynamicRouteCT(
       ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap).caseClass[TerminalPageTabLoc]) ~>
-      dynRenderR((page: TerminalPageTabLoc, router) => {
+      dynRenderR { (page: TerminalPageTabLoc, router) =>
         val props = TerminalComponent.Props(terminalPageTab = page, router)
         TerminalComponent(props)
-      })
+      }
   }
 
-  def layout(c: RouterCtl[Loc], r: Resolution[Loc]): html_<^.VdomElement = Layout(c, r)
+  val pathToThisApp: String = dom.document.location.pathname
 
-  def pathToThisApp: String = dom.document.location.pathname
+  val rootDomain: String = dom.document.location.host.split("\\.").drop(1).mkString(".")
+
+  val useHttps: Boolean = dom.document.location.protocol == "https:"
+
+  console.log(s"useHttps: '$useHttps'")
+
+  val urls: Urls = Urls(rootDomain, useHttps)
 
   def absoluteUrl(relativeUrl: String): String = {
     if (pathToThisApp == "/") s"/$relativeUrl"
     else s"$pathToThisApp/$relativeUrl"
   }
 
-  def exportViewUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
+  def exportUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
     case view: ViewPointInTime =>
       SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/${view.time.toLocalDate}/${view.millis}/$terminal")
     case view =>
-      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.millisSinceEpoch}/${view.dayEnd.millisSinceEpoch}/$terminal")
+      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.toLocalDate.toISOString}/${view.dayEnd.toLocalDate.toISOString}/$terminal")
   }
 
-  def exportArrivalViewUrl(viewMode: ViewMode, terminal: Terminal): String = viewMode match {
-    case view: ViewPointInTime =>
-      SPAMain.absoluteUrl(s"export/arrivals/snapshot/${view.time.toLocalDate}/${view.millis}/$terminal")
-    case view =>
-      SPAMain.absoluteUrl(s"export/arrivals/${view.dayStart.toLocalDate.toISOString}/${view.dayEnd.toLocalDate.toISOString}/$terminal")
-  }
+  def exportSnapshotUrl(exportType: ExportType, date: LocalDate, pointInTime: SDateLike, terminal: Terminal): String =
+    SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/$date/${pointInTime.millisSinceEpoch}/$terminal")
+
+  def exportDatesUrl(exportType: ExportType, start: LocalDate, end: LocalDate, terminal: Terminal): String =
+    SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${start.toISOString}/${end.toISOString}/$terminal")
 
   def assetsPrefix: String = if (pathToThisApp == "/") s"/assets" else s"live/assets"
 
@@ -358,7 +358,7 @@ object SPAMain {
   protected def getInstance(): this.type = this
 
   @JSExport
-  def main(): Unit = {
+  def main(args: Array[String]): Unit = {
     log.debug("Application starting")
 
     ErrorHandler.registerGlobalErrorHandler()
@@ -366,6 +366,10 @@ object SPAMain {
     import scalacss.ScalaCssReact._
 
     GlobalStyles.addToDocument()
+    DefaultFormFieldsStyle.addToDocument()
+    DefaultToolTipsStyle.addToDocument()
+    ArrivalsPageStylesDefault.addToDocument()
+    DefaultScenarioSimulationStyle.addToDocument()
 
     requestInitialActions()
 

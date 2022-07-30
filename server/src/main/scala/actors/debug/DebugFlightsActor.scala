@@ -1,13 +1,14 @@
 package actors.debug
 
-import actors.{GetState, RecoveryActorLike}
+import actors.persistent.{RecoveryActorLike, Sizes}
+import actors.persistent.staffing.GetState
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
+import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
-import server.protobuf.messages.FlightsMessage.FlightsDiffMessage
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import services.SDate
 
 case class DebugState(lastSnapshot: Option[GeneratedMessage], messages: List[GeneratedMessage])
@@ -77,4 +78,7 @@ class DebugFlightsActor(lookupId: String, maybePointInTime: Option[MillisSinceEp
       val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
       Recovery(fromSnapshot = criteria, replayMax = 1000)
   }
+
+  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  override val maybeSnapshotInterval: Option[Int] = Option(1000)
 }

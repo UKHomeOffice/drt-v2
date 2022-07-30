@@ -9,8 +9,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.immutable.IndexedSeq
 import scala.util.Try
 
-case class OptimizerConfig(sla: Int)
-
 case class OptimizerCrunchResult(
                          recommendedDesks: IndexedSeq[Int],
                          waitTimes: Seq[Int])
@@ -19,18 +17,18 @@ object TryRenjin {
   val log: Logger = LoggerFactory.getLogger(getClass)
   lazy val manager = new ScriptEngineManager()
 
-  def crunch(workloads: Iterable[Double], minDesks: Iterable[Int], maxDesks: Iterable[Int], config: OptimizerConfig): Try[OptimizerCrunchResult] = {
+  def crunch(workloads: Iterable[Double], minDesks: Iterable[Int], maxDesks: Iterable[Int], config: OptimiserConfig): Try[OptimizerCrunchResult] = {
     val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.crunch(workloads, minDesks, maxDesks, config)
   }
 
-  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimizerConfig): Seq[Int] = {
+  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserConfig): Seq[Int] = {
     val optimizer = Optimizer(engine = manager.getEngineByName("Renjin"))
     optimizer.processWork(workloads, desks, config)
   }
 
   case class Optimizer(engine: ScriptEngine) {
-    def crunch(workloads: Iterable[Double], minDesks: Iterable[Int], maxDesks: Iterable[Int], config: OptimizerConfig): Try[OptimizerCrunchResult] = {
+    def crunch(workloads: Iterable[Double], minDesks: Iterable[Int], maxDesks: Iterable[Int], config: OptimiserConfig): Try[OptimizerCrunchResult] = {
       val tryCrunchRes = Try {
         loadOptimiserScript
         initialiseWorkloads(workloads)
@@ -44,13 +42,11 @@ object TryRenjin {
         engine.put("weight_staff", 3)
         engine.put("weight_sla", 10)
 
-//        val adjustedXMax = if (workloads.size > 60) {
-//          engine.eval("rollingfairxmax <- rolling.fair.xmax(w, xmin=xmin, block.size=5, sla=adjustedSla, target.width=60, rolling.buffer=120)")
-//          val fairXmax = engine.eval("rollingfairxmax").asInstanceOf[DoubleVector]
-//          fairXmax.toIntArray.toSeq.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
-//        } else maxDesks
-
-        val adjustedXMax = maxDesks
+        val adjustedXMax = if (workloads.size > 60) {
+          engine.eval("rollingfairxmax <- rolling.fair.xmax(w, xmin=xmin, block.size=5, sla=adjustedSla, target.width=60, rolling.buffer=120)")
+          val fairXmax = engine.eval("rollingfairxmax").asInstanceOf[DoubleVector]
+          fairXmax.toIntArray.toSeq.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
+        } else maxDesks
 
         engine.put("adjustedXMax", adjustedXMax.toArray)
 
@@ -63,7 +59,7 @@ object TryRenjin {
       tryCrunchRes
     }
 
-    def processWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimizerConfig): Seq[Int] = {
+    def processWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserConfig): Seq[Int] = {
       loadOptimiserScript
       log.debug(s"Setting ${workloads.size} workloads & ${desks.size} desks")
       initialiseWorkloads(workloads)
@@ -71,7 +67,7 @@ object TryRenjin {
       runSimulation("desks", config).toList
     }
 
-    def runSimulation(desks: String, config: OptimizerConfig): Seq[Int] = {
+    def runSimulation(desks: String, config: OptimiserConfig): Seq[Int] = {
       engine.put("sla", config.sla)
       engine.eval("processed <- process.work(w, " + desks + ", sla, 0)")
 

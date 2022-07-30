@@ -1,10 +1,10 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.SPAMain._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
@@ -44,9 +44,7 @@ object TimeRangeFilter {
                    defaultWindow: TimeRangeHours,
                    showNow: Boolean,
                    minuteTicker: Int = 0
-                  )
-
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => p.minuteTicker)
+                  ) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("TimeRangeFilter")
     .render_P((props) => {
@@ -69,51 +67,48 @@ object TimeRangeFilter {
 
       def nowActive =
         if (selectedWindow.start == currentWindow.start && selectedWindow.end == currentWindow.end)
-        "active"
-      else ""
+          "active"
+        else ""
 
       def dayActive = if (selectedWindow.start == wholeDayWindow.start && selectedWindow.end == wholeDayWindow.end)
         "active"
       else ""
 
-      <.div(
-        <.div(^.className := "date-view-picker-container",
-          <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
-            if (props.showNow)
-              <.div(^.id := "now", ^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
-                GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "now")
-                props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(None), UrlTimeRangeEnd(None)))
-              })) else "",
-            <.div(^.id := "hours24", ^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
-              GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "24 hours")
-              props.router.set(props.terminalPageTab.withUrlParameters(
-                UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(Option(wholeDayWindow.start.toString)), UrlTimeRangeEnd(Option(wholeDayWindow.end.toString)))
-              )
-            }))
-          ),
-          <.div(^.className := "time-range",
-            "From: ",
-            <.select(^.className := "form-control",
-              ^.value := s"${selectedWindow.start}",
-              ^.onChange ==> ((e: ReactEventFromInput) => setStart(e.target.value)),
-              (0 to 24).map(h => {
-                <.option(^.value := s"$h", f"$h%02d")
-              }
-              ).toTagMod),
-            " To: ",
-            <.select(^.className := "form-control",
-              ^.value := s"${selectedWindow.end}",
-              ^.onChange ==> ((e: ReactEventFromInput) => setEnd(e.target.value)),
-              (0 to 36).map(h => {
-                val display = if (h < 24) f"$h%02d" else f"${h - 24}%02d +1"
-                <.option(^.value := s"$h", display)
-              }
-              ).toTagMod)
-          )
-        ))
-
+      <.div(^.className := "time-view-selector-container",
+        <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
+          if (props.showNow)
+            <.div(^.id := "now", ^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
+              GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "now")
+              props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(None), UrlTimeRangeEnd(None)))
+            })) else "",
+          <.div(^.id := "hours24", ^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
+            GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "24 hours")
+            props.router.set(props.terminalPageTab.withUrlParameters(
+              UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(Option(wholeDayWindow.start.toString)), UrlTimeRangeEnd(Option(wholeDayWindow.end.toString)))
+            )
+          }))
+        ),
+        <.div(
+          ^.className := "time-range",
+          <.select(^.className := "form-control",
+            ^.value := s"${selectedWindow.start}",
+            ^.onChange ==> ((e: ReactEventFromInput) => setStart(e.target.value)),
+            (0 to 24).map(h => {
+              <.option(^.value := s"$h", f"$h%02d")
+            }
+            ).toTagMod),
+          " To: ",
+          <.select(^.className := "form-control",
+            ^.value := s"${selectedWindow.end}",
+            ^.onChange ==> ((e: ReactEventFromInput) => setEnd(e.target.value)),
+            (0 to 36).map(h => {
+              val display = if (h < 24) f"$h%02d" else f"${h - 24}%02d +1"
+              <.option(^.value := s"$h", display)
+            }
+            ).toTagMod)
+        )
+      )
     })
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)

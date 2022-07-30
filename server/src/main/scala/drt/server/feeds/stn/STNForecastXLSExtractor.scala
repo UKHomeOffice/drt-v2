@@ -1,15 +1,16 @@
 package drt.server.feeds.stn
 
-import java.util.TimeZone
-
 import drt.server.feeds.common.XlsExtractorUtil._
-import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, ForecastFeedSource, PortCode, SDateLike}
 import org.apache.poi.ss.usermodel.{Cell, DateUtil}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDateLike
 
+import java.util.TimeZone
 import scala.util.{Failure, Success, Try}
 
 case class STNForecastFlightRow(scheduledDate: SDateLike,
@@ -23,7 +24,6 @@ case class STNForecastFlightRow(scheduledDate: SDateLike,
 object STNForecastXLSExtractor {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
-
 
   def apply(xlsFilePath: String): List[Arrival] = rows(xlsFilePath)
     .map(stnFieldsToArrival)
@@ -47,17 +47,18 @@ object STNForecastXLSExtractor {
       if row.getCell(1) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
     } yield {
       Try {
-        val scheduledCell = numericCellOption(headingIndexByNameMap("SCHEDULED TIME& DATE"), row).getOrElse(0.0)
+        val scheduledCell = tryNumericThenStringCellDoubleOption(headingIndexByNameMap("SCHEDULED TIME& DATE"), row)
         val carrierCodeCell = stringCellOption(headingIndexByNameMap("AIRLINE"), row).getOrElse("")
-        val flightNumberCell = stringCellOption(headingIndexByNameMap("FLIGHT NUMBER"), row).getOrElse("")
+        val flightNumberCell = tryNumericThenStringCellIntOption(headingIndexByNameMap("FLIGHT NUMBER"), row)
         val originCell = stringCellOption(headingIndexByNameMap("DESTINATION / ORIGIN"), row)
-        val maxPaxCell = numericCellOption(headingIndexByNameMap("FLIGHT CAPACITY"), row).getOrElse(0.0)
-        val totalCell = numericCellOption(headingIndexByNameMap("FLIGHT FORECAST"), row).getOrElse(0.0)
+        val maxPaxCell = tryNumericThenStringCellDoubleOption(headingIndexByNameMap("FLIGHT CAPACITY"), row)
+        val totalCell = tryNumericThenStringCellDoubleOption(headingIndexByNameMap("FLIGHT FORECAST"), row)
         val internationalDomesticCell = stringCellOption(headingIndexByNameMap("TYPE"), row)
         val scheduled = SDate(DateUtil.getJavaDate(scheduledCell, TimeZone.getTimeZone("UTC")).getTime)
 
+        val flightNumber: String = if (flightNumberCell == 0) "" else flightNumberCell.toString
         STNForecastFlightRow(scheduledDate = scheduled,
-          flightCode = s"$carrierCodeCell$flightNumberCell",
+          flightCode = s"$carrierCodeCell$flightNumber",
           origin = originCell.getOrElse(""),
           internationalDomestic = internationalDomesticCell.getOrElse(""),
           totalPax = totalCell.toInt,
@@ -66,9 +67,11 @@ object STNForecastXLSExtractor {
       }
     }
 
-    val arrivalRows = arrivalRowsTry.toList.flatMap {
-      case Success(a) => Some(a)
-      case Failure(e) => log.warn(s"Invalid data ${e.getMessage}")
+    val arrivalRows = arrivalRowsTry.zipWithIndex.toList.flatMap {
+      case (Success(a), _) =>
+        val inLondonEuropeTz = a.copy(scheduledDate = SDate(s"${a.scheduledDate.toISODateOnly}T${a.scheduledDate.toHoursAndMinutes}", Crunch.europeLondonTimeZone))
+        Some(inLondonEuropeTz)
+      case (Failure(e), i) => log.warn(s"Invalid data on row ${i + 3} ${e.getMessage}", e)
         None
     }.filter(_.internationalDomestic == "INTERNATIONAL")
 
@@ -84,6 +87,7 @@ object STNForecastXLSExtractor {
         Operator = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
+        PredictedTouchdown = None,
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

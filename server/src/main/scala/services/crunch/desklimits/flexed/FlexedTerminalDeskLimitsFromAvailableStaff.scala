@@ -1,21 +1,31 @@
 package services.crunch.desklimits.flexed
 
-import drt.shared.Queues.Queue
+import services.WorkloadProcessorsProvider
+import services.crunch.desklimits.QueueCapacityProvider
 import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 
 import scala.collection.immutable.{Map, NumericRange}
+import scala.concurrent.{ExecutionContext, Future}
 
 case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[Int],
-                                                      terminalDesksByMinute: List[Int],
+                                                      terminalDesks: Int,
                                                       flexedQueues: Set[Queue],
                                                       minDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]],
-                                                      maxDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]]) extends FlexedTerminalDeskLimitsLike {
-  def maxDesksForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, List[Int]]): Iterable[Int] = {
-    val availableDesksByMinute = maxDesks(minuteMillis, queue, allocatedDesks)
+                                                      capacityByQueue: Map[Queue, QueueCapacityProvider])
+                                                     (implicit ec: ExecutionContext) extends FlexedTerminalDeskLimitsLike {
+  override def maxDesksForMinutes(minuteMillis: NumericRange[Long], queue: Queue, allocatedDesks: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] = {
+    val eventualMaxProcessorsProvider = maxProcessors(minuteMillis, queue, allocatedDesks)
     val availableStaffByMinute = availableStaffForMinutes(minuteMillis, queue, allocatedDesks)
 
-    Crunch.reduceIterables[Int](List(availableDesksByMinute, availableStaffByMinute))(Math.min)
+    eventualMaxProcessorsProvider.map { desksProvider =>
+      val minute: IndexedSeq[Int] = desksProvider.processorsByMinute.map(_.processors.size)
+      val availableDesks: Iterable[Int] = Crunch.reduceIterables[Int](List(minute, availableStaffByMinute))(Math.min)
+      WorkloadProcessorsProvider(desksProvider.processorsByMinute.zip(availableDesks).map {
+        case (processors, available) => processors.copy(processors = processors.processors.take(available))
+      })
+    }
   }
 
   def availableStaffForMinutes(minuteMillis: NumericRange[Long],

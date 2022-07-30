@@ -1,20 +1,22 @@
 package drt.client.components
 
-import drt.auth.{LoggedInUser, StaffMovementsEdit}
+import diode.UseValueEq
 import drt.client.actions.Actions.UpdateStaffAdjustmentDialogueState
 import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 import org.scalajs.dom.html
 import org.scalajs.dom.html.TableCell
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.StaffMovementsEdit
+import uk.gov.homeoffice.drt.ports.AirportConfig
 
 object TerminalDesksAndQueuesRow {
 
@@ -40,11 +42,7 @@ object TerminalDesksAndQueuesRow {
                    loggedInUser: LoggedInUser,
                    slotMinutes: Int,
                    showWaitColumn: Boolean
-                  )
-
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p =>
-    (p.queueMinutes.hashCode(), p.staffMinute.hashCode(), p.showActuals, p.viewType.hashCode(), p.viewMode.hashCode(), p.showWaitColumn)
-  )
+                  ) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
     .render_P(props => {
@@ -55,9 +53,19 @@ object TerminalDesksAndQueuesRow {
         case (qn, cm) =>
           val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}")
 
-          def deployDeskTd(ragClass: String) = <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Dep: ${cm.deployedDesks.getOrElse("-")}", s"${cm.deskRec}")
+          def deployDeskTd(ragClass: String) = <.td(
+            ^.className := s"${queueColour(qn)} $ragClass",
+            Tippy.interactive(<.span(s"Suggested deployments with available staff: ${cm.deployedDesks.getOrElse("-")}"),
+              s"${cm.deskRec}")
+          )
 
-          def deployRecsDeskTd(ragClass: String) = <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"Rec: ${cm.deskRec}", s"${cm.deployedDesks.getOrElse("-")}")
+          def deployRecsDeskTd(ragClass: String) = <.td(
+            ^.className := s"${queueColour(qn)} $ragClass",
+            Tippy.interactive(
+              <.span(s"Recommended for this time slot / queue: ${cm.deskRec}"),
+              s"${cm.deployedDesks.getOrElse("-")}"
+            )
+          )
 
           val queueCells = props.viewType match {
             case ViewDeps =>
@@ -66,18 +74,34 @@ object TerminalDesksAndQueuesRow {
                 case pc if pc >= 0.7 => "amber"
                 case _ => ""
               }
-              if (props.showWaitColumn) {
-                List(paxLoadTd, deployRecsDeskTd(ragClass), <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With rec: ${cm.waitTime}", s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"))
-              } else {
+              if (props.showWaitColumn)
+                List(
+                  paxLoadTd,
+                  deployRecsDeskTd(ragClass),
+                  <.td(
+                    ^.className := s"${queueColour(qn)} $ragClass",
+                    Tippy.interactive(
+                      <.span(s"Recommended for this time slot / queue: ${cm.waitTime}"),
+                      s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"
+                    )
+                  )
+                )
+              else
                 List(paxLoadTd, deployRecsDeskTd(ragClass))
-              }
             case ViewRecs =>
               val ragClass: String = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(qn))
-              if (props.showWaitColumn) {
-                List(paxLoadTd, deployDeskTd(ragClass), <.td(^.className := s"${queueColour(qn)} $ragClass", ^.title := s"With Dep: ${cm.waitTime}", s"${Math.round(cm.waitTime)}"))
-              } else {
+              if (props.showWaitColumn)
+                List(
+                  paxLoadTd,
+                  deployDeskTd(ragClass),
+                  <.td(
+                    ^.className := s"${queueColour(qn)} $ragClass",
+                    Tippy.interactive(<.span(s"Suggested deployments with available staff: ${cm.waitTime}"),
+                      s"${Math.round(cm.waitTime)}")
+                  )
+                )
+              else
                 List(paxLoadTd, deployDeskTd(ragClass))
-              }
           }
 
           def queueActualsTd(actDesks: String) = <.td(^.className := queueActualsColour(qn), actDesks)
@@ -115,7 +139,6 @@ object TerminalDesksAndQueuesRow {
       <.tr((<.td(SDate(MilliDate(props.minuteMillis)).toHoursAndMinutes) :: queueTds.toList ++ pcpTds).toTagMod)
     })
     .componentDidMount(_ => Callback.log("TerminalDesksAndQueuesRow did mount"))
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def slaRagStatus(waitTime: Double, sla: Int): String = waitTime / sla match {

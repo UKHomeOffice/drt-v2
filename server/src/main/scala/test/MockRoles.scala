@@ -1,7 +1,8 @@
 package test.roles
 
 import controllers.UserRoleProviderLike
-import drt.auth.{Role, Roles}
+import uk.gov.homeoffice.drt.auth.Roles
+import uk.gov.homeoffice.drt.auth.Roles.Role
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}

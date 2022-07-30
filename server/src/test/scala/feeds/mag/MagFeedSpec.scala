@@ -5,11 +5,11 @@ import akka.http.scaladsl.model._
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.server.feeds.mag.{FeedRequesterLike, MagFeed, ProdFeedRequester}
 import drt.shared.FlightsApi.Flights
-import drt.shared.PortCode
 import pdi.jwt.JwtAlgorithm
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
@@ -72,7 +72,7 @@ class MagFeedSpec extends CrunchTestLike {
       case _ => List()
     }
 
-    result.length === 1
+    result.size === 1
   }
 
   "Given a mock json response containing a single valid flight with 0 for passenger count and max pax " +
@@ -80,7 +80,7 @@ class MagFeedSpec extends CrunchTestLike {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrivalWith0Pax))
 
     val actMax = Await.result(feed.requestArrivals(SDate.now()), 1 second) match {
-      case ArrivalsFeedSuccess(Flights(arrivals), _) => (arrivals.head.ActPax, arrivals.head.MaxPax)
+      case ArrivalsFeedSuccess(Flights(arrivals),_) => (arrivals.head.ActPax, arrivals.head.MaxPax)
       case _ => List()
     }
 

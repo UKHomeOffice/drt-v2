@@ -3,15 +3,16 @@ package feeds.cirium
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
+import drt.server.feeds.Feed
 import drt.server.feeds.cirium.CiriumFeed
-import drt.shared.Terminals.T1
-import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, LiveBaseFeedSource, Operator, PortCode}
 import org.specs2.mock.Mockito
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.cirium.services.entities._
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -52,12 +53,13 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
   }
 
-  "Given a CiriumFlightStatus I should be able to parse it to an equivelant DRT Arrival Instance" >> {
+  "Given a CiriumFlightStatus I should be able to parse it to an equivalent DRT Arrival Instance" >> {
     val publishedArrivalTime = "2019-07-15T11:05:00.000Z"
     val estRunwayArrival = "2019-07-15T11:07:00.000Z"
     val actRunwayArrival = "2019-07-15T11:08:00.000Z"
     val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
     val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
+    val publishedDepartureTime = "2019-07-15T09:10:00.000Z"
 
     val ciriumArrival = ciriumFlightStatus(
       publishedArrivalTime,
@@ -65,10 +67,12 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       actRunwayArrival,
       estGateArrivalTime,
       actGateArrivalTime,
-      "1000"
+      "1000",
+      publishedDepartureTime
     )
 
-    val expected = drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime)
+    val expected = drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime,publishedDepartureTime)
+
 
     val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
 
@@ -83,6 +87,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val actRunwayArrival = "2019-07-15T11:08:00.000Z"
     val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
     val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
+    val publishedDepartureTime = "2019-07-15T09:10:00.000Z"
 
     val ciriumArrival = ciriumFlightStatus(
       publishedArrivalTime,
@@ -90,7 +95,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       actRunwayArrival,
       estGateArrivalTime,
       actGateArrivalTime,
-      "1000"
+      "1000",
+      publishedDepartureTime
     )
 
     val expected = drtArrival(
@@ -98,7 +104,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       estRunwayArrival,
       actRunwayArrival,
       estGateArrivalTime,
-      actGateArrivalTime
+      actGateArrivalTime,
+      publishedDepartureTime
     ).copy(CarrierScheduled = Option(SDate(publishedArrivalTime).millisSinceEpoch))
 
     val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
@@ -106,29 +113,31 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     result === expected
   }
 
-  private def drtArrival(publishedArrivalTime: String, estRunwayArrival: String, actRunwayArrival: String, estGateArrivalTime: String, actGateArrivalTime: String) = {
+  private def drtArrival(publishedArrivalTime: String, estRunwayArrival: String, actRunwayArrival: String, estGateArrivalTime: String, actGateArrivalTime: String, publishedDepartureTime: String) = {
     Arrival(
-      Option(Operator("TST")),
-      ArrivalStatus("Active"),
-      Option(SDate(estRunwayArrival).millisSinceEpoch),
-      Option(SDate(actRunwayArrival).millisSinceEpoch),
-      Option(SDate(estGateArrivalTime).millisSinceEpoch),
-      Option(SDate(actGateArrivalTime).millisSinceEpoch),
-      Option("22"),
-      None,
-      None,
-      None,
-      None,
-      None,
-      Option("12"),
-      PortCode("LHR"),
-      T1,
-      "TST1000",
-      "TST1000",
-      PortCode("JFK"),
-      SDate(publishedArrivalTime).millisSinceEpoch,
-      None,
-      Set(LiveBaseFeedSource)
+      Operator = Option(Operator("TST")),
+      Status = ArrivalStatus("Active"),
+      Estimated = Option(SDate(estRunwayArrival).millisSinceEpoch),
+      PredictedTouchdown = None,
+      Actual = Option(SDate(actRunwayArrival).millisSinceEpoch),
+      EstimatedChox = Option(SDate(estGateArrivalTime).millisSinceEpoch),
+      ActualChox = Option(SDate(actGateArrivalTime).millisSinceEpoch),
+      Gate = Option("22"),
+      Stand = None,
+      MaxPax = None,
+      ActPax = None,
+      TranPax = None,
+      RunwayID = None,
+      BaggageReclaimId = Option("12"),
+      AirportID = PortCode("LHR"),
+      Terminal = T1,
+      rawICAO = "TST1000",
+      rawIATA = "TST1000",
+      Origin = PortCode("JFK"),
+      Scheduled = SDate(publishedArrivalTime).millisSinceEpoch,
+      PcpTime = None,
+      FeedSources = Set(LiveBaseFeedSource),
+      ScheduledDeparture = Option(SDate(publishedDepartureTime).millisSinceEpoch)
     )
   }
 
@@ -138,7 +147,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
                                   actRunwayArrival: String,
                                   estGateArrivalTime: String,
                                   actGateArrivalTime: String,
-                                  flightNumber: String
+                                  flightNumber: String,
+                                  publishedDepartureTime: String
                                 ) = {
     CiriumFlightStatus(
       100000,
@@ -148,7 +158,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       flightNumber,
       "JFK",
       "LHR",
-      CiriumDate("2019-07-15T09:10:00.000Z", None),
+      CiriumDate(publishedDepartureTime, None),
       CiriumDate(publishedArrivalTime, None),
       "A",
       CiriumOperationalTimes(
@@ -223,12 +233,14 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
     val probe = TestProbe()
 
-    ciriumFeed.tickingSource(250 milliseconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val actorSource = ciriumFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
-    probe.fishForMessage(2 seconds) {
+    probe.fishForMessage(2.seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
       case _ => false
     }
+    timer.cancel()
 
     success
   }
@@ -239,18 +251,20 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
     val probe = TestProbe()
 
-    ciriumFeed.tickingSource(100 milliseconds).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val actorSource = ciriumFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
-    probe.fishForMessage(2 seconds) {
+    probe.fishForMessage(2.seconds) {
       case s: ArrivalsFeedSuccess if s.arrivals.flights.nonEmpty && s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
       case _ => false
     }
+    timer.cancel()
 
     success
   }
 
   "Given a flight with an estimated touchdown, no estimated chox time, and scheduledTaxiInMinutes" +
-    " we should calculate estimated chox time" >> {
+    " we should not calculate estimated chox time" >> {
     val estimatedRunwayArrivalTime = "2019-07-15T11:05:00.000Z"
     val ciriumFlight = basicCiriumFlightStatus
       .copy(
@@ -262,7 +276,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
     val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
     val result = arrival.EstimatedChox
-    val expected = Option(SDate(estimatedRunwayArrivalTime).addMinutes(5).millisSinceEpoch)
+    val expected = None
 
     result === expected
   }
@@ -280,13 +294,13 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
 
     val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
     val result = arrival.EstimatedChox
-    val expected = Option(SDate(actualRunwayTime).addMinutes(5).millisSinceEpoch)
+    val expected = None
 
     result === expected
   }
 
-  "Given a flight with an estimated chox time, no estimated touch down time, and scheduledTaxiInMinutes " +
-    "we should calculate estimated touchdown time" >> {
+  "Given a flight with an estimated chox time, and no estimated touch down time " +
+    "the estimated time should be the est chox minus 5 minutes" >> {
     val estimatedChoxTime = "2019-07-15T11:05:00.000Z"
     val ciriumFlight = basicCiriumFlightStatus
       .copy(
@@ -310,6 +324,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val actRunwayArrival = "2019-07-15T11:08:00.000Z"
     val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
     val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
+    val publishedDepartureTime = "2019-07-15T09:10:00.000Z"
 
     override def makeRequest(): Future[List[CiriumFlightStatus]] = Future(List(ciriumFlightStatus(
       publishedArrivalTime,
@@ -317,7 +332,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       actRunwayArrival,
       estGateArrivalTime,
       actGateArrivalTime,
-      "1000"
+      "1000",
+      publishedDepartureTime
     )))
   }
 
@@ -328,7 +344,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val actRunwayArrival = "2019-07-15T11:08:00.000Z"
     val estGateArrivalTime = "2019-07-15T11:09:00.000Z"
     val actGateArrivalTime = "2019-07-15T11:10:00.000Z"
-
+    val publishedDepartureTime = "2019-07-15T09:10:00.000Z"
     var callCount = 0
 
     override def makeRequest(): Future[List[CiriumFlightStatus]] = {
@@ -343,7 +359,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
           actRunwayArrival,
           estGateArrivalTime,
           actGateArrivalTime,
-          "1000"
+          "1000",
+          publishedDepartureTime
         )))
       }
       callCount = callCount + 1

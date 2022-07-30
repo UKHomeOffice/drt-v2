@@ -1,11 +1,14 @@
 package drt.shared
 
-import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.arrivals.TotalPaxSource
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.time.LocalDate
+import upickle.default.{ReadWriter, macroRW}
 
-import scala.util.Try
+import scala.util.{Success, Try}
 
 case class SimulationParams(
                              terminal: Terminal,
@@ -14,11 +17,13 @@ case class SimulationParams(
                              processingTimes: Map[PaxTypeAndQueue, Int],
                              minDesks: Map[Queue, Int],
                              maxDesks: Map[Queue, Int],
-                             eGateBanksSize: Int,
+                             eGateBanksSizes: IndexedSeq[Int],
                              slaByQueue: Map[Queue, Int],
-                             crunchOffsetMinutes: Int
+                             crunchOffsetMinutes: Int,
+                             eGateOpenHours: Seq[Int],
                            ) {
-  def applyToAirportConfig(airportConfig: AirportConfig) = {
+
+  def applyToAirportConfig(airportConfig: AirportConfig): AirportConfig = {
     val openDesks: Map[Queues.Queue, (List[Int], List[Int])] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
       case (q, (origMinDesks, origMaxDesks)) =>
 
@@ -29,7 +34,7 @@ case class SimulationParams(
 
     airportConfig.copy(
       minMaxDesksByTerminalQueue24Hrs = airportConfig.minMaxDesksByTerminalQueue24Hrs + (terminal -> openDesks),
-      eGateBankSize = eGateBanksSize,
+      eGateBankSizes = Map(terminal -> eGateBanksSizes),
       slaByQueue = airportConfig.slaByQueue.map {
         case (q, v) => q -> slaByQueue.getOrElse(q, v)
       },
@@ -41,73 +46,39 @@ case class SimulationParams(
             .getOrElse(defaultValue)
       }),
     )
-
   }
 
-  def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits) =
+  def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits): FlightsWithSplits =
     FlightsWithSplits(flightsWithSplits.flights.map {
-      case (ua, fws) => ua -> fws.copy(
-        apiFlight = fws
-          .apiFlight.copy(
-          ActPax = fws.apiFlight.ActPax.map(n => (n * passengerWeighting).toInt),
-          TranPax = fws.apiFlight.TranPax.map(n => (n * passengerWeighting).toInt)
-        ))
+      case (ua, fws) =>
+        val actualPax = fws.apiFlight.ActPax.map(n => (n * passengerWeighting).toInt)
+        val tranPax = fws.apiFlight.TranPax.map(n => (n * passengerWeighting).toInt)
+        ua -> fws.copy(
+          apiFlight = fws
+            .apiFlight.copy(
+            ActPax = actualPax,
+            TranPax = tranPax,
+            FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource,
+            TotalPax = Set(TotalPaxSource(actualPax, ScenarioSimulationSource))
+          ))
     })
-
-  def toQueryStringParams: String = {
-    List(
-      s"terminal=$terminal",
-      s"date=$date",
-      s"passengerWeighting=$passengerWeighting",
-      s"eGateBankSize=$eGateBanksSize",
-      s"crunchOffsetMinutes=$crunchOffsetMinutes"
-    ) ::
-      processingTimes.map {
-        case (ptq, value) => s"${ptq.key}=$value"
-      } ::
-      minDesks.map {
-        case (q, value) => s"${q}_min=$value"
-      } ::
-      maxDesks.map {
-        case (q, value) => s"${q}_max=$value"
-      } ::
-      slaByQueue.map {
-        case (q, value) => s"${q}_sla=$value"
-      } :: Nil
-  }.flatten.mkString("&")
-
 }
 
-case class SimulationResult(params: SimulationParams, deskRecMinutes: DeskRecMinutes)
-
 object SimulationParams {
+  implicit val rw: ReadWriter[SimulationParams] = macroRW
 
-  def apply(terminal: Terminal, date: LocalDate, airportConfig: AirportConfig): SimulationParams = SimulationParams(
-    terminal,
-    date,
-    1.0,
-    airportConfig.terminalProcessingTimes(terminal).mapValues(m => (m * 60).toInt),
-    airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
-      case (q, (min, _)) => q -> min.max
-    },
-    airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
-      case (q, (_, max)) => q -> max.max
-    },
-    eGateBanksSize = airportConfig.eGateBankSize,
-    slaByQueue = airportConfig.slaByQueue,
-    crunchOffsetMinutes = 0
-  )
+  val fullDay = Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
 
   val requiredFields = List(
     "terminal",
     "date",
     "passengerWeighting",
-    "eGateBankSize",
-    "crunchOffsetMinutes"
+    "eGateBankSizes",
+    "crunchOffsetMinutes",
+    "eGateOpenHours"
   )
 
   def fromQueryStringParams(qsMap: Map[String, Seq[String]]): Try[SimulationParams] = Try {
-
     val maybeSimulationFieldsStrings: Map[String, Option[String]] = requiredFields
       .map(f => f -> qsMap.get(f).flatMap(_.headOption)).toMap
 
@@ -122,24 +93,30 @@ object SimulationParams {
     }.toMap
 
     val maybeParams = for {
-      terminal: String <- maybeSimulationFieldsStrings("terminal")
+      terminalName: String <- maybeSimulationFieldsStrings("terminal")
       dateString: String <- maybeSimulationFieldsStrings("date")
       localDate <- LocalDate.parse(dateString)
       passengerWeightingString: String <- maybeSimulationFieldsStrings("passengerWeighting")
-
-      eGateBankSizeString: String <- maybeSimulationFieldsStrings("eGateBankSize")
+      eGateBankSizeString: String <- maybeSimulationFieldsStrings("eGateBankSizes")
       crunchOffsetMinutes: String <- maybeSimulationFieldsStrings("crunchOffsetMinutes")
-    } yield SimulationParams(
-      Terminal(terminal),
-      localDate,
-      passengerWeightingString.toDouble,
-      procTimes,
-      qMinDesks,
-      qMaxDesks,
-      eGateBankSizeString.toInt,
-      qSlas,
-      crunchOffsetMinutes.toInt
-    )
+      eGateOpenHours: String <- maybeSimulationFieldsStrings("eGateOpenHours")
+    } yield {
+      val terminal = Terminal(terminalName)
+      SimulationParams(
+        terminal,
+        localDate,
+        passengerWeightingString.toDouble,
+        procTimes,
+        qMinDesks,
+        qMaxDesks,
+        eGateBankSizeString.split(",").map(_.toInt),
+        qSlas,
+        crunchOffsetMinutes.toInt,
+        eGateOpenHours.split(",").map(s => Try(s.toInt)).collect {
+          case Success(i) => i
+        }
+      )
+    }
 
     maybeParams match {
       case Some(simulationParams) => simulationParams
@@ -161,5 +138,11 @@ object SimulationParams {
     .collect {
       case (k, Some(v)) => k -> v
     }
+}
 
+
+case class SimulationResult(params: SimulationParams, queueToCrunchMinutes: Map[Queues.Queue, List[CrunchApi.CrunchMinute]])
+
+object SimulationResult {
+  implicit val rw: ReadWriter[SimulationResult] = macroRW
 }

@@ -1,53 +1,86 @@
 package drt.server.feeds.acl
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-import java.nio.charset.StandardCharsets.UTF_8
-import java.util.zip.{ZipEntry, ZipInputStream}
-
 import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
-import drt.shared
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals._
-import drt.shared.api.Arrival
-import drt.shared.{PortCode, Terminals}
 import net.schmizz.sshj.SSHClient
-import net.schmizz.sshj.sftp.{RemoteResourceInfo, SFTPClient}
+import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
+import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.Terminals._
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
+import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.collection.JavaConverters._
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.nio.charset.StandardCharsets.UTF_8
+import java.util.zip.{ZipEntry, ZipInputStream}
+import scala.collection.immutable.List
 import scala.collection.mutable.ArrayBuffer
+import scala.concurrent.duration.{DurationLong, FiniteDuration}
+import scala.jdk.CollectionConverters.iterableAsScalaIterableConverter
 import scala.util.{Failure, Success, Try}
 
-case class AclFeed(ftpServer: String, username: String, path: String, portCode: PortCode, terminalMapping: Terminal => Terminal, minBytes: Long) {
+case class AclFeed(ftpServer: String, username: String, path: String, portCode: PortCode, terminalMapping: Terminal => Terminal) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def ssh: SSHClient = sshClient(ftpServer, username, path)
-  def sftp(sshClient: SSHClient): SFTPClient = sftpClient(sshClient)
 
   def requestArrivals: ArrivalsFeedResponse = {
-    val feedResponseTry = (for {
+    val trySftpClient = for {
       sshClient <- Try(ssh)
-      sftpClient <- Try(sftp(sshClient))
-      responseTry = Try{
-        Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, latestFileForPort(sftpClient, portCode, minBytes)), terminalMapping))
-      }
+      sftpClient: SFTPClient <- Try(sshClient.newSFTPClient)
     } yield {
-      sshClient.disconnect()
-      sftpClient.close()
-      responseTry
-    }).flatten
+      (sshClient, sftpClient)
+    }
+    trySftpClient.map { case (sshClient, sftpClient) =>
+      val directoryName = "180_Days"
+      val allFiles = sftpClient.ls(directoryName).asScala.map(_.getName)
+      val arrivalsFeedResponse = maybeLatestFile(allFiles, portCode.iata, SDate.now())
+        .map { latestFile =>
+          val latestFilePath = s"$directoryName/$latestFile"
+          log.info(s"Latest ACL file: $latestFilePath")
+          val feedResponseTry = Try(
+            Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, latestFilePath), terminalMapping))
+          )
 
-    feedResponseTry match {
-      case Success(a) =>
-        ArrivalsFeedSuccess(a)
-      case Failure(f) =>
-        log.error(s"Failed to get flights from ACL: $f")
-        ArrivalsFeedFailure(f.getMessage)
+          feedResponseTry match {
+            case Success(a) =>
+              ArrivalsFeedSuccess(a)
+            case Failure(t) =>
+              log.error(s"Failed to get flights from ACL: $t")
+              ArrivalsFeedFailure(t.getMessage)
+          }
+        }
+        .getOrElse {
+          val msg = "No ACL file found for yesterday or today"
+          log.error(msg)
+          ArrivalsFeedFailure(msg)
+        }
+
+      sftpClient.close()
+      sshClient.disconnect()
+
+      arrivalsFeedResponse
+    } match {
+      case Success(response) => response
+      case Failure(t) =>
+        log.error(s"Failed to get flights from ACL: $t")
+        ArrivalsFeedFailure("Failed to connect to sftp server")
+    }
+  }
+
+  def fileExists(filePath: String, sftpClient: SFTPClient): Boolean = {
+    log.info(s"Looking for ACL file '$filePath'")
+    Try(sftpClient.ls(filePath)) match {
+      case Success(_) => true
+      case Failure(t) =>
+        log.info(s"ACL file $filePath not found")
+        false
     }
   }
 }
@@ -69,30 +102,26 @@ object AclFeed {
     sshClient.newSFTPClient
   }
 
-  def latestFileForPort(sftp: SFTPClient, portCode: PortCode, minBytes: Long): String = {
-    val portRegex = "([A-Z]{3})[SW][0-9]{2}_HOMEOFFICEROLL180_[0-9]{8}.zip".r
-    val dateRegex = "[A-Z]{3}[SW][0-9]{2}_HOMEOFFICEROLL180_([0-9]{8}).zip".r
-
-    val filesByDate = sftp
-      .ls("/180_Days/").asScala
-      .filter(_.getName match {
-        case portRegex(pc) if pc == portCode.toString => true
-        case _ => false
-      })
-      .sortBy(_.getName match {
-        case dateRegex(date) => date
-      })
-      .reverse
-
-    val latestFileOverMinBytes: RemoteResourceInfo = filesByDate
-      .find(_.getAttributes.getSize > minBytes)
-      .getOrElse(filesByDate.head)
-
-
-    log.info(s"Latest File ${latestFileOverMinBytes}. Size: ${latestFileOverMinBytes.getAttributes.getSize}")
-
-    latestFileOverMinBytes.getPath
+  def nextAclCheck(now: SDateLike, updateHour: Int): SDateLike = {
+    val todaysCheck = SDate(now.getFullYear(), now.getMonth(), now.getDate(), updateHour, 0, Crunch.europeLondonTimeZone)
+    if (todaysCheck > now) todaysCheck else todaysCheck.addDays(1)
   }
+
+  def delayUntilNextAclCheck(now: SDateLike, updateHour: Int): FiniteDuration = {
+    val nextCheck = nextAclCheck(now, updateHour)
+    (nextCheck.millisSinceEpoch - now.millisSinceEpoch).millis
+  }
+
+  def maybeLatestFile(allFiles: Iterable[String], portCode: String, now: SDateLike): Option[String] =
+    List(0, 1, 2, 3, 4)
+      .map { offset =>
+        val d = now.addDays(-1 * offset)
+        val todayStr = f"${d.getFullYear()}${d.getMonth()}%02d${d.getDate()}%02d"
+        s"$portCode.*$todayStr\\.zip".r
+      }
+      .map(fileRegex => allFiles.find(fileName => fileRegex.findFirstMatchIn(fileName).isDefined))
+      .find(_.isDefined)
+      .flatten
 
   def arrivalsFromCsvContent(csvContent: String, terminalMapping: Terminal => Terminal): List[Arrival] = {
     val flightEntries = csvContent
@@ -195,6 +224,7 @@ object AclFeed {
         Operator = operator,
         Status = "ACL Forecast",
         Estimated = None,
+        PredictedTouchdown = None,
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,
@@ -212,13 +242,12 @@ object AclFeed {
         Origin = fields(AclColIndex.Origin),
         Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(shared.AclFeedSource)
+        FeedSources = Set(AclFeedSource)
       )
     }
   }
 
   object AclColIndex {
-
     val allFields: Map[String, Int] = List(
       "A/C", "ACReg", "Airport", "ArrDep", "CreDate",
       "Date", "DOOP", "EditDate", "Icao Aircraft Type", "Icao Last/Next Station",
@@ -242,9 +271,20 @@ object AclFeed {
   }
 
   def aclToPortMapping(portCode: PortCode): Terminal => Terminal = portCode match {
-    case PortCode("LGW") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> S, T2 -> N).getOrElse(tIn, tIn)
-    case PortCode("EDI") => (tIn: Terminal) => Map[Terminal, Terminal](T1 -> A1).getOrElse(tIn, tIn)
-    case PortCode("LCY") => (tIn: Terminal) => Map[Terminal, Terminal](ACLTER -> T1).getOrElse(tIn, tIn)
+    case PortCode("LGW") => (tIn: Terminal) =>
+      Map[Terminal, Terminal](
+        T1 -> S,
+        T2 -> N,
+      ).getOrElse(tIn, tIn)
+    case PortCode("EDI") => (tIn: Terminal) =>
+      Map[Terminal, Terminal](T1 -> A2).getOrElse(tIn, tIn)
+    case PortCode("LCY") => (tIn: Terminal) =>
+      Map[Terminal, Terminal](
+        ACLTER -> T1,
+        MainApron -> T1,
+      ).getOrElse(tIn, tIn)
+    case PortCode("STN") =>
+      (tIn: Terminal) => Map[Terminal, Terminal](CTA -> T1).getOrElse(tIn, tIn)
     case _ => (tIn: Terminal) => tIn
   }
 }

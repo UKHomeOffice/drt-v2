@@ -41,7 +41,6 @@ node_modules/
 client/src/main/resources/bundle.js
 client/yarn.lock
 
-project/
 
 .ensime_cache/
 runsbt.sh
@@ -51,3 +50,5 @@ e2e/cypress/fixtures/example.json
 e2e/cypress/videos/*
 e2e/cypress/screenshots/*
 e2e/yarn.lock
+
+yarn.lock

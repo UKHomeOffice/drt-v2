@@ -20,8 +20,8 @@ class StatsDMetrics extends MetricsCollectorLike {
 
 class LoggingMetrics extends MetricsCollectorLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
-  override def timer(name: String, milliseconds: Double): Unit = log.info(s"$name took ${milliseconds}ms")
-  override def counter(name: String, value: Double): Unit = log.info(s"$name count: $value")
+  override def timer(name: String, milliseconds: Double): Unit = log.info(s"METRICS :: $name took ${milliseconds}ms")
+  override def counter(name: String, value: Double): Unit = log.info(s"METRICS :: $name count: $value")
 }
 
 object Metrics {
@@ -50,6 +50,19 @@ object Metrics {
   }
 
   def counter(name: String, value: Double): Unit = collector.counter(name, value)
+
+  def successCounter(name: String, value: Double) = {
+    counter(s"$name.success", value)
+  }
+
+  def failureCounter(name: String) = {
+    counter(s"$name.failure", 1)
+  }
+
+  def errorCounter(name: String) = {
+    counter(s"$name.error", 1)
+  }
+
 }
 
 case class StageTimer(stageName: String, portName: String, startTime: MillisSinceEpoch) {

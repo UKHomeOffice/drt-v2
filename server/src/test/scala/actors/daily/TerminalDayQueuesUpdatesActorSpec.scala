@@ -6,13 +6,14 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{Queues, SDateLike}
+import uk.gov.homeoffice.drt.time.SDateLike
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.CrunchMinuteMessage
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.CrunchMinuteMessage
 import services.SDate
 import services.crunch.CrunchTestLike
 import test.TestActors.TestTerminalDayQueuesActor
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
@@ -38,7 +39,7 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
       val eventualAcks = Future.sequence(Seq(
         queuesActor.ask(MinutesContainer(Iterable(crunchMinute))),
         queuesActor.ask(MinutesContainer(Iterable(crunchMinute.copy(minute = minute2))))))
-      Await.ready(eventualAcks, 1 second)
+      Await.ready(eventualAcks, 5 second)
 
       "I should see it received as an update" >> {
         val expected = List(
@@ -46,7 +47,7 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
           crunchMinute.copy(minute = minute2, lastUpdated = Option(day.millisSinceEpoch)))
           .map(cm => (cm.key, cm)).toMap
 
-        probe.fishForMessage(1 seconds) {
+        probe.fishForMessage(5 seconds) {
           case updates => updates == expected
         }
 

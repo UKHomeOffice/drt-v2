@@ -1,19 +1,20 @@
 package actors.daily
 
 import akka.actor.Props
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, TQM}
+import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MillisSinceEpoch}
+import drt.shared.{CrunchApi, TQM}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 
 object TerminalDayQueuesActor {
-  def props(terminal: Terminal, date: SDateLike, now: () => SDateLike): Props =
-    Props(new TerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, None))
+  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
+    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, None))
 
-  def propsPointInTime(terminal: Terminal, date: SDateLike, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, Option(pointInTime)))
+  def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
+    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
 }
 
 class TerminalDayQueuesActor(year: Int,
@@ -24,7 +25,7 @@ class TerminalDayQueuesActor(year: Int,
                              maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[CrunchMinute, TQM](year, month, day, terminal, now, maybePointInTime) {
   override val typeForPersistenceId: String = "queues"
 
-  import actors.PortStateMessageConversion._
+  import actors.serializers.PortStateMessageConversion._
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case CrunchMinutesMessage(minuteMessages) => state = minuteMessagesToKeysAndMinutes(minuteMessages).toMap
@@ -51,4 +52,7 @@ class TerminalDayQueuesActor(year: Int,
 
   override def containerToMessage(differences: Iterable[CrunchMinute]): GeneratedMessage =
     CrunchMinutesMessage(differences.map(m => crunchMinuteToMessage(m.toMinute)).toSeq)
+
+  override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[CrunchMinute, TQM]): Boolean =
+    container.contains(classOf[DeskRecMinute])
 }

@@ -1,8 +1,9 @@
 package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
+import uk.gov.homeoffice.drt.time.SDateLike
 import utest._
 
 object StaffingComponentTimezoneTests extends TestSuite {
@@ -131,8 +132,8 @@ object StaffingComponentTimezoneTests extends TestSuite {
           val expected = StaffAssignment(
             shiftStart.toISOString(),
             T1,
-            MilliDate(shiftStart.millisSinceEpoch),
-            MilliDate(shiftStart.addMinutes(14).millisSinceEpoch),
+            shiftStart.millisSinceEpoch,
+            shiftStart.addMinutes(14).millisSinceEpoch,
             1,
             None
           )
@@ -150,8 +151,8 @@ object StaffingComponentTimezoneTests extends TestSuite {
           val expected = StaffAssignment(
             shiftStart.toISOString(),
             T1,
-            MilliDate(shiftStart.millisSinceEpoch),
-            MilliDate(shiftStart.addMinutes(59).millisSinceEpoch),
+            shiftStart.millisSinceEpoch,
+            shiftStart.addMinutes(59).millisSinceEpoch,
             1,
             None
           )
@@ -169,8 +170,8 @@ object StaffingComponentTimezoneTests extends TestSuite {
           val expected = StaffAssignment(
             shiftStart.toISOString(),
             T1,
-            MilliDate(shiftStart.millisSinceEpoch),
-            MilliDate(shiftStart.addMinutes(59).millisSinceEpoch),
+            shiftStart.millisSinceEpoch,
+            shiftStart.addMinutes(59).millisSinceEpoch,
             1,
             None
           )
@@ -188,8 +189,8 @@ object StaffingComponentTimezoneTests extends TestSuite {
           val expected = StaffAssignment(
             shiftStart.toISOString(),
             T1,
-            MilliDate(shiftStart.millisSinceEpoch),
-            MilliDate(shiftStart.addMinutes(59).millisSinceEpoch),
+            shiftStart.millisSinceEpoch,
+            shiftStart.addMinutes(59).millisSinceEpoch,
             1,
             None
           )

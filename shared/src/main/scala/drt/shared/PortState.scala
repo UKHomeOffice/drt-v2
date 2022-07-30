@@ -1,15 +1,17 @@
 package drt.shared
 
 import drt.shared.CrunchApi._
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import upickle.default.{readwriter, ReadWriter => RW}
 
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.collection.{Map, SortedMap}
 
 
-case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
+case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
                      crunchMinutes: ISortedMap[TQM, CrunchMinute],
                      staffMinutes: ISortedMap[TM, StaffMinute]) extends PortStateLike {
   def window(start: SDateLike, end: SDateLike): PortState = {
@@ -32,16 +34,6 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
     val sms = staffMinuteRangeWithTerminals(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues.keys.toSeq)
 
     PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
-  }
-
-  def purgeOlderThanDate(thresholdMillis: MillisSinceEpoch): PortState = PortState(
-    purgeExpired(flights, UniqueArrival.atTime, thresholdMillis),
-    purgeExpired(crunchMinutes, TQM.atTime, thresholdMillis),
-    purgeExpired(staffMinutes, TM.atTime, thresholdMillis)
-  )
-
-  def purgeExpired[A <: WithTimeAccessor, B](expireable: ISortedMap[A, B], atTime: MillisSinceEpoch => A, thresholdMillis: MillisSinceEpoch): ISortedMap[A, B] = {
-    expireable -- expireable.range(atTime(0L), atTime(thresholdMillis - 1)).keys
   }
 
   def flightsRange(roundedStart: SDateLike, roundedEnd: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits]
@@ -88,6 +80,24 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
       .toMap
   }
 
+  def dailyCrunchSummary(start: SDateLike, days: Int, terminal: Terminal, queues: List[Queue]): ISortedMap[Long, IMap[Queue, CrunchMinute]] =
+    ISortedMap[Long, IMap[Queue, CrunchMinute]]() ++ (0 until days)
+      .map { day =>
+        val dayStart = start.addDays(day)
+        val dayEnd = dayStart.addDays(1)
+        val queueMinutes = queues
+          .map { queue =>
+            val slotMinutes = (dayStart.millisSinceEpoch until dayEnd.millisSinceEpoch by 60000)
+              .map { minute => crunchMinutes.get(TQM(terminal, queue, minute)) }
+              .collect { case Some(cm) => cm }
+              .toList
+            (queue, crunchPeriodSummary(terminal, dayStart.millisSinceEpoch, queue, slotMinutes))
+          }
+          .toMap
+        (dayStart.millisSinceEpoch, queueMinutes)
+      }
+      .toMap
+
   def staffSummary(start: SDateLike, periods: Long, periodSize: Long, terminal: Terminal): ISortedMap[Long, StaffMinute] = {
     val startMillis = start.roundToMinute().millisSinceEpoch
     val endMillis = startMillis + (periods * periodSize * 60000)
@@ -99,7 +109,6 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
           .map { minute => staffMinutes.get(TM(terminal, minute)) }
           .collect { case Some(sm) => sm }
           .toList
-        val completeList = staffMinutes.range(TM.atTime(startMillis), TM.atTime(endMillis))
         (periodStart, staffPeriodSummary(terminal, periodStart, slotMinutes))
       }
       .toMap
@@ -114,10 +123,23 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
       workLoad = slotMinutes.map(_.workLoad).sum,
       deskRec = slotMinutes.map(_.deskRec).max,
       waitTime = slotMinutes.map(_.waitTime).max,
-      deployedDesks = if (slotMinutes.exists(cm => cm.deployedDesks.isDefined)) Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max) else None,
-      deployedWait = if (slotMinutes.exists(cm => cm.deployedWait.isDefined)) Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max) else None,
-      actDesks = if (slotMinutes.exists(cm => cm.actDesks.isDefined)) Option(slotMinutes.map(_.actDesks.getOrElse(0)).max) else None,
-      actWait = if (slotMinutes.exists(cm => cm.actWait.isDefined)) Option(slotMinutes.map(_.actWait.getOrElse(0)).max) else None)
+      deployedDesks = if (slotMinutes.exists(cm => cm.deployedDesks.isDefined))
+        Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max)
+      else
+        None,
+      deployedWait = if (slotMinutes.exists(cm => cm.deployedWait.isDefined))
+        Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max)
+      else
+        None,
+      actDesks = if (slotMinutes.exists(cm => cm.actDesks.isDefined))
+        Option(slotMinutes.map(_.actDesks.getOrElse(0)).max)
+      else
+        None,
+      actWait = if (slotMinutes.exists(cm => cm.actWait.isDefined))
+        Option(slotMinutes.map(_.actWait.getOrElse(0)).max)
+      else
+        None
+    )
     else CrunchMinute(
       terminal = terminal,
       queue = queue,
@@ -146,26 +168,6 @@ case class PortState(flights: ISortedMap[UniqueArrival, ApiFlightWithSplits],
       fixedPoints = 0,
       movements = 0)
   }
-
-  def applyFlightsWithSplitsDiff(flightRemovals: Seq[UniqueArrival], flightUpdates: Iterable[(UniqueArrival, ApiFlightWithSplits)], nowMillis: MillisSinceEpoch): PortState = {
-    copy(flights = (flights -- flightRemovals) ++ flightUpdates)
-  }
-
-  def applyCrunchDiff(crunchMinuteUpdates: SortedMap[TQM, CrunchMinute], nowMillis: MillisSinceEpoch): PortState = {
-    copy(crunchMinutes = crunchMinutes ++ crunchMinuteUpdates)
-  }
-
-  def applyCrunchDiff(crunchMinuteUpdates: Seq[CrunchMinute], nowMillis: MillisSinceEpoch): PortState = {
-    copy(crunchMinutes = crunchMinutes ++ crunchMinuteUpdates.map(cm => (cm.key, cm.copy(lastUpdated = Option(nowMillis)))))
-  }
-
-  def applyStaffDiff(staffMinuteUpdates: SortedMap[TM, StaffMinute], nowMillis: MillisSinceEpoch): PortState = {
-    copy(staffMinutes = staffMinutes ++ staffMinuteUpdates)
-  }
-
-  def applyStaffDiff(staffMinuteUpdates: Seq[StaffMinute], nowMillis: MillisSinceEpoch): PortState = {
-    copy(staffMinutes = staffMinutes ++ staffMinuteUpdates.map(sm => (sm.key, sm.copy(lastUpdated = Option(nowMillis)))))
-  }
 }
 
 object PortState {
@@ -177,7 +179,7 @@ object PortState {
     PortState(ISortedMap[UniqueArrival, ApiFlightWithSplits]() ++ t._1, ISortedMap[TQM, CrunchMinute]() ++ t._2, ISortedMap[TM, StaffMinute]() ++ t._3)
   }
 
-  private def portStateToTuple(ps: PortState): (ISortedMap[UniqueArrival, ApiFlightWithSplits], ISortedMap[TQM, CrunchMinute], ISortedMap[TM, StaffMinute]) = {
+  private def portStateToTuple(ps: PortState): (IMap[UniqueArrival, ApiFlightWithSplits], ISortedMap[TQM, CrunchMinute], ISortedMap[TM, StaffMinute]) = {
     (ps.flights, ps.crunchMinutes, ps.staffMinutes)
   }
 

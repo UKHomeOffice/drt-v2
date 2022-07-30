@@ -4,17 +4,16 @@ import akka.actor.ActorRef
 import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.ActualDeskStats
-import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovement}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 
-case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
+case class CrunchGraphInputsAndProbes(aclArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       forecastArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       liveArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
+                                      ciriumArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       manifestsLiveInput: SourceQueueWithComplete[ManifestsFeedResponse],
-                                      shiftsInput: SourceQueueWithComplete[ShiftAssignments],
-                                      fixedPointsInput: SourceQueueWithComplete[FixedPointAssignments],
-                                      liveStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
-                                      forecastStaffMovementsInput: SourceQueueWithComplete[Seq[StaffMovement]],
+                                      shiftsInput: ActorRef,
+                                      fixedPointsInput: ActorRef,
+                                      staffMovementsInput: ActorRef,
                                       actualDesksAndQueuesInput: SourceQueueWithComplete[ActualDeskStats],
                                       portStateTestProbe: TestProbe,
                                       baseArrivalsTestProbe: TestProbe,
@@ -23,14 +22,11 @@ case class CrunchGraphInputsAndProbes(baseArrivalsInput: SourceQueueWithComplete
                                       aggregatedArrivalsActor: ActorRef,
                                       portStateActor: ActorRef) {
   def shutdown(): Unit = {
-    baseArrivalsInput.complete()
+    aclArrivalsInput.complete()
     forecastArrivalsInput.complete()
     liveArrivalsInput.complete()
+    ciriumArrivalsInput.complete()
     manifestsLiveInput.complete()
-    shiftsInput.complete()
-    fixedPointsInput.complete()
-    liveStaffMovementsInput.complete()
-    forecastStaffMovementsInput.complete()
     actualDesksAndQueuesInput.complete()
   }
 }

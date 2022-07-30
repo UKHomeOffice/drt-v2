@@ -2,8 +2,8 @@ package services.crunch
 
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.PortState
-import drt.shared.Queues.EeaDesk
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import services.SDate
 
 import scala.concurrent.duration._

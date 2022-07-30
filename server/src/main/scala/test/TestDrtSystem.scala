@@ -2,56 +2,79 @@ package test
 
 import actors._
 import actors.acking.AckingReceiver.Ack
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Cancellable, Props, Status}
+import actors.persistent.RedListUpdatesActor.AddSubscriber
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
 import akka.pattern.ask
-import akka.persistence.inmemory.extension.{InMemoryJournalStorage, InMemorySnapshotStorage, StorageExtension}
-import akka.stream.scaladsl.Source
-import akka.stream.{ActorMaterializer, KillSwitch}
+import akka.persistence.testkit.scaladsl.PersistenceTestKit
+import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
-import drt.auth.Role
-import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.api.Arrival
-import drt.shared.{AirportConfig, MilliTimes, PortCode}
-import graphs.SinkToSourceBridge
-import manifests.passengers.BestAvailableManifest
+import drt.server.feeds.Feed
+import drt.server.feeds.FeedPoller.Enable
+import drt.shared.coachTime.CoachWalkTime
+import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import server.feeds.ArrivalsFeedResponse
 import services.SDate
-import test.TestActors.{TestStaffMovementsActor, _}
-import test.feeds.test.{CSVFixtures, TestArrivalsActor, TestFixtureFeed, TestManifestsActor}
+import test.TestActors._
+import test.feeds.test._
 import test.roles.TestUserRoleProvider
+import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
+import scala.collection.SortedSet
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.Success
 
-case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
-                        (implicit val materializer: ActorMaterializer,
+case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Materializer) extends ManifestLookupLike {
+  override def maybeBestAvailableManifest(arrivalPort: PortCode,
+                                          departurePort: PortCode,
+                                          voyageNumber: VoyageNumber,
+                                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+
+  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+  }
+}
+
+case class TestDrtSystem(airportConfig: AirportConfig)
+                        (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
-                         val system: ActorSystem) extends DrtSystemInterface {
+                         val system: ActorSystem,
+                         val timeout: Timeout) extends DrtSystemInterface {
 
   import DrtStaticParameters._
 
   log.warn("Using test System")
 
-  override val baseArrivalsActor: ActorRef = system.actorOf(Props(new TestForecastBaseArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
-  override val forecastArrivalsActor: ActorRef = system.actorOf(Props(new TestForecastPortArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override val liveArrivalsActor: ActorRef = system.actorOf(Props(new TestLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
-  override val voyageManifestsActor: ActorRef = system.actorOf(Props(new TestVoyageManifestsActor(now, expireAfterMillis, params.snapshotIntervalVm)), name = "voyage-manifests-actor")
-  override val shiftsActor: ActorRef = system.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))))
-  override val fixedPointsActor: ActorRef = system.actorOf(Props(new TestFixedPointsActor(now)))
-  override val staffMovementsActor: ActorRef = system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now))), "TestActor-StaffMovements")
-  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new TestAggregatedArrivalsActor()))
-  override val crunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
-  override val deploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
+  override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
+  override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestPortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
+  override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestPortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
 
-  override val lookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-  val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal, crunchQueueActor)
+  val manifestLookups: ManifestLookups = ManifestLookups(system)
+
+  override val shiftsActor: ActorRef = restartOnStop.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
+  override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new TestFixedPointsActor(now, airportConfig.minutesToCrunch)), "staff-fixed-points")
+  override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "TestActor-StaffMovements")
+  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()))
+  override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
+
+  override val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentStaffingUpdateQueueActor: ActorRef = system.actorOf(Props(new TestStaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+
+  override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
+  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal)
   override val flightsActor: ActorRef = flightLookups.flightsActor
-  override val queuesActor: ActorRef = lookups.queueMinutesActor
-  override val staffActor: ActorRef = lookups.staffMinutesActor
+  override val queuesActor: ActorRef = minuteLookups.queueMinutesActor
+  override val staffActor: ActorRef = minuteLookups.staffMinutesActor
   override val queueUpdates: ActorRef = system.actorOf(Props(
     new QueueTestUpdatesSupervisor(
       now,
@@ -92,23 +115,21 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
   val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
-  val testFeed: Source[ArrivalsFeedResponse, Cancellable] = TestFixtureFeed(system, testArrivalActor)
+  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 1.second, 2.seconds)
 
   val testActors = List(
-    baseArrivalsActor,
+    forecastBaseArrivalsActor,
     forecastArrivalsActor,
     liveArrivalsActor,
     forecastArrivalsActor,
     portStateActor,
-    voyageManifestsActor,
+    manifestsRouterActor,
     shiftsActor,
     fixedPointsActor,
     staffMovementsActor,
     aggregatedArrivalsActor,
     testManifestsActor,
     testArrivalActor,
-    crunchQueueActor,
-    deploymentQueueActor
   )
 
   val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
@@ -116,17 +137,24 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
     log.info(s"Loading fixtures from $file")
-    val testActor = system.actorSelection(s"akka://${airportConfig.portCode.iata.toLowerCase}-drt-actor-system/user/TestActor-LiveArrivals").resolveOne()
     system.scheduler.schedule(1 second, 1 day)({
-      val day = SDate.now().toISODateOnly
-      CSVFixtures.csvPathToArrivalsOnDate(day, file).collect {
-        case Success(arrival) =>
-          testActor.map(_ ! arrival)
-      }
+      val startDay = SDate.now()
+      DateRange.utcDateRange(startDay, startDay.addDays(30)).map(day => {
+        val arrivals = CSVFixtures.csvPathToArrivalsOnDate(day.toISOString, file)
+          .collect {
+            case Success(arrival) => arrival
+          }
+        arrivals.map(testArrivalActor.ask)
+
+        val manifests = arrivals.map(a => {
+          MockManifest.manifestForArrival(a)
+        })
+        Await.ready(testManifestsActor.ask(VoyageManifests(manifests.toSet)), 5 seconds)
+      })
     })
   }
 
-  override def liveArrivalsSource(portCode: PortCode): Source[ArrivalsFeedResponse, Cancellable] = testFeed
+  override def liveArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[Feed.FeedTick]] = testFeed
 
   override def getRoles(config: Configuration,
                         headers: Headers,
@@ -137,34 +165,36 @@ case class TestDrtSystem(config: Configuration, airportConfig: AirportConfig)
   }
 
   def startSystem: () => List[KillSwitch] = () => {
-    val (manifestRequestsSource, bridge1Ks, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
-    val (manifestResponsesSource, bridge2Ks, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
-
-    val cs = startCrunchSystem(
+    val crunchInputs = startCrunchSystem(
       initialPortState = None,
       initialForecastBaseArrivals = None,
       initialForecastArrivals = None,
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
-      manifestRequestsSink,
-      manifestResponsesSource,
       refreshArrivalsOnStart = false,
-      startDeskRecs = startDeskRecs)
+      startDeskRecs = startDeskRecs(SortedSet(), SortedSet(), SortedSet()))
 
-    val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 1000
-    val manifestKillSwitch = startManifestsGraph(None, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
+    liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
-    subscribeStaffingActors(cs)
-    startScheduledFeedImports(cs)
+    redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
+    flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
+    manifestsRouterActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
+    queuesActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
+    staffActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
 
-    testManifestsActor ! SubscribeResponseQueue(cs.manifestsLiveResponse)
+    testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponse)
 
-    List(bridge1Ks, bridge2Ks, manifestKillSwitch) ++ cs.killSwitches
+    crunchInputs.killSwitches
   }
+
+  val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode)
 }
+
 
 class RestartActor(startSystem: () => List[KillSwitch],
                    testActors: List[ActorRef]) extends Actor with ActorLogging {
+
+  lazy val persistenceTestKit: PersistenceTestKit = PersistenceTestKit(context.system)
 
   var currentKillSwitches: List[KillSwitch] = List()
 
@@ -173,9 +203,6 @@ class RestartActor(startSystem: () => List[KillSwitch],
   override def receive: Receive = {
     case ResetData =>
       val replyTo = sender()
-
-      resetInMemoryData()
-
       log.info(s"About to shut down everything. Pressing kill switches")
 
       currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
@@ -183,8 +210,10 @@ class RestartActor(startSystem: () => List[KillSwitch],
         ks.shutdown()
       }
 
-      Future.sequence(testActors.map(_.ask(ResetData)(new Timeout(5 second)))).onComplete { _ =>
+      val resetFutures = testActors.map(_.ask(ResetData)(new Timeout(5 second)))
+      Future.sequence(resetFutures).onComplete { _ =>
         log.info(s"Shutdown triggered")
+        resetInMemoryData()
         startTestSystem()
         replyTo ! Ack
       }
@@ -201,10 +230,7 @@ class RestartActor(startSystem: () => List[KillSwitch],
 
   def startTestSystem(): Unit = currentKillSwitches = startSystem()
 
-  def resetInMemoryData(): Unit = {
-    StorageExtension(context.system).journalStorage ! InMemoryJournalStorage.ClearJournal
-    StorageExtension(context.system).snapshotStorage ! InMemorySnapshotStorage.ClearSnapshots
-  }
+  def resetInMemoryData(): Unit = persistenceTestKit.clearAll()
 }
 
 case object StartTestSystem

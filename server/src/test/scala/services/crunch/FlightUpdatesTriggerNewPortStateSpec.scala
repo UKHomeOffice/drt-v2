@@ -2,22 +2,35 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypes._
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Queues._
-import drt.shared.SplitRatiosNs.SplitSources._
-import drt.shared.Terminals.T1
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, TotalPaxSource}
+import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
+import uk.gov.homeoffice.drt.ports.Queues._
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
+import uk.gov.homeoffice.drt.ports.Terminals._
+import uk.gov.homeoffice.drt.ports._
 
-import scala.collection.immutable.{Seq, SortedMap}
+import scala.collection.immutable.{Map, Seq, SortedMap}
 import scala.concurrent.duration._
 
 
 class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
   isolated
   sequential
+
+  val testAirportConfig: AirportConfig = defaultAirportConfig.copy(
+    slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
+    terminalProcessingTimes = Map(T1 -> Map(
+      eeaMachineReadableToDesk -> 25d / 60,
+      eeaMachineReadableToEGate -> 25d / 60
+    )),
+    queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
+  )
+
 
   "Given an update to an existing flight " >> {
     "When I expect a PortState " >> {
@@ -29,24 +42,18 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         val inputFlightsBefore = Flights(List(flight))
         val updatedArrival = flight.copy(ActPax = Some(50))
         val inputFlightsAfter = Flights(List(updatedArrival))
-        val crunch = runCrunchGraph(TestConfig(
-          now = () => SDate(scheduled),
-          airportConfig = defaultAirportConfig.copy(
-            terminalProcessingTimes = Map(T1 -> Map(
-              eeaMachineReadableToDesk -> 25d / 60,
-              eeaMachineReadableToEGate -> 25d / 60
-              )),
-            queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
-            )))
+        val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
 
         val expectedFlights = Set(ApiFlightWithSplits(
-          updatedArrival.copy(FeedSources = Set(LiveFeedSource)),
-          Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None)), TerminalAverage, None, Percentage))))
+          updatedArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax =
+            Set(TotalPaxSource(updatedArrival.ActPax, LiveFeedSource))
+          ),
+          Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
 
-        crunch.portStateTestProbe.fishForMessage(3 seconds) {
+        crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
             val flightsAfterUpdate = ps.flights.values.map(_.copy(lastUpdated = None)).toSet
             flightsAfterUpdate == expectedFlights
@@ -67,25 +74,17 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         val inputFlightsBefore = Flights(List(flight))
         val updatedArrival = flight.copy(ActPax = Some(50))
         val inputFlightsAfter = Flights(List(updatedArrival))
-        val crunch = runCrunchGraph(TestConfig(
-          now = () => SDate(scheduled),
-          airportConfig = defaultAirportConfig.copy(
-            terminalProcessingTimes = Map(T1 -> Map(
-              eeaMachineReadableToDesk -> 25d / 60,
-              eeaMachineReadableToEGate -> 25d / 60
-              )),
-            queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
-            )))
+        val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
 
         val expectedFlights = Set(ApiFlightWithSplits(
-          updatedArrival.copy(FeedSources = Set(LiveFeedSource)),
-          Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None)), TerminalAverage, None, Percentage))))
+          updatedArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax =
+            Set(TotalPaxSource(updatedArrival.ActPax, LiveFeedSource))),
+          Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
 
-        crunch.portStateTestProbe.fishForMessage(3 seconds) {
+        crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
             val flightsAfterUpdate = ps.flights.values.map(_.copy(lastUpdated = None)).toSet
             flightsAfterUpdate == expectedFlights
@@ -99,26 +98,17 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
   "Given an existing ACL flight and crunch data" >> {
     "When I send an empty set of ACL flights" >> {
       "Then I should see the pax nos and workloads fall to zero for the flight that was removed" >> {
-
         val scheduled = "2017-01-01T00:00Z"
 
         val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
         val oneFlight = Flights(List(flight))
         val zeroFlights = Flights(List())
 
-        val crunch = runCrunchGraph(TestConfig(
-          now = () => SDate(scheduled),
-          airportConfig = defaultAirportConfig.copy(
-            terminalProcessingTimes = Map(T1 -> Map(
-              eeaMachineReadableToDesk -> 25d / 60,
-              eeaMachineReadableToEGate -> 25d / 60
-              )),
-            queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
-            )))
+        val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
-        offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(oneFlight))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(oneFlight))
 
-        crunch.portStateTestProbe.fishForMessage(1 second) {
+        crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(_, cms, _) if cms.nonEmpty =>
             val nonZeroPax = cms.values.map(_.paxLoad).max > 0
             val nonZeroWorkload = cms.values.map(_.workLoad).max > 0
@@ -126,9 +116,9 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
           case _ => false
         }
 
-        offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(zeroFlights))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(zeroFlights))
 
-        crunch.portStateTestProbe.fishForMessage(1 seconds) {
+        crunch.portStateTestProbe.fishForMessage(1.seconds) {
           case PortState(_, cms, _) if cms.nonEmpty =>
             val nonZeroPax = cms.values.map(_.paxLoad).max == 0
             val nonZeroWorkload = cms.values.map(_.workLoad).max == 0

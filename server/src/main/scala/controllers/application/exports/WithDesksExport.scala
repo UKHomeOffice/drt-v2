@@ -1,47 +1,165 @@
 package controllers.application.exports
 
-import actors.summaries.TerminalQueuesSummaryActor
-import akka.actor.ActorRef
+import akka.NotUsed
+import akka.stream.scaladsl.Source
 import controllers.Application
-import drt.auth.DesksAndQueuesView
+import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
-import drt.shared.Terminals.Terminal
+import drt.shared.ErrorResponse
 import play.api.mvc.{Action, AnyContent}
 import services.SDate
-import services.exports.Exports
-import services.exports.summaries.{GetSummaries, TerminalSummaryLike}
+import services.exports.StreamingDesksExport
+import uk.gov.homeoffice.drt.auth.Roles.DesksAndQueuesView
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import upickle.default.write
 
 import scala.concurrent.Future
+import scala.util.{Failure, Success, Try}
 
-trait WithDesksExport extends ExportToCsv {
+trait WithDesksExport {
   self: Application =>
 
-  private val summaryActorProvider: (SDateLike, Terminal) => ActorRef = (date: SDateLike, terminal: Terminal) => {
-    system.actorOf(TerminalQueuesSummaryActor.props(date, terminal, now))
+  def exportDesksAndQueuesRecsAtPointInTimeCSV(
+                                                localDate: String,
+                                                pointInTime: String,
+                                                terminalName: String): Action[AnyContent] =
+    authByRole(DesksAndQueuesView) {
+
+      (LocalDate.parse(localDate), Try(SDate(pointInTime.toLong))) match {
+        case (Some(ld), Success(pit)) =>
+
+          val viewDay = SDate(ld)
+          val start = viewDay
+          val end = viewDay.getLocalNextMidnight.addMinutes(-1)
+
+          exportStreamingDesksAndQueuesBetweenTimestampsCSV(
+            start,
+            end,
+            terminalName,
+            deskRecsExportStreamForTerminalDates(pointInTime = Option(pit.millisSinceEpoch)),
+            s"desks-and-queues-recs-at-${pit.toISOString()}-for"
+          )
+        case _ =>
+          Action(BadRequest(write(ErrorResponse("Invalid date format"))))
+      }
+    }
+
+  def exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLocalDate: String,
+                                                   endLocalDate: String,
+                                                   terminalName: String): Action[AnyContent] =
+    authByRole(DesksAndQueuesView) {
+      (LocalDate.parse(startLocalDate), LocalDate.parse(endLocalDate)) match {
+        case (Some(startLD), Some(endLD)) =>
+
+          val start = SDate(startLD)
+          val end = SDate(endLD).getLocalNextMidnight.addMinutes(-1)
+
+          exportStreamingDesksAndQueuesBetweenTimestampsCSV(
+            start,
+            end,
+            terminalName,
+            deskRecsExportStreamForTerminalDates(pointInTime = None),
+            "desks-and-queues-recs"
+          )
+        case _ =>
+          Action(BadRequest(write(ErrorResponse("Invalid date format"))))
+      }
+    }
+
+  def exportDesksAndQueuesDepsAtPointInTimeCSV(
+                                                localDate: String,
+                                                pointInTime: String,
+                                                terminalName: String
+                                              ): Action[AnyContent] =
+    authByRole(DesksAndQueuesView) {
+      (LocalDate.parse(localDate), Try(SDate(pointInTime.toLong))) match {
+        case (Some(ld), Success(pit)) =>
+
+          val start = SDate(ld)
+          val end = start.getLocalNextMidnight.addMinutes(-1)
+
+          exportStreamingDesksAndQueuesBetweenTimestampsCSV(
+            start,
+            end,
+            terminalName,
+            deploymentsExportStreamForTerminalDates(pointInTime = Option(pit.millisSinceEpoch)),
+            s"desks-and-queues-deps-at-${pit.toISOString()}-for"
+          )
+        case _ =>
+          Action(BadRequest(write(ErrorResponse("Invalid date format"))))
+      }
+    }
+
+  def exportDesksAndQueuesDepsBetweenTimeStampsCSV(startLocalDate: String,
+                                                   endLocalDate: String,
+                                                   terminalName: String): Action[AnyContent] =
+    authByRole(DesksAndQueuesView) {
+      (LocalDate.parse(startLocalDate), LocalDate.parse(endLocalDate)) match {
+        case (Some(startLD), Some(endLD)) =>
+
+          val start = SDate(startLD)
+          val end = SDate(endLD).getLocalNextMidnight.addMinutes(-1)
+          exportStreamingDesksAndQueuesBetweenTimestampsCSV(
+            start,
+            end,
+            terminalName,
+            deploymentsExportStreamForTerminalDates(pointInTime = None),
+            "desks-and-queues-deps"
+          )
+        case _ =>
+          Action(BadRequest(write(ErrorResponse("Invalid date format"))))
+      }
+    }
+
+  def exportStreamingDesksAndQueuesBetweenTimestampsCSV(
+                                                         start: SDateLike,
+                                                         end: SDateLike,
+                                                         terminalName: String,
+                                                         exportSourceFn: (SDateLike, SDateLike, Terminal) =>
+                                                           Source[String, NotUsed],
+                                                         filePrefix: String
+                                                       ): Action[AnyContent] = Action.async {
+    val exportSource: Source[String, NotUsed] = exportSourceFn(start, end, Terminal(terminalName))
+    log.info(s"Exporting between $start and $end")
+
+    val fileName = makeFileName(filePrefix, Terminal(terminalName), start, end, airportConfig.portCode)
+
+    Try(sourceToCsvResponse(exportSource, fileName)) match {
+      case Success(value) => Future(value)
+      case Failure(t) =>
+        log.error("Failed to get CSV export", t)
+        Future(BadRequest("Failed to get CSV export"))
+    }
   }
 
-  def exportDesksAndQueuesAtPointInTimeCSV(pointInTime: String,
-                                           terminalName: String): Action[AnyContent] =
-    authByRole(DesksAndQueuesView)(exportPointInTimeView(terminalName, pointInTime))
+  def deskRecsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
+    start: SDateLike,
+    end: SDateLike,
+    terminal: Terminal
+  ): Source[String, NotUsed] =
+    StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
+      start,
+      end,
+      terminal,
+      airportConfig.desksExportQueueOrder,
+      ctrl.minuteLookups.queuesLookup,
+      ctrl.minuteLookups.staffLookup,
+      pointInTime
+    )
 
-  def exportDesksAndQueuesBetweenTimeStampsCSV(startMillis: String,
-                                               endMillis: String,
-                                               terminalName: String): Action[AnyContent] =
-    authByRole(DesksAndQueuesView)(exportEndOfDayView(startMillis, endMillis, terminalName))
-
-  private def exportEndOfDayView(startMillis: String, endMillis: String, terminalName: String): Action[AnyContent] = {
-    val start = SDate(startMillis.toLong)
-    val end = SDate(endMillis.toLong)
-    val summaryForPeriodFn = Exports.queueSummariesFromPortState(airportConfig.nonTransferQueues(terminal(terminalName)), 15, Terminal(terminalName), queryFromPortStateFn(None))
-    Action(exportToCsv(start, end, "desks and queues", terminal(terminalName), Option((summaryActorProvider, GetSummaries)), summaryForPeriodFn))
-  }
-
-  private def exportPointInTimeView(terminalName: String, pointInTime: String): Action[AnyContent] = {
-    val pit = SDate(pointInTime.toLong)
-    val start = pit.getLocalLastMidnight
-    val end = start.addDays(1).addMinutes(-1)
-    val summaryForPeriodFn = Exports.queueSummariesFromPortState(airportConfig.nonTransferQueues(terminal(terminalName)), 15, Terminal(terminalName), queryFromPortStateFn(Option(pit.millisSinceEpoch)))
-    Action(exportToCsv(start, end, "desks and queues", terminal(terminalName), None, summaryForPeriodFn))
-  }
+  def deploymentsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
+    start: SDateLike,
+    end: SDateLike,
+    terminal: Terminal
+  ): Source[String, NotUsed] =
+    StreamingDesksExport.deploymentsToCSVStreamWithHeaders(
+      start,
+      end,
+      terminal,
+      airportConfig.desksExportQueueOrder,
+      ctrl.minuteLookups.queuesLookup,
+      ctrl.minuteLookups.staffLookup,
+      pointInTime
+    )
 }

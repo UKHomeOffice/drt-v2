@@ -1,14 +1,15 @@
 package drt.client.services.handlers
 
+import diode.Implicits.runAfterImpl
 import diode._
 import diode.data._
-import diode.Implicits.runAfterImpl
 import drt.client.actions.Actions._
 import drt.client.logger._
 import drt.client.services._
-import drt.shared._
 import drt.shared.CrunchApi._
+import drt.shared._
 import org.scalajs.dom
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import upickle.default.read
 
 import scala.collection.immutable.SortedMap
@@ -43,9 +44,13 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
       modelRW.value match {
         case (Ready(existingState), _) =>
           val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
-          val scheduledUpdateRequest = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
-          val newOriginCodes = crunchUpdates.flights.map(_.apiFlight.Origin) -- existingState.flights.map { case (_, fws) => fws.apiFlight.Origin }
-          val effects = if (newOriginCodes.nonEmpty) scheduledUpdateRequest + Effect(Future(GetAirportInfos(newOriginCodes))) else scheduledUpdateRequest
+          val scheduledUpdateRequests = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
+
+          val newOriginCodes = crunchUpdates.flights.map(_.apiFlight.Origin).toSet -- existingState.flights.map { case (_, fws) => fws.apiFlight.Origin }
+          val effects = if (newOriginCodes.nonEmpty)
+            scheduledUpdateRequests + Effect(Future(GetAirportInfos(newOriginCodes)))
+          else
+            scheduledUpdateRequests
 
           updated((Ready(newState), crunchUpdates.latest), effects)
 
@@ -76,7 +81,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
   }
 
   def updateStateFromUpdates(startMillis: MillisSinceEpoch, crunchUpdates: PortStateUpdates, existingState: PortState): PortState = {
-    val flights = updateAndTrimFlights(crunchUpdates, existingState, startMillis)
+    val flights = updateAndTrimFlights(crunchUpdates, existingState, startMillis) -- crunchUpdates.flightRemovals
     val minutes = updateAndTrimCrunch(crunchUpdates, existingState, startMillis)
     val staff = updateAndTrimStaff(crunchUpdates, existingState, startMillis)
     PortState(flights, minutes, staff)
@@ -100,7 +105,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     }
   }
 
-  def updateAndTrimFlights(crunchUpdates: PortStateUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): SortedMap[UniqueArrival, ApiFlightWithSplits] = {
+  def updateAndTrimFlights(crunchUpdates: PortStateUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): Map[UniqueArrival, ApiFlightWithSplits] = {
     val thirtyMinutesMillis = 30 * 60000
     val relevantFlights = existingState.flights
       .filter { case (_, fws) => fws.apiFlight.PcpTime.isDefined }

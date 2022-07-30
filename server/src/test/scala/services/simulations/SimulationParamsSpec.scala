@@ -2,26 +2,30 @@ package services.simulations
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, TotalPaxSource}
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.time.LocalDate
 
 class SimulationParamsSpec extends Specification {
 
-  val testConfig: AirportConfig = AirportConfigs.confByPort(PortCode("TEST"))
+  val testConfig: AirportConfig = DrtPortConfigs.confByPort(PortCode("TEST"))
 
   private val terminal: Terminal = Terminal("T1")
   val simulation: SimulationParams = SimulationParams(
-    terminal,
-    LocalDate(2020, 3, 27),
-    1.0,
-    testConfig.terminalProcessingTimes(terminal).mapValues(_ => 60),
-    testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
-    testConfig.queuesByTerminal(terminal).map(q => q -> 10).toMap,
-    5,
-    testConfig.slaByQueue,
-    0
+    terminal = terminal,
+    date = LocalDate(2020, 3, 27),
+    passengerWeighting = 1.0,
+    processingTimes = testConfig.terminalProcessingTimes(terminal).mapValues(_ => 60),
+    minDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
+    maxDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 10).toMap,
+    eGateBanksSizes = IndexedSeq(5, 5, 5),
+    slaByQueue = testConfig.slaByQueue,
+    crunchOffsetMinutes = 0,
+    eGateOpenHours = Seq()
   )
 
   "Given I am applying a simulation to an airport config" >> {
@@ -29,17 +33,9 @@ class SimulationParamsSpec extends Specification {
 
       val updatedConfig = simulation.applyToAirportConfig(testConfig)
 
-      val expected = Map(
-        eeaMachineReadableToDesk -> 1.0,
-        eeaMachineReadableToEGate -> 1.0,
-        eeaNonMachineReadableToDesk -> 1.0,
-        visaNationalToDesk -> 1.0,
-        nonVisaNationalToDesk -> 1.0
-      )
+      val expected = testConfig.terminalProcessingTimes(terminal).mapValues(_ => 1)
 
-      val result: Map[PaxTypeAndQueue, Double] = updatedConfig.terminalProcessingTimes(terminal)
-
-      result === expected
+      updatedConfig.terminalProcessingTimes(terminal) === expected
     }
 
     "The original airport config processing times should be used if replacements are not supplied" >> {
@@ -94,13 +90,13 @@ class SimulationParamsSpec extends Specification {
 
     "Simulation eGate bank size should be used" >> {
 
-      val simulationWithMinDesks = simulation.copy(eGateBanksSize = 7)
+      val simulationWithMinDesks = simulation.copy(eGateBanksSizes = IndexedSeq(7, 7, 7))
 
-      val expected = 7
+      val expected = Map(T1 -> IndexedSeq(7, 7, 7))
 
       val result = simulationWithMinDesks
         .applyToAirportConfig(testConfig)
-        .eGateBankSize
+        .eGateBankSizes
 
       result === expected
     }
@@ -117,19 +113,31 @@ class SimulationParamsSpec extends Specification {
 
       result === expected
     }
-
   }
 
   "Given I am applying a passenger weighting of 1 to some flights then the passenger numbers should be the same" >> {
     val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
 
-    val fws = FlightsWithSplits(List(
-      ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50)), Set())
+    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50),
+      totalPax = Set(TotalPaxSource(Option(100),ScenarioSimulationSource))), Set())
+    val flights = FlightsWithSplits(List(
+      flightWithSplits
     ).map(a => a.apiFlight.unique -> a).toMap)
 
-    val result = weightingOfOne.applyPassengerWeighting(fws)
+    val result = weightingOfOne.applyPassengerWeighting(flights)
 
-    result === fws
+    result.flights.values.head.apiFlight.bestPcpPaxEstimate === flightWithSplits.apiFlight.bestPcpPaxEstimate
+  }
+
+  "Given I am applying a passenger weighting to a flight, it should have the ScenarioSimulationSource added to it" >> {
+    val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
+
+    val flights = FlightsWithSplits(
+      List(ApiFlightWithSplits(ArrivalGenerator.arrival(), Set())).map(a => a.apiFlight.unique -> a).toMap)
+
+    val result = weightingOfOne.applyPassengerWeighting(flights)
+
+    result.flights.values.head.apiFlight.FeedSources === Set(ScenarioSimulationSource)
   }
 
   "Given I am applying a passenger weighting of 2 to some flights then passenger numbers and trans numbers shoudl be doubled" >> {
@@ -139,13 +147,11 @@ class SimulationParamsSpec extends Specification {
       ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50)), Set())
     ).map(a => a.apiFlight.unique -> a).toMap)
 
-    val expected = FlightsWithSplits(List(
-    ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(200), tranPax = Option(100)), Set())
-    ).map(a => a.apiFlight.unique -> a).toMap)
-
+    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(200), tranPax = Option(100),
+      totalPax = Set(TotalPaxSource(Option(200),ScenarioSimulationSource))),Set())
     val result = weightingOfTwo.applyPassengerWeighting(fws)
 
-    result === expected
+    result.flights.values.head.apiFlight.bestPcpPaxEstimate === flightWithSplits.apiFlight.bestPcpPaxEstimate
   }
 
 }

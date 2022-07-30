@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.SPAMain.{Loc, PortDashboardLoc}
@@ -7,15 +8,19 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared._
-import drt.shared.api.Arrival
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.lab.MuiToggleButtonGroup
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object PortDashboardPage {
 
-  case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc)
+  case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc) extends UseValueEq
 
   case class DisplayPeriod(start: SDateLike, end: SDateLike)
 
@@ -26,7 +31,7 @@ object PortDashboardPage {
   case class PortDashboardModel(
                                  airportConfig: Pot[AirportConfig],
                                  portState: Pot[PortState],
-                                 featureFlags: Pot[Map[String, Boolean]]
+                                 featureFlags: Pot[FeatureFlags]
                                )
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("PortDashboard")
@@ -58,12 +63,14 @@ object PortDashboardPage {
 
             <.div(
               <.div(
-                <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
+                MuiToggleButtonGroup(selected = true)(^.className := "btn-group no-gutters",
                   periods.zipWithIndex.map {
-                    case (p, index) => <.div(
-                      ^.className := s"btn btn-primary${if (p == displayPeriod) " active" else ""}",
-                      s"${p.start.prettyTime()}-${p.end.prettyTime()}", ^.onClick ==> switchDashboardPeriod(index)
-                    )
+                    case (p, index) =>
+                      MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+                        s"${p.start.prettyTime()}-${p.end.prettyTime()}",
+                        ^.className := s"btn btn-primary${if (p == displayPeriod) " active" else ""} muiFontSize",
+                        ^.target := "_blank",
+                        ^.onClick ==> switchDashboardPeriod(index))
                   }.toTagMod)),
               terminals.map { terminalName =>
                 <.div(
@@ -85,19 +92,16 @@ object PortDashboardPage {
                       val terminalQueuesInOrder = Queues.inOrder(queues.getOrElse(terminalName, Seq()))
 
                       portDashboardModel.featureFlags.renderReady(ff => {
-
-                        val pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
-
                         DashboardTerminalSummary(
-                          DashboardTerminalSummary.Props(scheduledFlightsInTerminal,
+                          DashboardTerminalSummary.Props(
+                            scheduledFlightsInTerminal,
                             terminalCrunchMinutes,
                             terminalStaffMinutes,
                             terminalName,
                             paxTypeAndQueueOrder(terminalName).splits.map(_.paxType),
                             terminalQueuesInOrder,
                             displayPeriod.start,
-                            displayPeriod.end,
-                            pcpPaxFn
+                            displayPeriod.end
                           )
                         )
                       }

@@ -1,6 +1,6 @@
 package data
 
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment}
 import org.specs2.mutable.SpecificationLike
 import services.SDate
@@ -31,8 +31,8 @@ class StaffApiSpec extends SpecificationLike {
         val baseDateTime = SDate("2017-06-28T01:00", Crunch.europeLondonTimeZone)
         val assignments = 0 to 3 map(i => {
           val offset = i * 15
-          val startDate = MilliDate(baseDateTime.addMinutes(offset).millisSinceEpoch)
-          val endDate = MilliDate(baseDateTime.addMinutes(offset + 14).millisSinceEpoch)
+          val startDate = baseDateTime.addMinutes(offset).millisSinceEpoch
+          val endDate = baseDateTime.addMinutes(offset + 14).millisSinceEpoch
           StaffAssignment(i.toString, T1, startDate, endDate, 5, Option("API"))
         })
 
@@ -64,8 +64,8 @@ class StaffApiSpec extends SpecificationLike {
         val baseDateTime = SDate("2017-06-28T01:00", Crunch.europeLondonTimeZone)
         val assignments = 0 to 3 map(i => {
           val offset = i * 15
-          val startDate = MilliDate(baseDateTime.addMinutes(offset).millisSinceEpoch)
-          val endDate = MilliDate(baseDateTime.addMinutes(offset + 14).millisSinceEpoch)
+          val startDate = baseDateTime.addMinutes(offset).millisSinceEpoch
+          val endDate = baseDateTime.addMinutes(offset + 14).millisSinceEpoch
           StaffAssignment(i.toString, T1, startDate, endDate, 0, Option("API"))
         })
 

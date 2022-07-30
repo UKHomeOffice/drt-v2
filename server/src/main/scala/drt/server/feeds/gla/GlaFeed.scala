@@ -1,7 +1,6 @@
 package drt.server.feeds.gla
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
@@ -9,20 +8,19 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.server.feeds.gla.GlaFeed.GlaArrival
 import drt.shared.FlightsApi.Flights
-import drt.shared.LiveFeedSource
-import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 
 trait GlaFeedRequesterLike {
 
@@ -45,9 +43,8 @@ case class GlaFeed(uri: String,
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source
-    .tick(initialDelay = 1 milliseconds, interval = 60 seconds, tick = NotUsed)
-    .mapAsync(1)(_ => {
+  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
+    source.mapAsync(1)(_ => {
       log.info(s"Requesting live feed.")
       requestArrivals()
     })
@@ -111,6 +108,7 @@ object GlaFeed {
     None,
     Status = ga.FlightStatusDesc,
     Estimated = ga.AODBProbableDateTime.map(SDate(_).millisSinceEpoch),
+    PredictedTouchdown = None,
     Actual = ga.ALDT.map(SDate(_).millisSinceEpoch),
     EstimatedChox = ga.EIBT.map(SDate(_).millisSinceEpoch),
     ActualChox = ga.AIBT.map(SDate(_).millisSinceEpoch),

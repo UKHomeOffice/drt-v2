@@ -4,18 +4,17 @@ import actors.FlightLookupsLike
 import actors.daily.RequestAndTerminateActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.UtcDate
 import test.TestActors.{ResetData, TestFlightsRouterActor, TestTerminalDayFlightActor}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 case class TestFlightLookups(system: ActorSystem,
                              now: () => SDateLike,
-                             queuesByTerminal: Map[Terminal, Seq[Queue]],
-                             updatesSubscriber: ActorRef)
-                            (implicit val ec: ExecutionContext) extends FlightLookupsLike {
+                             queuesByTerminal: Map[Terminal, Seq[Queue]]) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-flights-lookup-kill-actor")
 
   val resetFlightsData: (Terminal, UtcDate) => Future[Unit] = (terminal: Terminal, date: UtcDate) => {
@@ -29,9 +28,8 @@ case class TestFlightLookups(system: ActorSystem,
   override val flightsActor: ActorRef = system.actorOf(
     Props(
       new TestFlightsRouterActor(
-        updatesSubscriber,
         queuesByTerminal.keys,
-        flightsByDayLookup,
+        flightsByDayLookup(None),
         updateFlights,
         resetFlightsData
       )))

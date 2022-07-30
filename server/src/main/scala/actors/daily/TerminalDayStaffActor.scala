@@ -2,18 +2,19 @@ package actors.daily
 
 import akka.actor.Props
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, TM}
+import drt.shared.{CrunchApi, TM}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 
 object TerminalDayStaffActor {
-  def props(terminal: Terminal, date: SDateLike, now: () => SDateLike): Props =
-    Props(new TerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, None))
+  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
+    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, None))
 
-  def propsPointInTime(terminal: Terminal, date: SDateLike, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now, Option(pointInTime)))
+  def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
+    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
 }
 
 class TerminalDayStaffActor(year: Int,
@@ -24,7 +25,7 @@ class TerminalDayStaffActor(year: Int,
                             maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[StaffMinute, TM](year, month, day, terminal, now, maybePointInTime) {
   override val typeForPersistenceId: String = "staff"
 
-  import actors.PortStateMessageConversion._
+  import actors.serializers.PortStateMessageConversion._
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case StaffMinutesMessage(minuteMessages) => state = minuteMessagesToKeysAndMinutes(minuteMessages).toMap
@@ -36,18 +37,22 @@ class TerminalDayStaffActor(year: Int,
       state = state ++ updatesToApply(minuteMessagesToKeysAndMinutes(minuteMessages))
   }
 
-  private def minuteMessagesToKeysAndMinutes(messages: Seq[StaffMinuteMessage]): Iterable[(TM, StaffMinute)] = messages
-    .filter { cmm =>
-      val minuteMillis = cmm.minute.getOrElse(0L)
-      firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
-    }
-    .map { cmm =>
-      val cm = staffMinuteFromMessage(cmm)
-      (cm.key, cm)
-    }
+  private def minuteMessagesToKeysAndMinutes(messages: Seq[StaffMinuteMessage]): Iterable[(TM, StaffMinute)] =
+    messages
+      .filter { cmm =>
+        val minuteMillis = cmm.minute.getOrElse(0L)
+        firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
+      }
+      .map { cmm =>
+        val cm = staffMinuteFromMessage(cmm)
+        (cm.key, cm)
+      }
 
   override def stateToMessage: GeneratedMessage = StaffMinutesMessage(state.values.map(staffMinuteToMessage).toSeq)
 
   override def containerToMessage(differences: Iterable[StaffMinute]): GeneratedMessage =
     StaffMinutesMessage(differences.map(m => staffMinuteToMessage(m.toMinute)).toSeq)
+
+  override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[StaffMinute, TM]): Boolean =
+    container.contains(classOf[StaffMinute])
 }

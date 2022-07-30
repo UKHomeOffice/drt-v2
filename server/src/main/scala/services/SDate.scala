@@ -1,12 +1,13 @@
 package services
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{LocalDate, MilliDate, SDateLike, UtcDate}
+import drt.shared.MilliDate
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
 import services.graphstages.Crunch.{europeLondonTimeZone, utcTimeZone}
+import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, SDateLike, UtcDate}
 
 import scala.language.implicitConversions
 import scala.util.Try
@@ -86,13 +87,16 @@ object SDate {
 
   object implicits {
 
-    implicit def jodaToSDate(dateTime: DateTime): SDateLike = JodaSDate(dateTime)
+    implicit val jodaToSDate: DateTime => SDateLike = dateTime => JodaSDate(dateTime)
 
-    implicit def sdateToMilliDate(sdate: SDateLike): MilliDate = MilliDate(sdate.millisSinceEpoch)
+    implicit val sdateToMilliDate: SDateLike => MilliDate = sdate => MilliDate(sdate.millisSinceEpoch)
 
-    implicit def sdateFromMilliDate(milliDate: MilliDate): SDateLike = new DateTime(milliDate.millisSinceEpoch)
+    implicit val sdateFromMilliDate: MilliDate => SDateLike = milliDate => new DateTime(milliDate.millisSinceEpoch)
 
-    implicit def sdateFromMilliDateLocal(milliDate: MilliDate): SDateLike = new DateTime(milliDate.millisSinceEpoch, Crunch.europeLondonTimeZone)
+    implicit val sdateFromMillisLocal: MillisSinceEpoch => SDateLike = millis => SDate(millis, Crunch.europeLondonTimeZone)
+
+    implicit val sdateFromMilliDateLocal: MilliDate => SDateLike =
+      milliDate => new DateTime(milliDate.millisSinceEpoch, Crunch.europeLondonTimeZone)
   }
 
   def jodaSDateToIsoString(dateTime: SDateLike): String = {
@@ -120,6 +124,8 @@ object SDate {
 
   def apply(localDate: LocalDate): SDateLike = SDate(localDate.toISOString + "T00:00", Crunch.europeLondonTimeZone)
 
+  def apply(dateLike: DateLike): SDateLike = SDate(dateLike.toISOString + "T00:00", DateTimeZone.forID(dateLike.timeZone))
+
   def apply(utcDate: UtcDate): SDateLike = SDate(utcDate.year, utcDate.month, utcDate.day, 0, 0)
 
   def now(): JodaSDate = JodaSDate(new DateTime(DateTimeZone.UTC))
@@ -146,4 +152,6 @@ object SDate {
     val zoneDate = SDate(date, dateTimeZone)
     (zoneDate.getFullYear(), zoneDate.getMonth(), zoneDate.getDate())
   }
+
+  def weekOfYear(date: SDateLike): Int = new DateTime(date.millisSinceEpoch, DateTimeZone.UTC).getWeekOfWeekyear
 }

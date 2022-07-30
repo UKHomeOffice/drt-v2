@@ -1,0 +1,35 @@
+package services.crunch.deskrecs
+
+import akka.stream.Materializer
+import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.{SimulationMinutes, TQM}
+import services.crunch.desklimits.TerminalDeskLimitsLike
+import services.graphstages.Crunch.LoadMinute
+import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueStatus}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
+
+import scala.collection.immutable.{Map, NumericRange}
+import scala.concurrent.{ExecutionContext, Future}
+
+trait PortDesksAndWaitsProviderLike {
+  val minutesToCrunch: Int
+  val crunchOffsetMinutes: Int
+
+  def flightsToLoads(minuteMillis: NumericRange[MillisSinceEpoch],
+                     flights: FlightsWithSplits,
+                     redListUpdates: RedListUpdates,
+                     terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
+                    (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, LoadMinute]
+
+  def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
+                   loads: Map[TQM, LoadMinute],
+                   deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike])
+                  (implicit ec: ExecutionContext, mat: Materializer): Future[DeskRecMinutes]
+
+  def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
+                         loadsByQueue: Map[TQM, LoadMinute],
+                         deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike])
+                        (implicit ec: ExecutionContext, mat: Materializer): Future[SimulationMinutes]
+}

@@ -1,20 +1,23 @@
 package controllers.application
 
-import java.util.UUID
-
-import actors.pointInTime.ArrivalsReadActor
+import actors.persistent.arrivals._
+import actors.persistent.staffing.GetState
 import akka.actor.{ActorRef, PoisonPill}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.Application
-import drt.auth.ArrivalSource
+import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
 import services.SDate
-import upickle.default.write
+import uk.gov.homeoffice.drt.arrivals.UniqueArrival
+import uk.gov.homeoffice.drt.auth.Roles
+import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
+import uk.gov.homeoffice.drt.ports._
+import upickle.default.{read, write}
 
-import scala.concurrent.Future
+import java.util.UUID
 
 
 trait WithFeeds {
@@ -37,59 +40,89 @@ trait WithFeeds {
     }
   }
 
-  def getArrival(number: Int,
-                 terminal: String,
-                 scheduled: MillisSinceEpoch): Action[AnyContent] = authByRole(ArrivalSource) {
-    Action.async { _ =>
-      Source(ctrl.feedActors)
-        .mapAsync(1)(feed =>
-                       feed
-                         .ask(UniqueArrival(number, terminal, scheduled))
-                         .map {
-                           case Some(fsa: FeedSourceArrival) if ctrl.isValidFeedSource(fsa.feedSource) => Option(fsa)
-                           case _ => None
-                         }
-                     )
-        .runWith(Sink.seq)
-        .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
+  def checkFeed: Action[AnyContent] = authByRole(Roles.PortFeedUpload) {
+    Action { request =>
+      request.body.asText match {
+        case None => BadRequest
+        case Some(text) =>
+          read[FeedSource](text) match {
+            case AclFeedSource =>
+              log.info(s"Sending adhoc feed request to the base forecast feed actor")
+              ctrl.fcstBaseActor ! AdhocCheck
+            case ForecastFeedSource =>
+              log.info(s"Sending adhoc feed request to the forecast feed actor")
+              ctrl.fcstActor ! AdhocCheck
+            case LiveBaseFeedSource =>
+              log.info(s"Sending adhoc feed request to the base live feed actor")
+              ctrl.liveBaseActor ! AdhocCheck
+            case LiveFeedSource =>
+              log.info(s"Sending adhoc feed request to the live feed actor")
+              ctrl.liveActor ! AdhocCheck
+            case unexpected =>
+              log.info(s"Feed check not supported for $unexpected")
+          }
+          Ok
+      }
     }
   }
 
-  def getArrivalAtPointInTime(
-                               pointInTime: MillisSinceEpoch,
-                               number: Int, terminal: String,
-                               scheduled: MillisSinceEpoch
-                             ): Action[AnyContent] = authByRole(ArrivalSource) {
-    val arrivalActorPersistenceIds = Seq(
-      ("actors.LiveBaseArrivalsActor-live-base", LiveBaseFeedSource),
-      ("actors.LiveArrivalsActor-live", LiveFeedSource),
-      ("actors.ForecastBaseArrivalsActor-forecast-base", AclFeedSource),
-      ("actors.ForecastPortArrivalsActor-forecast-port", ForecastFeedSource)
-      )
+  def getArrival(number: Int,
+                 terminal: String,
+                 scheduled: MillisSinceEpoch,
+                 origin: String): Action[AnyContent] = authByRole(ArrivalSource) {
+    getAllFeedSourceArrivals(SDate.now().millisSinceEpoch, number, terminal, scheduled, origin)
+  }
 
-    val pointInTimeActorSources: Seq[ActorRef] = arrivalActorPersistenceIds.map {
-      case (id, source) =>
-        system.actorOf(
-          ArrivalsReadActor.props(SDate(pointInTime), id, source),
-          name = s"arrival-read-$id-${UUID.randomUUID()}"
-          )
-    }
+  def getArrivalAtPointInTime(pointInTime: MillisSinceEpoch,
+                              number: Int,
+                              terminal: String,
+                              scheduled: MillisSinceEpoch,
+                              origin: String): Action[AnyContent] = authByRole(ArrivalSource) {
+    getAllFeedSourceArrivals(pointInTime, number, terminal, scheduled, origin)
+  }
+
+  private def getAllFeedSourceArrivals(pointInTime: MillisSinceEpoch,
+                                       number: Int,
+                                       terminal: String,
+                                       scheduled: MillisSinceEpoch,
+                                       origin: String) =
     Action.async { _ =>
-      Source(pointInTimeActorSources.toList)
-        .mapAsync(1)((feedActor: ActorRef) => {
-          feedActor
-            .ask(UniqueArrival(number, terminal, scheduled))
-            .map {
-              case Some(fsa: FeedSourceArrival) =>
-                feedActor ! PoisonPill
-                Option(fsa)
-              case _ =>
-                feedActor ! PoisonPill
-                None
+      Source(pointInTimeActorSources(pointInTime).toList)
+        .mapAsync(1) { feedActor =>
+          val actor = feedActor(UniqueArrival(number, terminal, scheduled, origin))
+          actor
+            .ask(GetState)
+            .mapTo[Option[FeedSourceArrival]]
+            .map { result =>
+              actor ! PoisonPill
+              result
             }
-        })
+            .map {
+              case Some(feedSourceArrival) if ctrl.isValidFeedSource(feedSourceArrival.feedSource) =>
+                Option(feedSourceArrival)
+              case _ => None
+            }
+        }
+        .log(getClass.getName)
         .runWith(Sink.seq)
-        .map(arrivalSources => Ok(write(arrivalSources.filter(_.isDefined))))
+        .map(arrivalSources => Ok(write(arrivalSources)))
+    }
+
+  val arrivalActorPersistenceIds = Seq(
+    (CirriumLiveArrivalsActor.persistenceId, LiveBaseFeedSource),
+    (PortLiveArrivalsActor.persistenceId, LiveFeedSource),
+    (AclForecastArrivalsActor.persistenceId, AclFeedSource),
+    (PortForecastArrivalsActor.persistenceId, ForecastFeedSource)
+  )
+
+  def pointInTimeActorSources(pit: MillisSinceEpoch): Seq[UniqueArrival => ActorRef] = {
+    arrivalActorPersistenceIds.map {
+      case (id, source) =>
+        (ua: UniqueArrival) =>
+          system.actorOf(
+            ArrivalLookupActor.props(airportConfig.portCode, SDate(pit), ua, id, source),
+            name = s"arrival-read-$id-${UUID.randomUUID()}"
+          )
     }
   }
 

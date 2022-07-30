@@ -1,8 +1,7 @@
 package drt.server.feeds.lcy
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
-import drt.server.feeds.common.HttpClient
+import drt.server.feeds.common.ProdHttpClient
 import drt.shared.FlightsApi.Flights
 import org.specs2.mock.Mockito
 import org.specs2.specification.Scope
@@ -14,7 +13,7 @@ import scala.concurrent.{Await, Future}
 
 class LCYClientSpec extends CrunchTestLike with Mockito {
 
-  val httpClient = mock[HttpClient]
+  val httpClient = mock[ProdHttpClient]
 
   trait Context extends Scope {
     val lcyClient = LCYClient(httpClient, "someUser", "someSoapEndPoint", "someUsername", "somePassword")
@@ -22,7 +21,7 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
 
   "Given a request for a full refresh of all flights, if it's successful the client should return all the flights" in new Context {
 
-    httpClient.sendRequest(anyObject[HttpRequest])(anyObject[ActorSystem]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseTwoFlightXml)))
+    httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseTwoFlightXml)))
 
     val flight1 = LCYFlight(
       "MMD",
@@ -75,7 +74,7 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
   }
 
   "Given a request for a full refresh of all flights, if we are rate limited then we should get an ArrivalsFeedFailure" in new Context {
-    httpClient.sendRequest(anyObject[HttpRequest])(anyObject[ActorSystem]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, rateLimitReachedResponse)))
+    httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, rateLimitReachedResponse)))
 
 
     val result = Await.result(lcyClient.initialFlights, 1 second)
@@ -85,7 +84,7 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
 
   "Given a mock client returning an invalid XML response I should get an ArrivalFeedFailure " in new Context {
 
-    httpClient.sendRequest(anyObject[HttpRequest])(anyObject[ActorSystem]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, invalidXmlResponse)))
+    httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, invalidXmlResponse)))
 
 
     val result = Await.result(lcyClient.initialFlights, 1 second)
@@ -95,12 +94,12 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
 
 
   "Given a LCYFlight with 0 for passenger fields, I should see 0 pax, 0 max pax and 0 transfer pax." in new Context {
-    httpClient.sendRequest(anyObject[HttpRequest])(anyObject[ActorSystem]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseZeroPaxFlightXml)))
+    httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseZeroPaxFlightXml)))
 
     val result: Flights = Await.result(lcyClient.initialFlights, 1 second).asInstanceOf[ArrivalsFeedSuccess].arrivals
 
     val actMax = result match {
-      case Flights(f :: tail) => (f.ActPax, f.MaxPax)
+      case Flights(f :: _) => (f.ActPax, f.MaxPax)
     }
 
     val expected = (None, Some(0))

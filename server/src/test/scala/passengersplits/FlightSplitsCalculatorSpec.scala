@@ -1,7 +1,5 @@
 package passengersplits
 
-import drt.shared.Nationality
-import drt.shared.PaxTypes._
 import org.specs2.matcher.Matchers
 import org.specs2.mutable.Specification
 import org.specs2.specification.Tables
@@ -9,6 +7,8 @@ import org.specs2.specification.core.Fragments
 import passengersplits.core.PassengerTypeCalculator
 import passengersplits.core.PassengerTypeCalculator.PaxTypeInfo
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
+import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.ports.PaxTypes._
 
 
 class FlightSplitsCalculatorSpec extends Specification with Matchers with Tables {

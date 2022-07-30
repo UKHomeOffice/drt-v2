@@ -13,7 +13,7 @@ class UtcDateRangeSpec extends Specification {
       val day2 = "2020-05-02T00:00Z"
       val day3 = "2020-05-03T00:00Z"
       s"I should get $day1, $day2, $day3" >> {
-        val dates = Crunch.utcDaysInPeriod(SDate(startDateUtc), SDate(endDateUtc)).map(_.millisSinceEpoch)
+        val dates = Crunch.utcDaysInPeriod(SDate(startDateUtc), SDate(endDateUtc)).map(SDate(_).millisSinceEpoch)
         val expected = Seq(day1, day2, day3).map(SDate(_).millisSinceEpoch)
         dates === expected
       }
@@ -25,7 +25,7 @@ class UtcDateRangeSpec extends Specification {
       val day2 = "2020-05-02T00:00Z"
       val day3 = "2020-05-03T00:00Z"
       s"I should get $day1, $day2, $day3" >> {
-        val dates = Crunch.utcDaysInPeriod(SDate(startDateUtc, Crunch.utcTimeZone), SDate(endDateUtc, Crunch.utcTimeZone)).map(_.millisSinceEpoch)
+        val dates = Crunch.utcDaysInPeriod(SDate(startDateUtc, Crunch.utcTimeZone), SDate(endDateUtc, Crunch.utcTimeZone)).map(SDate(_).millisSinceEpoch)
         val expected = Seq(day1, day2, day3).map(SDate(_).millisSinceEpoch)
         dates === expected
       }
@@ -39,7 +39,7 @@ class UtcDateRangeSpec extends Specification {
       val day2 = "2020-05-01T00:00Z"
       val day3 = "2020-05-02T00:00Z"
       s"I should get $day1, $day2, $day3 (because the 1hr offset pushed each date to the date before)" >> {
-        val dates = Crunch.utcDaysInPeriod(SDate(startDateBst), SDate(endDateBst)).map(_.millisSinceEpoch)
+        val dates = Crunch.utcDaysInPeriod(SDate(startDateBst), SDate(endDateBst)).map(SDate(_).millisSinceEpoch)
         val expected = Seq(day1, day2, day3).map(SDate(_).millisSinceEpoch)
         dates === expected
       }
@@ -51,7 +51,7 @@ class UtcDateRangeSpec extends Specification {
       val day2 = "2020-05-01T00:00Z"
       val day3 = "2020-05-02T00:00Z"
       s"I should get $day1, $day2, $day3 (because the 1hr offset pushed each date to the date before) - The timezone of the SDate should not impact the utc days" >> {
-        val dates = Crunch.utcDaysInPeriod(SDate(startDateBst, Crunch.europeLondonTimeZone), SDate(endDateBst, Crunch.europeLondonTimeZone)).map(_.millisSinceEpoch)
+        val dates = Crunch.utcDaysInPeriod(SDate(startDateBst, Crunch.europeLondonTimeZone), SDate(endDateBst, Crunch.europeLondonTimeZone)).map(SDate(_).millisSinceEpoch)
         val expected = Seq(day1, day2, day3).map(SDate(_).millisSinceEpoch)
         dates === expected
       }

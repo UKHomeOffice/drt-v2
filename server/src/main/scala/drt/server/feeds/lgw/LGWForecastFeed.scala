@@ -1,25 +1,24 @@
 package drt.server.feeds.lgw
 
-import java.io.{ByteArrayOutputStream, File, FileReader}
-import java.nio.file.FileSystems
-
 import akka.NotUsed
 import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorAttributes, Supervision}
-import com.box.sdk.{BoxFile, BoxFolder, _}
+import com.box.sdk._
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
-import drt.shared.ForecastFeedSource
-import drt.shared.Terminals.{N, S}
-import drt.shared.api.Arrival
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.Terminals.{N, S}
 
+import java.io.{ByteArrayOutputStream, File, FileReader}
+import java.nio.file.FileSystems
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
@@ -88,6 +87,7 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
       Operator = None,
       Status = PORT_FORECAST,
       Estimated = None,
+      PredictedTouchdown = None,
       Actual = None,
       EstimatedChox = None,
       ActualChox = None,

@@ -1,10 +1,11 @@
 package services
 
 import drt.shared.CrunchApi._
-import drt.shared.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.europeLondonTimeZone
+import uk.gov.homeoffice.drt.ports.Queues
 
 
 object CSVData {
@@ -21,7 +22,7 @@ object CSVData {
     val queues: String = queueOrder.flatMap(
       q => {
         headlines.queueDayHeadlines.groupBy(_.queue).get(q).map(
-          qhls => (s"${Queues.queueDisplayNames.getOrElse(q, q)}" ::
+          qhls => (s"${Queues.displayName(q)}" ::
             qhls
               .toList
               .sortBy(_.day)

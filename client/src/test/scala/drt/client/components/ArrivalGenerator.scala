@@ -2,13 +2,11 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
-import drt.shared.{ApiFeedSource, ArrivalStatus, Operator, PortCode}
-
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Prediction, TotalPaxSource}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 
 object ArrivalGenerator {
-
   def apiFlight(
                  iata: String = "",
                  icao: String = "",
@@ -20,6 +18,7 @@ object ArrivalGenerator {
                  operator: Option[Operator] = None,
                  status: ArrivalStatus = ArrivalStatus(""),
                  estDt: String = "",
+                 predTouchdownDt: String = "",
                  actDt: String = "",
                  estChoxDt: String = "",
                  actChoxDt: String = "",
@@ -29,15 +28,18 @@ object ArrivalGenerator {
                  runwayId: Option[String] = None,
                  baggageReclaimId: Option[String] = None,
                  airportId: PortCode = PortCode(""),
-                 pcpTime: Option[MillisSinceEpoch] = None
+                 feedSources: Set[FeedSource] = Set(),
+                 pcpTime: Option[MillisSinceEpoch] = None,
+                 totalPax : Set[TotalPaxSource] = Set.empty
                ): Arrival =
     Arrival(
       Operator = operator,
       Status = status,
-      Estimated = if (estDt != "") Some(SDate(estDt).millisSinceEpoch) else None,
-      Actual = if (actDt != "") Some(SDate(actDt).millisSinceEpoch) else None,
-      EstimatedChox = if (estChoxDt != "") Some(SDate(estChoxDt).millisSinceEpoch) else None,
-      ActualChox = if (actChoxDt != "") Some(SDate(actChoxDt).millisSinceEpoch) else None,
+      Estimated = if (estDt.nonEmpty) Option(SDate(estDt).millisSinceEpoch) else None,
+      PredictedTouchdown = if (predTouchdownDt.nonEmpty) Option(Prediction(SDate.now().millisSinceEpoch, SDate(predTouchdownDt).millisSinceEpoch)) else None,
+      Actual = if (actDt.nonEmpty) Option(SDate(actDt).millisSinceEpoch) else None,
+      EstimatedChox = if (estChoxDt.nonEmpty) Option(SDate(estChoxDt).millisSinceEpoch) else None,
+      ActualChox = if (actChoxDt.nonEmpty) Option(SDate(actChoxDt).millisSinceEpoch) else None,
       Gate = gate,
       Stand = stand,
       MaxPax = maxPax,
@@ -50,8 +52,9 @@ object ArrivalGenerator {
       rawICAO = icao,
       rawIATA = iata,
       Origin = origin,
-      PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (schDt != "") Some(SDate(schDt).millisSinceEpoch) else None,
-      Scheduled = if (schDt != "") SDate(schDt).millisSinceEpoch else 0L,
-      FeedSources = Set(ApiFeedSource)
+      PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (schDt.nonEmpty) Some(SDate(schDt).millisSinceEpoch) else None,
+      Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0L,
+      FeedSources = feedSources,
+      TotalPax = totalPax
     )
 }

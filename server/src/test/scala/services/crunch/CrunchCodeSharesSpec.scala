@@ -2,11 +2,12 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.Terminals.{T1, T2, Terminal}
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
+import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
 
 import scala.collection.immutable.{List, Seq, SortedMap}
 import scala.concurrent.duration._
@@ -16,7 +17,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
   sequential
   isolated
 
-  val fiveMinutes = 600d / 60
+  val fiveMinutes: Double = 600d / 60
   val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(
     T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes),
     T2 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
@@ -42,7 +43,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
-      crunch.portStateTestProbe.fishForMessage(2 seconds) {
+      crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 15)
           resultSummary == expected
@@ -81,7 +82,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
           12.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
 
-      crunch.portStateTestProbe.fishForMessage(2 seconds) {
+      crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 30)
           resultSummary == expected

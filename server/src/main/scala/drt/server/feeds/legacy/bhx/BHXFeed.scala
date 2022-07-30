@@ -1,7 +1,7 @@
 package drt.server.feeds.legacy.bhx
 
-import drt.shared.api.Arrival
 import uk.co.bhx.online.flightinformation.FlightInformationSoap
+import uk.gov.homeoffice.drt.arrivals.Arrival
 
 import scala.collection.JavaConverters._
 

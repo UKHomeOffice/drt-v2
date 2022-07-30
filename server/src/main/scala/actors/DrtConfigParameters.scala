@@ -1,14 +1,16 @@
 package actors
 
-import actors.Sizes.oneMegaByte
+import actors.persistent.Sizes.oneMegaByte
 import com.amazonaws.auth.AWSCredentials
-import com.typesafe.config.ConfigFactory
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 
+import scala.concurrent.duration._
 case class DrtConfigParameters(config: Configuration) {
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  val gateWalkTimesFilePath: String = config.get[String]("walk_times.gates_csv_url")
+  val standWalkTimesFilePath: String = config.get[String]("walk_times.stands_csv_url")
 
   val forecastMaxDays: Int = config.get[Int]("crunch.forecast.max_days")
   val aclPollMinutes: Int = config.get[Int]("crunch.forecast.poll_minutes")
@@ -24,26 +26,19 @@ case class DrtConfigParameters(config: Configuration) {
 
     override def getAWSSecretKey: String = config.getOptional[String]("aws.credentials.secret_key").getOrElse("")
   }
-  val ftpServer: String = ConfigFactory.load.getString("acl.host")
-  val username: String = ConfigFactory.load.getString("acl.username")
-  val path: String = ConfigFactory.load.getString("acl.keypath")
-  val aclMinFileSizeInBytes: Long = config.getOptional[Long]("acl.min-file-size-in-bytes").getOrElse(10000L)
+  val aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)
+  val aclHost: Option[String] = config.getOptional[String]("acl.host")
+  val aclUsername: Option[String] = config.getOptional[String]("acl.username")
+  val aclKeyPath: Option[String] = config.getOptional[String]("acl.keypath")
   val refreshArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.refresh-arrivals-on-start").getOrElse(false)
+  val flushArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.flush-arrivals-on-start").getOrElse(false)
   val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
-  val resetRegisteredArrivalOnStart: Boolean = if (refreshArrivalsOnStart) {
-    log.warn("Refresh arrivals flag is active. Turning on historic manifest refresh")
-    true
-  } else config.getOptional[Boolean]("crunch.manifests.reset-registered-arrivals-on-start").getOrElse(false)
 
   val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
 
   val manifestLookupBatchSize: Int = config.getOptional[Int]("crunch.manifests.lookup-batch-size").getOrElse(10)
 
-  val useLegacyManifests: Boolean = config.getOptional[Boolean]("feature-flags.use-legacy-manifests").getOrElse(false)
-
   val rawSplitsUrl: String = config.getOptional[String]("crunch.splits.raw-data-path").getOrElse("/dev/null")
-  val dqZipBucketName: String = config.getOptional[String]("dq.s3.bucket").getOrElse(throw new Exception("You must set DQ_S3_BUCKET for us to poll for AdvPaxInfo"))
-  val apiS3PollFrequencyMillis: MillisSinceEpoch = config.getOptional[Int]("dq.s3.poll_frequency_seconds").getOrElse(60) * 1000L
   val isSuperUserMode: Boolean = config.getOptional[String]("feature-flags.super-user-mode").isDefined
   val maybeBlackJackUrl: Option[String] = config.getOptional[String]("feeds.lhr.blackjack_url")
 
@@ -73,19 +68,18 @@ case class DrtConfigParameters(config: Configuration) {
   val maybeGlaLivePassword: Option[String] = config.getOptional[String]("feeds.gla.password")
   val maybeGlaLiveUsername: Option[String] = config.getOptional[String]("feeds.gla.username")
 
-  val snapshotStaffOnStart: Boolean = config.get[Boolean]("feature-flags.snapshot-staffing-on-start")
+  val useApiPaxNos: Boolean = config.get[Boolean]("feature-flags.use-api-pax-nos")
+  val displayRedListInfo: Boolean = config.get[Boolean]("feature-flags.display-red-list-info")
 
-  val useApiPaxNos: Boolean = config.getOptional[Boolean]("feature-flags.use-api-pax-nos").getOrElse(false)
-
-  val enableToggleDisplayWaitTimes: Boolean = config
-    .getOptional[Boolean]("feature-flags.enable-toggle-display-wait-times").getOrElse(false)
-  val adjustEGateUseByUnder12s: Boolean = config.getOptional[Boolean]("feature-flags.adjust-egates-use-by-u12s").getOrElse(false)
+  val enableToggleDisplayWaitTimes: Boolean = config.get[Boolean]("feature-flags.enable-toggle-display-wait-times")
+  val adjustEGateUseByUnder12s: Boolean = config.get[Boolean]("feature-flags.adjust-egates-use-by-u12s")
 
   val maybeLcySoapEndPointUrl: Option[String] = config.getOptional[String]("feeds.lcy.soap.endPointUrl")
   val lcyLiveEndPointUrl: String = config.get[String]("feeds.lcy.live.endPointUrl")
   val lcyLiveUsername: String = config.get[String]("feeds.lcy.live.username")
   val lcyLivePassword: String = config.get[String]("feeds.lcy.live.password")
 
-  val maybeEdiTerminalMapCsvUrl = config.getOptional[String]("feeds.edi.terminal-map-csv-url")
+  //ignore ACL flight removals X seconds after the end of the day.
+  val maybeRemovalCutOffSeconds: Option[FiniteDuration] = config.getOptional[Int]("acl.removal-cutoff-seconds").map(s => s seconds)
 
 }

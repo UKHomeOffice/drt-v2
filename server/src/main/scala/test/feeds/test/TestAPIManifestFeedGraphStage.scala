@@ -18,7 +18,7 @@ class TestManifestsActor extends Actor with ActorLogging {
 
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
-  var maybeManifests: Option[Set[VoyageManifest]] = None
+  var maybeManifests: Option[Iterable[VoyageManifest]] = None
   var maybeSubscriber: Option[SourceQueueWithComplete[ManifestsFeedResponse]] = None
 
   override def receive: PartialFunction[Any, Unit] = {
@@ -29,13 +29,12 @@ class TestManifestsActor extends Actor with ActorLogging {
       maybeSubscriber match {
         case Some(subscriber) =>
           val onCompletionSendAck = Option(() => replyTo ! Ack)
-          OfferHandler.offerWithRetries(subscriber, ManifestsFeedSuccess(DqManifests("", manifests)), 5, onCompletionSendAck)
+          OfferHandler.offerWithRetries(subscriber, ManifestsFeedSuccess(DqManifests(0L, manifests)), 5, onCompletionSendAck)
           maybeManifests = None
         case None =>
-          maybeManifests = Some(manifests)
+          maybeManifests = Option(manifests)
           replyTo ! Ack
       }
-
 
     case ResetData =>
       maybeManifests = None
@@ -43,6 +42,6 @@ class TestManifestsActor extends Actor with ActorLogging {
 
     case SubscribeResponseQueue(manifestsResponse) =>
       maybeSubscriber = Option(manifestsResponse)
-      maybeManifests.foreach(manifests => ManifestsFeedSuccess(DqManifests("", manifests)))
+      maybeManifests.foreach(manifests => ManifestsFeedSuccess(DqManifests(0L, manifests)))
   }
 }

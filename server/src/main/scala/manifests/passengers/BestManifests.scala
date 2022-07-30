@@ -1,11 +1,49 @@
 package manifests.passengers
 
-import drt.shared.SplitRatiosNs.{SplitSource, SplitSources}
-import drt.shared.{SDateLike, _}
+import drt.shared._
 import manifests.UniqueArrivalKey
-import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
-import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, PaxAge, VoyageManifest}
+import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
+import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest}
 import services.SDate
+import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumber, VoyageNumberLike}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
+import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
+import uk.gov.homeoffice.drt.time.SDateLike
+
+trait ManifestLike {
+  val source: SplitSource
+  val arrivalPortCode: PortCode
+  val departurePortCode: PortCode
+  val voyageNumber: VoyageNumberLike
+  val carrierCode: CarrierCode
+  val scheduled: SDateLike
+  val nonUniquePassengers: Seq[ManifestPassengerProfile]
+  val maybeEventType: Option[EventType]
+
+  def uniquePassengers: Seq[ManifestPassengerProfile] = {
+    if (nonUniquePassengers.exists(_.passengerIdentifier.exists(_.nonEmpty)))
+      nonUniquePassengers
+        .collect {
+          case p@ManifestPassengerProfile(_, _, _, _, Some(id)) if id.nonEmpty => p
+        }
+        .map { passengerInfo =>
+          passengerInfo.passengerIdentifier -> passengerInfo
+        }
+        .toMap
+        .values
+        .toList
+    else
+      nonUniquePassengers
+  }
+
+  def maybeKey: Option[ArrivalKey] = voyageNumber match {
+    case vn: VoyageNumber =>
+      Option(ArrivalKey(departurePortCode, vn, scheduled.millisSinceEpoch))
+    case _ => None
+  }
+}
+
 
 case class BestAvailableManifest(source: SplitSource,
                                  arrivalPortCode: PortCode,
@@ -13,60 +51,55 @@ case class BestAvailableManifest(source: SplitSource,
                                  voyageNumber: VoyageNumberLike,
                                  carrierCode: CarrierCode,
                                  scheduled: SDateLike,
-                                 passengerList: List[ManifestPassengerProfile])
+                                 nonUniquePassengers: Seq[ManifestPassengerProfile],
+                                 override val maybeEventType: Option[EventType]) extends ManifestLike
 
 object BestAvailableManifest {
-  def apply(manifest: VoyageManifest): BestAvailableManifest = {
+  def apply(manifest: VoyageManifest): BestAvailableManifest =
+    fromManifest(manifest, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages)
 
-    val uniquePax: List[PassengerInfoJson] = if (manifest.PassengerList.exists(_.PassengerIdentifier.exists(_ != "")))
-      manifest.PassengerList.collect {
-        case p@PassengerInfoJson(_, _, _, _, _, _, _, _, Some(id)) if id != "" => p
-      }
-        .map { passengerInfo =>
-          passengerInfo.PassengerIdentifier -> passengerInfo
-        }
-        .toMap
-        .values
-        .toList
-    else
-      manifest.PassengerList
+  def historic(manifest: VoyageManifest): BestAvailableManifest =
+    fromManifest(manifest, SplitSources.Historical)
 
+  def fromManifest(manifest: VoyageManifest, source: SplitSource): BestAvailableManifest = {
     BestAvailableManifest(
-      SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-      manifest.ArrivalPortCode,
-      manifest.DeparturePortCode,
-      manifest.VoyageNumber,
-      manifest.CarrierCode,
-      manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
-      uniquePax.map(p => ManifestPassengerProfile(p, manifest.ArrivalPortCode))
+      source = source,
+      arrivalPortCode = manifest.ArrivalPortCode,
+      departurePortCode = manifest.DeparturePortCode,
+      voyageNumber = manifest.VoyageNumber,
+      carrierCode = manifest.CarrierCode,
+      scheduled = manifest.scheduleArrivalDateTime.getOrElse(SDate.now()),
+      nonUniquePassengers = manifest.uniquePassengers,
+      maybeEventType = Option(manifest.EventCode)
     )
   }
 
   def apply(source: SplitSource,
             uniqueArrivalKey: UniqueArrivalKey,
             passengerList: List[ManifestPassengerProfile]): BestAvailableManifest = BestAvailableManifest(
-    source,
-    uniqueArrivalKey.arrivalPort,
-    uniqueArrivalKey.departurePort,
-    uniqueArrivalKey.voyageNumber,
-    CarrierCode(""),
-    uniqueArrivalKey.scheduled,
-    passengerList)
+    source = source,
+    arrivalPortCode = uniqueArrivalKey.arrivalPort,
+    departurePortCode = uniqueArrivalKey.departurePort,
+    voyageNumber = uniqueArrivalKey.voyageNumber,
+    carrierCode = CarrierCode(""),
+    scheduled = uniqueArrivalKey.scheduled,
+    nonUniquePassengers = passengerList,
+    maybeEventType = None)
 }
 
 case class ManifestPassengerProfile(nationality: Nationality,
                                     documentType: Option[DocumentType],
                                     age: Option[PaxAge],
-                                    inTransit: Option[Boolean])
+                                    inTransit: Boolean,
+                                    passengerIdentifier: Option[String])
 
 object ManifestPassengerProfile {
-  def apply(pij: PassengerInfoJson, portCode: PortCode): ManifestPassengerProfile = {
-    val nationality = pij.NationalityCountryCode.getOrElse(Nationality(""))
-    val documentType: Option[DocumentType] = if (nationality.code == CountryCodes.UK)
-      Option(DocumentType.Passport)
-    else
-      pij.DocumentType
-    val maybeInTransit = Option(pij.InTransitFlag.isInTransit|| pij.DisembarkationPortCode.exists(_ != portCode))
-    ManifestPassengerProfile(nationality, documentType, pij.Age, maybeInTransit)
-  }
+  def apply(pij: PassengerInfoJson, portCode: PortCode): ManifestPassengerProfile =
+    ManifestPassengerProfile(
+      nationality = pij.NationalityCountryCode.getOrElse(Nationality("")),
+      documentType = pij.docTypeWithNationalityAssumption,
+      age = pij.Age,
+      inTransit = pij.isInTransit(portCode),
+      passengerIdentifier = pij.PassengerIdentifier
+    )
 }

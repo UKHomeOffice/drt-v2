@@ -2,11 +2,11 @@ package drt.server.feeds.lgw
 
 import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.{InvalidTerminal, N, S}
-import drt.shared._
-import drt.shared.api.Arrival
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, Operator, TotalPaxSource, VoyageNumber}
+import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Terminals}
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -37,6 +37,7 @@ case class ResponseToArrivals(data: String) {
       Operator = if (operator.isEmpty) None else Option(Operator(operator)),
       Status = parseStatus(n),
       Estimated = parseDateTime(n, operationQualifier = "TDN", timeType = "EST"),
+      PredictedTouchdown = None,
       Actual = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),
       EstimatedChox = parseDateTime(n, operationQualifier = "ONB", timeType = "EST"),
       ActualChox = parseDateTime(n, operationQualifier = "ONB", timeType = "ACT"),
@@ -49,7 +50,7 @@ case class ResponseToArrivals(data: String) {
       BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption.filter(StringUtils.isNotBlank(_)),
       AirportID = "LGW",
       Terminal = parseTerminal(n),
-      CarrierCode = CarrierCode((n \\ "AirlineIATA" text)),
+      CarrierCode = CarrierCode(n \\ "AirlineIATA" text),
       VoyageNumber = VoyageNumber(parseFlightNumber(n)),
       FlightCodeSuffix = None,
       Origin = parseOrigin(n),
@@ -57,8 +58,11 @@ case class ResponseToArrivals(data: String) {
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None,
-      ApiPax = None
-      )
+      ApiPax = None,
+      ScheduledDeparture = None,
+      RedListPax = None,
+      TotalPax = Set(TotalPaxSource(actPax, LiveFeedSource)),
+    )
     log.debug(s"parsed arrival: $arrival")
     arrival
   }

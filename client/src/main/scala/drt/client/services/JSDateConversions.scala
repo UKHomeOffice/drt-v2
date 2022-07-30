@@ -2,8 +2,9 @@ package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate.JSSDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{LocalDate, MilliDate, SDateLike, UtcDate}
+import drt.shared.MilliDate
 import moment._
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
 
 import scala.language.implicitConversions
 import scala.scalajs.js.Date
@@ -24,7 +25,9 @@ object JSDateConversions {
 
   implicit def longToMilliDate(millis: MillisSinceEpoch): MilliDate = MilliDate(millis)
 
-  implicit def milliDateToSDate(milliDate: MilliDate): SDateLike = SDate(milliDate)
+  implicit val longToSDateLocal: MillisSinceEpoch => SDateLike = millis => JSSDate(Moment.tz(millis, europeLondon))
+
+  implicit val milliDateToSDate: MilliDate => SDateLike = milliDate => SDate(milliDate)
 
   implicit def jsDateToSDate(date: Date): SDateLike = JSSDate(Moment.tz(date.getTime(), europeLondon))
 
@@ -80,7 +83,7 @@ object JSDateConversions {
 
       override def getTimeZoneOffsetMillis(): MillisSinceEpoch = date.utcOffset().toLong * 60000L
 
-      def startOfTheMonth(): SDateLike = SDate(date.getFullYear(), date.getMonth(), 1, 0, 0)
+      def startOfTheMonth(): SDateLike = SDate(date.getFullYear(), date.getMonth(), 1)
 
       def getUtcLastMidnight: SDateLike = Moment.tz(date.millisSinceEpoch, utc)
 
@@ -109,7 +112,7 @@ object JSDateConversions {
      */
     def apply(dateString: String): SDateLike = Moment.tz(dateString, europeLondon)
 
-    def stringToSDateLikeOption(dateString: String): Option[SDateLike] = {
+    def parse(dateString: String): Option[SDateLike] = {
       val moment = Moment.tz(dateString, europeLondon)
       if (moment.isValid()) Option(JSSDate(moment))
       else None

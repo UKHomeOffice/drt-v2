@@ -2,16 +2,15 @@ package feeds.lhr
 
 import akka.NotUsed
 import akka.pattern.pipe
-import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
-import drt.shared.Terminals.{T1, T4}
-import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, LiveFeedSource, Operator, PortCode}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T4}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
 import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
@@ -27,7 +26,7 @@ class LHRFeedSpec extends CrunchTestLike {
            |"4","QR005","Qatar Airways","DOH","Doha","22:00 09/03/2017","21:32 09/03/2017","21:33 09/03/2017","21:43 09/03/2017","21:45 09/03/2017","10","795","142","1""""
           .stripMargin
 
-      val csvGetters: Iterator[(Int) => String] = LHRFlightFeed.csvParserAsIteratorOfColumnGetter(csvString)
+      val csvGetters: Iterator[Int => String] = LHRFlightFeed.csvParserAsIteratorOfColumnGetter(csvString)
       val lhrFeed = LHRFlightFeed(csvGetters)
 
       val probe = TestProbe()
@@ -36,7 +35,7 @@ class LHRFeedSpec extends CrunchTestLike {
 
       val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
-      val flights = Await.result(futureFlightsSeq, 3 seconds).asInstanceOf[Vector[Arrival]]
+      val flights = Await.result(futureFlightsSeq, 3.seconds).asInstanceOf[Vector[Arrival]]
 
       flights.toList === List(
         List(
@@ -44,6 +43,7 @@ class LHRFeedSpec extends CrunchTestLike {
             Operator = Option(Operator("Qatar Airways")),
             Status = ArrivalStatus("UNK"),
             Estimated = Option(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
+            PredictedTouchdown = None,
             Actual = Option(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
             EstimatedChox = Option(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
             ActualChox = Option(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
@@ -62,7 +62,7 @@ class LHRFeedSpec extends CrunchTestLike {
            |"4","QR005","Qatar Airways","DOH","Doha","22:00 09/03/2017","21:32 09/03/2017","21:33 09/03/2017","21:43 09/03/2017","21:45 09/03/2017","10","0","0","0""""
           .stripMargin
 
-      val csvGetters: Iterator[(Int) => String] = LHRFlightFeed.csvParserAsIteratorOfColumnGetter(csvString)
+      val csvGetters: Iterator[Int => String] = LHRFlightFeed.csvParserAsIteratorOfColumnGetter(csvString)
       val lhrFeed = LHRFlightFeed(csvGetters)
 
       val probe = TestProbe()
@@ -71,7 +71,7 @@ class LHRFeedSpec extends CrunchTestLike {
 
       val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
-      val flights = Await.result(futureFlightsSeq, 3 seconds).asInstanceOf[Vector[Arrival]]
+      val flights = Await.result(futureFlightsSeq, 3.seconds).asInstanceOf[Vector[Arrival]]
 
       flights.toList === List(
         List(
@@ -79,6 +79,7 @@ class LHRFeedSpec extends CrunchTestLike {
             Operator = Option(Operator("Qatar Airways")),
             Status = ArrivalStatus("UNK"),
             Estimated = Option(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
+            PredictedTouchdown = None,
             Actual = Option(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
             EstimatedChox = Option(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
             ActualChox = Option(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
@@ -109,7 +110,7 @@ class LHRFeedSpec extends CrunchTestLike {
           .stripMargin
 
       val csv: CSVParser = CSVParser.parse(csvString, CSVFormat.DEFAULT)
-      val csvGetters: Iterator[(Int) => String] = csv.iterator().asScala.map((l: CSVRecord) => (i: Int) => l.get(i))
+      val csvGetters: Iterator[Int => String] = csv.iterator().asScala.map((l: CSVRecord) => (i: Int) => l.get(i))
       val lhrFeed = LHRFlightFeed(csvGetters)
 
 
@@ -117,7 +118,7 @@ class LHRFeedSpec extends CrunchTestLike {
       val flightsSource: Source[List[Arrival], NotUsed] = Source(List(lhrFeed.copiedToApiFlights))
       val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
-      val flights = Await.result(futureFlightsSeq, 3 seconds)
+      val flights = Await.result(futureFlightsSeq, 3.seconds)
 
       flights match {
         case Vector(List(_: Arrival)) =>

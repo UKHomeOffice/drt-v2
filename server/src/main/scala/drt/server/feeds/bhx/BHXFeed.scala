@@ -1,56 +1,51 @@
 package drt.server.feeds.bhx
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal, Unmarshaller}
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.server.feeds.common.FlightStatus
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
-import drt.shared.LiveFeedSource
-import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration._
 import scala.util.Try
 import scala.xml.{Node, NodeSeq}
 
 object BHXFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(client: BHXClientLike, pollFrequency: FiniteDuration, initialDelay: FiniteDuration)
-           (implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Source[ArrivalsFeedResponse, Cancellable] = {
+  def apply[FT](client: BHXClientLike, source: Source[FeedTick, FT])
+               (implicit actorSystem: ActorSystem, materializer: Materializer): Source[ArrivalsFeedResponse, FT] = {
     var initialRequest = true
-    val tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source.tick(initialDelay, pollFrequency, NotUsed)
-      .mapAsync(1)(_ => {
-        log.info(s"Requesting BHX Feed")
-        if (initialRequest)
-          client.initialFlights.map {
-            case s: ArrivalsFeedSuccess =>
-              initialRequest = false
-              s
-            case f: ArrivalsFeedFailure =>
-              f
-          }
-        else
-          client.updateFlights
-      })
-
-    tickingSource
+    source.mapAsync(1) { _ =>
+      log.info(s"Requesting BHX Feed")
+      if (initialRequest)
+        client.initialFlights.map {
+          case s: ArrivalsFeedSuccess =>
+            initialRequest = false
+            s
+          case f: ArrivalsFeedFailure =>
+            f
+        }
+      else
+        client.updateFlights
+    }
   }
-
 }
 
 case class BHXFlight(
@@ -96,19 +91,19 @@ trait BHXClientLike extends ScalaXmlSupport {
   val bhxLiveFeedUser: String
   val soapEndPoint: String
 
-  def initialFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
+  def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
 
     log.info(s"Making initial Live Feed Request")
     sendXMLRequest(fullRefreshXml(bhxLiveFeedUser))
   }
 
-  def updateFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
+  def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
 
     log.info(s"Making update Feed Request")
     sendXMLRequest(updateXml()(bhxLiveFeedUser))
   }
 
-  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
+  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
 
     implicit val xmlToResUM: Unmarshaller[NodeSeq, BHXFlightsResponse] = BHXFlight.unmarshaller
     implicit val resToBHXResUM: Unmarshaller[HttpResponse, BHXFlightsResponse] = BHXFlight.responseToAUnmarshaller
@@ -268,11 +263,12 @@ object BHXFlight extends NodeSeqUnmarshaller {
       val seats: immutable.Seq[Option[Int]] = cpn.flatMap(p => {
         (p \ seatingField).map(seatingNode =>
 
-        if (seatingNode.text.length == 0)
-          None
-        else
-          maybeNodeText(seatingNode).map(_.toInt)
-        )})
+          if (seatingNode.text.isEmpty)
+            None
+          else
+            maybeNodeText(seatingNode).map(_.toInt)
+        )
+      })
       if (seats.count(_.isDefined) > 0)
         Option(seats.flatten.sum)
       else
@@ -293,27 +289,28 @@ object BHXFlight extends NodeSeqUnmarshaller {
 
   def bhxFlightToArrival(f: BHXFlight): Arrival = {
     Arrival(
-      f.airline,
-      FlightStatus(f.status),
-      maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
-      maybeTimeStringToMaybeMillis(f.actualTouchDown),
-      None,
-      maybeTimeStringToMaybeMillis(f.actualOnBlocks),
-      f.passengerGate,
-      f.aircraftParkingPosition,
-      f.seatCapacity,
-      f.paxCount,
-      None,
-      None,
-      None,
-      f.arrivalAirport,
-      Terminal(s"T${f.aircraftTerminal}"),
-      f.airline + f.flightNumber,
-      f.airline + f.flightNumber,
-      f.departureAirport,
-      SDate(f.scheduledOnBlocks).millisSinceEpoch,
-      None,
-      Set(LiveFeedSource)
+      Operator = f.airline,
+      Status = FlightStatus(f.status),
+      PredictedTouchdown = None,
+      Estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
+      Actual = maybeTimeStringToMaybeMillis(f.actualTouchDown),
+      EstimatedChox = None,
+      ActualChox = maybeTimeStringToMaybeMillis(f.actualOnBlocks),
+      Gate = f.passengerGate,
+      Stand = f.aircraftParkingPosition,
+      MaxPax = f.seatCapacity,
+      ActPax = f.paxCount,
+      TranPax = None,
+      RunwayID = None,
+      BaggageReclaimId = None,
+      AirportID = f.arrivalAirport,
+      Terminal = Terminal(s"T${f.aircraftTerminal}"),
+      rawICAO = f.airline + f.flightNumber,
+      rawIATA = f.airline + f.flightNumber,
+      Origin = f.departureAirport,
+      Scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
+      PcpTime = None,
+      FeedSources = Set(LiveFeedSource)
     )
   }
 

@@ -1,23 +1,25 @@
 package drt.client.components
 
-import drt.auth.{BorderForceStaff, PortOperatorStaff}
+import diode.UseValueEq
 import drt.client.SPAMain.{Loc, PortDashboardLoc}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, CedatStaff, PortOperatorStaff}
 
 object UserDashboardPage {
 
-  case class Props(router: RouterCtl[Loc])
+  case class Props(router: RouterCtl[Loc]) extends UseValueEq
 
-  val component = ScalaComponent.builder[Props]("UserDashboard")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("UserDashboard")
     .render_P(p => {
       val loggedInUserRCP = SPACircuit.connect(_.loggedInUserPot)
       loggedInUserRCP(loggedInUserMP => {
         <.div(loggedInUserMP().renderReady(user => {
-          if (user.hasRole(PortOperatorStaff))
+          if (user.hasRole(PortOperatorStaff) || user.hasRole(CedatStaff))
             PortExportDashboardPage(user)
           else if (user.hasRole(BorderForceStaff))
             PortDashboardPage(p.router, PortDashboardLoc(None))

@@ -1,21 +1,21 @@
 package drt.client.components
 
-import drt.auth.LoggedInUser
 import drt.client.actions.Actions.{AddStaffMovements, UpdateStaffAdjustmentDialogueState}
 import drt.client.components.StaffAdjustmentDialogue.roundToNearest
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.{SDateLike, StaffMovements}
-import drt.shared.Terminals.Terminal
+import drt.shared.StaffMovements
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.util.{Success, Try}
 
@@ -90,8 +90,6 @@ object StaffAdjustmentDialogue {
   def roundToNearest(nearest: Int)(x: Int): Int = {
     (x.toDouble / nearest).round.toInt * nearest
   }
-
-  implicit val stateReuse: Reusability[StaffAdjustmentDialogueState] = Reusability.by(_.hashCode())
 
   def apply(state: StaffAdjustmentDialogueState): Component[Unit, StaffAdjustmentDialogueState, Unit, CtorType.Nullary] = ScalaComponent.builder[Unit]("staffMovementPopover")
     .initialState(state)
@@ -238,7 +236,6 @@ object StaffAdjustmentDialogue {
         )
       )
     }
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def popoverFormRow(label: String, maybeClassName: Option[String], xs: TagMod*): VdomTagOf[Div] = {

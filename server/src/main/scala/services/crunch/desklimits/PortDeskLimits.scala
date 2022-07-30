@@ -1,47 +1,73 @@
 package services.crunch.desklimits
 
-import drt.shared.AirportConfig
-import drt.shared.Terminals.Terminal
 import services.crunch.desklimits.fixed.FixedTerminalDeskLimits
 import services.crunch.desklimits.flexed.{FlexedTerminalDeskLimits, FlexedTerminalDeskLimitsFromAvailableStaff}
+import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
+import uk.gov.homeoffice.drt.ports.Queues.EGate
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 
 import scala.collection.immutable.Map
+import scala.concurrent.{ExecutionContext, Future}
 
 
 object PortDeskLimits {
   type StaffToDeskLimits = Map[Terminal, List[Int]] => Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff]
 
-  def fixed(airportConfig: AirportConfig): Map[Terminal, FixedTerminalDeskLimits] = (
-    for {
-      terminal <- airportConfig.terminals
-      minDesks <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
-      maxDesks <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
-    } yield (terminal, FixedTerminalDeskLimits(minDesks, maxDesks))).toMap
+  def fixed(airportConfig: AirportConfig, egatesProvider: Terminal => Future[EgateBanksUpdates])
+           (implicit ec: ExecutionContext): Map[Terminal, FixedTerminalDeskLimits] =
+    (
+      for {
+        terminal <- airportConfig.terminals
+        minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
+        maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
+      } yield {
+        (terminal, FixedTerminalDeskLimits(minDesksByQueue24Hrs, capacityProviders(maxDesksByQueue24Hrs, () => egatesProvider(terminal))))
+      }
+      ).toMap
 
-  def flexed(airportConfig: AirportConfig): Map[Terminal, FlexedTerminalDeskLimits] = airportConfig.desksByTerminal
-    .mapValues(desks => List.fill(airportConfig.minutesToCrunch)(desks))
-    .map { case (terminal, terminalDesksByMinute) =>
+  private def capacityProviders(maxDesks: Map[Queues.Queue, IndexedSeq[Int]], egatesProvider: () => Future[EgateBanksUpdates])
+                               (implicit ec: ExecutionContext): Map[Queues.Queue, QueueCapacityProvider] =
+    maxDesks.map {
+      case (EGate, _) => (EGate, EgatesCapacityProvider(egatesProvider))
+      case (nonEgateQueue, max) => (nonEgateQueue, DeskCapacityProvider(max))
+    }
+
+  def flexed(airportConfig: AirportConfig, egatesProvider: Terminal => Future[EgateBanksUpdates])
+            (implicit ec: ExecutionContext): Map[Terminal, FlexedTerminalDeskLimits] = airportConfig.desksByTerminal
+    .map { case (terminal, terminalDesks) =>
       for {
         minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
         maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
-      } yield (terminal, FlexedTerminalDeskLimits(terminalDesksByMinute, airportConfig.flexedQueues, minDesksByQueue24Hrs, maxDesksByQueue24Hrs))
+      } yield {
+        val limits = FlexedTerminalDeskLimits(
+          terminalDesks,
+          airportConfig.flexedQueues,
+          minDesksByQueue24Hrs,
+          capacityProviders(maxDesksByQueue24Hrs, () => egatesProvider(terminal)))
+        (terminal, limits)
+      }
     }
     .collect { case Some(terminalDesks) => terminalDesks }
     .toMap
 
-  def flexedByAvailableStaff(airportConfig: AirportConfig)
-                            (availableStaffByMinute: Map[Terminal, List[Int]]): Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff] = {
-    val desksByTerminalByMinute = airportConfig.desksByTerminal.mapValues(d => List.fill(airportConfig.minutesToCrunch)(d))
-
+  def flexedByAvailableStaff(airportConfig: AirportConfig, egatesProvider: Terminal => Future[EgateBanksUpdates])
+                            (availableStaffByMinute: Map[Terminal, List[Int]])
+                            (implicit ec: ExecutionContext): Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff] = {
     availableStaffByMinute
       .map { case (terminal, terminalStaffByMinute) =>
         for {
           minDesksByQueue24Hrs <- airportConfig.minDesksByTerminalAndQueue24Hrs.get(terminal)
           maxDesksByQueue24Hrs <- airportConfig.maxDesksByTerminalAndQueue24Hrs.get(terminal)
-          terminalDesksByMinute <- desksByTerminalByMinute.get(terminal)
+          terminalDesksByMinute <- airportConfig.desksByTerminal.get(terminal)
         } yield {
-
-          (terminal, FlexedTerminalDeskLimitsFromAvailableStaff(terminalStaffByMinute, terminalDesksByMinute, airportConfig.flexedQueues, minDesksByQueue24Hrs, maxDesksByQueue24Hrs))
+          val limitsFromStaff = FlexedTerminalDeskLimitsFromAvailableStaff(
+            terminalStaffByMinute,
+            terminalDesksByMinute,
+            airportConfig.flexedQueues,
+            minDesksByQueue24Hrs,
+            capacityProviders(maxDesksByQueue24Hrs, () => egatesProvider(terminal)))
+          (terminal, limitsFromStaff)
         }
       }
       .collect { case Some(terminalDesks) => terminalDesks }

@@ -5,11 +5,8 @@ import akka.util.Timeout
 import controllers.{AirportConfProvider, DrtActorSystem}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
+import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.server.feeds.Implicits._
-import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
-import drt.shared.{LiveFeedSource, PortCode, SDateLike}
-import javax.inject.{Inject, Singleton}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
@@ -23,7 +20,12 @@ import test.TestDrtSystem
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
+import uk.gov.homeoffice.drt.arrivals.{Arrival, TotalPaxSource}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDateLike
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -43,7 +45,9 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
 
   def saveArrival(arrival: Arrival): Future[Any] = {
     log.info(s"Incoming test arrival")
-    ctrl.testArrivalActor.ask(arrival)
+    ctrl.testArrivalActor.ask(arrival).map { _ =>
+      ctrl.liveActor ! AdhocCheck
+    }
   }
 
   def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
@@ -62,30 +66,32 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
         case Some(flight) =>
           val walkTimeMinutes = 4
           val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
-          val actPax = Some(flight.ActPax).filter(_ != 0)
+          val actPax = Option(flight.ActPax).filter(_ != 0)
           val arrival = Arrival(
             Operator = flight.Operator,
             Status = flight.Status,
-            Estimated = Some(SDate(flight.EstDT).millisSinceEpoch),
-            Actual = Some(SDate(flight.ActDT).millisSinceEpoch),
-            EstimatedChox = Some(SDate(flight.EstChoxDT).millisSinceEpoch),
-            ActualChox = Some(SDate(flight.ActChoxDT).millisSinceEpoch),
-            Gate = Some(flight.Gate),
-            Stand = Some(flight.Stand),
-            MaxPax = Some(flight.MaxPax).filter(_ != 0),
+            Estimated = Option(SDate(flight.EstDT).millisSinceEpoch),
+            Actual = Option(SDate(flight.ActDT).millisSinceEpoch),
+            EstimatedChox = Option(SDate(flight.EstChoxDT).millisSinceEpoch),
+            PredictedTouchdown = None,
+            ActualChox = Option(SDate(flight.ActChoxDT).millisSinceEpoch),
+            Gate = Option(flight.Gate),
+            Stand = Option(flight.Stand),
+            MaxPax = Option(flight.MaxPax).filter(_ != 0),
             ActPax = actPax,
-            TranPax = if (actPax.isEmpty) None else Some(flight.TranPax),
-            RunwayID = Some(flight.RunwayID),
-            BaggageReclaimId = Some(flight.BaggageReclaimId),
+            TranPax = if (actPax.isEmpty) None else Option(flight.TranPax),
+            RunwayID = Option(flight.RunwayID),
+            BaggageReclaimId = Option(flight.BaggageReclaimId),
             AirportID = PortCode(flight.AirportID),
             Terminal = Terminal(flight.Terminal),
             rawICAO = flight.ICAO,
             rawIATA = flight.IATA,
             Origin = PortCode(flight.Origin),
-            PcpTime = Some(pcpTime),
+            PcpTime = Option(pcpTime),
             FeedSources = Set(LiveFeedSource),
+            TotalPax = Set(TotalPaxSource(actPax, LiveFeedSource)),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
-            )
+          )
           saveArrival(arrival).map(_ => Created)
         case None =>
           Future(BadRequest(s"Unable to parse JSON: ${request.body.asText}"))

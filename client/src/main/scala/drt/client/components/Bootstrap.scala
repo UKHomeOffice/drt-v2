@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.UseValueEq
 import japgolly.scalajs.react.{CtorType, _}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^._
@@ -27,7 +28,7 @@ object Bootstrap {
   }
 
   object Panel {
-    case class Props(heading: String, style: CommonStyle.Value = CommonStyle.default)
+    case class Props(heading: String, style: CommonStyle.Value = CommonStyle.default) extends UseValueEq
 
     val component: Component[Props, Unit, Unit, CtorType.PropsAndChildren] = ScalaComponent.builder[Props](displayName = "Panel")
       .renderPC((_, p, c) =>

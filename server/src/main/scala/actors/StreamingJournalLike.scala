@@ -1,10 +1,8 @@
 package actors
 
-import akka.persistence.inmemory.query.scaladsl.InMemoryReadJournal
 import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
-import akka.persistence.query.journal.leveldb.scaladsl.LeveldbReadJournal
 import akka.persistence.query.scaladsl.{CurrentEventsByPersistenceIdQuery, EventsByPersistenceIdQuery, ReadJournal}
-import com.typesafe.config.Config
+import akka.persistence.testkit.query.scaladsl.PersistenceTestKitReadJournal
 import play.api.Configuration
 
 trait StreamingJournalLike {
@@ -27,6 +25,6 @@ object DbStreamingJournal extends StreamingJournalLike {
 }
 
 object InMemoryStreamingJournal extends StreamingJournalLike {
-  override type ReadJournalType = InMemoryReadJournal
-  override val id: String = InMemoryReadJournal.Identifier
+  override type ReadJournalType = PersistenceTestKitReadJournal
+  override val id: String = PersistenceTestKitReadJournal.Identifier
 }

@@ -1,25 +1,28 @@
 package test
 
-import actors.Sizes.oneMegaByte
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily._
-import actors.minutes.MinutesActorLike._
-import actors.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
-import actors.queues.{CrunchQueueActor, DeploymentQueueActor, FlightsRouterActor}
+import actors.persistent.Sizes.oneMegaByte
+import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
+import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, ManifestRouterActor, StaffingUpdateQueueActor}
+import actors.routing.FlightsRouterActor
+import actors.routing.minutes.MinutesActorLike._
+import actors.routing.minutes.{MinutesActorLike, QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.Logger
 import services.SDate
-import slickdb.ArrivalTable
+import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
-import scala.collection.immutable.SortedSet
 import scala.concurrent.Future
 
 
@@ -63,15 +66,15 @@ object TestActors {
     }
   }
 
-  class TestForecastBaseArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends ForecastBaseArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
+  class TestAclForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
+    extends AclForecastArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
     override def resetState(): Unit = state = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestForecastPortArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends ForecastPortArrivalsActor(oneMegaByte, now, expireAfterMillis) {
+  class TestPortForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
+    extends PortForecastArrivalsActor(oneMegaByte, now, expireAfterMillis) {
 
     def resetBehaviour: Receive = {
       case ResetData =>
@@ -86,22 +89,46 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends LiveArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
+  class TestPortLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
+    extends PortLiveArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestVoyageManifestsActor(override val now: () => SDateLike, expireAfterMillis: Int, snapshotInterval: Int)
-    extends VoyageManifestsActor(oneMegaByte, now, expireAfterMillis, Option(snapshotInterval)) with Resettable {
+  class TestCrunchQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
+    extends CrunchQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+    override def resetState(): Unit = {
+      state.clear()
+    }
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
+  class TestDeploymentQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
+    extends DeploymentQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+    override def resetState(): Unit = state.clear()
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
+  class TestStaffingUpdateQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
+    extends StaffingUpdateQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+    override def resetState(): Unit = state.clear()
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
+  class TestVoyageManifestsActor(manifestLookup: ManifestLookup, manifestsUpdate: ManifestsUpdate)
+    extends ManifestRouterActor(manifestLookup, manifestsUpdate) with Resettable {
+
     override def resetState(): Unit = state = initialState
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestShiftsActor(override val now: () => SDateLike,
-                        override val expireBefore: () => SDateLike) extends ShiftsActor(now, expireBefore) with Resettable {
+  class TestShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike)
+    extends ShiftsActor(now, expireBefore) with Resettable {
     override def resetState(): Unit = {
       state = initialState
       subscribers = List()
@@ -110,7 +137,7 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestFixedPointsActor(override val now: () => SDateLike) extends FixedPointsActor(now) with Resettable {
+  class TestFixedPointsActor(now: () => SDateLike, minutesToCrunch: Int) extends FixedPointsActor(now, minutesToCrunch, 5) with Resettable {
     override def resetState(): Unit = {
       state = initialState
       subscribers = List()
@@ -119,8 +146,9 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestStaffMovementsActor(override val now: () => SDateLike,
-                                override val expireBefore: () => SDateLike) extends StaffMovementsActor(now, expireBefore) with Resettable {
+  class TestStaffMovementsActor(now: () => SDateLike,
+                                expireBefore: () => SDateLike,
+                                minutesToCrunch: Int) extends StaffMovementsActor(now, expireBefore, minutesToCrunch) with Resettable {
     override def resetState(): Unit = {
       state = initialState
       subscribers = List()
@@ -129,41 +157,10 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestAggregatedArrivalsActor() extends {
-    private val portCode = PortCode("TEST")
-  } with AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables)) {
-    def reset: Receive = {
-      case ResetData =>
-        sender() ! Ack
+  class MockAggregatedArrivalsActor extends Actor {
+    override def receive: Receive = {
+      case _ => sender() ! Ack
     }
-
-    override def receive: Receive = reset orElse super.receive
-  }
-
-  class TestCrunchQueueActor(now: () => SDateLike, journalType: StreamingJournalLike, crunchOffsetMinutes: Int)
-    extends CrunchQueueActor(now, journalType, crunchOffsetMinutes) {
-    def reset: Receive = {
-      case ResetData =>
-        readyToEmit = true
-        maybeDaysQueueSource = None
-        queuedDays = SortedSet()
-        sender() ! Ack
-    }
-
-    override def receive: Receive = reset orElse super.receive
-  }
-
-  class TestDeploymentQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int)
-    extends DeploymentQueueActor(now, crunchOffsetMinutes) {
-    def reset: Receive = {
-      case ResetData =>
-        readyToEmit = true
-        maybeDaysQueueSource = None
-        queuedDays = SortedSet()
-        sender() ! Ack
-    }
-
-    override def receive: Receive = reset orElse super.receive
   }
 
   trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B] {
@@ -171,8 +168,8 @@ object TestActors {
     var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
 
     private def addToTerminalDays(container: MinutesContainer[A, B]): Unit = {
-      groupByTerminalAndDay(container).keys.foreach {
-        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date.millisSinceEpoch))
+      partitionUpdates(container).keys.foreach {
+        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, SDate(date).millisSinceEpoch))
       }
     }
 
@@ -184,10 +181,7 @@ object TestActors {
 
       case ResetData =>
         Future
-          .sequence(terminalDaysUpdated.map { case (t, d) =>
-            println(s"\n\n**Sending ResetData to $t / ${SDate(d).toISOString()}")
-            resetData(t, d)
-          })
+          .sequence(terminalDaysUpdated.map { case (t, d) => resetData(t, d) })
           .map { _ =>
             terminalDaysUpdated = Set()
             Ack
@@ -220,24 +214,23 @@ object TestActors {
   }
 
 
-  class TestFlightsRouterActor(subscriber: ActorRef,
-                               terminals: Iterable[Terminal],
+  class TestFlightsRouterActor(terminals: Iterable[Terminal],
                                byDayLookup: FlightsLookup,
                                updateMinutes: FlightsUpdate,
                                val resetData: (Terminal, UtcDate) => Future[Any])
-    extends FlightsRouterActor(subscriber, terminals, byDayLookup, updateMinutes) {
+    extends FlightsRouterActor(terminals, byDayLookup, updateMinutes) {
     override def receive: Receive = resetReceive orElse super.receive
 
     var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
 
-    private def addToTerminalDays(container: FlightsWithSplitsDiff): Unit = {
-      groupByTerminalAndDay(container).keys.foreach {
+    private def addToTerminalDays(container: ArrivalsDiff): Unit = {
+      partitionUpdates(container).keys.foreach {
         case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date))
       }
     }
 
     def resetReceive: Receive = {
-      case container: FlightsWithSplitsDiff =>
+      case container: ArrivalsDiff =>
         val replyTo = sender()
         addToTerminalDays(container)
         handleUpdatesAndAck(container, replyTo)
@@ -273,8 +266,7 @@ object TestActors {
       flightUpdatesActor,
       now,
       queues,
-      journalType)
-  {
+      journalType) {
 
     val actorClearRequests = Map(
       flightsActor -> ResetData,
@@ -322,7 +314,7 @@ object TestActors {
                                    month: Int,
                                    day: Int,
                                    terminal: Terminal,
-                                   now: () => SDateLike) extends TerminalDayFlightActor(year, month, day, terminal, now, None) with Resettable {
+                                   now: () => SDateLike) extends TerminalDayFlightActor(year, month, day, terminal, now, None, None) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

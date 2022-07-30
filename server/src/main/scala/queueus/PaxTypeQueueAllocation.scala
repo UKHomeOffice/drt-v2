@@ -1,29 +1,30 @@
 package queueus
 
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
-import drt.shared._
-import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
+import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
+import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
+import uk.gov.homeoffice.drt.arrivals.Splits
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxAge, PaxType, PaxTypeAndQueue}
 
 case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAllocator: QueueAllocator) {
-  def toQueues(terminal: Terminal, bestManifest: BestAvailableManifest): Map[Queue, List[(Queue, PaxType, ManifestPassengerProfile, Double)]] = {
-    val queueAllocatorForFlight = queueAllocator(terminal, bestManifest) _
-    val paxTypeAllocatorForFlight = paxTypeAllocator(bestManifest) _
-    bestManifest.passengerList.flatMap(mpp => {
+  def toQueues(terminal: Terminal, manifest: ManifestLike): Map[Queue, Iterable[(Queue, PaxType, ManifestPassengerProfile, Double)]] = {
+    val queueAllocatorForFlight: PaxType => Seq[(Queue, Double)] = queueAllocator.forTerminalAndManifest(terminal, manifest)
+    val paxTypeAllocatorForFlight = paxTypeAllocator
+    manifest.uniquePassengers.flatMap(mpp => {
       val paxType = paxTypeAllocatorForFlight(mpp)
       val queueAllocations = queueAllocatorForFlight(paxType)
       queueAllocations.map {
         case (queue, allocation) => (queue, paxType, mpp, allocation)
       }
     })
-    }
-    .groupBy {
-      case (queueType, _, _, _) => queueType
-    }
+  }.groupBy {
+    case (queueType, _, _, _) => queueType
+  }
 
-  def toSplits(terminal: Terminal, bestManifest:  BestAvailableManifest): Splits = {
-
-    val splits = toQueues(terminal, bestManifest).flatMap {
+  def toSplits(terminal: Terminal, manifest: ManifestLike): Splits = {
+    val splits = toQueues(terminal, manifest).flatMap {
       case (_, passengerProfileTypeByQueueCount) =>
         passengerProfileTypeByQueueCount.foldLeft(Map[PaxTypeAndQueue, ApiPaxTypeAndQueueCount]()) {
           case (soFar, (queue, paxType, mpp, paxCount)) =>
@@ -31,21 +32,37 @@ case class PaxTypeQueueAllocation(paxTypeAllocator: PaxTypeAllocator, queueAlloc
             val ptqc: ApiPaxTypeAndQueueCount = soFar.get(paxTypeAndQueue) match {
               case Some(apiPaxTypeAndQueueCount) => apiPaxTypeAndQueueCount.copy(
                 paxCount = apiPaxTypeAndQueueCount.paxCount + paxCount,
-                nationalities = incrementNationalityCount(mpp, paxCount, apiPaxTypeAndQueueCount)
+                nationalities = incrementNationalityCount(mpp, paxCount, apiPaxTypeAndQueueCount),
+                ages = incrementAgeCount(mpp, paxCount, apiPaxTypeAndQueueCount)
               )
-              case None => ApiPaxTypeAndQueueCount(paxType, queue, paxCount, Some(Map(mpp.nationality -> paxCount)))
+              case None => ApiPaxTypeAndQueueCount(
+                paxType,
+                queue,
+                paxCount,
+                Option(Map(mpp.nationality -> paxCount)),
+                mpp.age.map(age => Map(age -> paxCount))
+              )
             }
             soFar + (paxTypeAndQueue -> ptqc)
         }
     }.values.toSet
 
-    Splits(splits, bestManifest.source, None, PaxNumbers)
+    Splits(splits, manifest.source, manifest.maybeEventType, PaxNumbers)
   }
 
-  def incrementNationalityCount(mpp: ManifestPassengerProfile, paxCount: Double, apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount): Some[Map[Nationality, Double]] =
+  def incrementNationalityCount(mpp: ManifestPassengerProfile, paxCount: Double, apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount): Option[Map[Nationality, Double]] =
     apiPaxTypeAndQueueCount.nationalities.map(nats => {
       val existingOfNationality: Double = nats.getOrElse(mpp.nationality, 0)
       val newNats: Map[Nationality, Double] = nats + (mpp.nationality -> (existingOfNationality + paxCount))
-      Some(newNats)
-    }).getOrElse(Some(Map(mpp.nationality -> paxCount)))
+      Option(newNats)
+    }).getOrElse(Option(Map(mpp.nationality -> paxCount)))
+
+  def incrementAgeCount(mpp: ManifestPassengerProfile, paxCount: Double, apiPaxTypeAndQueueCount: ApiPaxTypeAndQueueCount): Option[Map[PaxAge, Double]] =
+    mpp.age.map(age => {
+      apiPaxTypeAndQueueCount.ages.map((paxAges: Map[PaxAge, Double]) => {
+        val existingOfAge: Double = paxAges.getOrElse(age, 0)
+        val newPaxAges: Map[PaxAge, Double] = paxAges + (age -> (existingOfAge + paxCount))
+        newPaxAges
+      }).getOrElse(Map(age -> paxCount))
+    })
 }

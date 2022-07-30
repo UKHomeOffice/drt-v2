@@ -15,6 +15,7 @@ declare namespace Cypress {
         asANonTestPortUser(): Chainable<Element>;
         asAnLHRPortUser(): Chainable<Element>;
         asAPortOperator(): Chainable<Element>;
+        asACedatStaffMember(): Chainable<Element>;
         asATestPortUser(): Chainable<Element>;
         asATestSetupUser(): Chainable<Element>;
         assertAccessRestricted(): Chainable<Element>;
@@ -46,5 +47,6 @@ declare namespace Cypress {
         staffDeployedAtRow(row: number): Chainable<Element>;
         staffMovementsAtRow(row: number): Chainable<Element>;
         waitForFlightToAppear(flight: string): Chainable<Element>;
+        navigateToArrivalsTab(): Chainable<Element>;
     }
 }

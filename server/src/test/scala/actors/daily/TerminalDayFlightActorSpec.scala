@@ -1,16 +1,19 @@
 package actors.daily
 
-import actors.GetState
+import actors.persistent.staffing.GetState
 import akka.actor.ActorRef
 import akka.pattern.ask
-import controllers.ArrivalGenerator.flightWithSplitsForDayAndTerminal
+import controllers.ArrivalGenerator.arrivalForDayAndTerminal
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
-import drt.shared.Queues.{EeaDesk, Queue}
-import drt.shared.Terminals.{T1, T2, Terminal}
-import drt.shared.{SDateLike, TQM, UtcDate}
+import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, RemoveSplits, SplitsForArrivals}
+import drt.shared.{ArrivalsDiff, TQM}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
+import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -32,26 +35,26 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
   "Given a terminal-day flight actor for a day which does not have any data" >> {
 
     "When I send a flight to persist which lies within the day, and then ask for its state I should see the flight" >> {
-      val arrival = flightWithSplitsForDayAndTerminal(date)
-      val flightsWithSplits = FlightsWithSplitsDiff(List(arrival), List())
+      val arrival = arrivalForDayAndTerminal(date)
+      val flightsWithSplits = ArrivalsDiff(List(arrival), List())
 
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
+      val result = Await.result(eventual, 2.second)
 
-      result === FlightsWithSplits(Map(arrival.unique-> arrival))
+      result === FlightsWithSplits(Map(arrival.unique -> ApiFlightWithSplits(arrival, Set(), lastUpdated = Option(myNow().millisSinceEpoch))))
     }
 
     "When I send a flight which lies outside the day, and then ask for its state I should see None" >> {
       val otherDate = SDate("2020-01-02T00:00")
-      val arrival = flightWithSplitsForDayAndTerminal(otherDate)
-      val flightsWithSplits = FlightsWithSplitsDiff(List(arrival), List())
+      val arrival = arrivalForDayAndTerminal(otherDate)
+      val flightsWithSplits = ArrivalsDiff(List(arrival), List())
 
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
+      val result = Await.result(eventual, 1.second)
 
       result === FlightsWithSplits.empty
     }
@@ -59,15 +62,15 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
     "When I send flights to persist which lie both inside and outside the day, " +
       "and then ask for its state I should see only the flights inside the actor's day" >> {
       val otherDate = SDate("2020-01-02T00:00")
-      val inside = flightWithSplitsForDayAndTerminal(date)
-      val outside = flightWithSplitsForDayAndTerminal(otherDate)
-      val flightsWithSplits = FlightsWithSplitsDiff(List(inside, outside), List())
+      val inside = arrivalForDayAndTerminal(date)
+      val outside = arrivalForDayAndTerminal(otherDate)
+      val flightsWithSplits = ArrivalsDiff(List(inside, outside), List())
 
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
-      val expected = FlightsWithSplits(Map(inside.unique -> inside))
+      val result = Await.result(eventual, 1.second)
+      val expected = FlightsWithSplits(Map(inside.unique -> ApiFlightWithSplits(inside, Set(), lastUpdated = Option(myNow().millisSinceEpoch))))
 
       result === expected
     }
@@ -75,22 +78,46 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
     "When I send flights to persist for the right and wrong terminal " +
       "and then ask for its state I should see only the flights for the correct terminal" >> {
 
-      val correctTerminal = flightWithSplitsForDayAndTerminal(date, T1)
-      val wrongTerminal = flightWithSplitsForDayAndTerminal(date, T2)
+      val correctTerminal = arrivalForDayAndTerminal(date, T1)
+      val wrongTerminal = arrivalForDayAndTerminal(date, T2)
 
-      val flightsWithSplits = FlightsWithSplitsDiff(List(correctTerminal, wrongTerminal), List())
+      val flightsWithSplits = ArrivalsDiff(List(correctTerminal, wrongTerminal), List())
 
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
 
       val eventual = sendFlightsToDay(flightsWithSplits, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
-      val expected = FlightsWithSplits(Map(correctTerminal.unique -> correctTerminal))
+      val result = Await.result(eventual, 1.second)
+      val expected = FlightsWithSplits(Map(correctTerminal.unique -> ApiFlightWithSplits(correctTerminal, Set(), lastUpdated = Option(myNow().millisSinceEpoch))))
 
       result === expected
     }
   }
 
-  private def sendFlightsToDay(flights: FlightsWithSplitsDiff,
+  "Given a TerminalDayFlightActor with a flight" >> {
+    "When I send it a message to remove splits" >> {
+      "I should see that the flight no longer has splits" >> {
+        val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
+        val arrival = arrivalForDayAndTerminal(date, terminal)
+        val splits = Set(Splits(Set(), Historical, None))
+        val eventualFlights = terminalDayActor.ask(ArrivalsDiff(Seq(arrival), Seq())).flatMap { _ =>
+          terminalDayActor.ask(SplitsForArrivals(Map(arrival.unique -> splits))).flatMap { _ =>
+            terminalDayActor.ask(RemoveSplits).flatMap { _ =>
+              terminalDayActor.ask(GetState).map {
+                case FlightsWithSplits(flights) =>
+                  flights
+              }
+            }
+          }
+        }
+
+        val expectedWithNoSplits = ApiFlightWithSplits(arrival, Set(), lastUpdated = Option(myNow().millisSinceEpoch))
+
+        Await.result(eventualFlights, 1.second).values.toSet === Set(expectedWithNoSplits)
+      }
+    }
+  }
+
+  private def sendFlightsToDay(flights: ArrivalsDiff,
                                actor: ActorRef): Future[FlightsWithSplits] = {
     actor.ask(flights).flatMap { _ =>
       actor.ask(GetState).mapTo[FlightsWithSplits]

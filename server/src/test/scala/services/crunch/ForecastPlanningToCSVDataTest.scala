@@ -1,9 +1,11 @@
 package services.crunch
 
 import drt.shared.CrunchApi._
-import drt.shared.{Forecast, Queues, SDateLike}
+import drt.shared.Forecast
 import org.specs2.mutable.Specification
 import services.{CSVData, SDate}
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.time.SDateLike
 
 class ForecastPlanningToCSVDataTest extends Specification {
 
@@ -495,7 +497,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
         QueueHeadline(day3StartMinute.millisSinceEpoch, Queues.EGate, 1, 2)
       ))
 
-      val result = CSVData.forecastHeadlineToCSV(headlines, Queues.exportQueueOrderSansFastTrack)
+      val result = CSVData.forecastHeadlineToCSV(headlines, Queues.forecastExportQueueOrderSansFastTrack)
 
       val expected =
         f"""|,${day1StartMinute.getDate()}%02d/${day1StartMinute.getMonth()}%02d,${day2StartMinute.getDate()}%02d/${day2StartMinute.getMonth()}%02d,${day3StartMinute.getDate()}%02d/${day3StartMinute.getMonth()}%02d

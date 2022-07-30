@@ -1,8 +1,9 @@
 package drt.shared
 
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import drt.shared.Terminals.Terminal
-import upickle.default.{macroRW, ReadWriter}
+import uk.gov.homeoffice.drt.arrivals.{WithTerminal, WithTimeAccessor}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import upickle.default.{ReadWriter, macroRW}
 
 case class TM(terminal: Terminal, minute: MillisSinceEpoch)
   extends Ordered[TM] with WithTimeAccessor with WithTerminal[TM] {

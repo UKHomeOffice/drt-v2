@@ -1,61 +1,47 @@
 package actors
 
-import java.sql.Timestamp
-
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
+import akka.Done
 import akka.actor.Actor
-import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
 import drt.shared._
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import services.StreamSupervision
 import slickdb.ArrivalTableLike
+import uk.gov.homeoffice.drt.arrivals.Arrival
 
+import java.sql.Timestamp
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 
 class AggregatedArrivalsActor(arrivalTable: ArrivalTableLike) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
   implicit val executionContext: ExecutionContextExecutor = ExecutionContext.global
+  implicit val materializer: Materializer = Materializer.createMaterializer(context)
 
   override def receive: Receive = {
-    case StreamInitialized =>
-      log.info("Stream initialized!")
-      sender() ! Ack
-
-    case RemoveFlight(UniqueArrival(number, terminal, scheduled)) =>
-      handleRemoval(number, terminal, scheduled)
-
-    case arrival: Arrival =>
-      handleUpdate(arrival)
-
-    case StreamFailure(t) =>
-      log.error("Received stream failure", t)
-
-    case StreamCompleted =>
-      log.info("Received shutdown")
+    case ArrivalsDiff(toUpdate, toRemove) =>
+      handleUpdates(toUpdate.values)
+        .andThen { case _ =>
+          handleRemovals(toRemove)
+        }
 
     case other =>
       log.error(s"Received unexpected message ${other.getClass}")
   }
 
-  def handleRemoval(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch): Unit = {
-    val eventualRemoval = arrivalTable.removeArrival(number, terminal, new Timestamp(scheduled))
-    val errorMsg = s"Error on removing arrival ($number/$terminal/$scheduled)"
-    ackOnCompletion(eventualRemoval, errorMsg)}
-
-  def handleUpdate(arrival: Arrival): Unit = {
-    val eventualUpdate = arrivalTable.insertOrUpdateArrival(arrival)
-    val errorMsg = s"Error on updating arrival ($arrival)"
-    ackOnCompletion(eventualUpdate, errorMsg)}
-
-  private def ackOnCompletion[X](futureToAck: Future[X], errorMsg: String): Unit = {
-    val replyTo = sender()
-    futureToAck
-      .map { _ => replyTo ! Ack }
-      .recover { case t =>
-        log.error(errorMsg, t)
-        replyTo ! Ack
+  def handleUpdates(toUpdate: Iterable[Arrival]): Future[Done] =
+    Source(toUpdate.toList)
+      .mapAsync(2) { arrival =>
+        arrivalTable.insertOrUpdateArrival(arrival)
       }
-  }
+      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
+      .runWith(Sink.ignore)
+
+  def handleRemovals(toRemove: Iterable[Arrival]): Future[Done] =
+    Source(toRemove.toList)
+      .mapAsync(2)(a =>
+        arrivalTable.removeArrival(a.VoyageNumber.numeric, a.Terminal, new Timestamp(a.Scheduled)))
+      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
+      .runWith(Sink.ignore)
 }

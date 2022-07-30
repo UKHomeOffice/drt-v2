@@ -3,89 +3,110 @@
 # ~~~~
 
 # Home page
-GET           /                                                    controllers.Application.index
-GET           /health-check                                        controllers.Application.healthCheck
+GET           /                                                                       controllers.Application.index
+GET           /health-check                                                           controllers.Application.healthCheck
 
-GET           /airport-config                                      controllers.Application.getAirportConfig
-GET           /contact-details                                     controllers.Application.getContactDetails
+GET           /airport-config                                                         controllers.Application.getAirportConfig
+GET           /contact-details                                                        controllers.Application.getContactDetails
 
-GET           /ooh-status                                          controllers.Application.getOOHStatus
-GET           /feature-flags                                       controllers.Application.getFeatureFlags
+GET           /ooh-status                                                             controllers.Application.getOOHStatus
+GET           /feature-flags                                                          controllers.Application.getFeatureFlags
 
-GET           /airport-info                                        controllers.Application.getAirportInfo
+GET           /airport-info                                                           controllers.Application.getAirportInfo
+GET           /walk-times                                                             controllers.Application.getWalkTimes
 
-GET           /alerts/:createdAfter                                controllers.Application.getAlerts(createdAfter: Long)
-POST          /alerts                                              controllers.Application.addAlert
-DELETE        /alerts                                              controllers.Application.deleteAlerts
+GET           /alerts/:createdAfter                                                   controllers.Application.getAlerts(createdAfter: Long)
+POST          /alerts                                                                 controllers.Application.addAlert
+DELETE        /alerts                                                                 controllers.Application.deleteAlerts
 
-GET           /version                                             controllers.Application.getApplicationVersion
+GET           /version                                                                controllers.Application.getApplicationVersion
 
-GET           /crunch                                              controllers.Application.getCrunch
-GET           /crunch-snapshot/:pit                                controllers.Application.getCrunchSnapshot(pit: Long)
+GET           /crunch                                                                 controllers.Application.getCrunch
+POST          /crunch/recalculate                                                     controllers.Application.reCrunch
+GET           /crunch-snapshot/:pit                                                   controllers.Application.getCrunchSnapshot(pit: Long)
 
-GET           /feed-statuses                                       controllers.Application.getFeedStatuses
-GET           /arrival/:number/:terminal/:scheduled                controllers.Application.getArrival(number: Int, terminal: String, scheduled: Long)
-GET           /arrival/:pointInTime/:number/:terminal/:scheduled   controllers.Application.getArrivalAtPointInTime(pointInTime: Long, number: Int, terminal: String, scheduled: Long)
+GET           /feed-statuses                                                          controllers.Application.getFeedStatuses
+GET           /feeds/statuses                                                         controllers.Application.getFeedStatuses
+POST          /feeds/check                                                            controllers.Application.checkFeed
+GET           /arrival/:number/:terminal/:scheduled/:origin                           controllers.Application.getArrival(number: Int, terminal: String, scheduled: Long, origin: String)
+GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin              controllers.Application.getArrivalAtPointInTime(pointInTime: Long, number: Int, terminal: String, scheduled: Long, origin: String)
+GET           /manifest/:utcDate/summary                                              controllers.Application.getPassengerInfoForDay(utcDate: String)
+GET           /manifest/:origin/:voyageNumber/:scheduled                              controllers.Application.getPassengerInfoArrival(origin: String, voyageNumber: Int, scheduled: Long)
+GET           /red-list/ports/:date                                                   controllers.Application.getRedListPorts(date: String)
+POST          /red-list/updates                                                       controllers.Application.updateRedListUpdates()
+GET           /red-list/updates                                                       controllers.Application.getRedListUpdates
+DELETE        /red-list/updates/:effectiveFrom                                        controllers.Application.deleteRedListUpdates(effectiveFrom: Long)
+GET           /red-list/updates-legacy                                                controllers.Application.getRedListUpdatesLegacy
+POST          /egate-banks/updates                                                    controllers.Application.updateEgateBanksUpdates()
+GET           /egate-banks/updates                                                    controllers.Application.getEgateBanksUpdates
+DELETE        /egate-banks/updates/:terminal/:effectiveFrom                           controllers.Application.deleteEgateBanksUpdates(terminal: String, effectiveFrom: Long)
+GET           /egate-banks/updates-legacy                                             controllers.Application.getEgateBanksUpdatesLegacy
 
-GET           /logged-in                                           controllers.Application.isLoggedIn
+GET           /logged-in                                                              controllers.Application.isLoggedIn
 
-GET           /fixed-points                                        controllers.Application.getFixedPoints
-POST          /fixed-points                                        controllers.Application.saveFixedPoints
+GET           /fixed-points                                                           controllers.Application.getFixedPoints
+POST          /fixed-points                                                           controllers.Application.saveFixedPoints
 
-GET           /export/desks/:start/:end/:terminalName              controllers.Application.exportDesksAndQueuesBetweenTimeStampsCSV(start, end, terminalName)
-GET           /export/desks/:pointInTime/:terminalName             controllers.Application.exportDesksAndQueuesAtPointInTimeCSV(pointInTime, terminalName)
-GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName  controllers.Application.exportFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
-GET           /export/arrivals/snapshot/:localDay/:pointInTime/:terminalName  controllers.Application.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDay: String, pointInTime: Long, terminalName: String)
+GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.Application.exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
+GET           /export/desk-recs/snapshot/:localDate/:pointInTime/:terminalName        controllers.Application.exportDesksAndQueuesRecsAtPointInTimeCSV(localDate, pointInTime, terminalName)
+GET           /export/desk-deps/:startLocalDate/:endLocalDate/:terminalName           controllers.Application.exportDesksAndQueuesDepsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
+GET           /export/desk-deps/snapshot/:localDate/:pointInTime/:terminalName        controllers.Application.exportDesksAndQueuesDepsAtPointInTimeCSV(localDate, pointInTime, terminalName)
+GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName              controllers.Application.exportFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /export/arrivals/snapshot/:localDate/:pointInTime/:terminalName         controllers.Application.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDate: String, pointInTime: Long, terminalName: String)
+GET           /export/arrivals-with-red-list-diversions/:startLocalDay/:endLocalDay/:terminalName              controllers.Application.exportFlightsWithSplitsForDateRangeCSVWithRedListDiversions(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /export/arrivals-with-red-list-diversions/snapshot/:localDate/:pointInTime/:terminalName         controllers.Application.exportFlightsWithSplitsForDayAtPointInTimeCSVWithRedListDiversions(localDate: String, pointInTime: Long, terminalName: String)
 
-GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource        controllers.Application.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
-GET           /export/planning/:weekStarting/:terminalName         controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
-GET           /export/headlines/:weekStarting/:terminalName        controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
-GET           /export/users                                        controllers.Application.exportUsers
-GET           /export/staff-movements/:pointInTime/:terminal       controllers.Application.exportStaffMovements(terminal: String, pointInTime: Long)
-GET           /export/desk-rec-simulation                          controllers.Application.simulationImport
+GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource                 controllers.Application.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
+GET           /export/planning/:weekStarting/:terminalName                            controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
+GET           /export/headlines/:weekStarting/:terminalName                           controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
+GET           /export/users                                                           controllers.Application.exportUsers
+GET           /export/staff-movements/:pointInTime/:terminal                          controllers.Application.exportStaffMovements(terminal: String, pointInTime: Long)
+GET           /export/desk-rec-simulation                                             controllers.Application.simulationExport
+GET           /desk-rec-simulation                                                    controllers.Application.simulation
 
-POST          /migrations/flights/:legacyType/start                controllers.Application.startFlightMigration(legacyType: Int)
-POST          /migrations/flights/:legacyType/stop                 controllers.Application.stopFlightMigration(legacyType: Int)
-GET           /migrations/flights                                  controllers.Application.flightMigrationStatus
+GET           /forecast-accuracy/:date                                                controllers.Application.getForecastAccuracy(date: String)
 
 # Map static resources from the /public folder to the /assets URL path
-GET           /assets/fonts/*file                                  controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
-GET           /assets/images/*file                                 controllers.Assets.at(path="/public/images", file)
-GET           /assets/*file                                        controllers.Assets.versioned(path="/public", file: Asset)
+GET           /assets/fonts/*file                                                     controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
+GET           /assets/images/*file                                                    controllers.Assets.at(path="/public/images", file)
+GET           /assets/*file                                                           controllers.Assets.versioned(path="/public", file: Asset)
 
 # Autowire calls
-POST          /api/*path                                           controllers.Application.autowireApi(path: String)
+POST          /api/*path                                                              controllers.Application.autowireApi(path: String)
 
-GET           /data/user                                           controllers.Application.getLoggedInUser()
+GET           /data/user                                                              controllers.Application.getLoggedInUser()
 
-POST          /data/login                                          controllers.Application.apiLogin()
+POST          /data/login                                                             controllers.Application.apiLogin()
 
-GET           /data/user/has-port-access                           controllers.Application.getUserHasPortAccess()
+GET           /data/user/has-port-access                                              controllers.Application.getUserHasPortAccess()
 
-GET           /data/actor-tree                                     controllers.Application.getActorTree()
-GET           /debug/flights/:persistenceId/:dateString/:messages  controllers.Application.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
+GET           /data/actor-tree                                                        controllers.Application.getActorTree()
+GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.Application.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 
+POST          /email/feedback/:feedback                                               controllers.Application.feedBack(feedback: String)
 
 # Logging
-POST          /logging                                             controllers.Application.logging
+POST          /logging                                                                controllers.Application.logging
 
 
-POST          /data/staff                                          controllers.Application.saveStaff
-GET           /staff-movements                                     controllers.Application.getStaffMovements(pointInTime: Option[Long])
-POST          /staff-movements                                     controllers.Application.addStaffMovements()
-DELETE        /staff-movements/:uuid                               controllers.Application.removeStaffMovements(uuid: java.util.UUID)
+POST          /data/staff                                                             controllers.Application.saveStaff
+GET           /staff-movements                                                        controllers.Application.getStaffMovements(pointInTime: Option[Long])
+POST          /staff-movements                                                        controllers.Application.addStaffMovements()
+DELETE        /staff-movements/:uuid                                                  controllers.Application.removeStaffMovements(uuid: String)
 
 # Feed import
-POST          /data/feed/:feedType/:portCode                       controllers.Application.feedImport(feedType: String, portCode: String)
+POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts()
+
+POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
 
 # Test related
-POST          /test/arrival                                        test.controllers.TestController.addArrival
+POST          /test/arrival                                                           test.controllers.TestController.addArrival
 
-POST          /test/arrivals/:forDate                              test.controllers.TestController.addArrivals(forDate)
+POST          /test/arrivals/:forDate                                                 test.controllers.TestController.addArrivals(forDate)
 
-POST          /test/manifest                                       test.controllers.TestController.addManifest
+POST          /test/manifest                                                          test.controllers.TestController.addManifest
 
-POST          /test/mock-roles                                     test.controllers.TestController.setMockRoles()
-GET           /test/mock-roles-set                                 test.controllers.TestController.setMockRolesByQueryString()
+POST          /test/mock-roles                                                        test.controllers.TestController.setMockRoles()
+GET           /test/mock-roles-set                                                    test.controllers.TestController.setMockRolesByQueryString()
 
-DELETE        /test/data                                           test.controllers.TestController.deleteAllData()
+DELETE        /test/data                                                              test.controllers.TestController.deleteAllData()

@@ -39,14 +39,18 @@ const bfRoles = [
   "arrivals-and-splits:view",
   "desks-and-queues:view",
   "staff-movements:edit",
-  "staff-movements:export"
+  "staff-movements:export",
+  "enhanced-api-view",
+  "create-alerts",
+  "test"
 ];
 const bfReadOnlyRoles = [
   "border-force-staff",
   "forecast:view",
   "fixed-points:view",
   "arrivals-and-splits:view",
-  "desks-and-queues:view"
+  "desks-and-queues:view",
+  "test"
 ];
 const bfPlanningRoles = ["staff:edit"];
 const superUserRoles = ["create-alerts", "manage-users"];
@@ -54,6 +58,17 @@ const portOperatorRoles = ["port-operator-staff",
   "arrivals-and-splits:view",
   "api:view-port-arrivals"
 ]
+const cedatRoles = ["cedat-staff",
+  "arrivals-and-splits:view",
+  "api:view-port-arrivals"
+]
+export const paxRagGreenSelector = '.pax-rag-green'
+export const paxRagAmberSelector = '.pax-rag-amber'
+export const paxRagRedSelector = '.pax-rag-red'
+
+export const eGatesCellSelector = '.egate-queue-pax';
+export const eeaCellSelector = '.eeadesk-queue-pax';
+export const nonEeaCellSelector = '.noneeadesk-queue-pax';
 
 Cypress.Commands.add('asABorderForceOfficer', () => {
   cy.request("POST", '/test/mock-roles', { "roles": portRole.concat(bfRoles) });
@@ -89,6 +104,10 @@ Cypress.Commands.add('asATestSetupUser', () => {
 });
 
 Cypress.Commands.add('asAPortOperator', () => {
+  cy.request("POST", '/test/mock-roles', { "roles": portOperatorRoles.concat(portRole) });
+});
+
+Cypress.Commands.add('asACedatStaffMember', () => {
   cy.request("POST", '/test/mock-roles', { "roles": portOperatorRoles.concat(portRole) });
 });
 
@@ -158,7 +177,7 @@ Cypress.Commands.add('findAndClick', (toFind) => {
 });
 
 Cypress.Commands.add('choose24Hours', () => {
-  cy.get('#current .date-selector .date-view-picker-container')
+  cy.get('#current .time-view-selector-container')
     .contains('24 hours')
     .click()
 });
@@ -169,6 +188,16 @@ Cypress.Commands.add('chooseArrivalsTab', () => {
 
 Cypress.Commands.add('addManifest', (manifest) => {
   cy.request('POST', '/test/manifest', manifest)
+});
+
+Cypress.Commands.add('navigateToArrivalsTab', () => {
+  cy
+    .navigateHome()
+    .navigateToMenuItem('T1')
+    .selectCurrentTab()
+    .get("#currentTab").click()
+    .get("#arrivalsTab").click()
+    .choose24Hours()
 });
 
 Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {

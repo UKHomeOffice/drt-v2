@@ -1,16 +1,18 @@
 package actors.daily
 
+import actors.StreamingJournalLike
 import actors.acking.AckingReceiver.Ack
-import actors.{PortStateMessageConversion, StreamingJournalLike}
+import actors.serializers.PortStateMessageConversion
 import akka.persistence.query.EventEnvelope
 import akka.persistence.{SnapshotMetadata, SnapshotOffer}
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.Terminals.Terminal
-import drt.shared.{SDateLike, TQM}
+import drt.shared.TQM
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import services.SDate
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 
 class TerminalDayQueuesUpdatesActor(year: Int,

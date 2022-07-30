@@ -1,11 +1,10 @@
 package controllers
 
-import actors.ArrivalGenerator
-import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.api.Arrival
-import drt.shared.{ApiFlightWithSplits, ArrivalStatus, FeedSource, Operator, PortCode, SDateLike}
-import org.springframework.util.StringUtils
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Prediction, TotalPaxSource}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object ArrivalGenerator {
   def arrival(iata: String = "",
@@ -14,10 +13,11 @@ object ArrivalGenerator {
               actPax: Option[Int] = None,
               maxPax: Option[Int] = None,
               terminal: Terminal = T1,
-              origin: PortCode = PortCode(""),
+              origin: PortCode = PortCode("JFK"),
               operator: Option[Operator] = None,
               status: ArrivalStatus = ArrivalStatus(""),
               estDt: String = "",
+              predTouchdownDt: String = "",
               actDt: String = "",
               estChoxDt: String = "",
               actChoxDt: String = "",
@@ -29,7 +29,8 @@ object ArrivalGenerator {
               baggageReclaimId: Option[String] = None,
               airportId: PortCode = PortCode(""),
               feedSources: Set[FeedSource] = Set(),
-              apiPax: Option[Int] = None
+              apiPax: Option[Int] = None,
+              totalPax: Set[TotalPaxSource] = Set.empty[TotalPaxSource]
              ): Arrival = {
     val pcpTime = if (pcpDt.nonEmpty) Option(SDate(pcpDt).millisSinceEpoch) else if (schDt.nonEmpty) Option(SDate(schDt).millisSinceEpoch) else None
 
@@ -41,10 +42,11 @@ object ArrivalGenerator {
       Origin = origin,
       Operator = operator,
       Status = status,
-      Estimated = if (!StringUtils.isEmpty(estDt)) Option(SDate.parseString(estDt).millisSinceEpoch) else None,
-      Actual = if (!StringUtils.isEmpty(actDt)) Option(SDate.parseString(actDt).millisSinceEpoch) else None,
-      EstimatedChox = if (!StringUtils.isEmpty(estChoxDt)) Option(SDate.parseString(estChoxDt).millisSinceEpoch) else None,
-      ActualChox = if (!StringUtils.isEmpty(actChoxDt)) Option(SDate.parseString(actChoxDt).millisSinceEpoch) else None,
+      Estimated = if (estDt.nonEmpty) Option(SDate.parseString(estDt).millisSinceEpoch) else None,
+      PredictedTouchdown = if (predTouchdownDt.nonEmpty) Option(Prediction(SDate.now().millisSinceEpoch, SDate.parseString(predTouchdownDt).millisSinceEpoch)) else None,
+      Actual = if (actDt.nonEmpty) Option(SDate.parseString(actDt).millisSinceEpoch) else None,
+      EstimatedChox = if (estChoxDt.nonEmpty) Option(SDate.parseString(estChoxDt).millisSinceEpoch) else None,
+      ActualChox = if (actChoxDt.nonEmpty) Option(SDate.parseString(actChoxDt).millisSinceEpoch) else None,
       Gate = gate,
       Stand = stand,
       MaxPax = maxPax,
@@ -53,13 +55,17 @@ object ArrivalGenerator {
       BaggageReclaimId = baggageReclaimId,
       AirportID = airportId,
       PcpTime = pcpTime,
-      Scheduled = if (!StringUtils.isEmpty(schDt)) SDate(schDt).millisSinceEpoch else 0,
+      Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
       FeedSources = feedSources,
-      ApiPax = apiPax
+      ApiPax = apiPax,
+      TotalPax = totalPax
     )
   }
 
   def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): ApiFlightWithSplits = ApiFlightWithSplits(
     ArrivalGenerator.arrival(schDt = date.toISOString(), terminal = terminal), Set(), Option(date.millisSinceEpoch)
   )
+
+  def arrivalForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): Arrival =
+    ArrivalGenerator.arrival(schDt = date.toISOString(), terminal = terminal)
 }

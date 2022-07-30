@@ -1,9 +1,10 @@
 package drt.shared
 
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
-import upickle.default.{macroRW, ReadWriter}
+import uk.gov.homeoffice.drt.arrivals.{WithTerminal, WithTimeAccessor}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import upickle.default.{ReadWriter, macroRW}
 
 case class TQM(terminal: Terminal, queue: Queue, minute: MillisSinceEpoch)
   extends Ordered[TQM] with WithTimeAccessor with WithTerminal[TQM] {

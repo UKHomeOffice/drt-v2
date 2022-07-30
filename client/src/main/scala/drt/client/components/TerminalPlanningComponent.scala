@@ -1,17 +1,23 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
-import drt.shared.{Forecast, MilliDate, Queues, SDateLike}
+import drt.shared.{Forecast, MilliDate}
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.Select
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.Seq
 
@@ -23,7 +29,7 @@ object TerminalPlanningComponent {
     SDate(f"${sunday.getFullYear()}-${sunday.getMonth()}%02d-${sunday.getDate()}%02dT00:00:00")
   }
 
-  case class Props(forecastPeriod: ForecastPeriodWithHeadlines, page: TerminalPageTabLoc, router: RouterCtl[Loc]) {
+  case class Props(forecastPeriod: ForecastPeriodWithHeadlines, page: TerminalPageTabLoc, router: RouterCtl[Loc]) extends UseValueEq {
     def hash: Int = {
       forecastPeriod.forecast.days.toList.map {
         case (_, slots) => slots.hashCode
@@ -31,9 +37,7 @@ object TerminalPlanningComponent {
     }.hashCode
   }
 
-  val forecastWeeks: Seq[SDateLike] = (0 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
-
-  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).hash)
+  val forecastWeeks: Seq[SDateLike] = (-4 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TerminalForecast")
     .renderP((_, props) => {
@@ -41,12 +45,12 @@ object TerminalPlanningComponent {
       val byTimeSlot: Seq[List[Option[ForecastTimeSlot]]] = Forecast.periodByTimeSlotAcrossDays(props.forecastPeriod.forecast)
 
       def drawSelect(names: Seq[String], values: List[String], value: String): VdomTagOf[Select] = {
-        <.select(^.className := "form-control", ^.value := value.toString,
+        <.select(^.className := "form-control", ^.value := value,
           ^.onChange ==> ((e: ReactEventFromInput) => {
             props.router.set(props.page.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toLocalDateTimeString()))))
           }),
           values.zip(names).map {
-            case (value, name) => <.option(^.value := value.toString, name)
+            case (value, name) => <.option(^.value := value, name)
           }.toTagMod)
       }
 
@@ -64,19 +68,23 @@ object TerminalPlanningComponent {
               defaultStartDate(props.page.dateFromUrlOrNow).toISOString())
           )
         ),
-        <.div(^.className := "export-links",
-          <.a(
+        <.div(
+          <.span(
+          MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+            MuiIcons(GetApp)(fontSize = "small"),
             "Export Headlines",
-            ^.className := "btn btn-link",
+            ^.className := "btn btn-link muiButton",
             ^.href := SPAMain.absoluteUrl(s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
             ^.target := "_blank"
-          ),
-          <.a(
-            "Export Week",
-            ^.className := "btn btn-link",
-            ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
-            ^.target := "_blank"
-          )
+          )),
+          <.span(^.className := "planning-export",
+            MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+              MuiIcons(GetApp)(fontSize = "small"),
+              "Export Week",
+              ^.className := "btn btn-link muiButton",
+              ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
+              ^.target := "_blank"
+            ))
         ),
         <.h3("Headline Figures"),
         <.table(^.className := "headlines",
@@ -89,7 +97,7 @@ object TerminalPlanningComponent {
             ), {
               val groupedByQ = props.forecastPeriod.headlines.queueDayHeadlines.groupBy(_.queue)
               Queues.queueOrder.flatMap(q => groupedByQ.get(q).map(qhls => <.tr(
-                <.th(^.className := "queue-heading", s"${Queues.queueDisplayNames.getOrElse(q, q)}"), qhls.toList.sortBy(_.day).map(qhl => <.td(qhl.paxNos)).toTagMod
+                <.th(^.className := "queue-heading", s"${Queues.displayName(q)}"), qhls.toList.sortBy(_.day).map(qhl => <.td(qhl.paxNos)).toTagMod
               ))).toTagMod
             }, {
               val byDay = props.forecastPeriod.headlines.queueDayHeadlines.groupBy(_.day).toList
@@ -130,7 +138,6 @@ object TerminalPlanningComponent {
         )
       )
     })
-    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}")
     })

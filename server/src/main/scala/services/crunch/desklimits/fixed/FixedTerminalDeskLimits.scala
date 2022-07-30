@@ -1,15 +1,18 @@
 package services.crunch.desklimits.fixed
 
-import drt.shared.Queues.Queue
-import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.crunch.deskrecs.DeskRecs
+import services.WorkloadProcessorsProvider
+import services.crunch.desklimits.{EmptyCapacityProvider, QueueCapacityProvider, TerminalDeskLimitsLike}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 
 import scala.collection.immutable.{Map, NumericRange}
+import scala.concurrent.Future
 
 case class FixedTerminalDeskLimits(minDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]],
-                                   maxDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]]) extends TerminalDeskLimitsLike {
-  def maxDesksForMinutes(minuteMillis: NumericRange[Long],
-                         queue: Queue,
-                         allocatedDesks: Map[Queue, List[Int]]): List[Int] =
-    DeskRecs.desksForMillis(minuteMillis, maxDesksByQueue24Hrs.getOrElse(queue, IndexedSeq.fill(24)(0))).toList
+                                   maxDesksByQueue24Hrs: Map[Queue, QueueCapacityProvider],
+                                  ) extends TerminalDeskLimitsLike {
+  override def maxDesksForMinutes(minuteMillis: NumericRange[Long],
+                                  queue: Queue,
+                                  allocatedDesks: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] = {
+    maxDesksByQueue24Hrs.getOrElse(queue, EmptyCapacityProvider).capacityForPeriod(minuteMillis)
+  }
 }

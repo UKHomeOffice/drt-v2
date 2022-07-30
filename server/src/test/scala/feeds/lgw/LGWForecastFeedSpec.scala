@@ -2,13 +2,13 @@ package feeds.lgw
 
 import com.box.sdk.{BoxConfig, BoxDeveloperEditionAPIConnection}
 import drt.server.feeds.lgw.LGWForecastFeed
-import drt.shared.Terminals.S
-import drt.shared.api.Arrival
-import drt.shared.{ForecastFeedSource, PortCode}
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.Terminals.S
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
 import scala.util.{Failure, Success, Try}
 
@@ -54,6 +54,7 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         Operator = None,
         Status = "Port Forecast",
         Estimated = None,
+        PredictedTouchdown = None,
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,
@@ -87,6 +88,7 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         Operator = None,
         Status = "Port Forecast",
         Estimated = None,
+        PredictedTouchdown = None,
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

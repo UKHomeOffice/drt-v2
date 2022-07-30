@@ -1,14 +1,18 @@
 package serialization
 
-import drt.auth.{Role, Roles}
 import drt.shared.CrunchApi._
-import drt.shared.PaxTypes._
-import drt.shared.SplitRatiosNs.SplitSources.Historical
-import drt.shared.Terminals.{T1, Terminal}
 import drt.shared._
-import drt.shared.api.Arrival
 import org.specs2.mutable.Specification
 import services.AirportToCountry
+import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
+import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.auth.Roles
+import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.ports.PaxTypes._
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports._
 import upickle.default._
 
 import scala.collection.immutable.SortedMap
@@ -30,7 +34,7 @@ class JsonSerializationSpec extends Specification {
 
     "AirportConfig" >> {
 
-      val lhrAirportConfig = AirportConfigs.confByPort(PortCode("LHR"))
+      val lhrAirportConfig = DrtPortConfigs.confByPort(PortCode("LHR"))
 
       val lhrAirportConfigAsJson: String = write(lhrAirportConfig)
 
@@ -40,7 +44,6 @@ class JsonSerializationSpec extends Specification {
     }
 
     "PaxTypes" >> {
-      import drt.shared.PaxType.paxTypeReaderWriter
 
       val allPaxTypes = Seq(
         EeaNonMachineReadable,
@@ -51,7 +54,6 @@ class JsonSerializationSpec extends Specification {
         NonVisaNational,
         B5JPlusNational,
         B5JPlusNationalBelowEGateAge,
-        UndefinedPaxType
       )
 
       val asJson: Seq[String] = allPaxTypes.map((pt: PaxType) => write(pt))
@@ -72,7 +74,7 @@ class JsonSerializationSpec extends Specification {
     }
 
     "AirportInfo" >> {
-      val info: Map[String, AirportInfo] = AirportToCountry.airportInfo
+      val info: Map[String, AirportInfo] = AirportToCountry.airportInfoByIataPortCode
 
       val asJson: String = write(info)
 
@@ -93,12 +95,12 @@ class JsonSerializationSpec extends Specification {
 
     "PortState" >> {
       val flightWithSplits = ApiFlightWithSplits(
-        Arrival(None, ArrivalStatus("scheduled"), None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
+        Arrival(None, ArrivalStatus("scheduled"), None, None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
         Set(
           Splits(
             Set(
-              ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None),
-              ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None)
+              ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None, None),
+              ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, None, None)
             ), Historical, None, Percentage))
       )
       val flightsWithSplits = SortedMap(flightWithSplits.apiFlight.unique -> flightWithSplits)
@@ -135,14 +137,15 @@ class JsonSerializationSpec extends Specification {
     "PortStateUpdates" >> {
       val cu = PortStateUpdates(
         0L,
-        Set(
+        Seq(
           ApiFlightWithSplits(
-            Arrival(None, ArrivalStatus("scheduled"), None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
-            Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("tw") -> 7.0)))), Historical, None, Percentage))
+            Arrival(None, ArrivalStatus("scheduled"), None, None, None, None, None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
+            Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("tw") -> 7.0)), None)), Historical, None, Percentage))
           )
         ),
-        Set(CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))),
-        Set(StaffMinute(T1, 0L, 1, 1,1,None))
+        Seq(UniqueArrival(100, T1, 60000L, PortCode("STN"))),
+        Seq(CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))),
+        Seq(StaffMinute(T1, 0L, 1, 1,1,None))
       )
 
       val asJson: String = write(cu)
@@ -172,7 +175,7 @@ class JsonSerializationSpec extends Specification {
 
     "FixedPointAssignments" >> {
       val fpa = FixedPointAssignments(
-        Seq(StaffAssignment("test", T1, MilliDate(0L), MilliDate(0L), 0, None))
+        Seq(StaffAssignment("test", T1, 0L, 0L, 0, None))
       )
 
       val json = write(fpa)

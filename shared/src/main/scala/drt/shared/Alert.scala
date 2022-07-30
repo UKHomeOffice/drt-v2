@@ -8,5 +8,5 @@ case class Alert(title: String, message: String, alertClass: String, expires: Mi
 
 object Alert {
   implicit val rw: RW[Alert] = macroRW
-  def empty = Alert("", "", "", 0L, 0L)
+  def empty: Alert = Alert("", "", "", 0L, 0L)
 }

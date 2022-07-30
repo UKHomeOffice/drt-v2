@@ -1,72 +1,106 @@
 package drt.client.components
 
-import drt.client.components.TooltipComponent._
+import diode.UseValueEq
+import diode.data.Pot
+import drt.client.components.ToolTips._
 import drt.client.modules.GoogleEventTracker
-import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues.Queue
-import drt.shared._
+import drt.shared.api.{WalkTime, WalkTimes}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.{EgateBanksEdit, RedListsEdit}
+import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import scala.collection.immutable.Map
 
 object PortConfigPage {
 
-  case class Props()
+  case class Props(redListUpdates: Pot[RedListUpdates], portEgateBanksUpdates: Pot[PortEgateBanksUpdates], user: Pot[LoggedInUser], airportConfig: Pot[AirportConfig], gateStandWalktime: Pot[WalkTimes]) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigPage")
-    .render_P(_ =>
-      <.div(^.className := "port-config", <.h3("Port Config"), PortConfigDetails())
-    )
+    .render_P { props =>
+      val mp = for {
+        redListUpdates <- props.redListUpdates
+        portEgateBanksUpdates <- props.portEgateBanksUpdates
+        user <- props.user
+        airportConfig <- props.airportConfig
+        gateStandWalktime <- props.gateStandWalktime
+      } yield
+        <.div(
+          <.h3("Port Config"),
+          if (user.hasRole(RedListsEdit)) {
+            RedListEditor(redListUpdates)
+          } else EmptyVdom,
+          if (user.hasRole(EgateBanksEdit)) {
+            <.div(
+              <.h2("E-gates"),
+              airportConfig.eGateBankSizes.map {
+                case (terminal, banks) =>
+                  val updates = portEgateBanksUpdates.updatesByTerminal.getOrElse(terminal, EgateBanksUpdates.empty)
+                  EgatesScheduleEditor(terminal, updates, EgateBank.fromAirportConfig(banks))
+              }.toTagMod
+            )
+          } else EmptyVdom,
+          PortConfigDetails(airportConfig, gateStandWalktime)
+        )
+      mp.render(identity)
+    }
     .componentDidMount(_ => Callback {
       GoogleEventTracker.sendPageView(s"port-config")
     })
     .build
 
-  def apply(): VdomElement = component(Props())
+  def apply(props: Props): VdomElement = component(props)
 }
 
 object PortConfigDetails {
 
-  case class Props()
+  case class Props(airportConfig: AirportConfig, gateStandWalktime: WalkTimes) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigDetails")
-    .render_P { _ =>
-      val airportConfigRCP = SPACircuit.connect(_.airportConfig)
+    .render_P { props =>
       <.div(
-        airportConfigRCP(airportConfigMP =>
-          <.div(airportConfigMP().renderReady(config => <.div(
-            config.terminals.map(tn =>
-              <.div(
-                <.h2(tn.toString),
-                <.div(^.className := "container config-container",
-                  <.h4("Min / Max Desks or eGate Banks by hour of day"),
-                  minMaxDesksTable(config.minMaxDesksByTerminalQueue24Hrs(tn))
-                ),
-                <.div(^.className := "container config-container",
-                  <.h4("Default Processing Times", " ", defaultProcessingTimesTooltip),
-                  defaultProcessingTimesTable(config.terminalProcessingTimes(tn))
-                ),
-                <.div(^.className := "container config-container",
-                  <.h4("Passenger Queue Allocation"),
-                  defaultPaxSplits(config.terminalPaxTypeQueueAllocation(tn))
-                ),
-                <.div(^.className := "container config-container",
-                  <.h4("Walktimes", " ", walkTimesTooltip),
-                  defaultWalktime(config.defaultWalkTimeMillis(tn))
-                )
+        props.airportConfig.terminals.map(tn =>
+          <.div(
+            <.h2(tn.toString),
+            <.div(^.className := "container config-container",
+              <.h4("Min / Max Desks or eGate Banks by hour of day"),
+              minMaxDesksTable(props.airportConfig.minMaxDesksByTerminalQueue24Hrs(tn))
+            ),
+            <.div(^.className := "container config-container",
+              <.h4("Default Processing Times", " ", defaultProcessingTimesTooltip),
+              defaultProcessingTimesTable(props.airportConfig.terminalProcessingTimes(tn))
+            ),
+            <.div(^.className := "container config-container",
+              <.h4("Passenger Queue Allocation"),
+              defaultPaxSplits(props.airportConfig.terminalPaxTypeQueueAllocation(tn))
+            ),
+            <.div(^.className := "container config-container",
+              <.h4("Walktimes", " ", walkTimesTooltip),
+              defaultWalktime(props.airportConfig.defaultWalkTimeMillis(tn))
+            ),
+            if (props.gateStandWalktime.byTerminal.nonEmpty) {
+              <.div(^.className := "container config-container",
+                <.h4("Gate/Stand Walktime"),
+                gateWalktime(props.gateStandWalktime.byTerminal(tn).gateWalktimes),
+                standWalktime(props.gateStandWalktime.byTerminal(tn).standWalkTimes)
               )
-            ).toTagMod
-          )))
-        ))
+            } else ""
+          )
+        ).toTagMod
+      )
     }
     .build
 
   def minMaxDesksTable(minMaxDesksByTerminalQueue: Map[Queue, (List[Int], List[Int])]): TagMod = minMaxDesksByTerminalQueue.map {
     case (queue, (min, max)) =>
       <.div(^.className := "config-block float-left",
-        <.h4(Queues.queueDisplayNames(queue)),
+        <.h4(Queues.displayName(queue)),
         <.table(^.className := "table table-bordered table-hover", <.tbody(
           <.tr(
             <.th(^.className := "col", "Hour"),
@@ -100,7 +134,7 @@ object PortConfigDetails {
           .map {
             case (ptq, time) =>
               <.tr(
-                <.th(^.scope := "row", s"${PaxTypesAndQueues.displayName(ptq)}"),
+                <.th(^.scope := "row", s"${ptq.displayName}"),
                 <.td(^.className := "text-right", (time * 60).toInt)
               )
           }.toTagMod
@@ -108,18 +142,60 @@ object PortConfigDetails {
     )
   )
 
+  def gateWalktime(gateWalktimes: Map[String, WalkTime]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
+    if (gateWalktimes.nonEmpty) {
+      val sortedMap = WalkTimes.sortGateStandMap(gateWalktimes)
+      <.table(^.className := "table table-bordered table-hover",
+        <.tbody(
+          <.tr(
+            <.th(^.className := "col", "Gate"),
+            <.th(^.className := "col", "Walk time minutes")
+          ),
+          sortedMap.map {
+            case (gate, walktime) =>
+              <.tr(
+                <.th(^.scope := "row", gate),
+                <.td(^.className := "text-right", (walktime.walkTimeMillis / 60000).toInt)
+              )
+          }.toTagMod))
+    } else {
+      ""
+    }
+  )
+
+  def standWalktime(standWalkTimes: Map[String, WalkTime]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
+    if (standWalkTimes.nonEmpty) {
+      val sortedMap = WalkTimes.sortGateStandMap(standWalkTimes)
+
+      <.table(^.className := "table table-bordered table-hover",
+        <.tbody(
+          <.tr(
+            <.th(^.className := "col", "Stand"),
+            <.th(^.className := "col", "Walk time minutes")
+          ),
+          sortedMap.map {
+            case (stand, walktime) =>
+              <.tr(
+                <.th(^.scope := "row", stand),
+                <.td(^.className := "text-right", (walktime.walkTimeMillis / 60000).toInt)
+              )
+          }.toTagMod))
+    } else {
+      ""
+    }
+  )
+
   def defaultWalktime(defaultWalkTime: MillisSinceEpoch): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
     <.table(^.className := "table table-bordered table-hover",
       <.tbody(
         <.tr(
           <.th(^.className := "col", "Gate"),
-          <.th(^.className := "col", "Walk time seconds")
+          <.th(^.className := "col", "Walk time minutes")
         ),
         <.tr(
           <.th(^.scope := "row", "Default"),
-          <.td(^.className := "text-right", (defaultWalkTime / 1000).toInt)
+          <.td(^.className := "text-right", (defaultWalkTime / 60000).toInt)
         )
-
       )
     )
   )
@@ -143,7 +219,7 @@ object PortConfigDetails {
               case (qt, ratio) =>
                 <.tr(
                   <.td(^.scope := "row", PaxTypes.displayName(pt)),
-                  <.td(^.scope := "row", Queues.queueDisplayNames(qt)),
+                  <.td(^.scope := "row", Queues.displayName(qt)),
                   <.td(^.className := "text-right", s"${Math.round(ratio * 100)}%")
                 )
             }
@@ -152,6 +228,6 @@ object PortConfigDetails {
     )
   )
 
-  def apply(): VdomElement = component(Props())
+  def apply(airportConfig: AirportConfig, gateStandWalktime: WalkTimes): VdomElement = component(Props(airportConfig, gateStandWalktime))
 }
 

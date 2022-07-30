@@ -10,15 +10,17 @@ import drt.client.services._
 import drt.shared.CrunchApi._
 import drt.shared.PortState
 import org.scalajs.dom
+import uk.gov.homeoffice.drt.ports.PortCode
 import upickle.default.read
 
+import scala.collection.immutable.HashSet
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
-                                 modelRW: ModelRW[M, (Pot[PortState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
+                                 modelRW: ModelRW[M, (Pot[PortState], MillisSinceEpoch, Pot[HashSet[PortCode]])]) extends LoggingActionHandler(modelRW) {
   val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
   val thirtySixHoursInMillis: Long = 1000L * 60 * 60 * 36
@@ -34,7 +36,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
       val eventualAction = processRequest(viewMode, updateRequestFuture)
 
-      updated((Pending(), 0L), Effect(Future(ShowLoader())) + Effect(eventualAction))
+      updated((Pending(), 0L, Pending()), Effect(Future(ShowLoader())) + Effect(eventualAction))
 
     case SetPortState(viewMode, _) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring out of date view response")
@@ -48,15 +50,19 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
       val hideLoader = Effect(Future(HideLoader()))
       val fetchOrigins = Effect(Future(GetAirportInfos(originCodes)))
+      val fetchRedList = Effect(Future(GetRedListPorts(viewMode.dayEnd.toLocalDate)))
+
+      val actions = hideLoader + fetchOrigins + fetchRedList
 
       val effects = if (getCurrentViewMode().isHistoric(SDate.now())) {
-        hideLoader + fetchOrigins
+        log.info(s"Setting historic flight paxinfo")
+        actions + Effect(Future(GetPassengerInfoForFlights))
       } else {
         log.info(s"Starting to poll for crunch updates")
-        hideLoader + fetchOrigins + getCrunchUpdatesAfterDelay(viewMode)
+        actions + getCrunchUpdatesAfterDelay(viewMode)
       }
 
-      updated((Ready(portState), portState.latestUpdate), effects)
+      updated((Ready(portState), portState.latestUpdate, Pending()), effects)
   }
 
   def processRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {

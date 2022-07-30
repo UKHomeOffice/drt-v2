@@ -1,8 +1,11 @@
 package drt.shared.splits
 
-import drt.shared.Queues.Queue
-import drt.shared._
-import drt.shared.api.Arrival
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, SplitStyle, Splits}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, Queues}
+
+import scala.collection.immutable.Map
+
 
 object ApiSplitsToSplitRatio {
 
@@ -18,24 +21,16 @@ object ApiSplitsToSplitRatio {
       }
     })
 
-  def paxPerQueueUsingBestSplitsAsRatio(
-                                         flightWithSplits: ApiFlightWithSplits,
-                                         pcpPaxFn: Arrival => Int
-                                       ): Option[Map[Queue, Int]] =
-    flightWithSplits.bestSplits.map(s =>
-      flightPaxPerQueueUsingSplitsAsRatio(s, flightWithSplits.apiFlight, pcpPaxFn)
-    )
+  def paxPerQueueUsingBestSplitsAsRatio(flightWithSplits: ApiFlightWithSplits): Option[Map[Queue, Int]] =
+    flightWithSplits.bestSplits.map(flightPaxPerQueueUsingSplitsAsRatio(_, flightWithSplits))
 
-  def flightPaxPerQueueUsingSplitsAsRatio(
-                                           splits: Splits,
-                                           flight: Arrival,
-                                           pcpPaxFn: Arrival => Int
-                                         ): Map[Queue, Int] = queueTotals(
-    applyPaxSplitsToFlightPax(splits, pcpPaxFn(flight))
-      .splits
-      .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
-      .toMap
-  )
+  def flightPaxPerQueueUsingSplitsAsRatio(splits: Splits, fws: ApiFlightWithSplits): Map[Queue, Int] =
+    queueTotals(
+      applyPaxSplitsToFlightPax(splits, fws.pcpPaxEstimate.pax.getOrElse(0))
+        .splits
+        .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
+        .toMap
+    )
 
   def applyPaxSplitsToFlightPax(apiSplits: Splits, totalPax: Int): Splits = {
     val splitsSansTransfer = apiSplits.splits.filter(_.queueType != Queues.Transfer)

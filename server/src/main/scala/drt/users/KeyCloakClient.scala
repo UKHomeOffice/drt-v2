@@ -1,7 +1,5 @@
 package drt.users
 
-import java.util.UUID
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
@@ -14,6 +12,7 @@ import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import org.slf4j.{Logger, LoggerFactory}
 import spray.json.{DefaultJsonProtocol, JsObject, JsValue, RootJsonFormat}
 
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps
@@ -59,7 +58,7 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
     if (users.isEmpty) Nil else users ++ getAllUsers(offset + 50)
   }
 
-  def getUserGroups(userId: UUID): Future[List[KeyCloakGroup]] = {
+  def getUserGroups(userId: String): Future[List[KeyCloakGroup]] = {
     val uri = keyCloakUrl + s"/users/$userId/groups"
     log.info(s"Calling key cloak: $uri")
     pipeline(HttpMethods.GET, uri, "getUserGroups").flatMap { r => Unmarshal(r).to[List[KeyCloakGroup]] }
@@ -93,13 +92,13 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
     } yield allUsers.filterNot(usersInGroup.toSet)
   }
 
-  def addUserToGroup(userId: UUID, groupId: String): Future[HttpResponse] = {
+  def addUserToGroup(userId: String, groupId: String): Future[HttpResponse] = {
     log.info(s"Adding $userId to $groupId")
     val uri = s"$keyCloakUrl/users/$userId/groups/$groupId"
     pipeline(HttpMethods.PUT, uri, "addUserToGroup")
   }
 
-  def removeUserFromGroup(userId: UUID, groupId: String): Future[HttpResponse] = {
+  def removeUserFromGroup(userId: String, groupId: String): Future[HttpResponse] = {
     log.info(s"Removing $userId from $groupId")
     val uri = s"$keyCloakUrl/users/$userId/groups/$groupId"
     pipeline(HttpMethods.DELETE, uri, "removeUserFromGroup")
@@ -110,12 +109,12 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
 trait KeyCloakUserParserProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
   implicit object KeyCloakUserFormatParser extends RootJsonFormat[KeyCloakUser] {
-    override def write(obj: KeyCloakUser): JsValue = ???
+    override def write(obj: KeyCloakUser): JsValue = throw new Exception("KeyCloakUser writer not implemented")
 
     override def read(json: JsValue): KeyCloakUser = json match {
       case JsObject(fields) =>
         KeyCloakUser(
-          UUID.fromString(fields.get("id").map(_.convertTo[String]).getOrElse("")),
+          fields.get("id").map(_.convertTo[String]).getOrElse(""),
           fields.get("username").map(_.convertTo[String]).getOrElse(""),
           fields.get("enabled").exists(_.convertTo[Boolean]),
           fields.get("emailVerified").exists(_.convertTo[Boolean]),

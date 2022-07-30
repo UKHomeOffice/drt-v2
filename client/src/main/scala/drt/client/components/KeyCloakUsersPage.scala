@@ -1,7 +1,5 @@
 package drt.client.components
 
-import java.util.UUID
-
 import diode.data.Pot
 import drt.client.SPAMain
 import drt.client.SPAMain.{KeyCloakUserEditLoc, Loc}
@@ -19,7 +17,7 @@ object KeyCloakUsersPage {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ListKeyCloakUsers")
     .render_P { p =>
-      def editUser(userId: UUID): ReactEventFromInput => Callback = (_: ReactEventFromInput) => p.router.set(KeyCloakUserEditLoc(userId))
+      def editUser(userId: String): ReactEventFromInput => Callback = (_: ReactEventFromInput) => p.router.set(KeyCloakUserEditLoc(userId))
 
       val keyCloakUsers = SPACircuit.connect(_.keyCloakUsers)
       keyCloakUsers(usersMP => {

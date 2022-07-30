@@ -2,15 +2,14 @@ package drt.client.services.handlers
 
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
-import drt.auth.{LoggedInUser, Roles}
+import uk.gov.homeoffice.drt.auth.{LoggedInUser, Roles}
 import drt.client.SPAMain
 import drt.client.actions.Actions._
 import drt.client.logger.log
 
 import org.scalajs.dom
 import org.scalajs.dom.XMLHttpRequest
-import ujson.Js.Value
-import upickle.Js
+import ujson.Value
 import upickle.default._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -19,7 +18,7 @@ import scala.concurrent.Future
 class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends LoggingActionHandler(modelRW) {
 
   implicit val loggedInUserReadWriter: ReadWriter[LoggedInUser] =
-    readwriter[Js.Value].bimap[LoggedInUser](user => {
+    readwriter[Value].bimap[LoggedInUser](user => {
       s"""| {
           |  userName: ${user.userName},
           |  id: ${user.id},

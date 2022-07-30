@@ -1,17 +1,13 @@
 package services.crunch
 
-import java.util.UUID
-
-import controllers.ArrivalGenerator
+import actors.persistent.staffing.{AddStaffMovements, SetFixedPoints, UpdateShifts}
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
-import drt.shared.FlightsApi.Flights
-import drt.shared.PaxTypesAndQueues._
-import drt.shared.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import drt.shared.Terminals.T1
 import drt.shared._
-import server.feeds.ArrivalsFeedSuccess
-import services.{Optimiser, SDate}
+import services.SDate
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
+import java.util.UUID
 import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
 
@@ -19,90 +15,18 @@ class StaffMinutesSpec extends CrunchTestLike {
   sequential
   isolated
 
-  "Upgraded deployments" >> {
-    "Given a shift with 10 staff and passengers split to 2 queues " +
-      "When I ask for the PortState " +
-      "Then I should see 1 EEA desk & 1 Non-EEA desks deployed - ie the min desks for each queue " >> {
-      val scheduled = "2017-01-01T00:00Z"
-      val shiftStart = SDate(scheduled)
-
-      val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-      val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
-      val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 10, None)
-      val initialShifts = ShiftAssignments(Seq(assignment1))
-
-      val startDate2 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-      val endDate2 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
-      val assignment2 = StaffAssignment("egate monitor", T1, startDate2, endDate2, 2, None)
-      val initialFixedPoints = FixedPointAssignments(Seq(assignment2))
-
-      val crunch = runCrunchGraph(TestConfig(
-        airportConfig = defaultAirportConfig.copy(
-          queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
-          terminalPaxSplits = Map(T1 -> SplitRatios(
-            SplitSources.TerminalAverage,
-            SplitRatio(eeaMachineReadableToDesk, 0.5),
-            SplitRatio(visaNationalToDesk, 0.5)
-          )),
-          terminalProcessingTimes = Map(
-            T1 -> Map(
-              eeaMachineReadableToDesk -> 25d / 60,
-              visaNationalToDesk -> 75d / 60
-            )
-          )
-        ),
-        now = () => shiftStart,
-        cruncher = Optimiser.crunch
-      ))
-
-      offerAndWait(crunch.shiftsInput, initialShifts)
-
-      crunch.portStateTestProbe.fishForMessage(2 seconds) {
-        case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.shifts) == Option(10)
-      }
-      offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
-
-      crunch.portStateTestProbe.fishForMessage(5 seconds) {
-        case ps: PortState => ps.staffMinutes.get(TM(T1, startDate1.millisSinceEpoch)).map(_.fixedPoints) == Option(2)
-      }
-
-      val expectedCrunchDeployments = Set(
-        (Queues.EeaDesk, shiftStart.addMinutes(0), 1),
-        (Queues.EeaDesk, shiftStart.addMinutes(1), 1),
-        (Queues.EeaDesk, shiftStart.addMinutes(2), 1),
-        (Queues.EeaDesk, shiftStart.addMinutes(3), 1),
-        (Queues.EeaDesk, shiftStart.addMinutes(4), 1),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(0), 1),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(1), 1),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(2), 1),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(3), 1),
-        (Queues.NonEeaDesk, shiftStart.addMinutes(4), 1)
-      )
-
-      crunch.portStateTestProbe.fishForMessage(5 seconds) {
-        case ps: PortState =>
-          val minutesInOrder = ps.crunchMinutes.values.toList.sortBy(cm => (cm.minute, cm.queue)).take(10)
-          val deployments = minutesInOrder.map(cm => (cm.queue, SDate(cm.minute), cm.deployedDesks.getOrElse(0))).toSet
-
-          deployments == expectedCrunchDeployments
-      }
-
-      success
-    }
-  }
-
   "Given two consecutive shifts " +
     "When I ask for the PortState " +
     "Then I should see the staff available for the duration of the shifts" >> {
     val shiftStart = SDate("2017-01-01T00:00Z")
 
-    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val startDate1 = SDate("2017-01-01T00:00").millisSinceEpoch
+    val endDate1 = SDate("2017-01-01T00:14").millisSinceEpoch
     val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 1, None)
-    val startDate2 = MilliDate(SDate("2017-01-01T00:15").millisSinceEpoch)
-    val endDate2 = MilliDate(SDate("2017-01-01T00:29").millisSinceEpoch)
+    val startDate2 = SDate("2017-01-01T00:15").millisSinceEpoch
+    val endDate2 = SDate("2017-01-01T00:29").millisSinceEpoch
     val assignment2 = StaffAssignment("shift b", T1, startDate2, endDate2, 2, None)
-    val initialShifts = ShiftAssignments(Seq(assignment1, assignment2))
+    val initialShifts = UpdateShifts(Seq(assignment1, assignment2))
     val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
         queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)
@@ -115,7 +39,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     val expectedStaff = List.fill(15)(1) ::: List.fill(15)(2)
     val expectedMillis = (shiftStart.millisSinceEpoch to (shiftStart.millisSinceEpoch + 29 * oneMinuteMillis) by oneMinuteMillis).toList
 
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
         val staff = minutesInOrder.map(_.shifts).take(expectedStaff.length)
@@ -131,17 +55,17 @@ class StaffMinutesSpec extends CrunchTestLike {
     "When I ask for the PortState " +
     "Then I should see zero staff available rather than a negative number" >> {
     val shiftStart = SDate("2017-01-01T00:00Z")
-    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-01T00:04").millisSinceEpoch)
+    val startDate1 = SDate("2017-01-01T00:00").millisSinceEpoch
+    val endDate1 = SDate("2017-01-01T00:04").millisSinceEpoch
     val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 0, None)
-    val startDate2 = MilliDate(SDate("2017-01-01T00:05").millisSinceEpoch)
-    val endDate2 = MilliDate(SDate("2017-01-01T00:09").millisSinceEpoch)
+    val startDate2 = SDate("2017-01-01T00:05").millisSinceEpoch
+    val endDate2 = SDate("2017-01-01T00:09").millisSinceEpoch
     val assignment2 = StaffAssignment("shift b", T1, startDate2, endDate2, 2, None)
-    val initialShifts = ShiftAssignments(Seq(assignment1, assignment2))
-    val uuid = UUID.randomUUID()
+    val initialShifts = UpdateShifts(Seq(assignment1, assignment2))
+    val uuid = UUID.randomUUID().toString
     val initialMovements = Seq(
-      StaffMovement(T1, "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid, createdBy = None),
-      StaffMovement(T1, "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid, createdBy = None)
+      StaffMovement(T1, "lunch start", shiftStart.millisSinceEpoch, -1, uuid, createdBy = None),
+      StaffMovement(T1, "lunch end", shiftStart.addMinutes(15).millisSinceEpoch, 1, uuid, createdBy = None)
     )
 
     val crunch = runCrunchGraph(TestConfig(
@@ -152,7 +76,7 @@ class StaffMinutesSpec extends CrunchTestLike {
     ))
 
     offerAndWait(crunch.shiftsInput, initialShifts)
-    offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
+    offerAndWait(crunch.staffMovementsInput, AddStaffMovements(initialMovements))
 
     val expectedStaffAvailable = Seq(
       shiftStart.addMinutes(0).millisSinceEpoch -> 0,
@@ -167,7 +91,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       shiftStart.addMinutes(9).millisSinceEpoch -> 1
     )
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(10)
         val staffAvailable = minutesInOrder.map(sm => (sm.minute, sm.available))
@@ -184,10 +108,10 @@ class StaffMinutesSpec extends CrunchTestLike {
     val startDate = SDate("2017-01-01T00:00")
     val endDate = SDate("2017-01-01T00:05")
 
-    val uuid = UUID.randomUUID()
+    val uuid = UUID.randomUUID().toString
     val initialMovements = Seq(
-      StaffMovement(T1, "lunch start", MilliDate(startDate.millisSinceEpoch), -1, uuid, createdBy = None),
-      StaffMovement(T1, "lunch end", MilliDate(endDate.millisSinceEpoch), 1, uuid, createdBy = None)
+      StaffMovement(T1, "lunch start", startDate.millisSinceEpoch, -1, uuid, createdBy = None),
+      StaffMovement(T1, "lunch end", endDate.millisSinceEpoch, 1, uuid, createdBy = None)
     )
 
     val crunch = runCrunchGraph(TestConfig(
@@ -197,12 +121,12 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => startDate
     ))
 
-    offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
+    offerAndWait(crunch.staffMovementsInput, AddStaffMovements(initialMovements))
 
     val minutesToCheck = 5
     val expectedStaffAvailableAndMovements = List.fill(minutesToCheck)((0, -1))
 
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.filter(m => startDate.millisSinceEpoch <= m.minute).sortBy(_.minute).take(minutesToCheck)
         val actualAvailableAndMovements = minutesInOrder.map(m => (m.available, m.movements))
@@ -219,14 +143,14 @@ class StaffMinutesSpec extends CrunchTestLike {
     val startDate = SDate("2017-01-01T00:00")
     val endDate = SDate("2017-01-01T00:04")
 
-    val shift = StaffAssignment("shift a", T1, MilliDate(startDate.millisSinceEpoch), MilliDate(endDate.millisSinceEpoch), 10, None)
+    val shift = StaffAssignment("shift a", T1, startDate.millisSinceEpoch, endDate.millisSinceEpoch, 10, None)
 
-    val initialShifts = ShiftAssignments(Seq(shift))
+    val initialShifts = UpdateShifts(Seq(shift))
 
-    val uuid = UUID.randomUUID()
+    val uuid = UUID.randomUUID().toString
     val initialMovements = Seq(
-      StaffMovement(T1, "lunch start", MilliDate(startDate.millisSinceEpoch), -1, uuid, createdBy = None),
-      StaffMovement(T1, "lunch end", MilliDate(endDate.addMinutes(1).millisSinceEpoch), 1, uuid, createdBy = None)
+      StaffMovement(T1, "lunch start", startDate.millisSinceEpoch, -1, uuid, createdBy = None),
+      StaffMovement(T1, "lunch end", endDate.addMinutes(1).millisSinceEpoch, 1, uuid, createdBy = None)
     )
 
     val crunch = runCrunchGraph(TestConfig(
@@ -237,12 +161,12 @@ class StaffMinutesSpec extends CrunchTestLike {
     ))
 
     offerAndWait(crunch.shiftsInput, initialShifts)
-    offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
+    offerAndWait(crunch.staffMovementsInput, AddStaffMovements(initialMovements))
 
     val minutesToCheck = 5
     val expectedStaffAvailableAndMovements = List.fill(minutesToCheck)((9, -1))
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.filter(m => startDate.millisSinceEpoch <= m.minute).sortBy(_.minute).take(minutesToCheck)
         val actualAvailableAndMovements = minutesInOrder.map(m => (m.available, m.movements))
@@ -258,13 +182,13 @@ class StaffMinutesSpec extends CrunchTestLike {
     "Then I should see the sum of the movements for the minute they cover" >> {
     val shiftStart = SDate("2017-01-01T00:00Z")
 
-    val uuid1 = UUID.randomUUID()
-    val uuid2 = UUID.randomUUID()
+    val uuid1 = UUID.randomUUID().toString
+    val uuid2 = UUID.randomUUID().toString
     val initialMovements = Seq(
-      StaffMovement(T1, "lunch start", MilliDate(shiftStart.millisSinceEpoch), -1, uuid1, createdBy = None),
-      StaffMovement(T1, "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 1, uuid1, createdBy = None),
-      StaffMovement(T1, "lunch start", MilliDate(shiftStart.millisSinceEpoch), -5, uuid2, createdBy = None),
-      StaffMovement(T1, "lunch end", MilliDate(shiftStart.addMinutes(15).millisSinceEpoch), 5, uuid2, createdBy = None)
+      StaffMovement(T1, "lunch start", shiftStart.millisSinceEpoch, -1, uuid1, createdBy = None),
+      StaffMovement(T1, "lunch end", shiftStart.addMinutes(15).millisSinceEpoch, 1, uuid1, createdBy = None),
+      StaffMovement(T1, "lunch start", shiftStart.millisSinceEpoch, -5, uuid2, createdBy = None),
+      StaffMovement(T1, "lunch end", shiftStart.addMinutes(15).millisSinceEpoch, 5, uuid2, createdBy = None)
     )
 
     val crunch = runCrunchGraph(TestConfig(
@@ -274,7 +198,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => shiftStart
     ))
 
-    offerAndWait(crunch.liveStaffMovementsInput, initialMovements)
+    offerAndWait(crunch.staffMovementsInput, AddStaffMovements(initialMovements))
 
     val expectedStaffMovements = Seq(
       shiftStart.addMinutes(0).millisSinceEpoch -> -6,
@@ -289,7 +213,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       shiftStart.addMinutes(9).millisSinceEpoch -> -6
     )
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute)
         val staffMovements = minutesInOrder.filter(_.minute >= shiftStart.millisSinceEpoch).map(sm => (sm.minute, sm.movements)).take(10)
@@ -306,10 +230,10 @@ class StaffMinutesSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val shiftStart = SDate(scheduled)
 
-    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val startDate1 = SDate("2017-01-01T00:00").millisSinceEpoch
+    val endDate1 = SDate("2017-01-01T00:14").millisSinceEpoch
     val assignment1 = StaffAssignment("egate monitor", T1, startDate1, endDate1, 2, None)
-    val initialFixedPoints = FixedPointAssignments(Seq(assignment1))
+    val initialFixedPoints = SetFixedPoints(Seq(assignment1))
 
     val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(
@@ -320,7 +244,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     offerAndWait(crunch.fixedPointsInput, initialFixedPoints)
 
-    offerAndWait(crunch.fixedPointsInput, FixedPointAssignments.empty)
+    offerAndWait(crunch.fixedPointsInput, SetFixedPoints(Seq()))
 
     val expectedFixedPoints = Seq(
       shiftStart.addMinutes(0).millisSinceEpoch -> 0,
@@ -335,7 +259,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       shiftStart.addMinutes(9).millisSinceEpoch -> 0
     )
 
-    crunch.portStateTestProbe.fishForMessage(10 seconds) {
+    crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>
         val minutesInOrder = ps.staffMinutes.values.toList.sortBy(_.minute).take(10)
         val fixedPoints = minutesInOrder.map(sm => (sm.minute, sm.fixedPoints))
@@ -352,10 +276,10 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
     val now = SDate(scheduled)
-    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val startDate1 = SDate("2017-01-01T00:00").millisSinceEpoch
+    val endDate1 = SDate("2017-01-01T00:14").millisSinceEpoch
     val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
-    val fixedPoints = FixedPointAssignments(Seq(assignment1))
+    val fixedPoints = SetFixedPoints(Seq(assignment1))
 
     val crunch = runCrunchGraph(TestConfig(
       now = () => now,
@@ -370,7 +294,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       (date, minutes)
     }.toMap
 
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case PortState(_, _, staffMinutes) =>
         val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).mapValues { minutes =>
           minutes.map(m => SDate(m.minute).millisSinceEpoch).sorted
@@ -387,10 +311,10 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
     val now = SDate(scheduled)
-    val startDate1 = MilliDate(SDate("2017-01-01T00:00").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-01T00:14").millisSinceEpoch)
+    val startDate1 = SDate("2017-01-01T00:00").millisSinceEpoch
+    val endDate1 = SDate("2017-01-01T00:14").millisSinceEpoch
     val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
-    val fixedPoints = FixedPointAssignments(Seq(assignment1))
+    val fixedPoints = SetFixedPoints(Seq(assignment1))
 
     val daysToCrunch = 5
 
@@ -417,7 +341,7 @@ class StaffMinutesSpec extends CrunchTestLike {
       (date, minutes)
     }.toMap
 
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case PortState(_, _, staffMinutes) =>
         val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).mapValues { minutes =>
           minutes.map(m => SDate(m.minute).toISOString()).sorted
@@ -434,10 +358,10 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val nowString = "2017-01-01T00:00:15Z"
     val now = SDate(nowString)
-    val startDate1 = MilliDate(SDate("2017-01-01T00:00:15").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-01T00:02:15").millisSinceEpoch)
+    val startDate1 = SDate("2017-01-01T00:00:15").millisSinceEpoch
+    val endDate1 = SDate("2017-01-01T00:02:15").millisSinceEpoch
     val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
-    val shifts = ShiftAssignments(Seq(assignment1))
+    val shifts = UpdateShifts(Seq(assignment1))
 
     val daysToCrunch = 1
 
@@ -445,21 +369,21 @@ class StaffMinutesSpec extends CrunchTestLike {
       now = () => now,
       airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1)),
       maxDaysToCrunch = daysToCrunch,
-      initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
+      initialPortState = Option(PortState.empty)
     ))
 
     offerAndWait(crunch.shiftsInput, shifts)
 
-    val expectedIsoMinutes = Seq(
-      "2017-01-01T00:00:00Z",
-      "2017-01-01T00:01:00Z",
-      "2017-01-01T00:02:00Z"
+    val expectedIsoMinutes = Set(
+      ("2017-01-01T00:00:00Z", 50),
+      ("2017-01-01T00:01:00Z", 50),
+      ("2017-01-01T00:02:00Z", 50)
     )
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
+    crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
-        val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
-        isoMinutes == expectedIsoMinutes
+        val minutes = staffMinutes.values.map(m => (SDate(m.minute).toISOString(), m.shifts)).toSet
+        minutes.intersect(expectedIsoMinutes) == expectedIsoMinutes
     }
 
     success
@@ -471,10 +395,10 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     val nowString = "2017-01-01T00:00:15Z"
     val now = SDate(nowString)
-    val startDate1 = MilliDate(SDate("2017-01-01T00:00:15").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-01T00:02:15").millisSinceEpoch)
+    val startDate1 = SDate("2017-01-01T00:00:15").millisSinceEpoch
+    val endDate1 = SDate("2017-01-01T00:02:15").millisSinceEpoch
     val assignment1 = StaffAssignment("shift a", T1, startDate1, endDate1, 50, None)
-    val fixedPoints = FixedPointAssignments(Seq(assignment1))
+    val fixedPoints = SetFixedPoints(Seq(assignment1))
 
     val daysToCrunch = 1
 
@@ -487,30 +411,30 @@ class StaffMinutesSpec extends CrunchTestLike {
 
     offerAndWait(crunch.fixedPointsInput, fixedPoints)
 
-    val expectedIsoMinutes = Seq(
-      "2017-01-01T00:00:00Z",
-      "2017-01-01T00:01:00Z",
-      "2017-01-01T00:02:00Z"
+    val expectedIsoMinutes = Set(
+      ("2017-01-01T00:00:00Z", 50),
+      ("2017-01-01T00:01:00Z", 50),
+      ("2017-01-01T00:02:00Z", 50)
     )
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
+    crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
-        val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
-        isoMinutes == expectedIsoMinutes
+        val minutes = staffMinutes.values.map(m => (SDate(m.minute).toISOString(), m.fixedPoints)).toSet
+        minutes.intersect(expectedIsoMinutes) == expectedIsoMinutes
     }
 
     success
   }
 
-  "Given a fixed point not starting on a minute boundary " +
+  "Given a staff movement not starting on a minute boundary " +
     "When I inspect the staff minutes " +
     "Then I should see the affected staff minutes rounded to the nearest minute" >> {
 
     val nowString = "2017-01-01T00:00:15Z"
     val now = SDate(nowString)
-    val startDate1 = MilliDate(SDate("2017-01-01T00:00:15").millisSinceEpoch)
-    val endDate1 = MilliDate(SDate("2017-01-01T00:02:15").millisSinceEpoch)
-    val uuid = UUID.randomUUID()
+    val startDate1 = SDate("2017-01-01T00:00:15").millisSinceEpoch
+    val endDate1 = SDate("2017-01-01T00:02:15").millisSinceEpoch
+    val uuid = UUID.randomUUID().toString
     val staffMovement1 = StaffMovement(T1, "some reason", startDate1, 1, uuid, None, None)
     val staffMovement2 = StaffMovement(T1, "some reason", endDate1, -1, uuid, None, None)
 
@@ -523,17 +447,17 @@ class StaffMinutesSpec extends CrunchTestLike {
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
     ))
 
-    offerAndWait(crunch.liveStaffMovementsInput, Seq(staffMovement1, staffMovement2))
+    offerAndWait(crunch.staffMovementsInput, AddStaffMovements(Seq(staffMovement1, staffMovement2)))
 
-    val expectedIsoMinutes = Seq(
-      "2017-01-01T00:00:00Z",
-      "2017-01-01T00:01:00Z"
+    val expectedIsoMinutes = Set(
+      ("2017-01-01T00:00:00Z", 1),
+      ("2017-01-01T00:01:00Z", 1),
     )
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
+    crunch.portStateTestProbe.fishForMessage(2.seconds, s"Didn't find expected minutes ($expectedIsoMinutes)") {
       case PortState(_, _, staffMinutes) =>
-        val isoMinutes = staffMinutes.values.toSeq.sortBy(_.minute).map(m => SDate(m.minute).toISOString())
-        isoMinutes == expectedIsoMinutes
+        val minutes = staffMinutes.values.map(m => (SDate(m.minute).toISOString(), m.movements)).toSet
+        minutes.intersect(expectedIsoMinutes) == expectedIsoMinutes
     }
 
     success

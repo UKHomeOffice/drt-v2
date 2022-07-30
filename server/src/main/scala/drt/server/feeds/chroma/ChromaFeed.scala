@@ -1,48 +1,35 @@
 package drt.server.feeds.chroma
 
-import akka.actor.Cancellable
+import akka.actor.typed
 import akka.stream.scaladsl.Source
 import drt.chroma.StreamingChromaFlow
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight}
-import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals._
-import drt.shared.api.Arrival
+import drt.server.feeds.Feed.FeedTick
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.Terminals._
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
-import scala.language.postfixOps
 
 case class ChromaLiveFeed(chromaFetcher: ChromaFetcher[ChromaLiveFlight]) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def chromaEdiFlights()(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
-    val chromaFlow = StreamingChromaFlow.chromaPollingSource(
-      chromaFetcher,
-      30 seconds,
-      StreamingChromaFlow.liveChromaToArrival
-    )
-
-    chromaFlow.map {
-      case aff: ArrivalsFeedFailure => aff
-      case afs: ArrivalsFeedSuccess => afs.copy(arrivals = Flights(correctEdiTerminals(afs)))
-    }
-  }
-
-  def correctEdiTerminals(afs: ArrivalsFeedSuccess): Seq[Arrival] = afs.arrivals.flights
+  def correctEdiTerminals(afs: ArrivalsFeedSuccess): Iterable[Arrival] = afs.arrivals.flights
     .map(csf => csf.copy(Terminal = A1))
 
-  def chromaVanillaFlights(frequency: FiniteDuration)(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
-    StreamingChromaFlow.chromaPollingSource(chromaFetcher, frequency, StreamingChromaFlow.liveChromaToArrival)
+  def chromaVanillaFlights(source: Source[FeedTick, typed.ActorRef[FeedTick]])
+                          (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
+    StreamingChromaFlow.chromaPollingSource(chromaFetcher, StreamingChromaFlow.liveChromaToArrival, source)
   }
 }
 
 case class ChromaForecastFeed(chromaFetcher: ChromaFetcher[ChromaForecastFlight]) {
   flightFeed =>
 
-  def chromaVanillaFlights(frequency: FiniteDuration)(implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, Cancellable] = {
-    StreamingChromaFlow.chromaPollingSource(chromaFetcher, frequency, StreamingChromaFlow.forecastChromaToArrival)
+  def chromaVanillaFlights(source: Source[FeedTick, typed.ActorRef[FeedTick]])
+                          (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
+    StreamingChromaFlow.chromaPollingSource(chromaFetcher, StreamingChromaFlow.forecastChromaToArrival, source)
   }
 }

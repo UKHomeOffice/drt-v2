@@ -1,11 +1,8 @@
 package controllers
 
-import java.nio.ByteBuffer
-import java.util.{Calendar, TimeZone, UUID}
-
-import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange}
+import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors._
-import actors.debug.{DebugFlightsActor, MessageQuery, MessageResponse}
+import actors.persistent.staffing.{GetState, UpdateShifts}
 import akka.actor._
 import akka.event.{Logging, LoggingAdapter}
 import akka.pattern._
@@ -16,34 +13,33 @@ import boopickle.Default._
 import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
 import controllers.application._
-import drt.auth._
 import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import drt.shared.SplitRatiosNs.SplitRatios
-import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
-import drt.shared.{AirportConfig, _}
+import drt.shared._
 import drt.users.KeyCloakClient
-import javax.inject.{Inject, Singleton}
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.mvc.{Action, _}
+import play.api.mvc._
 import play.api.{Configuration, Environment}
-import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
-import services.PcpArrival.{pcpFrom, _}
-import services.SplitsProvider.SplitProvider
+import services.PcpArrival._
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
 import services.staffing.StaffTimeSlots
-import services.workloadcalculator.PaxLoadCalculator
-import services.workloadcalculator.PaxLoadCalculator.PaxTypeAndQueueCount
-import test.TestDrtSystem
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, ManageUsers, Role, StaffEdit}
+import uk.gov.homeoffice.drt.auth._
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
-import scala.collection.SortedMap
+import java.nio.ByteBuffer
+import java.util.{Calendar, TimeZone, UUID}
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
@@ -60,25 +56,11 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 object PaxFlow {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def makeFlightPaxFlowCalculator(splitRatioForFlight: Arrival => Option[SplitRatios],
-                                  bestPax: Arrival => Int): Arrival => IndexedSeq[(MillisSinceEpoch, PaxTypeAndQueueCount)] = {
-    val provider = PaxLoadCalculator.flightPaxFlowProvider(splitRatioForFlight, bestPax)
-    arrival => {
-      val pax = bestPax(arrival)
-      val paxFlow = provider(arrival)
-      val summedPax = paxFlow.map(_._2.paxSum).sum
-      val firstPaxTime = paxFlow.headOption.map(pf => SDate(pf._1).toString)
-      log.debug(s"${Arrival.summaryString(arrival)} pax: $pax, summedFlowPax: $summedPax, deltaPax: ${pax - summedPax}, firstPaxTime: $firstPaxTime")
-      paxFlow
-    }
-  }
-
-  def splitRatioForFlight(splitsProviders: List[SplitProvider])
-                         (flight: Arrival): Option[SplitRatios] = SplitsProvider.splitsForFlight(splitsProviders)(flight)
-
-  def pcpArrivalTimeForFlight(timeToChoxMillis: MillisSinceEpoch, firstPaxOffMillis: MillisSinceEpoch)
+  def pcpArrivalTimeForFlight(timeToChoxMillis: MillisSinceEpoch, firstPaxOffMillis: MillisSinceEpoch, considerPredictions: Boolean)
                              (walkTimeProvider: FlightWalkTime)
-                             (flight: Arrival): MilliDate = pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider)(flight)
+                             (redListUpdates: RedListUpdates)
+                             (flight: Arrival): MilliDate =
+    pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider, considerPredictions)(flight, redListUpdates)
 }
 
 trait AirportConfiguration {
@@ -89,37 +71,34 @@ trait AirportConfProvider extends AirportConfiguration {
   val portCode: PortCode = PortCode(ConfigFactory.load().getString("portcode").toUpperCase)
   val config: Configuration
 
-  def useStaffingInput: Boolean = config.getOptional[String]("feature-flags.use-v2-staff-input").isDefined
-
   def contactEmail: Option[String] = config.getOptional[String]("contact-email")
 
   def oohPhone: Option[String] = config.getOptional[String]("ooh-phone")
 
-  def getPortConfFromEnvVar: AirportConfig = AirportConfigs.confByPort(portCode)
+  def useTimePredictions: Boolean = config.get[Boolean]("feature-flags.use-time-predictions")
+
+  def noLivePortFeed: Boolean = config.get[Boolean]("feature-flags.no-live-port-feed")
+
+  def aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)
+
+  def idealStaffAsDefault: Boolean = config.getOptional[Boolean]("feature-flags.use-ideal-staff-default").getOrElse(false)
+
+  private def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
 
   lazy val airportConfig: AirportConfig = {
     val configForPort = getPortConfFromEnvVar.copy(
       contactEmail = contactEmail,
-      outOfHoursContactPhone = oohPhone
+      outOfHoursContactPhone = oohPhone,
+      useTimePredictions = useTimePredictions,
+      noLivePortFeed = noLivePortFeed,
+      aclDisabled = aclDisabled,
+      idealStaffAsDefault = idealStaffAsDefault
     )
 
     configForPort.assertValid()
 
     configForPort
   }
-}
-
-trait ProdPassengerSplitProviders {
-  self: AirportConfiguration =>
-
-  val csvSplitsProvider: SplitsProvider.SplitProvider = SplitsProvider.csvProvider
-
-  def egatePercentageProvider(apiFlight: Arrival): Double = {
-    CSVPassengerSplitsProvider.egatePercentageFromSplit(csvSplitsProvider(apiFlight.flightCodeString, MilliDate(apiFlight.Scheduled)), 0.6)
-  }
-
-  def fastTrackPercentageProvider(apiFlight: Arrival): Option[FastTrackPercentages] =
-    Option(CSVPassengerSplitsProvider.fastTrackPercentagesFromSplit(csvSplitsProvider(apiFlight.flightCodeString, MilliDate(apiFlight.Scheduled)), 0d, 0d))
 }
 
 trait UserRoleProviderLike {
@@ -142,28 +121,14 @@ trait UserRoleProviderLike {
   }
 }
 
-object DrtActorSystem extends AirportConfProvider {
-  implicit val actorSystem: ActorSystem = ActorSystem("DRT")
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(actorSystem)
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  val config: Configuration = new Configuration(ConfigFactory.load)
-
-  val drtSystem: DrtSystemInterface =
-    if (isTestEnvironment) drtTestSystem
-    else drtProdSystem
-
-  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(config, getPortConfFromEnvVar)
-  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(config, getPortConfFromEnvVar)
-
-  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
-}
-
 @Singleton
 class Application @Inject()(implicit val config: Configuration, env: Environment)
   extends InjectedController
     with AirportConfProvider
     with WithAirportConfig
     with WithAirportInfo
+    with WithRedLists
+    with WithEgateBanks
     with WithAlerts
     with WithAuth
     with WithContactDetails
@@ -173,14 +138,16 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithImports
     with WithPortState
     with WithStaffing
-    with WithVersion
+    with WithApplicationInfo
     with WithSimulations
-    with WithMigrations
-    with ProdPassengerSplitProviders
-    with WithDebug {
+    with WithPassengerInfo
+    with WithWalkTimes
+    with WithDebug
+    with WithEmailFeedback
+    with WithForecastAccuracy {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
-  implicit val mat: ActorMaterializer = DrtActorSystem.mat
+  implicit val mat: Materializer = DrtActorSystem.mat
   implicit val ec: ExecutionContext = DrtActorSystem.ec
 
   implicit val timeout: Timeout = new Timeout(30 seconds)
@@ -192,6 +159,14 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   ctrl.run()
 
   val now: () => SDateLike = () => SDate.now()
+
+  lazy val govNotifyApiKey = config.get[String]("notifications.gov-notify-api-key")
+
+  lazy val negativeFeedbackTemplateId = config.get[String]("notifications.negative-feedback-templateId")
+
+  lazy val positiveFeedbackTemplateId = config.get[String]("notifications.positive-feedback-templateId")
+
+  lazy val govNotifyReference = config.get[String]("notifications.reference")
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
 
@@ -237,7 +212,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
       def forecastWeekSummary(startDay: MillisSinceEpoch,
                               terminal: Terminal): Future[Option[ForecastPeriodWithHeadlines]] = {
-        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, 7)
+        val numberOfDays = 7
+        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, numberOfDays)
 
         val portStateFuture = portStateActor.ask(
           GetStateForTerminalDateRange(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
@@ -248,7 +224,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
             case portState: PortState =>
               log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
               val fp = services.exports.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
-              val hf = services.exports.Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
+              val hf = services.exports.Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
               Option(ForecastPeriodWithHeadlines(fp, hf))
           }
           .recover {
@@ -295,7 +271,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         } else throw new Exception(permissionDeniedMessage)
       }
 
-      def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]] = {
+      def getKeyCloakUserGroups(userId: String): Future[Set[KeyCloakGroup]] = {
         if (getLoggedInUser().roles.contains(ManageUsers)) {
           keyCloakClient.getUserGroups(userId).map(_.toSet)
         } else throw new Exception(permissionDeniedMessage)
@@ -304,7 +280,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       case class KeyCloakGroups(groups: List[KeyCloakGroup])
 
 
-      def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit] =
+      def addUserToGroups(userId: String, groups: Set[String]): Future[Unit] =
         if (getLoggedInUser().roles.contains(ManageUsers)) {
           val futureGroupIds: Future[KeyCloakGroups] = keyCloakClient
             .getGroups
@@ -323,7 +299,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
           }
         } else throw new Exception(permissionDeniedMessage)
 
-      def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit] =
+      def removeUserFromGroups(userId: String, groups: Set[String]): Future[Unit] =
         keyCloakClient
           .getGroups
           .map(kcGroups => kcGroups.filter(g => groups.contains(g.name))
@@ -370,26 +346,42 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   def index: Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
-    Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
+    if (user.hasRole(airportConfig.role))
+      Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
+    else {
+      val baseDomain = config.get[String]("drt.domain")
+      val isSecure = config.get[Boolean]("drt.use-https")
+      val protocol = if (isSecure) "https://" else "http://"
+      val fromPort = "?fromPort=" + airportConfig.portCode.toString.toLowerCase
+      val redirectUrl = protocol + baseDomain + fromPort
+      log.info(s"User lacks ${airportConfig.role} role. Redirecting to $redirectUrl")
+      Redirect(Call("get", redirectUrl))
+    }
   }
 
-  def healthCheck: Action[AnyContent] = Action.async { _ =>
-    val requestStart = SDate.now()
-    val startMillis = SDate.now().getLocalLastMidnight.millisSinceEpoch
-    val endMillis = SDate.now().getLocalNextMidnight.millisSinceEpoch
-    val portState = ctrl.portStateActor.ask(GetStateForDateRange(startMillis, endMillis))(10 seconds).mapTo[PortState]
+  lazy val healthChecker: HealthChecker = if (!config.get[Boolean]("health-check.disable-feed-monitoring")) {
+    val healthyResponseTimeSeconds = config.get[Int]("health-check.max-response-time-seconds")
+    val defaultLastCheckThreshold = config.get[Int]("health-check.max-last-feed-check-minutes").minutes
+    val feedsHealthCheckGracePeriod = config.get[Int]("health-check.feeds-grace-period-minutes").minutes
+    val feedLastCheckThresholds: Map[FeedSource, FiniteDuration] = Map(
+      AclFeedSource -> 26.hours
+    )
 
-    portState
-      .map { _ =>
-        val requestEnd = SDate.now().millisSinceEpoch
-        log.info(s"Health check request started at ${requestStart.toISOString()} and lasted ${(requestStart.millisSinceEpoch - requestEnd) / 1000} seconds ")
-        NoContent
-      }
-      .recoverWith {
-        case t =>
-          log.error(s"Health check failed to get live response", t)
-          Future(InternalServerError("Failed to retrieve port state"))
-      }
+    val feedsToMonitor = ctrl.feedActorsForPort
+      .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
+      .values.toList
+
+    HealthChecker(Seq(
+      FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now, feedsHealthCheckGracePeriod),
+      ActorResponseTimeHealthCheck(ctrl.portStateActor, healthyResponseTimeSeconds * MilliTimes.oneSecondMillis))
+    )
+  } else HealthChecker(Seq())
+
+  def healthCheck: Action[AnyContent] = Action.async { _ =>
+    healthChecker.checksPassing.map {
+      case true => Ok("health check ok")
+      case _ => InternalServerError("health check failed")
+    }
   }
 
   def apiLogin(): Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>

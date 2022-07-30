@@ -1,5 +1,7 @@
 package actors
 
+import actors.persistent.staffing.GetState
+import actors.persistent.{AlertsActor, DeleteAlerts}
 import akka.actor.{ActorRef, Props}
 import akka.pattern._
 import akka.testkit.TestKit
@@ -10,7 +12,7 @@ import services.crunch.CrunchTestLike
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.language.reflectiveCalls
+
 
 class AlertsActorSpec extends CrunchTestLike {
   sequential

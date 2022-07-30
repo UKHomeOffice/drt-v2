@@ -1,10 +1,18 @@
 package services
 
-import drt.shared.{LocalDate, UtcDate}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
+import services.graphstages.Crunch.europeLondonTimeZone
+import uk.gov.homeoffice.drt.time.{LocalDate, UtcDate}
+
+import scala.concurrent.duration.DurationInt
 
 class ServerSDateSpec extends Specification {
+  "When removing a 15 minute finite duration from 2021-10-15 10:00" >> {
+    "I should get 15 minutes earlier (2021-10-15 09:45)" >> {
+      SDate("2021-10-15T10:00") - 15.minutes === SDate("2021-10-15T09:45")
+    }
+  }
   "When calling getDayOfWeek" >> {
     "On a Monday we should get back 1" >> {
       val d = SDate("2017-10-23T18:00:00")
@@ -154,13 +162,13 @@ class ServerSDateSpec extends Specification {
     }
   }
 
-  "When asking for getLocalLastMidnight" >> {
+  "When asking for getLocalLastMidnight with a non-UTC timezone" >> {
 
-    val date = SDate("2020-04-02T23:00:00Z")
-    val expected = SDate("2020-04-02T23:00:00Z")
+    val date = SDate("2020-04-02", europeLondonTimeZone)
+    val expected = LocalDate(2020, 4, 2)
 
-    s"Given ${date.toISOString()} then I should get ${expected.toISOString()}" >> {
-      val result = date.getLocalLastMidnight
+    s"Given ${date.toISOString()} then I should get $expected" >> {
+      val result = date.getLocalLastMidnight.toLocalDate
       expected === result
     }
   }
@@ -189,21 +197,21 @@ class ServerSDateSpec extends Specification {
       val date = SDate("2020-06-25T00:00", Crunch.europeLondonTimeZone)
       "I should get (2020, 6, 25)" >> {
         val result = SDate.yearMonthDayForZone(date, Crunch.europeLondonTimeZone)
-        result === (2020, 6, 25)
+        result === ((2020, 6, 25))
       }
     }
     "Given a UTC date/time of 2020-02-25T00:00" >> {
       val date = SDate("2020-02-25T00:00", Crunch.europeLondonTimeZone)
       "I should get (2020, 2, 25)" >> {
         val result = SDate.yearMonthDayForZone(date, Crunch.europeLondonTimeZone)
-        result === (2020, 2, 25)
+        result === ((2020, 2, 25))
       }
     }
     "Given a UTC date/time of 2020-06-24T23:00" >> {
       val date = SDate("2020-06-24T23:00", Crunch.utcTimeZone)
       "I should get (2020, 6, 25)" >> {
         val result = SDate.yearMonthDayForZone(date, Crunch.europeLondonTimeZone)
-        result === (2020, 6, 25)
+        result === ((2020, 6, 25))
       }
     }
   }

@@ -1,10 +1,10 @@
 package test.feeds.test
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, LiveFeedSource, PortCode, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Terminals}
 
 import scala.collection.immutable.Seq
 import scala.util.Try
@@ -41,27 +41,28 @@ object CSVFixtures {
       val fields = csvRow.split(",")
       import ArrivalsCSVFixture.fieldMap._
       Try(Arrival(
-        None,
-        ArrivalStatus("Unk"),
-        timeToSDate(fields(Estimated)),
-        timeToSDate(fields(Actual)),
-        timeToSDate(fields(EstimatedChox)),
-        timeToSDate(fields(ActualChox)),
-        None,
-        Option(fields(Stand)),
-        Option(fields(MaxPax).toInt),
-        Option(fields(ActPax).toInt),
-        Option(fields(TranPax).toInt),
-        None,
-        None,
-        PortCode("TEST"),
-        Terminals.Terminal(fields(Terminal)),
-        fields(rawICAO),
-        fields(rawIATA),
-        PortCode(fields(Origin)),
-        timeToSDate(fields(Scheduled)).getOrElse(SDate.now().millisSinceEpoch),
-        None,
-        Set(LiveFeedSource)
+        Operator = None,
+        Status = ArrivalStatus("Unk"),
+        Estimated = timeToSDate(fields(Estimated)),
+        PredictedTouchdown = None,
+        Actual = timeToSDate(fields(Actual)),
+        EstimatedChox = timeToSDate(fields(EstimatedChox)),
+        ActualChox = timeToSDate(fields(ActualChox)),
+        Gate = None,
+        Stand = Option(fields(Stand)),
+        MaxPax = Option(fields(MaxPax).toInt),
+        ActPax = Option(fields(ActPax).toInt),
+        TranPax = Option(fields(TranPax).toInt),
+        RunwayID = None,
+        BaggageReclaimId = None,
+        AirportID = PortCode("TEST"),
+        Terminal = Terminals.Terminal(fields(Terminal)),
+        rawICAO = fields(rawICAO),
+        rawIATA = fields(rawIATA),
+        Origin = PortCode(fields(Origin)),
+        Scheduled = timeToSDate(fields(Scheduled)).getOrElse(SDate.now().millisSinceEpoch),
+        PcpTime = None,
+        FeedSources = Set(LiveFeedSource)
       ))
     })
 

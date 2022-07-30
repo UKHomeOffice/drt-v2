@@ -7,11 +7,13 @@ import akka.actor.PoisonPill
 import akka.persistence.query.PersistenceQuery
 import akka.persistence.{PersistentActor, RecoveryCompleted}
 import akka.stream.scaladsl.{Keep, Sink}
-import akka.stream.{ActorMaterializer, KillSwitches, UniqueKillSwitch}
+import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
-import drt.shared.{MilliTimes, SDateLike, WithTimeAccessor}
 import org.slf4j.Logger
 import scalapb.GeneratedMessage
+import services.StreamSupervision
+import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 object StreamingUpdatesLike {
   case object StopUpdates
@@ -22,7 +24,7 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
   val log: Logger
   val now: () => SDateLike
 
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val mat: Materializer = Materializer.createMaterializer(context)
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
   var updates: Map[B, MinuteLike[A, B]] = Map[B, MinuteLike[A, B]]()
@@ -33,6 +35,7 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
       .eventsByPersistenceId(persistenceId, nr, Long.MaxValue)
       .viaMat(KillSwitches.single)(Keep.both)
       .toMat(Sink.actorRefWithAck(self, StreamInitialized, Ack, StreamCompleted))(Keep.left)
+      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .run()
     maybeKillSwitch = Option(killSwitch)
   }
@@ -81,7 +84,7 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
     updates = updates.filter(_._2.lastUpdated.getOrElse(0L) >= thresholdExpiryMillis)
   }
 
-  def updatesSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = updates.values.filter(_.lastUpdated.getOrElse(0L) >= sinceMillis) match {
+  def updatesSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = updates.values.filter(_.lastUpdated.getOrElse(0L) > sinceMillis) match {
     case someMinutes if someMinutes.nonEmpty => MinutesContainer(someMinutes)
     case _ => MinutesContainer.empty[A, B]
   }

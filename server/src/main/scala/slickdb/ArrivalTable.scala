@@ -1,14 +1,12 @@
 package slickdb
 
-import java.sql.Timestamp
-
-import drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.PortCode
-import drt.shared.Terminals.Terminal
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.arrivals.{Arrival => DrtArrival}
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
+import java.sql.Timestamp
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -20,7 +18,7 @@ case class AggregatedArrivals(arrivals: Seq[AggregatedArrival])
 case class AggregatedArrival(code: String, scheduled: MillisSinceEpoch, origin: String, destination: String, terminalName: String)
 
 object AggregatedArrival {
-  def apply(arrival: Arrival, destination: String): AggregatedArrival = AggregatedArrival(
+  def apply(arrival: DrtArrival, destination: String): AggregatedArrival = AggregatedArrival(
     arrival.flightCodeString,
     arrival.Scheduled,
     arrival.Origin.toString,
@@ -35,11 +33,10 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
   import tables.profile.api._
   import tables.{Arrival, ArrivalRow}
 
-  val db: tables.profile.backend.DatabaseDef = Database.forConfig("aggregated-db")
   val arrivalsTableQuery = TableQuery[Arrival]
 
   def selectAll: AggregatedArrivals = {
-    val eventualArrivals = db.run(arrivalsTableQuery.result).map(arrivalRows =>
+    val eventualArrivals = tables.run(arrivalsTableQuery.result).map(arrivalRows =>
       arrivalRows.map(ar =>
         AggregatedArrival(ar.code, ar.scheduled.getTime, ar.origin, ar.destination, ar.terminal)))
     val arrivals = Await.result(eventualArrivals, 5 seconds)
@@ -49,15 +46,15 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
   def removeArrival(number: Int, terminal: Terminal, scheduledTs: Timestamp): Future[Int] = {
     val idx = matchIndex(number, terminal, scheduledTs)
     log.info(s"removing: $number / ${terminal.toString} / $scheduledTs")
-    db.run(arrivalsTableQuery.filter(idx).delete) recover {
+    tables.run(arrivalsTableQuery.filter(idx).delete) recover {
       case throwable =>
         log.error(s"delete failed", throwable)
         0
     }
   }
 
-  def insertOrUpdateArrival(f: shared.api.Arrival): Future[Int] = {
-    db.run(arrivalsTableQuery.insertOrUpdate(arrivalRow(f))) recover {
+  def insertOrUpdateArrival(f: DrtArrival): Future[Int] = {
+    tables.run(arrivalsTableQuery.insertOrUpdate(arrivalRow(f))) recover {
       case throwable =>
         log.error(s"insertOrUpdate failed", throwable)
         0
@@ -70,7 +67,7 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
       arrival.scheduled === scheduledTs &&
       arrival.destination === portCode.toString
 
-  def arrivalRow(f: shared.api.Arrival): tables.ArrivalRow = {
+  def arrivalRow(f: uk.gov.homeoffice.drt.arrivals.Arrival): tables.ArrivalRow = {
     val sch = new Timestamp(f.Scheduled)
     val est = f.Estimated.map(new Timestamp(_))
     val act = f.Actual.map(new Timestamp(_))
@@ -78,7 +75,8 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
     val actChox = f.ActualChox.map(new Timestamp(_))
     val pcp = new Timestamp(f.PcpTime.getOrElse(f.Scheduled))
     val pcpPax = f.ActPax.map(ap => ap - f.TranPax.getOrElse(0))
+    val scheduledDeparture = f.ScheduledDeparture.map(new Timestamp(_))
 
-    ArrivalRow(f.flightCodeString, f.VoyageNumber.numeric, portCode.iata, f.Origin.toString, f.Terminal.toString, f.Gate, f.Stand, f.Status.description, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax)
+    ArrivalRow(f.flightCodeString, f.VoyageNumber.numeric, portCode.iata, f.Origin.toString, f.Terminal.toString, f.Gate, f.Stand, f.Status.description, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax, scheduledDeparture)
   }
 }

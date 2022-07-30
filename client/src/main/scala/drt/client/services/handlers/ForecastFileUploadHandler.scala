@@ -11,7 +11,6 @@ import org.scalajs.dom.ext.AjaxException
 import upickle.default._
 
 import scala.concurrent.{Future, Promise}
-import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 case class ResponseMessage(message: String)

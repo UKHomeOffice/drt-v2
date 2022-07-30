@@ -5,9 +5,9 @@ import actors.daily.RequestAndTerminateActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Queues.Queue
-import drt.shared.SDateLike
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import services.SDate
 import test.TestActors.{ResetData, TestQueueMinutesActor, TestStaffMinutesActor, TestTerminalDayQueuesActor, TestTerminalDayStaffActor}
 
@@ -18,8 +18,6 @@ case class TestMinuteLookups(system: ActorSystem,
                              expireAfterMillis: Int,
                              queuesByTerminal: Map[Terminal, Seq[Queue]])
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
-  override val replayMaxCrunchStateMessages = 1000
-
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
 
   val resetQueuesData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {

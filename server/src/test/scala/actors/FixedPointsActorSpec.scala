@@ -1,12 +1,13 @@
 package actors
 
-import actors.pointInTime.FixedPointsReadActor
+import actors.persistent.staffing.{FixedPointsActor, FixedPointsReadActor, GetState, SetFixedPoints, SetFixedPointsAck}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.testkit.ImplicitSender
-import drt.shared.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared._
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration._
 
@@ -17,20 +18,22 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
 
   import StaffAssignmentGenerator._
 
+  val forecastLengthDays = 2
+
   "FixedPoints actor" should {
     "remember a fixedPoint staff assignmesnt added before a shutdown" in {
-      val startTime = MilliDate(SDate(s"2017-01-01T07:00").millisSinceEpoch)
-      val endTime = MilliDate(SDate(s"2017-01-01T15:00").millisSinceEpoch)
+      val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T15:00").millisSinceEpoch
       val fixedPoints = FixedPointAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
-      val actor = system.actorOf(Props(classOf[FixedPointsActor], now), "fixedPointsActor1")
+      val actor = system.actorOf(Props(new FixedPointsActor(now, 1440, forecastLengthDays)), "fixedPointsActor1")
 
       actor ! SetFixedPoints(fixedPoints.assignments)
       expectMsg(SetFixedPointsAck(fixedPoints.assignments))
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(classOf[FixedPointsActor], now), "fixedPointsActor2")
+      val newActor = system.actorOf(Props(new FixedPointsActor(now, 1440, forecastLengthDays)), "fixedPointsActor2")
 
       newActor ! GetState
 
@@ -46,7 +49,7 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
 
     val now: () => SDateLike = () => SDate("2017-01-01T23:59")
 
-    val actor = system.actorOf(Props(classOf[FixedPointsActor], now), "fixedPointsActor1")
+    val actor = system.actorOf(Props(new FixedPointsActor(now, 1440, forecastLengthDays)), "fixedPointsActor1")
 
     actor ! SetFixedPoints(Seq(fixedPoint1, fixedPoint2))
     expectMsg(SetFixedPointsAck(Seq(fixedPoint1, fixedPoint2)))
@@ -56,7 +59,7 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
     expectMsg(SetFixedPointsAck(updatedFixedPoints))
     actor ! PoisonPill
 
-    val newActor = system.actorOf(Props(classOf[FixedPointsActor], now), "fixedPointsActor2")
+    val newActor = system.actorOf(Props(new FixedPointsActor(now, 1440, forecastLengthDays)), "fixedPointsActor2")
 
     newActor ! GetState
     val expected = FixedPointAssignments(updatedFixedPoints)
@@ -74,7 +77,7 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
 
     val now: () => SDateLike = () => SDate("2017-01-01T23:59")
 
-    val actor = system.actorOf(Props(classOf[FixedPointsActor], now), "fixedPointsActor1")
+    val actor = system.actorOf(Props(new FixedPointsActor(now, 1440, forecastLengthDays)), "fixedPointsActor1")
 
     actor ! SetFixedPoints(Seq(fixedPoint1, fixedPoint2, fixedPoint3, fixedPoint4))
     expectMsg(SetFixedPointsAck(Seq(fixedPoint1, fixedPoint2, fixedPoint3, fixedPoint4)))
@@ -85,12 +88,12 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
     expectMsg(SetFixedPointsAck(Seq(updatedFixedPoint1, updatedFixedPoint3)))
     actor ! PoisonPill
 
-    val newActor = system.actorOf(Props(classOf[FixedPointsActor], now), "fixedPointsActor2")
+    val newActor = system.actorOf(Props(new FixedPointsActor(now, 1440, forecastLengthDays)), "fixedPointsActor2")
 
     newActor ! GetState
     val expected = Set(updatedFixedPoint1, updatedFixedPoint3)
 
-    val result = expectMsgPF(1 second) {
+    val result = expectMsgPF(1.second) {
       case FixedPointAssignments(sa) => sa.toSet
     }
 
@@ -126,15 +129,15 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
     actorPit2006 ! GetState
     val expected = Set(fixedPoint2)
 
-    val result = expectMsgPF(1 second) {
+    val result = expectMsgPF(1.second) {
       case FixedPointAssignments(sa) => sa.toSet
     }
 
     result === expected
   }
 
-  def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[FixedPointsActor], now))
-  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(classOf[FixedPointsReadActor], now(), now))
+  def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new FixedPointsActor(now, 1440, forecastLengthDays)))
+  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new FixedPointsReadActor(now(), now)))
 
   def nowAs(date: String): () => SDateLike = () => SDate(date)
 }

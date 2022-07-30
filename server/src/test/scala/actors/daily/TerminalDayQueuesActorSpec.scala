@@ -1,14 +1,16 @@
 package actors.daily
 
-import actors.GetState
+import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.staffing.GetState
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
-import drt.shared.Queues.{EeaDesk, Queue}
-import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{SDateLike, SimulationMinute, TQM}
+import drt.shared.TQM
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -26,27 +28,11 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
 
     "When I send it a DeskRecMinute" >> {
       val drm = DeskRecMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4)
-      val eventualContainer = queuesActor.ask(MinutesContainer(Iterable(drm))).mapTo[MinutesContainer[CrunchMinute, TQM]]
+      val eventualContainer = queuesActor.ask(MinutesContainer(Iterable(drm))).mapTo[UpdatedMillis]
 
       "I should get back the merged CrunchMinute" >> {
-        val result = Await.result(eventualContainer, 1 second)
-        result === MinutesContainer(Iterable(drm.toUpdatedMinute(date.millisSinceEpoch)))
-      }
-    }
-
-    "When I send it a DeskRecMinute followed by a SimulationMinute" >> {
-      val drm = DeskRecMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4)
-      val sm = SimulationMinute(terminal, queue, date.millisSinceEpoch, 10, 11)
-
-      val eventualContainer = queuesActor
-        .ask(MinutesContainer(Iterable(drm)))
-        .flatMap { _ => queuesActor.ask(MinutesContainer(Iterable(sm))) }
-        .mapTo[MinutesContainer[CrunchMinute, TQM]]
-
-      "I should get back the merged CrunchMinute" >> {
-        val result = Await.result(eventualContainer, 1 second)
-        val expectedMinute = drm.toUpdatedMinute(date.millisSinceEpoch).copy(deployedDesks = Option(10), deployedWait = Option(11))
-        result === MinutesContainer(Iterable(expectedMinute))
+        val result = Await.result(eventualContainer, 1.second)
+        result === UpdatedMillis(Seq(drm.minute))
       }
     }
   }
@@ -56,7 +42,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
 
     "When I ask for the state for that day" >> {
       "I should get back an empty map of crunch minutes" >> {
-        val result = Await.result(terminalDayActor.ask(GetState).mapTo[Option[Map[TQM, CrunchMinute]]], 1 second)
+        val result = Await.result(terminalDayActor.ask(GetState).mapTo[Option[Map[TQM, CrunchMinute]]], 1.second)
 
         result === None
       }
@@ -68,7 +54,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinutesAndGetState(container, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
+      val result = Await.result(eventual, 1.second)
 
       result === Option(MinutesContainer(minutes.map(_.copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }
@@ -79,7 +65,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinutesAndGetState(crunchMinutes, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
+      val result = Await.result(eventual, 1.second)
 
       result === None
     }
@@ -92,7 +78,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinutesAndGetState(crunchMinutes, terminalDayActor)
-      val result = Await.result(eventual, 1 second)
+      val result = Await.result(eventual, 1.second)
 
       result === Option(MinutesContainer(Set(inside.copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }
@@ -110,6 +96,6 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
   }
 
   private def actorForTerminalAndDate(terminal: Terminal, date: SDateLike): ActorRef = {
-    system.actorOf(TerminalDayQueuesActor.props(terminal, date, () => date))
+    system.actorOf(TerminalDayQueuesActor.props(terminal, date.toUtcDate, () => date))
   }
 }

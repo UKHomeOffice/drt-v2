@@ -1,10 +1,11 @@
 package actors
 
-import drt.shared.Terminals.T1
-import drt.shared.api.Arrival
-import drt.shared.{PortCode, UniqueArrival}
+import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import scala.collection.immutable.SortedMap
 

@@ -1,24 +1,28 @@
 package drt.client.services
 
-import java.util.UUID
-
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import drt.auth.LoggedInUser
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
+import drt.shared.api.{ForecastAccuracy, PassengerInfoSummary, WalkTimes}
+import uk.gov.homeoffice.drt.arrivals.UniqueArrival
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.collection.immutable.Map
+import scala.collection.immutable.{HashSet, Map}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
 sealed trait ViewMode {
-  val uUID: UUID = UUID.randomUUID()
+  val uUID: String = UUID.randomUUID().toString()
 
   def isDifferentTo(viewMode: ViewMode): Boolean = viewMode.uUID != uUID
 
@@ -67,16 +71,52 @@ sealed trait ExportType {
   def toUrlString: String
 }
 
-object ExportDesks extends ExportType {
-  override def toString = "Desks"
+object ExportDeskRecs extends ExportType {
+  override def toString = "Recommendations"
 
-  override def toUrlString: String = toString.toLowerCase
+  override def toUrlString: String = "desk-recs"
+}
+
+object ExportDeployments extends ExportType {
+  override def toString = "Deployments"
+
+  override def toUrlString: String = "desk-deps"
 }
 
 object ExportArrivals extends ExportType {
   override def toString = "Arrivals"
 
   override def toUrlString: String = toString.toLowerCase
+}
+
+object ExportLiveArrivalsFeed extends ExportType {
+  override def toString = "Live arrivals feed"
+
+  override def toUrlString: String = "arrivals-feed"
+}
+
+case class ExportArrivalsWithRedListDiversions(label: String) extends ExportType {
+  override def toString: String = label
+
+  override def toUrlString: String = "arrivals-with-red-list-diversions"
+}
+
+case class ExportArrivalsWithoutRedListDiversions(label: String) extends ExportType {
+  override def toString: String = label
+
+  override def toUrlString: String = "arrivals"
+}
+
+object ExportArrivalsSingleTerminal extends ExportType {
+  override def toString = "Single terminal"
+
+  override def toUrlString: String = "arrivals"
+}
+
+object ExportArrivalsCombinedTerminals extends ExportType {
+  override def toString = "Combined terminals"
+
+  override def toUrlString: String = "arrivals-with-red-list-diversions"
 }
 
 object ExportStaffMovements extends ExportType {
@@ -114,9 +154,16 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      maybeStaffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None,
                      displayAlertDialog: Pot[Boolean] = Empty,
                      oohStatus: Pot[OutOfHoursStatus] = Empty,
-                     featureFlags: Pot[Map[String, Boolean]] = Empty,
+                     featureFlags: Pot[FeatureFlags] = Empty,
                      fileUploadState: Pot[FileUploadState] = Empty,
-                     simulationResult: Pot[SimulationResult] = Empty
+                     simulationResult: Pot[SimulationResult] = Empty,
+                     passengerInfoSummariesByArrival: Pot[Map[ArrivalKey, PassengerInfoSummary]] = Ready(Map()),
+                     snackbarMessage: Pot[String] = Empty,
+                     redListPorts: Pot[HashSet[PortCode]] = Empty,
+                     redListUpdates: Pot[RedListUpdates] = Empty,
+                     egateBanksUpdates: Pot[PortEgateBanksUpdates] = Empty,
+                     gateStandWalkTime: Pot[WalkTimes] = Empty,
+                     passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
                     )
 
 object PollDelay {
@@ -125,15 +172,15 @@ object PollDelay {
   val minuteUpdateDelay: FiniteDuration = 10 seconds
   val oohSupportUpdateDelay: FiniteDuration = 1 minute
   val checkFeatureFlagsDelay: FiniteDuration = 10 minutes
+  val passengerInfoDelay: FiniteDuration = 1 minutes
+  val passengerInfoDelayWaitingForFlights: FiniteDuration = 1 second
+
 }
 
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
   val blockWidth = 15
 
-  def timeProvider(): MillisSinceEpoch = SDate.now().millisSinceEpoch
-
-  override protected def initialModel = RootModel()
-
+  override protected def initialModel: RootModel = RootModel()
 
   def currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
 
@@ -143,10 +190,11 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
 
   override val actionHandler: HandlerFunction = {
     val composedHandlers: HandlerFunction = composeHandlers(
-      new InitialPortStateHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
+      new InitialPortStateHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis, m.redListPorts))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2, redListPorts = v._3))),
       new PortStateUpdatesHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
-      new AirportCountryHandler(() => timeProvider, zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
+      new AirportCountryHandler(zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
+      new PassengerInfoSummaryHandler(zoom(_.portStatePot), zoomRW(_.passengerInfoSummariesByArrival)((m, v) => m.copy(passengerInfoSummariesByArrival = v))),
       new ArrivalSourcesHandler(zoomRW(_.arrivalSources)((m, v) => m.copy(arrivalSources = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),
@@ -157,7 +205,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new ViewModeHandler(zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3)), zoom(_.portStatePot)),
+      new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new ShowAlertModalDialogHandler(zoomRW(_.displayAlertDialog)((m, v) => m.copy(displayAlertDialog = v))),
@@ -170,10 +218,18 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new UsersHandler(zoomRW(_.keyCloakUsers)((m, v) => m.copy(keyCloakUsers = v))),
       new EditUserHandler(zoomRW(_.selectedUserGroups)((m, v) => m.copy(selectedUserGroups = v))),
       new MinuteTickerHandler(zoomRW(_.minuteTicker)((m, v) => m.copy(minuteTicker = v))),
-      new FeedsStatusHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v))),
+      new FeedsHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v))),
       new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v))),
+      new RedListUpdatesHandler(zoomRW(_.redListUpdates)((m, v) => m.copy(redListUpdates = v))),
+      new EgateBanksUpdatesHandler(zoomRW(_.egateBanksUpdates)((m, v) => m.copy(egateBanksUpdates = v))),
       new StaffAdjustmentDialogueStateHandler(zoomRW(_.maybeStaffDeploymentAdjustmentPopoverState)((m, v) => m.copy(maybeStaffDeploymentAdjustmentPopoverState = v))),
-      new ForecastFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v)))
+      new ForecastFileUploadHandler(zoomRW(_.fileUploadState)((m, v) => m.copy(fileUploadState = v))),
+      new SimulationHandler(zoomRW(_.simulationResult)((m, v) => m.copy(simulationResult = v))),
+      new SnackbarHandler(zoomRW(_.snackbarMessage)((m, v) => m.copy(snackbarMessage = v))),
+      new RedListPortsHandler(zoomRW(_.redListPorts)((m, v) => m.copy(redListPorts = v))),
+      new GateStandWalkTimePortsHandler(zoomRW(_.gateStandWalkTime)((m, v) => m.copy(gateStandWalkTime = v))),
+      new CrunchHandler(zoomRW(identity)((m, _) => m)),
+      new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
     )
 
     composedHandlers

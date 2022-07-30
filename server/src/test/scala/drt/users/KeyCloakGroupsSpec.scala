@@ -11,7 +11,7 @@ import scala.concurrent.{Await, Future}
 
 
 class KeyCloakGroupsSpec extends CrunchTestLike {
-  val staticUuid: UUID = UUID.randomUUID()
+  val staticUuid: String = UUID.randomUUID().toString
 
   def usernameToUser(username: String): KeyCloakUser = KeyCloakUser(
     staticUuid,

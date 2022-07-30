@@ -4,16 +4,17 @@ import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForTerminalDateR
 import akka.pattern._
 import akka.util.{ByteString, Timeout}
 import controllers.Application
-import controllers.application.exports.{WithDesksExport, WithFlightsExport}
-import drt.auth.{ForecastView, ManageUsers}
+import controllers.application.exports.{CsvFileStreaming, WithDesksExport, WithFlightsExport}
 import drt.shared.CrunchApi._
-import drt.shared.Terminals.Terminal
-import drt.shared.{PortState, SDateLike}
+import drt.shared.PortState
 import drt.users.KeyCloakGroups
 import play.api.http.HttpEntity
 import play.api.mvc._
-import services.exports.{Exports, Forecast}
+import services.exports.Forecast
 import services.{CSVData, SDate}
+import uk.gov.homeoffice.drt.auth.Roles.{ForecastView, ManageUsers}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -40,11 +41,13 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
     }
   }
 
+  private val sixMonthsDays = 180
+
   def exportForecastWeekToCSV(startDay: String, terminalName: String): Action[AnyContent] = authByRole(ForecastView) {
     val terminal = Terminal(terminalName)
     Action.async {
       timedEndPoint(s"Export planning", Option(s"$terminal")) {
-        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, 180)
+        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, sixMonthsDays)
 
         val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
 
@@ -55,7 +58,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
           .map { portState =>
             val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
             val csvData = CSVData.forecastPeriodToCsv(fp)
-            Exports.csvFileResult(fileName, csvData)
+            CsvFileStreaming.csvFileResult(fileName, csvData)
           }
           .recover {
             case t =>
@@ -72,7 +75,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
     Action.async {
       timedEndPoint(s"Export planning headlines", Option(s"$terminal")) {
         val startOfWeekMidnight = SDate(startDay.toLong).getLocalLastMidnight
-        val endOfForecast = startOfWeekMidnight.addDays(180)
+        val endOfForecast = startOfWeekMidnight.addDays(sixMonthsDays)
         val now = SDate.now()
 
         val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) {
@@ -85,9 +88,9 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
 
         portStateFuture
           .map { portState =>
-            val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, endOfForecast, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
-            val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.exportQueueOrder)
-            Exports.csvFileResult(fileName, csvData)
+            val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, sixMonthsDays, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
+            val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.forecastExportQueueOrder)
+            CsvFileStreaming.csvFileResult(fileName, csvData)
           }
           .recover {
             case t =>
@@ -124,10 +127,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
   def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
     val startOfWeekMidnight = SDate(startDay).getLocalLastMidnight
     val endOfForecast = startOfWeekMidnight.addDays(numberOfDays)
-    val now = SDate.now()
 
-    val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) now.getLocalNextMidnight else startOfWeekMidnight
-
-    (startOfForecast, endOfForecast)
+    (startOfWeekMidnight, endOfForecast)
   }
 }

@@ -1,59 +1,26 @@
 package drt.client.components
 
-import diode.data.{Pot, Ready}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import drt.shared.api.Arrival
+import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
-import org.scalajs.dom.html.{Div, Span}
-
-import scala.scalajs.js
+import org.scalajs.dom.html.Div
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object FlightTableComponents {
 
-  def airportCodeComponent(portMapper: Map[String, Pot[AirportInfo]])(port: String): VdomElement = {
-    val tt = airportCodeTooltipText(portMapper) _
-    <.span(^.title := tt(port), port)
+  def maybeLocalTimeWithPopup(dt: Option[MillisSinceEpoch], maybeToolTip: Option[String] = None): TagMod = {
+    dt.map(millis => localTimePopup(millis, maybeToolTip)).getOrElse(<.span())
   }
 
-  def airportCodeComponentLensed(portInfoPot: Pot[AirportInfo])(port: String): VdomElement = {
-    val tt: Option[Pot[String]] = Option(potAirportInfoToTooltip(portInfoPot))
-    <.span(^.title := airportInfoDefault(tt), port)
-  }
-
-  def airportCodeTooltipText(portMapper: Map[String, Pot[AirportInfo]])(port: String): String = {
-    val portInfoOptPot = portMapper.get(port)
-
-    val res: Option[Pot[String]] = portInfoOptPot.map {
-      potAirportInfoToTooltip
+  def localTimePopup(dt: MillisSinceEpoch, maybeToolTip: Option[String]): VdomElement = {
+    maybeToolTip match {
+      case None => sdateLocalTimePopup(SDate(dt))
+      case Some(tooltip) => <.span(^.display := "flex", ^.flexWrap := "nowrap", sdateLocalTimePopup(SDate(dt)), <.span(^.marginLeft := "5px", Tippy.info(tooltip)))
     }
-    airportInfoDefault(res)
-  }
-
-  private def airportInfoDefault(res: Option[Pot[String]]): String = {
-    res match {
-      case Some(Ready(v)) => v
-      case _ => "waiting for info..."
-    }
-  }
-
-  private def potAirportInfoToTooltip(info: Pot[AirportInfo]): Pot[String] = {
-    info.map(i => s"${i.airportName}, ${i.city}, ${i.country}")
-  }
-
-  def originComponent(originMapper: String => String): js.Function = (props: js.Dynamic) => {
-    val mod: TagMod = ^.title := originMapper(props.data.toString)
-    <.span(props.data.toString(), mod).render
-  }
-
-  def localDateTimeWithPopup(dt: Option[MillisSinceEpoch]): TagMod = {
-    dt.map(millis => localTimePopup(millis)).getOrElse(<.span())
-  }
-
-  def localTimePopup(dt: MillisSinceEpoch): VdomElement = {
-    sdateLocalTimePopup(SDate(dt)).render
   }
 
   def millisToDisembark(pax: Int): Long = {
@@ -62,11 +29,11 @@ object FlightTableComponents {
     (minutesToDisembark * oneMinuteInMillis).toLong
   }
 
-  def pcpTimeRange(arrival: Arrival, bestPax: Arrival => Int): TagOf[Div] =
-    arrival.PcpTime.map { pcpTime: MillisSinceEpoch =>
+  def pcpTimeRange(fws: ApiFlightWithSplits): TagOf[Div] =
+    fws.apiFlight.PcpTime.map { pcpTime: MillisSinceEpoch =>
       val sdateFrom = SDate(MilliDate(pcpTime))
-      val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(bestPax(arrival))))
-      <.div(
+      val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(fws.pcpPaxEstimate.pax.getOrElse(0))))
+      <.div(^.display := "flex", ^.flexWrap := "nowrap",
         sdateLocalTimePopup(sdateFrom),
         " \u2192 ",
         sdateLocalTimePopup(sdateTo)
@@ -75,10 +42,9 @@ object FlightTableComponents {
       <.div()
     }
 
-  def sdateLocalTimePopup(sdate: SDateLike): TagOf[Span] = {
+  def sdateLocalTimePopup(sdate: SDateLike): Unmounted[Tippy.Props, Unit, Unit] = {
     val hhmm = f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d"
-    val titlePopup: TagMod = ^.title := sdate.toLocalDateTimeString()
-    <.span(hhmm, titlePopup)
+    Tippy.describe(<.span(sdate.toLocalDateTimeString(), ^.display := "inline"), hhmm)
   }
 
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))

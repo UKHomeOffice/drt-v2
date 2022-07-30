@@ -1,14 +1,17 @@
 package drt.client.components
 
+import diode.UseValueEq
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi._
-import drt.shared.Queues.{InvalidQueue, Queue}
-import drt.shared.Terminals.Terminal
 import drt.shared._
-import drt.shared.api.Arrival
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.ports.Queues.{InvalidQueue, Queue}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 
 object DashboardTerminalSummary {
@@ -103,7 +106,7 @@ object DashboardTerminalSummary {
     }
   }
 
-  def aggSplits(pcpPaxFn: Arrival => Int): Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits(pcpPaxFn)
+  def aggSplits: Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits
 
   def paxInPeriod(cms: Seq[CrunchMinute]): Double = cms.map(_.paxLoad).sum
 
@@ -111,12 +114,11 @@ object DashboardTerminalSummary {
                    crunchMinutes: List[CrunchMinute],
                    staffMinutes: List[StaffMinute],
                    terminal: Terminal,
-                   paxTypeAndQueues: Seq[PaxTypeAndQueue],
+                   paxTypeAndQueues: Iterable[PaxTypeAndQueue],
                    queues: Seq[Queue],
                    timeWindowStart: SDateLike,
-                   timeWindowEnd: SDateLike,
-                   pcpPaxFn: Arrival => Int
-                  )
+                   timeWindowEnd: SDateLike
+                  ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
     .render_P { props =>
@@ -130,12 +132,13 @@ object DashboardTerminalSummary {
       } else {
 
         val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal))
+
         def pressureStaffMinute = props.staffMinutes.find(_.minute == pressurePoint.minute)
 
         val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.available).getOrElse(0)
         val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
-        
-        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.pcpPaxFn)(props.flights)
+
+        val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.flights)
         val summary: Seq[DashboardSummary] = hourSummary(props.flights, props.crunchMinutes, props.timeWindowStart)
         val queueTotals = totalsByQueue(summary)
 
@@ -168,7 +171,7 @@ object DashboardTerminalSummary {
                 <.tr(^.className := "dashboard-summary__pax-summary-row",
                   <.th(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", "Time Range"),
                   <.th("Total Pax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"), props.queues.map(q =>
-                    <.th(Queues.queueDisplayNames(q), ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod),
+                    <.th(Queues.displayName(q), ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod),
                 summary.map {
 
                   case DashboardSummary(start, numFlights, paxPerQueue) =>
@@ -191,10 +194,10 @@ object DashboardTerminalSummary {
           <.div(^.className := "summary-box-container col-sm-1 pcp-summary",
             <.div(^.className := "pcp-pressure",
               <.div(^.className := "title", "PCP Pressure"),
-              <.div(^.className := "highest",
+              <.div(^.className := "highest", <.span(^.className := "sr-only", "Highest Pressure"),
                 Icon.chevronUp, s" ${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime()}"
               ),
-              <.div(^.className := "lowest",
+              <.div(^.className := "lowest", <.span(^.className := "sr-only", "Lowest Pressure"),
                 Icon.chevronDown, s" ${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime()}"
               )
             )

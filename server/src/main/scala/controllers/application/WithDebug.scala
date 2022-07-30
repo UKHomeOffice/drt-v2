@@ -1,12 +1,13 @@
 package controllers.application
 
 import actors.debug.{DebugFlightsActor, MessageQuery, MessageResponse}
+import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import akka.actor.Props
 import akka.pattern.ask
 import controllers.Application
-import drt.auth.Debug
+import uk.gov.homeoffice.drt.auth.Roles.Debug
 import play.api.mvc.{Action, AnyContent}
-import server.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import services.{ActorTree, SDate}
 
 import scala.collection.SortedMap
@@ -26,10 +27,10 @@ trait WithDebug {
     Action.async { _ =>
       val pit = SDate(dateString)
       val persistenceIds = SortedMap(
-        "ACL" -> "actors.ForecastBaseArrivalsActor-forecast-base",
-        "Port Forecast" -> "actors.ForecastPortArrivalsActor-forecast-port",
-        "Cirium Live" -> "actors.LiveBaseArrivalsActor-live-base",
-        "Port Live" -> "actors.LiveArrivalsActor-live",
+        "ACL" -> AclForecastArrivalsActor.persistenceId,
+        "Port Forecast" -> PortForecastArrivalsActor.persistenceId,
+        "Cirium Live" -> CirriumLiveArrivalsActor.persistenceId,
+        "Port Live" -> PortLiveArrivalsActor.persistenceId,
         "Crunch State" -> "crunch-state",
         "Flight State" -> "flight-state",
       ) ++ airportConfig.terminals.map(t => {

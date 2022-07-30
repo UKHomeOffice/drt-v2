@@ -1,6 +1,7 @@
 package drt.server
 
-import drt.shared.{ArrivalStatus, Operator, PortCode}
+import uk.gov.homeoffice.drt.arrivals.{ArrivalStatus, Operator}
+import uk.gov.homeoffice.drt.ports.PortCode
 
 package object feeds {
   import scala.language.implicitConversions

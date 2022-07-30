@@ -1,17 +1,13 @@
 package services.crunch
 
 import actors.AggregatedArrivalsActor
+import akka.Done
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared.FlightsApi.Flights
-import drt.shared.SplitRatiosNs.SplitSources
-import drt.shared.Terminals.{T1, Terminal}
-import drt.shared._
-import drt.shared.api.Arrival
 import org.specs2.specification.BeforeEach
 import server.feeds.ArrivalsFeedSuccess
 import services.SDate
@@ -19,10 +15,12 @@ import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
 import test.feeds.test.GetArrivals
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
-import scala.collection.immutable.{List, Seq, SortedMap}
-import scala.concurrent.Await
+import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.util.Try
 
 
@@ -37,14 +35,18 @@ class TestAggregatedArrivalsActor(arrivalTable: ArrivalTableLike, probe: ActorRe
 
   override def receive: Receive = testReceive orElse super.receive
 
-  override def handleRemoval(number: Int, terminal: Terminal, scheduled: MillisSinceEpoch): Unit = {
-    super.handleRemoval(number, terminal, scheduled)
-    probe ! RemovalHandled
+  override def handleRemovals(toRemove: Iterable[Arrival]): Future[Done] = {
+    super.handleRemovals(toRemove).map { done =>
+      if (toRemove.nonEmpty) probe ! RemovalHandled
+      done
+    }
   }
 
-  override def handleUpdate(flightUpdate: Arrival): Unit = {
-    super.handleUpdate(flightUpdate)
-    probe ! UpdateHandled
+  override def handleUpdates(toUpdate: Iterable[Arrival]): Future[Done] = {
+    super.handleUpdates(toUpdate).map { done =>
+      if (toUpdate.nonEmpty) probe ! UpdateHandled
+      done
+    }
   }
 }
 
@@ -62,13 +64,13 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
   def createTables(): Unit = {
     H2Tables.schema.createStatements.toList.foreach { query =>
-      Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10 seconds)
+      Await.ready(H2Tables.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
     }
   }
 
   def dropTables(): Unit = {
     H2Tables.schema.dropStatements.toList.reverse.foreach { query =>
-      Await.ready(table.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10 seconds)
+      Await.ready(H2Tables.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
     }
   }
 
@@ -96,7 +98,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     testProbe.expectMsg(UpdateHandled)
 
-    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
+    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
       case ag: AggregatedArrivals => ag
     }
 
@@ -119,15 +121,9 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
     val liveFlights = Flights(List(liveArrival))
 
-    val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
-    val initialFlightsWithSplits = Seq(ApiFlightWithSplits(expiredArrival, Set(oldSplits), None))
-    val initialPortState = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ initialFlightsWithSplits.map(f => (f.apiFlight.unique, f)), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
-
     val testProbe = TestProbe("arrivals-probe")
 
     val crunch = runCrunchGraph(TestConfig(
-      initialForecastBaseArrivals = SortedMap[UniqueArrival, Arrival](expiredArrival.unique -> expiredArrival),
-      initialPortState = Option(initialPortState),
       now = () => SDate(scheduled),
       expireAfterMillis = 250,
       maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
@@ -137,7 +133,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     testProbe.expectMsg(UpdateHandled)
 
-    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
+    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
       case ag: AggregatedArrivals => ag.arrivals.toSet
     }
 
@@ -160,32 +156,30 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     table.insertOrUpdateArrival(descheduledArrival)
 
-    val oldSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 100, None)), SplitSources.Historical, None, Percentage)
-    val initialFlightsWithSplits = Seq(ApiFlightWithSplits(descheduledArrival, Set(oldSplits), None))
-    val initialPortState = PortState(SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ initialFlightsWithSplits.map(f => (f.apiFlight.unique, f)), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())
-
     val testProbe = TestProbe("arrivals-probe")
 
     val crunch = runCrunchGraph(TestConfig(
-      initialForecastBaseArrivals = SortedMap[UniqueArrival, Arrival](descheduledArrival.unique -> descheduledArrival),
-      initialPortState = Option(initialPortState),
       now = () => SDate(scheduled),
       expireAfterMillis = 250,
-      maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
+      maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table)),
+      maxDaysToCrunch = 10
     ))
 
-    offerAndWait(crunch.baseArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(descheduledArrival))))
+    testProbe.expectMsg(UpdateHandled)
 
-    testProbe.expectMsg(RemovalHandled)
-
-    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5 seconds)), 5 seconds) match {
+    val arrivalsResult1 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
       case ag: AggregatedArrivals => ag.arrivals.toSet
     }
 
-    val expected = Set()
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
+    testProbe.expectMsg(RemovalHandled)
 
-    arrivalsResult === expected
+    val arrivalsResult2 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
+      case ag: AggregatedArrivals => ag.arrivals.toSet
+    }
+
+    arrivalsResult1.size === 1 && arrivalsResult2 === Set()
   }
-
 }
 

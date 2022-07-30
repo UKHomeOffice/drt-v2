@@ -1,11 +1,10 @@
-
 const passengerProfiles = {
 
-    ukPassport: {
-        "DocumentIssuingCountryCode": "GBR",
+    euPassport: {
+        "DocumentIssuingCountryCode": "FRA",
         "PersonType": "P",
         "DocumentLevel": "Primary",
-        "Age": 30,
+        "Age": "30",
         "DisembarkationPortCode": "TST",
         "InTransitFlag": "N",
         "DisembarkationPortCountryCode": "TST",
@@ -13,14 +12,14 @@ const passengerProfiles = {
         "PassengerIdentifier": "",
         "DocumentType": "Passport",
         "PoavKey": "1",
-        "NationalityCountryCode": "GBR"
+        "NationalityCountryCode": "FRA"
     },
 
-    ukChild: {
-        "DocumentIssuingCountryCode": "GBR",
+    euChild: {
+        "DocumentIssuingCountryCode": "ITA",
         "PersonType": "P",
         "DocumentLevel": "Primary",
-        "Age": 11,
+        "Age": "11",
         "DisembarkationPortCode": "TST",
         "InTransitFlag": "N",
         "DisembarkationPortCountryCode": "TST",
@@ -28,14 +27,14 @@ const passengerProfiles = {
         "PassengerIdentifier": "",
         "DocumentType": "Passport",
         "PoavKey": "1",
-        "NationalityCountryCode": "GBR"
+        "NationalityCountryCode": "ITA"
     },
 
     visaNational: {
         "DocumentIssuingCountryCode": "ZWE",
         "PersonType": "P",
         "DocumentLevel": "Primary",
-        "Age": 30,
+        "Age": "30",
         "DisembarkationPortCode": "TST",
         "InTransitFlag": "N",
         "DisembarkationPortCountryCode": "TST",
@@ -50,7 +49,7 @@ const passengerProfiles = {
         "DocumentIssuingCountryCode": "MRU",
         "PersonType": "P",
         "DocumentLevel": "Primary",
-        "Age": 30,
+        "Age": "30",
         "DisembarkationPortCode": "TST",
         "InTransitFlag": "N",
         "DisembarkationPortCountryCode": "TST",
@@ -65,7 +64,7 @@ const passengerProfiles = {
         "DocumentIssuingCountryCode": "AUS",
         "PersonType": "P",
         "DocumentLevel": "Primary",
-        "Age": 30,
+        "Age": "30",
         "DisembarkationPortCode": "TST",
         "InTransitFlag": "N",
         "DisembarkationPortCountryCode": "TST",
@@ -77,8 +76,46 @@ const passengerProfiles = {
     }
 }
 
+const adultWithCountryCode = (countryCode: string): object => {
+    return {
+        "DocumentIssuingCountryCode": countryCode,
+        "PersonType": "P",
+        "DocumentLevel": "Primary",
+        "Age": "30",
+        "DisembarkationPortCode": "TST",
+        "InTransitFlag": "N",
+        "DisembarkationPortCountryCode": "TST",
+        "NationalityCountryEEAFlag": "",
+        "PassengerIdentifier": "",
+        "DocumentType": "P",
+        "PoavKey": "3",
+        "NationalityCountryCode": countryCode
+    }
+}
 
-const manifestForDateTime = (dateString, timeString, passengerList): object => {
+const ukAdultWithId = (id: String) => {
+    return {
+        "DocumentIssuingCountryCode": "GBR",
+        "PersonType": "P",
+        "DocumentLevel": "Primary",
+        "Age": "30",
+        "DisembarkationPortCode": "TST",
+        "InTransitFlag": "N",
+        "DisembarkationPortCountryCode": "TST",
+        "NationalityCountryEEAFlag": "EEA",
+        "PassengerIdentifier": id,
+        "DocumentType": "Passport",
+        "PoavKey": "1",
+        "NationalityCountryCode": "GBR"
+    }
+}
+
+
+const manifestForDateTime = (scheduled: moment.Moment, passengerList): object => {
+
+    const dateString = scheduled.utc().format("YYYY-MM-DD");
+    const timeString = scheduled.utc().format("HH:mm:ss");
+
     return {
         "EventCode": "DC",
         "DeparturePortCode": "AMS",
@@ -101,7 +138,7 @@ const manifestForDateTime = (dateString, timeString, passengerList): object => {
 
 const passengerList = (euPax: number, visaNationals: number, nonVisaNationals: number, b5JNationals: number): object[] => {
 
-    return Array(euPax).fill(passengerProfiles.ukPassport)
+    return Array(euPax).fill(passengerProfiles.euPassport)
         .concat(Array(visaNationals).fill(passengerProfiles.visaNational))
         .concat(Array(nonVisaNationals).fill(passengerProfiles.nonVisaNational))
         .concat(Array(b5JNationals).fill(passengerProfiles.b5JNational))
@@ -111,4 +148,6 @@ export {
     manifestForDateTime,
     passengerList,
     passengerProfiles,
+    adultWithCountryCode,
+    ukAdultWithId
 }

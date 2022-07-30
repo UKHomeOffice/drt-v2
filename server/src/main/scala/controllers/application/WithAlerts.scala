@@ -1,15 +1,15 @@
 package controllers.application
 
-import actors.{DeleteAlerts, GetState}
+import actors.persistent.DeleteAlerts
+import actors.persistent.staffing.GetState
 import akka.pattern._
 import akka.util.Timeout
 import controllers.Application
-import drt.auth.CreateAlerts
 import drt.shared.Alert
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTime
-import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
+import uk.gov.homeoffice.drt.auth.Roles.CreateAlerts
 import upickle.default.{read, write}
 
 import scala.concurrent.Future
@@ -18,10 +18,7 @@ import scala.language.postfixOps
 
 trait WithAlerts {
   self: Application =>
-  val pattern = "yyyy-MM-dd HH:mm:ss"
-  implicit val dateRead: Reads[DateTime] = JodaReads.jodaDateReads(pattern)
-  implicit val alertMessageReads: Reads[AlertMessage] = Json.reads[AlertMessage]
-
+  
   def getAlerts(createdAfter: MillisSinceEpoch): Action[AnyContent] = Action.async { _ =>
     val eventualAlerts: Future[Seq[Alert]] = for {
       alerts <- (ctrl.alertsActor ? GetState).mapTo[Seq[Alert]]
@@ -58,4 +55,4 @@ trait WithAlerts {
   }
 }
 
-case class AlertMessage(title: String, message: String, alertClass: String, expires: MillisSinceEpoch)
+

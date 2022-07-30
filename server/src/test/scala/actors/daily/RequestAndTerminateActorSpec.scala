@@ -1,11 +1,12 @@
 package actors.daily
 
+import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.Props
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import drt.shared.Queues.EeaDesk
-import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{SDateLike, TQM}
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import services.SDate
 import services.crunch.CrunchTestLike
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
@@ -33,7 +34,7 @@ class RequestAndTerminateActorSpec extends CrunchTestLike {
       val result = Await.result(requestsActor.ask(RequestAndTerminate(actor, container)), 5 seconds)
 
       "I should get a diff of updated minutes back as an acknowledgement" >> {
-        result.isInstanceOf[MinutesContainer[CrunchMinute, TQM]]
+        result.isInstanceOf[UpdatedMillis]
       }
     }
   }

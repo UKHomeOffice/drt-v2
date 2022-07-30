@@ -1,13 +1,13 @@
 package drt.client.services
 
-import java.nio.ByteBuffer
-
 import boopickle.CompositePickler
 import boopickle.Default._
 import drt.client.SPAMain
 import drt.shared._
 import org.scalajs.dom
+import uk.gov.homeoffice.drt.time.SDateLike
 
+import java.nio.ByteBuffer
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.scalajs.js.typedarray._
@@ -19,7 +19,7 @@ object AjaxClient extends autowire.Client[ByteBuffer, Pickler, Pickler] {
 
   implicit val sDatePickler: CompositePickler[SDateLike] = compositePickler[SDateLike]
   implicit val staffAssignmentPickler: CompositePickler[StaffAssignment] = compositePickler[StaffAssignment]
-  implicit val staffAssignmentsPickler: CompositePickler[StaffAssignments] = compositePickler[StaffAssignments].addConcreteType[FixedPointAssignments].addConcreteType[ShiftAssignments]
+  implicit val staffAssignmentsPickler: CompositePickler[StaffAssignmentsLike] = compositePickler[StaffAssignmentsLike].addConcreteType[FixedPointAssignments].addConcreteType[ShiftAssignments]
 
   override def doCall(req: Request): Future[ByteBuffer] = {
     dom.ext.Ajax.post(

@@ -1,5 +1,5 @@
 # use Cypress provided image with all dependencies included
-FROM cypress/base:10
+FROM cypress/base:12
 RUN node --version
 RUN npm --version
 # copy our test page and test files

@@ -1,17 +1,24 @@
 package drt.client.actions
 
-import java.util.UUID
-
 import diode.Action
-import drt.auth.LoggedInUser
+import diode.data.Pot
+import drt.client.components.scenarios.SimulationFormFields
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import drt.shared.Terminals.Terminal
 import drt.shared._
+import drt.shared.api.{ForecastAccuracy, PassengerInfoSummary, WalkTimes}
 import org.scalajs.dom.FormData
+import uk.gov.homeoffice.drt.arrivals.UniqueArrival
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
+import scala.collection.immutable.HashSet
 import scala.concurrent.duration.FiniteDuration
 
 object Actions {
@@ -21,6 +28,8 @@ object Actions {
   case object TriggerReload extends Action
 
   case object GetApplicationVersion extends Action
+
+  case class ScheduleAction(delay: FiniteDuration, action: Action) extends Action
 
   case object GetLoggedInUser extends Action
 
@@ -64,7 +73,7 @@ object Actions {
 
   case object GetFeatureFlags extends Action
 
-  case class UpdateFeatureFlags(featureFlags: Map[String, Boolean]) extends Action
+  case class UpdateFeatureFlags(featureFlags: FeatureFlags) extends Action
 
   case object GetContactDetails extends Action
 
@@ -73,6 +82,8 @@ object Actions {
   case class SetFixedPoints(viewMode: ViewMode, fixedPoints: FixedPointAssignments, terminalName: Option[String]) extends Action
 
   case class SaveFixedPoints(fixedPoints: FixedPointAssignments, terminal: Terminal) extends Action
+
+  case class SetSnackbarMessage(message: Pot[String]) extends Action
 
   case class GetFixedPoints(viewMode: ViewMode) extends Action
 
@@ -90,7 +101,7 @@ object Actions {
 
   case class AddStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
 
-  case class RemoveStaffMovements(uUID: UUID) extends Action
+  case class RemoveStaffMovements(uUID: String) extends Action
 
   case class SetStaffMovementsAndPollIfLiveView(viewMode: ViewMode, staffMovements: StaffMovements) extends Action
 
@@ -105,6 +116,20 @@ object Actions {
   case class HideLoader() extends Action
 
   case class GetAirportInfos(codes: Set[PortCode]) extends Action
+
+  case class GetRedListPorts(localDate: LocalDate) extends Action
+
+  case class UpdateRedListPorts(codes: HashSet[PortCode], date: LocalDate) extends Action
+
+  case class SetWalktimes(walkTimes: WalkTimes) extends Action
+
+  case class GetPassengerInfoSummary(arrivalKey: ArrivalKey) extends Action
+
+  case class SetPassengerInfoSummary(arrivalKey: ArrivalKey, infoSummary: PassengerInfoSummary) extends Action
+
+  case object GetPassengerInfoForCurrentFlights extends Action
+
+  case object GetPassengerInfoForFlights extends Action
 
   case class UpdateAirportInfo(code: PortCode, info: Option[AirportInfo]) extends Action
 
@@ -136,9 +161,9 @@ object Actions {
 
   case class SetKeyCloakUsers(users: List[KeyCloakUser]) extends Action
 
-  case class SaveUserGroups(userId: UUID, groupsToAdd: Set[String], groupsToRemove: Set[String]) extends Action
+  case class SaveUserGroups(userId: String, groupsToAdd: Set[String], groupsToRemove: Set[String]) extends Action
 
-  case class GetUserGroups(userId: UUID) extends Action
+  case class GetUserGroups(userId: String) extends Action
 
   case class SetSelectedUserGroups(groups: Set[KeyCloakGroup]) extends Action
 
@@ -150,16 +175,47 @@ object Actions {
 
   case class SaveAlert(alert: Alert) extends Action
 
+  case object GetRedListUpdates extends Action
+
+  case class SaveRedListUpdate(setRedListUpdate: SetRedListUpdate) extends Action
+
+  case class DeleteRedListUpdate(effectiveFrom: MillisSinceEpoch) extends Action
+
+  case class SetRedListUpdates(updates: RedListUpdates) extends Action
+
+  case object GetPortEgateBanksUpdates extends Action
+
+  case class SaveEgateBanksUpdate(setEgateBankUpdate: SetEgateBanksUpdate) extends Action
+
+  case class DeleteEgateBanksUpdate(terminal: Terminal, effectiveFrom: MillisSinceEpoch) extends Action
+
+  case class SetEgateBanksUpdates(updates: PortEgateBanksUpdates) extends Action
+
   case class UpdateStaffAdjustmentDialogueState(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
 
-  case class FileUploadStatus(fileUploadState:FileUploadState) extends Action
+  case class FileUploadStatus(fileUploadState: FileUploadState) extends Action
 
   case class FileUploadInProgress() extends Action
 
-  case class ForecastFileUploadAction(portCode: String, formData:FormData) extends Action
+  case class ForecastFileUploadAction(portCode: String, formData: FormData) extends Action
 
   case class ResetFileUpload() extends Action
 
-  case class SimulationExport(simulation: SimulationParams) extends Action
+  case class GetSimulation(simulation: SimulationFormFields) extends Action
 
+  case class SetSimulation(simulationResult: SimulationResult) extends Action
+
+  case object ReSetSimulation extends Action
+
+  case object GetGateStandWalktime extends Action
+
+  case class UpdateGateStandWalktime(walkTimes:WalkTimes) extends Action
+
+  case class RequestForecastRecrunch(recalculateSplits: Boolean) extends Action
+
+  case class GetForecastAccuracy(localDate: LocalDate) extends Action
+
+  case object ClearForecastAccuracy extends Action
+
+  case class UpdateForecastAccuracy(forecastAccuracy: ForecastAccuracy) extends Action
 }

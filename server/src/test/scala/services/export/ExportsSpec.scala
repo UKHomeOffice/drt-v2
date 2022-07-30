@@ -1,11 +1,11 @@
 package services.`export`
 
 import controllers.application.exports.CsvFileStreaming
-import drt.shared.PortCode
-import drt.shared.Terminals.T1
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 class ExportsSpec extends Specification {
   "Given a start date of midnight BST 2020-06-24 and an end date of 1 minute before midnight BST (24 hours)" >> {

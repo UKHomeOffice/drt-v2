@@ -1,17 +1,19 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.{Pending, Pot, Ready}
-import drt.client.components.FlightTableComponents.localDateTimeWithPopup
+import drt.client.components.FlightTableComponents.maybeLocalTimeWithPopup
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.TableSection
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
 
 object ArrivalInfo {
 
-  case class Props(arrivalSources: Pot[List[Option[FeedSourceArrival]]])
+  case class Props(arrivalSources: Pot[List[Option[FeedSourceArrival]]], airportConfig: AirportConfig) extends UseValueEq
 
   def SourcesTable: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalSourcesTable")
     .render_P(props => {
@@ -23,7 +25,7 @@ object ArrivalInfo {
               tableHead,
               <.tbody(
                 sources.collect { case Some(sourceArrival) =>
-                  FeedSourceRow.component(FeedSourceRow.Props(sourceArrival))
+                  FeedSourceRow.component(FeedSourceRow.Props(sourceArrival, props.airportConfig))
                 }.toTagMod
               )))
         case Pending(_) => <.div("Waiting for sources")
@@ -37,6 +39,7 @@ object ArrivalInfo {
       ("Feed", None),
       ("Flight", None),
       ("Origin", None),
+      ("Terminal", None),
       ("Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
       ("Sch", None),
@@ -61,26 +64,30 @@ object ArrivalInfo {
 
 object FeedSourceRow {
 
-  case class Props(feedSourceArrival: FeedSourceArrival)
+  case class Props(feedSourceArrival: FeedSourceArrival, airportConfig: AirportConfig) extends UseValueEq
+
+  def feedDisplayName(isCiriumAsPortLive: Boolean, feedSource: FeedSource) = if (isCiriumAsPortLive)
+    feedSource.displayName(Option("Live arrival")) else feedSource.displayName(None)
 
   val component = ScalaComponent.builder[Props](displayName = "TableRow")
     .render_P(props => {
       val feedSource = props.feedSourceArrival.feedSource
       val arrival = props.feedSourceArrival.arrival
-
+      val isCiriumAsPortLive = props.airportConfig.noLivePortFeed && props.airportConfig.aclDisabled
       val paxTotal: String = arrival.ActPax.map(_.toString).getOrElse("-")
       val paxTrans: String = arrival.TranPax.map(_.toString).getOrElse("-")
       val flightFields = List[TagMod](
-        <.td(feedSource.name),
+        <.td(feedDisplayName(isCiriumAsPortLive, feedSource)),
         <.td(arrival.flightCodeString),
         <.td(arrival.Origin.toString),
+        <.td(arrival.Terminal.toString),
         <.td(s"${arrival.Gate.getOrElse("")}/${arrival.Stand.getOrElse("")}"),
-        <.td(arrival.Status.description),
-        <.td(localDateTimeWithPopup(Option(arrival.Scheduled))),
-        <.td(localDateTimeWithPopup(arrival.Estimated)),
-        <.td(localDateTimeWithPopup(arrival.Actual)),
-        <.td(localDateTimeWithPopup(arrival.EstimatedChox)),
-        <.td(localDateTimeWithPopup(arrival.ActualChox)),
+        <.td(arrival.displayStatus.description),
+        <.td(maybeLocalTimeWithPopup(Option(arrival.Scheduled))),
+        <.td(maybeLocalTimeWithPopup(arrival.Estimated)),
+        <.td(maybeLocalTimeWithPopup(arrival.Actual)),
+        <.td(maybeLocalTimeWithPopup(arrival.EstimatedChox)),
+        <.td(maybeLocalTimeWithPopup(arrival.ActualChox)),
         <.td(paxTotal),
         <.td(paxTrans),
       )

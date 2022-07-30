@@ -3,9 +3,9 @@ package drt.server.feeds.lcy
 import akka.actor.ActorSystem
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.model.headers.{BasicHttpCredentials, ModeledCustomHeader, ModeledCustomHeaderCompanion}
-import akka.http.scaladsl.model.{HttpRequest, _}
+import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import drt.server.feeds.common.HttpClient
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
@@ -16,7 +16,7 @@ import scala.concurrent.Future
 import scala.util.Try
 import scala.xml.NodeSeq
 
-case class LCYClient(httpClient: HttpClient, lcyLiveFeedUser: String, soapEndPoint: String, username: String, password: String) extends LcyClientSupport {
+case class LCYClient(httpClient: HttpClient, lcyLiveFeedUser: String, soapEndPoint: String, username: String, password: String) extends ProdLcyClientSupport {
 
   def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)(implicit system: ActorSystem): Future[HttpResponse] = {
     val httpRequest = HttpRequest(HttpMethods.POST, endpoint, headers, HttpEntity(ContentTypes.`text/xml(UTF-8)`, postXML)).addCredentials(BasicHttpCredentials(username, password))
@@ -40,7 +40,13 @@ object SoapActionHeader extends ModeledCustomHeaderCompanion[SoapActionHeader] {
   override def parse(value: String): Try[SoapActionHeader] = Try(new SoapActionHeader(value))
 }
 
-trait LcyClientSupport extends ScalaXmlSupport {
+trait LcyClientSupport {
+  def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse]
+
+  def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse]
+}
+
+trait ProdLcyClientSupport extends LcyClientSupport with ScalaXmlSupport {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -52,19 +58,17 @@ trait LcyClientSupport extends ScalaXmlSupport {
 
   def password: String
 
-  def initialFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
-
+  override def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
     log.info(s"Making initial Live Feed Request")
     sendXMLRequest(fullRefreshXml(lcyLiveFeedUser))
   }
 
-  def updateFlights(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
-
+  override def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
     log.info(s"Making update Feed Request")
     sendXMLRequest(updateXml()(lcyLiveFeedUser))
   }
 
-  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: ActorMaterializer): Future[ArrivalsFeedResponse] = {
+  def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
 
     implicit val xmlToResUM: Unmarshaller[NodeSeq, LCYFlightsResponse] = LCYFlightTransform.unmarshaller
     implicit val resToLCYResUM: Unmarshaller[HttpResponse, LCYFlightsResponse] = LCYFlightTransform.responseToAUnmarshaller

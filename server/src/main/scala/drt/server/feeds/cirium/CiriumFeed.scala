@@ -1,37 +1,35 @@
 package drt.server.feeds.cirium
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
-import drt.shared.Terminals.{A1, InvalidTerminal, T1, Terminal}
-import drt.shared.api.Arrival
-import drt.shared.{LiveBaseFeedSource, PortCode, SDateLike}
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import uk.gov.homeoffice.cirium.JsonSupport._
-import uk.gov.homeoffice.cirium.services.entities.{CiriumDate, CiriumFlightDurations, CiriumFlightStatus}
+import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.Terminals.{A1, InvalidTerminal, T1, Terminal ,A2}
+import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.language.postfixOps
 
 case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem: ActorSystem, materializer: Materializer) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import CiriumFeed._
 
-  def tickingSource(interval: FiniteDuration): Source[ArrivalsFeedResponse, Cancellable] = {
-    val source: Source[ArrivalsFeedResponse, Cancellable] = Source
-      .tick(0 millis, interval, NotUsed)
-      .mapAsync(1)(_ => {
+  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
+    source
+      .mapAsync(1){_ =>
         makeRequest()
           .map(fs => {
             log.debug(s"Got ${fs.size} arrivals from Cirium")
@@ -43,9 +41,7 @@ case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem
               log.error("Failed to connect to Cirium", throwable)
               ArrivalsFeedFailure("Failed to connect to Cirium.")
           }
-      })
-
-    source
+      }
   }
 
   def makeRequest(): Future[List[CiriumFlightStatus]] = requestFeed(s"$endpoint/statuses/$portCode")
@@ -55,10 +51,10 @@ object CiriumFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def terminalMatchForPort(terminal: Option[String], portCode: PortCode): Terminal = portCode.iata match {
-    case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" =>
+    case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" | "PIK" =>
       T1
     case "EDI" =>
-      A1
+      A2
     case "LHR" | "MAN" =>
       terminal.map(t => Terminal(s"T$t")).getOrElse(InvalidTerminal)
     case _ => Terminal(terminal.getOrElse(""))
@@ -75,60 +71,36 @@ object CiriumFeed {
     val scheduledToNearest5Mins = timeToNearest5Minutes(SDate(carrierScheduledTime)).millisSinceEpoch
 
     Arrival(
-      f.carrierFsCode,
-      ciriumStatusCodeToStatus(f.status),
-      extractEstRunwayArrival(f),
-      f.operationalTimes.actualRunwayArrival.map(_.millis),
-      extractEstChox(f),
-      f.operationalTimes.actualGateArrival.map(_.millis),
-      f.airportResources.flatMap(_.arrivalGate),
-      None,
-      None,
-      None,
-      None,
-      None,
-      f.airportResources.flatMap(_.baggage),
-      f.arrivalAirportFsCode,
-      terminalMatchForPort(f.airportResources.flatMap(_.arrivalTerminal), portCode),
-      f.operatingCarrierFsCode + f.flightNumber,
-      f.operatingCarrierFsCode + f.flightNumber,
-      f.departureAirportFsCode,
-      scheduledToNearest5Mins,
-      None,
-      Set(LiveBaseFeedSource),
-      if (scheduledToNearest5Mins == carrierScheduledTime)
+      Operator = f.carrierFsCode,
+      Status = ciriumStatusCodeToStatus(f.status),
+      PredictedTouchdown = None,
+      Estimated = f.estimated,
+      Actual = f.actualTouchdown,
+      EstimatedChox = f.estimatedChox,
+      ActualChox = f.actualChox,
+      Gate = f.airportResources.flatMap(_.arrivalGate),
+      Stand = None,
+      MaxPax = None,
+      ActPax = None,
+      TranPax = None,
+      RunwayID = None,
+      BaggageReclaimId = f.airportResources.flatMap(_.baggage),
+      AirportID = f.arrivalAirportFsCode,
+      Terminal = terminalMatchForPort(f.airportResources.flatMap(_.arrivalTerminal), portCode),
+      rawICAO = f.operatingCarrierFsCode + f.flightNumber,
+      rawIATA = f.operatingCarrierFsCode + f.flightNumber,
+      Origin = f.departureAirportFsCode,
+      Scheduled = scheduledToNearest5Mins,
+      PcpTime = None,
+      FeedSources = Set(LiveBaseFeedSource),
+      CarrierScheduled = if (scheduledToNearest5Mins == carrierScheduledTime)
         None
       else
-        Option(carrierScheduledTime)
+        Option(carrierScheduledTime),
+      ApiPax = None,
+      ScheduledDeparture = Some(f.departureDate).map(_.millis)
     )
   }
-
-  private def extractEstChox(f: CiriumFlightStatus) =
-    (f.operationalTimes, f.flightDurations) match {
-      case (o, _) if o.estimatedGateArrival.isDefined => o.estimatedGateArrival.map(_.millis)
-      case (o, Some(d)) if o.estimatedRunwayArrival.isDefined && d.scheduledTaxiInMinutes.isDefined =>
-        calcEstChoxFromTimes(o.estimatedRunwayArrival, d)
-      case (o, Some(d)) if o.actualRunwayArrival.isDefined && d.scheduledTaxiInMinutes.isDefined =>
-        calcEstChoxFromTimes(o.actualRunwayArrival, d)
-      case _ => None
-    }
-
-  private def calcEstChoxFromTimes(bestTime: Option[CiriumDate], durations: CiriumFlightDurations) =
-    for {
-      runwayArrival <- bestTime
-      taxiMinutes <- durations.scheduledTaxiInMinutes
-    } yield SDate(runwayArrival.millis).addMinutes(taxiMinutes).millisSinceEpoch
-
-  private def extractEstRunwayArrival(f: CiriumFlightStatus) =
-    (f.operationalTimes, f.flightDurations) match {
-      case (o, _) if o.estimatedRunwayArrival.isDefined => o.estimatedRunwayArrival.map(_.millis)
-      case (o, Some(d)) if o.estimatedGateArrival.isDefined && d.scheduledTaxiInMinutes.isDefined =>
-        for {
-          gateArrival <- o.estimatedGateArrival
-          taxiMinutes <- d.scheduledTaxiInMinutes
-        } yield SDate(gateArrival.millis).addMinutes(taxiMinutes * -1).millisSinceEpoch
-      case _ => None
-    }
 
   def requestFeed(endpoint: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[List[CiriumFlightStatus]] = Http()
     .singleRequest(HttpRequest(

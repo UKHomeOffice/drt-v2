@@ -2,14 +2,18 @@ package services.crunch
 
 import actors.DrtStaticParameters
 import akka.actor.{ActorRef, Props}
-import drt.shared.api.Arrival
-import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
-import services.{Simulator, SplitsProvider, TryCrunch}
 import drt.shared._
+import services.SDate.implicits.sdateFromMillisLocal
+import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
-import services.{Simulator, SplitsProvider, TryCrunch}
+import services.{TryCrunch, TrySimulator}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
+import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.SortedMap
+import scala.concurrent.Future
 
 case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
                       initialForecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
@@ -17,8 +21,6 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
                       initialPortState: Option[PortState] = None,
                       airportConfig: AirportConfig = TestDefaults.airportConfig,
-                      csvSplitsProvider: SplitsProvider.SplitProvider = (_, _) => None,
-                      pcpArrivalTime: Arrival => MilliDate = TestDefaults.pcpForFlightFromSch,
                       expireAfterMillis: Int = DrtStaticParameters.expireAfterMillis,
                       now: () => SDateLike,
                       initialShifts: ShiftAssignments = ShiftAssignments.empty,
@@ -26,7 +28,7 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       initialStaffMovements: Seq[StaffMovement] = Seq(),
                       logLabel: String = "",
                       cruncher: TryCrunch = CrunchMocks.mockCrunch,
-                      simulator: Simulator = CrunchMocks.mockSimulator,
+                      simulator: TrySimulator = CrunchMocks.mockSimulator,
                       maybeAggregatedArrivalsActor: Option[ActorRef] = None,
                       useLegacyManifests: Boolean = false,
                       maxDaysToCrunch: Int = 2,
@@ -34,6 +36,8 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       recrunchOnStart: Boolean = false,
                       flexDesks: Boolean = false,
                       maybePassengersActorProps: Option[Props] = None,
-                      pcpPaxFn: Arrival => Int = TestDefaults.pcpPaxFn,
-                      arrivalsAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustmentsNoop
+                      arrivalsAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustmentsNoop,
+                      maybeEgatesProvider: Option[() => Future[PortEgateBanksUpdates]] = None,
+                      setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = TestDefaults.setPcpFromSch,
+                      addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = diff => Future.successful(diff),
                      )

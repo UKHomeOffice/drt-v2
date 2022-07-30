@@ -1,25 +1,26 @@
 package drt.client.components
 
 import diode.UseValueEq
-import drt.auth.LoggedInUser
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
 import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
-import drt.client.components.TooltipComponent._
+import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
-import drt.shared.Queues.{EGate, Queue}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue}
 import drt.shared._
-import japgolly.scalajs.react.extra.Reusability
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
-import org.scalajs.dom.html.{Div, TableHeaderCell}
+import org.scalajs.dom.html.Div
 import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.util.{Success, Try}
 
@@ -28,7 +29,7 @@ object TerminalDesksAndQueues {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  def queueDisplayName(name: String): String = Queues.queueDisplayNames.getOrElse(Queue(name), name)
+  def queueDisplayName(name: String): String = Queues.displayName(Queue(name))
 
   def queueColour(queue: Queue): String = queue.toString.toLowerCase + "-user-desk-rec"
 
@@ -41,10 +42,9 @@ object TerminalDesksAndQueues {
                    airportConfig: AirportConfig,
                    terminalPageTab: TerminalPageTabLoc,
                    showActuals: Boolean,
-                   showWaitTime: Boolean,
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser,
-                   featureFlags: Map[String, Boolean]
+                   featureFlags: FeatureFlags
                   ) extends UseValueEq
 
   sealed trait ViewType {
@@ -60,10 +60,6 @@ object TerminalDesksAndQueues {
   }
 
   case class State(showActuals: Boolean, viewType: ViewType, showWaitColumn: Boolean)
-
-  implicit val stateReuse: Reusability[State] = Reusability.by_==[State]
-  implicit val propsReuse: Reusability[Props] = Reusability.by_==[Props]
-
 
   class Backend(backendScope: BackendScope[Props, State]) {
 
@@ -83,31 +79,30 @@ object TerminalDesksAndQueues {
         props.airportConfig.nonTransferQueues(terminal)
       }
 
-      def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean): List[VdomTagOf[TableHeaderCell]] = {
+      def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean) = {
         val queueColumnClass = queueColour(queueName)
         val queueColumnActualsClass = queueActualsColour(queueName)
         val headings = state.viewType match {
           case ViewDeps =>
             val h = List(<.th(
-              ^.title := "Suggested deployment given available staff",
-              s"Dep ${deskUnitLabel(queueName)}", " ", depTooltip(queueName) ,^.className := queueColumnClass)
+              s"Dep ${deskUnitLabel(queueName)}", " ", depBanksOrDesksTip(queueName), ^.className := queueColumnClass)
             )
             if (showWaitColumn)
-              h :+ <.th(^.title := "Wait times with suggested deployments", "Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
+              h :+ <.th("Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
             else
               h
           case ViewRecs =>
-            val h = List(<.th(^.title := "Recommendations to best meet SLAs", s"Rec ${deskUnitLabel(queueName)}", ^.className := queueColumnClass))
+            val h = List(<.th(s"Rec ${deskUnitLabel(queueName)} ", recBanksOrDesksTip(queueName), ^.className := queueColumnClass))
             if (showWaitColumn)
-              h :+ <.th(^.title := "Wait times with recommendations", "Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
+              h :+ <.th("Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
             else
               h
         }
 
         if (props.airportConfig.hasActualDeskStats && state.showActuals)
           headings ++ List(
-            <.th(^.title := "Actual desks used", s"Act ${deskUnitLabel(queueName)}", ^.className := queueColumnActualsClass),
-            <.th(^.title := "Actual wait times", "Act wait", ^.className := queueColumnActualsClass))
+            <.th(Tippy.describe(<.span("Actual desks used"), s"Act ${deskUnitLabel(queueName)}"), ^.className := queueColumnActualsClass),
+            <.th(Tippy.describe(<.span("Actual wait times"), "Act wait"), ^.className := queueColumnActualsClass))
         else headings
       }
 
@@ -115,11 +110,11 @@ object TerminalDesksAndQueues {
         val queueSubHeadings = queueNames.flatMap(queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName, showWaitColumn)).toTagMod
 
         List(queueSubHeadings,
-          <.th(^.className := "non-pcp", "Misc", " ", miscTooltip, ^.title := "Miscellaneous staff"),
-          <.th(^.className := "non-pcp", "Moves"," ", movesTooltip, ^.title := "Staff movements"),
-          <.th(^.className := "total-deployed", "Rec", " ", recToolTip, ^.title := "Total staff recommended for desks"),
-          <.th(^.className := "total-deployed", "Dep", ^.title := "Total staff deployed based on assignments entered"),
-          <.th(^.className := "total-deployed", "Avail", " ", availTooltip, ^.colSpan := 2, ^.title := "Total staff available based on staff entered"))
+          <.th(^.className := "non-pcp", "Misc", " ", miscTooltip),
+          <.th(^.className := "non-pcp", "Moves", " ", movesTooltip),
+          <.th(^.className := "total-deployed", "Rec", " ", recToolTip),
+          <.th(^.className := "total-deployed", "Dep"),
+          <.th(^.className := "total-deployed", "Avail", " ", availTooltip, ^.colSpan := 2))
       }
 
       def qth(queue: Queue, xs: TagMod*) = <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)
@@ -165,32 +160,31 @@ object TerminalDesksAndQueues {
         )
       }
 
-      def viewTypeControls(viewDepsClass: String, viewRecsClass: String): TagMod = {
-        List(
-          <.div(^.className := s"selector-control view-type-control $viewRecsClass",
+      def viewTypeControls(displayWaitTimesToggle: Boolean): TagMod = {
+        val controls = List(
+          <.div(^.className := s"controls-radio-wrapper",
             <.input.radio(^.checked := state.viewType == ViewRecs, ^.onChange ==> toggleViewType(ViewRecs), ^.id := "show-recs"),
-            <.label(^.`for` := "show-recs", "Recommendations", " ", recommendationsTooltip)
+            <.label(^.`for` := "show-recs", "Ideal staff", " ", recommendationsTooltip)
           ),
-          <.div(^.className := s"selector-control view-type-control $viewDepsClass",
+          <.div(^.className := s"controls-radio-wrapper",
             <.input.radio(^.checked := state.viewType == ViewDeps, ^.onChange ==> toggleViewType(ViewDeps), ^.id := "show-deps"),
-            <.label(^.`for` := "show-deps", "Available staff deployments", " ", availableStaffDeploymentsTooltip)
-          )).toTagMod
-      }
+            <.label(^.`for` := "show-deps", "Available staff", " ", availableStaffDeploymentsTooltip)
+          ))
 
+        val allControls = if (displayWaitTimesToggle) controls :+ viewWaitTimeControls else controls
+
+        <.div(^.className := "selector-control2",
+          allControls.toTagMod
+        )
+      }
 
       def viewWaitTimeControls: TagMod = {
         List(
-          <.div(^.className := s"selector-control view-type-control $viewRecsClass",
+          <.div(^.className := s"controls-radio-wrapper",
             <.input.checkbox(^.checked := state.showWaitColumn, ^.onChange ==> toggleWaitColumn, ^.id := "toggle-showWaitingTime"),
             <.label(^.`for` := "toggle-showWaitingTime", "Display wait times")
           )).toTagMod
       }
-
-      def showActualsClass = if (state.showActuals) "active-control" else ""
-
-      def viewRecsClass = if (state.viewType == ViewRecs) "active-control" else ""
-
-      def viewDepsClass = if (state.viewType == ViewDeps) "active-control" else ""
 
       val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
 
@@ -208,16 +202,9 @@ object TerminalDesksAndQueues {
 
       <.div(
         floatingHeader(state.showWaitColumn),
-        <.div(
-          if (props.airportConfig.hasActualDeskStats) {
-            <.div(^.className := s"selector-control deskstats-control $showActualsClass",
-              <.input.checkbox(^.checked := state.showActuals, ^.onChange ==> toggleShowActuals, ^.id := "show-actuals"),
-              <.label(^.`for` := "show-actuals", "Show BlackJack Data")
-            )
-          } else "",
-          StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab),
-          viewTypeControls(viewDepsClass, viewRecsClass),
-          if(props.featureFlags.getOrElse("enable-toggle-display-wait-times", false)) viewWaitTimeControls else ""
+        <.div(^.className := "desks-and-queues-top",
+          viewTypeControls(props.featureFlags.displayWaitTimesToggle),
+          StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab)
         ),
         <.table(
           ^.id := "sticky",
@@ -252,9 +239,8 @@ object TerminalDesksAndQueues {
   }
 
   val component = ScalaComponent.builder[Props]("Loader")
-    .initialStateFromProps(p => State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType, showWaitColumn = p.showWaitTime))
+    .initialStateFromProps(p => State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType, showWaitColumn = !p.featureFlags.displayWaitTimesToggle))
     .renderBackend[Backend]
-    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 

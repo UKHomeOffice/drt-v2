@@ -1,7 +1,8 @@
 package drt.client.services
 
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.util.Try
 
@@ -26,7 +27,8 @@ object StaffAssignmentHelper {
       endDt <- endDtTry
       staffDelta: Int <- staffDeltaTry
     } yield {
-      StaffAssignment(name, Terminal(terminalName), startDt, adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt), staffDelta, createdBy = createdBy)
+      val endTime = adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt).millisSinceEpoch
+      StaffAssignment(name, Terminal(terminalName), startDt.millisSinceEpoch, endTime, staffDelta, createdBy = createdBy)
     }
   }
 
@@ -45,21 +47,22 @@ object StaffAssignmentHelper {
       staffDelta: Int <- staffDeltaTry
     } yield {
       val endDt = startDt.addMinutes(lengthOfTimeMinutes)
-      StaffAssignment(name, Terminal(terminalName), startDt, adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt), staffDelta, createdBy = createdBy)
+      val endTime = adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt).millisSinceEpoch
+      StaffAssignment(name, Terminal(terminalName), startDt.millisSinceEpoch, endTime, staffDelta, createdBy = createdBy)
     }
   }
 
   def toCsv(assignment: StaffAssignment): String = {
-    val startDate: SDateLike = SDate(assignment.startDt)
-    val endDate: SDateLike = SDate(assignment.endDt)
+    val startDate: SDateLike = SDate(assignment.start)
+    val endDate: SDateLike = SDate(assignment.end)
     s"${assignment.name},${assignment.terminal},${startDate.ddMMyyString},${startDate.toHoursAndMinutes},${endDate.toHoursAndMinutes},${assignment.numberOfStaff}"
   }
 
   def fixedPointsFormat(fixedPoints: FixedPointAssignments): String = fixedPoints.assignments.map(fixedPointFormat).mkString("\n")
 
-  def fixedPointFormat(assignment: StaffAssignment): String = {
-    val startDate: SDateLike = SDate(assignment.startDt)
-    val endDate: SDateLike = SDate(assignment.endDt)
+  def fixedPointFormat(assignment: StaffAssignmentLike): String = {
+    val startDate: SDateLike = SDate(assignment.start)
+    val endDate: SDateLike = SDate(assignment.end)
     s"${assignment.name}, ${startDate.toHoursAndMinutes}, ${endDate.toHoursAndMinutes}, ${assignment.numberOfStaff}"
   }
 
@@ -81,10 +84,8 @@ case class StaffAssignmentParser(rawStaffAssignments: String) {
   val parsedAssignments: Array[Try[StaffAssignment]] = rawStaffAssignments
     .split("\n")
     .map(_.replaceAll("([^\\\\]),", "$1\",\"").split("\",\"").toList.map(_.trim))
-    .filter(parts => parts.length == 5 || parts.length == 6)
+    .filter(_.length == 6)
     .map {
-      case List(description, terminalName, startDay, startTime, endTime) =>
-        StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime, "1", None)
       case List(description, terminalName, startDay, startTime, endTime, staffNumberDelta) =>
         StaffAssignmentHelper.tryStaffAssignment(description, terminalName, startDay, startTime, endTime, staffNumberDelta, None)
     }

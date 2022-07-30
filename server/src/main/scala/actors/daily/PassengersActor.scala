@@ -1,17 +1,17 @@
 package actors.daily
 
-import actors.RecoveryActorLike
+import actors.persistent.{RecoveryActorLike, Sizes}
 import akka.actor.ActorRef
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{PortCode, SDateLike}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import server.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
 import services.{PaxDeltas, SDate}
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
-import scala.language.postfixOps
 
 case class PointInTimeOriginTerminalDay(pointInTime: Long, origin: String, terminal: String, day: Long)
 
@@ -66,6 +66,11 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
     }
   }
 
+  override def receiveCommand: Receive = {
+    case gad: GetAverageAdjustment => sendAverageDelta(gad, sender())
+    case u => log.info(s"Got unexpected command: $u")
+  }
+
   override def stateToMessage: GeneratedMessage = {
     log.warn("This function should not be called")
     OriginTerminalPaxCountsMessages(Seq())
@@ -94,11 +99,6 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
     portAverageDelta = if (count > 0) sum / count else 1d
   }
 
-  override def receiveCommand: Receive = {
-    case gad: GetAverageAdjustment => sendAverageDelta(gad, sender())
-    case u => log.info(s"Got unexpected command: $u")
-  }
-
   private def updateState(origin: PortCode, terminal: Terminal, updateForState: Map[(Long, Long), Int]): Unit = {
     originTerminalPaxNosState = originTerminalPaxNosState.updated(OriginAndTerminal(origin, terminal), updateForState)
   }
@@ -118,5 +118,8 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
       case PaxCountMessage(Some(pit), Some(day), Some(paxCount)) => ((pit, day), paxCount)
     }
     .toMap
+
+  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+  override val maybeSnapshotInterval: Option[Int] = Option(1000)
 }
 

@@ -1,0 +1,95 @@
+package services.scenarios
+
+import actors.persistent.SortedActorRefSource
+import actors.persistent.staffing.GetState
+import akka.NotUsed
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import akka.pattern.ask
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
+import akka.util.Timeout
+import drt.shared.CrunchApi.DeskRecMinutes
+import drt.shared.SimulationParams
+import manifests.queues.SplitsCalculator
+import passengersplits.parsing.VoyageManifestParser
+import queueus.DynamicQueueStatusProvider
+import services.crunch.desklimits.PortDeskLimits
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
+import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest}
+import services.crunch.deskrecs.{DynamicRunnableDeskRecs, PortDesksAndWaitsProvider, RunnableOptimisation}
+import services.graphstages.FlightFilter
+import services.{OptimiserWithFlexibleProcessors, SDate}
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
+import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
+
+import scala.collection.SortedSet
+import scala.concurrent.{ExecutionContextExecutor, Future}
+
+object Scenarios {
+
+  def simulationResult(simulationParams: SimulationParams,
+                       simulationAirportConfig: AirportConfig,
+                       splitsCalculator: SplitsCalculator,
+                       flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
+                       liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
+                       historicManifestsProvider: HistoricManifestsProvider,
+                       historicManifestsPaxProvider: HistoricManifestsPaxProvider,
+                       flightsActor: ActorRef,
+                       portStateActor: ActorRef,
+                       redListUpdatesProvider: () => Future[RedListUpdates],
+                       egateBanksProvider: () => Future[PortEgateBanksUpdates])
+                      (implicit system: ActorSystem, timeout: Timeout): Future[DeskRecMinutes] = {
+
+    implicit val ec: ExecutionContextExecutor = system.dispatcher
+    implicit val mat: Materializer = Materializer.createMaterializer(system)
+
+    val portDesksAndWaitsProvider: PortDesksAndWaitsProvider =
+      PortDesksAndWaitsProvider(
+        simulationAirportConfig,
+        OptimiserWithFlexibleProcessors.crunch,
+        FlightFilter.forPortConfig(simulationAirportConfig),
+        egateBanksProvider
+      )
+
+    val terminalEgatesProvider = (terminal: Terminal) => egateBanksProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
+
+    val terminalDeskLimits = PortDeskLimits.fixed(simulationAirportConfig, terminalEgatesProvider)
+
+    val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+      arrivalsProvider = flightsProvider,
+      liveManifestsProvider = liveManifestsProvider,
+      historicManifestsProvider = historicManifestsProvider,
+      historicManifestsPaxProvider = historicManifestsPaxProvider,
+      splitsCalculator = splitsCalculator,
+      splitsSink = flightsActor,
+      portDesksAndWaitsProvider = portDesksAndWaitsProvider,
+      maxDesksProviders = terminalDeskLimits,
+      redListUpdatesProvider = redListUpdatesProvider,
+      DynamicQueueStatusProvider(simulationAirportConfig, egateBanksProvider)
+    )
+
+    class DummyPersistentActor extends Actor {
+      override def receive: Receive = {
+        case _ => Unit
+      }
+    }
+
+    val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
+
+    val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch, SortedSet())
+    val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, deskRecsProducer).run()
+
+    crunchRequestQueue ! CrunchRequest(SDate(simulationParams.date).millisSinceEpoch, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
+
+    val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
+      case drm: DeskRecMinutes => DeskRecMinutes(drm.minutes.filter(_.terminal == simulationParams.terminal))
+    }
+    futureDeskRecMinutes.onComplete(_ => deskRecsKillSwitch.shutdown())
+    futureDeskRecMinutes
+  }
+
+
+}

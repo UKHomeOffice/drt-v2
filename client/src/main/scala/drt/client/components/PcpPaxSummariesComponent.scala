@@ -1,16 +1,19 @@
 package drt.client.components
 
+import diode.UseValueEq
 import diode.data.Pot
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
-import drt.shared.{PortState, Queues, SDateLike, TQM}
+import drt.shared.{PortState, TQM}
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 import org.scalajs.dom.html.Div
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 case class PcpPaxSummary(totalPax: Int, queuesPax: Map[Queue, Double])
 
@@ -23,7 +26,7 @@ object PcpPaxSummary {
     }
 
     val paxTotal = relevantMinutes.map { case (_, cm) => cm.paxLoad }.sum
-    val queueLoads = relevantMinutes.values
+    val queueLoads: Map[Queue, Double] = relevantMinutes.values
       .filter(cm => queues.contains(cm.queue))
       .groupBy(_.queue)
       .map {
@@ -36,26 +39,25 @@ object PcpPaxSummary {
 
 object PcpPaxSummariesComponent {
 
-  case class Props(portStatePot: Pot[PortState], viewMode: ViewMode, terminalName: Terminal, minuteTicker: Int)
+  case class Props(portStatePot: Pot[PortState], viewMode: ViewMode, terminalName: Terminal, minuteTicker: Int) extends UseValueEq
 
   class Backend {
     def render(props: Props): TagOf[Div] = {
       val now = SDate.now()
       val fiveMinutes = 5
       val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
-      <.div(^.className := "pcp-pax-summaries",
+      <.div(
+        ^.className := "pcp-pax-summaries",
         if (props.viewMode.isLive) {
-          props.portStatePot.render { cs =>
-            val boxes = Seq("next 5 mins", "5-10 mins", "10-15 mins")
-            <.div(
-              boxes.zipWithIndex.map {
-                case (label, box) =>
-                  val start = now.addMinutes(box * 5)
-                  val crunchMinutes = cs.window(start, start.addMinutes(5)).crunchMinutes
-                  val summary = PcpPaxSummary(start, fiveMinutes, crunchMinutes, props.terminalName, queues.toSet)
-                  summaryBox(box, label, start, queues, summary)
-              }.toTagMod
-            )
+          props.portStatePot.render { portState =>
+            val boxes = Seq("next 5 minutes", "5-10 minutes", "10-15 minutes")
+            boxes.zipWithIndex.map {
+              case (label, box) =>
+                val start = now.addMinutes(box * 5)
+                val crunchMinutes = portState.window(start, start.addMinutes(5)).crunchMinutes
+                val summary = PcpPaxSummary(start, fiveMinutes, crunchMinutes, props.terminalName, queues.toSet)
+                summaryBox(box, label, start, queues, summary)
+            }.toVdomArray
           }
         } else ""
       )
@@ -68,7 +70,7 @@ object PcpPaxSummariesComponent {
       <.div(^.className := "queues",
         queues.map(qn => {
           <.div(^.className := "queue",
-            <.div(^.className := "queue-name", <.div(Queues.queueDisplayNames(qn))),
+            <.div(^.className := "queue-name", <.div(Queues.displayName(qn))),
             <.div(^.className := "queue-pax", <.div(s"${summary.queuesPax.getOrElse(qn, 0d).round}"))
           )
         }).toTagMod

@@ -1,10 +1,11 @@
 package controllers.application
 
 import controllers.Application
-import drt.auth.ArrivalsAndSplitsView
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
 import services.AirportToCountry
+import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
+import uk.gov.homeoffice.drt.ports.PortCode
 
 
 trait WithAirportInfo {
@@ -18,7 +19,7 @@ trait WithAirportInfo {
         .flatMap(_.headOption)
         .map(codes => codes
           .split(",")
-          .map(code => (PortCode(code), AirportToCountry.airportInfo.get(code)))
+          .map(code => (PortCode(code), AirportToCountry.airportInfoByIataPortCode.get(code)))
           .collect {
             case (code, Some(info)) => (code, info)
           }
@@ -30,5 +31,4 @@ trait WithAirportInfo {
       Ok(write(res))
     }
   }
-
 }

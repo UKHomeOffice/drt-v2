@@ -1,30 +1,33 @@
 package controllers.application
 
-import java.util.UUID
-
 import actors._
-import actors.pointInTime.{FixedPointsReadActor, StaffMovementsReadActor}
+import actors.persistent.staffing._
 import akka.NotUsed
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern._
 import akka.stream.scaladsl.Source
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming
-import drt.auth.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}
 import services.SDate
 import services.exports.StaffMovementsExport
+import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{read, write}
 
+import java.util.UUID
 import scala.concurrent.Future
 
 
 trait WithStaffing {
   self: Application =>
+
+  import services.SDate.implicits.sdateFromMillisLocal
+
   def getFixedPoints: Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
 
@@ -101,9 +104,8 @@ trait WithStaffing {
   }
 
 
-  def removeStaffMovements(movementsToRemove: UUID): Action[AnyContent] = authByRole(StaffMovementsEdit) {
+  def removeStaffMovements(movementsToRemove: String): Action[AnyContent] = authByRole(StaffMovementsEdit) {
     Action {
-
       ctrl.staffMovementsActor ! RemoveStaffMovements(movementsToRemove)
       Accepted
     }
@@ -122,7 +124,7 @@ trait WithStaffing {
 
           staffMovementsForDay(date)
       }
-      
+
       eventualStaffMovements.map(sms => Ok(write(sms)))
     }
   }

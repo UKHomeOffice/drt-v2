@@ -2,44 +2,59 @@ package actors
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
-import actors.queues.{CrunchQueueActor, DeploymentQueueActor}
+import actors.persistent.RedListUpdatesActor.AddSubscriber
+import actors.persistent._
+import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.staffing._
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, Cancellable, Props}
-import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
-import akka.stream.{ActorMaterializer, OverflowStrategy}
-import drt.auth.{Role, Roles}
-import drt.server.feeds.api.S3ApiProvider
+import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown, PoisonPill, Props, typed}
+import akka.pattern.ask
+import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
+import akka.stream.{Materializer, OverflowStrategy}
+import akka.util.Timeout
+import drt.server.feeds.Feed
+import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
+import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.MilliTimes._
-import drt.shared.Terminals._
 import drt.shared._
-import drt.shared.api.Arrival
-import graphs.SinkToSourceBridge
-import manifests.actors.RegisteredArrivals
-import manifests.passengers.{BestAvailableManifest, S3ManifestPoller}
+import drt.shared.coachTime.CoachWalkTime
+import manifests.ManifestLookup
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
-import services._
+import services.SDate
 import services.crunch.CrunchSystem
+import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest}
+import services.metrics.ApiValidityReporter
+import slick.dbio.{DBIOAction, NoStream}
 import slickdb.{ArrivalTable, Tables}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.auth.Roles
+import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.time.MilliTimes
 
+import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 
-object PostgresTables extends {
-  val profile = slick.jdbc.PostgresProfile
-} with Tables
+object PostgresTables extends Tables {
+  override val profile = slick.jdbc.PostgresProfile
+  val db: profile.backend.Database = profile.api.Database.forConfig("aggregated-db")
+
+  override def run[R](action: DBIOAction[R, NoStream, Nothing]): Future[R] = db.run[R](action)
+}
 
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
-case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
-                        (implicit val materializer: ActorMaterializer,
+case class ProdDrtSystem(airportConfig: AirportConfig)
+                        (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
-                         val system: ActorSystem) extends DrtSystemInterface {
+                         val system: ActorSystem,
+                         val timeout: Timeout) extends DrtSystemInterface {
 
   import DrtStaticParameters._
 
@@ -47,32 +62,36 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
   val minSecondsBetweenBatches: Int = config.get[Int]("crunch.manifests.min-seconds-between-batches")
   val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
 
-  val aggregateArrivalsDbConfigKey = "aggregated-db"
-
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
-  override val baseArrivalsActor: ActorRef = system.actorOf(Props(new ForecastBaseArrivalsActor(params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis)), name = "base-arrivals-actor")
-  override val forecastArrivalsActor: ActorRef = system.actorOf(Props(new ForecastPortArrivalsActor(params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override val liveArrivalsActor: ActorRef = system.actorOf(Props(new LiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-arrivals-actor")
-  override val voyageManifestsActor: ActorRef = system.actorOf(Props(new VoyageManifestsActor(params.snapshotMegaBytesVoyageManifests, now, expireAfterMillis, Option(params.snapshotIntervalVm))), name = "voyage-manifests-actor")
+  override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AclForecastArrivalsActor(params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis)), name = "base-arrivals-actor")
+  override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortForecastArrivalsActor(params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis)), name = "forecast-arrivals-actor")
+  override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortLiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-arrivals-actor")
+
+  val manifestLookups: ManifestLookups = ManifestLookups(system)
 
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
 
-  override val crunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now, journalType, airportConfig.crunchOffsetMinutes)), name = "crunch-queue-actor")
-  override val deploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now, airportConfig.crunchOffsetMinutes)), name = "staff-queue-actor")
+  override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
+  override val manifestLookupService: ManifestLookup = ManifestLookup(PostgresTables)
 
-  override val lookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, airportConfig.portStateSnapshotInterval)
+  override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+
+  override val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentStaffingUpdateQueueActor: ActorRef = system.actorOf(Props(new StaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
   val flightLookups: FlightLookups = FlightLookups(
     system,
     now,
     airportConfig.queuesByTerminal,
-    crunchQueueActor
+    params.maybeRemovalCutOffSeconds
   )
+
   override val flightsActor: ActorRef = flightLookups.flightsActor
-  override val queuesActor: ActorRef = lookups.queueMinutesActor
-  override val staffActor: ActorRef = lookups.staffMinutesActor
+  override val queuesActor: ActorRef = minuteLookups.queueMinutesActor
+  override val staffActor: ActorRef = minuteLookups.staffMinutesActor
   override val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
   override val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
   override val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
@@ -90,15 +109,12 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
 
   val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 
-  override val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(now, timeBeforeThisMonth(now))))
-  override val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(now)))
-  override val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now))))
+  override val shiftsActor: ActorRef = restartOnStop.actorOf(Props(new ShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
+  override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new FixedPointsActor(now, airportConfig.minutesToCrunch, params.forecastMaxDays)), "staff-fixed-points")
+  override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "staff-movements")
 
-  override val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)))
-
-  val s3ApiProvider: S3ApiProvider = S3ApiProvider(params.awSCredentials, params.dqZipBucketName)
-  val initialManifestsState: Option[VoyageManifestState] = if (refetchApiData) None else initialState[VoyageManifestState](voyageManifestsActor)
-  val latestZipFileName: String = S3ApiProvider.latestUnexpiredDqZipFilename(initialManifestsState.map(_.latestZipFilename), now, expireAfterMillis)
+  val lastProcessedLiveApiMarker: Option[MillisSinceEpoch] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor).map(_.lastProcessedMarker)
+  system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString()).getOrElse("None")}")
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
 
@@ -109,55 +125,85 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     } else userRolesFromHeader(headers)
 
   def run(): Unit = {
-    val futurePortStates: Future[(Option[PortState], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]], Option[SortedMap[UniqueArrival, Arrival]], Option[RegisteredArrivals])] = {
-      val maybeLivePortState = if (usePartitionedPortState) initialFlightsPortState(portStateActor, params.forecastMaxDays) else initialStateFuture[PortState](portStateActor)
-      val maybeInitialBaseArrivals = initialStateFuture[ArrivalsState](baseArrivalsActor).map(_.map(_.arrivals))
-      val maybeInitialFcstArrivals = initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
-      val maybeInitialLiveArrivals = initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
-      val maybeInitialRegisteredArrivals = initialStateFuture[RegisteredArrivals](registeredArrivalsActor)
+    val futurePortStates: Future[
+      (Option[PortState],
+        Option[SortedMap[UniqueArrival, Arrival]],
+        Option[SortedMap[UniqueArrival, Arrival]],
+        Option[SortedMap[UniqueArrival, Arrival]],
+        Option[FeedSourceStatuses],
+        SortedSet[ProcessingRequest],
+        SortedSet[ProcessingRequest],
+        SortedSet[ProcessingRequest],
+        )] = {
       for {
-        lps <- maybeLivePortState
-        ba <- maybeInitialBaseArrivals
-        fa <- maybeInitialFcstArrivals
-        la <- maybeInitialLiveArrivals
-        ra <- maybeInitialRegisteredArrivals
-      } yield (lps, ba, fa, la, ra)
+        lps <- initialFlightsPortState(portStateActor, params.forecastMaxDays)
+        ba <- initialStateFuture[ArrivalsState](forecastBaseArrivalsActor).map(_.map(_.arrivals))
+        fa <- initialStateFuture[ArrivalsState](forecastArrivalsActor).map(_.map(_.arrivals))
+        la <- initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
+        aclStatus <- forecastBaseArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
+        crunchQueue <- persistentCrunchQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
+        deploymentQueue <- persistentDeploymentQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
+        staffingUpdateQueue <- persistentStaffingUpdateQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
+      } yield (lps, ba, fa, la, aclStatus, crunchQueue, deploymentQueue, staffingUpdateQueue)
     }
 
     futurePortStates.onComplete {
-      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeRegisteredArrivals)) =>
+      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeAclStatus, crunchQueue, deploymentQueue, staffingUpdateQueue)) =>
         system.log.info(s"Successfully restored initial state for App")
-        val (manifestRequestsSource, _, manifestRequestsSink) = SinkToSourceBridge[List[Arrival]]
-        val (manifestResponsesSource, _, manifestResponsesSink) = SinkToSourceBridge[List[BestAvailableManifest]]
 
-        val crunchInputs: CrunchSystem[Cancellable] = startCrunchSystem(
-          maybePortState,
-          maybeBaseArrivals,
-          maybeForecastArrivals,
-          Option(SortedMap[UniqueArrival, Arrival]()),
-          maybeLiveArrivals,
-          manifestRequestsSink,
-          manifestResponsesSource,
-          params.refreshArrivalsOnStart,
-          startDeskRecs)
+        val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
+          initialPortState = maybePortState,
+          initialForecastBaseArrivals = maybeBaseArrivals,
+          initialForecastArrivals = maybeForecastArrivals,
+          initialLiveBaseArrivals = Option(SortedMap[UniqueArrival, Arrival]()),
+          initialLiveArrivals = maybeLiveArrivals,
+          refreshArrivalsOnStart = params.refreshArrivalsOnStart,
+          startDeskRecs = startDeskRecs(crunchQueue, deploymentQueue, staffingUpdateQueue),
+        )
 
-        if (maybeRegisteredArrivals.isDefined) log.info(s"sending ${maybeRegisteredArrivals.get.arrivals.size} initial registered arrivals to batch stage")
-        else log.info(s"sending no registered arrivals to batch stage")
+        fcstBaseActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)
+        fcstActor ! Enable(crunchInputs.forecastArrivalsResponse)
+        liveBaseActor ! Enable(crunchInputs.liveBaseArrivalsResponse)
+        liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
-        new S3ManifestPoller(crunchInputs.manifestsLiveResponse, airportConfig.portCode, latestZipFileName, s3ApiProvider).startPollingForManifests()
-
-        if (!params.useLegacyManifests) {
-          val initRegisteredArrivals: Option[RegisteredArrivals] = initialRegisteredArrivals(maybeRegisteredArrivals, maybePortState)
-          val lookupRefreshDue: MillisSinceEpoch => Boolean = (lastLookupMillis: MillisSinceEpoch) => now().millisSinceEpoch - lastLookupMillis > 15 * oneMinuteMillis
-          startManifestsGraph(initRegisteredArrivals, manifestResponsesSink, manifestRequestsSource, lookupRefreshDue)
+        for {
+          aclStatus <- maybeAclStatus
+          lastSuccess <- aclStatus.feedStatuses.lastSuccessAt
+        } yield {
+          val twelveHoursAgo = SDate.now().addHours(-12).millisSinceEpoch
+          if (lastSuccess < twelveHoursAgo) {
+            val minutesToNextCheck = (Math.random() * 90).toInt.minutes
+            log.info(s"Last ACL check was more than 12 hours ago. Will check in ${minutesToNextCheck.toMinutes} minutes")
+            system.scheduler.scheduleOnce(minutesToNextCheck, () => fcstBaseActor ! AdhocCheck)
+          }
         }
 
-        subscribeStaffingActors(crunchInputs)
-        startScheduledFeedImports(crunchInputs)
+        val arrivalKeysProvider = DbManifestArrivalKeys(PostgresTables, airportConfig.portCode)
+        val manifestProcessor = DbManifestProcessor(PostgresTables, airportConfig.portCode, crunchInputs.manifestsLiveResponse)
+        val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
+        log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString()}")
+        ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 15.seconds)
+          .processFilesAfter(processFilesAfter)
+          .runWith(Sink.ignore)
+
+        redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
+        flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
+        manifestsRouterActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
+        queuesActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
+        staffActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
+
+        system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(flightsActor))
 
       case Failure(error) =>
-        system.log.error(error, s"Failed to restore initial state for App")
-        System.exit(1)
+        system.log.error(error, s"Failed to restore initial state for App. Beginning actor system shutdown")
+        system.terminate().onComplete {
+          case Success(_) =>
+            log.info("Actor system successfully shut down. Exiting")
+            System.exit(1)
+          case Failure(exception) =>
+            log.warn("Failed to shut down actor system", exception)
+            System.exit(1)
+        }
     }
 
     val staffingStates: Future[NotUsed] = {
@@ -174,12 +220,6 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     staffingStates.onComplete {
       case Success(NotUsed) =>
         system.log.info(s"Successfully restored initial staffing states for App")
-        if (params.snapshotStaffOnStart) {
-          log.info(s"Snapshotting staff as requested by feature flag")
-          shiftsActor ! SaveSnapshot
-          fixedPointsActor ! SaveSnapshot
-          staffMovementsActor ! SaveSnapshot
-        }
 
       case Failure(error) =>
         system.log.error(error, s"Failed to restore initial staffing state for App")
@@ -187,88 +227,7 @@ case class ProdDrtSystem(config: Configuration, airportConfig: AirportConfig)
     }
   }
 
-  def initialRegisteredArrivals(maybeRegisteredArrivals: Option[RegisteredArrivals],
-                                initialPortState: Option[PortState]): Option[RegisteredArrivals] =
-    if (params.resetRegisteredArrivalOnStart) {
-      log.info(s"Resetting registered arrivals for manifest lookups")
-      val maybeAllArrivals = initialPortState
-        .map { state =>
-          val arrivalsByKeySorted = SortedMap[ArrivalKey, Option[MillisSinceEpoch]]() ++ state.flights.values.map(fws => ArrivalKey(fws.apiFlight) -> None)
-          log.info(s"Sending ${arrivalsByKeySorted.size} arrivals by key from ${state.flights.size} port state arrivals")
-          arrivalsByKeySorted
-        }
-      Option(RegisteredArrivals(maybeAllArrivals.getOrElse(SortedMap())))
-    } else maybeRegisteredArrivals
+  val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode)
 }
 
-case class SetCrunchQueueActor(millisToCrunchActor: ActorRef)
-
-case class SetDeploymentQueueActor(millisToDeployActor: ActorRef)
-
-case class SetDaysQueueSource(daysQueueSource: SourceQueueWithComplete[MillisSinceEpoch])
-
-object ArrivalGenerator {
-  def arrival(iata: String = "",
-              icao: String = "",
-              schDt: String = "",
-              actPax: Option[Int] = None,
-              maxPax: Option[Int] = None,
-              terminal: Terminal = T1,
-              origin: PortCode = PortCode(""),
-              operator: Option[Operator] = None,
-              status: String = "",
-              estDt: String = "",
-              actDt: String = "",
-              estChoxDt: String = "",
-              actChoxDt: String = "",
-              pcpDt: String = "",
-              gate: Option[String] = None,
-              stand: Option[String] = None,
-              tranPax: Option[Int] = None,
-              runwayId: Option[String] = None,
-              baggageReclaimId: Option[String] = None,
-              airportId: PortCode = PortCode(""),
-              feedSources: Set[FeedSource] = Set()
-             ): Arrival = {
-    val pcpTime = if (pcpDt.nonEmpty) Option(SDate(pcpDt).millisSinceEpoch) else if (schDt.nonEmpty) Option(SDate(schDt).millisSinceEpoch) else None
-
-    Arrival(
-      rawICAO = icao,
-      rawIATA = iata,
-      ActPax = actPax,
-      Terminal = terminal,
-      Origin = origin,
-      Operator = operator,
-      Status = ArrivalStatus(status),
-      Estimated = if (estDt.nonEmpty) Option(SDate.parseString(estDt).millisSinceEpoch) else None,
-      Actual = if (actDt.nonEmpty) Option(SDate.parseString(actDt).millisSinceEpoch) else None,
-      EstimatedChox = if (estChoxDt.nonEmpty) Option(SDate.parseString(estChoxDt).millisSinceEpoch) else None,
-      ActualChox = if (actChoxDt.nonEmpty) Option(SDate.parseString(actChoxDt).millisSinceEpoch) else None,
-      Gate = gate,
-      Stand = stand,
-      MaxPax = maxPax,
-      TranPax = tranPax,
-      RunwayID = runwayId,
-      BaggageReclaimId = baggageReclaimId,
-      AirportID = airportId,
-      PcpTime = pcpTime,
-      Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
-      FeedSources = feedSources
-    )
-  }
-
-  def arrivals(now: () => SDateLike, terminalNames: Iterable[Terminal]): Iterable[Arrival] = {
-    val today = now().toISODateOnly
-    val arrivals = for {
-      terminal <- terminalNames
-    } yield {
-      (1 to 100).map { _ =>
-        def rand(max: Int): Int = (Math.random() * max).floor.toInt
-
-        ArrivalGenerator.arrival(iata = s"BA${rand(1000)}", terminal = terminal, schDt = s"${today}T${rand(24)}:${rand(60)}", actPax = Option(rand(450)))
-      }
-    }
-
-    arrivals.flatten
-  }
-}
+case class SetCrunchRequestQueue(source: ActorRef)

@@ -19,10 +19,11 @@ describe('Multi day export', () => {
       .choose24Hours()
       .get("#arrivalsTab").click().then(() => {
         cy.contains('Multi Day Export').click().then(() => {
-          cy.get('.modal-body').contains("Export Desks")
-            .get('.modal-body').contains("Export Arrivals")
-            .get('.modal-footer').contains("Close").click()
-            .get('.modal-body').should('not.be.visible');
+          cy.get('#multi-day-export-modal-body').contains("Recommendations")
+            .get('#multi-day-export-modal-body').contains("Deployments")
+            .get('#multi-day-export-modal-body').contains("Arrivals")
+            .get('#multi-day-export-modal-footer').contains("Close").click()
+            .get('#multi-day-export-modal-body').should('not.be.visible');
         })
       });
   });
@@ -38,8 +39,8 @@ describe('Multi day export', () => {
       .then(() => {
         cy.contains('Multi Day Export').click().then(() => {
           cy.wait(5000)
-            .get('.modal-footer').contains("Close").click()
-            .get('.modal-body').should('not.be.visible');
+            .get('#multi-day-export-modal-footer').contains("Close").click()
+            .get('#multi-day-export-modal-body').should('not.be.visible');
         });
       });
   });
@@ -48,7 +49,7 @@ describe('Multi day export', () => {
     cy
       .addFlight({
         "SchDT": todayAtUtcString(0, 55),
-        "ActChoxDT": todayAtUtcString(1, 2),
+        "ActChoxDT": todayAtUtcString(3, 2),
         "ActPax": 51
       })
       .asABorderForceOfficer()
@@ -66,15 +67,15 @@ describe('Multi day export', () => {
               .click()
               .then(() => {
                 cy
-                  .get('.modal-body')
-                  .contains("Export Desks")
+                  .get('#multi-day-export-modal-body')
+                  .contains("Recommendations")
                   .should('have.attr', 'href')
                   .then((href) => {
                     if (typeof href === 'string') {
                       cy
                         .request(href)
                         .then((response) => {
-                          expect(response.body).to.contain(",38,10,1,,,13,0,1,,,1,0,1,,,0,0,0,3")
+                          expect(response.body).to.contain(",38,14,1,,,13,0,1,,,1,0,1,,,0,0,0,3")
                         });
                     }
                   });

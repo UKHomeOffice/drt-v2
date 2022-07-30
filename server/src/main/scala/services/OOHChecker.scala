@@ -5,8 +5,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.ActorMaterializer
-import drt.shared.SDateLike
+import akka.stream.Materializer
+import uk.gov.homeoffice.drt.time.SDateLike
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -26,22 +26,21 @@ case class OOHChecker(bankHolidayClient: BankHolidayApiClient) {
     }
   }
 
-  def isWeekend(localTime: SDateLike) = localTime.getDayOfWeek >= 6
-
+  def isWeekend(localTime: SDateLike): Boolean = localTime.getDayOfWeek >= 6
 }
 
-case class BankHolidayApiClient(uri: String = "https://www.gov.uk/bank-holidays.json")(implicit system: ActorSystem, materializer: ActorMaterializer) {
+case class BankHolidayApiClient(uri: String = "https://www.gov.uk/bank-holidays.json")(implicit system: ActorSystem, materializer: Materializer) {
 
   import BankHolidayParserProtocol._
 
-  def getHolidays(): Future[Map[String, BankHolidayDivision]] =
+  def getHolidays: Future[Map[String, BankHolidayDivision]] =
     sendAndReceive(HttpRequest(HttpMethods.GET, Uri(uri)))
       .map(res => Unmarshal[HttpResponse](res).to[Map[String, BankHolidayDivision]])
       .flatMap(identity)
 
   def sendAndReceive: HttpRequest => Future[HttpResponse] = request => Http()(system).singleRequest(request)
 
-  def isEnglandAndWalesBankHoliday(localTime: SDateLike): Future[Boolean] = getHolidays()
+  def isEnglandAndWalesBankHoliday(localTime: SDateLike): Future[Boolean] = getHolidays
     .map {
       hols =>
         hols.get("england-and-wales")

@@ -1,91 +1,86 @@
 package services.crunch
 
-import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorRef
 import akka.stream._
-import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
+import drt.server.feeds.Feed
+import drt.server.feeds.Feed.EnabledFeedWithFrequency
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
-import drt.shared.api.Arrival
-import drt.shared.{SDateLike, _}
-import manifests.passengers.BestAvailableManifest
+import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
-import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
-import services.SplitsProvider.SplitProvider
+import server.feeds.ManifestsFeedResponse
 import services._
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike}
 import services.graphstages.Crunch._
 import services.graphstages._
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.SortedMap
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 
-case class CrunchSystem[FR](shifts: SourceQueueWithComplete[ShiftAssignments],
-                            fixedPoints: SourceQueueWithComplete[FixedPointAssignments],
-                            staffMovements: SourceQueueWithComplete[Seq[StaffMovement]],
-                            forecastBaseArrivalsResponse: FR,
-                            forecastArrivalsResponse: FR,
-                            liveBaseArrivalsResponse: FR,
-                            liveArrivalsResponse: FR,
+case class CrunchSystem[FT](forecastBaseArrivalsResponse: EnabledFeedWithFrequency[FT],
+                            forecastArrivalsResponse: EnabledFeedWithFrequency[FT],
+                            liveBaseArrivalsResponse: EnabledFeedWithFrequency[FT],
+                            liveArrivalsResponse: EnabledFeedWithFrequency[FT],
                             manifestsLiveResponse: SourceQueueWithComplete[ManifestsFeedResponse],
                             actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
+                            redListUpdates: SourceQueueWithComplete[List[RedListUpdateCommand]],
+                            crunchRequestActor: ActorRef,
+                            deploymentRequestActor: ActorRef,
                             killSwitches: List[UniqueKillSwitch]
                            )
 
-case class CrunchProps[FR](
-                            logLabel: String = "",
-                            airportConfig: AirportConfig,
-                            pcpArrival: Arrival => MilliDate,
-                            historicalSplitsProvider: SplitProvider,
-                            portStateActor: ActorRef,
-                            maxDaysToCrunch: Int,
-                            expireAfterMillis: Int,
-                            crunchOffsetMillis: MillisSinceEpoch = 0,
-                            actors: Map[String, ActorRef],
-                            useNationalityBasedProcessingTimes: Boolean,
-                            useLegacyManifests: Boolean = false,
-                            now: () => SDateLike = () => SDate.now(),
-                            initialFlightsWithSplits: Option[FlightsWithSplitsDiff] = None,
-                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
-                            manifestResponsesSource: Source[List[BestAvailableManifest], NotUsed],
-                            voyageManifestsActor: ActorRef,
-                            manifestRequestsSink: Sink[List[Arrival], NotUsed],
-                            initialPortState: Option[PortState] = None,
-                            initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
-                            initialForecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
-                            initialLiveBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
-                            initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
-                            arrivalsForecastBaseSource: Source[ArrivalsFeedResponse, FR], arrivalsForecastSource: Source[ArrivalsFeedResponse, FR],
-                            pcpPaxFn: Arrival => Int,
-                            arrivalsLiveBaseSource: Source[ArrivalsFeedResponse, FR],
-                            arrivalsLiveSource: Source[ArrivalsFeedResponse, FR],
-                            passengersActorProvider: () => ActorRef,
-                            initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
-                            initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
-                            initialStaffMovements: Seq[StaffMovement] = Seq(),
-                            refreshArrivalsOnStart: Boolean,
-                            stageThrottlePer: FiniteDuration,
-                            adjustEGateUseByUnder12s: Boolean,
-                            optimiser: TryCrunch,
-                            aclPaxAdjustmentDays: Int,
-                            startDeskRecs: () => (UniqueKillSwitch, UniqueKillSwitch),
-                            arrivalsAdjustments: ArrivalsAdjustmentsLike
+case class CrunchProps[FT](logLabel: String = "",
+                           airportConfig: AirportConfig,
+                           portStateActor: ActorRef,
+                           flightsActor: ActorRef,
+                           maxDaysToCrunch: Int,
+                           expireAfterMillis: Int,
+                           crunchOffsetMillis: MillisSinceEpoch = 0,
+                           actors: Map[String, ActorRef],
+                           useNationalityBasedProcessingTimes: Boolean,
+                           now: () => SDateLike = () => SDate.now(),
+                           initialFlightsWithSplits: Option[FlightsWithSplitsDiff] = None,
+                           manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
+                           voyageManifestsActor: ActorRef,
+                           simulator: TrySimulator,
+                           initialPortState: Option[PortState] = None,
+                           initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
+                           initialForecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
+                           initialLiveBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
+                           initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap[UniqueArrival, Arrival](),
+                           arrivalsForecastBaseFeed: Feed[FT],
+                           arrivalsForecastFeed: Feed[FT],
+                           arrivalsLiveBaseFeed: Feed[FT],
+                           arrivalsLiveFeed: Feed[FT],
+                           redListUpdatesSource: Source[List[RedListUpdateCommand], SourceQueueWithComplete[List[RedListUpdateCommand]]],
+                           passengersActorProvider: () => ActorRef,
+                           initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
+                           initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
+                           initialStaffMovements: Seq[StaffMovement] = Seq(),
+                           flushArrivalsOnStart: Boolean,
+                           refreshArrivalsOnStart: Boolean,
+                           optimiser: TryCrunch,
+                           aclPaxAdjustmentDays: Int,
+                           startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
+                           arrivalsAdjustments: ArrivalsAdjustmentsLike,
+                           addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff],
+                           setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
                           )
 
 object CrunchSystem {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply[FR](props: CrunchProps[FR])
-               (implicit materializer: Materializer, system: ActorSystem, ec: ExecutionContext): CrunchSystem[FR] = {
-
-    val shiftsSource: Source[ShiftAssignments, SourceQueueWithComplete[ShiftAssignments]] = Source.queue[ShiftAssignments](10, OverflowStrategy.backpressure)
-    val fixedPointsSource: Source[FixedPointAssignments, SourceQueueWithComplete[FixedPointAssignments]] = Source.queue[FixedPointAssignments](10, OverflowStrategy.backpressure)
-    val staffMovementsSource: Source[Seq[StaffMovement], SourceQueueWithComplete[Seq[StaffMovement]]] = Source.queue[Seq[StaffMovement]](10, OverflowStrategy.backpressure)
+  def apply[FT](props: CrunchProps[FT])
+               (implicit materializer: Materializer, ec: ExecutionContext): CrunchSystem[FT] = {
     val actualDesksAndQueuesSource: Source[ActualDeskStats, SourceQueueWithComplete[ActualDeskStats]] = Source.queue[ActualDeskStats](10, OverflowStrategy.backpressure)
 
     val initialFlightsWithSplits = initialFlightsFromPortState(props.initialPortState)
@@ -96,12 +91,12 @@ object CrunchSystem {
 
     val arrivalsStage = new ArrivalsGraphStage(
       name = props.logLabel,
+      initialRedListUpdates = RedListUpdates.empty,
       initialForecastBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastBaseArrivals,
       initialForecastArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals,
       initialLiveBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals,
       initialLiveArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals,
       initialMergedArrivals = initialMergedArrivals,
-      pcpArrivalTime = props.pcpArrival,
       validPortTerminals = props.airportConfig.terminals.toSet,
       ArrivalDataSanitiser(
         props.airportConfig.maybeCiriumEstThresholdHours,
@@ -109,56 +104,24 @@ object CrunchSystem {
       ),
       arrivalsAdjustments = props.arrivalsAdjustments,
       expireAfterMillis = props.expireAfterMillis,
-      now = props.now)
+      now = props.now,
+      flushOnStart = props.flushArrivalsOnStart,
+    )
 
     val forecastArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals, forecastMaxMillis)
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
 
-    val ptqa = if (props.airportConfig.hasTransfer)
-      PaxTypeQueueAllocation(
-        B5JPlusWithTransitTypeAllocator(),
-        TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation))
-    else
-      PaxTypeQueueAllocation(
-        B5JPlusTypeAllocator(),
-        TerminalQueueAllocator(props.airportConfig.terminalPaxTypeQueueAllocation))
-
-    val splitAdjustments = if (props.adjustEGateUseByUnder12s)
-      ChildEGateAdjustments(props.airportConfig.assumedAdultsPerChild)
-    else
-      AdjustmentsNoop()
-
-    val arrivalSplitsGraphStage = new ArrivalSplitsGraphStage(
-      name = props.logLabel,
-      optionalInitialFlights = initialFlightsWithSplits,
-      splitsCalculator = manifests.queues.SplitsCalculator(ptqa, props.airportConfig.terminalPaxSplits, splitAdjustments),
-      expireAfterMillis = props.expireAfterMillis,
-      now = props.now
-    )
-
-    val staffGraphStage = new StaffGraphStage(
-      initialShifts = props.initialShifts,
-      initialFixedPoints = props.initialFixedPoints,
-      optionalInitialMovements = Option(props.initialStaffMovements),
-      now = props.now,
-      expireAfterMillis = props.expireAfterMillis,
-      numberOfDays = props.maxDaysToCrunch)
+    val (crunchQueueActor, deploymentQueueActor, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch) = props.startDeskRecs()
 
     val crunchSystem = RunnableCrunch(
-      forecastBaseArrivalsSource = props.arrivalsForecastBaseSource,
-      forecastArrivalsSource = props.arrivalsForecastSource,
-      liveBaseArrivalsSource = props.arrivalsLiveBaseSource,
-      liveArrivalsSource = props.arrivalsLiveSource,
+      forecastBaseArrivalsSource = props.arrivalsForecastBaseFeed.source,
+      forecastArrivalsSource = props.arrivalsForecastFeed.source,
+      liveBaseArrivalsSource = props.arrivalsLiveBaseFeed.source,
+      liveArrivalsSource = props.arrivalsLiveFeed.source,
       manifestsLiveSource = props.manifestsLiveSource,
-      manifestResponsesSource = props.manifestResponsesSource,
-      shiftsSource = shiftsSource,
-      fixedPointsSource = fixedPointsSource,
-      staffMovementsSource = staffMovementsSource,
       actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
       arrivalsGraphStage = arrivalsStage,
-      arrivalSplitsStage = arrivalSplitsGraphStage,
-      staffGraphStage = staffGraphStage,
       forecastArrivalsDiffStage = forecastArrivalsDiffingStage,
       liveBaseArrivalsDiffStage = liveBaseArrivalsDiffingStage,
       liveArrivalsDiffStage = liveArrivalsDiffingStage,
@@ -168,33 +131,40 @@ object CrunchSystem {
       liveArrivalsActor = props.actors("live-arrivals"),
       applyPaxDeltas = PaxDeltas.applyAdjustmentsToArrivals(props.passengersActorProvider, props.aclPaxAdjustmentDays),
       manifestsActor = props.voyageManifestsActor,
-      manifestRequestsSink = props.manifestRequestsSink,
       portStateActor = props.portStateActor,
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
-      deploymentRequestActor = props.actors("deployment-request"),
       forecastMaxMillis = forecastMaxMillis,
-      throttleDurationPer = props.stageThrottlePer
+      redListUpdatesSource = props.redListUpdatesSource,
+      addTouchdownPredictions = props.addTouchdownPredictions,
+      setPcpTimes = props.setPcpTimes,
     )
 
-    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, shiftsIn, fixedPointsIn, movementsIn, actDesksIn, arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS) = crunchSystem.run
+    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run
 
-    val (deskRecsKillSwitch, deploymentsKillSwitch) = props.startDeskRecs()
-
-    val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, shiftsKS, fixedPKS, movementsKS, deskRecsKillSwitch, deploymentsKillSwitch)
+    val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
 
     CrunchSystem(
-      shifts = shiftsIn,
-      fixedPoints = fixedPointsIn,
-      staffMovements = movementsIn,
-      forecastBaseArrivalsResponse = forecastBaseIn,
-      forecastArrivalsResponse = forecastIn,
-      liveBaseArrivalsResponse = liveBaseIn,
-      liveArrivalsResponse = liveIn,
+      forecastBaseArrivalsResponse = EnabledFeedWithFrequency(forecastBaseIn, props.arrivalsForecastBaseFeed.initialDelay, props.arrivalsForecastBaseFeed.interval),
+      forecastArrivalsResponse = EnabledFeedWithFrequency(forecastIn, props.arrivalsForecastFeed.initialDelay, props.arrivalsForecastFeed.interval),
+      liveBaseArrivalsResponse = EnabledFeedWithFrequency(liveBaseIn, props.arrivalsLiveBaseFeed.initialDelay, props.arrivalsLiveBaseFeed.interval),
+      liveArrivalsResponse = EnabledFeedWithFrequency(liveIn, props.arrivalsLiveFeed.initialDelay, props.arrivalsLiveFeed.interval),
       manifestsLiveResponse = manifestsLiveIn,
       actualDeskStats = actDesksIn,
+      redListUpdates = redListUpdatesIn,
+      crunchRequestActor = crunchQueueActor,
+      deploymentRequestActor = deploymentQueueActor,
       killSwitches
     )
   }
+
+  def paxTypeQueueAllocator[FR](config: AirportConfig): PaxTypeQueueAllocation = if (config.hasTransfer)
+    PaxTypeQueueAllocation(
+      B5JPlusWithTransitTypeAllocator,
+      TerminalQueueAllocator(config.terminalPaxTypeQueueAllocation))
+  else
+    PaxTypeQueueAllocation(
+      B5JPlusTypeAllocator,
+      TerminalQueueAllocator(config.terminalPaxTypeQueueAllocation))
 
   def initialStaffMinutesFromPortState(initialPortState: Option[PortState]): Option[StaffMinutes] = initialPortState.map(
     ps => StaffMinutes(ps.staffMinutes))

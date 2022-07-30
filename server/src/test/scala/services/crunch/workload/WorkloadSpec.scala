@@ -1,357 +1,129 @@
 package services.crunch.workload
 
 import controllers.ArrivalGenerator
-import drt.shared.SplitRatiosNs.SplitSources
+import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
-import drt.shared.api.Arrival
-import org.specs2.mutable.Specification
 import services.SDate
-import services.graphstages.WorkloadCalculator
+import services.crunch.CrunchTestLike
+import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
+import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
+import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.ports.Queues.{Open, Queue, QueueFallbacks}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
+import uk.gov.homeoffice.drt.ports.Terminals._
+import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
+import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 
-class WorkloadSpec extends Specification {
-  val gbrSeconds = 45d
-  val fraSeconds = 45d
-  val zaSeconds = 100d
+class WorkloadSpec extends CrunchTestLike {
 
-  val natProcTimes: Map[Nationality, Double] = Map(
-    Nationality("GBR") -> gbrSeconds,
-    Nationality("FRA") -> fraSeconds,
-    Nationality("ZAR") -> zaSeconds
-  )
+  private def generateSplits(paxCount: Int, splitSource: SplitSource, eventType: Option[EventType]): Set[Splits] =
+    Set(
+      Splits(
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, paxCount, None, None)),
+        splitSource,
+        eventType,
+        PaxNumbers))
 
-  def pcpPaxFn: Arrival => Int = PcpPax.bestPaxEstimateWithApi
+  private def workloadCalculator(procTimes: Map[PaxTypeAndQueue, Double], filter: FlightFilter) =
+    DynamicWorkloadCalculator(
+      Map(T1 -> procTimes, T2 -> procTimes, T3 -> procTimes, T4 -> procTimes, T5 -> procTimes),
+      QueueFallbacks(Map()),
+      filter,
+      AirportConfigDefaults.fallbackProcessingTime)
+
+  private val procTime = 1.5
+
+  val redListedZimbabwe: RedListUpdates = RedListUpdates(Map(0L -> RedListUpdate(0L, Map("Zimbabwe" -> "ZWE"), List())))
+
+  private def workloadForFlight(arrival: Arrival, splits: Set[Splits], filter: FlightFilter): Double = {
+    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> procTime)
+    workloadCalculator(procTimes, filter)
+      .flightLoadMinutes(arrival.pcpRange, FlightsWithSplits(Iterable(ApiFlightWithSplits(arrival, splits, None))), redListedZimbabwe, (t: Terminal) => (q: Queue, m: MillisSinceEpoch) => Open)
+      .minutes.values.map(_.workLoad).sum
+  }
 
   "Given an arrival with 1 pax and 1 split containing 1 pax with no nationality data " +
     "When I ask for the workload for this arrival " +
     "Then I see the 1x the proc time provided" >> {
 
-    val arrival = ArrivalGenerator.arrival(actPax = Option(1))
-    val splits = Set(
-      Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
-        PaxNumbers))
-    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val emptyNatProcTimes: Map[Nationality, Double] = Map()
-    val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(
-        ApiFlightWithSplits(arrival, splits, None),
-        procTimes,
-        emptyNatProcTimes,
-        true,
-        pcpPaxFn
-      )
-      .toList
-      .map(_.workLoad)
+    val arrival = ArrivalGenerator.arrival(actPax = Option(1), totalPax = Set(TotalPaxSource(Option(1), AclFeedSource)))
+    val splits = generateSplits(1, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
 
-    workloads === List(1.5)
+    val workloads = workloadForFlight(arrival, splits, FlightFilter.regular(List(T1)))
+
+    workloads === procTime
   }
 
   "Given an arrival with a PCP time that has seconds, then these seconds should be ignored for workload calcs" >> {
-    val arrival = ArrivalGenerator.arrival(actPax = Option(1))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(1),totalPax = Set(TotalPaxSource(Option(1), AclFeedSource)))
       .copy(PcpTime = Some(SDate("2018-08-28T17:07:05").millisSinceEpoch))
 
-    val splits = Set(
-      Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, None)),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
-        PaxNumbers))
-    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
+    val splits = generateSplits(1, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
+    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> procTime)
 
-    val flightSplitMinutes = WorkloadCalculator
-      .flightToFlightSplitMinutes(
-        ApiFlightWithSplits(arrival, splits, None),
-        procTimes,
-        Map()
-        , false, pcpPaxFn)
-      .toList
+    val workloads = workloadCalculator(procTimes, FlightFilter.regular(List(T1)))
+      .flightToFlightSplitMinutes(arrival.pcpRange, ApiFlightWithSplits(arrival, splits, None), (q: Queue, m: MillisSinceEpoch) => Open)
 
-    val startTime = SDate(flightSplitMinutes.head.minute).toISOString()
+    val startTime = SDate(workloads.head.minute).toISOString()
 
     startTime === "2018-08-28T17:07:00Z"
   }
 
-  "Given an arrival with 1 pax and 1 split containing 1 pax with 1 nationality " +
-    "When I ask for the workload for this arrival " +
-    "Then I see the 1x the proc time for the given nationality rather than the port proc time" >> {
-
-    val arrival = ArrivalGenerator.arrival(actPax = Option(1))
-    val splits = Set(
-      Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)))),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
-        PaxNumbers))
-    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(
-        ApiFlightWithSplits(arrival, splits, None),
-        procTimes,
-        natProcTimes,
-        true,
-        pcpPaxFn
-      )
-      .toList
-      .map(_.workLoad)
-
-    workloads === List(gbrSeconds / 60)
-  }
-
-  "Given an arrival with 10 pax and 1 split containing 1 pax with 1 nationality " +
-    "When I ask for the workload for this arrival " +
-    "Then I see the 10x the proc time for the given nationality" >> {
-
-    val arrival = ArrivalGenerator.arrival(actPax = Option(10))
-    val splits = Set(
-      Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)))),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
-        PaxNumbers))
-    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(
-        ApiFlightWithSplits(arrival, splits, None),
-        procTimes,
-        natProcTimes,
-        true,
-        pcpPaxFn
-      )
-      .toList
-      .map(_.workLoad)
-
-    workloads === List(gbrSeconds / 60 * 10)
-  }
-
-  "Given an arrival with 100 pax and 1 split containing 1 pax with 1 nationality " +
-    "When I ask for the workload for this arrival " +
-    "Then I see the 100x the proc time for the given nationality" >> {
-
-    val arrival = ArrivalGenerator.arrival(actPax = Option(100))
-    val splits = Set(
-      Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1)))),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
-        PaxNumbers))
-    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(
-        ApiFlightWithSplits(arrival, splits, None),
-        procTimes,
-        natProcTimes,
-        true,
-        pcpPaxFn
-      )
-      .toList
-      .map(_.workLoad)
-
-    workloads === List.fill(5)(gbrSeconds / 60 * 20)
-  }
-
-  "Given an arrival with 10 pax and 1 split containing 3 pax with 2 nationalities " +
-    "When I ask for the workload for this arrival " +
-    "Then I see the 10x 2/3 + 10x 1/3 the proc times for the given nationalities" >> {
-
-    val arrival = ArrivalGenerator.arrival(actPax = Option(10))
-    val splits = Set(
-      Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 3, Option(Map(Nationality("GBR") -> 1, Nationality("FRA") -> 2)))),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
-        PaxNumbers))
-    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(
-        ApiFlightWithSplits(arrival, splits, None),
-        procTimes,
-        natProcTimes,
-        true,
-        pcpPaxFn
-      )
-      .toList
-      .map(_.workLoad)
-
-    val expectedFraWorkload = 2d / 3 * (fraSeconds / 60) * 10
-    val expectedGbrWorkload = 1d / 3 * (gbrSeconds / 60) * 10
-    workloads === List(expectedFraWorkload + expectedGbrWorkload)
-  }
-
-  "Given an arrival with 2 pax and 2 splits each containing 1 pax with 1 nationality " +
-    "When I ask for the workload for this arrival " +
-    "Then I see the 1x the proc time for the given nationality in each queue" >> {
-
-    val arrival = ArrivalGenerator.arrival(actPax = Option(2))
-    val splits = Set(
-      Splits(
-        Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 1, Option(Map(Nationality("GBR") -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("ZAR") -> 1)))
-        ),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
-        PaxNumbers))
-    val procTimes = Map(
-      PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5,
-      PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk) -> 5.5
-    )
-    val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(
-        ApiFlightWithSplits(arrival, splits, None),
-        procTimes,
-        natProcTimes,
-        true,
-        pcpPaxFn
-      )
-      .toList
-      .map(_.workLoad)
-
-    workloads === List(gbrSeconds / 60, zaSeconds / 60)
-  }
-
-  "Given an arrival with 4 pax and 2 splits each containing 2 pax with 2 nationalities " +
-    "When I ask for the workload for this arrival " +
-    "Then I see the sum to each nationality for each split" >> {
-
-    val arrival = ArrivalGenerator.arrival(actPax = Option(4))
-    val splits = Set(
-      Splits(
-        Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 2, Option(Map(Nationality("GBR") -> 1, Nationality("FRA") -> 1))),
-          ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 2, Option(Map(Nationality("ZAR") -> 1, Nationality("ZBW") -> 1)))
-        ),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
-        PaxNumbers))
-    val procTimes = Map(
-      PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5,
-      PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk) -> 5.5
-    )
-    val gbrSeconds = 45d
-    val fraSeconds = 90d
-    val zaSeconds = 100d
-    val zbwSeconds = 200d
-    val natProcTimes: Map[Nationality, Double] = Map(
-      Nationality("GBR") -> gbrSeconds,
-      Nationality("FRA") -> fraSeconds,
-      Nationality("ZBW") -> zbwSeconds,
-      Nationality("ZAR") -> zaSeconds
-    )
-    val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(
-        ApiFlightWithSplits(arrival, splits, None),
-        procTimes,
-        natProcTimes,
-        true,
-        pcpPaxFn
-      )
-      .toList
-      .map(_.workLoad)
-
-    workloads === List((gbrSeconds + fraSeconds) / 60, (zaSeconds + zbwSeconds) / 60)
-  }
-
-  "Given an arrival with 30 pax and 2 splits each containing 15 pax with 2 nationalities " +
-    "When I ask for the workload for this arrival " +
-    "Then I see the sum to each nationality for each split over two minutes" >> {
-
-    val arrival = ArrivalGenerator.arrival(actPax = Option(24))
-    val splits = Set(
-      Splits(
-        Set(
-          ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 12, Option(Map(Nationality("GBR") -> 10, Nationality("FRA") -> 2))),
-          ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 12, Option(Map(Nationality("ZAR") -> 6, Nationality("ZBW") -> 6)))
-        ),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
-        PaxNumbers))
-    val procTimes = Map(
-      PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5,
-      PaxTypeAndQueue(PaxTypes.VisaNational, Queues.NonEeaDesk) -> 5.5
-    )
-    val gbrSeconds = 45d
-    val fraSeconds = 90d
-    val zaSeconds = 100d
-    val zbwSeconds = 200d
-    val natProcTimes: Map[Nationality, Double] = Map(
-      Nationality("GBR") -> gbrSeconds,
-      Nationality("FRA") -> fraSeconds,
-      Nationality("ZBW") -> zbwSeconds,
-      Nationality("ZAR") -> zaSeconds
-    )
-    val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(
-        ApiFlightWithSplits(arrival, splits, None),
-        procTimes,
-        natProcTimes,
-        true,
-        pcpPaxFn
-      )
-      .map(m => (m.paxType, m.queueName, m.workLoad))
-
-    val eeaDeskWorkloadInSeconds = (gbrSeconds * 10 + fraSeconds * 2) / 60
-    val nonEEADeskWorkloadInSeconds = (zaSeconds * 6 + zbwSeconds * 6) / 60
-    workloads.toSet === Set(
-      (PaxTypes.EeaMachineReadable, Queues.EeaDesk, eeaDeskWorkloadInSeconds * 10 / 12),
-      (PaxTypes.VisaNational, Queues.NonEeaDesk, nonEEADeskWorkloadInSeconds * 10 / 12),
-      (PaxTypes.EeaMachineReadable, Queues.EeaDesk, eeaDeskWorkloadInSeconds * 2 / 12),
-      (PaxTypes.VisaNational, Queues.NonEeaDesk, nonEEADeskWorkloadInSeconds * 2 / 12)
-    )
-  }
-
-  "Given an arrival with None pax on the arrival and 1 split containing 6 pax with no nationality data " +
+  "Given an arrival with None pax on the arrival and 1 split containing 6 pax " +
     "When I ask for the workload for this arrival " +
     "Then I see the 6x the proc time provided" >> {
 
-    val arrival = ArrivalGenerator.arrival(actPax = None, apiPax = Option(6))
-    val splits = Set(
-      Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 6, None)),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
-        PaxNumbers))
-    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val emptyNatProcTimes: Map[Nationality, Double] = Map()
-    val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(
-        ApiFlightWithSplits(arrival, splits, None),
-        procTimes,
-        emptyNatProcTimes,
-        true,
-        PcpPax.bestPaxEstimateWithApi
-      )
-      .toList
-      .map(_.workLoad)
+    val arrival = ArrivalGenerator.arrival(actPax = None, apiPax = Option(6),totalPax = Set(TotalPaxSource(Option(6), ApiFeedSource)))
+    val splits = generateSplits(6, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
+    val workloads = workloadForFlight(arrival, splits, FlightFilter.regular(List(T1)))
 
-    workloads === List(1.5 * 6)
+    workloads === procTime * 6
   }
 
-  "Given an arrival with 1 pax on the arrival and 1 split containing 6 pax with no nationality data " +
+  "Given an arrival with 1 pax on the arrival and 1 historic split containing 6 pax " +
     "When I ask for the workload for this arrival " +
     "Then I see the 1x the proc time provided" >> {
 
-    val arrival = ArrivalGenerator.arrival(actPax = Option(1), apiPax = Option(6), feedSources = Set(LiveFeedSource))
-    val splits = Set(
-      Splits(
-        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 6, None)),
-        SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages,
-        Option(EventTypes.DC),
-        PaxNumbers))
-    val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 1.5)
-    val emptyNatProcTimes: Map[Nationality, Double] = Map()
-    val workloads = WorkloadCalculator
-      .flightToFlightSplitMinutes(
-        ApiFlightWithSplits(arrival, splits, None),
-        procTimes,
-        emptyNatProcTimes,
-        true,
-        PcpPax.bestPaxEstimateWithApi
-      )
-      .toList
-      .map(_.workLoad)
+    val arrival = ArrivalGenerator.arrival(actPax = Option(1), apiPax = Option(6), feedSources = Set(LiveFeedSource), totalPax = Set(TotalPaxSource(Option(1), LiveFeedSource)))
+    val splits = generateSplits(6, SplitSources.Historical, None)
+    val workloads = workloadForFlight(arrival, splits, FlightFilter.regular(List(T1)))
 
-    workloads === List(1.5 * 1)
+    workloads === procTime * 1
+  }
+
+  "Concerning red list origins" >> {
+    val redListOriginBulawayo = PortCode("BUQ")
+
+    def portConf(port: PortCode): AirportConfig = DrtPortConfigs.confByPort(port)
+
+    val paxCount = 6
+
+    s"Given an arrival with 6 pax at STN $T1 from a red list country, I should see some workload" >> {
+      workloadForFlightFromTo(redListOriginBulawayo, portConf(PortCode("STN")), T1, paxCount) === paxCount * procTime
+    }
+
+    s"Given an arrival with 6 pax at LHR $T2 from a red list country, I should see no workload" >> {
+      workloadForFlightFromTo(redListOriginBulawayo, portConf(PortCode("LHR")), T2, paxCount) === 0
+    }
+
+    s"Given an arrival with 6 pax at LHR $T3 from a red list country, I should see no workload" >> {
+      workloadForFlightFromTo(redListOriginBulawayo, portConf(PortCode("LHR")), T3, paxCount) === paxCount * procTime
+    }
+
+    s"Given an arrival with 6 pax at LHR $T4 from a red list country, I should see no workload" >> {
+      workloadForFlightFromTo(redListOriginBulawayo, portConf(PortCode("LHR")), T4, paxCount) === paxCount * procTime
+    }
+
+    s"Given an arrival with 6 pax at LHR $T5 from a red list country, I should see no workload" >> {
+      workloadForFlightFromTo(redListOriginBulawayo, portConf(PortCode("LHR")), T5, paxCount) === 0
+    }
+  }
+
+  def workloadForFlightFromTo(origin: PortCode, config: AirportConfig, terminal: Terminal, paxCount: Int): Double = {
+    val arrival = ArrivalGenerator.arrival(schDt = "2021-06-01T12:00", actPax = Option(paxCount), terminal = terminal, origin = origin, totalPax = Set(TotalPaxSource(Option(paxCount), AclFeedSource)))
+    val splits = generateSplits(paxCount, SplitSources.Historical, None)
+    workloadForFlight(arrival, splits, FlightFilter.forPortConfig(config))
   }
 }

@@ -3,11 +3,11 @@ package drt.server.feeds.lcy
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
-import drt.shared.Terminals.T1
-import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, LiveFeedSource, Operator, PortCode}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -213,27 +213,28 @@ class LCYFlightTransformSpec extends CrunchTestLike {
     val result = LCYFlightTransform.lcyFlightToArrival(lcyFlight)
 
     val expected = Arrival(
-      Option(Operator("SA")),
-      ArrivalStatus("ARRIVED ON STAND"),
-      Option(SDate(estimatedTouchDownTimeString).millisSinceEpoch),
-      Option(SDate(actualTouchDownTimeString).millisSinceEpoch),
-      None,
-      Option(SDate(actualOnBlocksTimeString).millisSinceEpoch),
-      Option("6"),
-      Option("55"),
-      Option(175),
-      Option(65),
-      None,
-      None,
-      None,
-      PortCode("LCY"),
-      T1,
-      "SA123",
-      "SA123",
-      PortCode("JNB"),
-      SDate(scheduledTimeString).millisSinceEpoch,
-      None,
-      Set(LiveFeedSource)
+      Operator = Option(Operator("SA")),
+      Status = ArrivalStatus("ARRIVED ON STAND"),
+      Estimated = Option(SDate(estimatedTouchDownTimeString).millisSinceEpoch),
+      PredictedTouchdown = None,
+      Actual = Option(SDate(actualTouchDownTimeString).millisSinceEpoch),
+      EstimatedChox = None,
+      ActualChox = Option(SDate(actualOnBlocksTimeString).millisSinceEpoch),
+      Gate = Option("6"),
+      Stand = Option("55"),
+      MaxPax = Option(175),
+      ActPax = Option(65),
+      TranPax = None,
+      RunwayID = None,
+      BaggageReclaimId = None,
+      AirportID = PortCode("LCY"),
+      Terminal = T1,
+      rawICAO = "SA123",
+      rawIATA = "SA123",
+      Origin = PortCode("JNB"),
+      Scheduled = SDate(scheduledTimeString).millisSinceEpoch,
+      PcpTime = None,
+      FeedSources = Set(LiveFeedSource)
     )
 
     result === expected

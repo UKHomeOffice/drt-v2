@@ -1,8 +1,9 @@
 package services
 
-import drt.shared.Terminals.{T1, T2, T3}
-import drt.shared.{Queues, TQM}
+import drt.shared.TQM
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, T3}
 
 import scala.collection.immutable
 

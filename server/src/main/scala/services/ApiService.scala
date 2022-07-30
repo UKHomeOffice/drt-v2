@@ -1,16 +1,16 @@
 package services
 
-import java.util.UUID
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.util.Timeout
 import controllers.ShiftPersistence
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import drt.shared.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc.{Headers, Session}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.Map
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -21,11 +21,9 @@ import scala.language.postfixOps
 import scala.util.Try
 
 trait AirportToCountryLike {
-  lazy val airportInfo: Map[String, AirportInfo] = {
-    val bufferedSource = scala.io.Source.fromURL(
-      getClass.getResource("/airports.dat"))(Codec.UTF8)
+  lazy val airportInfoByIataPortCode: Map[String, AirportInfo] = {
+    val bufferedSource = scala.io.Source.fromURL(getClass.getResource("/airports.dat"))(Codec.UTF8)
     bufferedSource.getLines().map { l =>
-
       val t = Try {
         val splitRow: Array[String] = l.split(",")
         val sq: String => String = stripQuotes
@@ -42,7 +40,7 @@ trait AirportToCountryLike {
   }
 
   def airportInfosByAirportCodes(codes: Set[String]): Future[Map[String, AirportInfo]] = Future {
-    val res = codes.map(code => (code, airportInfo.get(code)))
+    val res = codes.map(code => (code, airportInfoByIataPortCode.get(code)))
 
     val successes: Set[(String, AirportInfo)] = res collect {
       case (code, Some(ai)) =>
@@ -53,18 +51,19 @@ trait AirportToCountryLike {
   }
 }
 
-object AirportToCountry extends AirportToCountryLike
+object AirportToCountry extends AirportToCountryLike {
+  def isRedListed(portToCheck: PortCode, forDate: MillisSinceEpoch, redListUpdates: RedListUpdates): Boolean = airportInfoByIataPortCode
+    .get(portToCheck.iata)
+    .exists(ai => redListUpdates.countryCodesByName(forDate).contains(ai.country))
+}
 
 abstract class ApiService(val airportConfig: AirportConfig,
                           val shiftsActor: ActorRef,
                           val fixedPointsActor: ActorRef,
                           val staffMovementsActor: ActorRef,
                           val headers: Headers,
-                          val session: Session
-                         )
-  extends Api
-    with AirportToCountryLike
-    with ShiftPersistence {
+                          val session: Session)
+  extends Api with ShiftPersistence {
 
   override implicit val timeout: akka.util.Timeout = Timeout(30 seconds)
 
@@ -84,11 +83,11 @@ abstract class ApiService(val airportConfig: AirportConfig,
 
   def getKeyCloakGroups(): Future[List[KeyCloakGroup]]
 
-  def getKeyCloakUserGroups(userId: UUID): Future[Set[KeyCloakGroup]]
+  def getKeyCloakUserGroups(userId: String): Future[Set[KeyCloakGroup]]
 
-  def addUserToGroups(userId: UUID, groups: Set[String]): Future[Unit]
+  def addUserToGroups(userId: String, groups: Set[String]): Future[Unit]
 
-  def removeUserFromGroups(userId: UUID, groups: Set[String]): Future[Unit]
+  def removeUserFromGroups(userId: String, groups: Set[String]): Future[Unit]
 
   def getShowAlertModalDialog(): Boolean
 }

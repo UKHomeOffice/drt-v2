@@ -1,66 +1,133 @@
 package drt.client.components
 
-import drt.auth.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView, LoggedInUser}
+import diode.UseValueEq
 import drt.client.SPAMain
+import drt.client.components.TerminalContentComponent.exportLink
+import drt.client.components.styles.{DefaultFormFieldsStyle, WithScalaCssImplicits}
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services._
+import drt.client.util.DateUtil.isNotValidDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
-import drt.shared.Terminals.Terminal
-import japgolly.scalajs.react.extra.Reusability
+import drt.shared.redlist.LhrRedListDatesImpl
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiFormLabel, MuiGrid, MuiTextField}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
+import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.vdom.all.onClick.Event
+import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, ScalaComponent}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
-object MultiDayExportComponent {
+object MultiDayExportComponent extends WithScalaCssImplicits {
   val today: SDateLike = SDate.now()
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(terminal: Terminal,
-                   selectedDate: SDateLike,
-                   loggedInUser: LoggedInUser)
+  case class Props(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser) extends UseValueEq
 
-  case class State(startDay: Int,
-                   startMonth: Int,
-                   startYear: Int,
-                   endDay: Int,
-                   endMonth: Int,
-                   endYear: Int,
-                   showDialogue: Boolean = false
-                  ) {
-    def startMillis: MillisSinceEpoch = SDate(startYear, startMonth, startDay).millisSinceEpoch
+  case class StateDate(date: LocalDate, isNotValid: Boolean = false)
 
-    def endMillis: MillisSinceEpoch = SDate(endYear, endMonth, endDay).millisSinceEpoch
+  case class State(startDate: StateDate, endDate: StateDate, showDialogue: Boolean = false) extends UseValueEq {
+
+    def setStart(dateString: String, isNotValid: Boolean): State = if (isNotValid) copy(startDate = StateDate(startDate.date, isNotValid = true)) else copy(startDate = StateDate(LocalDate.parse(dateString).getOrElse(startDate.date)))
+
+    def setEnd(dateString: String, isNotValid: Boolean): State = if (isNotValid) copy(endDate = StateDate(endDate.date, isNotValid = true)) else copy(endDate = StateDate(LocalDate.parse(dateString).getOrElse(endDate.date)))
+
+    def startMillis: MillisSinceEpoch = SDate(startDate.date).millisSinceEpoch
+
+    def endMillis: MillisSinceEpoch = SDate(endDate.date).millisSinceEpoch
   }
 
-  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-  implicit val terminalReuse: Reusability[Terminal] = Reusability.derive[Terminal]
-  implicit val propsReuse: Reusability[Props] = Reusability.by(p => (p.terminal, p.selectedDate.millisSinceEpoch))
-
-  val component = ScalaComponent.builder[Props]("SnapshotSelector")
-    .initialStateFromProps(p => State(
-      startDay = p.selectedDate.getDate(),
-      startMonth = p.selectedDate.getMonth(),
-      startYear = p.selectedDate.getFullYear(),
-      endDay = p.selectedDate.getDate(),
-      endMonth = p.selectedDate.getMonth(),
-      endYear = p.selectedDate.getFullYear()
-    ))
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
+    .initialStateFromProps { p =>
+      State(
+        startDate = StateDate(p.selectedDate.toLocalDate),
+        endDate = StateDate(p.selectedDate.toLocalDate)
+      )
+    }
     .renderPS((scope, props, state) => {
 
       val showClass = if (state.showDialogue) "show" else "fade"
 
+      def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String, currentDate: LocalDate): html_<^.VdomElement = {
+        MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
+          MuiGrid(item = true, xs = 1)(
+            DefaultFormFieldsStyle.datePickerLabel,
+            MuiFormLabel()(label),
+          ),
+          MuiGrid(item = true, xs = 4)(
+            MuiTextField()(
+              DefaultFormFieldsStyle.datePicker,
+              ^.`type` := "date",
+              ^.defaultValue := SDate(currentDate).toISODateOnly,
+              ^.onChange ==> setDate
+            )
+          ),
+          MuiGrid(item = true, xs = 6)(
+            if (label == "From")
+              validDateIndicator(state.startDate.isNotValid)
+            else
+              validDateIndicator(state.endDate.isNotValid)
+          )
+        )
+      }
+
+      def validDateIndicator(isNotValid: Boolean): TagMod = isNotValid match {
+        case true =>
+          <.div(^.id := "snapshot-error", <.div("Please enter valid date"))
+        case false =>
+          <.div(^.id := "snapshot-done", Icon.checkCircleO)
+      }
+
+      val setStartDate: ReactEventFromInput => CallbackTo[Unit] = e => {
+        e.persist()
+        isNotValidDate(e.target.value) match {
+          case true =>
+            scope.modState(_.setStart(e.target.value, true))
+
+          case _ =>
+            scope.modState(_.setStart(e.target.value, false))
+        }
+      }
+
+      val setEndDate: ReactEventFromInput => CallbackTo[Unit] = e => {
+        e.persist()
+        isNotValidDate(e.target.value) match {
+          case true =>
+            scope.modState(_.setEnd(e.target.value, true))
+          case _ =>
+            scope.modState(_.setEnd(e.target.value, false))
+        }
+      }
+
+      val gridXs = 4
+
+      def showDialogue(event: Event): Callback = {
+        event.preventDefault()
+        scope.modState(_.copy(showDialogue = true))
+      }
+
       <.div(
-        <.a(
+        ^.className := "export-button-wrapper",
+        MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+          MuiIcons(GetApp)(fontSize = "small"),
           "Multi Day Export",
           ^.className := "btn btn-default",
           VdomAttr("data-toggle") := "modal",
           VdomAttr("data-target") := "#multi-day-export",
-          ^.onClick --> scope.modState(_.copy(showDialogue = true))
+          ^.href := "#",
+          ^.onClick ==> showDialogue,
         ),
         <.div(^.className := "multi-day-export modal " + showClass, ^.id := "#multi-day-export", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
             ^.className := "modal-dialog modal-dialog-centered",
+            ^.id := "multi-day-export-modal-dialog",
             ^.role := "document",
             <.div(
               ^.className := "modal-content",
@@ -70,67 +137,63 @@ object MultiDayExportComponent {
               ),
               <.div(
                 ^.className := "modal-body",
-                DateSelector("From", today, d => {
-                  scope.modState(_.copy(startDay = d.getDate(), startMonth = d.getMonth(), startYear = d.getFullYear()))
-                }),
-                DateSelector("To", today, d => {
-                  scope.modState(_.copy(endDay = d.getDate(), endMonth = d.getMonth(), endYear = d.getFullYear()))
-                }),
-                if (state.startMillis > state.endMillis)
-                  <.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date.")
-                else
-                  EmptyVdom,
+                ^.id := "multi-day-export-modal-body",
+                MuiGrid(container = true)(
+                  MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
+                    datePickerWithLabel(setStartDate, "From", state.startDate.date),
+                    datePickerWithLabel(setEndDate, "To", state.endDate.date),
+                    if (state.startDate.date > state.endDate.date)
+                      MuiGrid(item = true, xs = 12)(<.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date."))
+                    else
+                      EmptyVdom,
 
-                <.div(
-                  <.div(^.className := "multi-day-export-links",
-
-                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
-                      <.a("Export Arrivals",
-                        ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/arrivals/" +
-                          s"${SDate(state.startMillis).toLocalDate.toISOString}/" +
-                          s"${SDate(state.endMillis).toLocalDate.toISOString}/${props.terminal}"),
-                        ^.target := "_blank",
-                        ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
-                        }
-                      ) else EmptyVdom,
+                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
+                      val exports = props.portCode match {
+                        case PortCode("LHR") if LhrRedListDatesImpl.dayHasPaxDiversions(SDate(state.endDate.date)) =>
+                          List(ExportArrivalsWithRedListDiversions("Reflect pax diversions"), ExportArrivalsWithoutRedListDiversions("Don't reflect pax diversions"))
+                        case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
+                        case _ => List(ExportArrivals)
+                      }
+                      exportLinksGroup(props, state, gridXs, exports, "Arrivals")
+                    } else EmptyVdom,
                     if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                      <.a("Export Desks",
-                        ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/desks/${state.startMillis}/${state.endMillis}/${props.terminal}"),
-                        ^.target := "_blank",
-                        ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Desks", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
-                        }
-                      ) else EmptyVdom,
-                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endMillis <= SDate.now().millisSinceEpoch))
-                      <.a("Export Live Feed",
-                        ^.className := "btn btn-default",
-                        ^.href := SPAMain.absoluteUrl(s"export/arrivals-feed/${props.terminal}/${state.startMillis}/${state.endMillis}/LiveFeedSource"),
-                        ^.target := "_blank",
-                        ^.onClick --> {
-                          Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "click", "Export Arrivals", f"${state.startYear}-${state.startMonth}%02d-${state.startDay}%02d - ${state.endYear}-${state.endMonth}%02d-${state.endDay}%02d"))
-                        }
-                      ) else EmptyVdom
-
+                      exportLinksGroup(props, state, gridXs, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
+                    else EmptyVdom,
+                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate))
+                      exportLinksGroup(props, state, gridXs, List(ExportLiveArrivalsFeed), "Feeds")
+                    else EmptyVdom
+                  )),
+                <.div(
+                  ^.className := "modal-footer",
+                  ^.id := "multi-day-export-modal-footer",
+                  <.button(
+                    ^.className := "btn btn-link",
+                    VdomAttr("data-dismiss") := "modal", "Close",
+                    ^.onClick --> scope.modState(_.copy(showDialogue = false))
                   )
-                )
-              ),
-              <.div(
-                ^.className := "modal-footer",
-                <.button(
-                  ^.className := "btn btn-link",
-                  VdomAttr("data-dismiss") := "modal", "Close",
-                  ^.onClick --> scope.modState(_.copy(showDialogue = false))
                 )
               )
             )
-          )
-        ))
+          ))
+      )
     })
-    .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(terminal, selectedDate, loggedInUser: LoggedInUser))
+
+  private def exportLinksGroup(props: Props, state: State, gridXs: Int, exports: List[ExportType], title: String): VdomElement =
+    MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
+      MuiGrid(item = true, xs = 12)(title),
+      exports.map(export =>
+        MuiGrid(item = true, xs = gridXs)(
+          exportLink(
+            props.selectedDate,
+            props.terminal.toString,
+            export,
+            SPAMain.exportDatesUrl(export, state.startDate.date, state.endDate.date, props.terminal)
+          )
+        )
+      ).toVdomArray
+    )
+
+  def apply(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(portCode, terminal, viewMode, selectedDate, loggedInUser: LoggedInUser))
 }

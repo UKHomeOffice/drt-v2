@@ -5,8 +5,13 @@ This project is a tool used by UK Borderforce to help ensure sufficient resource
 with anticipated demand.
 It is the latest (as of Mar 2017) iteration of a tool to tackle this lofty goal. This repo replaces an earlier, PHP, database
 and Scala set of projects.
-We began from the ground up here, consolidating back into a monolith per port. We'll cover the decisions in more detail in
-[Architectural Decision Records](doc/architecture/decisions/0001-record-architecture-decisions.md)
+We began from the ground up here, consolidating back into a monolith per port. 
+
+## High level data flow
+![image info](./doc/architecture/diagrams/DRT%20High%20Level%20Overview.svg)
+
+## DRT main app data flow
+![image info](./doc/architecture/diagrams/DRT%20v2%20data%20flow%20-%202021.svg)
 
 Drt v2 is a replacement for an earlier system built primarily with PHP.
 
@@ -14,7 +19,6 @@ It is a tool which aims to provide Borderforce officers in airports with informa
 A) respond to live changes to circumstances - flights coming in early or late, lower than expected resourcing due to people calling in sick,
 B) planning for future resourcing
 
-As of 2017-03-39 it primarily focuses on the 'live' aspect.
 
 ## Approach
 The core of both drt v1 and v2 is an algorithm by Home Office Science. It's an optimization function which searches a space for the lowest cost based on: queue length (time), number of desks staffed, cost of changing staff and so on.
@@ -87,3 +91,8 @@ To reset the value, first delete the deployment for the port in question to make
 ```SELECT setval('journal_ordering_seq', COALESCE((SELECT MAX(ordering)+1 FROM journal), 1), false);```
 
 This gets the values back in sync and resolves the duplicate key insertion errors. The mystery is how we ended up having them out of sync in the first place...
+
+#Updating the akka version and akka persistent jdbc 
+With upgrade for akka version (2.6.17) and akka persistent jdbc (5.0.4) there is change in schema for journal and snapshot . At moment there are no tools to migration from legacy to new schema.
+But there is option provided to continue using legacy schema with some configure update for dao which is document by lightbend  https://doc.akka.io/docs/akka-persistence-jdbc/current/migration.html.
+At some point once the migration tool is available we can migrate to new schema which is beneficial. 

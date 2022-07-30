@@ -1,43 +1,46 @@
 package services.arrivals
 
-import drt.shared.Terminals.T1
-import drt.shared.api.Arrival
-import drt.shared.{ArrivalStatus, PortCode, SDateLike}
 import org.specs2.mutable.Specification
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Prediction}
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.time.SDateLike
 
 class ArrivalDataSanitiserSpec extends Specification {
 
   val scheduled: SDateLike = SDate(2019, 9, 30, 16, 0)
 
   def arrival(estimated: Option[Long] = None,
+              predTouchdown: Option[Prediction[Long]] = None,
               actual: Option[Long] = None,
               estChox: Option[Long] = None,
               actChox: Option[Long] = None,
               gate: Option[String] = None,
               status: ArrivalStatus = ArrivalStatus("test")): Arrival =
     Arrival(
-      None,
-      status,
-      estimated,
-      actual,
-      estChox,
-      actChox,
-      gate,
-      None,
-      None,
-      None,
-      None,
-      None,
-      None,
-      PortCode("STN"),
-      T1,
-      "TST100",
-      "TST100",
-      PortCode("TST"),
-      scheduled.millisSinceEpoch,
-      None,
-      Set()
+      Operator = None,
+      Status = status,
+      Estimated = estimated,
+      PredictedTouchdown = predTouchdown,
+      Actual = actual,
+      EstimatedChox = estChox,
+      ActualChox = actChox,
+      Gate = gate,
+      Stand = None,
+      MaxPax = None,
+      ActPax = None,
+      TranPax = None,
+      RunwayID = None,
+      BaggageReclaimId = None,
+      AirportID = PortCode("STN"),
+      Terminal = T1,
+      rawICAO = "TST100",
+      rawIATA = "TST100",
+      Origin = PortCode("TST"),
+      Scheduled = scheduled.millisSinceEpoch,
+      PcpTime = None,
+      FeedSources = Set()
       )
 
   "Given a base live arrival with an estimated time that is outside the threshold " +

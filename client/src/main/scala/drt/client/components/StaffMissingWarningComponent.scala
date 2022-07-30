@@ -1,12 +1,16 @@
 package drt.client.components
 
-import drt.auth.{LoggedInUser, StaffEdit}
+import diode.UseValueEq
+import drt.client.SPAMain.TerminalPageModes.Staffing
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.shared.CrunchApi.StaffMinute
-import japgolly.scalajs.react.ScalaComponent
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 
 
 object StaffMissingWarningComponent {
@@ -18,31 +22,28 @@ object StaffMissingWarningComponent {
                     loggedInUser: LoggedInUser,
                     router: RouterCtl[Loc],
                     terminalPageTab: TerminalPageTabLoc
-                  )
+                  ) extends UseValueEq
 
-  val component = ScalaComponent.builder[Props]("StaffMissingWarning")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffMissingWarning")
     .render_P(p => {
 
       val hasStaff = p.terminalStaffMinutes.values.exists(_.available > 0)
-      if (!hasStaff)
-        <.span(^.className := "has-alerts",
+
+      <.span(^.className := "has-alerts grow",
+        if (!hasStaff)
           <.span(^.`class` := s"alert alert-class-warning the-alert staff-alert", ^.role := "alert",
             <.strong(s"You have not entered any staff"),
             " for the time period you are viewing, please enter staff on the ",
             if (p.loggedInUser.hasRole(StaffEdit))
               p.router.link(
-                p.terminalPageTab.copy(
-                  mode = "staffing",
-                  subMode = "15",
-                  queryParams = Map()
-                )
+                p.terminalPageTab.update(mode = Staffing, subMode = "15")
               )("Monthly Staffing")
             else
               <.strong("Monthly Staffing"),
             " page."
           )
-        )
-      else <.span()
+        else <.span()
+      )
 
     })
 

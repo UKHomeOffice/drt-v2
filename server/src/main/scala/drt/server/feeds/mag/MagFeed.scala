@@ -1,7 +1,6 @@
 package drt.server.feeds.mag
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model._
@@ -9,20 +8,20 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
+import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.server.feeds.mag.MagFeed.MagArrival
 import drt.shared.FlightsApi.Flights
-import drt.shared.api.Arrival
-import drt.shared.{LiveFeedSource, PortCode, SDateLike, Terminals}
 import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Terminals}
+import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
 
@@ -35,10 +34,7 @@ trait FeedRequesterLike {
 }
 
 object ProdFeedRequester extends FeedRequesterLike {
-  override def sendTokenRequest(header: String,
-                                claim: String,
-                                key: String,
-                                algorithm: JwtAlgorithm): String =
+  override def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String =
     Try(Jwt.encode(header: String, claim: String, key: String, algorithm: JwtAlgorithm)).getOrElse("")
 
   override def send(request: HttpRequest)
@@ -79,9 +75,8 @@ case class MagFeed(key: String,
               from: Int,
               size: Int) = s"https://$claimSub/v1/flight/$portCode/arrival?startDate=${start.toISOString()}&endDate=${end.toISOString()}&from=$from&size=$size"
 
-  def tickingSource: Source[ArrivalsFeedResponse, Cancellable] = Source
-    .tick(initialDelay = 0 milliseconds, interval = 30 seconds, tick = NotUsed)
-    .mapAsync(parallelism = 1)(_ => requestArrivals(now().addHours(hoursToAdd = -12)))
+  def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
+    source.mapAsync(parallelism = 1)(_ => requestArrivals(now().addHours(hoursToAdd = -12)))
 
   def requestArrivals(start: SDateLike): Future[ArrivalsFeedResponse] =
     Source(0 to 1000 by 100)
@@ -99,6 +94,7 @@ case class MagFeed(key: String,
           log.error(s"Failed to fetch or parse MAG arrivals: ${t.getMessage}")
           List()
       }
+      .log(getClass.getName)
       .runWith(Sink.seq)
       .map {
         case as if as.nonEmpty =>
@@ -183,6 +179,7 @@ object MagFeed {
     Operator = ma.operatingAirline.iata,
     Status = if (ma.onBlockTime.actual.isDefined) "On Chocks" else if (ma.touchDownTime.actual.isDefined) "Landed" else ma.flightStatus,
     Estimated = ma.arrival.estimated.map(str => SDate(str).millisSinceEpoch),
+    PredictedTouchdown = None,
     Actual = ma.arrival.actual.map(str => SDate(str).millisSinceEpoch),
     EstimatedChox = ma.onBlockTime.estimated.map(str => SDate(str).millisSinceEpoch),
     ActualChox = ma.onBlockTime.actual.map(str => SDate(str).millisSinceEpoch),

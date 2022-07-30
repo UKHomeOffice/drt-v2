@@ -7,9 +7,9 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.SDateLike
-import drt.shared.api.Arrival
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -83,6 +83,7 @@ object PaxDeltas {
       }
 
     val eventualUpdatedArrivals = updatedArrivalsSource
+      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .runWith(Sink.seq)
       .map(_.toList)
 
@@ -105,11 +106,15 @@ object PaxDeltas {
         arrival
       }
 
-  private def applyAdjustment(arrival: Arrival, delta: Double) = {
-    val updatedPax = arrival.ActPax.map(pax => (pax * delta).round.toInt) match {
-      case Some(positiveWithDelta) if positiveWithDelta > 0 => Option(positiveWithDelta)
-      case _ => Option(0)
+  def applyAdjustment(arrival: Arrival, delta: Double): Arrival = {
+    val saneDelta = delta match {
+      case negative if negative < 0 => 0
+      case over100pc if over100pc > 1 => 1
+      case normal => normal
     }
+
+    val updatedPax = arrival.ActPax.map(pax => (pax * saneDelta).round.toInt)
+
     arrival.copy(ActPax = updatedPax)
   }
 }

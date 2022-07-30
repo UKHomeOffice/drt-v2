@@ -1,16 +1,16 @@
 package actors.flights
 
-import actors.ArrivalGenerator
-import actors.minutes.MockLookup
-import actors.queues.FlightsRouterActor
-import actors.queues.FlightsRouterActor._
-import akka.stream.scaladsl.Sink
+import actors.DateRange
+import actors.routing.FlightsRouterActor
+import actors.routing.FlightsRouterActor._
+import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
-import drt.shared.Terminals.{T1, Terminal}
-import drt.shared.{ApiFlightWithSplits, UtcDate}
 import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.time.UtcDate
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -19,7 +19,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
   "When I ask for a Source of query dates" >> {
     "Given a start date of 2020-09-10 and end date of 2020-09-11" >> {
       "I should get 2 days before (2020-09-08) to 1 day after (2020-09-12)" >> {
-        val result = FlightsRouterActor.utcDateRange(SDate(2020, 9, 10), SDate(2020, 9, 11))
+        val result = DateRange.utcDateRangeWithBuffer(2, 1)(SDate(2020, 9, 10), SDate(2020, 9, 11))
         val expected = Seq(
           UtcDate(2020, 9, 8),
           UtcDate(2020, 9, 9),
@@ -47,7 +47,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     "When I ask if its pcp range falls within 2020-09-28" >> {
       "Then I should get a true response" >> {
         val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-29T12:00Z", pcpDt = "2020-09-28T12:00Z", actPax = Option(100)), Set())
-        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange())
+        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange)
         result === true
       }
     }
@@ -57,7 +57,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     "When I ask if its pcp range falls within 2020-09-28" >> {
       "Then I should get a true response" >> {
         val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-27T12:00Z", pcpDt = "2020-09-28T12:00Z", actPax = Option(100)), Set())
-        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange())
+        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange)
         result === true
       }
     }
@@ -73,7 +73,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     val flight0509Early = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T01:10Z", pcpDt = "2020-09-04T23:50Z", actPax = Option(100)), Set())
     val flight0609 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-06T12:00Z", pcpDt = "2020-09-06T12:00Z", actPax = Option(100)), Set())
 
-    val earlyOnTimeAndLateFlights = (_: Terminal, utcDate: UtcDate, _: Option[MillisSinceEpoch]) =>
+    val earlyOnTimeAndLateFlights = (_: Option[MillisSinceEpoch]) => (utcDate: UtcDate) => (_: Terminal) =>
       Future(Map(
         UtcDate(2020, 9, 1) -> FlightsWithSplits(Seq(flight0109)),
         UtcDate(2020, 9, 2) -> FlightsWithSplits(Seq(flight0209onTime, flight0209Late)),
@@ -88,8 +88,8 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
         val startDate = SDate(2020, 9, 3)
         val endDate = SDate(2020, 9, 4, 23, 59)
 
-        val flights = FlightsRouterActor.flightsByDaySource(earlyOnTimeAndLateFlights)(startDate, endDate, T1, None)
-        val result = Await.result(FlightsRouterActor.runAndCombine(Future(flights)), 1 second)
+        val flights = FlightsRouterActor.multiTerminalFlightsByDaySource(earlyOnTimeAndLateFlights)(startDate, endDate, Seq(T1), None)
+        val result = Await.result(FlightsRouterActor.runAndCombine(Future(flights)), 1.second)
         val expected = FlightsWithSplits(Seq(flight0209Late, flight0309, flight0409, flight0509Early))
         result === expected
       }

@@ -1,20 +1,21 @@
 package services.exports
 
 import drt.shared.CrunchApi._
-import drt.shared.Queues.Queue
-import drt.shared.Terminals.Terminal
-import drt.shared.{AirportConfig, PortState, SDateLike}
+import drt.shared.PortState
 import services.SDate
+import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object Forecast {
   def headlineFigures(startOfForecast: SDateLike,
-                      endOfForecast: SDateLike,
+                      numberOfDays: Int,
                       terminal: Terminal,
                       portState: PortState,
                       queues: List[Queue]): ForecastHeadlineFigures = {
     val dayMillis = 60 * 60 * 24 * 1000
-    val periods = (endOfForecast.millisSinceEpoch - startOfForecast.millisSinceEpoch) / dayMillis
-    val crunchSummaryDaily = portState.crunchSummary(startOfForecast, periods, 1440, terminal, queues)
+    val crunchSummaryDaily = portState.dailyCrunchSummary(startOfForecast, numberOfDays, terminal, queues)
 
     val figures = for {
       (dayMillis, queueMinutes) <- crunchSummaryDaily

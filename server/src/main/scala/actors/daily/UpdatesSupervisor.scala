@@ -1,21 +1,22 @@
 package actors.daily
 
-import java.util.UUID
-
 import actors.PartitionedPortStateActor.GetUpdatesSince
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.pattern.{AskTimeoutException, ask, pipe}
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
-import drt.shared.Terminals.Terminal
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
+import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -52,10 +53,10 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
   import UpdatesSupervisor._
 
   implicit val ex: ExecutionContextExecutor = context.dispatcher
-  implicit val mat: ActorMaterializer = ActorMaterializer.create(context)
+  implicit val mat: Materializer = Materializer.createMaterializer(context)
   implicit val timeout: Timeout = new Timeout(30 seconds)
 
-  val cancellableTick: Cancellable = context.system.scheduler.schedule(10 seconds, 10 seconds, self, PurgeExpired)
+  val cancellableTick: Cancellable = context.system.scheduler.scheduleWithFixedDelay(10 seconds, 10 seconds, self, PurgeExpired)
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), s"updates-supervisor-kill-actor-${getClass.getTypeName}")
 
   var streamingUpdateActors: Map[(Terminal, MillisSinceEpoch), ActorRef] = Map[(Terminal, MillisSinceEpoch), ActorRef]()
@@ -98,6 +99,7 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
       val terminalDays = terminalDaysForPeriod(fromMillis, toMillis)
 
       terminalsAndDaysUpdatesSource(terminalDays, sinceMillis)
+        .log(getClass.getName)
         .runWith(Sink.fold(MinutesContainer.empty[A, B])(_ ++ _))
         .pipeTo(replyTo)
 
