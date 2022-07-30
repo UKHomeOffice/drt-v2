@@ -61,7 +61,7 @@ object OptimiserWithFlexibleProcessors {
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
     for {
-      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla)
+      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
       //      processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq())
     } yield {
       val queue = QueueCapacity(desks.to[List]).processMinutes(config.sla, indexedWork.to[List])
@@ -78,7 +78,7 @@ object OptimiserWithFlexibleProcessors {
     val indexedMinDesks = minDesks.toIndexedSeq
 
         val bestMaxDesks = if (workloads.size >= 60) {
-          val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer)
+          val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processors)
           fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
         } else maxDesks.toIndexedSeq
 
@@ -86,7 +86,7 @@ object OptimiserWithFlexibleProcessors {
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
     for {
-      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla)
+      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
       //      processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq())
     } yield {
       val queue = QueueCapacity(desks.to[List]).processMinutes(config.sla, indexedWork.to[List])
@@ -149,14 +149,15 @@ object OptimiserWithFlexibleProcessors {
                      sla: Int,
                      qstart: IndexedSeq[Double],
                      processors: WorkloadProcessorsProvider): Try[ProcessedWorkLike] = {
-    //    legacyTryProcessWork(work, capacity, sla, qstart)
+    //    legacyTryProcessWork(work, capacity, sla, qstart, processors)
     Try(QueueCapacity(capacity.to[List]).processMinutes(sla, work.to[List]))
   }
 
   def legacyTryProcessWork(work: IndexedSeq[Double],
                            capacity: IndexedSeq[Int],
                            sla: Int,
-                           qstart: IndexedSeq[Double]): Try[ProcessedWorkLike] = {
+                           qstart: IndexedSeq[Double],
+                           processors: WorkloadProcessorsProvider): Try[ProcessedWorkLike] = {
 
     if (capacity.length != work.length) {
       Failure(new Exception(s"capacity & work don't match: ${capacity.length} vs ${work.length}"))
