@@ -156,52 +156,52 @@ object OptimiserWithFlexibleProcessors {
     Try(QueueCapacity(actualCapacity.to[List]).processMinutes(sla, work.to[List]))
   }
 
-//  def legacyTryProcessWork(work: IndexedSeq[Double],
-//                           capacity: IndexedSeq[Int],
-//                           sla: Int,
-//                           qstart: IndexedSeq[Double],
-//                           processors: WorkloadProcessorsProvider): Try[ProcessedWorkLike] = {
-//
-//    if (capacity.length != work.length) {
-//      Failure(new Exception(s"capacity & work don't match: ${capacity.length} vs ${work.length}"))
-//    } else Try {
-//      var q = qstart
-//      var totalWait: Double = 0d
-//      var excessWait: Double = 0d
-//
-//      val (finalWait, finalUtil) = work.indices.foldLeft((List[Int](), List[Double]())) {
-//        case ((wait, util), minute) =>
-//          q = work(minute) +: q
-//          val totalResourceForMinute = processors.forMinute(minute).capacityForServers(capacity(minute))
-//          var resource: Double = totalResourceForMinute.toDouble
-//          var age = q.size
-//
-//          while (age > 0) {
-//            val nextWorkToProcess = q(age - 1)
-//            val surplus = resource - nextWorkToProcess
-//            if (surplus >= 0) {
-//              totalWait = totalWait + nextWorkToProcess * (age - 1)
-//              if (age - 1 >= sla) excessWait = excessWait + nextWorkToProcess * (age - 1)
-//              q = q.dropRight(1)
-//              resource = surplus
-//              age = age - 1
-//            } else {
-//              totalWait = totalWait + resource * (age - 1)
-//              if (age - 1 >= sla) excessWait = excessWait + resource * (age - 1)
-//              q = q.dropRight(1) :+ (nextWorkToProcess - resource)
-//              resource = 0
-//              age = 0
-//            }
-//          }
-//          val nextUtil = if (totalResourceForMinute != 0) 1 - (resource / totalResourceForMinute) else 0
-//          (q.size :: wait, nextUtil :: util)      }
-//
-//      val waitReversed = finalWait.reverse
-//      val utilReversed = finalUtil.reverse
-//
-//      ProcessedWork(utilReversed, waitReversed, q, totalWait, excessWait)
-//    }
-//  }
+  def legacyTryProcessWork(work: IndexedSeq[Double],
+                           capacity: IndexedSeq[Int],
+                           sla: Int,
+                           qstart: IndexedSeq[Double],
+                           processors: WorkloadProcessorsProvider): Try[ProcessedWorkLike] = {
+
+    if (capacity.length != work.length) {
+      Failure(new Exception(s"capacity & work don't match: ${capacity.length} vs ${work.length}"))
+    } else Try {
+      var q = qstart
+      var totalWait: Double = 0d
+      var excessWait: Double = 0d
+
+      val (finalWait, finalUtil) = work.indices.foldLeft((List[Int](), List[Double]())) {
+        case ((wait, util), minute) =>
+          q = work(minute) +: q
+          val totalResourceForMinute = processors.forMinute(minute).capacityForServers(capacity(minute))
+          var resource: Double = totalResourceForMinute.toDouble
+          var age = q.size
+
+          while (age > 0) {
+            val nextWorkToProcess = q(age - 1)
+            val surplus = resource - nextWorkToProcess
+            if (surplus >= 0) {
+              totalWait = totalWait + nextWorkToProcess * (age - 1)
+              if (age - 1 >= sla) excessWait = excessWait + nextWorkToProcess * (age - 1)
+              q = q.dropRight(1)
+              resource = surplus
+              age = age - 1
+            } else {
+              totalWait = totalWait + resource * (age - 1)
+              if (age - 1 >= sla) excessWait = excessWait + resource * (age - 1)
+              q = q.dropRight(1) :+ (nextWorkToProcess - resource)
+              resource = 0
+              age = 0
+            }
+          }
+          val nextUtil = if (totalResourceForMinute != 0) 1 - (resource / totalResourceForMinute) else 0
+          (q.size :: wait, nextUtil :: util)      }
+
+      val waitReversed = finalWait.reverse
+      val utilReversed = finalUtil.reverse
+
+      ProcessedWork(utilReversed, waitReversed, q, totalWait, excessWait)
+    }
+  }
 
   def rollingFairXmax(work: IndexedSeq[Double],
                       xmin: IndexedSeq[Int],
@@ -240,7 +240,7 @@ object OptimiserWithFlexibleProcessors {
       else {
         do {
           val trialDesks = leftwardDesks(winWork, winXmin, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog, winProcessors)
-          val trialProcessExcessWait = tryProcessWork(winWork, trialDesks, sla, IndexedSeq(0), winProcessors) match {
+          val trialProcessExcessWait = legacyTryProcessWork(winWork, trialDesks, sla, IndexedSeq(0), winProcessors) match {
             case Success(pw) => pw.excessWait
             case Failure(t) => throw t
           }
@@ -305,10 +305,11 @@ object OptimiserWithFlexibleProcessors {
            previousDesksOpen: Int,
            processors: WorkloadProcessorsProvider)
           (capacity: IndexedSeq[Int]): Cost = {
-    var simRes = tryProcessWork(work, capacity, sla, qStart, processors) match {
+    var simRes = legacyTryProcessWork(work, capacity, sla, qStart, processors) match {
       case Success(pw) => pw
       case Failure(t) => throw t
     }
+//    println(s"excessWait: ${simRes.excessWait}, totalWait: ${simRes.totalWait}, residual: ${simRes.residual}")
 
     var finalCapacity = capacity.takeRight(1).head
     val backlog = simRes.residual.reverse
@@ -512,7 +513,7 @@ object OptimiserWithFlexibleProcessors {
           val stop = winStart + winStep
           val workToProcess = work.slice(winStart, stop)
           val desksToProcess = desks.slice(winStart, stop)
-          qStart = tryProcessWork(workToProcess.toIndexedSeq, desksToProcess.toIndexedSeq, sla, qStart.toIndexedSeq, processors.forWindow(winStart, stop)) match {
+          qStart = legacyTryProcessWork(workToProcess.toIndexedSeq, desksToProcess.toIndexedSeq, sla, qStart.toIndexedSeq, processors.forWindow(winStart, stop)) match {
             case Success(pw) => pw.residual
             case Failure(t) => throw t
           }
