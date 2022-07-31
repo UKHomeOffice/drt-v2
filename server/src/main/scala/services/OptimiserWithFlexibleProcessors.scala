@@ -62,42 +62,43 @@ object OptimiserWithFlexibleProcessors {
 
     for {
       desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
-      //      processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq())
     } yield {
-      val queue = QueueCapacity(desks.to[List]).processMinutes(config.sla, indexedWork.to[List])
-      OptimizerCrunchResult(desks.toIndexedSeq, queue.waits)
-      //      OptimizerCrunchResult(desks.toIndexedSeq, processedWork.waits)
-    }
-  }
-
-  def crunchWithDump(workloads: Iterable[Double],
-                     minDesks: Iterable[Int],
-                     maxDesks: Iterable[Int],
-                     config: OptimiserConfig): Try[OptimizerCrunchResult] = {
-    val indexedWork = workloads.toIndexedSeq
-    val indexedMinDesks = minDesks.toIndexedSeq
-
-        val bestMaxDesks = if (workloads.size >= 60) {
-          val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processors)
-          fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
-        } else maxDesks.toIndexedSeq
-
-//    val bestMaxDesks = maxDesks.toIndexedSeq
-    if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
-
-    for {
-      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
-      //      processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq())
-    } yield {
-      val queue = QueueCapacity(desks.to[List]).processMinutes(config.sla, indexedWork.to[List])
-      indexedWork.zipWithIndex.zip(desks).zip(queue.waits).zip(queue.queueByMinute).foreach {
-        case ((((work, minute), desksOpen), wait), queueLength) =>
-          println(s"$minute,$work,$queueLength,$desksOpen,$wait")
+      val actualCapacity = desks.zipWithIndex.map {
+        case (c, idx) => config.processors.forMinute(idx).capacityForServers(c)
       }
-      OptimizerCrunchResult(desks.toIndexedSeq, queue.waits)
-      //      OptimizerCrunchResult(desks.toIndexedSeq, processedWork.waits)
+      val queue = QueueCapacity(actualCapacity.toList).processMinutes(config.sla, indexedWork.to[List])
+      OptimizerCrunchResult(desks.toIndexedSeq, queue.waits, queue.queueByMinute.toIndexedSeq)
     }
   }
+
+//  def crunchWithDump(workloads: Iterable[Double],
+//                     minDesks: Iterable[Int],
+//                     maxDesks: Iterable[Int],
+//                     config: OptimiserConfig): Try[OptimizerCrunchResult] = {
+//    val indexedWork = workloads.toIndexedSeq
+//    val indexedMinDesks = minDesks.toIndexedSeq
+//
+//        val bestMaxDesks = if (workloads.size >= 60) {
+//          val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processors)
+//          fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
+//        } else maxDesks.toIndexedSeq
+//
+////    val bestMaxDesks = maxDesks.toIndexedSeq
+//    if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
+//
+//    for {
+//      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
+//      //      processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq())
+//    } yield {
+//      val queue = QueueCapacity(desks.to[List]).processMinutes(config.sla, indexedWork.to[List])
+//      indexedWork.zipWithIndex.zip(desks).zip(queue.waits).zip(queue.queueByMinute).foreach {
+//        case ((((work, minute), desksOpen), wait), queueLength) =>
+//          println(s"$minute,$work,$queueLength,$desksOpen,$wait")
+//      }
+//      OptimizerCrunchResult(desks.toIndexedSeq, queue.waits, queue.queueByMinute.toIndexedSeq)
+//      //      OptimizerCrunchResult(desks.toIndexedSeq, processedWork.waits)
+//    }
+//  }
 
   def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserConfig): Try[Seq[Int]] =
     tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq(), config.processors).map(_.waits)
@@ -155,52 +156,52 @@ object OptimiserWithFlexibleProcessors {
     Try(QueueCapacity(actualCapacity.to[List]).processMinutes(sla, work.to[List]))
   }
 
-  def legacyTryProcessWork(work: IndexedSeq[Double],
-                           capacity: IndexedSeq[Int],
-                           sla: Int,
-                           qstart: IndexedSeq[Double],
-                           processors: WorkloadProcessorsProvider): Try[ProcessedWorkLike] = {
-
-    if (capacity.length != work.length) {
-      Failure(new Exception(s"capacity & work don't match: ${capacity.length} vs ${work.length}"))
-    } else Try {
-      var q = qstart
-      var totalWait: Double = 0d
-      var excessWait: Double = 0d
-
-      val (finalWait, finalUtil) = work.indices.foldLeft((List[Int](), List[Double]())) {
-        case ((wait, util), minute) =>
-          q = work(minute) +: q
-          val totalResourceForMinute = processors.forMinute(minute).capacityForServers(capacity(minute))
-          var resource: Double = totalResourceForMinute.toDouble
-          var age = q.size
-
-          while (age > 0) {
-            val nextWorkToProcess = q(age - 1)
-            val surplus = resource - nextWorkToProcess
-            if (surplus >= 0) {
-              totalWait = totalWait + nextWorkToProcess * (age - 1)
-              if (age - 1 >= sla) excessWait = excessWait + nextWorkToProcess * (age - 1)
-              q = q.dropRight(1)
-              resource = surplus
-              age = age - 1
-            } else {
-              totalWait = totalWait + resource * (age - 1)
-              if (age - 1 >= sla) excessWait = excessWait + resource * (age - 1)
-              q = q.dropRight(1) :+ (nextWorkToProcess - resource)
-              resource = 0
-              age = 0
-            }
-          }
-          val nextUtil = if (totalResourceForMinute != 0) 1 - (resource / totalResourceForMinute) else 0
-          (q.size :: wait, nextUtil :: util)      }
-
-      val waitReversed = finalWait.reverse
-      val utilReversed = finalUtil.reverse
-
-      ProcessedWork(utilReversed, waitReversed, q, totalWait, excessWait)
-    }
-  }
+//  def legacyTryProcessWork(work: IndexedSeq[Double],
+//                           capacity: IndexedSeq[Int],
+//                           sla: Int,
+//                           qstart: IndexedSeq[Double],
+//                           processors: WorkloadProcessorsProvider): Try[ProcessedWorkLike] = {
+//
+//    if (capacity.length != work.length) {
+//      Failure(new Exception(s"capacity & work don't match: ${capacity.length} vs ${work.length}"))
+//    } else Try {
+//      var q = qstart
+//      var totalWait: Double = 0d
+//      var excessWait: Double = 0d
+//
+//      val (finalWait, finalUtil) = work.indices.foldLeft((List[Int](), List[Double]())) {
+//        case ((wait, util), minute) =>
+//          q = work(minute) +: q
+//          val totalResourceForMinute = processors.forMinute(minute).capacityForServers(capacity(minute))
+//          var resource: Double = totalResourceForMinute.toDouble
+//          var age = q.size
+//
+//          while (age > 0) {
+//            val nextWorkToProcess = q(age - 1)
+//            val surplus = resource - nextWorkToProcess
+//            if (surplus >= 0) {
+//              totalWait = totalWait + nextWorkToProcess * (age - 1)
+//              if (age - 1 >= sla) excessWait = excessWait + nextWorkToProcess * (age - 1)
+//              q = q.dropRight(1)
+//              resource = surplus
+//              age = age - 1
+//            } else {
+//              totalWait = totalWait + resource * (age - 1)
+//              if (age - 1 >= sla) excessWait = excessWait + resource * (age - 1)
+//              q = q.dropRight(1) :+ (nextWorkToProcess - resource)
+//              resource = 0
+//              age = 0
+//            }
+//          }
+//          val nextUtil = if (totalResourceForMinute != 0) 1 - (resource / totalResourceForMinute) else 0
+//          (q.size :: wait, nextUtil :: util)      }
+//
+//      val waitReversed = finalWait.reverse
+//      val utilReversed = finalUtil.reverse
+//
+//      ProcessedWork(utilReversed, waitReversed, q, totalWait, excessWait)
+//    }
+//  }
 
   def rollingFairXmax(work: IndexedSeq[Double],
                       xmin: IndexedSeq[Int],

@@ -7,15 +7,19 @@ case class ProcessedQueue(sla: Int,
                           completedBatches: List[ProcessedBatchOfWork],
                           leftover: BatchOfWork,
                           override val queueByMinute: List[Double]) extends ProcessedWorkLike {
-  override lazy val waits: List[Int] = {
-    val allWaits = (completedWaits ::: incompleteBatchWaits)
-      .groupBy { case (minute, _) => minute }
-      .map { case (minute, waits) => (minute, waits.map(_._2).max) }
-      .toList
-      .sortBy { case (minute, _) => minute }
-
-    allWaits.map(_._2)
-  }
+  override lazy val waits: List[Int] =
+    completedBatches.foldLeft(List[Int]()) {
+      case (waits, batch) =>
+        batch.maxWait match {
+          case Some(maxWait) => waits :+ maxWait
+          case None =>
+            val derivedWait = waits.reverse.headOption match {
+              case Some(previousWait) => previousWait + 1
+              case None => 1
+            }
+            waits :+ derivedWait
+        }
+    }
   override lazy val excessWait: Double = completedBatches.map(_.totalExcessWait(sla)).sum + leftoverExcessWaits(sla)
   override val util: List[Double] = List()
   override val residual: IndexedSeq[Double] = IndexedSeq()
@@ -50,6 +54,12 @@ case class ProcessedQueue(sla: Int,
 
 case class ProcessedBatchOfWork(minuteProcessed: Int, batch: BatchOfWork) {
   lazy val totalWait: Double = batch.loads.map(_.processed.map(_.loadedWait).sum).sum
+
+  lazy val maxWait: Option[Int] =
+    if (batch.nonEmpty) {
+      println(s"minuteProcessed: $minuteProcessed, createdAt: ${batch.loads.map(_.createdAt).min} => ${minuteProcessed - batch.loads.map(_.createdAt).min}")
+      Option(minuteProcessed - batch.loads.map(_.createdAt).min)
+    } else None
 
   def totalExcessWait(sla: Int): Double = batch.loads.map(_.processed.map(_.excessLoadedWait(sla)).sum).sum
 }
@@ -118,6 +128,8 @@ object BatchOfWork {
 }
 
 case class BatchOfWork(loads: List[Work]) {
+  val nonEmpty: Boolean = loads.nonEmpty
+
   lazy val completed: BatchOfWork = BatchOfWork(loads.filter(_.completed))
   lazy val outstanding: BatchOfWork = BatchOfWork(loads.filter(!_.completed))
 

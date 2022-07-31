@@ -25,7 +25,7 @@ class WorkSpec extends Specification {
         val result = QueueCapacity(desks).processMinutes(sla, workByMinute)
 
         val expectedWaits = List(1)
-        val expectedLeftover = BatchOfWork(List(Work(1d, 0)))
+        val expectedLeftover = BatchOfWork(List(Work(1d, 0, List(ProcessedLoad(1.0,0,0)))))
 
         result.waits === expectedWaits && result.leftover === expectedLeftover
       }

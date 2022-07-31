@@ -11,7 +11,7 @@ object CrunchMocks {
 
   def mockCrunch(wl: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], config: OptimiserConfig): Try[OptimizerCrunchResult] = {
     log.info(s"Using mock crunch! ${wl.size}")
-    Try(OptimizerCrunchResult(minDesks.toIndexedSeq, Seq.fill(wl.length)(config.sla)))
+    Try(OptimizerCrunchResult(minDesks.toIndexedSeq, Seq.fill(wl.length)(config.sla), Vector.fill[Double](wl.length)(0)))
   }
 
   def mockSimulator(workloads: Seq[Double], desks: Seq[Int], config: OptimiserConfig): Try[Seq[Int]] = {

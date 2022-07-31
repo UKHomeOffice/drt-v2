@@ -104,8 +104,10 @@ object CrunchApi {
                           workLoad: Double,
                           deskRec: Int,
                           waitTime: Int,
+                          maybePaxInQueue: Option[Int],
                           deployedDesks: Option[Int] = None,
                           deployedWait: Option[Int] = None,
+                          maybeDeployedPaxInQueue: Option[Int] = None,
                           actDesks: Option[Int] = None,
                           actWait: Option[Int] = None,
                           lastUpdated: Option[MillisSinceEpoch] = None) extends MinuteLike[CrunchMinute, TQM] with WithLastUpdated {
@@ -135,6 +137,7 @@ object CrunchApi {
       workLoad = 0,
       deskRec = 0,
       waitTime = 0,
+      maybePaxInQueue = None,
       actDesks = ad.desks,
       actWait = ad.waitTime,
       lastUpdated = Option(now)
@@ -159,7 +162,9 @@ object CrunchApi {
                            paxLoad: Double,
                            workLoad: Double,
                            deskRec: Int,
-                           waitTime: Int) extends DeskRecMinuteLike with MinuteComparison[CrunchMinute] with MinuteLike[CrunchMinute, TQM] {
+                           waitTime: Int,
+                           maybePaxInQueue: Option[Int],
+                          ) extends DeskRecMinuteLike with MinuteComparison[CrunchMinute] with MinuteLike[CrunchMinute, TQM] {
     lazy val key: TQM = MinuteHelper.key(terminal, queue, minute)
 
     override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
@@ -174,7 +179,7 @@ object CrunchApi {
     override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = toMinute.copy(lastUpdated = Option(now))
 
     override def toMinute: CrunchMinute = CrunchMinute(
-      terminal, queue, minute, paxLoad, workLoad, deskRec, waitTime, lastUpdated = None)
+      terminal, queue, minute, paxLoad, workLoad, deskRec, waitTime, maybePaxInQueue, lastUpdated = None)
   }
 
   case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateQueueMinutes {
@@ -294,11 +299,11 @@ object CrunchApi {
         case qn if byQueueName.contains(qn) =>
           val queueMinutes: Seq[CrunchMinute] = byQueueName(qn)
           val allActDesks = queueMinutes.collect {
-            case CrunchMinute(_, _, _, _, _, _, _, _, _, Some(ad), _, _) => ad
+            case cm: CrunchMinute if cm.actDesks.isDefined => cm.actDesks.getOrElse(0)
           }
           val actDesks = if (allActDesks.isEmpty) None else Option(allActDesks.max)
           val allActWaits = queueMinutes.collect {
-            case CrunchMinute(_, _, _, _, _, _, _, _, _, _, Some(aw), _) => aw
+            case cm: CrunchMinute if cm.actWait.isDefined => cm.actWait.getOrElse(0)
           }
           val actWaits = if (allActWaits.isEmpty) None else Option(allActWaits.max)
           CrunchMinute(
@@ -309,8 +314,10 @@ object CrunchApi {
             workLoad = queueMinutes.map(_.workLoad).sum,
             deskRec = queueMinutes.map(_.deskRec).max,
             waitTime = queueMinutes.map(_.waitTime).max,
+            maybePaxInQueue = queueMinutes.map(_.maybePaxInQueue).max,
             deployedDesks = Option(queueMinutes.map(_.deployedDesks.getOrElse(0)).max),
             deployedWait = Option(queueMinutes.map(_.deployedWait.getOrElse(0)).max),
+            maybeDeployedPaxInQueue = Option(queueMinutes.map(_.maybeDeployedPaxInQueue.getOrElse(0)).max),
             actDesks = actDesks,
             actWait = actWaits
           )

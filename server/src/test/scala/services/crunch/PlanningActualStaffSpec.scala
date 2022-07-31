@@ -26,7 +26,7 @@ class PlanningActualStaffSpec() extends CrunchTestLike {
 
         val crunchMinutesT1: Set[CrunchMinute] = (0 to 59)
           .map(index => CrunchMinute(terminal = T1, queue = Queues.EeaDesk, minute = index * 60000,
-                                     lastUpdated = None, paxLoad = 0d, workLoad = 0d, deskRec = 1, waitTime = 0)).toSet
+                                     lastUpdated = None, paxLoad = 0d, workLoad = 0d, deskRec = 1, waitTime = 0, maybePaxInQueue = None)).toSet
         val crunchMinutesT2 = crunchMinutesT1.map(_.copy(terminal = T2, deskRec = 2))
 
         val ps = PortState(List(), (crunchMinutesT1 ++ crunchMinutesT2).toList, (staffMinutesT1 ++ staffMinutesT2).toList)

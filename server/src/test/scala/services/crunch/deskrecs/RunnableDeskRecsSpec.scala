@@ -311,7 +311,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     portStateProbe.fishForMessage(2.seconds) {
       case DeskRecMinutes(drms) =>
         drms.exists {
-          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _) => m == noonMillis && p > 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _, _) => m == noonMillis && p > 0
           case _ => false
         }
       case _ => false
@@ -323,11 +323,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     portStateProbe.fishForMessage(2.seconds) {
       case DeskRecMinutes(drms) =>
         val zeroAtNoon = drms.exists {
-          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _) => m == noonMillis && p == 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _, _) => m == noonMillis && p == 0
           case _ => false
         }
         val nonZeroAtOne = drms.exists {
-          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _) => m == onePmMillis && p > 0
+          case DeskRecMinute(T1, Queues.EeaDesk, m, p, _, _, _, _) => m == onePmMillis && p > 0
           case _ => false
         }
         zeroAtNoon && nonZeroAtOne
@@ -358,10 +358,10 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val initialPortState = PortState(
       flightsWithSplits = List(flight1),
       crunchMinutes = List(
-        CrunchMinute(T1, Queues.EeaDesk, noonMillis, 30, 10, 0, 0),
-        CrunchMinute(T1, Queues.EeaDesk, noonMillis + 60000, 5, 2.5, 0, 0),
-        CrunchMinute(T1, Queues.EeaDesk, noonMillis + 120000, 1, 1, 0, 0),
-        CrunchMinute(T1, Queues.EeaDesk, noonMillis + 180000, 1, 1, 0, 0)
+        CrunchMinute(T1, Queues.EeaDesk, noonMillis, 30, 10, 0, 0, None),
+        CrunchMinute(T1, Queues.EeaDesk, noonMillis + 60000, 5, 2.5, 0, 0, None),
+        CrunchMinute(T1, Queues.EeaDesk, noonMillis + 120000, 1, 1, 0, 0, None),
+        CrunchMinute(T1, Queues.EeaDesk, noonMillis + 180000, 1, 1, 0, 0, None)
       ),
       staffMinutes = List()
     )

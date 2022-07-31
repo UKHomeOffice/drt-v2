@@ -123,12 +123,17 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
       workLoad = slotMinutes.map(_.workLoad).sum,
       deskRec = slotMinutes.map(_.deskRec).max,
       waitTime = slotMinutes.map(_.waitTime).max,
+      maybePaxInQueue = slotMinutes.map(_.maybePaxInQueue).max,
       deployedDesks = if (slotMinutes.exists(cm => cm.deployedDesks.isDefined))
         Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max)
       else
         None,
       deployedWait = if (slotMinutes.exists(cm => cm.deployedWait.isDefined))
         Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max)
+      else
+        None,
+      maybeDeployedPaxInQueue = if (slotMinutes.exists(cm => cm.maybeDeployedPaxInQueue.isDefined))
+        Option(slotMinutes.map(_.maybeDeployedPaxInQueue.getOrElse(0)).max)
       else
         None,
       actDesks = if (slotMinutes.exists(cm => cm.actDesks.isDefined))
@@ -148,8 +153,10 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
       workLoad = 0,
       deskRec = 0,
       waitTime = 0,
+      maybePaxInQueue = None,
       deployedDesks = None,
       deployedWait = None,
+      maybeDeployedPaxInQueue = None,
       actDesks = None,
       actWait = None)
   }

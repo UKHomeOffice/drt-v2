@@ -24,9 +24,9 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
                     (implicit ec: ExecutionContext, mat: Materializer): Future[Iterable[DeskRecMinute]] = {
     desksAndWaits(minuteMillis, terminalWork, deskLimitsProvider).map { queueDesksAndWaits =>
       queueDesksAndWaits.flatMap {
-        case (queue, (desks, waits)) =>
-          minuteMillis.zip(terminalPax(queue).zip(terminalWork(queue))).zip(desks.zip(waits)).map {
-            case ((minute, (pax, work)), (desk, wait)) => DeskRecMinute(terminal, queue, minute, pax, work, desk, wait)
+        case (queue, (desks, waits, paxInQueue)) =>
+          minuteMillis.zip(terminalPax(queue).zip(terminalWork(queue)).zip(paxInQueue)).zip(desks.zip(waits)).map {
+            case ((minute, ((pax, work), queueSize)), (desk, wait)) => DeskRecMinute(terminal, queue, minute, pax, work, desk, wait, Option(Math.round(queueSize).toInt))
           }
       }
     }
@@ -35,17 +35,17 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
   def desksAndWaits(minuteMillis: NumericRange[MillisSinceEpoch],
                     loadsByQueue: Map[Queue, Seq[Double]],
                     deskLimitsProvider: TerminalDeskLimitsLike)
-                   (implicit ec: ExecutionContext, mat: Materializer): Future[Map[Queue, (Iterable[Int], Iterable[Int])]] = {
+                   (implicit ec: ExecutionContext, mat: Materializer): Future[Map[Queue, (Iterable[Int], Iterable[Int], Iterable[Double])]] = {
     val queuesToProcess = loadsByQueue.keys.toSet
 
     val queues = Source(queuePriority.filter(queuesToProcess.contains))
 
     queues
-      .runFoldAsync(Map[Queue, (Iterable[Int], Iterable[Int])]()) {
+      .runFoldAsync(Map[Queue, (Iterable[Int], Iterable[Int], Iterable[Double])]()) {
         case (queueRecsSoFar, queue) =>
           log.debug(s"Optimising $queue")
           val queueWork = loadsByQueue(queue)
-          val queueDeskAllocations = queueRecsSoFar.mapValues { case (desks, _) => desks.toList }
+          val queueDeskAllocations = queueRecsSoFar.mapValues { case (desks, _, _) => desks.toList }
 
           for {
             (minDesks, processorsProvider) <- deskLimitsProvider.deskLimitsForMinutes(minuteMillis, queue, queueDeskAllocations)
@@ -53,13 +53,13 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
             queueWork match {
               case noWork if noWork.isEmpty || noWork.max == 0 =>
                 log.info(s"No workload to crunch for $queue on ${SDate(minuteMillis.min).toISOString()}. Filling with min desks and zero wait times")
-                queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0))))
+                queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0), List.fill(minDesks.size)(0d))))
               case someWork =>
                 val start = System.currentTimeMillis()
                 val maxDesks = processorsProvider.maxProcessors(someWork.size)
                 val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks, OptimiserConfig(slas(queue), processorsProvider)) match {
-                  case Success(OptimizerCrunchResult(desks, waits)) =>
-                    queueRecsSoFar + (queue -> ((desks.toList, waits.toList)))
+                  case Success(OptimizerCrunchResult(desks, waits, paxInQueue)) =>
+                    queueRecsSoFar + (queue -> ((desks.toList, waits.toList, paxInQueue)))
                   case Failure(t) =>
                     log.error(s"Crunch failed for $queue", t)
                     queueRecsSoFar

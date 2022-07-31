@@ -232,6 +232,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
     workLoad = 0d,
     deskRec = deskRec,
     waitTime = 0,
+    maybePaxInQueue = Option(0),
     deployedDesks = simDesks
   )
 }

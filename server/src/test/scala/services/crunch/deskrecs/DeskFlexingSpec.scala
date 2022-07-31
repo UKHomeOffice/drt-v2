@@ -50,7 +50,7 @@ class DeskFlexingSpec extends CrunchTestLike {
     val mockDeskRecs: (Seq[Double], Seq[Int], Seq[Int], OptimiserConfig) => Try[OptimizerCrunchResult] =
       (_: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], _: OptimiserConfig) => {
         observedMaxDesks = observedMaxDesks ++ List(maxDesks.toList)
-        Success(OptimizerCrunchResult(minDesks.toIndexedSeq, minDesks))
+        Success(OptimizerCrunchResult(minDesks.toIndexedSeq, minDesks, Vector()))
       }
   }
 

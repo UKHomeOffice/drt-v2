@@ -52,8 +52,10 @@ object PortStateMessageConversion {
       workLoad = cmm.workLoad.getOrElse(0d),
       deskRec = cmm.deskRec.getOrElse(0),
       waitTime = cmm.waitTime.getOrElse(0),
+      maybePaxInQueue = cmm.maybePaxInQueue,
       deployedDesks = cmm.simDesks,
       deployedWait = cmm.simWait,
+      maybeDeployedPaxInQueue = cmm.maybeDeployedPaxInQueue,
       actDesks = cmm.actDesks,
       actWait = cmm.actWait,
       lastUpdated = cmm.lastUpdated

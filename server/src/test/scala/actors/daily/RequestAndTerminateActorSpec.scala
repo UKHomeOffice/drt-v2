@@ -20,7 +20,7 @@ class RequestAndTerminateActorSpec extends CrunchTestLike {
 
   def resetData(terminal: Terminal, day: SDateLike): Unit = {
     val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => SDate.now())))
-    Await.ready(actor.ask(ResetData), 1 second)
+    Await.ready(actor.ask(ResetData), 1.second)
   }
 
   "Given a RequestAndTerminateActor" >> {
@@ -29,9 +29,9 @@ class RequestAndTerminateActorSpec extends CrunchTestLike {
     val requestsActor = system.actorOf(Props(new RequestAndTerminateActor()))
 
     "When I send it some updates to persist" >> {
-      val container = MinutesContainer(Iterable(CrunchMinute(terminal, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)))
+      val container = MinutesContainer(Iterable(CrunchMinute(terminal, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)))
       val actor = system.actorOf(Props(new TerminalDayQueuesActor(myNow().getFullYear(), myNow().getMonth(), myNow().getDate(), terminal, myNow, None)))
-      val result = Await.result(requestsActor.ask(RequestAndTerminate(actor, container)), 5 seconds)
+      val result = Await.result(requestsActor.ask(RequestAndTerminate(actor, container)), 5.seconds)
 
       "I should get a diff of updated minutes back as an acknowledgement" >> {
         result.isInstanceOf[UpdatedMillis]

@@ -27,7 +27,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
     val queuesActor: ActorRef = system.actorOf(Props(new TerminalDayQueuesActor(2020, 1, 1, terminal, myNow, None)))
 
     "When I send it a DeskRecMinute" >> {
-      val drm = DeskRecMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4)
+      val drm = DeskRecMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None)
       val eventualContainer = queuesActor.ask(MinutesContainer(Iterable(drm))).mapTo[UpdatedMillis]
 
       "I should get back the merged CrunchMinute" >> {

@@ -30,8 +30,10 @@ case class SimulationMinute(terminal: Terminal,
     workLoad = 0,
     deskRec = 0,
     waitTime = 0,
+    maybePaxInQueue = None,
     deployedDesks = Option(desks),
     deployedWait = Option(waitTime),
+    maybeDeployedPaxInQueue = None,
     lastUpdated = None)
 
 }

@@ -24,7 +24,7 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
   val date: String = "2020-01-01"
   val day: SDateLike = SDate(s"${date}T00:00")
 
-  val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, day.millisSinceEpoch, 1, 2, 3, 4)
+  val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, day.millisSinceEpoch, 1, 2, 3, 4, None)
   val crunchMinuteMessage: CrunchMinuteMessage = CrunchMinuteMessage(Option(terminal.toString), Option(queue.toString), Option(day.millisSinceEpoch), Option(1.0), Option(2.0), Option(3), Option(4), None, None, None, None, Option(day.millisSinceEpoch))
 
   "Given a TerminalDayQueueMinuteUpdatesActor" >> {
@@ -39,7 +39,7 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
       val eventualAcks = Future.sequence(Seq(
         queuesActor.ask(MinutesContainer(Iterable(crunchMinute))),
         queuesActor.ask(MinutesContainer(Iterable(crunchMinute.copy(minute = minute2))))))
-      Await.ready(eventualAcks, 5 second)
+      Await.ready(eventualAcks, 5.second)
 
       "I should see it received as an update" >> {
         val expected = List(
@@ -47,7 +47,7 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
           crunchMinute.copy(minute = minute2, lastUpdated = Option(day.millisSinceEpoch)))
           .map(cm => (cm.key, cm)).toMap
 
-        probe.fishForMessage(5 seconds) {
+        probe.fishForMessage(5.seconds) {
           case updates => updates == expected
         }
 
