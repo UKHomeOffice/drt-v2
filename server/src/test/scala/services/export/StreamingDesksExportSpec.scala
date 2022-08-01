@@ -11,6 +11,7 @@ import services.`export`.CsvTestHelper._
 import services.crunch.CrunchTestLike
 import services.exports.StreamingDesksExport
 import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 class StreamingDesksExportSpec extends CrunchTestLike {
@@ -35,13 +36,23 @@ class StreamingDesksExportSpec extends CrunchTestLike {
     val minute1 = SDate("2020-11-19T00:00")
     val minute2 = SDate("2020-11-19T00:15")
 
-    val crunchMinutesContainer = MinutesContainer[CrunchMinute, TQM](List(
-      CrunchMinute(T1, Queues.EeaDesk, minute1.millisSinceEpoch, pax, workload, eeaDeskRec, waitTime, Option(eeaDeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EeaDesk, minute2.millisSinceEpoch, pax, workload, eeaDeskRec, waitTime, Option(eeaDeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.NonEeaDesk, minute1.millisSinceEpoch, pax, workload, nonEEADeskRec, waitTime, Option(nonEEADeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.NonEeaDesk, minute2.millisSinceEpoch, pax, workload, nonEEADeskRec, waitTime, Option(nonEEADeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EGate, minute1.millisSinceEpoch, pax, workload, eGateRec, waitTime, Option(eGateDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EGate, minute2.millisSinceEpoch, pax, workload, eGateRec, waitTime, Option(eGateDep), Option(depWait), Option(actDesk), Option(actWait)),
+    val crunchMinutesContainer = MinutesContainer[CrunchMinute, TQM](for {
+      queue <- List(EeaDesk, NonEeaDesk, EGate)
+      minute <- List(minute1, minute2)
+    } yield CrunchMinute(
+      terminal = T1,
+      queue = queue,
+      minute = minute.millisSinceEpoch,
+      paxLoad = pax,
+      workLoad = workload,
+      deskRec = Map(EeaDesk -> eeaDeskRec, NonEeaDesk -> nonEEADeskRec, EGate -> eGateRec)(queue),
+      waitTime = waitTime,
+      maybePaxInQueue = None,
+      deployedDesks = Option(Map(EeaDesk -> eeaDeskDep, NonEeaDesk -> nonEEADeskDep, EGate -> eGateDep)(queue)),
+      deployedWait = Option(depWait),
+      maybeDeployedPaxInQueue = None,
+      actDesks = Option(actDesk),
+      actWait = Option(actWait),
     ))
 
     val shifts = 1
