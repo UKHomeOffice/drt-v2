@@ -56,7 +56,7 @@ class OptimiserSpec extends Specification {
     engine.eval("results <- process.work(work, desks, 18, 0)$wait")
     val rResult = engine.eval("results").asInstanceOf[IntVector].toIntArray.toList
 
-    val newResult = OptimiserWithFlexibleProcessors.tryProcessWork(work, desks.toIndexedSeq, 18, IndexedSeq(0), desksWorkloadsProvider(work.size)).map(_.waits).get
+    val newResult = OptimiserWithFlexibleProcessors.legacyTryProcessWork(work, desks.toIndexedSeq, 18, IndexedSeq(0), desksWorkloadsProvider(work.size)).map(_.waits).get
 
     rResult === newResult
   }

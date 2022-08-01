@@ -1,6 +1,7 @@
 package services
 
 import scala.collection.immutable
+import scala.util.Failure
 
 
 case class ProcessedQueue(sla: Int,
@@ -70,11 +71,15 @@ case class ProcessedBatchOfWork(minuteProcessed: Int, batch: BatchOfWork) {
   def totalExcessWait(sla: Int): Double = batch.completed.loads.map(_.processed.map(_.excessLoadedWait(sla)).sum).sum
 }
 
-case class QueueCapacity(desks: List[Int]) {
-  def processMinutes(sla: Int, minutes: List[Double]): ProcessedQueue = {
-    val workWithDesks: immutable.Seq[(Work, Capacity)] = minutes.zipWithIndex
+case class QueueCapacity(capacity: List[Int]) {
+  def processMinutes(sla: Int, work: List[Double]): ProcessedQueue = {
+    if (capacity.length != work.length) {
+      throw new Exception(s"capacity & work lengths don't match: ${capacity.length} vs ${work.length}")
+    }
+
+    val workWithDesks: immutable.Seq[(Work, Capacity)] = work.zipWithIndex
       .map { case (wl, minute) => Work(wl, minute) }
-      .zip(desks)
+      .zip(capacity)
       .map { case (w, d) => (w, Capacity(d, w.createdAt)) }
 
     val (processedMinutes, queueSizeByMinute, leftOver) = workWithDesks
@@ -91,7 +96,7 @@ case class QueueCapacity(desks: List[Int]) {
 //      println(s"batch: ${batch.batch}")
 //    }
 
-    val queue = ProcessedQueue(sla, minutes.length, processedMinutes, leftOver, queueSizeByMinute.reverse)
+    val queue = ProcessedQueue(sla, work.length, processedMinutes, leftOver, queueSizeByMinute.reverse)
 //    println(s"excessWait: ${queue.excessWait}")
 //    println(s"totalWait: ${queue.totalWait}")
 //    println(s"completedWaits: ${queue.completedWaits}")

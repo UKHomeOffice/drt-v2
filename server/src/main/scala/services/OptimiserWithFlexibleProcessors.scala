@@ -331,6 +331,7 @@ object OptimiserWithFlexibleProcessors {
         .map { case (x, y) => x + y }
 
       val excessFilter = meanWaits.map(_ > sla)
+
       val totalWaitIncrease = backlog.zip(meanWaits).map { case (x, y) => x * y }.sum
       val excessWaitIncrease = excessFilter
         .zip(backlog.zip(meanWaits))
@@ -499,8 +500,8 @@ object OptimiserWithFlexibleProcessors {
         val xmaxCondensed = maxDesks.slice(winStart, winStop).grouped(blockWidth).map(_.head).toIndexedSeq
 
         val windowIndices = winStart until winStop
-        branchBoundBinarySearch(blockGuess, myCost(currentWork, qStart, lastDesksOpen, currentProcessors), xminCondensed, xmaxCondensed, concavityLimit)
-          //        branchBound(blockGuess, myCost(currentWork, qStart, churnStart), xminCondensed, xmaxCondensed, concavityLimit)
+//        branchBoundBinarySearch(blockGuess, myCost(currentWork, qStart, lastDesksOpen, currentProcessors), xminCondensed, xmaxCondensed, concavityLimit)
+        branchBound(blockGuess, myCost(currentWork, qStart, lastDesksOpen, currentProcessors), xminCondensed, xmaxCondensed, concavityLimit)
           .flatMap(o => List.fill(blockWidth)(o))
           .zip(windowIndices)
           .foreach {
