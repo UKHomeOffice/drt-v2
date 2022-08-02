@@ -56,7 +56,6 @@ trait WorkloadCalculatorLike {
     }
     splitRatios
   }
-
 }
 
 case class DynamicWorkloadCalculator(defaultProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],

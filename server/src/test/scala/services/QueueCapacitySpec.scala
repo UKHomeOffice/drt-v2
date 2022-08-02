@@ -5,10 +5,6 @@ import org.specs2.mutable.Specification
 class QueueCapacitySpec extends Specification {
   val sla = 25
 
-  "Given some work and some capacity" >> {
-    "I should see the queue size matches the work"
-  }
-
   "Given a single minute containing 1 minute wof work with one desk open" >> {
     "When I process the work" >> {
       "I should see zero wait time and no left over work" >> {
