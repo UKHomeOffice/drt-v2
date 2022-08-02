@@ -149,10 +149,12 @@ object PortStateMessageConversion {
     workLoad = Option(cm.workLoad),
     deskRec = Option(cm.deskRec),
     waitTime = Option(cm.waitTime),
+    maybePaxInQueue = cm.maybePaxInQueue,
     simDesks = cm.deployedDesks,
     simWait = cm.deployedWait,
     actDesks = cm.actDesks,
     actWait = cm.actWait,
+    maybeDeployedPaxInQueue = cm.maybeDeployedPaxInQueue,
     lastUpdated = cm.lastUpdated
   )
 }
