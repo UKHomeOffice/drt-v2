@@ -1,7 +1,6 @@
 package services
 
 import scala.collection.immutable
-import scala.util.Failure
 
 
 case class ProcessedQueue(sla: Int,
@@ -60,13 +59,10 @@ case class ProcessedBatchOfWork(minuteProcessed: Int, batch: BatchOfWork) {
   lazy val totalWait: Double = batch.loads.map(_.processed.map(_.loadedWait).sum).sum
 
   lazy val maxWait: Option[Int] =
-    if (batch.nonEmpty) {
-//      println(s"minuteProcessed: $minuteProcessed, createdAt: ${batch.loads.map(_.createdAt).min} => ${minuteProcessed - batch.loads.map(_.createdAt).min}")
+    if (batch.nonEmpty)
       Option(minuteProcessed - batch.loads.map(_.createdAt).min)
-    } else{
-//      println(s"minuteProcessed: $minuteProcessed - no loads")
+    else
       None
-    }
 
   def totalExcessWait(sla: Int): Double = batch.completed.loads.map(_.processed.map(_.excessLoadedWait(sla)).sum).sum
 }
@@ -85,22 +81,36 @@ case class QueueCapacity(capacity: List[Int]) {
     val (processedMinutes, queueSizeByMinute, leftOver) = workWithDesks
       .foldLeft((List[ProcessedBatchOfWork](), List[Double](), BatchOfWork(List()))) {
         case ((processedBatchesSoFar, queueSizeByMinute, spillover), (work, desksOpen)) =>
-//          println(s"doing ${work.createdAt}")
           val (processedBatch, _) = desksOpen.process(spillover + work)
           val processedBatches = processedBatchesSoFar :+ ProcessedBatchOfWork(work.createdAt, processedBatch)
           val queueSize = processedBatch.outstanding.loads.map(_.load).sum
           (processedBatches, queueSize :: queueSizeByMinute, processedBatch.outstanding)
       }
 
-//    processedMinutes.foreach { batch =>
-//      println(s"batch: ${batch.batch}")
-//    }
+    ProcessedQueue(sla, work.length, processedMinutes, leftOver, queueSizeByMinute.reverse)
+  }
 
-    val queue = ProcessedQueue(sla, work.length, processedMinutes, leftOver, queueSizeByMinute.reverse)
-//    println(s"excessWait: ${queue.excessWait}")
-//    println(s"totalWait: ${queue.totalWait}")
-//    println(s"completedWaits: ${queue.completedWaits}")
-    queue
+  def processPassengers(sla: Int, passengersByMinute: List[List[Double]]): ProcessedQueue = {
+    if (capacity.length != passengersByMinute.length) {
+      throw new Exception(s"capacity & work lengths don't match: ${capacity.length} vs ${passengersByMinute.length}")
+    }
+
+    val workWithDesks: immutable.Seq[(List[Work], Capacity)] = passengersByMinute.zipWithIndex
+      .map { case (passengers, minute) => (minute, passengers.map(paxWorkLoad => Work(paxWorkLoad, minute))) }
+      .zip(capacity)
+      .map { case ((minute, passengers), d) => (passengers, Capacity(d, minute)) }
+
+    val (processedMinutes, queueSizeByMinute, leftOver) = workWithDesks
+      .foldLeft((List[ProcessedBatchOfWork](), List[Double](), BatchOfWork(List()))) {
+        case ((processedBatchesSoFar, queueSizeByMinute, spillover), (passengers, desksOpen)) =>
+          val (processedBatch, _) = desksOpen.process(spillover + passengers)
+          val processedBatches = processedBatchesSoFar :+ ProcessedBatchOfWork(desksOpen.availableAt, processedBatch)
+//          val queueSize = processedBatch.outstanding.loads.map(_.load).sum
+          val paxInQueue = processedBatch.outstanding.loads.size
+          (processedBatches, paxInQueue :: queueSizeByMinute, processedBatch.outstanding)
+      }
+
+    ProcessedQueue(sla, passengersByMinute.length, processedMinutes, leftOver, queueSizeByMinute.reverse)
   }
 }
 
@@ -153,7 +163,7 @@ case class BatchOfWork(loads: List[Work]) {
   lazy val completed: BatchOfWork = BatchOfWork(loads.filter(_.completed))
   lazy val outstanding: BatchOfWork = BatchOfWork(loads.filter(!_.completed))
 
-  def +(loadsToAdd: BatchOfWork): BatchOfWork = this.copy(loads = (loads ::: loadsToAdd.loads).sortBy(_.createdAt))
+  def +(loadsToAdd: List[Work]): BatchOfWork = this.copy(loads = (loads ::: loadsToAdd).sortBy(_.createdAt))
 
   def +(loadToAdd: Work): BatchOfWork = this.copy(loads = (loadToAdd :: loads).sortBy(_.createdAt))
 }
