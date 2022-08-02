@@ -51,7 +51,7 @@ object TerminalDesksAndQueuesRow {
 
       val queueTds = crunchMinutesByQueue.flatMap {
         case (qn, cm) =>
-          val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)}")
+          val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)} / ${cm.maybePaxInQueue.map(Math.round(_).toString).getOrElse("-")}")
 
           def deployDeskTd(ragClass: String) = <.td(
             ^.className := s"${queueColour(qn)} $ragClass",
@@ -69,11 +69,7 @@ object TerminalDesksAndQueuesRow {
 
           val queueCells = props.viewType match {
             case ViewDeps =>
-              val ragClass = cm.deployedWait.getOrElse(0).toDouble / props.airportConfig.slaByQueue(qn) match {
-                case pc if pc >= 1 => "red"
-                case pc if pc >= 0.7 => "amber"
-                case _ => ""
-              }
+              val ragClass = slaRagStatus(cm.deployedWait.getOrElse(0).toDouble, props.airportConfig.slaByQueue(qn))
               if (props.showWaitColumn)
                 List(
                   paxLoadTd,

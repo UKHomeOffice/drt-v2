@@ -7,18 +7,20 @@ import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScroll
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, NonEeaDesk, Queue}
 import drt.shared._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
-import org.scalajs.dom.html.Div
+import org.scalajs.dom.html.{Div, TableCell}
 import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.Terminals.T2
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -79,7 +81,7 @@ object TerminalDesksAndQueues {
         props.airportConfig.nonTransferQueues(terminal)
       }
 
-      def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean) = {
+      def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean): List[VdomTagOf[TableCell]] = {
         val queueColumnClass = queueColour(queueName)
         val queueColumnActualsClass = queueActualsColour(queueName)
         val headings = state.viewType match {
@@ -133,6 +135,12 @@ object TerminalDesksAndQueues {
         <.th(^.className := "non-pcp", ^.colSpan := 2, ""),
         <.th(^.className := "total-deployed", ^.colSpan := 4, "PCP")
       )
+
+      props.portState.crunchMinutes.filterKeys(k => k.terminal == T2 && k.queue == NonEeaDesk).foreach {
+        case (_, cm) =>
+          if (cm.minute >= SDate("2022-08-02T06:00").millisSinceEpoch && cm.minute < SDate("2022-08-02T06:30").millisSinceEpoch)
+            println(s"${SDate(cm.minute).toISOString()}: ${cm.paxLoad} -> ${cm.maybePaxInQueue.getOrElse(0)}")
+      }
 
       val queues = props.airportConfig.nonTransferQueues(terminal).toList
       val terminalCrunchMinutes = props.portState.crunchSummary(props.viewStart, props.hoursToView * 4, 15, terminal, queues)
