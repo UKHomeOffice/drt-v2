@@ -3,8 +3,8 @@ package passengersplits
 import org.specs2.mutable.Specification
 
 class FlightPassengerLoadsSpec extends Specification {
-  "Given some numbers" >> {
-    "I should be able to produce some whole passenger workloads" >> {
+  "Given some numbers I should be able to produce some whole passenger workloads" >> {
+    "" >> {
       val totalPassengers = 100
       val eeaToDesk = 5
       val paxOffRate = 20
