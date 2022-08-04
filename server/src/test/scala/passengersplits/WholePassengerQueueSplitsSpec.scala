@@ -6,7 +6,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, EeaNonMachineRe
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
 
-class FlightPassengerLoadsSpec extends Specification {
+class WholePassengerQueueSplitsSpec extends Specification {
   "Given some splits and a total number of passengers I should get a set of pax type and queue counts with whole numbers of passengers" >> {
     val splits = Set(
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, None, None),

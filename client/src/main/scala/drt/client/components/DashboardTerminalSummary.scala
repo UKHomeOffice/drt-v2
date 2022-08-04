@@ -29,7 +29,7 @@ object DashboardTerminalSummary {
   def hourRange(start: SDateLike, numHours: Int): IndexedSeq[SDateLike] = (0 until numHours).map(h => start.addHours(h))
 
   def aggregateAcrossQueues(startMinutes: List[CrunchMinute], terminal: Terminal): List[CrunchMinute] = {
-    val emptyMinute = CrunchMinute(terminal, InvalidQueue, 0L, 0, 0, 0, 0, None, None, None, None, None)
+    val emptyMinute = CrunchMinute(terminal, InvalidQueue, 0L, 0, None, 0, 0, 0, None, None, None, None, None)
 
     startMinutes
       .groupBy(_.minute)
@@ -41,6 +41,11 @@ object DashboardTerminalSummary {
               InvalidQueue,
               minute,
               minuteSoFar.paxLoad + cm.paxLoad,
+              (minuteSoFar.passengers, cm.passengers) match {
+                case (None, newPax) => newPax
+                case (Some(pax), Some(newPax)) => Option(pax ++ newPax)
+                case (Some(pax), None) => Some(pax)
+              },
               minuteSoFar.workLoad + cm.workLoad,
               minuteSoFar.deskRec + cm.deskRec,
               minuteSoFar.waitTime + cm.waitTime,

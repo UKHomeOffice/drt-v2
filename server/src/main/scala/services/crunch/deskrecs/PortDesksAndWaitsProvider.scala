@@ -17,6 +17,7 @@ import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
+import scala.collection.immutable
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -44,7 +45,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 
   def deskRecsToSimulations(terminalQueueDeskRecs: Seq[DeskRecMinute]): Map[TQM, SimulationMinute] = terminalQueueDeskRecs
     .map {
-      case DeskRecMinute(t, q, m, _, _, d, w, _) => (TQM(t, q, m), SimulationMinute(t, q, m, d, w))
+      case DeskRecMinute(t, q, m, _, _, _, d, w, _) => (TQM(t, q, m), SimulationMinute(t, q, m, d, w))
     }.toMap
 
   def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
@@ -63,7 +64,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     .map {
       case (tqm, minutes) =>
         val loads = minutes.values
-        (tqm, LoadMinute(tqm.terminal, tqm.queue, loads.map(_.paxLoad).sum, loads.map(_.workLoad).sum, tqm.minute))
+        (tqm, LoadMinute(tqm.terminal, tqm.queue, loads.map(_.paxLoad), loads.map(_.workLoad).sum, tqm.minute))
     }
 
   def terminalWorkLoadsByQueue(terminal: Terminal,
@@ -71,7 +72,8 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                loadMinutes: Map[TQM, LoadMinute]): Map[Queue, Seq[Double]] = queuesByTerminal(terminal)
     .filterNot(_ == Transfer)
     .map { queue =>
-      val lms = minuteMillis.map(minute => loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, 0, 0, minute)).workLoad)
+      val lms = minuteMillis.map(minute =>
+        loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, Seq(), 0, minute)).workLoad)
       (queue, lms)
     }
     .toMap
@@ -80,7 +82,16 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                               loadMinutes: Map[TQM, LoadMinute]): Map[Queue, Seq[Double]] = queuesByTerminal(terminal)
     .filterNot(_ == Transfer)
     .map { queue =>
-      val paxLoads = minuteMillis.map(minute => loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, 0, 0, minute)).paxLoad)
+      val paxLoads = minuteMillis.map(minute => loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, Seq(), 0, minute)).paxLoad)
+      (queue, paxLoads)
+    }
+    .toMap
+
+  def terminalPassengersByQueue(terminal: Terminal, minuteMillis: NumericRange[MillisSinceEpoch],
+                                loadMinutes: Map[TQM, LoadMinute]): Map[Queue, immutable.IndexedSeq[Iterable[Double]]] = queuesByTerminal(terminal)
+    .filterNot(_ == Transfer)
+    .map { queue =>
+      val paxLoads = minuteMillis.map(minute => loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, Seq(), 0, minute)).passengers)
       (queue, paxLoads)
     }
     .toMap
@@ -91,10 +102,11 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                            (implicit ec: ExecutionContext, mat: Materializer): Future[DeskRecMinutes] = {
     val terminalQueueDeskRecs = deskLimitProviders.map {
       case (terminal, maxDesksProvider) =>
-        val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loads)
+//        val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loads)
+        val terminalPassengers = terminalPassengersByQueue(terminal, minuteMillis, loads)
         val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)
         log.debug(s"Optimising $terminal")
-        terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPax, terminalWork, maxDesksProvider)
+        terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPassengers, terminalWork, maxDesksProvider)
     }
 
     Future.sequence(terminalQueueDeskRecs).map { deskRecs =>

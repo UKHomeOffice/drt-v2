@@ -2,18 +2,16 @@ package services.graphstages
 
 import drt.shared.CrunchApi._
 import drt.shared._
-import org.joda.time.{DateTime, DateTimeZone}
+import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import services._
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Splits, UniqueArrival, WithTimeAccessor}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.PaxType
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.MilliTimes.{minutesInADay, oneDayMillis, oneMinuteMillis}
-import uk.gov.homeoffice.drt.time.{DateLikeOrdering, MilliTimes, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike, UtcDate}
 
-import scala.collection.immutable.{Map, SortedMap, SortedSet}
-import scala.collection.mutable
+import scala.collection.immutable.{Map, SortedMap}
 
 object Crunch {
   val paxOffPerMinute: Int = 20
@@ -21,20 +19,20 @@ object Crunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   case class SplitMinutes(minutes: Map[TQM, LoadMinute]) {
-    def ++(incoming: Iterable[FlightSplitMinute]): SplitMinutes = {
-      incoming.foldLeft(this) {
-        case (acc, fsm) =>
-          acc + LoadMinute(fsm.terminalName, fsm.queueName, fsm.paxLoad, fsm.workLoad, fsm.minute)
-      }
-    }
+//    def ++(incoming: Iterable[FlightSplitMinute]): SplitMinutes = {
+//      incoming.foldLeft(this) {
+//        case (acc, fsm) =>
+//          acc + LoadMinute(fsm.terminalName, fsm.queueName, fsm.paxLoad, fsm.workLoad, fsm.minute)
+//      }
+//    }
 
-    def +(incoming: LoadMinute): SplitMinutes = {
-      val key = incoming.uniqueId
-      minutes.get(key) match {
-        case None => SplitMinutes(minutes + (key -> incoming))
-        case Some(existingFsm) => SplitMinutes(minutes + (key -> (existingFsm + incoming)))
-      }
-    }
+//    def +(incoming: LoadMinute): SplitMinutes = {
+//      val key = incoming.uniqueId
+//      minutes.get(key) match {
+//        case None => SplitMinutes(minutes + (key -> incoming))
+//        case Some(existingFsm) => SplitMinutes(minutes + (key -> (existingFsm + incoming)))
+//      }
+//    }
 
     def toLoads: Loads = Loads(SortedMap[TQM, LoadMinute]() ++ minutes)
   }
@@ -45,11 +43,11 @@ object Crunch {
                                paxType: PaxType,
                                terminalName: Terminal,
                                queueName: Queue,
-                               paxLoad: Double,
                                passengers: Iterable[Passenger],
                                workLoad: Double,
                                minute: MillisSinceEpoch) {
     lazy val key: TQM = TQM(terminalName, queueName, minute)
+    lazy val paxLoad: Double = passengers.map(_.processingTime).sum
   }
 
   case class FlightSplitDiff(flightId: CodeShareKeyOrderedBySchedule,
@@ -60,22 +58,49 @@ object Crunch {
                              workLoad: Double,
                              minute: MillisSinceEpoch)
 
+  trait LoadMinuteLike {
+    val terminal: Terminal
+    val queue: Queue
+    val minute: MillisSinceEpoch
+    val paxLoad: Double
+    val workLoad: Double
+    val maybePassengers: Option[Iterable[Double]]
+  }
+
   case class LoadMinute(terminal: Terminal,
                         queue: Queue,
-                        paxLoad: Double,
+                        passengers: Iterable[Double],
                         workLoad: Double,
-                        minute: MillisSinceEpoch) extends TerminalQueueMinute {
+                        minute: MillisSinceEpoch) extends TerminalQueueMinute with LoadMinuteLike {
     lazy val uniqueId: TQM = TQM(terminal, queue, minute)
 
-    def +(other: LoadMinute): LoadMinute = this.copy(
+    lazy val paxLoad: Double = passengers.sum
+    lazy val maybePassengers: Option[Iterable[Double]] = Some(passengers)
+
+    def +(other: LoadMinute): LoadMinuteLike = this.copy(
+      passengers = this.passengers ++ other.passengers,
+      workLoad = this.workLoad + other.workLoad
+      )
+  }
+
+  case class LegacyLoadMinute(terminal: Terminal,
+                        queue: Queue,
+                              paxLoad: Double,
+                        workLoad: Double,
+                        minute: MillisSinceEpoch) extends TerminalQueueMinute with LoadMinuteLike {
+    lazy val uniqueId: TQM = TQM(terminal, queue, minute)
+
+    lazy val maybePassengers: Option[Iterable[Double]] = None
+
+    def +(other: LegacyLoadMinute): LoadMinuteLike = this.copy(
       paxLoad = this.paxLoad + other.paxLoad,
       workLoad = this.workLoad + other.workLoad
       )
   }
 
   object LoadMinute {
-    def apply(cm: CrunchMinute): LoadMinute = LoadMinute(cm.terminal, cm.queue, cm.paxLoad, cm.workLoad, cm.minute)
-    def apply(cm: DeskRecMinute): LoadMinute = LoadMinute(cm.terminal, cm.queue, cm.paxLoad, cm.workLoad, cm.minute)
+    def apply(cm: CrunchMinute): LoadMinute = LoadMinute(cm.terminal, cm.queue, cm.passengers.getOrElse(Seq(cm.paxLoad)), cm.workLoad, cm.minute)
+    def apply(cm: DeskRecMinute): LoadMinute = LoadMinute(cm.terminal, cm.queue, cm.passengers.getOrElse(Seq(cm.paxLoad)), cm.workLoad, cm.minute)
   }
 
   case class Loads(loadMinutes: SortedMap[TQM, LoadMinute]) {

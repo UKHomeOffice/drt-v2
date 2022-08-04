@@ -6,9 +6,10 @@ import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueStatus}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
+import scala.collection.immutable
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -18,15 +19,15 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
 
   def workToDeskRecs(terminal: Terminal,
                      minuteMillis: NumericRange[MillisSinceEpoch],
-                     terminalPax: Map[Queue, Seq[Double]],
+                     terminalPassengers: Map[Queue, immutable.IndexedSeq[Iterable[Double]]],
                      terminalWork: Map[Queue, Seq[Double]],
                      deskLimitsProvider: TerminalDeskLimitsLike)
                     (implicit ec: ExecutionContext, mat: Materializer): Future[Iterable[DeskRecMinute]] = {
     desksAndWaits(minuteMillis, terminalWork, deskLimitsProvider).map { queueDesksAndWaits =>
       queueDesksAndWaits.flatMap {
         case (queue, (desks, waits, paxInQueue)) =>
-          minuteMillis.zip(terminalPax(queue).zip(terminalWork(queue)).zip(paxInQueue)).zip(desks.zip(waits)).map {
-            case ((minute, ((pax, work), queueSize)), (desk, wait)) => DeskRecMinute(terminal, queue, minute, pax, work, desk, wait, Option(Math.round(queueSize).toInt))
+          minuteMillis.zip(terminalPassengers(queue).zip(terminalWork(queue)).zip(paxInQueue)).zip(desks.zip(waits)).map {
+            case ((minute, ((pax, work), queueSize)), (desk, wait)) => DeskRecMinute(terminal, queue, minute, pax.sum, Option(pax), work, desk, wait, Option(Math.round(queueSize).toInt))
           }
       }
     }

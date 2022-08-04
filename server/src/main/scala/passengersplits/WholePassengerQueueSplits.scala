@@ -1,12 +1,52 @@
 package passengersplits
 
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
+import drt.shared.TQM
+import org.slf4j.LoggerFactory
+import services.graphstages.Crunch.LoadMinute
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, Transfer}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
 
 object WholePassengerQueueSplits {
+  private val log = LoggerFactory.getLogger(getClass)
+
+  def splits(flights: Iterable[ApiFlightWithSplits], processingTime: Terminal => (PaxType, Queue) => Double): Map[TQM, LoadMinute] =
+    flights
+      .groupBy(_.apiFlight.Terminal)
+      .toList
+      .flatMap {
+        case (terminal, flights) =>
+          val procTimes = processingTime(terminal)
+          flights
+            .flatMap(flight =>
+              flightSplits(flight, procTimes)
+                .flatMap { case (queue, byMinute) =>
+                  byMinute.map {
+                    case (minute, passengers) => (TQM(terminal, queue, minute), passengers)
+                  }
+                }
+            )
+      }
+      .groupBy(_._1)
+      .map {
+        case (tqm, passengers) =>
+          val pax = passengers.flatMap(_._2)
+          (tqm, LoadMinute(tqm.terminal, tqm.queue, pax, pax.sum, tqm.minute))
+      }
+
+  def flightSplits(flight: ApiFlightWithSplits, processingTime: (PaxType, Queue) => Double): Map[Queue, Map[Int, List[Double]]] =
+    flight.bestSplits match {
+      case Some(splitsToUse) =>
+        wholePaxPerQueuePerMinute(flight.apiFlight.bestPcpPaxEstimate.pax.getOrElse(0), splitsToUse.splits, processingTime)
+      case None =>
+        log.error(s"No splits found for ${flight.apiFlight.flightCode}")
+        Map.empty
+    }
+
   def wholePaxPerQueuePerMinute(totalPax: Int,
-                                        wholeSplits: Set[ApiPaxTypeAndQueueCount],
-                                        processingTime: (PaxType, Queue) => Double): Map[Queue, Map[Int, List[Double]]] =
+                                wholeSplits: Set[ApiPaxTypeAndQueueCount],
+                                processingTime: (PaxType, Queue) => Double): Map[Queue, Map[Int, List[Double]]] =
     wholeSplits
       .toList
       .map { ptqc =>
