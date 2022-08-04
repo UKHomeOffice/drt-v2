@@ -70,7 +70,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "186"
-    val drtLib = "v20220804_4"
+    val drtLib = "v303"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "2.0.0"

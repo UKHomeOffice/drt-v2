@@ -148,6 +148,7 @@ object PortStateMessageConversion {
     queueName = Option(cm.queue.toString),
     minute = Option(cm.minute),
     paxLoad = Option(cm.paxLoad),
+    passengers = cm.passengers.map(pax => PassengersMessage(pax.map(load => PassengerMessage(Option(load))).toSeq)),
     workLoad = Option(cm.workLoad),
     deskRec = Option(cm.deskRec),
     waitTime = Option(cm.waitTime),
