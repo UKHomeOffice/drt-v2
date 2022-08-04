@@ -1,7 +1,7 @@
 package passengersplits
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.ports.ApiPaxTypeAndQueueCount
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypesAndQueues}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Transfer}
 
@@ -39,10 +39,13 @@ class FlightPassengerLoadsSpec extends Specification {
   }
 
   private def wholePassengerSplits(totalPax: Int, splits: Set[ApiPaxTypeAndQueueCount]): Set[ApiPaxTypeAndQueueCount] = {
-    val splitsMinusTransfer = splits.filterNot(_.queueType == Transfer)
+    val splitsMinusTransferInOrder = splits.toList
+      .sortBy(_.paxCount)
+      .filterNot(_.queueType == Transfer)
     val totalSplitsPax = splits.toList.map(_.paxCount).sum
-    val totalSplits = splitsMinusTransfer.size
-    splitsMinusTransfer.foldLeft(Set[ApiPaxTypeAndQueueCount]()) {
+    val totalSplits = splitsMinusTransferInOrder.size
+
+    splitsMinusTransferInOrder.foldLeft(Set[ApiPaxTypeAndQueueCount]()) {
       case (actualSplits, nextSplit) =>
         val countSoFar = actualSplits.map(_.paxCount).sum
         val proposedCount = Math.round((nextSplit.paxCount / totalSplitsPax) * totalPax).toInt
@@ -61,24 +64,34 @@ class FlightPassengerLoadsSpec extends Specification {
       val totalPassengers = 100
       val eeaToDesk = 5
       val paxOffRate = 20
+      val processingTime = 25d
 
-      val finalPaxByMinute: scala.List[Int] = paxPerMinute(totalPassengers, eeaToDesk, paxOffRate)
+      val finalPaxByMinute = paxLoadsPerMinute(totalPassengers, eeaToDesk, paxOffRate, processingTime)
 
-      finalPaxByMinute === List(1, 1, 1, 1, 1)
+      finalPaxByMinute === List(List(25d), List(25d), List(25d), List(25d), List(25d))
     }
   }
 
-  private def paxPerMinute(totalPassengers: Int, eeaToDesk: Int, paxOffRate: Int) = {
+  private def paxLoadsPerMinute(totalPassengers: Int, eeaToDesk: Int, paxOffRate: Int, loadPerPax: Double): List[List[Double]] = {
     val minutesOff = totalPassengers.toDouble / paxOffRate
     val paxPerMinuteDecimal = eeaToDesk / minutesOff
 
-    val paxByMinute = (1 to minutesOff.toInt).foldLeft(List[Int]()) {
-      case (paxByMinute, minute) =>
+    val paxLoadsByMinute = (1 to minutesOff.toInt).foldLeft(List[List[Double]]()) {
+      case (paxLoadsAcc, minute) =>
         val roundedDecimalPaxForMinute = paxPerMinuteDecimal * minute
-        val paxThisMinute = Math.round(roundedDecimalPaxForMinute).toInt - paxByMinute.sum
-        paxThisMinute :: paxByMinute
+        val paxThisMinute = Math.round(roundedDecimalPaxForMinute).toInt - paxCountFromLoads(paxLoadsAcc)
+        val loads = List.fill(paxThisMinute)(loadPerPax)
+        loads :: paxLoadsAcc
     }
 
-    (if (paxByMinute.sum < eeaToDesk) (eeaToDesk - paxByMinute.sum) :: paxByMinute else paxByMinute).reverse
+    val finalPaxLoads = if (paxCountFromLoads(paxLoadsByMinute) < eeaToDesk) {
+      val finalMinutePax = eeaToDesk - paxCountFromLoads(paxLoadsByMinute)
+      List.fill(finalMinutePax)(loadPerPax) :: paxLoadsByMinute
+    }
+    else paxLoadsByMinute
+
+    finalPaxLoads.reverse
   }
+
+  private def paxCountFromLoads(paxByMinute: List[List[Double]]): Int = paxByMinute.map(_.size).sum
 }

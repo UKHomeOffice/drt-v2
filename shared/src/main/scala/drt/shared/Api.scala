@@ -14,13 +14,6 @@ import upickle.default._
 import scala.concurrent.Future
 import scala.language.postfixOps
 
-object DeskAndPaxTypeCombinations {
-  val egate = "eGate"
-  val deskEeaNonMachineReadable = "EEA NMR"
-  val deskEea = "EEA"
-  val nationalsDeskVisa = "VISA"
-  val nationalsDeskNonVisa = "Non-VISA"
-}
 
 case class MilliDate(_millisSinceEpoch: MillisSinceEpoch) extends Ordered[MilliDate] with WithTimeAccessor {
   lazy val secondsOffset: MillisSinceEpoch = _millisSinceEpoch % 60000
@@ -38,46 +31,6 @@ object MilliDate {
   def atTime: MillisSinceEpoch => MilliDate = (time: MillisSinceEpoch) => MilliDate(time)
 }
 
-//sealed trait EventType extends ClassNameForToString
-//
-//object EventType {
-//  implicit val rw: ReadWriter[EventType] = macroRW
-//
-//  def apply(eventType: String): EventType = eventType match {
-//    case "DC" => DC
-//    case "CI" => CI
-//    case _ => InvalidEventType
-//  }
-//}
-//
-//object EventTypes {
-//
-//  object DC extends EventType
-//
-//  object CI extends EventType
-//
-//  object InvalidEventType extends EventType
-//
-//}
-
-//case class Splits(splits: Set[ApiPaxTypeAndQueueCount],
-//                  source: SplitSource,
-//                  maybeEventType: Option[EventType],
-//                  splitStyle: SplitStyle = PaxNumbers) {
-//  lazy val totalExcludingTransferPax: Double = Splits.totalExcludingTransferPax(splits)
-//  lazy val totalPax: Double = Splits.totalPax(splits)
-//}
-//
-//object Splits {
-//  def totalExcludingTransferPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.filter(s => s.queueType != Queues.Transfer).toList.map(_.paxCount).sum
-//
-//  def totalPax(splits: Set[ApiPaxTypeAndQueueCount]): Double = splits.toList.map(s => {
-//    s.paxCount
-//  }).sum
-//
-//  implicit val rw: ReadWriter[Splits] = macroRW
-//}
-
 case class StaffTimeSlot(terminal: Terminal,
                          start: MillisSinceEpoch,
                          staff: Int,
@@ -93,13 +46,6 @@ object MinuteHelper {
 }
 
 case class FlightsNotReady()
-
-//object MonthStrings {
-//  val months = List(
-//    "January", "February", "March", "April", "May", "June",
-//    "July", "August", "September", "October", "November", "December"
-//  )
-//}
 
 case class RemoveFlight(flightKey: UniqueArrival)
 
