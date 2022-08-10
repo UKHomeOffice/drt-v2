@@ -30,8 +30,8 @@ class PortStateMessageConversionSpec extends Specification {
 
         val correctedMillis = MilliDate(invalidMinuteMilli).millisSinceEpoch
         val expectedCrunchMinutes = SortedMap[TQM, CrunchMinute]() ++ Seq(
-          CrunchMinute(T1, Queues.EeaDesk, validMinuteMilli, 1, 0, 0, 0, None, None, None, None, None),
-          CrunchMinute(T1, Queues.EeaDesk, correctedMillis, 2, 0, 0, 0, None, None, None, None, None)
+          CrunchMinute(T1, Queues.EeaDesk, validMinuteMilli, 1, None, 0, 0, 0, None, None, None, None, None),
+          CrunchMinute(T1, Queues.EeaDesk, correctedMillis, 2, None, 0, 0, 0, None, None, None, None, None)
         ).map(m => (m.key, m))
         val expectedStaffMinutes = SortedMap[TM, StaffMinute]() ++ Seq(
           StaffMinute(T1, validMinuteMilli, 1, 0, 0, None),
@@ -52,6 +52,7 @@ class PortStateMessageConversionSpec extends Specification {
         queue = EeaDesk,
         minute = 60000L,
         paxLoad = 1.1,
+        passengers = Option(Seq(1.1, 2.2, 3.3)),
         workLoad = 25.6,
         deskRec = 2,
         waitTime = 2,

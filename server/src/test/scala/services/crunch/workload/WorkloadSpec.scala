@@ -64,9 +64,9 @@ class WorkloadSpec extends CrunchTestLike {
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> procTime)
 
     val workloads = workloadCalculator(procTimes, FlightFilter.regular(List(T1)))
-      .flightToFlightSplitMinutes(arrival.pcpRange, ApiFlightWithSplits(arrival, splits, None), (q: Queue, m: MillisSinceEpoch) => Open)
+      .flightLoadMinutes(arrival.pcpRange, FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, splits, None))), RedListUpdates.empty, _ => (q: Queue, m: MillisSinceEpoch) => Open)
 
-    val startTime = SDate(workloads.head.minute).toISOString()
+    val startTime = SDate(workloads.minutes.keys.toList.minBy(_.minute).minute).toISOString()
 
     startTime === "2018-08-28T17:07:00Z"
   }

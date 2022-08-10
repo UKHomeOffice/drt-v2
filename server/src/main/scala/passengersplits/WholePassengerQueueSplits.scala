@@ -38,7 +38,8 @@ object WholePassengerQueueSplits {
   def flightSplits(flight: ApiFlightWithSplits, processingTime: (PaxType, Queue) => Double): Map[Queue, Map[Int, List[Double]]] =
     flight.bestSplits match {
       case Some(splitsToUse) =>
-        wholePaxPerQueuePerMinute(flight.apiFlight.bestPcpPaxEstimate.pax.getOrElse(0), splitsToUse.splits, processingTime)
+        val pcpPax = flight.apiFlight.bestPcpPaxEstimate.pax.getOrElse(0)
+        wholePaxPerQueuePerMinute(pcpPax, splitsToUse.splits, processingTime)
       case None =>
         log.error(s"No splits found for ${flight.apiFlight.flightCode}")
         Map.empty
@@ -46,8 +47,8 @@ object WholePassengerQueueSplits {
 
   def wholePaxPerQueuePerMinute(totalPax: Int,
                                 wholeSplits: Set[ApiPaxTypeAndQueueCount],
-                                processingTime: (PaxType, Queue) => Double): Map[Queue, Map[Int, List[Double]]] =
-    wholeSplits
+                                processingTime: (PaxType, Queue) => Double): Map[Queue, Map[Int, List[Double]]] = {
+    val perQueuePerMinute: Map[Queue, Map[Int, List[Double]]] = wholeSplits
       .toList
       .map { ptqc =>
         val procTime = processingTime(ptqc.passengerType, ptqc.queueType)
@@ -69,6 +70,14 @@ object WholePassengerQueueSplits {
             }
           (queue, loadsByMinute)
       }
+    val paxCount = perQueuePerMinute.values.flatMap(_.values.map(_.size)).sum
+    if (paxCount != totalPax) {
+      println(s"*** bad splits: $paxCount != $totalPax")
+    } else {
+      println(s"*** good splits: $paxCount == $totalPax")
+    }
+    perQueuePerMinute
+  }
 
   def wholePassengerSplits(totalPax: Int, splits: Set[ApiPaxTypeAndQueueCount]): Set[ApiPaxTypeAndQueueCount] = {
     val splitsMinusTransferInOrder = splits.toList
@@ -79,7 +88,7 @@ object WholePassengerQueueSplits {
 
     splitsMinusTransferInOrder.foldLeft(Set[ApiPaxTypeAndQueueCount]()) {
       case (actualSplits, nextSplit) =>
-        val countSoFar = actualSplits.map(_.paxCount).sum
+        val countSoFar = actualSplits.toList.map(_.paxCount).sum
         val proposedCount = Math.round((nextSplit.paxCount / totalSplitsPax) * totalPax).toInt
 
         val finalSplit = actualSplits.size == totalSplits - 1

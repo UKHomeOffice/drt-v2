@@ -9,17 +9,32 @@ import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
 class WholePassengerQueueSplitsSpec extends Specification {
   "Given some splits and a total number of passengers I should get a set of pax type and queue counts with whole numbers of passengers" >> {
     val splits = Set(
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 33.3, None, None),
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 33.3, None, None),
+      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 33.3, None, None),
+    )
+    val totalPax = 10
+
+    val expected = Set(
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 3, None, None),
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 3, None, None),
+      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 4, None, None),
+    )
+
+    wholePassengerSplits(totalPax, splits) must_== expected
+  }
+
+  "Given some splits containing transfer passengers and a total number of passengers I should get a set of pax type and queue counts with whole numbers of passengers" >> {
+    val splits = Set(
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, None, None),
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 3, None, None),
-      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 3, None, None),
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, Transfer, 3, None, None),
     )
     val totalPax = 10
 
     val expected = Set(
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, None, None),
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 4, None, None),
-      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 5, None, None),
-    )
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 9, None, None))
 
     wholePassengerSplits(totalPax, splits) must_== expected
   }
@@ -55,7 +70,7 @@ class WholePassengerQueueSplitsSpec extends Specification {
       5 -> List(25d))
   }
 
-  "Given some splits and a total number of passengers I should be able to get the breakdown of whole passenger loads by minute" >> {
+  "Given some splits and a total number of passengers I should get the breakdown of whole passenger loads by minute" >> {
     val splits = Set(
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1, None, None),
       ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 3, None, None),
@@ -65,8 +80,28 @@ class WholePassengerQueueSplitsSpec extends Specification {
 
     val wholeSplits = wholePassengerSplits(totalPax, splits)
 
-    val d = wholePaxPerQueuePerMinute(totalPax, wholeSplits, processingTime)
-    d should ===(Map(EeaDesk -> Map(1 -> List(25.0, 30.0, 30.0, 30.0, 30.0, 30.0)), EGate -> Map(1 -> List(20.0, 20.0, 20.0, 20.0))))
+    val expected = Map(
+      EeaDesk -> Map(1 -> List(25.0, 30.0, 30.0, 30.0, 30.0, 30.0)),
+      EGate -> Map(1 -> List(20.0, 20.0, 20.0, 20.0)))
+
+    wholePaxPerQueuePerMinute(totalPax, wholeSplits, processingTime) should ===(expected)
+  }
+
+  "Given some percentage splits and a total number of passengers I should get the breakdown of whole passenger loads by minute with no rounding errors" >> {
+    val splits = Set(
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 33.3d, None, None),
+      ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 33.3d, None, None),
+      ApiPaxTypeAndQueueCount(EeaNonMachineReadable, EeaDesk, 33.3d, None, None),
+    )
+    val totalPax = 10
+
+    val wholeSplits = wholePassengerSplits(totalPax, splits)
+
+    val expected = Map(
+      EeaDesk -> Map(1 -> List(25.0, 25.0, 25.0, 30.0, 30.0, 30.0, 30.0)),
+      EGate -> Map(1 -> List(20.0, 20.0, 20.0)))
+
+    wholePaxPerQueuePerMinute(totalPax, wholeSplits, processingTime) should ===(expected)
   }
 
   private def processingTime(paxType: PaxType, queue: Queue): Double = (paxType, queue) match {
