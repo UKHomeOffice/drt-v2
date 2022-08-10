@@ -39,7 +39,7 @@ object WholePassengerQueueSplits {
     flight.bestSplits match {
       case Some(splitsToUse) =>
         val pcpPax = flight.apiFlight.bestPcpPaxEstimate.pax.getOrElse(0)
-        wholePaxPerQueuePerMinute(pcpPax, splitsToUse.splits, processingTime)
+        wholePaxPerQueuePerMinute(pcpPax, wholePassengerSplits(pcpPax, splitsToUse.splits), processingTime)
       case None =>
         log.error(s"No splits found for ${flight.apiFlight.flightCode}")
         Map.empty
