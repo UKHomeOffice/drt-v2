@@ -2,11 +2,14 @@ package passengersplits
 
 import drt.shared.TQM
 import org.slf4j.LoggerFactory
+import services.SDate
 import services.graphstages.Crunch.LoadMinute
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
+
+import scala.collection.immutable
 
 object WholePassengerQueueSplits {
   private val log = LoggerFactory.getLogger(getClass)
@@ -19,19 +22,21 @@ object WholePassengerQueueSplits {
         case (terminal, flights) =>
           val procTimes = processingTime(terminal)
           flights
-            .flatMap(flight =>
+            .flatMap { flight =>
+              val pcpTime = SDate(flight.apiFlight.pcpRange.min)
               flightSplits(flight, procTimes)
                 .flatMap { case (queue, byMinute) =>
                   byMinute.map {
-                    case (minute, passengers) => (TQM(terminal, queue, minute), passengers)
+                    case (minute, passengers) =>
+                      (TQM(terminal, queue, pcpTime.addMinutes(minute - 1).millisSinceEpoch), passengers)
                   }
                 }
-            )
+            }
       }
       .groupBy(_._1)
       .map {
         case (tqm, passengers) =>
-          val pax = passengers.flatMap(_._2)
+          val pax: immutable.Seq[Double] = passengers.flatMap(_._2)
           (tqm, LoadMinute(tqm.terminal, tqm.queue, pax, pax.sum, tqm.minute))
       }
 
@@ -47,8 +52,8 @@ object WholePassengerQueueSplits {
 
   def wholePaxPerQueuePerMinute(totalPax: Int,
                                 wholeSplits: Set[ApiPaxTypeAndQueueCount],
-                                processingTime: (PaxType, Queue) => Double): Map[Queue, Map[Int, List[Double]]] = {
-    val perQueuePerMinute: Map[Queue, Map[Int, List[Double]]] = wholeSplits
+                                processingTime: (PaxType, Queue) => Double): Map[Queue, Map[Int, List[Double]]] =
+    wholeSplits
       .toList
       .map { ptqc =>
         val procTime = processingTime(ptqc.passengerType, ptqc.queueType)
@@ -70,14 +75,6 @@ object WholePassengerQueueSplits {
             }
           (queue, loadsByMinute)
       }
-    val paxCount = perQueuePerMinute.values.flatMap(_.values.map(_.size)).sum
-    if (paxCount != totalPax) {
-      println(s"*** bad splits: $paxCount != $totalPax")
-    } else {
-      println(s"*** good splits: $paxCount == $totalPax")
-    }
-    perQueuePerMinute
-  }
 
   def wholePassengerSplits(totalPax: Int, splits: Set[ApiPaxTypeAndQueueCount]): Set[ApiPaxTypeAndQueueCount] = {
     val splitsMinusTransferInOrder = splits.toList

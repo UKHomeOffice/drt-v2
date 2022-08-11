@@ -1,0 +1,154 @@
+package services.crunch.deskrecs
+
+import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.FlightsApi.FlightsWithSplits
+import drt.shared.{ArrivalGenerator, CrunchApi, TQM}
+import services.crunch.CrunchTestLike
+import services.crunch.desklimits.TerminalDeskLimitsLike
+import services.graphstages.Crunch.LoadMinute
+import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
+import services.{OptimiserWithFlexibleProcessors, SDate, WorkloadProcessors, WorkloadProcessorsProvider}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
+import uk.gov.homeoffice.drt.egates.Desk
+import uk.gov.homeoffice.drt.ports.PaxTypes.GBRNational
+import uk.gov.homeoffice.drt.ports.Queues._
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, PortCode}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+
+import scala.collection.immutable.{Map, NumericRange, SortedMap}
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
+
+class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
+  val gbrToDesk = 18
+  val gbrToEgate = 20
+
+  "A PortDesksAndWaitsProvider should produce correct LoadMinutes" >> {
+    "Given a single flight with 2 passengers and a single split" >> {
+      val scheduled = SDate("2022-08-11T12:00")
+      val pax = 2
+      val flights = List(
+        (pax, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 100, None, None)))
+      )
+      val loads = getFlightLoads(scheduled, flights, getProvider)
+      val scheduledMillis = scheduled.millisSinceEpoch
+
+      val expected = Map(TQM(T1, EeaDesk, scheduledMillis) -> LoadMinute(T1, EeaDesk, List(gbrToDesk, gbrToDesk), pax * gbrToDesk, scheduledMillis))
+
+      loads === expected
+    }
+    "Given two flights with 1 & 2 passengers and single splits" >> {
+      val scheduled = SDate("2022-08-11T12:00")
+      val pax1 = 1
+      val pax2 = 2
+      val flights = List(
+        (pax1, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 100, None, None))),
+        (pax2, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 100, None, None))),
+      )
+      val loads = getFlightLoads(scheduled, flights, getProvider)
+      val scheduledMillis = scheduled.millisSinceEpoch
+
+      val expected = Map(TQM(T1, EeaDesk, scheduledMillis) -> LoadMinute(T1, EeaDesk, List(gbrToDesk, gbrToDesk, gbrToDesk), pax1 * gbrToDesk + pax2 * gbrToDesk, scheduledMillis))
+
+      loads === expected
+    }
+    "Given a flight with 2 passengers and 2 equal splits" >> {
+      val scheduled = SDate("2022-08-11T12:00")
+      val pax = 2
+      val flights = List(
+        (pax, Set(
+          ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 50, None, None),
+          ApiPaxTypeAndQueueCount(GBRNational, EGate, 50, None, None),
+        )),
+      )
+      val loads = getFlightLoads(scheduled, flights, getProvider)
+      val scheduledMillis = scheduled.millisSinceEpoch
+
+      val expected = Map(
+        TQM(T1, EeaDesk, scheduledMillis) -> LoadMinute(T1, EeaDesk, List(gbrToDesk), gbrToDesk, scheduledMillis),
+        TQM(T1, EGate, scheduledMillis) -> LoadMinute(T1, EGate, List(gbrToEgate), gbrToEgate, scheduledMillis),
+      )
+
+      loads === expected
+    }
+  }
+  "A PortDesksAndWaitsProvider should produce correct DeskRecs" >> {
+    "Given a single flight with 2 passengers and a single split" >> {
+      val scheduled = SDate("2022-08-11T12:00")
+      val pax = 2
+      val flights = List((pax, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 100, None, None))))
+      val loads = Await.result(getDeskRecs(scheduled, flights, getProvider), 1.second).minutes
+        .filter(m => m.queue == EeaDesk && m.minute == scheduled.millisSinceEpoch)
+
+      val expected = List(
+        DeskRecMinute(T1, EeaDesk, 1660219200000L, 36.0, Some(List(18.0, 18.0)), 36.0, 10, 0, Some(26)),
+      )
+
+      loads === expected
+    }
+  }
+
+  object MockTerminalDeskLimits extends TerminalDeskLimitsLike {
+    override val minDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]] = Map(
+      EeaDesk -> IndexedSeq.fill(24)(10),
+      EGate -> IndexedSeq.fill(24)(10),
+      NonEeaDesk -> IndexedSeq.fill(24)(10),
+    )
+
+    override def maxDesksForMinutes(minuteMillis: NumericRange[MillisSinceEpoch], queue: Queue, existingAllocations: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] =
+      Future.successful(WorkloadProcessorsProvider(DeskRecs.desksForMillis(minuteMillis, IndexedSeq.fill(24)(10)).map(x => WorkloadProcessors(Seq.fill(x)(Desk)))))
+  }
+
+  private def getDeskRecs(scheduled: SDateLike, flightParams: List[(Int, Set[ApiPaxTypeAndQueueCount])], provider: PortDesksAndWaitsProvider): Future[CrunchApi.DeskRecMinutes] = {
+    val start = scheduled.millisSinceEpoch
+    val end = scheduled.addMinutes(14).millisSinceEpoch
+    val loads = getFlightLoads(scheduled, flightParams, provider)
+    provider.loadsToDesks(
+      minuteMillis = start to end by MilliTimes.oneMinuteMillis,
+      loads,
+      Map(T1 -> MockTerminalDeskLimits)
+    )
+  }
+
+  private def getFlightLoads(scheduled: SDateLike, flightParams: List[(Int, Set[ApiPaxTypeAndQueueCount])], provider: PortDesksAndWaitsProvider): Map[TQM, LoadMinute] = {
+    val start = scheduled.millisSinceEpoch
+    val end = scheduled.addMinutes(14).millisSinceEpoch
+    val flights = flightParams.zipWithIndex.map {
+      case ((pax, splits), idx) =>
+        ApiFlightWithSplits(
+          ArrivalGenerator.arrival(iata = s"BA${idx.toString}", origin = PortCode(idx.toString), terminal = T1, sch = scheduled.millisSinceEpoch, actPax = Option(pax), pcpTime = Option(scheduled.millisSinceEpoch)),
+          Set(Splits(splits, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, None))
+        )
+    }
+
+    provider.flightsToLoads(
+      minuteMillis = start to end by MilliTimes.oneMinuteMillis,
+      flights = FlightsWithSplits(flights),
+      RedListUpdates.empty,
+      _ => (_: Queue, _: MillisSinceEpoch) => Open
+    )
+  }
+
+
+  private def getProvider = {
+    val queues = SortedMap[Terminal, Seq[Queue]](T1 -> Seq(EeaDesk, EGate, NonEeaDesk))
+    val divertedQueues = Map[Queue, Queue]()
+    val terminalDesks = Map[Terminal, Int](T1 -> 10)
+    val flexedQueuesPriority = List(EeaDesk, EGate, NonEeaDesk)
+    val slas = Map[Queue, Int](EeaDesk -> 25, EGate -> 20, NonEeaDesk -> 45)
+    val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(
+      PaxTypeAndQueue(GBRNational, EeaDesk) -> 18d,
+      PaxTypeAndQueue(GBRNational, EGate) -> 20d,
+    ))
+    val minutesToCrunch = 3
+    val offsetMinutes = 0
+    val tryCrunch = OptimiserWithFlexibleProcessors.crunch _
+    val workLoadCalc = DynamicWorkloadCalculator(procTimes, QueueFallbacks(Map()), FlightFilter(List()), 45)
+
+    PortDesksAndWaitsProvider(queues, divertedQueues, terminalDesks, flexedQueuesPriority, slas,
+      procTimes, minutesToCrunch, offsetMinutes, tryCrunch, workLoadCalc)
+  }
+}

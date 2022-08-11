@@ -181,8 +181,13 @@ object CrunchApi {
 
     override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = toMinute.copy(lastUpdated = Option(now))
 
-    override def toMinute: CrunchMinute = CrunchMinute(
-      terminal, queue, minute, paxLoad, passengers, workLoad, deskRec, waitTime, maybePaxInQueue, lastUpdated = None)
+    override def toMinute: CrunchMinute = {
+      val cm = CrunchMinute(
+        terminal, queue, minute, paxLoad, passengers, workLoad, deskRec, waitTime, maybePaxInQueue, lastUpdated = None)
+      if (passengers.isDefined)
+        println(s"toMinute: $maybePaxInQueue -> ${cm.maybePaxInQueue}")
+      cm
+    }
   }
 
   case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateQueueMinutes {

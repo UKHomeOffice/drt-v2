@@ -74,7 +74,7 @@ object Crunch {
                         minute: MillisSinceEpoch) extends TerminalQueueMinute with LoadMinuteLike {
     lazy val uniqueId: TQM = TQM(terminal, queue, minute)
 
-    lazy val paxLoad: Double = passengers.sum
+    lazy val paxLoad: Double = passengers.size
     lazy val maybePassengers: Option[Iterable[Double]] = Some(passengers)
 
     def +(other: LoadMinute): LoadMinuteLike = this.copy(

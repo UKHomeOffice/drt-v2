@@ -26,9 +26,23 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
     desksAndWaits(minuteMillis, terminalWork, deskLimitsProvider).map { queueDesksAndWaits =>
       queueDesksAndWaits.flatMap {
         case (queue, (desks, waits, paxInQueue)) =>
-          minuteMillis.zip(terminalPassengers(queue).zip(terminalWork(queue)).zip(paxInQueue)).zip(desks.zip(waits)).map {
-            case ((minute, ((pax, work), queueSize)), (desk, wait)) => DeskRecMinute(terminal, queue, minute, pax.sum, Option(pax), work, desk, wait, Option(Math.round(queueSize).toInt))
-          }
+          minuteMillis.indices
+            .map { idx =>
+              val maybeDrm = for {
+                minute <- minuteMillis.lift(idx)
+                pax <- terminalPassengers(queue).lift(idx)
+                work <- terminalWork(queue).lift(idx)
+                desk <- desks.toIndexedSeq.lift(idx)
+                wait <- waits.toIndexedSeq.lift(idx)
+                queueSize <- paxInQueue.toIndexedSeq.lift(idx)
+              } yield DeskRecMinute(terminal, queue, minute, pax.sum, Option(pax), work, desk, wait, Option(Math.round(queueSize).toInt))
+
+              (idx, maybeDrm)
+            }
+            .map {
+              case (_, Some(drm)) => drm
+              case (idx, None) => DeskRecMinute(terminal, queue, minuteMillis(idx), 0, None, 0, 0, 0, None)
+            }
       }
     }
   }

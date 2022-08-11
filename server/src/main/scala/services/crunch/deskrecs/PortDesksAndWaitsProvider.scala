@@ -5,12 +5,12 @@ import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.TryCrunch
+import services.{TryCrunch, WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.Crunch.LoadMinute
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
-import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
+import uk.gov.homeoffice.drt.egates.{Desk, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
@@ -64,7 +64,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     .map {
       case (tqm, minutes) =>
         val loads = minutes.values
-        (tqm, LoadMinute(tqm.terminal, tqm.queue, loads.map(_.paxLoad), loads.map(_.workLoad).sum, tqm.minute))
+        (tqm, LoadMinute(tqm.terminal, tqm.queue, loads.flatMap(_.passengers), loads.map(_.workLoad).sum, tqm.minute))
     }
 
   def terminalWorkLoadsByQueue(terminal: Terminal,
@@ -91,7 +91,12 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                 loadMinutes: Map[TQM, LoadMinute]): Map[Queue, immutable.IndexedSeq[Iterable[Double]]] = queuesByTerminal(terminal)
     .filterNot(_ == Transfer)
     .map { queue =>
-      val paxLoads = minuteMillis.map(minute => loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, Seq(), 0, minute)).passengers)
+      val paxLoads = minuteMillis.map { minute =>
+        loadMinutes.get(TQM(terminal, queue, minute)) match {
+          case Some(lm) => lm.passengers
+          case None => Seq.empty[Double]
+        }
+      }
       (queue, paxLoads)
     }
     .toMap
@@ -102,10 +107,8 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                            (implicit ec: ExecutionContext, mat: Materializer): Future[DeskRecMinutes] = {
     val terminalQueueDeskRecs = deskLimitProviders.map {
       case (terminal, maxDesksProvider) =>
-//        val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loads)
         val terminalPassengers = terminalPassengersByQueue(terminal, minuteMillis, loads)
         val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)
-        log.debug(s"Optimising $terminal")
         terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPassengers, terminalWork, maxDesksProvider)
     }
 
