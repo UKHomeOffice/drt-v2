@@ -35,7 +35,7 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
                 desk <- desks.toIndexedSeq.lift(idx)
                 wait <- waits.toIndexedSeq.lift(idx)
                 queueSize <- paxInQueue.toIndexedSeq.lift(idx)
-              } yield DeskRecMinute(terminal, queue, minute, pax.sum, Option(pax), work, desk, wait, Option(Math.round(queueSize).toInt))
+              } yield DeskRecMinute(terminal, queue, minute, pax.size, Option(pax), work, desk, wait, Option(Math.round(queueSize).toInt))
 
               (idx, maybeDrm)
             }

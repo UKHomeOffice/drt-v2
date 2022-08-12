@@ -37,27 +37,33 @@ object DashboardTerminalSummary {
         case (minute, cms) =>
           cms.foldLeft(emptyMinute) {
             case (minuteSoFar, cm) => CrunchMinute(
-              minuteSoFar.terminal,
-              InvalidQueue,
-              minute,
-              minuteSoFar.paxLoad + cm.paxLoad,
-              (minuteSoFar.passengers, cm.passengers) match {
+              terminal = minuteSoFar.terminal,
+              queue = InvalidQueue,
+              minute = minute,
+              paxLoad = minuteSoFar.paxLoad + cm.paxLoad,
+              passengers = (minuteSoFar.passengers, cm.passengers) match {
                 case (None, newPax) => newPax
                 case (Some(pax), Some(newPax)) => Option(pax ++ newPax)
                 case (Some(pax), None) => Some(pax)
               },
-              minuteSoFar.workLoad + cm.workLoad,
-              minuteSoFar.deskRec + cm.deskRec,
-              minuteSoFar.waitTime + cm.waitTime,
-              Option(minuteSoFar.deployedDesks.getOrElse(0) + cm.deployedDesks.getOrElse(0)),
-              Option(minuteSoFar.deployedWait.getOrElse(0) + cm.deployedWait.getOrElse(0)),
-              Option(minuteSoFar.deployedWait.getOrElse(0) + cm.deployedWait.getOrElse(0)),
-              Option(minuteSoFar.actDesks.getOrElse(0) + cm.actDesks.getOrElse(0)),
-              None
+              workLoad = minuteSoFar.workLoad + cm.workLoad,
+              deskRec = List(minuteSoFar.deskRec, cm.deskRec).sum,
+              waitTime = List(minuteSoFar.waitTime, cm.waitTime).sum,
+              maybePaxInQueue = maxFromOptionals(minuteSoFar.maybePaxInQueue, cm.maybePaxInQueue),
+              deployedDesks = maxFromOptionals(minuteSoFar.deployedDesks, cm.deployedDesks),
+              deployedWait = maxFromOptionals(minuteSoFar.deployedWait, cm.deployedWait),
+              maybeDeployedPaxInQueue = maxFromOptionals(minuteSoFar.maybeDeployedPaxInQueue, cm.maybeDeployedPaxInQueue),
+              actDesks = None
             )
           }
       }.toList
   }
+
+  private def maxFromOptionals(maybeInt1: Option[Int], maybeInt2: Option[Int]): Option[Int] =
+    maybeInt1.toList ::: maybeInt2.toList match {
+      case Nil => None
+      case somePaxInQueue => Option(somePaxInQueue.max)
+    }
 
   def hourSummary(flights: List[ApiFlightWithSplits], cms: List[CrunchMinute], start: SDateLike): Seq[DashboardSummary] = {
     val groupedFlights: Map[MillisSinceEpoch, Set[ApiFlightWithSplits]] = groupFlightsByHour(flights, start).toMap

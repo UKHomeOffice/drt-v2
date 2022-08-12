@@ -22,13 +22,13 @@ object DashboardComponentTests extends TestSuite {
           val startDate = SDate("2017-10-30T00:00:00Z")
 
           val startMinutes = List(
-            CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, Option(List(10, 10)), 40, 10, 10, Option(5), None, None),
-            CrunchMinute(T1, Queues.EGate, startDate.millisSinceEpoch, 20, Option(List(15, 11)), 40, 10, 10, Option(5), None, None)
+            CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 2, Option(List(10, 10)), 40, 10, 10, Option(5), None, None),
+            CrunchMinute(T1, Queues.EGate, startDate.millisSinceEpoch, 2, Option(List(15, 11)), 40, 10, 10, Option(7), None, None)
           )
 
           val result = aggregateAcrossQueues(startMinutes, T1)
           val expected = List(
-            CrunchMinute(T1, Queues.InvalidQueue, startDate.millisSinceEpoch, 40, Option(List(10, 10, 15, 11)), 80, 20, 20, Option(10), Some(0), Some(0), Some(0))
+            CrunchMinute(T1, Queues.InvalidQueue, startDate.millisSinceEpoch, 4, Option(List(10, 10, 15, 11)), 80, 20, 20, Option(7), None, None)
           )
 
           assert(result == expected)
@@ -38,17 +38,16 @@ object DashboardComponentTests extends TestSuite {
           val startDate = SDate("2017-10-30T00:00:00Z")
 
           val startMinutes = List(
-            CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, Option(List(10, 10)), 40, 10, 10, Option(5), None, None),
-            CrunchMinute(T1, Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 20, Option(List(10, 10)), 40, 10, 10, Option(5), None, None)
+            CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 2, Option(List(10, 10)), 40, 10, 10, Option(5), None, None, Option(5)),
+            CrunchMinute(T1, Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 2, Option(List(10, 10)), 40, 10, 10, Option(5), None, None, Option(7))
           )
 
           val result = aggregateAcrossQueues(startMinutes, T1)
           val expected =
             List(
-              CrunchMinute(T1, Queues.InvalidQueue, startDate.millisSinceEpoch, 20, Option(List(10, 10)), 40, 10, 10, Some(5), Some(0), Some(0), Some(0), None),
-              CrunchMinute(T1, Queues.InvalidQueue, startDate.addMinutes(15).millisSinceEpoch, 20, Option(List(10, 10)), 40, 10, 10, Some(5), Some(0), Some(0), Some(0), None)
+              CrunchMinute(T1, Queues.InvalidQueue, startDate.millisSinceEpoch, 2, Option(List(10, 10)), 40, 10, 10, Option(5), None, None, Option(5)),
+              CrunchMinute(T1, Queues.InvalidQueue, startDate.addMinutes(15).millisSinceEpoch, 2, Option(List(10, 10)), 40, 10, 10, Option(5), None, None, Option(7))
             )
-
 
           assert(result.toSet == expected.toSet)
         }
@@ -56,16 +55,16 @@ object DashboardComponentTests extends TestSuite {
           val startDate = SDate("2017-10-30T00:00:00Z")
 
           val startMinutes = List(
-            CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, Option(List(10, 10)), 40, 10, 10, Option(5), None, None),
-            CrunchMinute(T1, Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 20, Option(List(11, 11)), 40, 10, 10, Option(5), None, None),
-            CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, Option(List(12, 12)), 40, 10, 10, Option(5), None, None),
-            CrunchMinute(T1, Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 20, Option(List(13, 13)), 40, 10, 10, Option(5), None, None)
+            CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 2, Option(List(10, 10)), 40, 10, 10, Option(5), None, None),
+            CrunchMinute(T1, Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 2, Option(List(11, 11)), 40, 10, 10, Option(6), None, None),
+            CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 2, Option(List(12, 12)), 40, 10, 10, Option(7), None, None),
+            CrunchMinute(T1, Queues.EGate, startDate.addMinutes(15).millisSinceEpoch, 2, Option(List(13, 13)), 40, 10, 10, Option(8), None, None)
           )
 
           val result = aggregateAcrossQueues(startMinutes, T1)
           val expected = List(
-            CrunchMinute(T1, Queues.InvalidQueue, startDate.millisSinceEpoch, 40, Option(List(10, 10, 12, 12)), 80, 20, 20, Option(10), Some(0), Some(0), Some(0)),
-            CrunchMinute(T1, Queues.InvalidQueue, startDate.addMinutes(15).millisSinceEpoch, 40, Option(List(11, 11, 13, 13)), 80, 20, 20, Option(10), Some(0), Some(0), Some(0))
+            CrunchMinute(T1, Queues.InvalidQueue, startDate.millisSinceEpoch, 4, Option(List(10, 10, 12, 12)), 80, 20, 20, Option(7), None, None, None),
+            CrunchMinute(T1, Queues.InvalidQueue, startDate.addMinutes(15).millisSinceEpoch, 4, Option(List(11, 11, 13, 13)), 80, 20, 20, Option(8), None, None, None)
           )
 
           assert(result.toSet == expected.toSet)
@@ -74,11 +73,11 @@ object DashboardComponentTests extends TestSuite {
 
       "Given a list of Crunch Minutes I should find the timeslot with the highest RAG rating in the list" - {
         val startDate = SDate("2017-10-30T00:00:00Z")
-        val worstRagRatingMinute = CrunchMinute(T1, Queues.EeaDesk, startDate.addMinutes(30).millisSinceEpoch, 20, None, 40, 10, 10, Option(5), None, None)
+        val worstRagRatingMinute = CrunchMinute(T1, Queues.EeaDesk, startDate.addMinutes(30).millisSinceEpoch, 2, None, 40, 10, 10, Option(10), Option(10), None, None)
         val crunchMinutes = List(
-          CrunchMinute(T1, Queues.EeaDesk, startDate.addMinutes(15).millisSinceEpoch, 20, None, 40, 10, 10, Option(10), None, None),
+          CrunchMinute(T1, Queues.EeaDesk, startDate.addMinutes(15).millisSinceEpoch, 2, None, 40, 5, 10, Option(10), Option(10), None, None),
           worstRagRatingMinute,
-          CrunchMinute(T1, Queues.EeaDesk, startDate.addMinutes(45).millisSinceEpoch, 20, None, 40, 10, 10, Option(10), None, None)
+          CrunchMinute(T1, Queues.EeaDesk, startDate.addMinutes(45).millisSinceEpoch, 2, None, 40, 3, 10, Option(10), Option(10), None, None)
         )
 
         val result = worstTimeslot(crunchMinutes)

@@ -192,65 +192,65 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     }
   }
 
-//  "Given a flight and a mock splits calculator" >> {
-//    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), totalPax = Set(TotalPaxSource(Option(100), LiveFeedSource)))
-//    val flights = Seq(ApiFlightWithSplits(arrival, Set()))
-//    val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
-//    val mockSplits: SplitsForArrival = (_, _) => splits
-//
-//    "addManifests" >> {
-//      "When I have a manifest matching the arrival I should get the mock splits added to the arrival" >> {
-//        val manifest = VoyageManifestGenerator.manifestForArrival(arrival, List(euIdCard))
-//        val manifestsForArrival = manifestsByKey(manifest)
-//        val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
-//
-//        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1), FeedSources = arrival.FeedSources + ApiFeedSource,
-//          TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(Option(1), ApiFeedSource))
-//        ), Set(splits)))
+  "Given a flight and a mock splits calculator" >> {
+    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), totalPax = Set(TotalPaxSource(Option(100), LiveFeedSource)))
+    val flights = Seq(ApiFlightWithSplits(arrival, Set()))
+    val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
+    val mockSplits: SplitsForArrival = (_, _) => splits
+
+    "addManifests" >> {
+      "When I have a manifest matching the arrival I should get the mock splits added to the arrival" >> {
+        val manifest = VoyageManifestGenerator.manifestForArrival(arrival, List(euIdCard))
+        val manifestsForArrival = manifestsByKey(manifest)
+        val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
+
+        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1), FeedSources = arrival.FeedSources + ApiFeedSource,
+          TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(Option(1), ApiFeedSource))
+        ), Set(splits)))
+      }
+
+      "When I have no manifests matching the arrival I should get no splits added to the arrival" >> {
+        val manifest = VoyageManifestGenerator.voyageManifest(portCode = PortCode("AAA"))
+        val manifestsForDifferentArrival = manifestsByKey(manifest)
+        val withLiveManifests = addManifests(flights, manifestsForDifferentArrival, mockSplits)
+
+        withLiveManifests === Seq(ApiFlightWithSplits(arrival, Set()))
+      }
+    }
+
+    "addSplits" >> {
+      "When I have live manifests matching the arrival where the live manifest is within the trust threshold I should get the live splits" >> {
+        checkSplitsSource(arrival, Option(xOfPaxType(100, visa)), Map(), Set(ApiSplitsWithHistoricalEGateAndFTPercentages))
+      }
+
+      "When I have live and historic manifests matching the arrival where the live manifest isn't within the trust threshold I should get the fallback historic splits" >> {
+        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(arrival -> Option(xOfPaxType(10, visa))), Set(ApiSplitsWithHistoricalEGateAndFTPercentages, Historical))
+      }
+
+      "When I have live manifests matching the arrival where the live manifest isn't within the trust threshold, and no historical manifest, I should get the fallback terminal average splits" >> {
+        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(), Set(TerminalAverage))
+      }
+
+      "When I have live manifests matching the arrival where the live manifest isn't within the trust threshold, and no historical manifest, I should get the fallback terminal average splits" >> {
+        checkSplitsSource(arrival, None, Map(), Set(TerminalAverage))
+      }
+    }
+
+    "add historic API pax" >> {
+//      "When I have ACL pax number I should get some pax from historic API" >> {
+//        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(AclFeedSource),
+//          totalPax = Set(TotalPaxSource(Option(100), AclFeedSource)))
+//        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(100), AclFeedSource),
+//          TotalPaxSource(Option(10), HistoricApiFeedSource)))
 //      }
-//
-//      "When I have no manifests matching the arrival I should get no splits added to the arrival" >> {
-//        val manifest = VoyageManifestGenerator.voyageManifest(portCode = PortCode("AAA"))
-//        val manifestsForDifferentArrival = manifestsByKey(manifest)
-//        val withLiveManifests = addManifests(flights, manifestsForDifferentArrival, mockSplits)
-//
-//        withLiveManifests === Seq(ApiFlightWithSplits(arrival, Set()))
-//      }
-//    }
-//
-//    "addSplits" >> {
-//      "When I have live manifests matching the arrival where the live manifest is within the trust threshold I should get the live splits" >> {
-//        checkSplitsSource(arrival, Option(xOfPaxType(100, visa)), Map(), Set(ApiSplitsWithHistoricalEGateAndFTPercentages))
-//      }
-//
-//      "When I have live and historic manifests matching the arrival where the live manifest isn't within the trust threshold I should get the fallback historic splits" >> {
-//        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(arrival -> Option(xOfPaxType(10, visa))), Set(ApiSplitsWithHistoricalEGateAndFTPercentages, Historical))
-//      }
-//
-//      "When I have live manifests matching the arrival where the live manifest isn't within the trust threshold, and no historical manifest, I should get the fallback terminal average splits" >> {
-//        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(), Set(TerminalAverage))
-//      }
-//
-//      "When I have live manifests matching the arrival where the live manifest isn't within the trust threshold, and no historical manifest, I should get the fallback terminal average splits" >> {
-//        checkSplitsSource(arrival, None, Map(), Set(TerminalAverage))
-//      }
-//    }
-//
-//    "add historic API pax" >> {
-////      "When I have ACL pax number I should get some pax from historic API" >> {
-////        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(AclFeedSource),
-////          totalPax = Set(TotalPaxSource(Option(100), AclFeedSource)))
-////        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(100), AclFeedSource),
-////          TotalPaxSource(Option(10), HistoricApiFeedSource)))
-////      }
-//
-//      "When I have no Feed I should get some pax from historic API" >> {
-//        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(),
-//          totalPax = Set.empty)
-//        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(10), HistoricApiFeedSource)))
-//      }
-//    }
-//  }
+
+      "When I have no Feed I should get some pax from historic API" >> {
+        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(),
+          totalPax = Set.empty)
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(10), HistoricApiFeedSource)))
+      }
+    }
+  }
 
   private def checkSplitsSource(arrival: Arrival,
                                 maybeLiveManifestPax: Option[List[PassengerInfoJson]],
@@ -299,62 +299,62 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       success
     }
 
-//    "When I provide only historic splits with an id card pax, all pax should arrive at the eea desk " >> {
-//      val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
-//      setupGraphAndCheckQueuePax(
-//        arrival = arrival,
-//        livePax = None,
-//        historicPax = Option(List(euIdCard)),
-//        expectedQueuePax = expected)
-//
-//      success
-//    }
-//
-//    "When I provide only live splits with an id card pax, all pax should arrive at the eea desk " >> {
-//      val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
-//      setupGraphAndCheckQueuePax(
-//        arrival = arrival,
-//        livePax = Option(xOfPaxType(100, euIdCard)),
-//        historicPax = None,
-//        expectedQueuePax = expected)
-//
-//      success
-//    }
-//
-//    "When I provide live (id card) and historic (visa) splits, all pax should arrive at the eea desk as per the live splits" >> {
-//      val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
-//      setupGraphAndCheckQueuePax(
-//        arrival = arrival,
-//        livePax = Option(xOfPaxType(100, euIdCard)),
-//        historicPax = Option(List(visa)),
-//        expectedQueuePax = expected)
-//
-//      success
-//    }
-//
-//    "When I provide live (visa) and historic (id card) splits, all pax should arrive at the non-eea desk as per the live splits" >> {
-//      val expected: Map[(Terminal, Queue), Int] = Map((T1, NonEeaDesk) -> 100)
-//      setupGraphAndCheckQueuePax(
-//        arrival = arrival,
-//        livePax = Option(xOfPaxType(100, visa)),
-//        historicPax = Option(List(euIdCard)),
-//        expectedQueuePax = expected)
-//
-//      success
-//    }
+    "When I provide only historic splits with an id card pax, all pax should arrive at the eea desk " >> {
+      val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
+      setupGraphAndCheckQueuePax(
+        arrival = arrival,
+        livePax = None,
+        historicPax = Option(List(euIdCard)),
+        expectedQueuePax = expected)
+
+      success
+    }
+
+    "When I provide only live splits with an id card pax, all pax should arrive at the eea desk " >> {
+      val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
+      setupGraphAndCheckQueuePax(
+        arrival = arrival,
+        livePax = Option(xOfPaxType(100, euIdCard)),
+        historicPax = None,
+        expectedQueuePax = expected)
+
+      success
+    }
+
+    "When I provide live (id card) and historic (visa) splits, all pax should arrive at the eea desk as per the live splits" >> {
+      val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
+      setupGraphAndCheckQueuePax(
+        arrival = arrival,
+        livePax = Option(xOfPaxType(100, euIdCard)),
+        historicPax = Option(List(visa)),
+        expectedQueuePax = expected)
+
+      success
+    }
+
+    "When I provide live (visa) and historic (id card) splits, all pax should arrive at the non-eea desk as per the live splits" >> {
+      val expected: Map[(Terminal, Queue), Int] = Map((T1, NonEeaDesk) -> 100)
+      setupGraphAndCheckQueuePax(
+        arrival = arrival,
+        livePax = Option(xOfPaxType(100, visa)),
+        historicPax = Option(List(euIdCard)),
+        expectedQueuePax = expected)
+
+      success
+    }
   }
 
-//  "validApiPercentage" >> {
-//    val validApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
-//    val invalidApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
-//    "Given no flights, then validApiPercentage should give 100%" >> {
-//      DynamicRunnableDeskRecs.validApiPercentage(Seq()) === 100d
-//    }
-//    "Given 1 flight with live api splits, when it is valid, then validApiPercentage should give 100%" >> {
-//      DynamicRunnableDeskRecs.validApiPercentage(Seq(validApi)) === 100d
-//    }
-//    "Given 4 flights with live api splits, when 3 are categorised as valid, then validApiPercentage should give 75%" >> {
-//      DynamicRunnableDeskRecs.validApiPercentage(Seq(validApi, validApi, validApi, invalidApi)) === 75d
-//    }
-//  }
+  "validApiPercentage" >> {
+    val validApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+    val invalidApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+    "Given no flights, then validApiPercentage should give 100%" >> {
+      DynamicRunnableDeskRecs.validApiPercentage(Seq()) === 100d
+    }
+    "Given 1 flight with live api splits, when it is valid, then validApiPercentage should give 100%" >> {
+      DynamicRunnableDeskRecs.validApiPercentage(Seq(validApi)) === 100d
+    }
+    "Given 4 flights with live api splits, when 3 are categorised as valid, then validApiPercentage should give 75%" >> {
+      DynamicRunnableDeskRecs.validApiPercentage(Seq(validApi, validApi, validApi, invalidApi)) === 75d
+    }
+  }
 }

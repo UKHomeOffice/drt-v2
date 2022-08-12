@@ -168,39 +168,40 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     success
   }
 
-  "Given a flight with splits " +
-    "When I ask for the workload " +
+  "Given a flight with splits, when I ask for the workload" >> {
     "Then I should see the workload associated with the best splits for that flight" >> {
-    val scheduled = "2019-10-10T23:05:00Z"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25), feedSources = Set(LiveFeedSource),
-      totalPax = Set(TotalPaxSource(Option(25), LiveFeedSource)))
+      val scheduled = "2019-10-10T23:05:00Z"
+      val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(25), feedSources = Set(LiveFeedSource),
+        totalPax = Set(TotalPaxSource(Option(25), LiveFeedSource)))
 
-    val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
+      val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
-    val portStateProbe = TestProbe("port-state")
-    val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
-    mockPortStateActor ! SetFlights(flight)
+      val portStateProbe = TestProbe("port-state")
+      val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
+      mockPortStateActor ! SetFlights(flight)
 
-    val arrivalPax = Map(arrival -> Option(List(euPassport, visa)))
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(arrivalPax), mockHistoricManifestsPaxProvider(arrivalPax))
+      val arrivalPax = Map(arrival -> Option(List(euPassport, visa)))
+      val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(arrivalPax), mockHistoricManifestsPaxProvider(arrivalPax))
 
-    daysQueueSource ! crunchRequest(SDate(scheduled))
+      daysQueueSource ! crunchRequest(SDate(scheduled))
 
-    val expectedLoads = Set(
-      (Queues.EeaDesk, 10, SDate(scheduled).millisSinceEpoch),
-      (Queues.EeaDesk, 2.5, SDate(scheduled).addMinutes(1).millisSinceEpoch),
-      (Queues.NonEeaDesk, 10, SDate(scheduled).millisSinceEpoch),
-      (Queues.NonEeaDesk, 2.5, SDate(scheduled).addMinutes(1).millisSinceEpoch)
-    )
+      val expectedLoads = Set(
+        (Queues.EeaDesk, 10, SDate(scheduled).millisSinceEpoch),
+        (Queues.EeaDesk, 3, SDate(scheduled).addMinutes(1).millisSinceEpoch),
+        (Queues.NonEeaDesk, 10, SDate(scheduled).millisSinceEpoch),
+        (Queues.NonEeaDesk, 2, SDate(scheduled).addMinutes(1).millisSinceEpoch)
+      )
 
-    portStateProbe.fishForMessage(2.seconds) {
-      case DeskRecMinutes(drms) =>
-        val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queue, drm.paxLoad, drm.minute)).toSet
-        result == expectedLoads
-      case _ => false
+      portStateProbe.fishForMessage(2.seconds) {
+        case DeskRecMinutes(drms) =>
+          val result = drms.filterNot(_.paxLoad == 0).map(drm => (drm.queue, drm.paxLoad, drm.minute)).toSet
+
+          result == expectedLoads
+        case _ => false
+      }
+
+      success
     }
-
-    success
   }
 
   "Given a flight with splits and some transit pax " +
@@ -224,9 +225,9 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val expectedLoads = Set(
       (Queues.EeaDesk, 10, scheduledDate.millisSinceEpoch),
-      (Queues.EeaDesk, 2.5, SDate(scheduled).addMinutes(1).millisSinceEpoch),
+      (Queues.EeaDesk, 3, SDate(scheduled).addMinutes(1).millisSinceEpoch),
       (Queues.NonEeaDesk, 10, scheduledDate.millisSinceEpoch),
-      (Queues.NonEeaDesk, 2.5, SDate(scheduled).addMinutes(1).millisSinceEpoch)
+      (Queues.NonEeaDesk, 2, SDate(scheduled).addMinutes(1).millisSinceEpoch)
     )
 
     portStateProbe.fishForMessage(2.seconds) {
@@ -268,11 +269,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val expectedLoads = Set(
       (Queues.EeaDesk, 10, scheduledSd.addMinutes(0).millisSinceEpoch),
-      (Queues.EeaDesk, 2.5 + 10, scheduledSd.addMinutes(1).millisSinceEpoch),
-      (Queues.EeaDesk, 0 + 2.5, scheduledSd.addMinutes(2).millisSinceEpoch),
+      (Queues.EeaDesk, 3 + 10, scheduledSd.addMinutes(1).millisSinceEpoch),
+      (Queues.EeaDesk, 0 + 3, scheduledSd.addMinutes(2).millisSinceEpoch),
       (Queues.NonEeaDesk, 10, scheduledSd.addMinutes(0).millisSinceEpoch),
-      (Queues.NonEeaDesk, 2.5 + 10, scheduledSd.addMinutes(1).millisSinceEpoch),
-      (Queues.NonEeaDesk, 0 + 2.5, scheduledSd.addMinutes(2).millisSinceEpoch)
+      (Queues.NonEeaDesk, 2 + 10, scheduledSd.addMinutes(1).millisSinceEpoch),
+      (Queues.NonEeaDesk, 0 + 2, scheduledSd.addMinutes(2).millisSinceEpoch)
     )
 
     portStateProbe.fishForMessage(2.seconds) {

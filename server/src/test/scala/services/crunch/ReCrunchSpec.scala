@@ -22,15 +22,16 @@ class ReCrunchSpec extends CrunchTestLike {
           queue = EeaDesk,
           minute = minute.millisSinceEpoch,
           paxLoad = 0,
-          passengers = None,
+          passengers = Option(Seq()),
           workLoad = 0,
           deskRec = minDesks,
           waitTime = 0,
-          maybePaxInQueue = None,
+          maybePaxInQueue = Option(0),
+          deployedDesks = Option(0),
           deployedWait = Option(0),
-          deployedDesks = Option(0))
+        )
 
-        crunch.portStateTestProbe.fishForMessage(1 second) {
+        crunch.portStateTestProbe.fishForMessage(2.second) {
           case PortState(_, cms, _) =>
             val minute = cms(expected.key)
             minute.equals(expected)

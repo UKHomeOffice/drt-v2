@@ -60,7 +60,7 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
     val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, deskRecs).run()
     queue ! request
 
-    probe.fishForMessage(1.second)(expectedQueuePax)
+    probe.fishForMessage(5.second)(expectedQueuePax)
   }
 
   "Given a mock workload provider returning no workloads" >> {
@@ -68,6 +68,7 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
       val expected: PartialFunction[Any, Boolean] = {
         case SimulationMinutes(minutes) =>
           val minuteCountByQueue: Map[Queue, Int] = minutes.groupBy(_.queue).mapValues(_.size)
+          println(s"Got $minuteCountByQueue")
           minuteCountByQueue === Map(EeaDesk -> 1440, NonEeaDesk -> 1440, EGate -> 1440)
       }
       val noLoads = MinutesContainer.empty[CrunchMinute, TQM]

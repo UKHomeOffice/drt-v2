@@ -285,9 +285,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
         offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
-        val expected = Map(Queues.EeaDesk -> 1.2, Queues.EGate -> 0.8, Queues.NonEeaDesk -> 2.0)
+        val expected = Map(Queues.EeaDesk -> 1, Queues.EGate -> 1, Queues.NonEeaDesk -> 2.0)
 
-        crunch.portStateTestProbe.fishForMessage(10 seconds) {
+        crunch.portStateTestProbe.fishForMessage(2.seconds) {
           case ps: PortState =>
             val queuePax = ps.crunchMinutes
               .values

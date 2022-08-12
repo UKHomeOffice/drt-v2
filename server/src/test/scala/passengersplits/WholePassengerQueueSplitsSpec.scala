@@ -2,8 +2,9 @@ package passengersplits
 
 import org.specs2.mutable.Specification
 import passengersplits.WholePassengerQueueSplits.{paxLoadsPerMinute, wholePassengerSplits, wholePaxPerQueuePerMinute}
+import services.SDate
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable}
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue, Transfer}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Open, Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
 
 class WholePassengerQueueSplitsSpec extends Specification {
@@ -79,12 +80,13 @@ class WholePassengerQueueSplitsSpec extends Specification {
     val totalPax = 10
 
     val wholeSplits = wholePassengerSplits(totalPax, splits)
+    val firstMinute = SDate("2022-08-01T00:00")
 
     val expected = Map(
-      EeaDesk -> Map(1 -> List(25.0, 30.0, 30.0, 30.0, 30.0, 30.0)),
-      EGate -> Map(1 -> List(20.0, 20.0, 20.0, 20.0)))
+      EeaDesk -> Map(firstMinute.millisSinceEpoch -> List(25.0, 30.0, 30.0, 30.0, 30.0, 30.0)),
+      EGate -> Map(firstMinute.millisSinceEpoch -> List(20.0, 20.0, 20.0, 20.0)))
 
-    wholePaxPerQueuePerMinute(totalPax, wholeSplits, processingTime) should ===(expected)
+    wholePaxPerQueuePerMinute(totalPax, wholeSplits, processingTime, (_, _) => Open, (_, _) => List(), firstMinute) should ===(expected)
   }
 
   "Given some percentage splits and a total number of passengers I should get the breakdown of whole passenger loads by minute with no rounding errors" >> {
@@ -96,12 +98,13 @@ class WholePassengerQueueSplitsSpec extends Specification {
     val totalPax = 10
 
     val wholeSplits = wholePassengerSplits(totalPax, splits)
+    val firstMinute = SDate("2022-08-01T00:00")
 
     val expected = Map(
-      EeaDesk -> Map(1 -> List(25.0, 25.0, 25.0, 30.0, 30.0, 30.0, 30.0)),
-      EGate -> Map(1 -> List(20.0, 20.0, 20.0)))
+      EeaDesk -> Map(firstMinute.millisSinceEpoch -> List(25.0, 25.0, 25.0, 30.0, 30.0, 30.0, 30.0)),
+      EGate -> Map(firstMinute.millisSinceEpoch -> List(20.0, 20.0, 20.0)))
 
-    wholePaxPerQueuePerMinute(totalPax, wholeSplits, processingTime) should ===(expected)
+    wholePaxPerQueuePerMinute(totalPax, wholeSplits, processingTime, (_, _) => Open, (_, _) => List(), firstMinute) should ===(expected)
   }
 
   private def processingTime(paxType: PaxType, queue: Queue): Double = (paxType, queue) match {
