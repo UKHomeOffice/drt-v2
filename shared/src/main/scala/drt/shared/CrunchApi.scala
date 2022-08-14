@@ -171,9 +171,15 @@ object CrunchApi {
     lazy val key: TQM = MinuteHelper.key(terminal, queue, minute)
 
     override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
-      if (existing.paxLoad != paxLoad || existing.workLoad != workLoad || existing.deskRec != deskRec || existing.waitTime != waitTime)
+      if (toMinute.copy(lastUpdated = None) != existing.copy(lastUpdated = None))
         Option(existing.copy(
-          paxLoad = paxLoad, workLoad = workLoad, deskRec = deskRec, waitTime = waitTime, lastUpdated = Option(now)
+          paxLoad = paxLoad,
+          passengers = passengers,
+          workLoad = workLoad,
+          deskRec = deskRec,
+          waitTime = waitTime,
+          maybePaxInQueue = maybePaxInQueue,
+          lastUpdated = Option(now)
         ))
       else None
 
