@@ -42,7 +42,7 @@ object WholePassengerQueueSplits {
       .groupBy(_._1)
       .map {
         case (tqm, passengers) =>
-          val pax: immutable.Seq[Double] = passengers.flatMap(_._2)
+          val pax = passengers.flatMap(_._2)
           (tqm, LoadMinute(tqm.terminal, tqm.queue, pax, pax.sum, tqm.minute))
       }
 

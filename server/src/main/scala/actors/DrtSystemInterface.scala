@@ -201,7 +201,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
 
-  val optimiser: TryCrunch = OptimiserWithFlexibleProcessors.crunch
+  val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 

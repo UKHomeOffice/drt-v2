@@ -90,12 +90,12 @@ case class QueueCapacity(capacity: List[Int]) {
     ProcessedQueue(sla, work.length, processedMinutes, leftOver, queueSizeByMinute.reverse)
   }
 
-  def processPassengers(sla: Int, passengersByMinute: List[List[Double]]): ProcessedQueue = {
-    if (capacity.length != passengersByMinute.length) {
-      throw new Exception(s"capacity & work lengths don't match: ${capacity.length} vs ${passengersByMinute.length}")
+  def processPassengers(sla: Int, passengersByMinute: Iterable[Iterable[Double]]): ProcessedQueue = {
+    if (capacity.length != passengersByMinute.size) {
+      throw new Exception(s"capacity & work lengths don't match: ${capacity.length} vs ${passengersByMinute.size}")
     }
 
-    val workWithDesks: immutable.Seq[(List[Work], Capacity)] = passengersByMinute.zipWithIndex
+    val workWithDesks: Iterable[(Iterable[Work], Capacity)] = passengersByMinute.zipWithIndex
       .map { case (passengers, minute) => (minute, passengers.map(paxWorkLoad => Work(paxWorkLoad, minute))) }
       .zip(capacity)
       .map { case ((minute, passengers), d) => (passengers, Capacity(d, minute)) }
@@ -103,14 +103,13 @@ case class QueueCapacity(capacity: List[Int]) {
     val (processedMinutes, queueSizeByMinute, leftOver) = workWithDesks
       .foldLeft((List[ProcessedBatchOfWork](), List[Double](), BatchOfWork(List()))) {
         case ((processedBatchesSoFar, queueSizeByMinute, spillover), (passengers, desksOpen)) =>
-          val (processedBatch, _) = desksOpen.process(spillover + passengers)
+          val (processedBatch, _) = desksOpen.process(spillover + passengers.toList)
           val processedBatches = processedBatchesSoFar :+ ProcessedBatchOfWork(desksOpen.availableAt, processedBatch)
-//          val queueSize = processedBatch.outstanding.loads.map(_.load).sum
           val paxInQueue = processedBatch.outstanding.loads.size
           (processedBatches, paxInQueue :: queueSizeByMinute, processedBatch.outstanding)
       }
 
-    ProcessedQueue(sla, passengersByMinute.length, processedMinutes, leftOver, queueSizeByMinute.reverse)
+    ProcessedQueue(sla, passengersByMinute.size, processedMinutes, leftOver, queueSizeByMinute.reverse)
   }
 }
 

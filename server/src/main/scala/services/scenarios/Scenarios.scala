@@ -49,7 +49,7 @@ object Scenarios {
     val portDesksAndWaitsProvider: PortDesksAndWaitsProvider =
       PortDesksAndWaitsProvider(
         simulationAirportConfig,
-        OptimiserWithFlexibleProcessors.crunch,
+        OptimiserWithFlexibleProcessors.crunchWholePax,
         FlightFilter.forPortConfig(simulationAirportConfig),
         egateBanksProvider
       )
