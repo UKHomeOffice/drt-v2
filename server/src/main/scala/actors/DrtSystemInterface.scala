@@ -366,7 +366,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       manifestsLiveSource = voyageManifestsLiveSource,
       voyageManifestsActor = manifestsRouterActor,
-      simulator = simulator,
+//      simulator = simulator,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(SortedMap()),
       initialForecastArrivals = initialForecastArrivals.getOrElse(SortedMap()),

@@ -98,7 +98,6 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                            (implicit ec: ExecutionContext, mat: Materializer): Future[DeskRecMinutes] = {
     val terminalQueueDeskRecs = deskLimitProviders.map {
       case (terminal, maxDesksProvider) =>
-//        val terminalPax = terminalPaxLoadsByQueue(terminal, minuteMillis, loads)
         val terminalPassengers = terminalPassengersByQueue(terminal, minuteMillis, loads)
         val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)
         log.debug(s"Optimising $terminal")
