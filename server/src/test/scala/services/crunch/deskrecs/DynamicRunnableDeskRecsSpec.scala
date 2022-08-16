@@ -23,7 +23,7 @@ import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest}
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
-import services.{SDate, TryCrunch}
+import services.{SDate, TryCrunch, TryCrunchWholePax}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
@@ -141,7 +141,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   val airportConfig: AirportConfig = TestDefaults.airportConfigWithEgates
 
   val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.terminalProvider(airportConfig))
-  val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
+  val mockCrunch: TryCrunchWholePax = CrunchMocks.mockCrunchWholePax
 
   val ptqa: PaxTypeQueueAllocation = PaxTypeQueueAllocation(
     B5JPlusTypeAllocator,

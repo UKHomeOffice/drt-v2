@@ -12,7 +12,6 @@ import org.specs2.specification.BeforeEach
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.time.SDateLike
 import util.RandomString
 
 import java.io.File
@@ -22,7 +21,7 @@ import scala.concurrent.duration.DurationInt
 
 object NeboArrivalActorTest {
 
-  def props(redListPassengers: RedListPassengers, now: () => SDateLike, testProbeRef: ActorRef): Props =
+  def props(redListPassengers: RedListPassengers, testProbeRef: ActorRef): Props =
     Props(new NeboArrivalActor(redListPassengers, () => SDate("2017-10-25T00:00:00Z"), None) {
       override val maybeSnapshotInterval: Option[Int] = Option(1)
 
@@ -87,7 +86,7 @@ class NeboArrivalActorSpec extends CrunchTestLike with ImplicitSender with Befor
 
     val probe: TestProbe = TestProbe()
 
-    val actor = system.actorOf(NeboArrivalActorTest.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z"), probe.ref))
+    val actor = system.actorOf(NeboArrivalActorTest.props(redListPassengers, probe.ref))
 
     actor.ask(redListPassengers).flatMap(_ => actor.ask(redListPassengers2))
     probe.expectMsgClass(1.second, classOf[RecoveryCompleted])
@@ -97,7 +96,7 @@ class NeboArrivalActorSpec extends CrunchTestLike with ImplicitSender with Befor
     actor ! PoisonPill
 
     val newProbe: TestProbe = TestProbe()
-    val newNeboArrivalActor: ActorRef = system.actorOf(NeboArrivalActorTest.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z"), newProbe.ref))
+    val newNeboArrivalActor: ActorRef = system.actorOf(NeboArrivalActorTest.props(redListPassengers, newProbe.ref))
 
     newProbe.expectMsgClass(1.second, classOf[SnapshotOffer])
     newProbe.expectMsgClass(1.second, classOf[RecoveryCompleted])

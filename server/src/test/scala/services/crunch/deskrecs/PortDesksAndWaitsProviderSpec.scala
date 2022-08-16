@@ -1,6 +1,6 @@
 package services.crunch.deskrecs
 
-import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{ArrivalGenerator, CrunchApi, TQM}
 import services.crunch.CrunchTestLike
@@ -84,7 +84,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
         .filter(m => m.queue == EeaDesk && m.minute == scheduled.millisSinceEpoch)
 
       val expected = List(
-        DeskRecMinute(T1, EeaDesk, 1660219200000L, pax, Some(List(gbrToDesk, gbrToDesk)), pax * gbrToDesk, 10, 0, Some(26)),
+        DeskRecMinute(T1, EeaDesk, 1660219200000L, pax, Some(List(gbrToDesk, gbrToDesk)), pax * gbrToDesk, 10, 0, Some(2)),
       )
 
       loads === expected
@@ -145,7 +145,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     ))
     val minutesToCrunch = 3
     val offsetMinutes = 0
-    val tryCrunch = OptimiserWithFlexibleProcessors.crunch _
+    val tryCrunch = OptimiserWithFlexibleProcessors.crunchWholePax _
     val workLoadCalc = DynamicWorkloadCalculator(procTimes, QueueFallbacks(Map()), FlightFilter(List()), 45)
 
     PortDesksAndWaitsProvider(queues, divertedQueues, terminalDesks, flexedQueuesPriority, slas,

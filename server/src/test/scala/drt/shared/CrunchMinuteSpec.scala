@@ -1,6 +1,6 @@
 package drt.shared
 
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute}
+import drt.shared.CrunchApi.CrunchMinute
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1

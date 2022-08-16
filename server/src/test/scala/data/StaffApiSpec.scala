@@ -1,10 +1,10 @@
 package data
 
-import uk.gov.homeoffice.drt.ports.Terminals.T1
-import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment}
+import drt.shared.{ShiftAssignments, StaffAssignment}
 import org.specs2.mutable.SpecificationLike
 import services.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 class StaffApiSpec extends SpecificationLike {
 

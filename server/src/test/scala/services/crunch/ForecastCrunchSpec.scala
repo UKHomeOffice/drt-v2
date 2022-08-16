@@ -41,7 +41,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrival = ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = T1, actPax = Option(21))
     val baseFlights = Flights(List(baseArrival))
 
-    val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), maxDaysToCrunch = 4, cruncher = CrunchMocks.mockCrunch))
+    val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), maxDaysToCrunch = 4, cruncher = CrunchMocks.mockCrunchWholePax))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
@@ -90,7 +90,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       ),
       now = () => SDate(scheduled),
       initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
-      cruncher = OptimiserWithFlexibleProcessors.crunch,
+      cruncher = OptimiserWithFlexibleProcessors.crunchWholePax,
       maxDaysToCrunch = 4
     ))
 

@@ -1,7 +1,7 @@
 package drt.shared.api
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.collection.immutable.SortedMap

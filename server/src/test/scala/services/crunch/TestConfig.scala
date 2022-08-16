@@ -6,7 +6,7 @@ import drt.shared._
 import services.SDate.implicits.sdateFromMillisLocal
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
-import services.{TryCrunch, TrySimulator}
+import services.{TryCrunchWholePax, TrySimulator}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -27,7 +27,7 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       initialFixedPoints: FixedPointAssignments = FixedPointAssignments.empty,
                       initialStaffMovements: Seq[StaffMovement] = Seq(),
                       logLabel: String = "",
-                      cruncher: TryCrunch = CrunchMocks.mockCrunch,
+                      cruncher: TryCrunchWholePax = CrunchMocks.mockCrunchWholePax,
                       simulator: TrySimulator = CrunchMocks.mockSimulator,
                       maybeAggregatedArrivalsActor: Option[ActorRef] = None,
                       useLegacyManifests: Boolean = false,

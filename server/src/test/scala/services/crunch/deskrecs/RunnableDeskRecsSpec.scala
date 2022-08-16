@@ -24,7 +24,7 @@ import services.crunch.deskrecs.OptimiserMocks.{mockHistoricManifestsPaxProvider
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
-import services.{SDate, TryCrunch}
+import services.{SDate, TryCrunch, TryCrunchWholePax}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
@@ -87,7 +87,7 @@ class MockSplitsSinkActor() extends Actor {
 }
 
 class RunnableDeskRecsSpec extends CrunchTestLike {
-  val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
+  val mockCrunch: TryCrunchWholePax = CrunchMocks.mockCrunchWholePax
   val noDelay = 10L
   val longDelay = 250L
   val historicSplits: Splits = Splits(Set(

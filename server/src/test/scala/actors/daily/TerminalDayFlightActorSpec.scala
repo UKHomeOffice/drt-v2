@@ -5,7 +5,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import controllers.ArrivalGenerator.arrivalForDayAndTerminal
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, RemoveSplits, SplitsForArrivals}
+import drt.shared.FlightsApi.{FlightsWithSplits, RemoveSplits, SplitsForArrivals}
 import drt.shared.{ArrivalsDiff, TQM}
 import services.SDate
 import services.crunch.CrunchTestLike

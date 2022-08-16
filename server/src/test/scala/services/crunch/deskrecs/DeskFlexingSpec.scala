@@ -47,8 +47,8 @@ class DeskFlexingSpec extends CrunchTestLike {
   class MockWithObserver {
     var observedMaxDesks: List[List[Int]] = List()
 
-    val mockDeskRecs: (Seq[Double], Seq[Int], Seq[Int], OptimiserConfig) => Try[OptimizerCrunchResult] =
-      (_: Seq[Double], minDesks: Seq[Int], maxDesks: Seq[Int], _: OptimiserConfig) => {
+    val mockDeskRecs: (Iterable[Iterable[Double]], Seq[Int], Seq[Int], OptimiserConfig) => Try[OptimizerCrunchResult] =
+      (_: Iterable[Iterable[Double]], minDesks: Seq[Int], maxDesks: Seq[Int], _: OptimiserConfig) => {
         observedMaxDesks = observedMaxDesks ++ List(maxDesks.toList)
         Success(OptimizerCrunchResult(minDesks.toIndexedSeq, minDesks, Vector()))
       }
@@ -162,5 +162,5 @@ class DeskFlexingSpec extends CrunchTestLike {
     }
   }
 
-  private def mockLoads(queues: List[Queue]): Map[Queue, Seq[Double]] = queues.map(q => (q, List.fill(30)(10d))).toMap
+  private def mockLoads(queues: List[Queue]): Map[Queue, Iterable[Iterable[Double]]] = queues.map(q => (q, Iterable.fill(30)(Iterable(10d)))).toMap
 }

@@ -12,7 +12,7 @@ import services.crunch.deskrecs.OptimiserMocks.MockSinkActor
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
-import services.{SDate, TryCrunch}
+import services.{SDate, TryCrunchWholePax}
 import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
@@ -36,7 +36,7 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
   val egatesProvider: Terminal => Future[EgateBanksUpdates] = MockEgatesProvider.terminalProvider(airportConfig)
 
   val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, egatesProvider)
-  val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
+  val mockCrunch: TryCrunchWholePax = CrunchMocks.mockCrunchWholePax
 
   val staffToDeskLimits: StaffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, egatesProvider)
   val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig))

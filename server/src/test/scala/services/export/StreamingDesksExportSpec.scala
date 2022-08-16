@@ -10,7 +10,6 @@ import services.SDate
 import services.`export`.CsvTestHelper._
 import services.crunch.CrunchTestLike
 import services.exports.StreamingDesksExport
-import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 
@@ -194,7 +193,6 @@ class StreamingDesksExportSpec extends CrunchTestLike {
 
       val start = SDate("2020-11-01")
       val end = SDate("2020-11-03").getLocalNextMidnight.addMinutes(-1)
-      val dates = DateRange.utcDateRangeSource(start, end)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         start,
@@ -222,7 +220,6 @@ class StreamingDesksExportSpec extends CrunchTestLike {
 
       val start = SDate("2020-11-01")
       val end = SDate("2020-11-02")
-      val dates = DateRange.utcDateRangeSource(start, end)
 
       val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         start,

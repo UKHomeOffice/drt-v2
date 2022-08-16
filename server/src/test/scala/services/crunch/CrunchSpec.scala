@@ -1,12 +1,9 @@
 package services.crunch
 
-import drt.shared.CrunchApi.MillisSinceEpoch
-import org.joda.time.DateTime
 import org.specs2.mutable.Specification
 import services.SDate
 import services.graphstages.Crunch
 import services.graphstages.Crunch.crunchStartWithOffset
-import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.MilliTimes.{minutesInADay, oneDayMillis, oneHourMillis, oneMinuteMillis}
 
 class CrunchSpec extends Specification {

@@ -116,8 +116,8 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
 
     val probe = TestProbe()
     val actorSource = LGWFeed(azureClient)(system).source(Feed.actorRefSource).map {
-      case s: ArrivalsFeedSuccess =>
-      case f: ArrivalsFeedFailure =>
+      case _: ArrivalsFeedSuccess =>
+      case _: ArrivalsFeedFailure =>
     }.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
     actorSource ! Feed.Tick
 
