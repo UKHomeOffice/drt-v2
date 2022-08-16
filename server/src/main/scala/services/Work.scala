@@ -12,16 +12,7 @@ case class ProcessedQueue(sla: Int,
 
   override lazy val waits: List[Int] =
     allBatches.foldLeft(List[Int]()) {
-      case (waits, batch) =>
-        batch.maxWait match {
-          case Some(maxWait) => waits :+ maxWait
-          case None =>
-            val derivedWait = waits.reverse.headOption match {
-              case Some(previousWait) => previousWait + 1
-              case None => 1
-            }
-            waits :+ derivedWait
-        }
+      case (waits, batch) => waits :+ batch.maxWait.getOrElse(0)
     }
   override lazy val excessWait: Double = completedBatches.map(_.totalExcessWait(sla)).sum + leftoverExcessWaits(sla)
   override val util: List[Double] = List()
