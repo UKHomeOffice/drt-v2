@@ -189,11 +189,11 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   color: #008000;
 }
 
-@media (max-width: 800px){
-    .table-flex {
-        display: flex;
-        flex-wrap: wrap;
-    }
+@media (max-width: 800px) {
+  .table-flex {
+    display: flex;
+    flex-wrap: wrap;
+  }
 }
 
 @media (max-width: 800px) {
@@ -565,8 +565,8 @@ table.headlines tr:nth-child(odd) {
 }
 
 .feedback {
-  display:inline;
-  margin: 5px 5px 5px 5px ;
+  display: inline;
+  margin: 5px 5px 5px 5px;
 }
 
 .staff-adjustment--save-cancel.btn.btn-default, .staff-adjustment--save-cancel.btn.btn-primary {
@@ -631,10 +631,10 @@ table.headlines tr:nth-child(odd) {
 }
 
 @media (max-width: 800px) {
-    .tab-content {
-      display: flex ;
-      flex-wrap: wrap;
-    }
+  .tab-content {
+    display: flex;
+    flex-wrap: wrap;
+  }
 }
 
 #snapshot-done {
@@ -1259,7 +1259,7 @@ p {
   color: #7E8588;
 }
 
-.date-component-wrapper{
+.date-component-wrapper {
   display: flex;
   align-content: flex-start;
   flex-direction: column;
@@ -1412,6 +1412,21 @@ p {
 
 .pcp-pax-summary.b3 .queues .queue div {
   background-color: #FAFAFB;
+}
+
+.queue-pax {
+  display: flex;
+  justify-content: flex-start;
+  gap: 15px;
+}
+
+.queue-pax-waiting {
+  min-width: 1.7em;
+}
+
+.queue-pax-joining {
+  font-size: smaller;
+  color: #666;
 }
 
 // Usage table
@@ -1817,20 +1832,20 @@ th h2 {
 }
 
 .arrivals__table__flight__chart__show__nationalities {
-     float: left;
+  float: left;
 }
 
 .arrivals__table__flight__chart__show__nationalities_checkbox {
-    float: left;
+  float: left;
 }
 
 .arrivals__table__flight__chart__show__nationalities_label {
-     float: right;
-     display: inline-block;
-     margin-left: 2px;
-     font-size: 12px;
-     font-weight: normal;
-     padding: 2px 10px 2px 1px;
+  float: right;
+  display: inline-block;
+  margin-left: 2px;
+  font-size: 12px;
+  font-weight: normal;
+  padding: 2px 10px 2px 1px;
 }
 
 .simulation__chart-box {
@@ -1882,19 +1897,19 @@ th h2 {
   border-right: 1px solid #ccc;
 }
 
-.pax-rag-green  {
+.pax-rag-green {
   border-bottom: 3px solid @reliability-high;
 }
 
-.pax-rag-amber  {
+.pax-rag-amber {
   border-bottom: 3px solid @reliability-medium;
 }
 
-.pax-rag-red  {
+.pax-rag-red {
   border-bottom: 3px solid @reliability-low;
 }
 
-.pax-no-splits  {
+.pax-no-splits {
   border-bottom: 0px;
 }
 
@@ -1954,11 +1969,12 @@ body {
   font-size: 1.45rem
 }
 
-.port-config{
- display: flex ;
+.port-config {
+  display: flex;
   flexWrap: wrap;
 
 }
+
 .no-gutters {
   margin-right: 0;
   margin-left: 0;
@@ -2159,9 +2175,9 @@ div.access-restricted {
 }
 
 .terminal-dashboard {
-    @media (max-width: 800px) {
-       font-size: 1.75rem
-    }
+  @media (max-width: 800px) {
+    font-size: 1.75rem
+  }
   display: flex;
   flex-wrap: wrap;
 }
@@ -2211,8 +2227,8 @@ div.access-restricted {
   font-weight: bold;
   text-align: center;
   height: 4.5em;
-  @media (max-width: 800px){
-     padding: 5%;
+  @media (max-width: 800px) {
+    padding: 5%;
   }
 }
 
@@ -2233,7 +2249,7 @@ div.access-restricted {
   width: 85%;
   opacity: 95%;
   min-width: 1100px;
-  @media (max-width: 800px){
+  @media (max-width: 800px) {
     min-width: 800px;
   }
   font-size: 1.45rem;
@@ -2282,8 +2298,8 @@ div.access-restricted {
   border-style: solid;
   border-radius: 15px;
   background-color: #eee;
-  @media (max-width: 800px){
-     font-size: 1.70rem;
+  @media (max-width: 800px) {
+    font-size: 1.70rem;
   }
   font-weight: bold;
   text-align: center;
@@ -2308,11 +2324,11 @@ div.access-restricted {
   top: 10%;
   height: 20%;
   font-size: 18px;
-  @media (max-width: 800px){
-     top: 5%;
-     height: 30%;
-     display: flex;
-     font-size: 1.40rem;
+  @media (max-width: 800px) {
+    top: 5%;
+    height: 30%;
+    display: flex;
+    font-size: 1.40rem;
   }
 }
 
@@ -2347,7 +2363,7 @@ div.access-restricted {
 }
 
 .tippy-box {
-    min-width: 800px
+  min-width: 800px
 }
 
 .dashboard-time-switcher {
@@ -2451,9 +2467,9 @@ div.access-restricted {
 }
 
 .terminal-config {
-  width : 65%;
-  @media (max-width: 800px){
-     width : 100%;
+  width: 65%;
+  @media (max-width: 800px) {
+    width: 100%;
   }
 }
 

@@ -7,7 +7,6 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
@@ -17,6 +16,7 @@ import org.scalajs.dom.html.TableCell
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffMovementsEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object TerminalDesksAndQueuesRow {
 
@@ -51,7 +51,13 @@ object TerminalDesksAndQueuesRow {
 
       val queueTds = crunchMinutesByQueue.flatMap {
         case (qn, cm) =>
-          val paxLoadTd = <.td(^.className := queueColour(qn), s"${Math.round(cm.paxLoad)} / ${cm.maybePaxInQueue.map(Math.round(_).toString).getOrElse("-")}")
+          val inQueue: String = cm.maybePaxInQueue.map(Math.round(_).toString).getOrElse("-")
+          val paxLoadTd = <.td(^.className := queueColour(qn),
+            <.div(^.className := "queue-pax",
+              <.div(^.className := "queue-pax-waiting", inQueue),
+              <.div(^.className := "queue-pax-joining", s"<< ${Math.round(cm.paxLoad)}"),
+            )
+          )
 
           def deployDeskTd(ragClass: String) = <.td(
             ^.className := s"${queueColour(qn)} $ragClass",
