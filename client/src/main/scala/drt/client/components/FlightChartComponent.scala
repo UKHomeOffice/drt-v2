@@ -44,10 +44,18 @@ object FlightChartComponent {
                           case (_, pax) => pax
                         }
 
-                      val nationalityData = ChartJsData(sortedNats.map(_._1.code), sortedNats.map(_._2.toDouble), "Live API")
+                      val nationalityData = ChartJsData(
+                        labels = sortedNats.map(_._1.code),
+                        data = sortedNats.map(_._2.toDouble),
+                        dataSetLabel = "Live API",
+                        `type` = "bar")
 
                       val sortedAges = info.ageRanges.toList.sortBy(_._1.title)
-                      val ageData: ChartJsData = ChartJsData(sortedAges.map(_._1.title), sortedAges.map(_._2.toDouble), "Live API")
+                      val ageData = ChartJsData(
+                        labels = sortedAges.map(_._1.title),
+                        data = sortedAges.map(_._2.toDouble),
+                        dataSetLabel = "Live API",
+                        `type` = "bar")
 
                       val sortedPaxTypes = info.paxTypes.toList.sortBy(_._1.cleanName)
 
@@ -63,10 +71,13 @@ object FlightChartComponent {
                       else
                         200 + widthFactor * info.nationalities.size
 
-
-                      val paxTypeData: ChartJsData = ChartJsData(sortedPaxTypes.map {
-                        case (pt, _) => PaxTypes.displayNameShort(pt)
-                      }, sortedPaxTypes.map(_._2.toDouble), "Live API")
+                      val paxTypeData: ChartJsData = ChartJsData(
+                        labels = sortedPaxTypes.map {
+                          case (pt, _) => PaxTypes.displayNameShort(pt)
+                        },
+                        data = sortedPaxTypes.map(_._2.toDouble),
+                        dataSetLabel = "Live API",
+                        `type` = "bar")
 
                       <.div(^.cls := "container arrivals__table__flight__chart-box",
                         <.div(^.cls := "row", ^.width := (chartWidth * 3).toString + "px",
@@ -77,7 +88,8 @@ object FlightChartComponent {
                                   data = nationalityData,
                                   width = Option(chartWidth),
                                   height = Option(chartHeight),
-                                  options = ChartJsOptions.withSuggestedMax("Nationality breakdown", sortedNats.toMap.values.max + 5)
+                                  options = ChartJsOptions
+                                    .withSuggestedMax("Nationality breakdown", sortedNats.toMap.values.max + 5)
                                 )
                               ))
                           else
@@ -89,7 +101,8 @@ object FlightChartComponent {
                                   data = paxTypeData,
                                   width = Option(chartWidth),
                                   height = Option(chartHeight),
-                                  options = ChartJsOptions.withSuggestedMax("Passenger types", sortedPaxTypes.toMap.values.max + 5)
+                                  options = ChartJsOptions
+                                    .withSuggestedMax("Passenger types", sortedPaxTypes.toMap.values.max + 5)
                                 )))
                           else
                             EmptyVdom,
@@ -100,7 +113,8 @@ object FlightChartComponent {
                                   data = ageData,
                                   width = Option(chartWidth),
                                   height = Option(chartHeight),
-                                  options = ChartJsOptions.withSuggestedMax("Age breakdown", sortedAges.toMap.values.max + 5)
+                                  options = ChartJsOptions
+                                    .withSuggestedMax("Age breakdown", sortedAges.toMap.values.max + 5)
                                 ))
                             )
                           else

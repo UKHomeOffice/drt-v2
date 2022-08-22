@@ -168,6 +168,7 @@ object ChartJSComponent {
                             responsive: js.UndefOr[Boolean] = js.undefined,
                             maintainAspectRatio: js.UndefOr[Boolean] = js.undefined,
                             aspectRatio: js.UndefOr[Double] = js.undefined,
+                            layout: js.UndefOr[Dictionary[js.Any]] = js.undefined,
                            ) {
     def toJs: js.Object = JSMacro[ChartJsOptions](this)
   }
@@ -253,8 +254,8 @@ object ChartJSComponent {
     def apply(datasets: Seq[ChartJsDataSet], labels: Option[Seq[String]]): ChartJsData =
       ChartJsData(datasets.map(_.toJs).toJSArray, labels.map(_.toJSArray).orUndefined)
 
-    def apply(labels: Seq[String], data: Seq[Double], dataSetLabel: String): ChartJsData =
-      ChartJsData(js.Array(ChartJsDataSet(data.toJSArray, label = dataSetLabel).toJs), labels.toJSArray)
+    def apply(labels: Seq[String], data: Seq[Double], dataSetLabel: String, `type`: String): ChartJsData =
+      ChartJsData(js.Array(ChartJsDataSet(data.toJSArray, label = dataSetLabel, `type` = `type`).toJs), labels.toJSArray)
   }
 
   val log: Logger = LoggerFactory.getLogger("ChartJSComponent")
