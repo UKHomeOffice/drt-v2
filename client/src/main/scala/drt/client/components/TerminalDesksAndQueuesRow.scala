@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.actions.Actions.UpdateStaffAdjustmentDialogueState
-import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType, queueActualsColour, queueColour}
+import drt.client.components.TerminalDesksAndQueues.{Deployments, Ideal, DeskType, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
@@ -41,7 +41,7 @@ object TerminalDesksAndQueuesRow {
                    airportConfig: AirportConfig,
                    terminal: Terminal,
                    showActuals: Boolean,
-                   viewType: ViewType,
+                   viewType: DeskType,
                    hasActualDeskStats: Boolean,
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser,
@@ -87,7 +87,7 @@ object TerminalDesksAndQueuesRow {
           )
 
           val queueCells = props.viewType match {
-            case ViewDeps =>
+            case Deployments =>
               val ragClass = slaRagStatus(cm.deployedWait.getOrElse(0).toDouble, props.airportConfig.slaByQueue(queue))
               if (props.showWaitColumn)
                 List(
@@ -103,7 +103,7 @@ object TerminalDesksAndQueuesRow {
                 )
               else
                 List(paxLoadTd, deployRecsDeskTd(ragClass))
-            case ViewRecs =>
+            case Ideal =>
               val ragClass: String = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(queue))
               if (props.showWaitColumn)
                 List(
