@@ -60,7 +60,7 @@ object FlightChartComponent {
                       val widthFactor = if (info.nationalities.size > 10 && state.showAllNationalities) 5 else 0
                       val chartWidth: Int = if (dom.window.innerWidth > 800)
                         300 + widthFactor * info.nationalities.size
-                        else
+                      else
                         200 + widthFactor * info.nationalities.size
 
 
@@ -75,8 +75,8 @@ object FlightChartComponent {
                               ChartJSComponent(
                                 ChartJsProps(
                                   data = nationalityData,
-                                  chartWidth,
-                                  chartHeight,
+                                  width = Option(chartWidth),
+                                  height = Option(chartHeight),
                                   options = ChartJsOptions.withSuggestedMax("Nationality breakdown", sortedNats.toMap.values.max + 5)
                                 )
                               ))
@@ -87,8 +87,8 @@ object FlightChartComponent {
                               ChartJSComponent(
                                 ChartJsProps(
                                   data = paxTypeData,
-                                  chartWidth,
-                                  chartHeight,
+                                  width = Option(chartWidth),
+                                  height = Option(chartHeight),
                                   options = ChartJsOptions.withSuggestedMax("Passenger types", sortedPaxTypes.toMap.values.max + 5)
                                 )))
                           else
@@ -98,8 +98,8 @@ object FlightChartComponent {
                               ChartJSComponent(
                                 ChartJsProps(
                                   data = ageData,
-                                  chartWidth,
-                                  chartHeight,
+                                  width = Option(chartWidth),
+                                  height = Option(chartHeight),
                                   options = ChartJsOptions.withSuggestedMax("Age breakdown", sortedAges.toMap.values.max + 5)
                                 ))
                             )

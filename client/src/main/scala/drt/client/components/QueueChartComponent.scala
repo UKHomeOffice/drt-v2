@@ -66,9 +66,11 @@ object QueueChartComponent {
             datasets = Seq(paxInQueueSet, incomingPax, desks, waits, slaDataSet),
             labels = Option(labels),
           ),
-          width = 300,
-          height = 25,
-          options = ChartJsOptions.withMultipleDataSets(props.queue.toString, suggestedMax = Map("y3" -> props.sla * 2), maxTicks = 96)
+          width = None, //Option(1024),
+          height = None, //Option(250),
+          options = ChartJsOptions
+            .withMultipleDataSets(props.queue.toString, suggestedMax = Map("y3" -> props.sla * 2), maxTicks = 96)
+            .copy(maintainAspectRatio = true, responsive = true, aspectRatio = 5)
         )
       )
     }

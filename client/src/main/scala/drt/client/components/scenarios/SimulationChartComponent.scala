@@ -128,9 +128,9 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
         q -> ChartJSComponent(
           ChartJsProps(
             data = ChartJsData(datasets = dataSets, labels = maybeStrings),
-            300,
-            150,
-            ChartJsOptions.withMultipleDataSets(s"${displayName(q)} Simulation", 25)
+            width = Option(300),
+            height = Option(150),
+            options = ChartJsOptions.withMultipleDataSets(s"${displayName(q)} Simulation", 25)
           )
         )
     }

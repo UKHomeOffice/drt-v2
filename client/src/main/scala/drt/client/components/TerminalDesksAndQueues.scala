@@ -12,7 +12,7 @@ import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{BackendScope, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
 import org.scalajs.dom.DOMList
 import org.scalajs.dom.html.{Div, TableCell}
@@ -71,8 +71,7 @@ object TerminalDesksAndQueues {
 
   case class State(showActuals: Boolean, deskType: DeskType, displayType: DisplayType, showWaitColumn: Boolean) extends UseValueEq
 
-  class Backend(backendScope: BackendScope[Props, State]) {
-
+  class Backend() {
     def render(props: Props, state: State): VdomTagOf[Div] = {
       val slotMinutes = 15
 
@@ -223,44 +222,50 @@ object TerminalDesksAndQueues {
         .mapValues(_.map(_._2).max)
 
       <.div(
-        floatingHeader(state.showWaitColumn),
-        props.airportConfig.queuesByTerminal(props.terminalPageTab.terminal).filterNot(_ == Transfer).map { queue =>
-          val dayStart = SDate(props.viewStart.getLocalLastMidnight.millisSinceEpoch)
-          val sortedCrunchMinuteSummaries: List[(Long, Map[Queue, CrunchApi.CrunchMinute])] = props.portState.crunchSummary(dayStart, 96, 15, terminal, queues).toList.sortBy(_._1)
-          val queueSla = props.airportConfig.slaByQueue(queue)
-          QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, queueSla))
-        }.toTagMod,
         <.div(^.className := "desks-and-queues-top",
           viewTypeControls(props.featureFlags.displayWaitTimesToggle),
           StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab)
         ),
-        <.table(
-          ^.id := "sticky",
-          classesAttr,
-          <.thead(
-            dataStickyAttr,
-            <.tr(<.th("") :: headings: _*),
-            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames, state.showWaitColumn): _*)),
-          <.tbody(
-            ^.id := "sticky-body",
-            viewMinutes.map { millis =>
-              val rowProps = TerminalDesksAndQueuesRow.Props(
-                minuteMillis = millis,
-                queueMinutes = queues.map(q => terminalCrunchMinutes(millis)(q)),
-                staffMinute = terminalStaffMinutes.getOrElse(millis, StaffMinute.empty),
-                maxPaxInQueues = maxPaxInQueues,
-                airportConfig = props.airportConfig,
-                terminal = terminal,
-                showActuals = state.showActuals,
-                viewType = state.deskType,
-                hasActualDeskStats = props.airportConfig.hasActualDeskStats,
-                viewMode = props.viewMode,
-                loggedInUser = props.loggedInUser,
-                slotMinutes = slotMinutes,
-                showWaitColumn = state.showWaitColumn
-              )
-              TerminalDesksAndQueuesRow(rowProps)
-            }.toTagMod))
+        if (state.displayType == ChartsView) {
+          props.airportConfig.queuesByTerminal(props.terminalPageTab.terminal).filterNot(_ == Transfer).map { queue =>
+            val dayStart = SDate(props.viewStart.getLocalLastMidnight.millisSinceEpoch)
+            val sortedCrunchMinuteSummaries: List[(Long, Map[Queue, CrunchApi.CrunchMinute])] = props.portState.crunchSummary(dayStart, 96, 15, terminal, queues).toList.sortBy(_._1)
+            val queueSla = props.airportConfig.slaByQueue(queue)
+            QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, queueSla))
+          }.toTagMod
+        } else {
+          <.div(
+            floatingHeader(state.showWaitColumn),
+            <.table(
+              ^.id := "sticky",
+              classesAttr,
+              <.thead(
+                dataStickyAttr,
+                <.tr(<.th("") :: headings: _*),
+                <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames, state.showWaitColumn): _*)),
+              <.tbody(
+                ^.id := "sticky-body",
+                viewMinutes.map { millis =>
+                  val rowProps = TerminalDesksAndQueuesRow.Props(
+                    minuteMillis = millis,
+                    queueMinutes = queues.map(q => terminalCrunchMinutes(millis)(q)),
+                    staffMinute = terminalStaffMinutes.getOrElse(millis, StaffMinute.empty),
+                    maxPaxInQueues = maxPaxInQueues,
+                    airportConfig = props.airportConfig,
+                    terminal = terminal,
+                    showActuals = state.showActuals,
+                    viewType = state.deskType,
+                    hasActualDeskStats = props.airportConfig.hasActualDeskStats,
+                    viewMode = props.viewMode,
+                    loggedInUser = props.loggedInUser,
+                    slotMinutes = slotMinutes,
+                    showWaitColumn = state.showWaitColumn
+                  )
+                  TerminalDesksAndQueuesRow(rowProps)
+                }.toTagMod)
+            )
+          )
+        }
       )
     }
   }

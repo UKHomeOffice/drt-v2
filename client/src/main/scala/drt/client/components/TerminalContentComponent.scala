@@ -86,7 +86,6 @@ object TerminalContentComponent {
       val queueOrder: Seq[Queue] = props.airportConfig.queueTypeSplitOrder(terminal)
 
       val desksAndQueuesActive = if (state.activeTab == "desksAndQueues") "active" else ""
-      val queueChartsActive = if (state.activeTab == "queueCharts") "active" else ""
       val arrivalsActive = if (state.activeTab == "arrivals") "active" else ""
       val staffingActive = if (state.activeTab == "staffing") "active" else ""
       val simulationsActive = if (state.activeTab == "simulations") "active" else ""
@@ -113,11 +112,6 @@ object TerminalContentComponent {
               <.ul(^.className := "nav nav-tabs",
                 <.li(^.className := desksAndQueuesActive,
                   <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
-                    GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                    props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
-                  }),
-                <.li(^.className := queueChartsActive,
-                  <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Queue Charts"), ^.onClick --> {
                     GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
                   }),

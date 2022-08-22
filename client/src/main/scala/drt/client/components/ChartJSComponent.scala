@@ -64,27 +64,28 @@ object ChartJSComponent {
   trait Props extends js.Object {
     var data: js.Object = js.native
     var options: js.UndefOr[js.Object] = js.native
-    var width: Int = js.native
-    var height: Int = js.native
+    var width: js.UndefOr[Int] = js.native
+    var height: js.UndefOr[Int] = js.native
   }
 
-  case class ChartJsProps(
-                           data: js.Object,
-                           //                           `type`: String = "line",
-                           width: Int = 300,
-                           height: Int = 150,
-                           options: js.UndefOr[js.Object] = js.undefined
-                         ) {
-
+  case class ChartJsProps(data: js.Object,
+                          width: Option[Int],
+                          height: Option[Int],
+                          options: js.UndefOr[js.Object] = js.undefined) {
     def toJs: Props = {
       val props = (new js.Object).asInstanceOf[Props]
       props.data = data
       props.options = options
-      props.width = width
-      props.height = height
+      props.width = width.orUndefined
+      props.height = height.orUndefined
 
       props
     }
+  }
+
+  object ChartJsProps {
+    def apply(data: ChartJsData, width: Option[Int], height: Option[Int], options: ChartJsOptions): ChartJsProps =
+      ChartJsProps(data = data.toJs, width, height, options.toJs)
   }
 
   case class RGBA(red: Int, green: Int, blue: Int, alpha: Double = 1.0) {
@@ -105,16 +106,6 @@ object ChartJSComponent {
     val green1: RGBA = RGBA(92, 245, 21)
     val green2: RGBA = RGBA(92, 200, 21)
     val green3: RGBA = RGBA(92, 150, 21)
-  }
-
-  object ChartJsProps {
-    //    def apply(data: ChartJsData, width: Int, height: Int): ChartJsProps = ChartJsProps(data = data, width, height)
-
-    def apply(data: ChartJsData, width: Int, height: Int, options: ChartJsOptions): ChartJsProps =
-      ChartJsProps(data = data.toJs, width, height, options.toJs)
-
-    def apply(data: ChartJsData, options: ChartJsOptions): ChartJsProps =
-      ChartJsProps(data = data.toJs, options = options.toJs)
   }
 
   case class ChartJsDataSet(
@@ -174,6 +165,9 @@ object ChartJSComponent {
 
   case class ChartJsOptions(scales: js.UndefOr[Dictionary[js.Any]] = js.undefined,
                             plugins: js.UndefOr[Dictionary[js.Any]] = js.undefined,
+                            responsive: js.UndefOr[Boolean] = js.undefined,
+                            maintainAspectRatio: js.UndefOr[Boolean] = js.undefined,
+                            aspectRatio: js.UndefOr[Double] = js.undefined,
                            ) {
     def toJs: js.Object = JSMacro[ChartJsOptions](this)
   }
@@ -247,10 +241,8 @@ object ChartJSComponent {
     }
   }
 
-  case class ChartJsData(
-                          datasets: js.Array[js.Object],
-                          labels: js.UndefOr[js.Array[String]] = js.undefined,
-                        ) {
+  case class ChartJsData(datasets: js.Array[js.Object],
+                         labels: js.UndefOr[js.Array[String]] = js.undefined) {
     def toJs: js.Object = JSMacro[ChartJsData](this)
   }
 
