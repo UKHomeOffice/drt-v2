@@ -6,8 +6,9 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.SPACircuit
 import drt.shared.ArrivalKey
 import io.kinoplan.scalajs.react.material.ui.core.MuiCircularProgress
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
@@ -19,7 +20,7 @@ object FlightChartComponent {
   case class State(showAllNationalities: Boolean)
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
-  val component = ScalaComponent.builder[Props]("FlightChart")
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FlightChart")
     .initialState(State(false))
     .renderPS((scope, props, state) => {
       val proxy = SPACircuit.connect(_.passengerInfoSummariesByArrival)
@@ -71,7 +72,7 @@ object FlightChartComponent {
                         <.div(^.cls := "row", ^.width := (chartWidth * 3).toString + "px",
                           if (sortedNats.toMap.values.sum > 0)
                             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart nationality-chart",
-                              ChartJSComponent.Bar(
+                              ChartJSComponent(
                                 ChartJsProps(
                                   data = nationalityData,
                                   chartWidth,
@@ -83,7 +84,7 @@ object FlightChartComponent {
                             EmptyVdom,
                           if (sortedPaxTypes.toMap.values.sum > 0 && sortedAges.toMap.values.sum > 0)
                             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart passenger-type-chart",
-                              ChartJSComponent.Bar(
+                              ChartJSComponent(
                                 ChartJsProps(
                                   data = paxTypeData,
                                   chartWidth,
@@ -94,7 +95,7 @@ object FlightChartComponent {
                             EmptyVdom,
                           if (sortedAges.toMap.values.sum > 0)
                             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart age-breakdown-chart",
-                              ChartJSComponent.Bar(
+                              ChartJSComponent(
                                 ChartJsProps(
                                   data = ageData,
                                   chartWidth,

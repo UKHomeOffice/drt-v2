@@ -13,14 +13,55 @@ import scala.scalajs.js.{Dictionary, undefined}
 /**
  * Sets some helpful defaults for your data set
  *
- * @param properties see https://www.chartjs.org/docs/latest/charts/line.html#dataset-properties
+ * properties see https://www.chartjs.org/docs/latest/charts/line.html#dataset-properties
  */
 
 object ChartJSComponent {
 
+  @JSImport("chart.js", "Chart")
+  @js.native
+  object Chart extends js.Object {
+    def register(thing: js.Object*): js.Object = js.native
+  }
+
+  @JSImport("chart.js", "LinearScale")
+  @js.native
+  object LinearScale extends js.Object
+
+  @JSImport("chart.js", "CategoryScale")
+  @js.native
+  object CategoryScale extends js.Object
+
+  @JSImport("chart.js", "PointElement")
+  @js.native
+  object PointElement extends js.Object
+
+  @JSImport("chart.js", "BarElement")
+  @js.native
+  object BarElement extends js.Object
+
+  @JSImport("chart.js", "LineElement")
+  @js.native
+  object LineElement extends js.Object
+
+  @JSImport("chart.js", "Title")
+  @js.native
+  object Title extends js.Object
+
+  @JSImport("chart.js", "Tooltip")
+  @js.native
+  object Tooltip extends js.Object
+
+  @JSImport("chart.js", "Legend")
+  @js.native
+  object Legend extends js.Object
+
+  @JSImport("chart.js", "Filler")
+  @js.native
+  object Filler extends js.Object
+
   @js.native
   trait Props extends js.Object {
-
     var data: js.Object = js.native
     var options: js.UndefOr[js.Object] = js.native
     var width: Int = js.native
@@ -29,6 +70,7 @@ object ChartJSComponent {
 
   case class ChartJsProps(
                            data: js.Object,
+                           //                           `type`: String = "line",
                            width: Int = 300,
                            height: Int = 150,
                            options: js.UndefOr[js.Object] = js.undefined
@@ -61,12 +103,12 @@ object ChartJSComponent {
     val red3: RGBA = RGBA(255, 159, 149)
 
     val green1: RGBA = RGBA(92, 245, 21)
-
-
+    val green2: RGBA = RGBA(92, 200, 21)
+    val green3: RGBA = RGBA(92, 150, 21)
   }
 
   object ChartJsProps {
-    def apply(data: ChartJsData, width: Int, height: Int): ChartJsProps = ChartJsProps(data = data, width, height)
+    //    def apply(data: ChartJsData, width: Int, height: Int): ChartJsProps = ChartJsProps(data = data, width, height)
 
     def apply(data: ChartJsData, width: Int, height: Int, options: ChartJsOptions): ChartJsProps =
       ChartJsProps(data = data.toJs, width, height, options.toJs)
@@ -85,90 +127,123 @@ object ChartJSComponent {
                              hoverBackgroundColor: js.UndefOr[String] = js.undefined,
                              `type`: js.UndefOr[String] = js.undefined,
                              pointRadius: js.UndefOr[Int] = js.undefined,
+                             yAxisID: js.UndefOr[String] = js.undefined,
+                             tension: js.UndefOr[Double] = js.undefined,
+                             fill: js.UndefOr[Boolean] = js.undefined,
                            ) {
 
     def toJs: js.Object = JSMacro[ChartJsDataSet](this)
   }
 
   object ChartJsDataSet {
-    def bar(label: String, data: Seq[Double], colour: RGBA): ChartJsDataSet =
+    def bar(label: String, data: Seq[Double], colour: RGBA, backgroundColour: Option[RGBA] = None, yAxisID: Option[String] = None): ChartJsDataSet =
       ChartJsDataSet(
         data = data.toJSArray,
         label = label,
-        backgroundColor = colour.asStringWithAlpha(0.2),
+        backgroundColor = backgroundColour.getOrElse(RGBA(0, 0, 0, 0)).toString,
         borderColor = colour.asStringWithAlpha(1),
         borderWidth = 1,
         hoverBackgroundColor = colour.asStringWithAlpha(0.4),
         hoverBorderColor = colour.asStringWithAlpha(1),
-        `type` = "bar"
+        `type` = "bar",
+        yAxisID = yAxisID.orUndefined,
+        fill = true,
       )
 
-    def line(label: String, data: Seq[Double], colour: RGBA, pointRadius: Option[Int] = None): ChartJsDataSet =
+    def line(label: String,
+             data: Seq[Double],
+             colour: RGBA,
+             backgroundColour: Option[RGBA] = None,
+             pointRadius: Option[Int] = None,
+             yAxisID: Option[String] = None,
+             fill: Option[Boolean] = None
+            ): ChartJsDataSet =
       ChartJsDataSet(
         data = data.toJSArray,
         label = label,
-        backgroundColor = colour.asStringWithAlpha(0.2),
-        borderColor = colour.asStringWithAlpha(1),
-        borderWidth = 1,
-        hoverBackgroundColor = colour.asStringWithAlpha(0.4),
-        hoverBorderColor = colour.asStringWithAlpha(1),
+        backgroundColor = backgroundColour.getOrElse(RGBA(0, 0, 0, 0)).toString,
+        borderColor = colour.toString,
+        borderWidth = 2,
         `type` = "line",
-        pointRadius = pointRadius.orUndefined
+        pointRadius = pointRadius.orUndefined,
+        yAxisID = yAxisID.orUndefined,
+        tension = 0.2,
+        fill = fill.orUndefined,
       )
   }
 
-  case class ChartJsOptions(
-                             scales: js.UndefOr[Dictionary[js.Any]] = js.undefined,
-                             title: js.UndefOr[Dictionary[js.Any]] = js.undefined,
-                             legend: js.UndefOr[Dictionary[js.Any]] = js.undefined,
+  case class ChartJsOptions(scales: js.UndefOr[Dictionary[js.Any]] = js.undefined,
+                            plugins: js.UndefOr[Dictionary[js.Any]] = js.undefined,
                            ) {
     def toJs: js.Object = JSMacro[ChartJsOptions](this)
   }
 
   object ChartJsOptions {
-    def withSuggestedMax(title: String, suggestedMax: Int): ChartJsOptions = options(title, Option(suggestedMax))
+    def withSuggestedMax(title: String, suggestedMax: Int): ChartJsOptions = options(title, Map("y" -> suggestedMax))
 
-    def apply(title: String): ChartJsOptions = options(title, None)
+    def apply(title: String): ChartJsOptions = options(title, Map())
 
-    def withMultipleDataSets(title: String, maxTicks: Int): ChartJsOptions =
-      options(title, None, displayLegend = true, Option(maxTicks))
+    def withMultipleDataSets(title: String, maxTicks: Int, suggestedMax: Map[String, Int] = Map()): ChartJsOptions =
+      options(title, suggestedMax, displayLegend = true, Option(maxTicks))
 
-    def options(title: String, suggestedMax: Option[Double], displayLegend: Boolean = false, maxTicks: Option[Int] = None): ChartJsOptions = {
+    def options(title: String, suggestedMax: Map[String, Int], displayLegend: Boolean = false, maxTicks: Option[Int] = None): ChartJsOptions = {
       val autoSkip = if (maxTicks.isDefined) true else undefined
 
       val scales: Dictionary[js.Any] = js.Dictionary(
-        "yAxes" ->
-          js.Array(
-            js.Dictionary("ticks" ->
-              js.Dictionary(
-                "beginAtZero" -> true,
-                "suggestedMax" -> suggestedMax.orUndefined
-              )
-            )
+        "y" ->
+          js.Dictionary(
+            "type" -> "linear",
+            "display" -> "auto",
+            "position" -> "left",
+            "suggestedMax" -> suggestedMax.get("y").orUndefined,
+            "title" -> js.Dictionary(
+              "text" -> "passengers",
+              "display" -> "auto",
+            ),
           ),
-        "xAxes" ->
-          js.Array(
-            js.Dictionary("ticks" ->
-              js.Dictionary(
-                "beginAtZero" -> true,
-                "suggestedMax" -> suggestedMax.orUndefined,
-                "autoSkip" -> autoSkip,
-                "maxTicksLimit" -> maxTicks.orUndefined
-              )
-            )
-          )
+        "y2" ->
+          js.Dictionary(
+            "type" -> "linear",
+            "display" -> "auto",
+            "position" -> "right",
+            "suggestedMax" -> suggestedMax.get("y2").orUndefined,
+            "title" -> js.Dictionary(
+              "text" -> "staff",
+              "display" -> "auto",
+            ),
+            "grid" -> js.Dictionary(
+              "drawOnChartArea" -> false,
+            ),
+          ),
+        "y3" ->
+          js.Dictionary(
+            "type" -> "linear",
+            "display" -> "auto",
+            "position" -> "right",
+            "suggestedMax" -> suggestedMax.get("y3").orUndefined,
+            "title" -> js.Dictionary(
+              "text" -> "minutes",
+              "display" -> "auto",
+            ),
+            "grid" -> js.Dictionary(
+              "drawOnChartArea" -> false,
+            ),
+          ),
       )
 
-      val t: Dictionary[js.Any] = js.Dictionary(
-        "display" -> true,
-        "text" -> title
+      val plugins: Dictionary[js.Any] = js.Dictionary(
+        "title" -> js.Dictionary(
+          "display" -> true,
+          "text" -> title,
+          "align" -> "start",
+        ),
+        "legend" -> js.Dictionary(
+          "display" -> displayLegend,
+          "align" -> "end",
+        )
       )
 
-      val legend: Dictionary[js.Any] = js.Dictionary(
-        "display" -> displayLegend
-      )
-
-      ChartJsOptions(scales, t, legend)
+      ChartJsOptions(scales, plugins)
     }
   }
 
@@ -192,54 +267,13 @@ object ChartJSComponent {
 
   val log: Logger = LoggerFactory.getLogger("ChartJSComponent")
 
-
   @JSImport("react-chartjs-2", "Line")
   @js.native
-  object LineRaw extends js.Object
+  object ChartRaw extends js.Object
 
-  object Line {
+  Chart.register(LinearScale, CategoryScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler)
 
-    private val component = JsComponent[Props, Children.None, Null](LineRaw)
+  private val component = JsComponent[Props, Children.None, Null](ChartRaw)
 
-    def apply(props: ChartJsProps): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
-      component(props.toJs)
-
-  }
-
-  @JSImport("react-chartjs-2", "Bar")
-  @js.native
-  object BarRaw extends js.Object
-
-  object Bar {
-    private val component = JsComponent[Props, Children.None, Null](BarRaw)
-
-    def apply(props: ChartJsProps): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
-      component(props.toJs)
-  }
-
-  @JSImport("react-chartjs-2", "HorizontalBar")
-  @js.native
-  object HorizontalBarRaw extends js.Object
-
-  object HorizontalBar {
-
-    private val component = JsComponent[Props, Children.None, Null](HorizontalBarRaw)
-
-
-    def apply(props: ChartJsProps): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
-      component(props.toJs)
-  }
-
-  @JSImport("react-chartjs-2", "Pie")
-  @js.native
-  object PieRaw extends js.Object
-
-  object Pie {
-
-    private val component = JsComponent[Props, Children.None, Null](PieRaw)
-
-    def apply(props: ChartJsProps): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
-      component(props.toJs)
-  }
-
+  def apply(props: ChartJsProps): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] = component(props.toJs)
 }

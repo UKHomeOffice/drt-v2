@@ -162,7 +162,8 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                     if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate))
                       exportLinksGroup(props, state, gridXs, List(ExportLiveArrivalsFeed), "Feeds")
                     else EmptyVdom
-                  )),
+                  )
+                ),
                 <.div(
                   ^.className := "modal-footer",
                   ^.id := "multi-day-export-modal-footer",
@@ -185,6 +186,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       MuiGrid(item = true, xs = 12)(title),
       exports.map(export =>
         MuiGrid(item = true, xs = gridXs)(
+          ^.key := export.toString,
           exportLink(
             props.selectedDate,
             props.terminal.toString,

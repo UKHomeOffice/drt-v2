@@ -8,15 +8,19 @@ import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared._
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html
 import org.scalajs.dom.html.TableCell
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffMovementsEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+
+import scala.scalajs.js
 
 object TerminalDesksAndQueuesRow {
 
@@ -33,6 +37,7 @@ object TerminalDesksAndQueuesRow {
   case class Props(minuteMillis: MillisSinceEpoch,
                    queueMinutes: Seq[CrunchMinute],
                    staffMinute: StaffMinute,
+                   maxPaxInQueues: Map[Queue, Int],
                    airportConfig: AirportConfig,
                    terminal: Terminal,
                    showActuals: Boolean,
@@ -44,29 +49,37 @@ object TerminalDesksAndQueuesRow {
                    showWaitColumn: Boolean
                   ) extends UseValueEq
 
-  val component = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
     .render_P(props => {
       val crunchMinutesByQueue = props.queueMinutes.filter(qm => props.airportConfig.queuesByTerminal(props.terminal).contains(qm.queue)).map(
         qm => Tuple2(qm.queue, qm)).toMap
 
       val queueTds = crunchMinutesByQueue.flatMap {
-        case (qn, cm) =>
+        case (queue, cm) =>
           val inQueue: String = cm.maybePaxInQueue.map(Math.round(_).toString).getOrElse("-")
-          val paxLoadTd = <.td(^.className := queueColour(qn),
-            <.div(^.className := "queue-pax",
-              <.div(^.className := "queue-pax-waiting", inQueue),
-              <.div(^.className := "queue-pax-joining", s"<< ${Math.round(cm.paxLoad)}"),
+          val widthPct = Math.round(cm.maybePaxInQueue.getOrElse(0).toDouble / props.maxPaxInQueues(queue) * 100).toInt / 2
+          val joining = Math.round(cm.paxLoad)
+          val paxLoadTd = <.td(^.className := queueColour(queue),
+            Tippy.interactive(
+              <.div(^.style := js.Dictionary("textAlign" -> "left"),
+                s"$joining passengers joining. Maximum passengers in the queue: $inQueue pax in queue"),
+              <.div(^.className := "queue-pax",
+                <.div(^.className := "queue-pax-joining", joining),
+                <.div(^.className := "queue-pax-waiting-graphic",
+                  <.div(^.className := "queue-pax-waiting-graphic-bar", ^.style := js.Dictionary("width" -> widthPct))
+                )
+              ),
             )
           )
 
-          def deployDeskTd(ragClass: String) = <.td(
-            ^.className := s"${queueColour(qn)} $ragClass",
+          def deployDeskTd(ragClass: String): VdomTagOf[TableCell] = <.td(
+            ^.className := s"${queueColour(queue)} $ragClass",
             Tippy.interactive(<.span(s"Suggested deployments with available staff: ${cm.deployedDesks.getOrElse("-")}"),
               s"${cm.deskRec}")
           )
 
-          def deployRecsDeskTd(ragClass: String) = <.td(
-            ^.className := s"${queueColour(qn)} $ragClass",
+          def deployRecsDeskTd(ragClass: String): VdomTagOf[TableCell] = <.td(
+            ^.className := s"${queueColour(queue)} $ragClass",
             Tippy.interactive(
               <.span(s"Recommended for this time slot / queue: ${cm.deskRec}"),
               s"${cm.deployedDesks.getOrElse("-")}"
@@ -75,13 +88,13 @@ object TerminalDesksAndQueuesRow {
 
           val queueCells = props.viewType match {
             case ViewDeps =>
-              val ragClass = slaRagStatus(cm.deployedWait.getOrElse(0).toDouble, props.airportConfig.slaByQueue(qn))
+              val ragClass = slaRagStatus(cm.deployedWait.getOrElse(0).toDouble, props.airportConfig.slaByQueue(queue))
               if (props.showWaitColumn)
                 List(
                   paxLoadTd,
                   deployRecsDeskTd(ragClass),
                   <.td(
-                    ^.className := s"${queueColour(qn)} $ragClass",
+                    ^.className := s"${queueColour(queue)} $ragClass",
                     Tippy.interactive(
                       <.span(s"Recommended for this time slot / queue: ${cm.waitTime}"),
                       s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"
@@ -91,13 +104,13 @@ object TerminalDesksAndQueuesRow {
               else
                 List(paxLoadTd, deployRecsDeskTd(ragClass))
             case ViewRecs =>
-              val ragClass: String = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(qn))
+              val ragClass: String = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(queue))
               if (props.showWaitColumn)
                 List(
                   paxLoadTd,
                   deployDeskTd(ragClass),
                   <.td(
-                    ^.className := s"${queueColour(qn)} $ragClass",
+                    ^.className := s"${queueColour(queue)} $ragClass",
                     Tippy.interactive(<.span(s"Suggested deployments with available staff: ${cm.waitTime}"),
                       s"${Math.round(cm.waitTime)}")
                   )
@@ -106,13 +119,13 @@ object TerminalDesksAndQueuesRow {
                 List(paxLoadTd, deployDeskTd(ragClass))
           }
 
-          def queueActualsTd(actDesks: String) = <.td(^.className := queueActualsColour(qn), actDesks)
+          def queueActualsTd(actDesks: String) = <.td(^.className := queueActualsColour(queue), actDesks)
 
           if (props.showActuals) {
             val actDesks: String = cm.actDesks.map(act => s"$act").getOrElse("-")
             val actWaits: String = cm.actWait.map(act => s"$act").getOrElse("-")
 
-            queueCells ++ Seq(queueActualsTd(actDesks), <.td(^.className := queueActualsColour(qn), actWaits))
+            queueCells ++ Seq(queueActualsTd(actDesks), <.td(^.className := queueActualsColour(queue), actWaits))
 
           } else queueCells
       }

@@ -2,15 +2,14 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
-import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
+import drt.client.components.ChartJSComponent._
 import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, ViewMode}
+import drt.client.services.ViewMode
 import drt.shared.CrunchApi.StaffMinute
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, NonEeaDesk, Queue}
 import drt.shared._
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -20,7 +19,7 @@ import org.scalajs.dom.html.{Div, TableCell}
 import org.scalajs.dom.raw.Node
 import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.ports.Terminals.T2
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -138,30 +137,15 @@ object TerminalDesksAndQueues {
         <.th(^.className := "total-deployed", ^.colSpan := 4, "PCP")
       )
 
-      props.portState.crunchMinutes.filterKeys(k => k.terminal == T2 && k.queue == NonEeaDesk).foreach {
-        case (_, cm) =>
-          if (cm.minute >= SDate("2022-08-02T06:00").millisSinceEpoch && cm.minute < SDate("2022-08-02T06:30").millisSinceEpoch)
-            println(s"${SDate(cm.minute).toISOString()}: ${cm.paxLoad} -> ${cm.maybePaxInQueue.getOrElse(0)}")
-      }
-
       val queues = props.airportConfig.nonTransferQueues(terminal).toList
       val terminalCrunchMinutes = props.portState.crunchSummary(props.viewStart, props.hoursToView * 4, 15, terminal, queues)
       val terminalStaffMinutes = props.portState.staffSummary(props.viewStart, props.hoursToView * 4, 15, terminal)
       val viewMinutes = props.viewStart.millisSinceEpoch until (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by 15 * 60000
 
-      val toggleShowActuals = (e: ReactEventFromInput) => {
-        val newValue: Boolean = e.target.checked
-
-        SPACircuit.dispatch(UpdateShowActualDesksAndQueues(newValue))
-
-        backendScope.modState(_.copy(showActuals = newValue))
-      }
-
       val toggleWaitColumn = (e: ReactEventFromInput) => {
         val newValue: Boolean = e.target.checked
         backendScope.modState(_.copy(showWaitColumn = newValue))
       }
-
 
       def toggleViewType(newViewType: ViewType) = (_: ReactEventFromInput) => {
         GoogleEventTracker.sendEvent(s"$terminal", "Desks & Queues", newViewType.toString)
@@ -210,8 +194,87 @@ object TerminalDesksAndQueues {
           ))
       }
 
+      val maxPaxInQueues: Map[Queue, Int] = terminalCrunchMinutes
+        .toList
+        .flatMap {
+          case (minute, queuesAndMinutes) =>
+            queuesAndMinutes.map {
+              case (queue, cm) => (queue, cm.maybePaxInQueue.getOrElse(0))
+            }
+        }
+        .groupBy(_._1)
+        .map {
+          case (queue, queueMinutes) => (queue, queueMinutes)
+        }
+        .mapValues(_.map(_._2).max)
+
+      def queueGraphic(queue: Queue) = {
+        val labels: Seq[String] = (0 until 96).map(m => SDate("2022-08-17T23:00").addMinutes(m * 15).toHoursAndMinutes)
+        val dayStart = SDate(props.viewStart.getLocalLastMidnight.millisSinceEpoch)
+        val sortedCrunchMinuteSummaries = props.portState.crunchSummary(dayStart, 96, 15, terminal, queues).toList.sortBy(_._1)
+        val paxInQueueSet: ChartJsDataSet = ChartJsDataSet.line(
+          label = "Pax in queue",
+          data = sortedCrunchMinuteSummaries.map {
+            case (_, queuesAndMinutes) => queuesAndMinutes(queue).maybePaxInQueue.getOrElse(0).toDouble
+          },
+          colour = RGBA.blue1,
+          backgroundColour = Option(RGBA.blue1.copy(alpha = 0.2)),
+          pointRadius = Option(0),
+          yAxisID = Option("y"),
+          fill = Option(true),
+        )
+        val incomingPax: ChartJsDataSet = ChartJsDataSet.line(
+          label = "Incoming pax",
+          data = sortedCrunchMinuteSummaries.map {
+            case (_, queuesAndMinutes) => queuesAndMinutes(queue).paxLoad
+          },
+          colour = RGBA.blue2.copy(alpha = 0.4),
+          pointRadius = Option(0),
+          yAxisID = Option("y"),
+        )
+        val desks: ChartJsDataSet = ChartJsDataSet.bar(
+          label = "Staff",
+          data = sortedCrunchMinuteSummaries.map {
+            case (_, queuesAndMinutes) => queuesAndMinutes(queue).deskRec.toDouble
+          },
+          colour = RGBA(200, 200, 200),
+          backgroundColour = Option(RGBA(200, 200, 200, 0.2)),
+          yAxisID = Option("y2"),
+        )
+        val waits: ChartJsDataSet = ChartJsDataSet.line(
+          label = "Wait times",
+          data = sortedCrunchMinuteSummaries.map {
+            case (_, queuesAndMinutes) => queuesAndMinutes(queue).waitTime.toDouble
+          },
+          colour = RGBA.red1,
+          backgroundColour = Option(RGBA.red1.copy(alpha = 0.2)),
+          pointRadius = Option(0),
+          yAxisID = Option("y3"),
+          fill = Option(true),
+        )
+        val sla: ChartJsDataSet = ChartJsDataSet.line(
+          label = "SLA",
+          data = Seq.fill(96)(props.airportConfig.slaByQueue(queue).toDouble),
+          colour = RGBA.green3,
+          pointRadius = Option(0),
+          yAxisID = Option("y3"),
+        )
+        ChartJSComponent(
+          ChartJsProps(
+            data = ChartJsData(
+              datasets = Seq(paxInQueueSet, incomingPax, desks, waits, sla),
+              labels = Option(labels),
+            ),
+            width = 300,
+            height = 25,
+            options = ChartJsOptions.withMultipleDataSets(queue.toString, suggestedMax = Map("y3" -> props.airportConfig.slaByQueue(queue) * 2), maxTicks = 96)
+          )
+        )
+      }
+
       <.div(
         floatingHeader(state.showWaitColumn),
+        props.airportConfig.queuesByTerminal(props.terminalPageTab.terminal).filterNot(_ == Transfer).map(queueGraphic).toTagMod,
         <.div(^.className := "desks-and-queues-top",
           viewTypeControls(props.featureFlags.displayWaitTimesToggle),
           StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab)
@@ -227,18 +290,19 @@ object TerminalDesksAndQueues {
             ^.id := "sticky-body",
             viewMinutes.map { millis =>
               val rowProps = TerminalDesksAndQueuesRow.Props(
-                millis,
-                queues.map(q => terminalCrunchMinutes(millis)(q)),
-                terminalStaffMinutes.getOrElse(millis, StaffMinute.empty),
-                props.airportConfig,
-                terminal,
-                state.showActuals,
-                state.viewType,
-                props.airportConfig.hasActualDeskStats,
-                props.viewMode,
-                props.loggedInUser,
-                slotMinutes,
-                state.showWaitColumn
+                minuteMillis = millis,
+                queueMinutes = queues.map(q => terminalCrunchMinutes(millis)(q)),
+                staffMinute = terminalStaffMinutes.getOrElse(millis, StaffMinute.empty),
+                maxPaxInQueues = maxPaxInQueues,
+                airportConfig = props.airportConfig,
+                terminal = terminal,
+                showActuals = state.showActuals,
+                viewType = state.viewType,
+                hasActualDeskStats = props.airportConfig.hasActualDeskStats,
+                viewMode = props.viewMode,
+                loggedInUser = props.loggedInUser,
+                slotMinutes = slotMinutes,
+                showWaitColumn = state.showWaitColumn
               )
               TerminalDesksAndQueuesRow(rowProps)
             }.toTagMod))

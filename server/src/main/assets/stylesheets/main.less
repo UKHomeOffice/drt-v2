@@ -1417,7 +1417,8 @@ p {
 .queue-pax {
   display: flex;
   justify-content: flex-start;
-  gap: 15px;
+  flex-direction: column;
+  gap: 0px;
 }
 
 .queue-pax-waiting {
@@ -1425,8 +1426,19 @@ p {
 }
 
 .queue-pax-joining {
-  font-size: smaller;
-  color: #666;
+  //font-size: smaller;
+  //color: #666;
+  text-align: left;
+}
+
+.queue-pax-waiting-graphic {
+  min-width: 1.7em;
+}
+
+.queue-pax-waiting-graphic-bar {
+  padding: 1px;
+  height: 4px;
+  background-color: #6c83d0
 }
 
 // Usage table

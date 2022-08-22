@@ -27,7 +27,7 @@ object NationalityFinderChartComponent {
           <.div(^.cls := "row",
             if (sortedNats.toMap.values.sum > 0)
               <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart nationality-chart",
-                ChartJSComponent.Bar(
+                ChartJSComponent(
                   ChartJsProps(
                     data = nationalityData,
                     300,
