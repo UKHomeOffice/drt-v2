@@ -40,10 +40,6 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
   override val maybeSnapshotInterval: Option[Int] = Option(500)
 
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
-
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
-
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
   val state: mutable.SortedSet[ProcessingRequest] = mutable.SortedSet()

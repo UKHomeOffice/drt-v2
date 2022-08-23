@@ -274,10 +274,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       val (crunchRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deskRecsProducer, persistentCrunchQueueActor, cq)
 
       val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
-        OptimisationProviders.loadsProvider(minuteLookups.queueMinutesActor),
-        OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, airportConfig.terminals),
-        staffToDeskLimits,
-        portDeskRecs.loadsToSimulations
+        loadsProvider = OptimisationProviders.loadsProvider(minuteLookups.queueMinutesActor),
+        staffProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, airportConfig.terminals),
+        staffToDeskLimits = staffToDeskLimits,
+        loadsToQueueMinutes = portDeskRecs.loadsToSimulations
       )
 
       val (deploymentRequestQueue: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, dq)

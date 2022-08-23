@@ -83,10 +83,6 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
 
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override def now: () => SDateLike = () => SDate.now()
-
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
-
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case _: String => log.debug(s"Ignoring redundant zip file name")
 
@@ -251,6 +247,5 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
         scheduled -> VoyageManifests(vm)
     }
 
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = Option(1000)
 }

@@ -41,10 +41,8 @@ class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointI
 
   override def persistenceId: String = f"manifests-$year-$month%02d-$day%02d"
 
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   var state: Map[ArrivalKey, VoyageManifest] = Map()
 

@@ -26,8 +26,6 @@ abstract class ArrivalsActor(now: () => SDateLike,
   val restorer = new ArrivalsRestorer[Arrival]
   var state: ArrivalsState = initialState
 
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
-
   override def initialState: ArrivalsState = ArrivalsState.empty(feedSource)
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {

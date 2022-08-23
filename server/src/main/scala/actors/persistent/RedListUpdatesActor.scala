@@ -34,10 +34,7 @@ class RedListUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike wi
 
   override def persistenceId: String = "red-list-updates"
 
-  override val snapshotBytesThreshold: Int = oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = None
-
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case updates: SetRedListUpdateMessage =>

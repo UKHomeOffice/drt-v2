@@ -20,7 +20,6 @@ class ArrivalsReadActor(pointInTime: SDateLike, persistenceIdString: String, fee
 
   def now: () => SDateLike = () => pointInTime
 
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = Option(1000)
 
   val log: Logger = LoggerFactory.getLogger(getClass)

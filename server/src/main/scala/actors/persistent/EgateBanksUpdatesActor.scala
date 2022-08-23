@@ -50,10 +50,7 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
 
   override def persistenceId: String = "egate-banks-updates"
 
-  override val snapshotBytesThreshold: Int = oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = None
-
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case updates: SetEgateBanksUpdateMessage =>

@@ -31,8 +31,6 @@ object PassengersActor {
 class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: () => SDateLike) extends RecoveryActorLike {
   override val persistenceId = s"daily-pax"
 
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
-
   val log: Logger = LoggerFactory.getLogger(persistenceId)
 
   var originTerminalPaxNosState: Map[OriginAndTerminal, Map[(Long, Long), Int]] = Map()
@@ -119,7 +117,6 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
     }
     .toMap
 
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = Option(1000)
 }
 

@@ -33,8 +33,6 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
                        override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike with PersistentDrtActor[NeboArrivals] {
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass")
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
   var state: NeboArrivals = initialState

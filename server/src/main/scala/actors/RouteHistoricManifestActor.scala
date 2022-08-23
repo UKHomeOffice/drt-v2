@@ -93,8 +93,6 @@ class RouteHistoricManifestActor(origin: String,
 
   override def persistenceId: String = s"route-manifest-$origin-$destination-$voyageNumber-$dayOfWeek-$weekOfYear"
 
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
 

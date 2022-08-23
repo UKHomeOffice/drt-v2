@@ -14,9 +14,7 @@ import services.crunch.CrunchTestLike
 import scala.concurrent.duration._
 
 class TestSnapshottingActor(probe: ActorRef, snapshotMessage: GeneratedMessage, override val snapshotBytesThreshold: Int = 0, override val maybeSnapshotInterval: Option[Int] = None) extends RecoveryActorLike {
-  override val now: () => SDateLike = () => SDate.now()
   override val log: Logger = LoggerFactory.getLogger(getClass)
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case _ => Unit

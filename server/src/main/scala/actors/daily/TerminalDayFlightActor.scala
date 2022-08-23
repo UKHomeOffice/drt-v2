@@ -59,10 +59,8 @@ class TerminalDayFlightActor(year: Int,
 
   override def persistenceId: String = f"terminal-flights-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def postRecoveryComplete(): Unit = {
     state = state.copy(flights = restorer.arrivals)

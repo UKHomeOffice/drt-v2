@@ -74,9 +74,7 @@ class ShiftsActorBase(val now: () => SDateLike,
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
   val snapshotInterval = 5000
-  override val snapshotBytesThreshold: Int = oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = Option(snapshotInterval)
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def persistenceId = "shifts-store"
 
