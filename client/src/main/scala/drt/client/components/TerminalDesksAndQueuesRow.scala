@@ -62,7 +62,7 @@ object TerminalDesksAndQueuesRow {
           val paxLoadTd = <.td(^.className := queueColour(queue),
             Tippy.interactive(
               <.div(^.style := js.Dictionary("textAlign" -> "left"),
-                s"$joining passengers joining. Maximum passengers in the queue: $inQueue pax in queue"),
+                s"$joining passengers joining. Maximum passengers in the queue: $inQueue"),
               <.div(^.className := "queue-pax",
                 <.div(^.className := "queue-pax-joining", joining),
                 <.div(^.className := "queue-pax-waiting-graphic",

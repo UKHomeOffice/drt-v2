@@ -5,14 +5,14 @@ import actors.persistent.staffing.GetState
 import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.ManifestMessageConversion
 import akka.actor.Props
-import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
+import akka.persistence.SaveSnapshotSuccess
 import drt.shared.ArrivalKey
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.VoyageManifestsMessage
 import services.SDate
+import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.VoyageManifestsMessage
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 object DayManifestActor {
@@ -24,7 +24,7 @@ object DayManifestActor {
 }
 
 
-class DayManifestActor(year: Int, month: Int, day: Int, maybePointInTime: Option[MillisSinceEpoch])
+class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointInTime: Option[MillisSinceEpoch])
   extends RecoveryActorLike {
 
   def now: () => SDate.JodaSDate = () => SDate.now()
@@ -47,14 +47,6 @@ class DayManifestActor(year: Int, month: Int, day: Int, maybePointInTime: Option
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   var state: Map[ArrivalKey, VoyageManifest] = Map()
-
-  override def recovery: Recovery = maybePointInTime match {
-    case None =>
-      Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
-    case Some(pointInTime) =>
-      val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-      Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
-  }
 
   override def receiveCommand: Receive = {
     case manifests: VoyageManifests =>

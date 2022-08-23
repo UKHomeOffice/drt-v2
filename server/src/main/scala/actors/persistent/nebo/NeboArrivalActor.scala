@@ -5,7 +5,7 @@ import actors.persistent.staffing.GetState
 import actors.persistent.{PersistentDrtActor, RecoveryActorLike, Sizes}
 import actors.serializers.NeboArrivalMessageConversion._
 import akka.actor.Props
-import akka.persistence.{Recovery, SaveSnapshotFailure, SaveSnapshotSuccess, SnapshotSelectionCriteria}
+import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{NeboArrivals, RedListPassengers}
 import org.slf4j.{Logger, LoggerFactory}
@@ -30,7 +30,7 @@ object NeboArrivalActor {
 
 class NeboArrivalActor(redListPassengers: RedListPassengers,
                        val now: () => SDateLike,
-                       maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike with PersistentDrtActor[NeboArrivals] {
+                       override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike with PersistentDrtActor[NeboArrivals] {
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass")
   override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
@@ -38,14 +38,6 @@ class NeboArrivalActor(redListPassengers: RedListPassengers,
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
   var state: NeboArrivals = initialState
-
-  override def recovery: Recovery = maybePointInTime match {
-    case None =>
-      Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
-    case Some(pointInTime) =>
-      val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-      Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
-  }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case neboArrivalMessage: NeboArrivalMessage =>

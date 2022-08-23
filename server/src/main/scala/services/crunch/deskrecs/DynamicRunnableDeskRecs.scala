@@ -180,10 +180,6 @@ object DynamicRunnableDeskRecs {
     Flow[(ProcessingRequest, List[ApiFlightWithSplits])]
       .mapAsync(1) { case (cr, flights) =>
         val startTime = SDate.now()
-        val flightsWithNoApiFeedSource = flights.count(!_.apiFlight.FeedSources.contains(ApiFeedSource))
-        log.info(s"DynamicRunnableDeskRecs: Existing logic has $flightsWithNoApiFeedSource pax lookups")
-        val flightsToLookUp = flights.count(hasNoPaxSources)
-        log.info(s"DynamicRunnableDeskRecs: New logic has $flightsToLookUp pax lookups")
         Source(flights)
           .mapAsync(1) { flight =>
             if (hasNoPaxSources(flight)) {

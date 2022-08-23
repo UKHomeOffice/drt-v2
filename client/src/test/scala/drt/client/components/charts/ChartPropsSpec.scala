@@ -79,7 +79,7 @@ object ChartPropsSpec extends TestSuite {
     }
 
     "Given just some data and labels, then the ChartJSData apply shortcut should create the relevant datasets for me" - {
-      val data = ChartJsData(Seq("one", "two", "three"), Seq(10.0, 1.0, 10.0), "title")
+      val data = ChartJsData(Seq("one", "two", "three"), Seq(10.0, 1.0, 10.0), "title", "line")
       val result = data.toJs
 
       val expected =
@@ -102,7 +102,7 @@ object ChartPropsSpec extends TestSuite {
     "Given a scala set of props I should get back a JS set of the same props" - {
 
       val props = ChartJsProps(
-        ChartJsData(
+        data = ChartJsData(
           datasets = Seq(ChartJsDataSet(
             data = js.Array(65, 59, 80, 81, 56, 55, 40),
             label = "My First dataset",
@@ -110,13 +110,13 @@ object ChartPropsSpec extends TestSuite {
             borderColor = "rgba(255,99,132,1)",
             borderWidth = 1,
             hoverBackgroundColor = "rgba(255,99,132,0.4)",
-            hoverBorderColor = "rgba(255,99,132,1)",
+            hoverBorderColor = "rgba(255,99,132,1)"
           )),
           labels = Option(Seq("January", "February", "March", "April", "May", "June", "July"))
         ),
-        300,
-        150,
-        ChartJsOptions()
+        width = Option(300),
+        height = Option(150),
+        options = ChartJsOptions()
       )
 
       val result = props.toJs

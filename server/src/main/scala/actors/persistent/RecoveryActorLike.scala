@@ -1,7 +1,7 @@
 package actors.persistent
 
 import akka.actor.ActorRef
-import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
+import akka.persistence.{PersistentActor, Recovery, RecoveryCompleted, SnapshotOffer, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.Logger
@@ -19,12 +19,22 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   def now: () => SDateLike
 
   val recoveryStartMillis: MillisSinceEpoch
-
+  val maybePointInTime: Option[Long] = None
   val snapshotBytesThreshold: Int
   val maybeSnapshotInterval: Option[Int]
   var messagesPersistedSinceSnapshotCounter = 0
   var bytesSinceSnapshotCounter = 0
   var maybeAckAfterSnapshot: List[(ActorRef, Any)] = List()
+
+  def recoveryMethod(maybePointInTime: Option[MillisSinceEpoch], maxSnapshotInterval: Int): Recovery =
+    maybePointInTime match {
+      case None =>
+        Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
+      case Some(pointInTime) =>
+        val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
+        Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
+    }
+
 
   def ackIfRequired(): Unit = {
     maybeAckAfterSnapshot.foreach {
