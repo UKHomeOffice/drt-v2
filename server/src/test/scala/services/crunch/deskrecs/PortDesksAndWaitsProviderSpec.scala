@@ -84,7 +84,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
         .filter(m => m.queue == EeaDesk && m.minute == scheduled.millisSinceEpoch)
 
       val expected = List(
-        DeskRecMinute(T1, EeaDesk, 1660219200000L, pax, Some(List(gbrToDesk, gbrToDesk)), pax * gbrToDesk, 10, 0, Some(2)),
+        DeskRecMinute(T1, EeaDesk, 1660219200000L, pax, pax * gbrToDesk, 10, 0, Some(2)),
       )
 
       loads === expected

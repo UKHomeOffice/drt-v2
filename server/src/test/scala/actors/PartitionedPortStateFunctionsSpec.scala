@@ -119,7 +119,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
     "When I ask to reply with updates" >> {
       val maxUpdatedMillis = 100L
       val updatedFlight = ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001"), Set(), lastUpdated = Option(10L))
-      val updatedQueueMinute = CrunchMinute(T1, EeaDesk, 0L, 0, None, 0, 0, 0, None, lastUpdated = Option(maxUpdatedMillis))
+      val updatedQueueMinute = CrunchMinute(T1, EeaDesk, 0L, 0, 0, 0, 0, None, lastUpdated = Option(maxUpdatedMillis))
 
       val updatedFlights = FlightsWithSplitsDiff(Seq(updatedFlight), Seq())
       val updatedQueues = MinutesContainer[CrunchMinute, TQM](Seq(updatedQueueMinute))
@@ -138,7 +138,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
     "When I ask to reply with updates" >> {
       val maxUpdatedMillis = 100L
       val updatedFlight = ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001"), Set(), lastUpdated = Option(10L))
-      val updatedQueueMinute = CrunchMinute(T1, EeaDesk, 0L, 0, None, 0, 0, 0, None, lastUpdated = Option(50L))
+      val updatedQueueMinute = CrunchMinute(T1, EeaDesk, 0L, 0, 0, 0, 0, None, lastUpdated = Option(50L))
       val updatedStaffMinute = StaffMinute(T1, 0L, 0, 0, 0, lastUpdated = Option(maxUpdatedMillis))
 
       val updatedFlights = FlightsWithSplitsDiff(Seq(updatedFlight), Seq())
@@ -171,7 +171,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
     "Given a replyWithPortState function with mock requesters returning some data" >> {
       "When I ask to reply with the PortState" >> {
         val flight = ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001"), Set(), lastUpdated = Option(10L))
-        val queueMinute = CrunchMinute(T1, EeaDesk, 0L, 0, None, 0, 0, 0, None, lastUpdated = Option(50L))
+        val queueMinute = CrunchMinute(T1, EeaDesk, 0L, 0, 0, 0, 0, None, lastUpdated = Option(50L))
         val staffMinute = StaffMinute(T1, 0L, 0, 0, 0, lastUpdated = Option(75L))
         val flights = FlightsWithSplits(Seq(flight))
         val queues = MinutesContainer[CrunchMinute, TQM](Seq(queueMinute))

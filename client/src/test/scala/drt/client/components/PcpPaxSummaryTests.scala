@@ -64,7 +64,7 @@ object PcpPaxSummaryTests extends TestSuite {
 
   def generateCrunchMinutes(firstMinuteMillis: MillisSinceEpoch, quantity: Int, terminal: Terminal, queue: Queue, pax: Double, work: Double): Set[CrunchMinute] = {
     (0 until quantity).map(offset => {
-      CrunchMinute(terminal, queue, firstMinuteMillis + offset * 60000, pax, Option(List(pax)), work, 0, 0, None)
+      CrunchMinute(terminal, queue, firstMinuteMillis + offset * 60000, pax, work, 0, 0, None)
     }).toSet
   }
 }

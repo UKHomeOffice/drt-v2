@@ -34,13 +34,13 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
                 desk <- desks.toIndexedSeq.lift(idx)
                 wait <- waits.toIndexedSeq.lift(idx)
                 queueSize <- paxInQueue.toIndexedSeq.lift(idx)
-              } yield DeskRecMinute(terminal, queue, minute, pax.size, Option(pax), work, desk, wait, Option(Math.round(queueSize).toInt))
+              } yield DeskRecMinute(terminal, queue, minute, pax.size, work, desk, wait, Option(Math.round(queueSize).toInt))
 
               (idx, maybeDrm)
             }
             .map {
               case (_, Some(drm)) => drm
-              case (idx, None) => DeskRecMinute(terminal, queue, minuteMillis(idx), 0, None, 0, 0, 0, None)
+              case (idx, None) => DeskRecMinute(terminal, queue, minuteMillis(idx), 0, 0, 0, 0, None)
             }
       }
     }

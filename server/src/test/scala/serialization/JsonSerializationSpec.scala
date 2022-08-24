@@ -106,8 +106,8 @@ class JsonSerializationSpec extends Specification {
       val flightsWithSplits = SortedMap(flightWithSplits.apiFlight.unique -> flightWithSplits)
 
       val crunchMinutes = SortedMap[TQM, CrunchMinute]() ++ List(
-        CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, None, 2.0, 1, 1, None, None, None, None, Some(0)),
-        CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, None, 2.0, 1, 1, None, None, None, None, Some(0))
+        CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0)),
+        CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))
       ).map(cm => (TQM(cm), cm))
 
       val staffMinutes = SortedMap[TM, StaffMinute]() ++ List(
@@ -144,7 +144,7 @@ class JsonSerializationSpec extends Specification {
           )
         ),
         Seq(UniqueArrival(100, T1, 60000L, PortCode("STN"))),
-        Seq(CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, None, 2.0, 1, 1, None, None, None, None, Some(0))),
+        Seq(CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))),
         Seq(StaffMinute(T1, 0L, 1, 1,1,None))
       )
 

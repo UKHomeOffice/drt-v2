@@ -229,7 +229,6 @@ class StaffDeploymentSpec extends CrunchTestLike {
     queue = queueName,
     minute = minute,
     paxLoad = 0,
-    passengers = None,
     workLoad = 0d,
     deskRec = deskRec,
     waitTime = 0,

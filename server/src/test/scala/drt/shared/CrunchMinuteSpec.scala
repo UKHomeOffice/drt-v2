@@ -24,7 +24,6 @@ class CrunchMinuteSpec extends Specification {
       queue = EeaDesk,
       minute = 0L,
       paxLoad = paxLoad,
-      passengers = maybePassengers,
       workLoad = workLoad,
       deskRec = deskRec,
       waitTime = waitTime,
@@ -38,10 +37,6 @@ class CrunchMinuteSpec extends Specification {
     "When paxLoad is updated" >> {
       val cm = existing.copy(paxLoad = paxLoad + 1)
       cm.maybeUpdated(existing, nowMillis) === Option(existing.copy(paxLoad = paxLoad + 1, lastUpdated = Option(nowMillis)))
-    }
-    "When maybePassengers is updated" >> {
-      val cm = existing.copy(passengers = maybePassengers.map(_ :+ 3.0))
-      cm.maybeUpdated(existing, nowMillis) === Option(existing.copy(passengers = maybePassengers.map(_ :+ 3.0), lastUpdated = Option(nowMillis)))
     }
     "When workLoad is updated" >> {
       val cm = existing.copy(workLoad = workLoad + 1)

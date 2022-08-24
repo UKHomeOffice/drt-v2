@@ -15,7 +15,7 @@ class ForecastHeadlineFiguresSpec extends Specification {
     "And I ask for headline figures for week beginning 2017-01-02T00:00Z for T1 " +
       "Then I should see Total Pax of 1 and EEA Pax of 1 and total workload of 2 on 2017-01-02" >> {
       val startMinute = SDate("2017-01-02T00:00Z")
-      val ps = PortState(List(), List(CrunchMinute(T1, Queues.EeaDesk, startMinute.millisSinceEpoch, 1, None, 2, 0, 0, None)), List())
+      val ps = PortState(List(), List(CrunchMinute(T1, Queues.EeaDesk, startMinute.millisSinceEpoch, 1, 2, 0, 0, None)), List())
       val result = Forecast.headlineFigures(startMinute, 1, T1, ps, List(Queues.EeaDesk))
 
       val expected = ForecastHeadlineFigures(Seq(QueueHeadline(startMinute.millisSinceEpoch, Queues.EeaDesk, 1, 2)))
@@ -28,8 +28,8 @@ class ForecastHeadlineFiguresSpec extends Specification {
       "Then I should only see the values from T1" >> {
       val startMinute = SDate("2017-01-02T00:00Z")
       val ps = PortState(List(), List(
-        CrunchMinute(T1, Queues.EeaDesk, startMinute.millisSinceEpoch, 1, None, 2, 0, 0, None),
-        CrunchMinute(T2, Queues.EeaDesk, startMinute.millisSinceEpoch, 1, None, 2, 0, 0, None)
+        CrunchMinute(T1, Queues.EeaDesk, startMinute.millisSinceEpoch, 1, 2, 0, 0, None),
+        CrunchMinute(T2, Queues.EeaDesk, startMinute.millisSinceEpoch, 1, 2, 0, 0, None)
       ), List())
 
       val result = Forecast.headlineFigures(startMinute, 1, T1, ps, List(Queues.EeaDesk))
@@ -44,8 +44,8 @@ class ForecastHeadlineFiguresSpec extends Specification {
       "Then I should see Total Pax of 1 and EEA Pax of 1 and total workload of 2 on 2017-01-02" >> {
       val startMinute = SDate("2017-01-02T00:00Z")
       val ps = PortState(List(), List(
-        CrunchMinute(T1, Queues.EeaDesk, startMinute.millisSinceEpoch, 1, None, 2, 0, 0, None),
-        CrunchMinute(T1, Queues.EGate, startMinute.millisSinceEpoch, 1, None, 2, 0, 0, None)
+        CrunchMinute(T1, Queues.EeaDesk, startMinute.millisSinceEpoch, 1, 2, 0, 0, None),
+        CrunchMinute(T1, Queues.EGate, startMinute.millisSinceEpoch, 1, 2, 0, 0, None)
       ), List())
       val result = Forecast.headlineFigures(startMinute, 1, T1, ps, List(Queues.EeaDesk, Queues.EGate))
 
@@ -65,10 +65,10 @@ class ForecastHeadlineFiguresSpec extends Specification {
       val day1StartMinute = SDate("2017-01-02T00:00Z")
       val day2StartMinute = SDate("2017-01-03T00:00Z")
       val ps = PortState(List(), List(
-        CrunchMinute(T1, Queues.EeaDesk, day1StartMinute.millisSinceEpoch, 1, None, 2, 0, 0, None),
-        CrunchMinute(T1, Queues.EGate, day1StartMinute.millisSinceEpoch, 1, None, 2, 0, 0, None),
-        CrunchMinute(T1, Queues.EeaDesk, day2StartMinute.millisSinceEpoch, 1, None, 2, 0, 0, None),
-        CrunchMinute(T1, Queues.EGate, day2StartMinute.millisSinceEpoch, 1, None, 2, 0, 0, None)
+        CrunchMinute(T1, Queues.EeaDesk, day1StartMinute.millisSinceEpoch, 1, 2, 0, 0, None),
+        CrunchMinute(T1, Queues.EGate, day1StartMinute.millisSinceEpoch, 1, 2, 0, 0, None),
+        CrunchMinute(T1, Queues.EeaDesk, day2StartMinute.millisSinceEpoch, 1, 2, 0, 0, None),
+        CrunchMinute(T1, Queues.EGate, day2StartMinute.millisSinceEpoch, 1, 2, 0, 0, None)
       ), List())
       val result = Forecast.headlineFigures(day1StartMinute, 2, T1, ps, List(Queues.EeaDesk, Queues.EGate))
 

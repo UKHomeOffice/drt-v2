@@ -101,7 +101,6 @@ object CrunchApi {
                           queue: Queue,
                           minute: MillisSinceEpoch,
                           paxLoad: Double,
-                          passengers: Option[Iterable[Double]],
                           workLoad: Double,
                           deskRec: Int,
                           waitTime: Int,
@@ -135,7 +134,6 @@ object CrunchApi {
       queue = tqm.queue,
       minute = tqm.minute,
       paxLoad = 0,
-      passengers = None,
       workLoad = 0,
       deskRec = 0,
       waitTime = 0,
@@ -162,7 +160,6 @@ object CrunchApi {
                            queue: Queue,
                            minute: MillisSinceEpoch,
                            paxLoad: Double,
-                           passengers: Option[Iterable[Double]],
                            workLoad: Double,
                            deskRec: Int,
                            waitTime: Int,
@@ -174,7 +171,6 @@ object CrunchApi {
       if (toMinute.copy(lastUpdated = None) != existing.copy(lastUpdated = None))
         Option(existing.copy(
           paxLoad = paxLoad,
-          passengers = passengers,
           workLoad = workLoad,
           deskRec = deskRec,
           waitTime = waitTime,
@@ -188,7 +184,7 @@ object CrunchApi {
     override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = toMinute.copy(lastUpdated = Option(now))
 
     override def toMinute: CrunchMinute = CrunchMinute(
-        terminal, queue, minute, paxLoad, passengers, workLoad, deskRec, waitTime, maybePaxInQueue, lastUpdated = None)
+        terminal, queue, minute, paxLoad, workLoad, deskRec, waitTime, maybePaxInQueue, lastUpdated = None)
   }
 
   case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateQueueMinutes {
@@ -230,7 +226,7 @@ object CrunchApi {
     override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = toMinute.copy(lastUpdated = Option(now))
 
     override def toMinute: CrunchMinute = CrunchMinute(
-      terminal, queue, minute, 0d, None, 0d, 0, 0, None, None, deskStat.desks, deskStat.waitTime, None)
+      terminal, queue, minute, 0d, 0d, 0, 0, None, None, deskStat.desks, deskStat.waitTime, None)
   }
 
   case class ActualDeskStats(portDeskSlots: IMap[Terminal, IMap[Queue, IMap[MillisSinceEpoch, DeskStat]]]) extends PortStateQueueMinutes {
@@ -320,10 +316,6 @@ object CrunchApi {
             queue = qn,
             minute = startMinute,
             paxLoad = queueMinutes.map(_.paxLoad).sum,
-            passengers =
-              if (queueMinutes.exists(_.passengers.isDefined))
-                Option(queueMinutes.flatMap(_.passengers.toList.flatten))
-              else None,
             workLoad = queueMinutes.map(_.workLoad).sum,
             deskRec = queueMinutes.map(_.deskRec).max,
             waitTime = queueMinutes.map(_.waitTime).max,

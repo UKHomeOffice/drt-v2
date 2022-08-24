@@ -83,28 +83,17 @@ object Crunch {
       )
   }
 
-  case class LegacyLoadMinute(terminal: Terminal,
-                        queue: Queue,
-                              paxLoad: Double,
-                        workLoad: Double,
-                        minute: MillisSinceEpoch) extends TerminalQueueMinute with LoadMinuteLike {
-    lazy val uniqueId: TQM = TQM(terminal, queue, minute)
-
-    lazy val maybePassengers: Option[Iterable[Double]] = None
-
-    def +(other: LegacyLoadMinute): LoadMinuteLike = this.copy(
-      paxLoad = this.paxLoad + other.paxLoad,
-      workLoad = this.workLoad + other.workLoad
-      )
-  }
-
   object LoadMinute {
-    def apply(cm: CrunchMinute): LoadMinute = LoadMinute(cm.terminal, cm.queue, cm.passengers.getOrElse(Seq(cm.paxLoad)), cm.workLoad, cm.minute)
-    def apply(cm: DeskRecMinute): LoadMinute = LoadMinute(cm.terminal, cm.queue, cm.passengers.getOrElse(Seq(cm.paxLoad)), cm.workLoad, cm.minute)
+    def apply(cm: CrunchMinute): LoadMinute = {
+      val wholePassengerCount = cm.paxLoad.toInt
+      val averagePassenger = cm.workLoad / wholePassengerCount
+      val passengers = Iterable.fill(wholePassengerCount)(averagePassenger)
+      LoadMinute(cm.terminal, cm.queue, passengers, cm.workLoad, cm.minute)
+    }
+//    def apply(cm: DeskRecMinute): LoadMinute = LoadMinute(cm.terminal, cm.queue, cm.passengers.getOrElse(Seq(cm.paxLoad)), cm.workLoad, cm.minute)
   }
 
-  case class Loads(loadMinutes: SortedMap[TQM, LoadMinute]) {
-  }
+  case class Loads(loadMinutes: SortedMap[TQM, LoadMinute])
 
   object Loads {
     def apply(lms: Seq[LoadMinute]): Loads = Loads(SortedMap[TQM, LoadMinute]() ++ lms.map(cm => (TQM(cm.terminal, cm.queue, cm.minute), cm)))

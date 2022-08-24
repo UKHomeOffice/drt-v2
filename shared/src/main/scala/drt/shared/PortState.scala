@@ -120,10 +120,6 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
       queue = queue,
       minute = periodStart,
       paxLoad = slotMinutes.map(_.paxLoad).sum,
-      passengers =
-        if (slotMinutes.exists(_.passengers.isDefined))
-          Option(slotMinutes.flatMap(_.passengers.toList.flatten))
-        else None,
       workLoad = slotMinutes.map(_.workLoad).sum,
       deskRec = slotMinutes.map(_.deskRec).max,
       waitTime = slotMinutes.map(_.waitTime).max,
@@ -154,7 +150,6 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
       queue = queue,
       minute = periodStart,
       paxLoad = 0,
-      passengers = None,
       workLoad = 0,
       deskRec = 0,
       waitTime = 0,

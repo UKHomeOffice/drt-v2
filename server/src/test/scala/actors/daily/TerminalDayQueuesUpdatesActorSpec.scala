@@ -24,7 +24,7 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
   val date: String = "2020-01-01"
   val day: SDateLike = SDate(s"${date}T00:00")
 
-  val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, day.millisSinceEpoch, 1, None, 2, 3, 4, None)
+  val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, day.millisSinceEpoch, 1, 2, 3, 4, None)
   val crunchMinuteMessage: CrunchMinuteMessage = CrunchMinuteMessage(Option(terminal.toString), Option(queue.toString), Option(day.millisSinceEpoch), Option(1.0), Option(2.0), Option(3), Option(4), None, None, None, None, Option(day.millisSinceEpoch))
 
   "Given a TerminalDayQueueMinuteUpdatesActor" >> {

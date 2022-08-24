@@ -43,14 +43,13 @@ object PortStateMessageConversion {
 
   def crunchMinuteFromMessage(cmm: CrunchMinuteMessage): CrunchMinute = {
     val minute = cmm.minute.getOrElse(0L)
-    val roundedMinute = minute - (minute % 60000)
-    val pax: Option[Seq[Double]] = cmm.passengers.map(_.passengers.map(_.load.getOrElse(0.0)))
+    val roundedMinute: Long = minute - (minute % 60000)
+
     CrunchMinute(
       terminal = Terminal(cmm.terminalName.getOrElse("")),
       queue = Queue(cmm.queueName.getOrElse("")),
       minute = roundedMinute,
       paxLoad = cmm.paxLoad.getOrElse(0d),
-      passengers = pax,
       workLoad = cmm.workLoad.getOrElse(0d),
       deskRec = cmm.deskRec.getOrElse(0),
       waitTime = cmm.waitTime.getOrElse(0),
@@ -148,7 +147,6 @@ object PortStateMessageConversion {
     queueName = Option(cm.queue.toString),
     minute = Option(cm.minute),
     paxLoad = Option(cm.paxLoad),
-    passengers = cm.passengers.map(pax => PassengersMessage(pax.map(load => PassengerMessage(Option(load))).toSeq)),
     workLoad = Option(cm.workLoad),
     deskRec = Option(cm.deskRec),
     waitTime = Option(cm.waitTime),

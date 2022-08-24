@@ -21,7 +21,7 @@ class PortStateSummariesSpec extends Specification {
       queue <- queues
       minute <- 0 to 29
     } yield {
-      CrunchMinute(T1, queue, minute.toLong * 60000, minute.toDouble, None, minute.toDouble, minute, minute, Option(minute), Option(minute), Option(minute), Option(minute))
+      CrunchMinute(T1, queue, minute.toLong * 60000, minute.toDouble, minute.toDouble, minute, minute, Option(minute), Option(minute), Option(minute), Option(minute))
     }
 
     val cmsMap = SortedMap[TQM, CrunchMinute]() ++ cmsList.map(cm => (TQM(cm), cm)).toMap
@@ -33,20 +33,20 @@ class PortStateSummariesSpec extends Specification {
 
     val expected = Map(
       0L -> Map(
-        Queues.EeaDesk -> CrunchMinute(T1, Queues.EeaDesk, 0, 105, None, 105, 14, 14, Option(14), Option(14), Option(14), Option(14)),
-        Queues.EGate -> CrunchMinute(T1, Queues.EGate, 0, 105, None, 105, 14, 14, Option(14), Option(14), Option(14), Option(14))
+        Queues.EeaDesk -> CrunchMinute(T1, Queues.EeaDesk, 0, 105, 105, 14, 14, Option(14), Option(14), Option(14), Option(14)),
+        Queues.EGate -> CrunchMinute(T1, Queues.EGate, 0, 105, 105, 14, 14, Option(14), Option(14), Option(14), Option(14))
       ),
       15L * 60000 -> Map(
-        Queues.EeaDesk -> CrunchMinute(T1, Queues.EeaDesk, 15 * 60000, 330, None, 330, 29, 29, Option(29), Option(29), Option(29), Option(29)),
-        Queues.EGate -> CrunchMinute(T1, Queues.EGate, 15 * 60000, 330, None, 330, 29, 29, Option(29), Option(29), Option(29), Option(29))
+        Queues.EeaDesk -> CrunchMinute(T1, Queues.EeaDesk, 15 * 60000, 330, 330, 29, 29, Option(29), Option(29), Option(29), Option(29)),
+        Queues.EGate -> CrunchMinute(T1, Queues.EGate, 15 * 60000, 330, 330, 29, 29, Option(29), Option(29), Option(29), Option(29))
       ),
       30L * 60000 -> Map(
-        Queues.EeaDesk -> CrunchMinute(T1, Queues.EeaDesk, 30 * 60000, 0, None, 0, 0, 0, None, None, None, None),
-        Queues.EGate -> CrunchMinute(T1, Queues.EGate, 30 * 60000, 0, None, 0, 0, 0, None, None, None, None)
+        Queues.EeaDesk -> CrunchMinute(T1, Queues.EeaDesk, 30 * 60000, 0, 0, 0, 0, None, None, None, None),
+        Queues.EGate -> CrunchMinute(T1, Queues.EGate, 30 * 60000, 0, 0, 0, 0, None, None, None, None)
       ),
       45L * 60000 -> Map(
-        Queues.EeaDesk -> CrunchMinute(T1, Queues.EeaDesk, 45 * 60000, 0, None, 0, 0, 0, None, None, None, None),
-        Queues.EGate -> CrunchMinute(T1, Queues.EGate, 45 * 60000, 0, None, 0, 0, 0, None, None, None, None)
+        Queues.EeaDesk -> CrunchMinute(T1, Queues.EeaDesk, 45 * 60000, 0, 0, 0, 0, None, None, None, None),
+        Queues.EGate -> CrunchMinute(T1, Queues.EGate, 45 * 60000, 0, 0, 0, 0, None, None, None, None)
       )
     )
 
@@ -62,7 +62,7 @@ class PortStateSummariesSpec extends Specification {
       queue <- queues
       minute <- 0 to 14
     } yield {
-      CrunchMinute(terminal, queue, minute.toLong * 60000, minute.toDouble, None, minute.toDouble, minute, minute, None, None, None, None)
+      CrunchMinute(terminal, queue, minute.toLong * 60000, minute.toDouble, minute.toDouble, minute, minute, None, None, None, None)
     }
 
     val cmsMap = SortedMap[TQM, CrunchMinute]() ++ cmsList.map(cm => (TQM(cm), cm)).toMap
@@ -74,8 +74,8 @@ class PortStateSummariesSpec extends Specification {
 
     val expected = Map(
       0L -> Map(
-        Queues.EeaDesk -> CrunchMinute(terminal, Queues.EeaDesk, 0, 105, None, 105, 14, 14, None, None, None, None),
-        Queues.EGate -> CrunchMinute(terminal, Queues.EGate, 0, 105, None, 105, 14, 14, None, None, None, None)
+        Queues.EeaDesk -> CrunchMinute(terminal, Queues.EeaDesk, 0, 105, 105, 14, 14, None, None, None, None),
+        Queues.EGate -> CrunchMinute(terminal, Queues.EGate, 0, 105, 105, 14, 14, None, None, None, None)
       )
     )
 
