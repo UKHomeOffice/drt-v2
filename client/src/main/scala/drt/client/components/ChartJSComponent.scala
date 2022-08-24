@@ -174,57 +174,12 @@ object ChartJSComponent {
   }
 
   object ChartJsOptions {
-    def withSuggestedMax(title: String, suggestedMax: Int): ChartJsOptions = options(title, Map("y" -> suggestedMax))
+    def apply(title: String): ChartJsOptions = options(title, displayLegend = true)
 
-    def apply(title: String): ChartJsOptions = options(title, Map())
+    def withMultipleDataSets(title: String, maxTicks: Int): ChartJsOptions =
+      options(title, displayLegend = true)
 
-    def withMultipleDataSets(title: String, maxTicks: Int, suggestedMax: Map[String, Int] = Map()): ChartJsOptions =
-      options(title, suggestedMax, displayLegend = true, Option(maxTicks))
-
-    def options(title: String, suggestedMax: Map[String, Int], displayLegend: Boolean = false, maxTicks: Option[Int] = None): ChartJsOptions = {
-      val autoSkip = if (maxTicks.isDefined) true else undefined
-
-      val scales: Dictionary[js.Any] = js.Dictionary(
-        "y" ->
-          js.Dictionary(
-            "type" -> "linear",
-            "display" -> "auto",
-            "position" -> "left",
-            "suggestedMax" -> suggestedMax.get("y").orUndefined,
-            "title" -> js.Dictionary(
-              "text" -> "passengers",
-              "display" -> "auto",
-            ),
-          ),
-        "y2" ->
-          js.Dictionary(
-            "type" -> "linear",
-            "display" -> "auto",
-            "position" -> "right",
-            "suggestedMax" -> suggestedMax.get("y2").orUndefined,
-            "title" -> js.Dictionary(
-              "text" -> "staff",
-              "display" -> "auto",
-            ),
-            "grid" -> js.Dictionary(
-              "drawOnChartArea" -> false,
-            ),
-          ),
-        "y3" ->
-          js.Dictionary(
-            "type" -> "linear",
-            "display" -> "auto",
-            "position" -> "right",
-            "suggestedMax" -> suggestedMax.get("y3").orUndefined,
-            "title" -> js.Dictionary(
-              "text" -> "minutes",
-              "display" -> "auto",
-            ),
-            "grid" -> js.Dictionary(
-              "drawOnChartArea" -> false,
-            ),
-          ),
-      )
+    def options(title: String, displayLegend: Boolean = false): ChartJsOptions = {
 
       val plugins: Dictionary[js.Any] = js.Dictionary(
         "title" -> js.Dictionary(
@@ -238,7 +193,7 @@ object ChartJSComponent {
         )
       )
 
-      ChartJsOptions(scales, plugins)
+      ChartJsOptions(undefined, plugins)
     }
   }
 

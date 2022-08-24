@@ -7,6 +7,8 @@ import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 
+import scala.scalajs.js
+
 object QueueChartComponent {
   case class Props(queue: Queue, queueSummaries: List[(Long, Map[Queue, CrunchApi.CrunchMinute])], sla: Int)
 
@@ -68,9 +70,52 @@ object QueueChartComponent {
           ),
           width = None, //Option(1024),
           height = None, //Option(250),
-          options = ChartJsOptions
-            .withMultipleDataSets(props.queue.toString, suggestedMax = Map("y3" -> props.sla * 2), maxTicks = 96)
-            .copy(maintainAspectRatio = true, responsive = true, aspectRatio = 5)
+          options = ChartJsOptions(props.queue.toString)
+//            .withMultipleDataSets(props.queue.toString, suggestedMax = Map("y3" -> props.sla * 2), maxTicks = 96)
+            .copy(
+              maintainAspectRatio = true,
+              responsive = true,
+              aspectRatio = 5,
+              scales = js.Dictionary[js.Any](
+                "y" ->
+                  js.Dictionary(
+                    "type" -> "linear",
+                    "display" -> "auto",
+                    "position" -> "left",
+                    "title" -> js.Dictionary(
+                      "text" -> "passengers",
+                      "display" -> "auto",
+                    ),
+                  ),
+                "y2" ->
+                  js.Dictionary[js.Any](
+                    "type" -> "linear",
+                    "display" -> "auto",
+                    "position" -> "right",
+                    "title" -> js.Dictionary(
+                      "text" -> "staff",
+                      "display" -> "auto",
+                    ),
+                    "grid" -> js.Dictionary(
+                      "drawOnChartArea" -> false,
+                    ),
+                  ),
+                "y3" ->
+                  js.Dictionary[js.Any](
+                    "type" -> "linear",
+                    "display" -> "auto",
+                    "position" -> "right",
+                    "suggestedMax" -> props.sla * 2,
+                    "title" -> js.Dictionary(
+                      "text" -> "minutes",
+                      "display" -> "auto",
+                    ),
+                    "grid" -> js.Dictionary(
+                      "drawOnChartArea" -> false,
+                    ),
+                  ),
+              )
+            )
         )
       )
     }

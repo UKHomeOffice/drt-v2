@@ -14,6 +14,8 @@ import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.PaxTypes
 
+import scala.scalajs.js
+
 object FlightChartComponent {
   case class Props(flightWithSplits: ApiFlightWithSplits)
 
@@ -88,8 +90,12 @@ object FlightChartComponent {
                                   data = nationalityData,
                                   width = Option(chartWidth),
                                   height = Option(chartHeight),
-                                  options = ChartJsOptions
-                                    .withSuggestedMax("Nationality breakdown", sortedNats.toMap.values.max + 5)
+                                  options = ChartJsOptions("Nationality breakdown").copy(
+                                    scales = js.Dictionary[js.Any](
+                                      "y" -> js.Dictionary(
+                                        "suggestedMax" -> (sortedNats.toMap.values.max + 5),
+                                      ),
+                                    ))
                                 )
                               ))
                           else
@@ -101,8 +107,12 @@ object FlightChartComponent {
                                   data = paxTypeData,
                                   width = Option(chartWidth),
                                   height = Option(chartHeight),
-                                  options = ChartJsOptions
-                                    .withSuggestedMax("Passenger types", sortedPaxTypes.toMap.values.max + 5)
+                                  options = ChartJsOptions("Passenger types").copy(
+                                    scales = js.Dictionary[js.Any](
+                                      "y" -> js.Dictionary(
+                                        "suggestedMax" -> (sortedPaxTypes.toMap.values.max + 5),
+                                      ),
+                                    ))
                                 )))
                           else
                             EmptyVdom,
@@ -113,8 +123,12 @@ object FlightChartComponent {
                                   data = ageData,
                                   width = Option(chartWidth),
                                   height = Option(chartHeight),
-                                  options = ChartJsOptions
-                                    .withSuggestedMax("Age breakdown", sortedAges.toMap.values.max + 5)
+                                  options = ChartJsOptions("Age breakdown").copy(
+                                    scales = js.Dictionary[js.Any](
+                                      "y" -> js.Dictionary(
+                                        "suggestedMax" -> (sortedAges.toMap.values.max + 5),
+                                      ),
+                                    ))
                                 ))
                             )
                           else
