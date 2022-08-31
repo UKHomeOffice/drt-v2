@@ -1,6 +1,5 @@
 package drt.server.feeds.edi
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
 import drt.server.feeds.common.ProdHttpClient

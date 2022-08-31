@@ -1,6 +1,6 @@
 package services.crunch.deskrecs
 
-import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
+import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, PassengersMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{ArrivalGenerator, CrunchApi, TQM}
 import services.crunch.CrunchTestLike
@@ -113,7 +113,9 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     )
   }
 
-  private def getFlightLoads(scheduled: SDateLike, flightParams: List[(Int, Set[ApiPaxTypeAndQueueCount])], provider: PortDesksAndWaitsProvider): Map[TQM, LoadMinute] = {
+  private def getFlightLoads(scheduled: SDateLike,
+                             flightParams: List[(Int, Set[ApiPaxTypeAndQueueCount])],
+                             provider: PortDesksAndWaitsProvider): Map[TQM, PassengersMinute] = {
     val start = scheduled.millisSinceEpoch
     val end = scheduled.addMinutes(14).millisSinceEpoch
     val flights = flightParams.zipWithIndex.map {

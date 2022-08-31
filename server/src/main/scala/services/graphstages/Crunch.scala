@@ -90,7 +90,6 @@ object Crunch {
       val passengers = Iterable.fill(wholePassengerCount)(averagePassenger)
       LoadMinute(cm.terminal, cm.queue, passengers, cm.workLoad, cm.minute)
     }
-//    def apply(cm: DeskRecMinute): LoadMinute = LoadMinute(cm.terminal, cm.queue, cm.passengers.getOrElse(Seq(cm.paxLoad)), cm.workLoad, cm.minute)
   }
 
   case class Loads(loadMinutes: SortedMap[TQM, LoadMinute])

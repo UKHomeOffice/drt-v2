@@ -9,7 +9,7 @@ import actors.persistent.staffing.{GetFeedStatuses, GetState}
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
-import actors.{DateRange, SetCrunchRequestQueue}
+import actors.{DateRange, AddUpdatesSubscriber}
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
@@ -113,7 +113,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   )
 
   override def receiveCommand: Receive = {
-    case SetCrunchRequestQueue(queueActor) =>
+    case AddUpdatesSubscriber(queueActor) =>
       log.info("Received subscriber")
       maybeUpdatesSubscriber = Option(queueActor)
 

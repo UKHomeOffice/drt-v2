@@ -1,16 +1,16 @@
 package services.crunch.deskrecs
 
 import akka.stream.Materializer
-import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch, PassengersMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.{TryCrunch, TryCrunchWholePax, WorkloadProcessors, WorkloadProcessorsProvider}
+import services.TryCrunchWholePax
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.Crunch.LoadMinute
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
-import uk.gov.homeoffice.drt.egates.{Desk, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
@@ -35,10 +35,10 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
-                                  loadsByQueue: Map[TQM, LoadMinute],
+                                  passengersByQueue: Map[TQM, PassengersMinute],
                                   deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike])
                                  (implicit ec: ExecutionContext, mat: Materializer): Future[SimulationMinutes] = {
-    loadsToDesks(minuteMillis, loadsByQueue, deskLimitProviders).map(deskRecMinutes =>
+    loadsToDesks(minuteMillis, passengersByQueue, deskLimitProviders).map(deskRecMinutes =>
       SimulationMinutes(deskRecsToSimulations(deskRecMinutes.minutes).values)
     )
   }
@@ -55,7 +55,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                               flights: FlightsWithSplits,
                               redListUpdates: RedListUpdates,
                               terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
-                             (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, LoadMinute] = workloadCalculator
+                             (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, PassengersMinute] = workloadCalculator
     .flightLoadMinutes(minuteMillis, flights, redListUpdates, terminalQueueStatuses).minutes
     .groupBy {
       case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
@@ -64,22 +64,22 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     .map {
       case (tqm, minutes) =>
         val loads = minutes.values
-        (tqm, LoadMinute(tqm.terminal, tqm.queue, loads.flatMap(_.passengers), loads.map(_.workLoad).sum, tqm.minute))
+        (tqm, PassengersMinute(tqm.terminal, tqm.queue, tqm.minute, loads.flatMap(_.passengers), None) )
     }
 
   def terminalWorkLoadsByQueue(terminal: Terminal,
                                minuteMillis: NumericRange[MillisSinceEpoch],
-                               loadMinutes: Map[TQM, LoadMinute]): Map[Queue, Seq[Double]] = queuesByTerminal(terminal)
+                               loadMinutes: Map[TQM, PassengersMinute]): Map[Queue, Seq[Double]] = queuesByTerminal(terminal)
     .filterNot(_ == Transfer)
     .map { queue =>
       val lms = minuteMillis.map(minute =>
-        loadMinutes.getOrElse(TQM(terminal, queue, minute), LoadMinute(terminal, queue, Seq(), 0, minute)).workLoad)
+        loadMinutes.getOrElse(TQM(terminal, queue, minute), PassengersMinute(terminal, queue, minute, Seq(), None)).passengers.sum)
       (queue, lms)
     }
     .toMap
 
   def terminalPassengersByQueue(terminal: Terminal, minuteMillis: NumericRange[MillisSinceEpoch],
-                                loadMinutes: Map[TQM, LoadMinute]): Map[Queue, immutable.IndexedSeq[Iterable[Double]]] = queuesByTerminal(terminal)
+                                loadMinutes: Map[TQM, PassengersMinute]): Map[Queue, immutable.IndexedSeq[Iterable[Double]]] = queuesByTerminal(terminal)
     .filterNot(_ == Transfer)
     .map { queue =>
       val paxLoads = minuteMillis.map { minute =>
@@ -93,7 +93,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     .toMap
 
   override def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
-                            loads: Map[TQM, LoadMinute],
+                            loads: Map[TQM, PassengersMinute],
                             deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike])
                            (implicit ec: ExecutionContext, mat: Materializer): Future[DeskRecMinutes] = {
     val terminalQueueDeskRecs = deskLimitProviders.map {

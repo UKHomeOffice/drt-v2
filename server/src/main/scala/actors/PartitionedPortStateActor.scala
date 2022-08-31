@@ -15,7 +15,7 @@ import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.UniqueArrival
+import uk.gov.homeoffice.drt.arrivals.{UniqueArrival, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
@@ -222,6 +222,12 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val replyWithMinutesAsPortState: PortStateRequester = replyWithMinutesAsPortStateFn(requestQueueMinutes, requestStaffMinutes)
   val askThenAck: AckingAsker = Acking.askThenAck
 
+  def containsQueueTypeMinutes[A, B <: WithTimeAccessor](mins: MinutesContainer[A, B]): Boolean =
+    mins.minutes.headOption.exists(_.toMinute.isInstanceOf[CrunchMinute])
+
+  def containsStaffTypeMinutes[A, B <: WithTimeAccessor](mins: MinutesContainer[A, B]): Boolean =
+    mins.minutes.headOption.exists(_.toMinute.isInstanceOf[StaffMinute])
+
   def processMessage: Receive = {
     case StreamInitialized => sender() ! Ack
 
@@ -236,11 +242,21 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
     case noUpdates: PortStateMinutes[_, _] if noUpdates.isEmpty =>
       sender() ! Ack
 
+    case someQueueUpdates: MinutesContainer[CrunchMinute, TQM] if containsQueueTypeMinutes(someQueueUpdates) =>
+      val replyTo = sender()
+      askThenAck(queuesActor, someQueueUpdates, replyTo)
+
     case someQueueUpdates: PortStateQueueMinutes =>
+      println(s"%%%%%%%% got PortStateQueueMinutes %%%%%%%%% - update test???")
       val replyTo = sender()
       askThenAck(queuesActor, someQueueUpdates.asContainer, replyTo)
 
+    case someStaffUpdates: MinutesContainer[StaffMinute, TM] if containsStaffTypeMinutes(someStaffUpdates) =>
+      val replyTo = sender()
+      askThenAck(staffActor, someStaffUpdates, replyTo)
+
     case someStaffUpdates: PortStateStaffMinutes =>
+      println(s"%%%%%%%% got PortStateStaffMinutes %%%%%%%%% - update test???")
       val replyTo = sender()
       askThenAck(staffActor, someStaffUpdates.asContainer, replyTo)
 

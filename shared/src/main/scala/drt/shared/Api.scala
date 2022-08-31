@@ -77,6 +77,8 @@ trait PortStateMinutes[MinuteType, IndexType <: WithTimeAccessor] {
 
 trait PortStateQueueMinutes extends PortStateMinutes[CrunchMinute, TQM]
 
+trait PortStateQueueLoadMinutes extends PortStateMinutes[PassengersMinute, TQM]
+
 trait PortStateStaffMinutes extends PortStateMinutes[StaffMinute, TM]
 
 

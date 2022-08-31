@@ -146,6 +146,26 @@ object CrunchApi {
     implicit val rw: ReadWriter[CrunchMinute] = macroRW
   }
 
+  case class PassengersMinute(terminal: Terminal,
+                              queue: Queue,
+                              minute: MillisSinceEpoch,
+                              passengers: Iterable[Double],
+                              lastUpdated: Option[MillisSinceEpoch]
+                             ) extends MinuteLike[PassengersMinute, TQM] {
+
+    override def maybeUpdated(existing: PassengersMinute, now: MillisSinceEpoch): Option[PassengersMinute] =
+      if (existing.passengers != passengers)
+        Option(copy(lastUpdated = Option(now)))
+      else
+        None
+
+    override val key: TQM = TQM(terminal, queue, minute)
+
+    override def toUpdatedMinute(now: MillisSinceEpoch): PassengersMinute = toMinute.copy(lastUpdated = Option(now))
+
+    override def toMinute: PassengersMinute = this
+  }
+
   trait DeskRecMinuteLike {
     val terminal: Terminal
     val queue: Queue
@@ -193,6 +213,12 @@ object CrunchApi {
     override def isEmpty: Boolean = minutes.isEmpty
   }
 
+  case class PassengersMinutes(minutes: Iterable[PassengersMinute]) extends PortStateQueueLoadMinutes {
+    override val asContainer: MinutesContainer[PassengersMinute, TQM] = MinutesContainer(minutes)
+
+    override def isEmpty: Boolean = minutes.isEmpty
+  }
+
   trait SimulationMinuteLike {
     val terminal: Terminal
     val queue: Queue
@@ -226,7 +252,20 @@ object CrunchApi {
     override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = toMinute.copy(lastUpdated = Option(now))
 
     override def toMinute: CrunchMinute = CrunchMinute(
-      terminal, queue, minute, 0d, 0d, 0, 0, None, None, deskStat.desks, deskStat.waitTime, None)
+      terminal = terminal,
+      queue = queue,
+      minute = minute,
+      paxLoad = 0d,
+      workLoad = 0d,
+      deskRec = 0,
+      waitTime = 0,
+      maybePaxInQueue = None,
+      deployedDesks = None,
+      deployedWait = None,
+      maybeDeployedPaxInQueue = None,
+      actDesks = deskStat.desks,
+      actWait = deskStat.waitTime,
+    )
   }
 
   case class ActualDeskStats(portDeskSlots: IMap[Terminal, IMap[Queue, IMap[MillisSinceEpoch, DeskStat]]]) extends PortStateQueueMinutes {

@@ -1,6 +1,6 @@
 package actors.routing
 
-import actors.SetCrunchRequestQueue
+import actors.AddUpdatesSubscriber
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.minutes.MinutesActorLike.ProcessNextUpdateRequest
@@ -10,26 +10,25 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.DataUpdates.Updates
-import services.SDate
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 trait RouterActorLikeWithSubscriber[U <: Updates, P] extends RouterActorLike[U, P] {
-  var maybeUpdatesSubscriber: Option[ActorRef] = None
+  var updatesSubscribers: List[ActorRef] = List()
 
   override def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[UpdatedMillis] =
     super.handleUpdatesAndAck(updates, replyTo).map { updatedMillis =>
       if (shouldSendEffectsToSubscriber(updates))
-        maybeUpdatesSubscriber.foreach(_ ! updatedMillis)
+        updatesSubscribers.foreach(_ ! updatedMillis)
       updatedMillis
     }
 
   override def receiveUtil: Receive = super.receiveUtil orElse {
-    case SetCrunchRequestQueue(queueActor) =>
+    case AddUpdatesSubscriber(queueActor) =>
       log.info("Received subscriber")
-      maybeUpdatesSubscriber = Option(queueActor)
+      updatesSubscribers = queueActor :: updatesSubscribers
   }
 }
 

@@ -33,6 +33,7 @@ case class CrunchSystem[FT](forecastBaseArrivalsResponse: EnabledFeedWithFrequen
                             actualDeskStats: SourceQueueWithComplete[ActualDeskStats],
                             redListUpdates: SourceQueueWithComplete[List[RedListUpdateCommand]],
                             crunchRequestActor: ActorRef,
+                            deskRecsRequestActor: ActorRef,
                             deploymentRequestActor: ActorRef,
                             killSwitches: List[UniqueKillSwitch]
                            )
@@ -69,7 +70,7 @@ case class CrunchProps[FT](logLabel: String = "",
                            refreshArrivalsOnStart: Boolean,
                            optimiser: TryCrunchWholePax,
                            aclPaxAdjustmentDays: Int,
-                           startDeskRecs: () => (ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
+                           startDeskRecs: () => (ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                            arrivalsAdjustments: ArrivalsAdjustmentsLike,
                            addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                            setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
@@ -112,7 +113,7 @@ object CrunchSystem {
     val liveBaseArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals, forecastMaxMillis)
     val liveArrivalsDiffingStage = new ArrivalsDiffingStage(if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals, forecastMaxMillis)
 
-    val (crunchQueueActor, deploymentQueueActor, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch) = props.startDeskRecs()
+    val (crunchQueueActor, deskRecsQueueActor, deploymentQueueActor, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch) = props.startDeskRecs()
 
     val crunchSystem = RunnableCrunch(
       forecastBaseArrivalsSource = props.arrivalsForecastBaseFeed.source,
@@ -152,6 +153,7 @@ object CrunchSystem {
       actualDeskStats = actDesksIn,
       redListUpdates = redListUpdatesIn,
       crunchRequestActor = crunchQueueActor,
+      deskRecsRequestActor = deskRecsQueueActor,
       deploymentRequestActor = deploymentQueueActor,
       killSwitches
     )

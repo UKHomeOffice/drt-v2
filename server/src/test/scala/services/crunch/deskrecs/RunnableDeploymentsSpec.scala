@@ -4,12 +4,13 @@ import actors.MinuteLookupsLike
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.RequestAndTerminateActor
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
-import actors.routing.minutes.{QueueMinutesActor, StaffMinutesActor}
+import actors.routing.minutes.{QueueLoadsMinutesActor, QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import test.TestActors.TestQueueLoadsMinutesActor
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -62,6 +63,8 @@ case class TestMinuteLookups(queueProbe: ActorRef,
                              deploymentsQueueSubscriber: ActorRef)
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
+
+  override val queueLoadsMinutesActor: ActorRef = system.actorOf(Props(new QueueLoadsMinutesActor(queuesByTerminal.keys, queuesLoadsLookup, updatePassengerMinutes)))
 
   override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queueProbe, queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, deploymentsQueueSubscriber)))
 

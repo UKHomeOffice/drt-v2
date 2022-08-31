@@ -66,6 +66,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
   override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
   override val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentDeskRecsQueueActor: ActorRef = system.actorOf(Props(new TestDeskRecsQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
   override val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
   override val persistentStaffingUpdateQueueActor: ActorRef = system.actorOf(Props(new TestStaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
@@ -73,6 +74,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal)
   override val flightsActor: ActorRef = flightLookups.flightsActor
+  override val queueLoadsActor: ActorRef = minuteLookups.queueLoadsMinutesActor
   override val queuesActor: ActorRef = minuteLookups.queueMinutesActor
   override val staffActor: ActorRef = minuteLookups.staffMinutesActor
   override val queueUpdates: ActorRef = system.actorOf(Props(
@@ -172,15 +174,16 @@ case class TestDrtSystem(airportConfig: AirportConfig)
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
       refreshArrivalsOnStart = false,
-      startDeskRecs = startDeskRecs(SortedSet(), SortedSet(), SortedSet()))
+      startDeskRecs = startDeskRecs(SortedSet(), SortedSet(), SortedSet(), SortedSet()))
 
     liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
     redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
-    flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
-    manifestsRouterActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
-    queuesActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
-    staffActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
+    flightsActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
+    manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
+    queuesActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
+    queuesActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+    staffActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
 
     testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponse)
 

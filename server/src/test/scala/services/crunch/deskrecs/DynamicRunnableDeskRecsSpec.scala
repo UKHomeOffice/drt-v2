@@ -5,10 +5,10 @@ import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.DeskRecMinutes
+import drt.shared.CrunchApi.PassengersMinutes
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
@@ -17,13 +17,13 @@ import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import queueus._
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
-import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider, addManifests}
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
+import services.crunch.deskrecs.DynamicRunnablePassengerLoads.addManifests
 import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest}
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
-import services.{SDate, TryCrunch, TryCrunchWholePax}
+import services.{SDate, TryCrunchWholePax}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
@@ -140,7 +140,7 @@ case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKe
 class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   val airportConfig: AirportConfig = TestDefaults.airportConfigWithEgates
 
-  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.terminalProvider(airportConfig))
+//  val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, MockEgatesProvider.terminalProvider(airportConfig))
   val mockCrunch: TryCrunchWholePax = CrunchMocks.mockCrunchWholePax
 
   val ptqa: PaxTypeQueueAllocation = PaxTypeQueueAllocation(
@@ -160,7 +160,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val request = CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440)
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
 
-    val deskRecs: Flow[ProcessingRequest, PortStateQueueMinutes, NotUsed] = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+    val deskRecs = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
       arrivalsProvider = mockFlightsProvider(List(arrival)),
       liveManifestsProvider = mockLiveManifestsProvider(arrival, livePax),
       historicManifestsProvider = mockHistoricManifestsProvider(Map(arrival -> historicPax)),
@@ -168,9 +168,9 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       splitsCalculator = splitsCalculator,
       splitsSink = mockSplitsSink,
       portDesksAndWaitsProvider = desksAndWaitsProvider,
-      maxDesksProviders = maxDesksProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
       DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
+      airportConfig.queuesByTerminal,
     )
 
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet())
@@ -179,11 +179,11 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     queue ! request
 
     probe.fishForMessage(5.second) {
-      case DeskRecMinutes(drms) =>
-        val tqPax = drms
-          .groupBy(drm => (drm.terminal, drm.queue))
+      case PassengersMinutes(mins) =>
+        val tqPax = mins
+          .groupBy(pm => (pm.terminal, pm.queue))
           .map {
-            case (tq, minutes) => (tq, minutes.map(_.paxLoad).sum)
+            case (tq, mins) => (tq, mins.map(_.passengers.size).sum)
           }
           .collect {
             case (tq, pax) if pax > 0 => (tq, pax)
@@ -237,13 +237,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     }
 
     "add historic API pax" >> {
-//      "When I have ACL pax number I should get some pax from historic API" >> {
-//        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(AclFeedSource),
-//          totalPax = Set(TotalPaxSource(Option(100), AclFeedSource)))
-//        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(100), AclFeedSource),
-//          TotalPaxSource(Option(10), HistoricApiFeedSource)))
-//      }
-
       "When I have no Feed I should get some pax from historic API" >> {
         val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(),
           totalPax = Set.empty)
@@ -256,7 +249,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
                                 maybeLiveManifestPax: Option[List[PassengerInfoJson]],
                                 maybeHistoricArrivalManifestPax: Map[Arrival, Option[List[PassengerInfoJson]]],
                                 expectedSplitsSources: Set[SplitSource]) = {
-    val flow = DynamicRunnableDeskRecs.addSplits(
+    val flow = DynamicRunnablePassengerLoads.addSplits(
       mockLiveManifestsProvider(arrival, maybeLiveManifestPax),
       mockHistoricManifestsProvider(maybeHistoricArrivalManifestPax),
       splitsCalculator)
@@ -270,7 +263,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   private def checkPaxSource(arrival: Arrival,
                              maybeHistoricArrivalManifestPax: Map[Arrival, Option[List[PassengerInfoJson]]],
                              expectedPaxSources: Set[TotalPaxSource]) = {
-    val flow = DynamicRunnableDeskRecs.addPax(mockHistoricManifestsPaxProvider(maybeHistoricArrivalManifestPax))
+    val flow = DynamicRunnablePassengerLoads.addPax(mockHistoricManifestsPaxProvider(maybeHistoricArrivalManifestPax))
 
     val crunchRequestSource = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(ApiFlightWithSplits(arrival, Set())))))
     val result: immutable.Seq[(ProcessingRequest, List[ApiFlightWithSplits])] = Await.result(crunchRequestSource.via(flow).runWith(Sink.seq), 1.second)
@@ -348,13 +341,13 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val validApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
     val invalidApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
     "Given no flights, then validApiPercentage should give 100%" >> {
-      DynamicRunnableDeskRecs.validApiPercentage(Seq()) === 100d
+      DynamicRunnablePassengerLoads.validApiPercentage(Seq()) === 100d
     }
     "Given 1 flight with live api splits, when it is valid, then validApiPercentage should give 100%" >> {
-      DynamicRunnableDeskRecs.validApiPercentage(Seq(validApi)) === 100d
+      DynamicRunnablePassengerLoads.validApiPercentage(Seq(validApi)) === 100d
     }
     "Given 4 flights with live api splits, when 3 are categorised as valid, then validApiPercentage should give 75%" >> {
-      DynamicRunnableDeskRecs.validApiPercentage(Seq(validApi, validApi, validApi, invalidApi)) === 75d
+      DynamicRunnablePassengerLoads.validApiPercentage(Seq(validApi, validApi, validApi, invalidApi)) === 75d
     }
   }
 }

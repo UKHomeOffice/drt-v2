@@ -1,8 +1,8 @@
 package actors.daily
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.RecoveryActorLike
 import actors.persistent.staffing.GetState
-import actors.persistent.{RecoveryActorLike, Sizes}
 import akka.persistence.SaveSnapshotSuccess
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import org.slf4j.{Logger, LoggerFactory}
@@ -41,7 +41,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   override def receiveCommand: Receive = {
     case container: MinutesContainer[VAL, INDEX] =>
-      log.debug(s"Received MinutesContainer for persistence")
+      log.info(s"Received MinutesContainer for persistence")
       updateAndPersistDiff(container)
 
     case GetState =>
@@ -81,6 +81,10 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
         val updatedMillis = if (shouldSendEffectsToSubscriber(container))
           UpdatedMillis(differences.map(_.minute))
         else UpdatedMillis.empty
+//        log.info(s"======updates: ${container.minutes}")
+//        log.info(s"======should send: ${shouldSendEffectsToSubscriber(container)}")
+//        log.info(s"======diff: $differences")
+//        log.info(s"======updatedMillis: $updatedMillis")
 
         val replyToAndMessage = List((sender(), updatedMillis))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)

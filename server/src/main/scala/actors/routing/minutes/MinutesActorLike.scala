@@ -114,7 +114,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
 
   override def partitionUpdates: PartialFunction[MinutesContainer[A, B], Map[(Terminal, UtcDate), MinutesContainer[A, B]]] = {
     case container: MinutesContainer[A, B] => container.minutes
-      .groupBy(simMin => (simMin.terminal, SDate(simMin.minute).toUtcDate))
+      .groupBy(minuteLike => (minuteLike.terminal, SDate(minuteLike.minute).toUtcDate))
       .mapValues(MinutesContainer(_))
   }
 
@@ -133,4 +133,5 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
 
   override def updatePartition(partition: (Terminal, UtcDate), updates: MinutesContainer[A, B]): Future[QueueLikeActor.UpdatedMillis] =
     updateMinutes(partition, updates)
+
 }

@@ -58,37 +58,39 @@ object Scenarios {
 
     val terminalDeskLimits = PortDeskLimits.fixed(simulationAirportConfig, terminalEgatesProvider)
 
-    val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
-      arrivalsProvider = flightsProvider,
-      liveManifestsProvider = liveManifestsProvider,
-      historicManifestsProvider = historicManifestsProvider,
-      historicManifestsPaxProvider = historicManifestsPaxProvider,
-      splitsCalculator = splitsCalculator,
-      splitsSink = flightsActor,
-      portDesksAndWaitsProvider = portDesksAndWaitsProvider,
-      maxDesksProviders = terminalDeskLimits,
-      redListUpdatesProvider = redListUpdatesProvider,
-      DynamicQueueStatusProvider(simulationAirportConfig, egateBanksProvider)
-    )
+//    val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToQueueMinutes(
+//      arrivalsProvider = flightsProvider,
+//      liveManifestsProvider = liveManifestsProvider,
+//      historicManifestsProvider = historicManifestsProvider,
+//      historicManifestsPaxProvider = historicManifestsPaxProvider,
+//      splitsCalculator = splitsCalculator,
+//      splitsSink = flightsActor,
+//      portDesksAndWaitsProvider = portDesksAndWaitsProvider,
+//      maxDesksProviders = terminalDeskLimits,
+//      redListUpdatesProvider = redListUpdatesProvider,
+//      DynamicQueueStatusProvider(simulationAirportConfig, egateBanksProvider)
+//    )
 
-    class DummyPersistentActor extends Actor {
-      override def receive: Receive = {
-        case _ => Unit
-      }
-    }
+//    class DummyPersistentActor extends Actor {
+//      override def receive: Receive = {
+//        case _ => Unit
+//      }
+//    }
+//
+//    val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
+//
+//    val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch, SortedSet())
+//    val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, deskRecsProducer).run()
+//
+//    crunchRequestQueue ! CrunchRequest(SDate(simulationParams.date).millisSinceEpoch, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
+//
+//    val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
+//      case drm: DeskRecMinutes => DeskRecMinutes(drm.minutes.filter(_.terminal == simulationParams.terminal))
+//    }
+//    futureDeskRecMinutes.onComplete(_ => deskRecsKillSwitch.shutdown())
+//    futureDeskRecMinutes
 
-    val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
-
-    val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch, SortedSet())
-    val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, deskRecsProducer).run()
-
-    crunchRequestQueue ! CrunchRequest(SDate(simulationParams.date).millisSinceEpoch, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
-
-    val futureDeskRecMinutes: Future[DeskRecMinutes] = (portStateActor ? GetState).map {
-      case drm: DeskRecMinutes => DeskRecMinutes(drm.minutes.filter(_.terminal == simulationParams.terminal))
-    }
-    futureDeskRecMinutes.onComplete(_ => deskRecsKillSwitch.shutdown())
-    futureDeskRecMinutes
+    Future.successful(DeskRecMinutes(Seq()))
   }
 
 

@@ -9,7 +9,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.FlightsApi.FlightsWithSplits
 import services.SDate
-import services.crunch.deskrecs.DynamicRunnableDeskRecs
+import services.crunch.deskrecs.DynamicRunnablePassengerLoads
 import uk.gov.homeoffice.drt.time.UtcDate
 
 import scala.concurrent.ExecutionContext
@@ -25,7 +25,7 @@ case class ApiValidityReporter(flightsActor: ActorRef)
       .flatMap(_.runWith(Sink.seq).map {
         dateAndFlights =>
           val flights = dateAndFlights.flatMap(_._2.flights.values)
-          Metrics.counter("api-live-valid-percentage", DynamicRunnableDeskRecs.validApiPercentage(flights))
+          Metrics.counter("api-live-valid-percentage", DynamicRunnablePassengerLoads.validApiPercentage(flights))
       })
   }
 }

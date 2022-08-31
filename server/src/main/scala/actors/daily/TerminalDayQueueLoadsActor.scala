@@ -1,31 +1,21 @@
 package actors.daily
 
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike}
+import actors.serializers.PassengersMinutesMessageConversion.{passengerMinutesFromMessage, passengerMinutesToMessage}
+import akka.actor.Props
+import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
 import drt.shared.{CrunchApi, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{PassengersMinuteMessage, PassengersMinutesMessage}
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
-case class PassengersMinute(terminal: Terminal,
-                            queue: Queue,
-                            minute: MillisSinceEpoch,
-                            passengers: Iterable[Double],
-                            lastUpdated: Option[MillisSinceEpoch]
-                           ) extends MinuteLike[PassengersMinute, TQM] {
+object TerminalDayQueueLoadsActor {
+  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
+    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, None))
 
-  override def maybeUpdated(existing: PassengersMinute, now: MillisSinceEpoch): Option[PassengersMinute] =
-    if (existing.passengers != passengers)
-      Option(copy(lastUpdated = Option(now)))
-    else
-      None
-
-  override val key: TQM = TQM(terminal, queue, minute)
-
-  override def toUpdatedMinute(now: MillisSinceEpoch): PassengersMinute = toMinute.copy(lastUpdated = Option(now))
-
-  override def toMinute: PassengersMinute = this
+  def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
+    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
 }
 
 class TerminalDayQueueLoadsActor(year: Int,
@@ -40,13 +30,27 @@ class TerminalDayQueueLoadsActor(year: Int,
 
   override val maybeSnapshotInterval: Option[Int] = Option(100)
 
-  override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[PassengersMinute, TQM]): Boolean = false
+  override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[PassengersMinute, TQM]): Boolean = true
 
-  override def containerToMessage(differences: Iterable[PassengersMinute]): GeneratedMessage = ???
+  override def containerToMessage(differences: Iterable[PassengersMinute]): GeneratedMessage = PassengersMinutesMessage(
+    differences.map(pm => PassengersMinuteMessage(
+      queueName = Option(pm.queue.toString),
+      minute = Option(pm.minute),
+      passengers = pm.passengers.toSeq,
+    )).toSeq
+  )
 
-  override def processRecoveryMessage: PartialFunction[Any, Unit] = ???
+  override def processRecoveryMessage: PartialFunction[Any, Unit] = {
+    case pms: PassengersMinutesMessage =>
+      val updates = passengerMinutesFromMessage(terminal, pms)
+      state = state ++ updates.map(pm => (pm.key, pm))
+  }
 
-  override def processSnapshotMessage: PartialFunction[Any, Unit] = ???
+  override def processSnapshotMessage: PartialFunction[Any, Unit] = {
+    case pms: PassengersMinutesMessage =>
+      val updates = passengerMinutesFromMessage(terminal, pms)
+      state = updates.map(pm => (pm.key, pm)).toMap
+  }
 
-  override def stateToMessage: GeneratedMessage = ???
+  override def stateToMessage: GeneratedMessage = passengerMinutesToMessage(state.values.toSeq)
 }

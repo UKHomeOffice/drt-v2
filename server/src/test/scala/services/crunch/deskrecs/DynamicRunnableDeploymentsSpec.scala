@@ -4,7 +4,7 @@ import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.SortedActorRefSource
 import akka.actor.{Actor, Props}
 import akka.testkit.TestProbe
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PassengersMinute}
 import drt.shared._
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
@@ -24,7 +24,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-class MockProviderActor(minutes: MinutesContainer[CrunchMinute, TQM]) extends Actor {
+class MockProviderActor(minutes: MinutesContainer[PassengersMinute, TQM]) extends Actor {
   override def receive: Receive = {
     case _: GetStateForDateRange => sender() ! minutes
   }
@@ -41,7 +41,7 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
   val staffToDeskLimits: StaffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, egatesProvider)
   val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig))
 
-  def setupGraphAndCheckQueuePax(minutes: MinutesContainer[CrunchMinute, TQM],
+  def setupGraphAndCheckQueuePax(minutes: MinutesContainer[PassengersMinute, TQM],
                                  expectedQueuePax: PartialFunction[Any, Boolean]): Any = {
     val probe = TestProbe()
 
@@ -50,7 +50,7 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
     val mockProvider = system.actorOf(Props(new MockProviderActor(minutes)))
 
     val deskRecs = DynamicRunnableDeployments.crunchRequestsToDeployments(
-      OptimisationProviders.loadsProvider(mockProvider),
+      OptimisationProviders.passengersProvider(mockProvider),
       OptimisationProviders.staffMinutesProvider(mockProvider, airportConfig.terminals),
       staffToDeskLimits,
       desksAndWaitsProvider.loadsToSimulations)
@@ -71,7 +71,7 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
           println(s"Got $minuteCountByQueue")
           minuteCountByQueue === Map(EeaDesk -> 1440, NonEeaDesk -> 1440, EGate -> 1440)
       }
-      val noLoads = MinutesContainer.empty[CrunchMinute, TQM]
+      val noLoads = MinutesContainer.empty[PassengersMinute, TQM]
 
       setupGraphAndCheckQueuePax(minutes = noLoads, expectedQueuePax = expected)
 

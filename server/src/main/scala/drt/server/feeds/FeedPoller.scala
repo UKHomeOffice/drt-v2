@@ -6,8 +6,6 @@ import akka.actor.typed.scaladsl.{Behaviors, TimerScheduler}
 import drt.server.feeds.Feed.{EnabledFeedWithFrequency, FeedTick, Tick}
 import org.slf4j.{Logger, LoggerFactory}
 
-import scala.concurrent.duration.DurationInt
-
 object FeedPoller {
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
