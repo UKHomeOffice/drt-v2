@@ -112,6 +112,10 @@ object ApplicationConfig {
 
 object DataUpdates {
 
+  trait Combinable[A]  {
+    def ++(other: A): A
+  }
+
   trait Updates
 
   trait FlightUpdates extends Updates
