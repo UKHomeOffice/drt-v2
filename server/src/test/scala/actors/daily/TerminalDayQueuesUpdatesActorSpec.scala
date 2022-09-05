@@ -37,8 +37,8 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
 
     "When I send it a crunch minute" >> {
       val eventualAcks = Future.sequence(Seq(
-        queuesActor.ask(MinutesContainer(Iterable(crunchMinute))),
-        queuesActor.ask(MinutesContainer(Iterable(crunchMinute.copy(minute = minute2))))))
+        queuesActor.ask(MinutesContainer(Seq(crunchMinute))),
+        queuesActor.ask(MinutesContainer(Seq(crunchMinute.copy(minute = minute2))))))
       Await.ready(eventualAcks, 5.second)
 
       "I should see it received as an update" >> {

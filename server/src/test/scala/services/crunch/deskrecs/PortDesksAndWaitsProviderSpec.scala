@@ -36,7 +36,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       val loads = getFlightLoads(scheduled, flights, getProvider)
       val scheduledMillis = scheduled.millisSinceEpoch
 
-      val expected = Map(TQM(T1, EeaDesk, scheduledMillis) -> LoadMinute(T1, EeaDesk, List(gbrToDesk, gbrToDesk), pax * gbrToDesk, scheduledMillis))
+      val expected = Map(TQM(T1, EeaDesk, scheduledMillis) -> PassengersMinute(T1, EeaDesk, scheduledMillis, List(gbrToDesk, gbrToDesk), None))
 
       loads === expected
     }
@@ -51,7 +51,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       val loads = getFlightLoads(scheduled, flights, getProvider)
       val scheduledMillis = scheduled.millisSinceEpoch
 
-      val expected = Map(TQM(T1, EeaDesk, scheduledMillis) -> LoadMinute(T1, EeaDesk, List(gbrToDesk, gbrToDesk, gbrToDesk), pax1 * gbrToDesk + pax2 * gbrToDesk, scheduledMillis))
+      val expected = Map(TQM(T1, EeaDesk, scheduledMillis) -> PassengersMinute(T1, EeaDesk, scheduledMillis, List(gbrToDesk, gbrToDesk, gbrToDesk), None))
 
       loads === expected
     }
@@ -68,8 +68,8 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       val scheduledMillis = scheduled.millisSinceEpoch
 
       val expected = Map(
-        TQM(T1, EeaDesk, scheduledMillis) -> LoadMinute(T1, EeaDesk, List(gbrToDesk), gbrToDesk, scheduledMillis),
-        TQM(T1, EGate, scheduledMillis) -> LoadMinute(T1, EGate, List(gbrToEgate), gbrToEgate, scheduledMillis),
+        TQM(T1, EeaDesk, scheduledMillis) -> PassengersMinute(T1, EeaDesk, scheduledMillis, List(gbrToDesk), None),
+        TQM(T1, EGate, scheduledMillis) -> PassengersMinute(T1, EGate, scheduledMillis, List(gbrToEgate), None),
       )
 
       loads === expected

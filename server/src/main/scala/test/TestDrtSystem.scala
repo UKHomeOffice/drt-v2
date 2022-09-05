@@ -73,10 +73,10 @@ case class TestDrtSystem(airportConfig: AirportConfig)
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal)
-  override val flightsActor: ActorRef = flightLookups.flightsActor
-  override val queueLoadsActor: ActorRef = minuteLookups.queueLoadsMinutesActor
-  override val queuesActor: ActorRef = minuteLookups.queueMinutesActor
-  override val staffActor: ActorRef = minuteLookups.staffMinutesActor
+  override val flightsRouterActor: ActorRef = flightLookups.flightsActor
+  override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor
+  override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesActor
+  override val staffRouterActor: ActorRef = minuteLookups.staffMinutesActor
   override val queueUpdates: ActorRef = system.actorOf(Props(
     new QueueTestUpdatesSupervisor(
       now,
@@ -102,9 +102,9 @@ case class TestDrtSystem(airportConfig: AirportConfig)
   override val portStateActor: ActorRef = system.actorOf(
     Props(
       new TestPartitionedPortStateActor(
-        flightsActor,
-        queuesActor,
-        staffActor,
+        flightsRouterActor,
+        queuesRouterActor,
+        staffRouterActor,
         queueUpdates,
         staffUpdates,
         flightUpdates,
@@ -179,11 +179,11 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
     redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
-    flightsActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
+    flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
     manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
-    queuesActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
-    queuesActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
-    staffActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+    queuesRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
+    queuesRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+    staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
 
     testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponse)
 

@@ -30,7 +30,7 @@ class MockProviderActor(minutes: MinutesContainer[PassengersMinute, TQM]) extend
   }
 }
 
-class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
+class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
   val airportConfig: AirportConfig = TestDefaults.airportConfigWithEgates
 
   val egatesProvider: Terminal => Future[EgateBanksUpdates] = MockEgatesProvider.terminalProvider(airportConfig)
@@ -66,9 +66,8 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
   "Given a mock workload provider returning no workloads" >> {
     "When I ask for deployments I should see 1440 minutes for each queue" >> {
       val expected: PartialFunction[Any, Boolean] = {
-        case SimulationMinutes(minutes) =>
-          val minuteCountByQueue: Map[Queue, Int] = minutes.groupBy(_.queue).mapValues(_.size)
-          println(s"Got $minuteCountByQueue")
+        case minutes: MinutesContainer[CrunchMinute, TQM] =>
+          val minuteCountByQueue: Map[Queue, Int] = minutes.minutes.groupBy(_.toMinute.queue).mapValues(_.size)
           minuteCountByQueue === Map(EeaDesk -> 1440, NonEeaDesk -> 1440, EGate -> 1440)
       }
       val noLoads = MinutesContainer.empty[PassengersMinute, TQM]

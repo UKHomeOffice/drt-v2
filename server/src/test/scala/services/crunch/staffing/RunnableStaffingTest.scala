@@ -4,7 +4,7 @@ import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.testkit.TestProbe
 import dispatch.Future
-import drt.shared.CrunchApi.{StaffMinute, StaffMinutes}
+import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared._
 import services.SDate
 import services.SDate.implicits.sdateFromMillisLocal
@@ -28,7 +28,7 @@ class RunnableStaffingTest extends CrunchTestLike {
       val queue = startStaffingFlow(updateDate, probe, ShiftAssignments.empty, FixedPointAssignments.empty, StaffMovements.empty)
       queue.offer(TerminalUpdateRequest(T1, LocalDate(2022, 6, 17), 0, 2))
       "I should get the 2 consecutive staff minutes for that date starting from midnight with zeros" >> {
-        probe.expectMsg(StaffMinutes(Seq(
+        probe.expectMsg(MinutesContainer(Seq(
           StaffMinute(T1, date.millisSinceEpoch, 0, 0, 0, Option(updateDate.millisSinceEpoch)),
           StaffMinute(T1, date.addMinutes(1).millisSinceEpoch, 0, 0, 0, Option(updateDate.millisSinceEpoch)),
         )))
@@ -49,7 +49,7 @@ class RunnableStaffingTest extends CrunchTestLike {
       queue.offer(TerminalUpdateRequest(T1, LocalDate(2022, 6, 17), 0, 2))
 
       "I should get the 2 consecutive staff minutes for that date starting from midnight with the values from the mocks" >> {
-        probe.expectMsg(StaffMinutes(Seq(
+        probe.expectMsg(MinutesContainer(Seq(
           StaffMinute(T1, date.millisSinceEpoch, 1, 2, -1, Option(updateDate.millisSinceEpoch)),
           StaffMinute(T1, date.addMinutes(1).millisSinceEpoch, 1, 2, -1, Option(updateDate.millisSinceEpoch)),
         )))

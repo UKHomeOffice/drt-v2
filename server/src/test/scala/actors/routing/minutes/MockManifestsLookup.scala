@@ -29,6 +29,6 @@ case class MockManifestsLookup() {
 
   def update: ManifestsUpdate = (date: UtcDate, manifests: VoyageManifests) => {
     paramsUpdate = paramsUpdate :+ ((date, manifests))
-    Future(UpdatedMillis(manifests.manifests.map(_.scheduled.millisSinceEpoch)))
+    Future(UpdatedMillis(manifests.manifests.map(_.scheduled.millisSinceEpoch).toSet))
   }
 }

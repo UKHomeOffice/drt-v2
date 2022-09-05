@@ -85,7 +85,7 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
   }
 
   def updatesSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = updates.values.filter(_.lastUpdated.getOrElse(0L) > sinceMillis) match {
-    case someMinutes if someMinutes.nonEmpty => MinutesContainer(someMinutes)
+    case someMinutes if someMinutes.nonEmpty => MinutesContainer(someMinutes.toSeq)
     case _ => MinutesContainer.empty[A, B]
   }
 

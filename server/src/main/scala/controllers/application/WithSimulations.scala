@@ -73,7 +73,7 @@ trait WithSimulations {
                 OptimisationProviders.liveManifestsProvider(ctrl.manifestsRouterActor),
                 OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
                 OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
-                ctrl.flightsActor,
+                ctrl.flightsRouterActor,
                 portStateActor,
                 () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
                 () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
@@ -120,7 +120,7 @@ trait WithSimulations {
                 liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsRouterActor),
                 historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
                 historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
-                flightsActor = ctrl.flightsActor,
+                flightsActor = ctrl.flightsRouterActor,
                 portStateActor = portStateActor,
                 redListUpdatesProvider = () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
                 egateBanksProvider = () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
@@ -198,7 +198,7 @@ trait WithSimulations {
   def simulationQueuesLookup(cms: SortedMap[TQM, CrunchMinute])(
     terminalDate: (Terminal, UtcDate),
     maybePit: Option[MillisSinceEpoch]
-  ): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = Future(Option(MinutesContainer(cms.values)))
+  ): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = Future(Option(MinutesContainer(cms.values.toSeq)))
 
   def staffLookupNoop: MinutesLookup[StaffMinute, TM] = (terminalDate: (Terminal, UtcDate), maybePit: Option[MillisSinceEpoch]) => Future(None)
 }

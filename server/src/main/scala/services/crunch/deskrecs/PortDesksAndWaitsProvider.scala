@@ -39,7 +39,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                   deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike])
                                  (implicit ec: ExecutionContext, mat: Materializer): Future[SimulationMinutes] = {
     loadsToDesks(minuteMillis, passengersByQueue, deskLimitProviders).map(deskRecMinutes =>
-      SimulationMinutes(deskRecsToSimulations(deskRecMinutes.minutes).values)
+      SimulationMinutes(deskRecsToSimulations(deskRecMinutes.minutes).values.toSeq)
     )
   }
 

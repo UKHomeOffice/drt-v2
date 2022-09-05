@@ -55,7 +55,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   }
 
   private def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
-    if (state.nonEmpty) Option(MinutesContainer(state.values.toSet)) else None
+    if (state.nonEmpty) Option(MinutesContainer(state.values.toSeq)) else None
 
   def diffFromMinutes(state: Map[INDEX, VAL], minutes: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
     val nowMillis = now().millisSinceEpoch
@@ -79,7 +79,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
         state = updateStateFromDiff(state, differences)
         val messageToPersist = containerToMessage(differences)
         val updatedMillis = if (shouldSendEffectsToSubscriber(container))
-          UpdatedMillis(differences.map(_.minute))
+          UpdatedMillis(differences.map(_.minute).toSet)
         else UpdatedMillis.empty
 //        log.info(s"======updates: ${container.minutes}")
 //        log.info(s"======should send: ${shouldSendEffectsToSubscriber(container)}")

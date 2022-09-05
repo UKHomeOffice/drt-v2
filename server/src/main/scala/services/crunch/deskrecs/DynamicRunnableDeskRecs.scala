@@ -45,7 +45,8 @@ object DynamicRunnableDeskRecs {
       }
       .mapAsync(1) {
         case (request, loads) =>
-          log.info(s"Simulating ${request.durationMinutes} minutes (${request.start.toISOString()} to ${request.end.toISOString()})")
+          println(s"got a bunch of pax loads")
+          log.info(s"Optimising ${request.durationMinutes} minutes (${request.start.toISOString()} to ${request.end.toISOString()})")
           loadsToQueueMinutes(request.minutesInMillis, loads, maxDesksProviders)
             .map(minutes => Option(minutes))
             .recover {

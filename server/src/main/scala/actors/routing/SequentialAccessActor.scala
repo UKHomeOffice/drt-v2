@@ -1,5 +1,7 @@
 package actors.routing
 
+import actors.AddUpdatesSubscriber
+import actors.acking.AckingReceiver.Ack
 import actors.routing.SequentialAccessActor.{ProcessNextRequest, RequestFinished}
 import akka.actor.{Actor, ActorRef}
 import akka.stream.Materializer
@@ -16,17 +18,20 @@ object SequentialAccessActor {
   case object RequestFinished
 }
 
-class SequentialAccessActor[RES, REQ, RESP <: Combinable[RESP]](
-                                                                 resourceRequest: (RES, REQ) => Future[RESP],
-                                                                 splitByResource: REQ => Iterable[(RES, REQ)],
-                                                               ) extends Actor {
+class SequentialAccessActor[RES, REQ, UPDATES <: Combinable[UPDATES]](
+                                                                                resourceRequest: (RES, REQ) => Future[UPDATES],
+                                                                                splitByResource: REQ => Iterable[(RES, REQ)],
+                                                                              ) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
 
-  var requests: List[(ActorRef, Iterable[(RES, REQ)])] = List()
-  var busy: Boolean = false
+  var updatesSubscribers: List[ActorRef] = List.empty
+  var requests: List[(ActorRef, Iterable[(RES, REQ)])] = List.empty
 
+  var busy: Boolean = false
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val mat: Materializer = Materializer.createMaterializer(context)
+
+  def shouldSendEffectsToSubscribers(request: REQ): Boolean = true
 
   override def receive: Receive = {
     case ProcessNextRequest =>
@@ -35,6 +40,10 @@ class SequentialAccessActor[RES, REQ, RESP <: Combinable[RESP]](
     case RequestFinished =>
       setBusy(false)
       self ! ProcessNextRequest
+
+    case AddUpdatesSubscriber(queueActor) =>
+      log.info("Received subscriber")
+      updatesSubscribers = queueActor :: updatesSubscribers
 
     case request: REQ =>
       addRequests(sender(), splitByResource(request))
@@ -52,9 +61,16 @@ class SequentialAccessActor[RES, REQ, RESP <: Combinable[RESP]](
           .mapAsync(1) {
             case (resource, request) => resourceRequest(resource, request)
           }
-          .runWith(Sink.reduce[RESP](_ ++ _))
-          .onComplete { maybeResponse =>
-            maybeResponse.foreach(replyTo ! _)
+          .runWith(Sink.reduce[UPDATES](_ ++ _))
+          .onComplete { maybeUpdates =>
+            if (shouldSendEffectsToSubscribers(next.head._2)) {
+              for {
+                updates <- maybeUpdates.toOption.toList
+                subscriber <- updatesSubscribers
+              } yield subscriber ! updates
+            }
+
+            replyTo ! Ack
             self ! RequestFinished
           }
     }

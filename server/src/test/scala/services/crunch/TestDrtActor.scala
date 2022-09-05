@@ -23,14 +23,12 @@ import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
 import server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
-import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
-import test.TestMinuteLookups
 import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -120,7 +118,7 @@ class TestDrtActor extends Actor {
 
       val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal)
       val flightsActor: ActorRef = flightLookups.flightsActor
-      val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal)
+      val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal)
       val queueLoadsActor = minuteLookups.queueLoadsMinutesActor
       val queuesActor = minuteLookups.queueMinutesActor
       val staffActor = minuteLookups.staffMinutesActor
@@ -155,7 +153,7 @@ class TestDrtActor extends Actor {
         val millisToCrunchStart = Crunch.crunchStartWithOffset(portDeskRecs.crunchOffsetMinutes) _
         val daysToReCrunch = (0 until tc.maxDaysToCrunch).map(d => {
           millisToCrunchStart(today.addDays(d)).millisSinceEpoch
-        })
+        }).toSet
         crunchQueueActor ! UpdatedMillis(daysToReCrunch)
       }
 
@@ -171,7 +169,6 @@ class TestDrtActor extends Actor {
 
         val mockCacheLookup: Arrival => Future[Option[ManifestLike]] = _ => Future.successful(None)
         val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(Ack)
-
         val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
           arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
           liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
@@ -182,7 +179,7 @@ class TestDrtActor extends Actor {
           portDesksAndWaitsProvider = portDeskRecs,
           redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
           DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
-          airportConfig.queuesByTerminal,
+          tc.airportConfig.queuesByTerminal,
         )
 
         val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
@@ -198,7 +195,7 @@ class TestDrtActor extends Actor {
 
         val deskRecsGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
 
-        val (deskRecsRequestQueueActor, deskRecsKillSwitch: UniqueKillSwitch) =
+        val (deskRecsRequestQueueActor, deskRecsKillSwitch) =
           RunnableOptimisation.createGraph(deskRecsGraphSource, portStateActor, deskRecsProducer).run()
 
         val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(

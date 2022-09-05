@@ -131,10 +131,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val liveArrivalsActor: ActorRef
   val manifestsRouterActor: ActorRef
 
-  val flightsActor: ActorRef
-  val queueLoadsActor: ActorRef
-  val queuesActor: ActorRef
-  val staffActor: ActorRef
+  val flightsRouterActor: ActorRef
+  val queueLoadsRouterActor: ActorRef
+  val queuesRouterActor: ActorRef
+  val staffRouterActor: ActorRef
   val queueUpdates: ActorRef
   val staffUpdates: ActorRef
   val flightUpdates: ActorRef
@@ -154,7 +154,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case None => rangeRequest
     }
 
-    flightsActor.ask(request)
+    flightsRouterActor.ask(request)
       .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
       .flatMap { source =>
         source.mapConcat {
@@ -257,9 +257,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
 
       val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, now, system, timeout, ec)
-
       val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
-
       val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
         liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
@@ -273,7 +271,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         airportConfig.queuesByTerminal,
       )
 
-      val (crunchRequestQueueActor: ActorRef, crunchKillSwitch: UniqueKillSwitch) =
+      val (crunchRequestQueueActor, _: UniqueKillSwitch) =
         startOptimisationGraph(passengerLoadsProducer, persistentCrunchQueueActor, crunchQueue, minuteLookups.queueLoadsMinutesActor)
 
       val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToDeployments(
@@ -282,7 +280,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         loadsToQueueMinutes = portDeskRecs.loadsToDesks,
       )
 
-      val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) =
+      val (deskRecsRequestQueueActor, deskRecsKillSwitch) =
         startOptimisationGraph(deskRecsProducer, persistentDeskRecsQueueActor, deskRecsQueue, minuteLookups.queueMinutesActor)
 
       val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
@@ -292,7 +290,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         loadsToQueueMinutes = portDeskRecs.loadsToSimulations
       )
 
-      val (deploymentRequestQueueActor: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) =
+      val (deploymentRequestQueueActor, deploymentsKillSwitch) =
         startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, deploymentQueue, minuteLookups.queueMinutesActor)
 
       val shiftsProvider = (r: ProcessingRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
@@ -309,7 +307,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
       log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString()}")
 
-      val staffChecker = StaffMinutesChecker(staffActor, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig)
+      val staffChecker = StaffMinutesChecker(staffRouterActor, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig)
 
       staffChecker.calculateForecastStaffMinutes()
       system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())
@@ -365,7 +363,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
       portStateActor = portStateActor,
-      flightsActor = flightsActor,
+      flightsActor = flightsRouterActor,
       maxDaysToCrunch = params.forecastMaxDays,
       expireAfterMillis = DrtStaticParameters.expireAfterMillis,
       actors = Map(
@@ -383,7 +381,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       manifestsLiveSource = voyageManifestsLiveSource,
       voyageManifestsActor = manifestsRouterActor,
-//      simulator = simulator,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(SortedMap()),
       initialForecastArrivals = initialForecastArrivals.getOrElse(SortedMap()),

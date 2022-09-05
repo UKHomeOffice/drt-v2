@@ -213,7 +213,7 @@ object CrunchApi {
     override def isEmpty: Boolean = minutes.isEmpty
   }
 
-  case class PassengersMinutes(minutes: Iterable[PassengersMinute]) extends PortStateQueueLoadMinutes {
+  case class PassengersMinutes(minutes: Seq[PassengersMinute]) extends PortStateQueueLoadMinutes {
     override val asContainer: MinutesContainer[PassengersMinute, TQM] = MinutesContainer(minutes)
 
     override def isEmpty: Boolean = minutes.isEmpty
@@ -273,12 +273,15 @@ object CrunchApi {
 
     override def isEmpty: Boolean = portDeskSlots.isEmpty
 
-    lazy val deskStatMinutes: Iterable[DeskStatMinute] = for {
-      (tn, queueMinutes) <- portDeskSlots
-      (qn, deskStats) <- queueMinutes
-      (startMinute, deskStat) <- deskStats
-      minute <- startMinute until startMinute + 15 * oneMinuteMillis by oneMinuteMillis
-    } yield DeskStatMinute(tn, qn, minute, deskStat)
+    lazy val deskStatMinutes: Seq[DeskStatMinute] = {
+      val mins = for {
+        (tn, queueMinutes) <- portDeskSlots
+        (qn, deskStats) <- queueMinutes
+        (startMinute, deskStat) <- deskStats
+        minute <- startMinute until startMinute + 15 * oneMinuteMillis by oneMinuteMillis
+      } yield DeskStatMinute(tn, qn, minute, deskStat)
+      mins.toSeq
+    }
   }
 
   sealed trait MinutesLike[A, B] {
@@ -286,28 +289,28 @@ object CrunchApi {
   }
 
   object MinutesContainer {
-    def empty[A, B <: WithTimeAccessor]: MinutesContainer[A, B] = MinutesContainer[A, B](Iterable())
+    def empty[A, B <: WithTimeAccessor]: MinutesContainer[A, B] = MinutesContainer[A, B](Seq())
   }
 
-  case class MinutesContainer[A, B <: WithTimeAccessor](minutes: Iterable[MinuteLike[A, B]]) extends MinuteUpdates with Combinable[MinutesContainer[A, B]] {
+  case class MinutesContainer[MINUTE, IDX <: WithTimeAccessor](minutes: Seq[MinuteLike[MINUTE, IDX]]) extends MinuteUpdates with Combinable[MinutesContainer[MINUTE, IDX]] {
     def latestUpdateMillis: MillisSinceEpoch = Try(minutes.map(_.lastUpdated.getOrElse(0L)).max).getOrElse(0L)
 
-    def window(start: SDateLike, end: SDateLike): MinutesContainer[A, B] = {
+    def window(start: SDateLike, end: SDateLike): MinutesContainer[MINUTE, IDX] = {
       val startMillis = start.millisSinceEpoch
       val endMillis = end.millisSinceEpoch
       MinutesContainer(minutes.filter(i => startMillis <= i.minute && i.minute <= endMillis))
     }
 
-    def ++(that: MinutesContainer[A, B]): MinutesContainer[A, B] = MinutesContainer(minutes ++ that.minutes)
+    def ++(that: MinutesContainer[MINUTE, IDX]): MinutesContainer[MINUTE, IDX] = MinutesContainer(minutes ++ that.minutes)
 
-    def updatedSince(sinceMillis: MillisSinceEpoch): MinutesContainer[A, B] = MinutesContainer(minutes.filter(_.lastUpdated.getOrElse(0L) > sinceMillis))
+    def updatedSince(sinceMillis: MillisSinceEpoch): MinutesContainer[MINUTE, IDX] = MinutesContainer(minutes.filter(_.lastUpdated.getOrElse(0L) > sinceMillis))
 
     def contains(clazz: Class[_]): Boolean = minutes.headOption match {
       case Some(x) if x.getClass == clazz => true
       case _ => false
     }
 
-    lazy val indexed: IMap[B, A] = minutes.map(m => (m.key, m.toMinute)).toMap
+    lazy val indexed: IMap[IDX, MINUTE] = minutes.map(m => (m.key, m.toMinute)).toMap
   }
 
   case class CrunchMinutes(minutes: Set[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]

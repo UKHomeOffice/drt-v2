@@ -55,7 +55,8 @@ object WholePassengerQueueSplits {
         val pcpPax = flight.apiFlight.bestPcpPaxEstimate.pax.getOrElse(0)
         val startMinute = SDate(flight.apiFlight.pcpRange.min)
         val terminalQueueFallbacks = (q: Queue, pt: PaxType) => queueFallbacks.availableFallbacks(flight.apiFlight.Terminal, q, pt).toList
-        wholePaxPerQueuePerMinute(pcpPax, wholePassengerSplits(pcpPax, splitsToUse.splits), processingTime, queueStatus(flight.apiFlight.Terminal), terminalQueueFallbacks, startMinute)
+        val wholePaxSplits = wholePassengerSplits(pcpPax, splitsToUse.splits)
+        wholePaxPerQueuePerMinute(pcpPax, wholePaxSplits, processingTime, queueStatus(flight.apiFlight.Terminal), terminalQueueFallbacks, startMinute)
       case None =>
         log.error(s"No splits found for ${flight.apiFlight.flightCode}")
         Map.empty

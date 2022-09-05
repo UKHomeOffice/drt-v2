@@ -27,10 +27,10 @@ class QueueMinutesActorSpec extends CrunchTestLike {
   def lookupWithData(crunchMinutes: MinutesContainer[CrunchMinute, TQM]): MinutesLookup[CrunchMinute, TQM] = (_: (Terminal, UtcDate), _: Option[MillisSinceEpoch]) => Future(Option(crunchMinutes))
 
   val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
-  val minutesContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(Iterable(crunchMinute))
+  val minutesContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(Seq(crunchMinute))
 
   val noopUpdates: ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[UpdatedMillis] =
-    (_: (Terminal, UtcDate), _: MinutesContainer[CrunchMinute, TQM]) => Future(UpdatedMillis(Seq()))
+    (_: (Terminal, UtcDate), _: MinutesContainer[CrunchMinute, TQM]) => Future(UpdatedMillis(Set()))
 
   "When I send some PassengerMinutes to a QueueMinutesActor and query it" >> {
     "I should see the passenger minutes originally sent" >> {
@@ -103,7 +103,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
       val crunchMinuteOutSideRange2: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T11:00").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
       val crunchMinuteInsideRange1: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T10:00").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
       val crunchMinuteInsideRange2: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T10:59").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
-      val minutes = Iterable(crunchMinuteInsideRange1, crunchMinuteInsideRange2, crunchMinuteOutSideRange1, crunchMinuteOutSideRange2)
+      val minutes = Seq(crunchMinuteInsideRange1, crunchMinuteInsideRange2, crunchMinuteOutSideRange1, crunchMinuteOutSideRange2)
       val minutesState: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
 
       "I should get the one minute back" >> {
@@ -111,7 +111,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(startMinute.millisSinceEpoch, endMinute.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1.second)
 
-        result === MinutesContainer(Iterable(crunchMinuteInsideRange1, crunchMinuteInsideRange2))
+        result === MinutesContainer(Seq(crunchMinuteInsideRange1, crunchMinuteInsideRange2))
       }
     }
   }

@@ -90,18 +90,18 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
     params.maybeRemovalCutOffSeconds
   )
 
-  override val flightsActor: ActorRef = flightLookups.flightsActor
-  override val queueLoadsActor: ActorRef = minuteLookups.queueLoadsMinutesActor
-  override val queuesActor: ActorRef = minuteLookups.queueMinutesActor
-  override val staffActor: ActorRef = minuteLookups.staffMinutesActor
+  override val flightsRouterActor: ActorRef = flightLookups.flightsActor
+  override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor
+  override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesActor
+  override val staffRouterActor: ActorRef = minuteLookups.staffMinutesActor
   override val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
   override val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
   override val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
 
   override val portStateActor: ActorRef = system.actorOf(Props(new PartitionedPortStateActor(
-    flightsActor = flightsActor,
-    queuesActor = queuesActor,
-    staffActor = staffActor,
+    flightsActor = flightsRouterActor,
+    queuesActor = queuesRouterActor,
+    staffActor = staffRouterActor,
     queueUpdatesActor = queueUpdates,
     staffUpdatesActor = staffUpdates,
     flightUpdatesActor = flightUpdates,
@@ -191,13 +191,13 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           .runWith(Sink.ignore)
 
         redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
-        flightsActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
+        flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
         manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
-        queuesActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
-        queuesActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
-        staffActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+        queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
+        queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+        staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
 
-        system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(flightsActor))
+        system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(flightsRouterActor))
 
       case Failure(error) =>
         system.log.error(error, s"Failed to restore initial state for App. Beginning actor system shutdown")

@@ -53,7 +53,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
       "Then I should see a CrunchRequest for the day before in UTC (midnight BST is 23:00 the day before in UTC)" >> {
         val daysSourceProbe: TestProbe = TestProbe()
         val actor = startQueueActor(daysSourceProbe, zeroOffset, SortedSet())
-        actor ! UpdatedMillis(Iterable(day))
+        actor ! UpdatedMillis(Set(day))
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 6), zeroOffset, durationMinutes))
         success
       }
@@ -63,7 +63,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
       "Then I should see a CrunchRequest for the day before as the offset pushes that day to cover the following midnight" >> {
         val daysSourceProbe: TestProbe = TestProbe()
         val actor = startQueueActor(daysSourceProbe, twoHourOffset, SortedSet())
-        actor ! UpdatedMillis(Iterable(day))
+        actor ! UpdatedMillis(Set(day))
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 5), twoHourOffset, durationMinutes))
         success
       }
@@ -76,7 +76,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
         val today = myNow().millisSinceEpoch
         val tomorrow = myNow().addDays(1).millisSinceEpoch
         watch(actor)
-        actor ! UpdatedMillis(Iterable(today, tomorrow))
+        actor ! UpdatedMillis(Set(today, tomorrow))
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 5), twoHourOffset, durationMinutes))
         Thread.sleep(200)
         startQueueActor(daysSourceProbe, defaultAirportConfig.crunchOffsetMinutes, SortedSet())

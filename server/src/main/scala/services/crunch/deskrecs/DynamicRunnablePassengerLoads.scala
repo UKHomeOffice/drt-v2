@@ -6,7 +6,7 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute, PassengersMinutes}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared.FlightsApi.{FlightsWithSplits, PaxForArrivals, SplitsForArrivals}
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPaxCount}
@@ -21,7 +21,7 @@ import services.{SDate, TimeLogger}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, HistoricApiFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
@@ -126,17 +126,17 @@ object DynamicRunnablePassengerLoads {
             statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(crunchDay.minutesInMillis)
             queueStatusProvider = queueStatusesProvider(statuses)
           } yield {
-            val loads = portDesksAndWaitsProvider.flightsToLoads(crunchDay.minutesInMillis, FlightsWithSplits(flights), redListUpdates, queueStatusProvider)
-            val passengers = for {
+            val flightsPax = portDesksAndWaitsProvider.flightsToLoads(crunchDay.minutesInMillis, FlightsWithSplits(flights), redListUpdates, queueStatusProvider)
+            val paxMinutesForCrunchPeriod = for {
               terminal <- queuesByTerminal.keys
               queue <- queuesByTerminal(terminal)
               minute <- crunchDay.minutesInMillis
             } yield {
-              loads.getOrElse(TQM(terminal, queue, minute), PassengersMinute(terminal, queue, minute, Seq(), Option(SDate.now().millisSinceEpoch)))
+              flightsPax.getOrElse(TQM(terminal, queue, minute), PassengersMinute(terminal, queue, minute, Seq(), Option(SDate.now().millisSinceEpoch)))
             }
 
             log.info(s"Passenger load calculation finished: (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
-            Option(MinutesContainer(passengers))
+            Option(MinutesContainer(paxMinutesForCrunchPeriod.toSeq))
           }
           eventualDeskRecs.recover {
             case t =>

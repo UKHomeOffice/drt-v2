@@ -9,7 +9,7 @@ import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovements
 import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, DeskRecsQueueActor, ManifestRouterActor, StaffingUpdateQueueActor}
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike._
-import actors.routing.minutes.{MinutesActorLike, QueueLoadsMinutesActor, QueueMinutesActor, StaffMinutesActor}
+import actors.routing.minutes.{MinutesActorLike, MinutesActorLike2, QueueLoadsMinutesActor, QueueMinutesActor, StaffMinutesActor}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
@@ -200,6 +200,33 @@ object TestActors {
 
   }
 
+  trait TestMinuteActorLike2[A, B <: WithTimeAccessor] extends MinutesActorLike2[A, B] {
+    val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
+    var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
+
+    private def addToTerminalDays(container: MinutesContainer[A, B]): Unit = {
+      partitionUpdates(container).keys.foreach {
+        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, SDate(date).millisSinceEpoch))
+      }
+    }
+
+    def resetReceive: Receive = {
+      case container: MinutesContainer[A, B] =>
+        val replyTo = sender()
+        addToTerminalDays(container)
+
+      case ResetData =>
+        Future
+          .sequence(terminalDaysUpdated.map { case (t, d) => resetData(t, d) })
+          .map { _ =>
+            terminalDaysUpdated = Set()
+            Ack
+          }
+          .pipeTo(sender())
+    }
+
+  }
+
   class TestStaffMinutesActor(terminals: Iterable[Terminal],
                               lookup: MinutesLookup[StaffMinute, TM],
                               updateMinutes: MinutesUpdate[StaffMinute, TM],
@@ -212,7 +239,7 @@ object TestActors {
                               lookup: MinutesLookup[CrunchMinute, TQM],
                               updateMinutes: MinutesUpdate[CrunchMinute, TQM],
                               val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends QueueMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[CrunchMinute, TQM] {
+    extends QueueMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike2[CrunchMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
@@ -220,7 +247,7 @@ object TestActors {
                                    lookup: MinutesLookup[PassengersMinute, TQM],
                                    updateMinutes: MinutesUpdate[PassengersMinute, TQM],
                                    val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends QueueLoadsMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[PassengersMinute, TQM] {
+    extends QueueLoadsMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike2[PassengersMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 

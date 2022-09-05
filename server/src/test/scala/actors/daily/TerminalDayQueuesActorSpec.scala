@@ -28,11 +28,11 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
 
     "When I send it a DeskRecMinute" >> {
       val drm = DeskRecMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None)
-      val eventualContainer = queuesActor.ask(MinutesContainer(Iterable(drm))).mapTo[UpdatedMillis]
+      val eventualContainer = queuesActor.ask(MinutesContainer(Seq(drm))).mapTo[UpdatedMillis]
 
       "I should get back the merged CrunchMinute" >> {
         val result = Await.result(eventualContainer, 1.second)
-        result === UpdatedMillis(Seq(drm.minute))
+        result === UpdatedMillis(Set(drm.minute))
       }
     }
   }
@@ -49,7 +49,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
     }
 
     "When I send minutes to persist which lie within the day, and then ask for its state I should see the minutes sent" >> {
-      val minutes = Set(crunchMinuteForDate(date))
+      val minutes = Seq(crunchMinuteForDate(date))
       val container = MinutesContainer(minutes)
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
@@ -61,7 +61,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
 
     "When I send minutes to persist which lie outside the day, and then ask for its state I should see None" >> {
       val otherDate = SDate("2020-01-02T00:00")
-      val crunchMinutes = MinutesContainer(Set(crunchMinuteForDate(otherDate)))
+      val crunchMinutes = MinutesContainer(Seq(crunchMinuteForDate(otherDate)))
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinutesAndGetState(crunchMinutes, terminalDayActor)
@@ -74,13 +74,13 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
       val otherDate = SDate("2020-01-02T00:00")
       val inside = crunchMinuteForDate(date)
       val outside = crunchMinuteForDate(otherDate)
-      val crunchMinutes = MinutesContainer(Set(inside, outside))
+      val crunchMinutes = MinutesContainer(Seq(inside, outside))
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinutesAndGetState(crunchMinutes, terminalDayActor)
       val result = Await.result(eventual, 1.second)
 
-      result === Option(MinutesContainer(Set(inside.copy(lastUpdated = Option(date.millisSinceEpoch)))))
+      result === Option(MinutesContainer(Seq(inside.copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }
   }
 
