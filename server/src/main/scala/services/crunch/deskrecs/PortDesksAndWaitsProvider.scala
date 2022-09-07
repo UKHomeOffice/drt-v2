@@ -100,7 +100,6 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
       case (terminal, maxDesksProvider) =>
         val terminalPassengers = terminalPassengersByQueue(terminal, minuteMillis, loads)
         val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)
-        log.debug(s"Optimising $terminal")
         terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPassengers, terminalWork, maxDesksProvider)
     }
 

@@ -178,12 +178,7 @@ case class TestDrtSystem(airportConfig: AirportConfig)
 
     liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
-    redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
-    flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
-    manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
-    queuesRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
-    queuesRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
-    staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+    setSubscribers(crunchInputs)
 
     testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponse)
 

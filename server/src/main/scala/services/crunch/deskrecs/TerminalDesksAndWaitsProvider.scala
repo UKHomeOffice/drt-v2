@@ -6,7 +6,7 @@ import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import org.slf4j.{Logger, LoggerFactory}
 import services._
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Queues.{Queue, queueOrder}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable.{Map, NumericRange}
@@ -71,12 +71,19 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
               case someWork =>
                 val start = System.currentTimeMillis()
                 val maxDesks = processorsProvider.maxProcessors(someWork.size)
-                val optimisedDesks = cruncher(someWork, minDesks.toSeq, maxDesks, OptimiserConfig(slas(queue), processorsProvider)) match {
-                  case Success(OptimizerCrunchResult(desks, waits, paxInQueue)) =>
-                    queueRecsSoFar + (queue -> ((desks.toList, waits.toList, paxInQueue)))
-                  case Failure(t) =>
-                    log.error(s"Crunch failed for $queue", t)
-                    queueRecsSoFar
+                val nonZeroMaxDesksPct = maxDesks.count(_ > 0) / maxDesks.size
+                val optimisedDesks = if (nonZeroMaxDesksPct > 0.5) {
+                  val x = cruncher(someWork, minDesks.toSeq, maxDesks, OptimiserConfig(slas(queue), processorsProvider)) match {
+                    case Success(OptimizerCrunchResult(desks, waits, paxInQueue)) =>
+                      queueRecsSoFar + (queue -> ((desks.toList, waits.toList, paxInQueue)))
+                    case Failure(t) =>
+                      log.error(s"Crunch failed for $queue", t)
+                      queueRecsSoFar
+                  }
+                  x
+                } else {
+                  log.info(s"Skipping crunch for $queue as only ${nonZeroMaxDesksPct * 100}% of max desks are non-zero")
+                  queueRecsSoFar
                 }
 
                 log.info(s"$queue crunch for ${SDate(minuteMillis.min).toISOString()} took: ${System.currentTimeMillis() - start}ms")

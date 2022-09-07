@@ -3,6 +3,7 @@ package actors
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors.daily.PassengersActor
+import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
 import actors.persistent.prediction.TouchdownPredictionActor
@@ -272,7 +273,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       )
 
       val (crunchRequestQueueActor, _: UniqueKillSwitch) =
-        startOptimisationGraph(passengerLoadsProducer, persistentCrunchQueueActor, crunchQueue, minuteLookups.queueLoadsMinutesActor)
+        startOptimisationGraph(passengerLoadsProducer, persistentCrunchQueueActor, crunchQueue, minuteLookups.queueLoadsMinutesActor, "passenger-loads")
 
       val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToDeployments(
         loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
@@ -281,7 +282,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       )
 
       val (deskRecsRequestQueueActor, deskRecsKillSwitch) =
-        startOptimisationGraph(deskRecsProducer, persistentDeskRecsQueueActor, deskRecsQueue, minuteLookups.queueMinutesActor)
+        startOptimisationGraph(deskRecsProducer, persistentDeskRecsQueueActor, deskRecsQueue, minuteLookups.queueMinutesActor, "desk-recs")
 
       val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
         loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
@@ -291,7 +292,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       )
 
       val (deploymentRequestQueueActor, deploymentsKillSwitch) =
-        startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, deploymentQueue, minuteLookups.queueMinutesActor)
+        startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, deploymentQueue, minuteLookups.queueMinutesActor, "deployments")
 
       val shiftsProvider = (r: ProcessingRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
       val fixedPointsProvider = (r: ProcessingRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
@@ -299,7 +300,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
       val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now)
       val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
-        startOptimisationGraph(staffMinutesProducer, persistentStaffingUpdateQueueActor, staffQueue, minuteLookups.staffMinutesActor)
+        startOptimisationGraph(staffMinutesProducer, persistentStaffingUpdateQueueActor, staffQueue, minuteLookups.staffMinutesActor, "staffing")
       shiftsActor ! staffingUpdateRequestQueue
       fixedPointsActor ! staffingUpdateRequestQueue
       staffMovementsActor ! staffingUpdateRequestQueue
@@ -326,10 +327,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                                                                persistentQueueActor: ActorRef,
                                                                initialQueue: SortedSet[ProcessingRequest],
                                                                sinkActor: ActorRef,
+                                                               graphName: String,
                                                               ): (ActorRef, UniqueKillSwitch) = {
-    val graphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, initialQueue)
+    val graphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, initialQueue, graphName)
     val (requestQueueActor, deskRecsKillSwitch) =
-      RunnableOptimisation.createGraph(graphSource, sinkActor, minutesProducer).run()
+      RunnableOptimisation.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
     (requestQueueActor, deskRecsKillSwitch)
   }
 
@@ -576,4 +578,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     .collect { case Some(fs) => fs }
     .withAttributes(StreamSupervision.resumeStrategyWithLog("getFeedStatus"))
     .runWith(Sink.seq)
+
+  def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]]): Unit = {
+    redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
+    flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
+    manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
+    queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
+    queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+    staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+  }
+
 }

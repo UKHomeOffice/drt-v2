@@ -172,9 +172,9 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       airportConfig.queuesByTerminal,
     )
 
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet())
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "passenger-loads")
 
-    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, queueMinutesProducer).run()
+    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, queueMinutesProducer, "passenger-loads").run()
     queue ! request
 
     probe.fishForMessage(5.second) {

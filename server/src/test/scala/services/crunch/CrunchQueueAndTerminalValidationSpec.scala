@@ -50,6 +50,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           crunch.portStateTestProbe.fishForMessage(1.seconds) {
             case ps: PortState =>
               val resultSummary = paxLoadsFromPortState(ps, 1).flatMap(_._2.keys).toSet
+              println(s"resultSummary: $resultSummary")
               resultSummary == expected
           }
 

@@ -55,9 +55,9 @@ class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
       staffToDeskLimits,
       desksAndWaitsProvider.loadsToSimulations)
 
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet())
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "deployments")
 
-    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, deskRecs).run()
+    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, deskRecs, "deployments").run()
     queue ! request
 
     probe.fishForMessage(5.second)(expectedQueuePax)

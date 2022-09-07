@@ -5,7 +5,7 @@ import akka.stream.scaladsl.Flow
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.TimeLogger
+import services.{SDate, TimeLogger}
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
@@ -53,9 +53,13 @@ object DynamicRunnableDeployments {
       }
       .mapAsync(1) {
         case (request, loads, deskLimitsByTerminal) =>
-          log.info(s"Simulating ${request.durationMinutes} minutes (${request.start.toISOString()} to ${request.end.toISOString()})")
+          val started = SDate.now().millisSinceEpoch
+          log.info(s"[deployments] Optimising ${request.durationMinutes} minutes (${request.start.toISOString()} to ${request.end.toISOString()})")
           loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal)
-            .map(minutes => Option(minutes))
+            .map { minutes =>
+              log.info(s"[deployments] Optimising complete. Took ${SDate.now().millisSinceEpoch - started}ms")
+              Option(minutes)
+            }
             .recover {
               case t =>
                 log.error(s"Failed to fetch staff", t)

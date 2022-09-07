@@ -182,10 +182,10 @@ class TestDrtActor extends Actor {
           tc.airportConfig.queuesByTerminal,
         )
 
-        val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
+        val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet(), "passenger-loads")
 
         val (crunchRequestActor, crunchKillSwitch) =
-          RunnableOptimisation.createGraph(crunchGraphSource, minuteLookups.queueLoadsMinutesActor, passengerLoadsProducer).run()
+          RunnableOptimisation.createGraph(crunchGraphSource, minuteLookups.queueLoadsMinutesActor, passengerLoadsProducer, "passenger-loads").run()
 
         val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToDeployments(
           loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
@@ -193,10 +193,10 @@ class TestDrtActor extends Actor {
           loadsToQueueMinutes = portDeskRecs.loadsToDesks,
         )
 
-        val deskRecsGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
+        val deskRecsGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet(), "desk-recs")
 
         val (deskRecsRequestQueueActor, deskRecsKillSwitch) =
-          RunnableOptimisation.createGraph(deskRecsGraphSource, portStateActor, deskRecsProducer).run()
+          RunnableOptimisation.createGraph(deskRecsGraphSource, portStateActor, deskRecsProducer, "desk-recs").run()
 
         val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
           OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
@@ -205,18 +205,18 @@ class TestDrtActor extends Actor {
           portDeskRecs.loadsToSimulations
         )
 
-        val deploymentGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
+        val deploymentGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet(), "deployments")
         val (deploymentRequestActor, deploymentsKillSwitch) =
-          RunnableOptimisation.createGraph(deploymentGraphSource, portStateActor, deploymentsProducer).run()
+          RunnableOptimisation.createGraph(deploymentGraphSource, portStateActor, deploymentsProducer, "deployments").run()
 
         val shiftsProvider = (r: ProcessingRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
         val fixedPointsProvider = (r: ProcessingRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
         val movementsProvider = (r: ProcessingRequest) => staffMovementsActor.ask(r).mapTo[StaffMovements]
 
         val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, tc.now)
-        val staffingGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet())
+        val staffingGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet(), "staffing")
         val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
-          RunnableOptimisation.createGraph(staffingGraphSource, portStateActor, staffMinutesProducer).run()
+          RunnableOptimisation.createGraph(staffingGraphSource, portStateActor, staffMinutesProducer, "staffing").run()
 
         shiftsActor ! staffingUpdateRequestQueue
         fixedPointsActor ! staffingUpdateRequestQueue

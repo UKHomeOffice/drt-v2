@@ -4,7 +4,7 @@ import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, Stream
 import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
+import akka.stream.scaladsl.GraphDSL.Implicits.{SourceShapeArrow, port2flow}
 import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink}
 import akka.stream.{Attributes, ClosedShape, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
@@ -56,7 +56,9 @@ object RunnableOptimisation {
 
   def createGraph[A, B <: WithTimeAccessor](crunchRequestSource: SortedActorRefSource,
                                             minutesSinkActor: ActorRef,
-                                            crunchRequestsToQueueMinutes: Flow[ProcessingRequest, MinutesContainer[A, B], NotUsed])
+                                            crunchRequestsToQueueMinutes: Flow[ProcessingRequest, MinutesContainer[A, B], NotUsed],
+                                            graphName: String,
+                                           )
                                            (implicit system: ActorSystem): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     val deskRecsSink = Sink.actorRefWithAck(minutesSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
     val ks = KillSwitches.single[MinutesContainer[A, B]]
@@ -64,7 +66,13 @@ object RunnableOptimisation {
     val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {
       implicit builder =>
         (crunchRequests, killSwitch) =>
-          crunchRequests ~> crunchRequestsToQueueMinutes ~> killSwitch ~> deskRecsSink
+          crunchRequests.out.map {cr =>
+            log.info(s"[$graphName] Sending $cr to producer")
+            cr
+          } ~> crunchRequestsToQueueMinutes.map { minutes =>
+            log.info(s"[$graphName] Sending ${minutes.minutes.size} minutes to sink")
+            minutes
+          } ~> killSwitch ~> deskRecsSink
           ClosedShape
     }
 

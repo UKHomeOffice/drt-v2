@@ -125,9 +125,9 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       airportConfig.queuesByTerminal,
     )
 
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet())
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "desk-recs")
 
-    RunnableOptimisation.createGraph(crunchGraphSource, mockPortStateActor, deskRecsProducer).run()
+    RunnableOptimisation.createGraph(crunchGraphSource, mockPortStateActor, deskRecsProducer, "desk-recs").run()
   }
 
   private def crunchRequest(midnight20190101: SDateLike, airportConfig: AirportConfig = defaultAirportConfig): CrunchRequest = {

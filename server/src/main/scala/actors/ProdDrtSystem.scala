@@ -190,12 +190,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           .processFilesAfter(processFilesAfter)
           .runWith(Sink.ignore)
 
-        redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
-        flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
-        manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
-        queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
-        queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
-        staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+        setSubscribers(crunchInputs)
 
         system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(flightsRouterActor))
 
