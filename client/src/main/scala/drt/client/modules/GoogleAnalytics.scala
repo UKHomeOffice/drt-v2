@@ -1,32 +1,34 @@
 package drt.client.modules
 
-import java.util.UUID
-
 import org.scalajs.dom
 
+import java.util.UUID
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSGlobalScope
 import scala.util.Try
-
 
 object GoogleEventTracker {
 
   @js.native
   @JSGlobalScope
   object Globals extends js.Object {
-    var analytics: js.Any = js.native
+    var gtag: js.Any = js.native
   }
+
   def trackingCode: String = dom.document.getElementById("ga-code").getAttribute("value")
+
   def port: String = dom.document.getElementById("port-code").getAttribute("value")
+
   def userId: String = dom.document.getElementById("user-id").getAttribute("value")
-  def isScriptLoaded: Boolean =  Try(Globals.analytics.isInstanceOf[js.Function]).isSuccess
+
+  def isScriptLoaded: Boolean = Try(Globals.gtag.isInstanceOf[js.Function]).isSuccess
+
   private var hasCreateTrackerRun = false
 
   private def runCreateTracker(): Unit = {
-    if (!hasCreateTrackerRun && !userId.isEmpty && !port.isEmpty && !trackingCode.isEmpty) {
+    if (!hasCreateTrackerRun && userId.nonEmpty && port.nonEmpty && trackingCode.nonEmpty) {
       val userUUID = if (userId.contains("@")) UUID.randomUUID else userId
-      GoogleAnalytics.analytics("create", trackingCode, "auto", js.Dictionary("userId"->userUUID))
-      GoogleAnalytics.analytics("set", "anonymizeIp", true)
+      GoogleAnalytics.gtag("config", trackingCode, js.Dictionary("userId" -> userUUID, "anonymize_ip" -> true))
       hasCreateTrackerRun = true
     }
   }
@@ -35,39 +37,27 @@ object GoogleEventTracker {
     if (isScriptLoaded) {
       runCreateTracker()
       if (hasCreateTrackerRun) {
-        GoogleAnalytics.analytics("set", "page", s"/$port/$page")
-        GoogleAnalytics.analytics("send", "pageView")
+        GoogleAnalytics.gtag("event", "page_view", js.Dictionary("page" -> s"/$port/$page"))
       }
     }
   }
 
   def sendEvent(category: String, action: String, label: String): Unit = {
-    if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.analytics("send", "event", s"$port-$category", action, label)
+    if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.gtag("event", s"${port}_$category", js.Dictionary("action" -> action, "label" -> label))
   }
 
   def sendEvent(category: String, action: String, label: String, value: String): Unit = {
-    if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.analytics("send", "event", s"$port-$category", action, label, value)
+    if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.gtag("event", s"${port}_$category", js.Dictionary("action" -> action, "label" -> label, "value" -> value))
   }
 
   def sendError(description: String, fatal: Boolean): Unit = {
-    if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.analytics("send", "exception", js.Dictionary("exDescription" -> description, "exFatal" -> fatal))
+    if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.gtag("event", "exception", js.Dictionary("exDescription" -> description, "exFatal" -> fatal))
   }
 }
+
 
 @js.native
 @JSGlobalScope
 object GoogleAnalytics extends js.Any {
-  def analytics(send: String, event: String): Unit = js.native
-
-  def analytics(send: String, event: String, category: String): Unit = js.native
-
-  def analytics(send: String, event: String, fieldObjs: js.Any): Unit = js.native
-
-  def analytics(send: String, event: String, category: String, action: String): Unit = js.native
-
-  def analytics(send: String, event: String, category: String, fieldObjs: js.Any): Unit = js.native
-
-  def analytics(send: String, event: String, category: String, action: String, label: String): Unit = js.native
-
-  def analytics(send: String, event: String, category: String, action: String, label: String, value: js.Any): Unit = js.native
+  def gtag(event: String, eventName: String, fieldObjs: js.Any): Unit = js.native
 }
