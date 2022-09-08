@@ -13,15 +13,15 @@ class Filters @Inject()(env: Environment,
 
 object SecurityHeaders {
   val default = "default-src 'self'"
-  val javaScript = "script-src 'self' www.google-analytics.com ajax.googleapis.com 'sha256-g7xvSeFvOZB+aVUYeI3wlm6J3HMikqnm32sVJHUX9f8='"
+  val javaScript = "script-src 'self' https://*.googletagmanager.com www.googletagmanager.com www.google-analytics.com ajax.googleapis.com"
   val styles = "style-src 'self' cdnjs.cloudflare.com 'unsafe-inline'"
   val fonts = "font-src 'self' cdnjs.cloudflare.com"
-  val images = "img-src 'self' https://www.google-analytics.com www.google-analytics.com"
-
+  val images = "img-src 'self' https://*.googletagmanager.com www.googletagmanager.com https://*.google-analytics.com www.google-analytics.com"
+  val connect = "connect-src 'self' https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com"
   val filter = SecurityHeadersFilter(SecurityHeadersConfig(
     frameOptions = None,
     xssProtection = None,
-    contentSecurityPolicy = Option(default + "; " + javaScript + "; " + styles + "; " + fonts + "; " + images),
+    contentSecurityPolicy = Option(default + "; " + javaScript + "; " + styles + "; " + fonts + "; " + images + "; " + connect),
     contentTypeOptions = None
   ))
 }
