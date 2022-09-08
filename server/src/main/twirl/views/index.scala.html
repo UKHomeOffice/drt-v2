@@ -31,15 +31,15 @@
     <input type="hidden" id="ga-code" value="@{googleTrackingCode}"/>
     <input type="hidden" id="user-id" value="@{userId}"/>
 </body>
-@*
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+    @*
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
       integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-*@
+    *@
 
-@Seq("fastopt", "opt").find(optType => env.resource(s"public/client-$optType.js").isDefined).map { appName =>
-@Seq("-library.js", "-loader.js", ".js").map { filePostFix =>
-<script src="/assets/client-@appName@filePostFix?@BuildInfo.version"></script>
-}
-}
+    @Seq("fastopt", "opt").find(optType => env.resource(s"public/client-$optType.js").isDefined).map { appName =>
+        @Seq("-library.js", "-loader.js", ".js").map { filePostFix =>
+            <script src="/assets/client-@appName@filePostFix?@BuildInfo.version"></script>
+        }
+    }
 <!-- version: @BuildInfo.version -->
 </html>
