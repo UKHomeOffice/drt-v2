@@ -34,15 +34,6 @@ trait RouterActorLikeWithSubscriber[U <: Updates, P] extends RouterActorLike[U, 
 }
 
 trait RouterActorLikeWithSubscriber2[U <: Updates, P] extends RouterActorLike2[U, P] {
-//  var updatesSubscribers: List[ActorRef] = List()
-
-//  override def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[UpdatedMillis] =
-//    super.handleUpdatesAndAck(updates, replyTo).map { updatedMillis =>
-//      if (shouldSendEffectsToSubscriber(updates))
-//        updatesSubscribers.foreach(_ ! updatedMillis)
-//      updatedMillis
-//    }
-
   override def receiveUtil: Receive = super.receiveUtil orElse {
     case AddUpdatesSubscriber(queueActor) =>
       log.info("Received subscriber - forwarding to sequential access actor")
@@ -145,8 +136,6 @@ trait RouterActorLike2[U <: Updates, P] extends Actor with ActorLogging {
   implicit val mat: Materializer = Materializer.createMaterializer(context)
   implicit val timeout: Timeout = new Timeout(60 seconds)
 
-//  var updateRequestsQueue: List[(ActorRef, U)] = List()
-
   val sequentialUpdatesActor: ActorRef
 
   def partitionUpdates: PartialFunction[U, Map[P, U]]
@@ -155,43 +144,12 @@ trait RouterActorLike2[U <: Updates, P] extends Actor with ActorLogging {
 
   def receiveQueries: Receive
 
-//  def shouldSendEffectsToSubscriber: U => Boolean
-
-//  def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[UpdatedMillis] = {
-//    processingRequest = true
-//    val eventualEffects = updateAll(updates)
-//    eventualEffects
-//      .onComplete { _ =>
-//        processingRequest = false
-//        replyTo ! Ack
-//        self ! ProcessNextUpdateRequest
-//      }
-//    eventualEffects
-//  }
-
-//  def updateAll(updates: U): Future[UpdatedMillis] = {
-//    val eventualUpdatedMinutesDiff: Source[UpdatedMillis, NotUsed] =
-//      Source(partitionUpdates(updates)).mapAsync(1) {
-//        case (partition, updates) => updatePartition(partition, updates)
-//      }
-//    combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
-//  }
-
-//  private def combineUpdateEffectsStream(effects: Source[UpdatedMillis, NotUsed]): Future[UpdatedMillis] =
-//    effects
-//      .fold[UpdatedMillis](UpdatedMillis.empty)(_ ++ _)
-//      .log(getClass.getName)
-//      .runWith(Sink.seq)
-//      .map(_.foldLeft[UpdatedMillis](UpdatedMillis.empty)(_ ++ _))
-//      .recover { case t =>
-//        log.error(t, "Failed to combine update effects")
-//        UpdatedMillis.empty
-//      }
+  def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[Any] =
+    sequentialUpdatesActor.ask(updates).pipeTo(replyTo)
 
   override def receive: Receive =
     receiveUtil orElse
       receiveUpdates orElse
-//      receiveProcessRequest orElse
       receiveQueries orElse
       receiveUnexpected
 
@@ -206,25 +164,13 @@ trait RouterActorLike2[U <: Updates, P] extends Actor with ActorLogging {
 
   def receiveUpdates: Receive = {
     case updates: U =>
-      sequentialUpdatesActor.ask(updates).pipeTo(sender())
-//      updateRequestsQueue = (sender(), updates) :: updateRequestsQueue
-//      self ! ProcessNextUpdateRequest
+      handleUpdatesAndAck(updates, sender())
   }
 
-//  def receiveProcessRequest: Receive = {
-//    case ProcessNextUpdateRequest =>
-//      if (!processingRequest) {
-//        updateRequestsQueue match {
-//          case (replyTo, updates) :: tail =>
-//            handleUpdatesAndAck(updates, replyTo)
-//            updateRequestsQueue = tail
-//          case Nil =>
-//            log.debug("Update requests queue is empty. Nothing to do")
-//        }
-//      }
-//  }
-
   def receiveUnexpected: Receive = {
-    case unexpected => log.warning(s"Got an unexpected message: ${unexpected.getClass}")
+    case unexpected =>
+      println(s"unexpected!!! $unexpected")
+
+      log.warning(s"Got an unexpected message: ${unexpected.getClass}")
   }
 }

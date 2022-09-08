@@ -67,14 +67,14 @@ object TestActors {
   }
 
   class TestAclForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends AclForecastArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
+    extends AclForecastArrivalsActor(now, expireAfterMillis) with Resettable {
     override def resetState(): Unit = state = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
   class TestPortForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends PortForecastArrivalsActor(oneMegaByte, now, expireAfterMillis) {
+    extends PortForecastArrivalsActor(now, expireAfterMillis) {
 
     def resetBehaviour: Receive = {
       case ResetData =>
@@ -90,7 +90,7 @@ object TestActors {
   }
 
   class TestPortLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends PortLiveArrivalsActor(oneMegaByte, now, expireAfterMillis) with Resettable {
+    extends PortLiveArrivalsActor(now, expireAfterMillis) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
@@ -184,9 +184,8 @@ object TestActors {
 
     def resetReceive: Receive = {
       case container: MinutesContainer[A, B] =>
-        val replyTo = sender()
         addToTerminalDays(container)
-        handleUpdatesAndAck(container, replyTo)
+        handleUpdatesAndAck(container, sender())
 
       case ResetData =>
         Future
@@ -212,8 +211,8 @@ object TestActors {
 
     def resetReceive: Receive = {
       case container: MinutesContainer[A, B] =>
-        val replyTo = sender()
         addToTerminalDays(container)
+        handleUpdatesAndAck(container, sender())
 
       case ResetData =>
         Future

@@ -6,7 +6,7 @@ import drt.shared.CrunchApi._
 import drt.shared.{ArrivalsDiff, PortState}
 import services.crunch.CrunchTestLike
 import test.TestActors.ResetData
-import test.TestDrtSystem
+import test.{MockDrtParameters, TestDrtSystem}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -19,7 +19,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
   isolated
 
   "Given a test drt system" >> {
-    val drtSystem = TestDrtSystem(defaultAirportConfig)
+    val drtSystem = TestDrtSystem(defaultAirportConfig, MockDrtParameters())
 
     "When I send its port state actor an arrival" >> {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly)

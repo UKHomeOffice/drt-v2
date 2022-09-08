@@ -90,7 +90,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val config: Configuration = new Configuration(ConfigFactory.load)
   val airportConfig: AirportConfig
-  val params: DrtConfigParameters = DrtConfigParameters(config)
+  val params: DrtParameters
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
 
   val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(params.gateWalkTimesFilePath)
@@ -108,7 +108,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val alertsActor: ActorRef = restartOnStop.actorOf(Props(new AlertsActor(now)), "alerts-actor")
   val redListUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new RedListUpdatesActor(now)), "red-list-updates-actor")
   val egateBanksUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new EgateBanksUpdatesActor(now, defaultEgates, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, params.forecastMaxDays)), "egate-banks-updates-actor")
-  val liveBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new CirriumLiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-base-arrivals-actor")
+  val liveBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new CirriumLiveArrivalsActor(now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val persistentCrunchQueueActor: ActorRef
   val persistentDeskRecsQueueActor: ActorRef

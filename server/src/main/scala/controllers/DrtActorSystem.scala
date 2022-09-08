@@ -1,13 +1,13 @@
 package controllers
 
-import actors.{DrtSystemInterface, ProdDrtSystem}
+import actors.{DrtSystemInterface, ProdDrtParameters, ProdDrtSystem}
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import play.api.Configuration
-import test.TestDrtSystem
+import test.{MockDrtParameters, TestDrtSystem}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
@@ -23,7 +23,7 @@ object DrtActorSystem extends AirportConfProvider {
     if (isTestEnvironment) drtTestSystem
     else drtProdSystem
 
-  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig)
-  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig)
+  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, MockDrtParameters())
+  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config))
 
 }

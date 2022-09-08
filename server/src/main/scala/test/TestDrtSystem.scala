@@ -8,6 +8,7 @@ import akka.pattern.ask
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
+import com.amazonaws.auth.AWSCredentials
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.Enable
 import drt.shared.coachTime.CoachWalkTime
@@ -43,7 +44,45 @@ case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Mater
   }
 }
 
-case class TestDrtSystem(airportConfig: AirportConfig)
+case class MockDrtParameters() extends DrtParameters {
+  override val gateWalkTimesFilePath: String = ""
+  override val standWalkTimesFilePath: String = ""
+  override val forecastMaxDays: Int = 3
+  override val aclDisabled: Boolean = false
+  override val aclHost: Option[String] = None
+  override val aclUsername: Option[String] = None
+  override val aclKeyPath: Option[String] = None
+  override val refreshArrivalsOnStart: Boolean = false
+  override val flushArrivalsOnStart: Boolean = false
+  override val recrunchOnStart: Boolean = false
+  override val useNationalityBasedProcessingTimes: Boolean = false
+  override val isSuperUserMode: Boolean = false
+  override val bhxIataEndPointUrl: String = ""
+  override val bhxIataUsername: String = ""
+  override val maybeBhxSoapEndPointUrl: Option[String] = None
+  override val maybeLtnLiveFeedUrl: Option[String] = None
+  override val maybeLtnLiveFeedUsername: Option[String] = None
+  override val maybeLtnLiveFeedPassword: Option[String] = None
+  override val maybeLtnLiveFeedToken: Option[String] = None
+  override val maybeLtnLiveFeedTimeZone: Option[String] = None
+  override val maybeLGWNamespace: Option[String] = None
+  override val maybeLGWSASToKey: Option[String] = None
+  override val maybeLGWServiceBusUri: Option[String] = None
+  override val maybeGlaLiveUrl: Option[String] = None
+  override val maybeGlaLiveToken: Option[String] = None
+  override val maybeGlaLivePassword: Option[String] = None
+  override val maybeGlaLiveUsername: Option[String] = None
+  override val useApiPaxNos: Boolean = true
+  override val displayRedListInfo: Boolean = false
+  override val enableToggleDisplayWaitTimes: Boolean = false
+  override val adjustEGateUseByUnder12s: Boolean = false
+  override val lcyLiveEndPointUrl: String = ""
+  override val lcyLiveUsername: String = ""
+  override val lcyLivePassword: String = ""
+  override val maybeRemovalCutOffSeconds: Option[FiniteDuration] = None
+}
+
+case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem,
