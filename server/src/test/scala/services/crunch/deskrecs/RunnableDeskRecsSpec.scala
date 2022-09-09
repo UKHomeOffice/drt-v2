@@ -10,7 +10,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import dispatch.Future
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, DeskRecMinutes, MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MinutesContainer, PassengersMinute}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, PaxForArrivals, SplitsForArrivals}
 import drt.shared._
 import manifests.queues.SplitsCalculator
@@ -25,7 +25,7 @@ import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefa
 import services.graphstages.{CrunchMocks, FlightFilter}
 import services.{SDate, TryCrunchWholePax}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, TotalPaxSource, WithTimeAccessor}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources

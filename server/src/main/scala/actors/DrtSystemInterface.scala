@@ -275,7 +275,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       val (crunchRequestQueueActor, _: UniqueKillSwitch) =
         startOptimisationGraph(passengerLoadsProducer, persistentCrunchQueueActor, crunchQueue, minuteLookups.queueLoadsMinutesActor, "passenger-loads")
 
-      val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToDeployments(
+      val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
         loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
         maxDesksProviders = deskLimitsProviders,
         loadsToQueueMinutes = portDeskRecs.loadsToDesks,
@@ -546,7 +546,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     val actorPath = askableActor.actorRef.path
     queryActorWithRetry[A](askableActor, GetState)
       .map {
-        case Some(state: A) if state.isInstanceOf[A] =>
+        case Some(state) if state.isInstanceOf[A] =>
           log.debug(s"Got initial state (Some(${state.getClass})) from $actorPath")
           Option(state)
         case None =>

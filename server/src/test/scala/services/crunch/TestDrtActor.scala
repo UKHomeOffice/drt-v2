@@ -42,7 +42,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
-case class MockManifestLookupService()(implicit mat: Materializer) extends ManifestLookupLike {
+case class MockManifestLookupService() extends ManifestLookupLike {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
@@ -187,7 +187,7 @@ class TestDrtActor extends Actor {
         val (crunchRequestActor, crunchKillSwitch) =
           RunnableOptimisation.createGraph(crunchGraphSource, minuteLookups.queueLoadsMinutesActor, passengerLoadsProducer, "passenger-loads").run()
 
-        val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToDeployments(
+        val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
           loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
           maxDesksProviders = deskLimitsProviders,
           loadsToQueueMinutes = portDeskRecs.loadsToDesks,

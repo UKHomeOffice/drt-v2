@@ -19,7 +19,7 @@ class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor with Ac
   var promisedResult: Promise[DeskRecMinutes] = Promise[DeskRecMinutes]
 
   override def receive: Receive = {
-    case GetFlights(from, to) =>
+    case GetFlights(_, _) =>
       val groupedByDay = fws.flights.values
         .groupBy(f => SDate(f.apiFlight.Scheduled).toUtcDate)
         .map {
