@@ -142,9 +142,9 @@ describe('API splits', () => {
       .addManifest(apiManifest)
       .get(paxRagGreenSelector, {timeout: 5000})
       .get('.egate-queue-pax')
-      .contains("7")
+      .contains("8")
       .get('.eeadesk-queue-pax')
-      .contains("4")
+      .contains("3")
       .request({
         method: 'GET',
         url: "/manifest/" + scheduledTime.format("YYYY-MM-DD") + "/summary",

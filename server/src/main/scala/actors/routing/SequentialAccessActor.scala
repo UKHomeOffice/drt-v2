@@ -63,11 +63,14 @@ class SequentialAccessActor[RES, REQ, UPDATES <: Combinable[UPDATES]](
           }
           .runWith(Sink.reduce[UPDATES](_ ++ _))
           .onComplete { maybeUpdates =>
-            if (shouldSendEffectsToSubscribers(next.head._2)) {
-              for {
-                updates <- maybeUpdates.toOption.toList
-                subscriber <- updatesSubscribers
-              } yield subscriber ! updates
+            next.headOption.foreach {
+              case (_, request) =>
+                if (next.nonEmpty && shouldSendEffectsToSubscribers(request)) {
+                  for {
+                    updates <- maybeUpdates.toOption.toList
+                    subscriber <- updatesSubscribers
+                  } yield subscriber ! updates
+                }
             }
 
             replyTo ! Ack
