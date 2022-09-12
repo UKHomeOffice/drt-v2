@@ -61,7 +61,7 @@ describe('Simulation export', () => {
             .get("#adjust_processing_times")
             .click()
             .get("#EeaMachineReadable_EeaDesk")
-            .type("{selectall}60")
+            .type("{selectall}61")
             .blur()
             .get('#export-simulation')
             .then((el) => {
@@ -81,7 +81,7 @@ describe('Simulation export', () => {
                     expect(eGatePaxCount).to.equal(8, "expected 8 passengers in EGate with weighting of 1")
 
                     const eeaMaxWait = maxColumn(csvData, eeaDeskWaitCsvIndex)
-                    expect(eeaMaxWait).to.equal(1, "expected 1 minute EEA wait time with 60 seconds proc time, 1 desk and 2 pax")
+                    expect(eeaMaxWait).to.equal(1, "expected 1 minute EEA wait time with 61 second proc time, 1 desk and 2 pax")
 
                 })
             })

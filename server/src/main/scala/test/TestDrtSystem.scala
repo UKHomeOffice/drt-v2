@@ -2,13 +2,11 @@ package test
 
 import actors._
 import actors.acking.AckingReceiver.Ack
-import actors.persistent.RedListUpdatesActor.AddSubscriber
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
 import akka.pattern.ask
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
-import com.amazonaws.auth.AWSCredentials
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.Enable
 import drt.shared.coachTime.CoachWalkTime
@@ -171,6 +169,10 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
     aggregatedArrivalsActor,
     testManifestsActor,
     testArrivalActor,
+    persistentCrunchQueueActor,
+    persistentDeskRecsQueueActor,
+    persistentDeploymentQueueActor,
+    persistentStaffingUpdateQueueActor,
   )
 
   val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")

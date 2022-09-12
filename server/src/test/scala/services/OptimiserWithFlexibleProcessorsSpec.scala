@@ -26,6 +26,19 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
       }
     }
 
+    "Given 2x 1 minute pax incoming workload per minute, and desks fixed at 1 per minute" >> {
+      "I should see a minute wait for the passenger processed at minute 2" >> {
+        val twoOneMinuteOnFirstMinutePax = Seq(Iterable(1d, 1d)) ++ Seq.fill(29)(Iterable())
+        val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunchWholePax(
+          passengers = twoOneMinuteOnFirstMinutePax,
+          minDesks = oneDesk,
+          maxDesks = oneDesk,
+          config = OptimiserConfig(20, WorkloadProcessorsProvider(IndexedSeq.fill(30)(WorkloadProcessors(Seq.fill(10)(Desk))))))
+
+        result.get.waitTimes === Seq(0, 1) ++ Seq.fill(28)(0)
+      }
+    }
+
     "Given 2 minutes incoming workload per minute, and desks fixed at 1 per minute" >> {
       "I should see workload spilling over each minute, leaving increasing wait times" >> {
         val twoMinuteWorkloadFor30Minutes = Seq.fill(30)(Iterable(2d))
