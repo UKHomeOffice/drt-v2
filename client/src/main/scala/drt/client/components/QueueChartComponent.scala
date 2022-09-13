@@ -1,6 +1,7 @@
 package drt.client.components
 
 import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsDataSet, ChartJsOptions, ChartJsProps, RGBA}
+import drt.client.components.TerminalDesksAndQueues.{Deployments, DeskType, Ideal}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
@@ -10,7 +11,10 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import scala.scalajs.js
 
 object QueueChartComponent {
-  case class Props(queue: Queue, queueSummaries: List[(Long, Map[Queue, CrunchApi.CrunchMinute])], sla: Int)
+  case class Props(queue: Queue,
+                   queueSummaries: List[(Long, Map[Queue, CrunchApi.CrunchMinute])],
+                   sla: Int,
+                   deskType: DeskType)
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("QueueChart")
     .render_P { props =>
@@ -36,9 +40,12 @@ object QueueChartComponent {
         yAxisID = Option("y"),
       )
       val desks: ChartJsDataSet = ChartJsDataSet.bar(
-        label = "Staff",
+        label = if (props.deskType == Ideal) "Ideal Staff" else "Staff from available",
         data = props.queueSummaries.map {
-          case (_, queuesAndMinutes) => queuesAndMinutes(props.queue).deskRec.toDouble
+          case (_, queuesAndMinutes) => props.deskType match {
+            case Ideal => queuesAndMinutes(props.queue).deskRec.toDouble
+            case Deployments => queuesAndMinutes(props.queue).deployedDesks.getOrElse(0).toDouble
+          }
         },
         colour = RGBA(200, 200, 200),
         backgroundColour = Option(RGBA(200, 200, 200, 0.2)),
@@ -47,7 +54,10 @@ object QueueChartComponent {
       val waits: ChartJsDataSet = ChartJsDataSet.line(
         label = "Wait times",
         data = props.queueSummaries.map {
-          case (_, queuesAndMinutes) => queuesAndMinutes(props.queue).waitTime.toDouble
+          case (_, queuesAndMinutes) => props.deskType match {
+            case Ideal => queuesAndMinutes(props.queue).waitTime.toDouble
+            case Deployments => queuesAndMinutes(props.queue).deployedWait.getOrElse(0).toDouble
+          }
         },
         colour = RGBA.red1,
         backgroundColour = Option(RGBA.red1.copy(alpha = 0.2)),
@@ -68,10 +78,9 @@ object QueueChartComponent {
             datasets = Seq(paxInQueueSet, incomingPax, desks, waits, slaDataSet),
             labels = Option(labels),
           ),
-          width = None, //Option(1024),
-          height = None, //Option(250),
+          width = None,
+          height = None,
           options = ChartJsOptions(props.queue.toString)
-//            .withMultipleDataSets(props.queue.toString, suggestedMax = Map("y3" -> props.sla * 2), maxTicks = 96)
             .copy(
               maintainAspectRatio = true,
               responsive = true,

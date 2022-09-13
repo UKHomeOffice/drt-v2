@@ -44,33 +44,6 @@ object OptimiserWithFlexibleProcessors {
   val targetWidth = 60
   val rollingBuffer = 120
 
-//  def crunch(workloads: Iterable[Double],
-//             minDesks: Iterable[Int],
-//             maxDesks: Iterable[Int],
-//             config: OptimiserConfig): Try[OptimizerCrunchResult] = {
-//    val processorsCount = config.processors.processorsByMinute.length
-//    assert(processorsCount == workloads.size, s"processors by minute ($processorsCount) needs to match workload length (${workloads.size})")
-//    val indexedWork = workloads.toIndexedSeq
-//    val indexedMinDesks = minDesks.toIndexedSeq
-//
-//    val bestMaxDesks = if (workloads.size >= 60) {
-//      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processors)
-//      fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
-//    } else maxDesks.toIndexedSeq
-//
-//    if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
-//
-//    for {
-//      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
-//    } yield {
-//      val actualCapacity = desks.zipWithIndex.map {
-//        case (c, idx) => config.processors.forMinute(idx).capacityForServers(c)
-//      }
-//      val queue = QueueCapacity(actualCapacity.toList).processMinutes(config.sla, indexedWork.to[List])
-//      OptimizerCrunchResult(desks.toIndexedSeq, queue.waits, queue.queueByMinute.toIndexedSeq)
-//    }
-//  }
-
   def crunchWholePax(passengers: Iterable[Iterable[Double]],
                      minDesks: Iterable[Int],
                      maxDesks: Iterable[Int],
@@ -87,45 +60,20 @@ object OptimiserWithFlexibleProcessors {
 
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
+    val start = SDate.now().millisSinceEpoch
     for {
       desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
     } yield {
       val actualCapacity = desks.zipWithIndex.map {
         case (c, idx) => config.processors.forMinute(idx).capacityForServers(c)
       }
+      val optFinished = SDate.now().millisSinceEpoch
       val queue = QueueCapacity(actualCapacity.toList).processPassengers(config.sla, passengers)
+      val queueTook = SDate.now().millisSinceEpoch - optFinished
+      log.info(s"Optimisation took ${optFinished - start}ms. Queue length & waits took ${queueTook}ms")
       OptimizerCrunchResult(desks.toIndexedSeq, queue.waits, queue.queueByMinute.toIndexedSeq)
     }
   }
-
-  //  def crunchWithDump(workloads: Iterable[Double],
-  //                     minDesks: Iterable[Int],
-  //                     maxDesks: Iterable[Int],
-  //                     config: OptimiserConfig): Try[OptimizerCrunchResult] = {
-  //    val indexedWork = workloads.toIndexedSeq
-  //    val indexedMinDesks = minDesks.toIndexedSeq
-  //
-  //        val bestMaxDesks = if (workloads.size >= 60) {
-  //          val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processors)
-  //          fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
-  //        } else maxDesks.toIndexedSeq
-  //
-  ////    val bestMaxDesks = maxDesks.toIndexedSeq
-  //    if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
-  //
-  //    for {
-  //      desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
-  //      //      processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq())
-  //    } yield {
-  //      val queue = QueueCapacity(desks.to[List]).processMinutes(config.sla, indexedWork.to[List])
-  //      indexedWork.zipWithIndex.zip(desks).zip(queue.waits).zip(queue.queueByMinute).foreach {
-  //        case ((((work, minute), desksOpen), wait), queueLength) =>
-  //          println(s"$minute,$work,$queueLength,$desksOpen,$wait")
-  //      }
-  //      OptimizerCrunchResult(desks.toIndexedSeq, queue.waits, queue.queueByMinute.toIndexedSeq)
-  //      //      OptimizerCrunchResult(desks.toIndexedSeq, processedWork.waits)
-  //    }
-  //  }
 
   def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserConfig): Try[Seq[Int]] =
     tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq(), config.processors).map(_.waits)

@@ -231,7 +231,7 @@ object TerminalDesksAndQueues {
             val dayStart = SDate(props.viewStart.getLocalLastMidnight.millisSinceEpoch)
             val sortedCrunchMinuteSummaries: List[(Long, Map[Queue, CrunchApi.CrunchMinute])] = props.portState.crunchSummary(dayStart, 96, 15, terminal, queues).toList.sortBy(_._1)
             val queueSla = props.airportConfig.slaByQueue(queue)
-            QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, queueSla))
+            QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, queueSla, state.deskType))
           }.toTagMod
         } else {
           <.div(
