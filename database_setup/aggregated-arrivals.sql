@@ -15,7 +15,7 @@ CREATE TABLE public.arrival(
   pcp timestamp NOT NULL,
   totalPassengers integer,
   pcpPassengers integer,
-  scheduled_departure timestamp;
+  scheduled_departure timestamp,
   PRIMARY KEY (number, destination, terminal, scheduled)
 );
 
