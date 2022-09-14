@@ -4,7 +4,7 @@ import drt.shared.CrunchApi._
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{readwriter, ReadWriter => RW}
 
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
@@ -123,12 +123,17 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
       workLoad = slotMinutes.map(_.workLoad).sum,
       deskRec = slotMinutes.map(_.deskRec).max,
       waitTime = slotMinutes.map(_.waitTime).max,
+      maybePaxInQueue = slotMinutes.map(_.maybePaxInQueue).max,
       deployedDesks = if (slotMinutes.exists(cm => cm.deployedDesks.isDefined))
         Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max)
       else
         None,
       deployedWait = if (slotMinutes.exists(cm => cm.deployedWait.isDefined))
         Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max)
+      else
+        None,
+      maybeDeployedPaxInQueue = if (slotMinutes.exists(cm => cm.maybeDeployedPaxInQueue.isDefined))
+        Option(slotMinutes.map(_.maybeDeployedPaxInQueue.getOrElse(0)).max)
       else
         None,
       actDesks = if (slotMinutes.exists(cm => cm.actDesks.isDefined))
@@ -148,8 +153,10 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
       workLoad = 0,
       deskRec = 0,
       waitTime = 0,
+      maybePaxInQueue = None,
       deployedDesks = None,
       deployedWait = None,
+      maybeDeployedPaxInQueue = None,
       actDesks = None,
       actWait = None)
   }
