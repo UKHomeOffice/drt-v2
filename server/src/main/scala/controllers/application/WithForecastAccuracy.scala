@@ -1,18 +1,12 @@
 package controllers.application
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
 import controllers.Application
-import drt.shared.api.ForecastAccuracy
 import play.api.mvc.{Action, AnyContent}
-import services.AccuracyForDate
 import services.accuracy.ForecastAccuracyCalculator
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default.write
 
-import scala.collection.immutable.SortedMap
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 
 trait WithForecastAccuracy {

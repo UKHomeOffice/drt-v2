@@ -42,8 +42,10 @@ object PcpArrival {
   }
 
   def walkTimeMillisProviderFromCsv(walkTimesCsvFileUrl: String): GateOrStandWalkTime = {
-    val walkTimes = loadWalkTimesFromCsv(walkTimesCsvFileUrl)
-      .map(x => ((x.gateOrStand, x.terminal), x.walkTimeMillis)).toMap
+    val walkTimes =
+      if (walkTimesCsvFileUrl.nonEmpty)
+        loadWalkTimesFromCsv(walkTimesCsvFileUrl).map(x => ((x.gateOrStand, x.terminal), x.walkTimeMillis)).toMap
+      else Map[(String, Terminal), MillisSinceEpoch]()
 
     val tupleToLong = roundTimesToNearestMinute(walkTimes)
     walkTimeMillis(tupleToLong)

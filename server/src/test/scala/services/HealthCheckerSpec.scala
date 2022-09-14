@@ -30,7 +30,7 @@ case class PassingCheck()(implicit ec: ExecutionContext) extends HealthCheck {
   override def isPassing: Future[Boolean] = Future(true)
 }
 
-case class FailingCheck(implicit ec: ExecutionContext) extends HealthCheck {
+case class FailingCheck()(implicit ec: ExecutionContext) extends HealthCheck {
   override def isPassing: Future[Boolean] = Future(false)
 }
 

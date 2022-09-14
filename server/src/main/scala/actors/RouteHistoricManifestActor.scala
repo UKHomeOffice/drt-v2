@@ -7,7 +7,7 @@ import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.ManifestMessageConversion
 import akka.actor.{ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
-import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
+import akka.persistence.SaveSnapshotSuccess
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
@@ -17,7 +17,7 @@ import scalapb.GeneratedMessage
 import services.SDate
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{ManifestLikeMessage, MaybeManifestLikeMessage, VoyageManifestMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{ManifestLikeMessage, MaybeManifestLikeMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -25,17 +25,19 @@ import scala.concurrent.{ExecutionContext, Future}
 object RouteHistoricManifestActor {
   private val log = LoggerFactory.getLogger(getClass)
 
-  val manifestCacheLookup = (destination: PortCode, now: () => SDateLike, system: ActorSystem, timeout: Timeout, ec: ExecutionContext) =>
-    (arrival: Arrival) => {
-      val key = UniqueArrivalKey(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-      RouteHistoricManifestActor.forUniqueArrival(key, now, None)(system, timeout, ec)
-    }
+  val manifestCacheLookup: (PortCode, () => SDateLike, ActorSystem, Timeout, ExecutionContext) => Arrival => Future[Option[ManifestLike]] =
+    (destination: PortCode, now: () => SDateLike, system: ActorSystem, timeout: Timeout, ec: ExecutionContext) =>
+      (arrival: Arrival) => {
+        val key = UniqueArrivalKey(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+        RouteHistoricManifestActor.forUniqueArrival(key, now, None)(system, timeout, ec)
+      }
 
-  val manifestCacheStore = (destination: PortCode, now: () => SDateLike, system: ActorSystem, timeout: Timeout, ec: ExecutionContext) =>
-    (arrival: Arrival, manifest: ManifestLike) => {
-      val key = UniqueArrivalKey(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
-      RouteHistoricManifestActor.updateForUniqueArrival(key, manifest, now)(system, timeout, ec)
-    }
+  val manifestCacheStore: (PortCode, () => SDateLike, ActorSystem, Timeout, ExecutionContext) => (Arrival, ManifestLike) => Future[AckingReceiver.Ack.type] =
+    (destination: PortCode, now: () => SDateLike, system: ActorSystem, timeout: Timeout, ec: ExecutionContext) =>
+      (arrival: Arrival, manifest: ManifestLike) => {
+        val key = UniqueArrivalKey(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+        RouteHistoricManifestActor.updateForUniqueArrival(key, manifest, now)(system, timeout, ec)
+      }
 
   def forUniqueArrival(uniqueArrivalKey: UniqueArrivalKey, now: () => SDateLike, maybePointInTime: Option[Long])
                       (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): Future[Option[ManifestLike]] = {
@@ -80,24 +82,19 @@ object RouteHistoricManifestActor {
     ))
 }
 
-class RouteHistoricManifestActor(origin: String, destination: String, voyageNumber: Int, dayOfWeek: Int, weekOfYear: Int, override val now: () => SDateLike, maybePointInTime: Option[Long])
-  extends RecoveryActorLike {
+class RouteHistoricManifestActor(origin: String,
+                                 destination: String,
+                                 voyageNumber: Int,
+                                 dayOfWeek: Int,
+                                 weekOfYear: Int,
+                                 val now: () => SDateLike,
+                                 override val maybePointInTime: Option[Long]) extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId: String = s"route-manifest-$origin-$destination-$voyageNumber-$dayOfWeek-$weekOfYear"
 
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
-
-  override def recovery: Recovery = maybePointInTime match {
-    case None =>
-      Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
-    case Some(pointInTime) =>
-      val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-      Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
-  }
 
   var state: Option[ManifestLike] = None
 

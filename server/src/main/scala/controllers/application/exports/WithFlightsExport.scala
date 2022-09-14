@@ -94,7 +94,7 @@ trait WithFlightsExport {
 
   private def flightsRequestToCsv(pointInTime: MillisSinceEpoch, export: FlightsExport): Future[Result] = {
     val pitRequest = PointInTimeQuery(pointInTime, export.request)
-    ctrl.flightsActor.ask(pitRequest).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]].map {
+    ctrl.flightsRouterActor.ask(pitRequest).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]].map {
       flightsStream =>
         val flightsAndManifestsStream = flightsStream.mapAsync(1) { case (d, fws) =>
           ctrl.manifestsRouterActor

@@ -7,7 +7,7 @@ class CrunchManagerActor extends Actor {
   var maybeRequestActor: Option[ActorRef] = None
 
   override def receive: Receive = {
-    case SetCrunchRequestQueue(requestActor) =>
+    case AddUpdatesSubscriber(requestActor) =>
       maybeRequestActor = Option(requestActor)
 
     case um: UpdatedMillis =>

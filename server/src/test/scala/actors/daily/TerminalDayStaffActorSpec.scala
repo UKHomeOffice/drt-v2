@@ -42,18 +42,18 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
     }
 
     "When I send minutes to persist which lie within the day, and then ask for its state I should see the minutes sent" >> {
-      val staffMinutes = MinutesContainer(Set(staffMinuteForDate(date)))
+      val staffMinutes = MinutesContainer(Seq(staffMinuteForDate(date)))
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinutesAndGetState(staffMinutes, terminalDayActor)
       val result = Await.result(eventual, 1.second)
 
-      result === Option(MinutesContainer(Set(staffMinuteForDate(date).copy(lastUpdated = Option(date.millisSinceEpoch)))))
+      result === Option(MinutesContainer(Seq(staffMinuteForDate(date).copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }
 
     "When I send minutes to persist which lie outside the day, and then ask for its state I should see None" >> {
       val otherDate = SDate("2020-01-02T00:00")
-      val staffMinutes = MinutesContainer(Set(staffMinuteForDate(otherDate)))
+      val staffMinutes = MinutesContainer(Seq(staffMinuteForDate(otherDate)))
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinutesAndGetState(staffMinutes, terminalDayActor)
@@ -66,13 +66,13 @@ class TerminalDayStaffActorSpec extends CrunchTestLike {
       val otherDate = SDate("2020-01-02T00:00")
       val inside = staffMinuteForDate(date)
       val outside = staffMinuteForDate(otherDate)
-      val staffMinutes = MinutesContainer(Set(inside, outside))
+      val staffMinutes = MinutesContainer(Seq(inside, outside))
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date)
 
       val eventual = sendMinutesAndGetState(staffMinutes, terminalDayActor)
       val result = Await.result(eventual, 1.second)
 
-      result === Option(MinutesContainer(Set(inside.copy(lastUpdated = Option(date.millisSinceEpoch)))))
+      result === Option(MinutesContainer(Seq(inside.copy(lastUpdated = Option(date.millisSinceEpoch)))))
     }
   }
 

@@ -58,9 +58,7 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
 
   override def persistenceId = "fixedPoints-store"
 
-  override val snapshotBytesThreshold: Int = oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = Option(250)
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   var state: FixedPointAssignments = initialState
 

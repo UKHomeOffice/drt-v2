@@ -53,7 +53,7 @@ class QueueDiversionSpec extends CrunchTestLike {
         ))
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
-        expectPaxByQueue(Map(EeaDesk -> 100))
+        expectPaxByQueue(Map(EeaDesk -> pax))
         crunch.shutdown()
 
         success

@@ -15,8 +15,8 @@ import services.SDate
 import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.ports.Terminals.{A1, InvalidTerminal, T1, Terminal ,A2}
-import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.Terminals.{A2, InvalidTerminal, T1, Terminal}
+import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.ExecutionContext.Implicits.global

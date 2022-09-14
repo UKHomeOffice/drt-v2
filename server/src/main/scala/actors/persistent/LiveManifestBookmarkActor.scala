@@ -20,8 +20,6 @@ class LiveManifestBookmarkActor(defaultMarker: MillisSinceEpoch, val now: () => 
 
   override def persistenceId: String = "live-manifest-bookmark"
 
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = Option(500)
 
   var marker: MillisSinceEpoch = defaultMarker

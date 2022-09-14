@@ -46,7 +46,7 @@ case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
           val threshold = feedLastCheckThresholds.getOrElse(feedSource, defaultLastCheckThreshold)
           if (gracePeriodHasPassed && lastSuccessAt < (now() - threshold).millisSinceEpoch) {
             val minutesSinceLastCheck = ((now().millisSinceEpoch - lastSuccessAt) / 60000).toInt
-            log.warn(s"${feedSource.name} has not been checked for $minutesSinceLastCheck minutes")
+            log.error(s"${feedSource.name} has not been checked for $minutesSinceLastCheck minutes")
             Some(feedSource)
           } else None
       }
@@ -74,7 +74,7 @@ case class ActorResponseTimeHealthCheck(portStateActor: ActorRef,
         val took = requestEnd - requestStart.millisSinceEpoch
         val isWithingThreshold = took < healthyResponseTimeMillis
 
-        val message = s"Health check: Port state request took $took seconds"
+        val message = s"Health check: Port state request took ${took}ms"
         if (isWithingThreshold) log.info(message) else log.warn(message)
 
         isWithingThreshold

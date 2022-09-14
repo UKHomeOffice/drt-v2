@@ -9,7 +9,6 @@ import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
 import services.SDate
 import services.crunch.CrunchTestLike
 import spray.json._
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.collection.immutable.{Seq, SortedMap}
 

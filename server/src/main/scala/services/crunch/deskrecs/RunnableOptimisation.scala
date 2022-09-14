@@ -3,16 +3,14 @@ package services.crunch.deskrecs
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.persistent.SortedActorRefSource
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem}
-import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
+import akka.actor.ActorRef
+import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
 import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink}
-import akka.stream.{Attributes, ClosedShape, KillSwitches, UniqueKillSwitch}
+import akka.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.PortStateMinutes
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch.europeLondonTimeZone
 import services.{SDate, StreamSupervision, TimeLogger}
-import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -54,17 +52,24 @@ object RunnableOptimisation {
 
   case class RemoveCrunchRequest(crunchRequest: ProcessingRequest)
 
-  def createGraph[A, B <: WithTimeAccessor](crunchRequestSource: SortedActorRefSource,
-                                            deskRecsSinkActor: ActorRef,
-                                            crunchRequestsToQueueMinutes: Flow[ProcessingRequest, PortStateMinutes[A, B], NotUsed])
-                                           (implicit system: ActorSystem): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
-    val deskRecsSink = Sink.actorRefWithAck(deskRecsSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
-    val ks = KillSwitches.single[PortStateMinutes[A, B]]
+  def createGraph[A](crunchRequestSource: SortedActorRefSource,
+                                            minutesSinkActor: ActorRef,
+                                            crunchRequestsToQueueMinutes: Flow[ProcessingRequest, A, NotUsed],
+                                            graphName: String,
+                                           ): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
+    val deskRecsSink = Sink.actorRefWithAck(minutesSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
+    val ks = KillSwitches.single[A]
 
     val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {
       implicit builder =>
         (crunchRequests, killSwitch) =>
-          crunchRequests ~> crunchRequestsToQueueMinutes ~> killSwitch ~> deskRecsSink
+          crunchRequests.out.map {cr =>
+            log.info(s"[$graphName] Sending $cr to producer")
+            cr
+          } ~> crunchRequestsToQueueMinutes.map { minutes =>
+            log.info(s"[$graphName] Sending output to sink")
+            minutes
+          } ~> killSwitch ~> deskRecsSink
           ClosedShape
     }
 

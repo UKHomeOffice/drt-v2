@@ -39,7 +39,7 @@ trait WithImports {
             .map { redListCounts =>
               updateAndGetAllNeboPax(redListCounts)
                 .map { updatedRedListCounts =>
-                  ctrl.flightsActor
+                  ctrl.flightsRouterActor
                     .ask(RedListCounts(updatedRedListCounts))
                   Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers} red list records imported")))
                 }.recover {

@@ -2,7 +2,6 @@ package test
 
 import actors._
 import actors.acking.AckingReceiver.Ack
-import actors.persistent.RedListUpdatesActor.AddSubscriber
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
 import akka.pattern.ask
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
@@ -43,7 +42,45 @@ case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Mater
   }
 }
 
-case class TestDrtSystem(airportConfig: AirportConfig)
+case class MockDrtParameters() extends DrtParameters {
+  override val gateWalkTimesFilePath: String = ""
+  override val standWalkTimesFilePath: String = ""
+  override val forecastMaxDays: Int = 3
+  override val aclDisabled: Boolean = false
+  override val aclHost: Option[String] = None
+  override val aclUsername: Option[String] = None
+  override val aclKeyPath: Option[String] = None
+  override val refreshArrivalsOnStart: Boolean = false
+  override val flushArrivalsOnStart: Boolean = false
+  override val recrunchOnStart: Boolean = false
+  override val useNationalityBasedProcessingTimes: Boolean = false
+  override val isSuperUserMode: Boolean = false
+  override val bhxIataEndPointUrl: String = ""
+  override val bhxIataUsername: String = ""
+  override val maybeBhxSoapEndPointUrl: Option[String] = None
+  override val maybeLtnLiveFeedUrl: Option[String] = None
+  override val maybeLtnLiveFeedUsername: Option[String] = None
+  override val maybeLtnLiveFeedPassword: Option[String] = None
+  override val maybeLtnLiveFeedToken: Option[String] = None
+  override val maybeLtnLiveFeedTimeZone: Option[String] = None
+  override val maybeLGWNamespace: Option[String] = None
+  override val maybeLGWSASToKey: Option[String] = None
+  override val maybeLGWServiceBusUri: Option[String] = None
+  override val maybeGlaLiveUrl: Option[String] = None
+  override val maybeGlaLiveToken: Option[String] = None
+  override val maybeGlaLivePassword: Option[String] = None
+  override val maybeGlaLiveUsername: Option[String] = None
+  override val useApiPaxNos: Boolean = true
+  override val displayRedListInfo: Boolean = false
+  override val enableToggleDisplayWaitTimes: Boolean = false
+  override val adjustEGateUseByUnder12s: Boolean = false
+  override val lcyLiveEndPointUrl: String = ""
+  override val lcyLiveUsername: String = ""
+  override val lcyLivePassword: String = ""
+  override val maybeRemovalCutOffSeconds: Option[FiniteDuration] = None
+}
+
+case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem,
@@ -66,15 +103,17 @@ case class TestDrtSystem(airportConfig: AirportConfig)
   override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
   override val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentDeskRecsQueueActor: ActorRef = system.actorOf(Props(new TestDeskRecsQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
   override val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
   override val persistentStaffingUpdateQueueActor: ActorRef = system.actorOf(Props(new TestStaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal)
-  override val flightsActor: ActorRef = flightLookups.flightsActor
-  override val queuesActor: ActorRef = minuteLookups.queueMinutesActor
-  override val staffActor: ActorRef = minuteLookups.staffMinutesActor
+  override val flightsRouterActor: ActorRef = flightLookups.flightsActor
+  override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor
+  override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesActor
+  override val staffRouterActor: ActorRef = minuteLookups.staffMinutesActor
   override val queueUpdates: ActorRef = system.actorOf(Props(
     new QueueTestUpdatesSupervisor(
       now,
@@ -100,9 +139,9 @@ case class TestDrtSystem(airportConfig: AirportConfig)
   override val portStateActor: ActorRef = system.actorOf(
     Props(
       new TestPartitionedPortStateActor(
-        flightsActor,
-        queuesActor,
-        staffActor,
+        flightsRouterActor,
+        queuesRouterActor,
+        staffRouterActor,
         queueUpdates,
         staffUpdates,
         flightUpdates,
@@ -130,6 +169,10 @@ case class TestDrtSystem(airportConfig: AirportConfig)
     aggregatedArrivalsActor,
     testManifestsActor,
     testArrivalActor,
+    persistentCrunchQueueActor,
+    persistentDeskRecsQueueActor,
+    persistentDeploymentQueueActor,
+    persistentStaffingUpdateQueueActor,
   )
 
   val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
@@ -172,15 +215,11 @@ case class TestDrtSystem(airportConfig: AirportConfig)
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
       refreshArrivalsOnStart = false,
-      startDeskRecs = startDeskRecs(SortedSet(), SortedSet(), SortedSet()))
+      startDeskRecs = startDeskRecs(SortedSet(), SortedSet(), SortedSet(), SortedSet()))
 
     liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
-    redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
-    flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
-    manifestsRouterActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
-    queuesActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
-    staffActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
+    setSubscribers(crunchInputs)
 
     testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponse)
 

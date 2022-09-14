@@ -19,7 +19,7 @@ object CrunchManager {
     val millisToCrunchStart = Crunch.crunchStartWithOffset(offsetMinutes) _
     val daysToReCrunch = (0 until forecastMaxDays).map(d => {
       millisToCrunchStart(today.addDays(d)).millisSinceEpoch
-    })
+    }).toSet
     crunchManager ! UpdatedMillis(daysToReCrunch)
   }
 

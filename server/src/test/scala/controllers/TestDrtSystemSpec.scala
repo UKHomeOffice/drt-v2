@@ -6,7 +6,7 @@ import drt.shared.CrunchApi._
 import drt.shared.{ArrivalsDiff, PortState}
 import services.crunch.CrunchTestLike
 import test.TestActors.ResetData
-import test.TestDrtSystem
+import test.{MockDrtParameters, TestDrtSystem}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -19,7 +19,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
   isolated
 
   "Given a test drt system" >> {
-    val drtSystem = TestDrtSystem(defaultAirportConfig)
+    val drtSystem = TestDrtSystem(defaultAirportConfig, MockDrtParameters())
 
     "When I send its port state actor an arrival" >> {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly)
@@ -44,8 +44,8 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
     "When I send its port state actor a DeskRecMinute" >> {
       val minute = drtSystem.now().getUtcLastMidnight.addMinutes(10)
-      val drm = DeskRecMinute(T1, EeaDesk, minute.millisSinceEpoch, 1, 2, 3, 4)
-      Await.ready(drtSystem.portStateActor.ask(DeskRecMinutes(List(drm))), 1.second)
+      val drm = DeskRecMinute(T1, EeaDesk, minute.millisSinceEpoch, 1, 2, 3, 4, Option(10))
+      Await.ready(drtSystem.portStateActor.ask(MinutesContainer(List(drm))), 1.second)
 
       "Then I should see the corresponding CrunchMinute when I check its port state" >> {
         val minuteExists = doesCrunchMinuteExist(drtSystem, drm) === true
@@ -66,7 +66,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
     "When I send its port state actor a StaffMinute" >> {
       val minute = drtSystem.now().getLocalLastMidnight.addMinutes(10)
       val sm = StaffMinute(T1, minute.millisSinceEpoch, 1, 2, 3)
-      Await.ready(drtSystem.portStateActor.ask(StaffMinutes(List(sm))), 1.second)
+      Await.ready(drtSystem.portStateActor.ask(MinutesContainer(List(sm))), 1.second)
 
       "Then I should see the corresponding StaffMinute when I check its port state" >> {
         val minuteExists = doesStaffMinuteExist(drtSystem, sm) === true

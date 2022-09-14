@@ -61,7 +61,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     Option(ManifestPaxCount(SplitSource("ApiSplitsWithHistoricalEGateAndFTPercentages"),
       UniqueArrivalKey(PortCode("LHR"),departurePort = arrival.Origin,voyageNumber = arrival.VoyageNumber,SDate(arrival.Scheduled)),10)))
 
-  "Given some arrivals and simlution config I should get back DeskRecMinutes containing all the passengers from the arrivals" >> {
+  "Given some arrivals and simulation config I should get back DeskRecMinutes containing all the passengers from the arrivals" >> {
 
     val simulationParams = defaultSimulationParams(Terminals.T1, crunchDate, defaultAirportConfig)
 

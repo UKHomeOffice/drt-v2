@@ -1,5 +1,6 @@
 package actors.persistent.arrivals
 
+import actors.persistent.Sizes
 import drt.shared.FeedStatusSuccess
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
@@ -15,12 +16,10 @@ object AclForecastArrivalsActor {
   val persistenceId = "actors.ForecastBaseArrivalsActor-forecast-base"
 }
 
-class AclForecastArrivalsActor(initialSnapshotBytesThreshold: Int,
-                               val now: () => SDateLike,
+class AclForecastArrivalsActor(val now: () => SDateLike,
                                expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, AclFeedSource) {
   override def persistenceId: String = AclForecastArrivalsActor.persistenceId
 
-  override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
   override val maybeSnapshotInterval: Option[Int] = Option(100)
 
   val log: Logger = LoggerFactory.getLogger(getClass)

@@ -15,7 +15,12 @@ private object SortedActorRefSource {
   }
 }
 
-final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes: Int, durationMinutes: Int, initialQueue: SortedSet[ProcessingRequest])
+final class SortedActorRefSource(persistentActor: ActorRef,
+                                 crunchOffsetMinutes: Int,
+                                 durationMinutes: Int,
+                                 initialQueue: SortedSet[ProcessingRequest],
+                                 graphName: String,
+                                )
                                 (implicit system: ActorSystem)
   extends GraphStageWithMaterializedValue[SourceShape[ProcessingRequest], ActorRef] {
 
@@ -45,13 +50,18 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
           buffer += m
           persistentActor ! m
           tryPushElement()
+
         case (_, UpdatedMillis(millis)) =>
-          val requests = millis.map(CrunchRequest(_, crunchOffsetMinutes, durationMinutes)).toSet
-          requests.foreach(persistentActor ! _)
-          buffer ++= requests
-          tryPushElement()
+          val requests = millis.map(CrunchRequest(_, crunchOffsetMinutes, durationMinutes))
+          if (requests.nonEmpty) {
+            log.info(s"[$graphName] Received updated millis: $requests")
+            requests.foreach(persistentActor ! _)
+            buffer ++= requests
+            tryPushElement()
+          }
+
         case unexpected =>
-          log.warning(s"Ignoring unexpected message: $unexpected")
+          log.warning(s"[$graphName] Ignoring unexpected message: $unexpected")
       }.ref
 
       private def tryPushElement(): Unit = {
@@ -61,6 +71,7 @@ final class SortedActorRefSource(persistentActor: ActorRef, crunchOffsetMinutes:
           maybeNextElement.foreach { e =>
             persistentActor ! RemoveCrunchRequest(e)
             buffer -= e
+            log.info(s"[$graphName] Pushing element: $e")
             push(out, e)
             prioritiseForecast = !prioritiseForecast
           }

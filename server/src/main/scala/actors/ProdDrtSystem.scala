@@ -7,7 +7,7 @@ import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing._
 import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown, PoisonPill, Props, typed}
+import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
@@ -24,7 +24,7 @@ import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
 import services.SDate
 import services.crunch.CrunchSystem
-import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest}
+import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.metrics.ApiValidityReporter
 import slick.dbio.{DBIOAction, NoStream}
 import slickdb.{ArrivalTable, Tables}
@@ -50,7 +50,7 @@ object PostgresTables extends Tables {
 
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
-case class ProdDrtSystem(airportConfig: AirportConfig)
+case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem,
@@ -64,9 +64,9 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
-  override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AclForecastArrivalsActor(params.snapshotMegaBytesBaseArrivals, now, expireAfterMillis)), name = "base-arrivals-actor")
-  override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortForecastArrivalsActor(params.snapshotMegaBytesFcstArrivals, now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortLiveArrivalsActor(params.snapshotMegaBytesLiveArrivals, now, expireAfterMillis)), name = "live-arrivals-actor")
+  override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
+  override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
+  override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
@@ -76,9 +76,10 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
 
   override val manifestLookupService: ManifestLookup = ManifestLookup(PostgresTables)
 
-  override val minuteLookups: MinuteLookups = MinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  override val minuteLookups: MinuteLookups = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
   override val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new CrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentDeskRecsQueueActor: ActorRef = system.actorOf(Props(new DeskRecsQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
   override val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new DeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
   override val persistentStaffingUpdateQueueActor: ActorRef = system.actorOf(Props(new StaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
@@ -89,23 +90,24 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
     params.maybeRemovalCutOffSeconds
   )
 
-  override val flightsActor: ActorRef = flightLookups.flightsActor
-  override val queuesActor: ActorRef = minuteLookups.queueMinutesActor
-  override val staffActor: ActorRef = minuteLookups.staffMinutesActor
+  override val flightsRouterActor: ActorRef = flightLookups.flightsActor
+  override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor
+  override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesActor
+  override val staffRouterActor: ActorRef = minuteLookups.staffMinutesActor
   override val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
   override val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
   override val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
 
   override val portStateActor: ActorRef = system.actorOf(Props(new PartitionedPortStateActor(
-    flightsActor,
-    queuesActor,
-    staffActor,
-    queueUpdates,
-    staffUpdates,
-    flightUpdates,
-    now,
-    airportConfig.queuesByTerminal,
-    journalType)))
+    flightsActor = flightsRouterActor,
+    queuesActor = queuesRouterActor,
+    staffActor = staffRouterActor,
+    queueUpdatesActor = queueUpdates,
+    staffUpdatesActor = staffUpdates,
+    flightUpdatesActor = flightUpdates,
+    now = now,
+    queues = airportConfig.queuesByTerminal,
+    journalType = journalType)))
 
   val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
 
@@ -134,6 +136,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         SortedSet[ProcessingRequest],
         SortedSet[ProcessingRequest],
         SortedSet[ProcessingRequest],
+        SortedSet[ProcessingRequest],
         )] = {
       for {
         lps <- initialFlightsPortState(portStateActor, params.forecastMaxDays)
@@ -142,13 +145,14 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
         la <- initialStateFuture[ArrivalsState](liveArrivalsActor).map(_.map(_.arrivals))
         aclStatus <- forecastBaseArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
         crunchQueue <- persistentCrunchQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
+        deskRecsQueue <- persistentDeskRecsQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         deploymentQueue <- persistentDeploymentQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         staffingUpdateQueue <- persistentStaffingUpdateQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
-      } yield (lps, ba, fa, la, aclStatus, crunchQueue, deploymentQueue, staffingUpdateQueue)
+      } yield (lps, ba, fa, la, aclStatus, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)
     }
 
     futurePortStates.onComplete {
-      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeAclStatus, crunchQueue, deploymentQueue, staffingUpdateQueue)) =>
+      case Success((maybePortState, maybeBaseArrivals, maybeForecastArrivals, maybeLiveArrivals, maybeAclStatus, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)) =>
         system.log.info(s"Successfully restored initial state for App")
 
         val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
@@ -158,7 +162,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           initialLiveBaseArrivals = Option(SortedMap[UniqueArrival, Arrival]()),
           initialLiveArrivals = maybeLiveArrivals,
           refreshArrivalsOnStart = params.refreshArrivalsOnStart,
-          startDeskRecs = startDeskRecs(crunchQueue, deploymentQueue, staffingUpdateQueue),
+          startDeskRecs = startDeskRecs(crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue),
         )
 
         fcstBaseActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)
@@ -186,13 +190,9 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
           .processFilesAfter(processFilesAfter)
           .runWith(Sink.ignore)
 
-        redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
-        flightsActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
-        manifestsRouterActor ! SetCrunchRequestQueue(crunchInputs.crunchRequestActor)
-        queuesActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
-        staffActor ! SetCrunchRequestQueue(crunchInputs.deploymentRequestActor)
+        setSubscribers(crunchInputs)
 
-        system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(flightsActor))
+        system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(flightsRouterActor))
 
       case Failure(error) =>
         system.log.error(error, s"Failed to restore initial state for App. Beginning actor system shutdown")
@@ -230,4 +230,4 @@ case class ProdDrtSystem(airportConfig: AirportConfig)
   val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode)
 }
 
-case class SetCrunchRequestQueue(source: ActorRef)
+case class AddUpdatesSubscriber(source: ActorRef)

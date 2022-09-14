@@ -182,7 +182,7 @@ object RunnableCrunch {
           arrivalsFanOut ~> flightsSink
           arrivalsFanOut ~> aggregatedArrivalsSink
 
-          actualDesksAndWaitTimesSourceSync ~> deskStatsSink
+          actualDesksAndWaitTimesSourceSync.out.map(_.asContainer) ~> deskStatsSink
 
           // @formatter:on
 

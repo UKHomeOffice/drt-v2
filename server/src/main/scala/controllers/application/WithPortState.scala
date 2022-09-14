@@ -74,7 +74,7 @@ trait WithPortState {
     Action.async { request: Request[AnyContent] =>
       request.body.asText match {
         case Some("true") =>
-          queueDaysToReCrunchWithUpdatedSplits(ctrl.flightsActor, ctrl.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now)
+          queueDaysToReCrunchWithUpdatedSplits(ctrl.flightsRouterActor, ctrl.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now)
           Future.successful(Ok("Re-crunching with updated splits"))
         case _ =>
           queueDaysToReCrunch(ctrl.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now)

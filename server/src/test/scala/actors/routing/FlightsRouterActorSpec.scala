@@ -43,7 +43,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
   val testProbe: TestProbe = TestProbe()
 
   val noopUpdates: ((Terminal, UtcDate), FlightUpdates) => Future[UpdatedMillis] =
-    (_, _: FlightUpdates) => Future(UpdatedMillis(Iterable()))
+    (_, _: FlightUpdates) => Future(UpdatedMillis(Set()))
 
   "Concerning visibility of flights (scheduled & pcp range)" >> {
     "Given a flight that is scheduled within the range of dates" >> {

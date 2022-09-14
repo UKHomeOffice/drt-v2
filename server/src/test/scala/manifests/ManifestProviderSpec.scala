@@ -1,7 +1,6 @@
 package manifests
 
 import actors.acking.AckingReceiver.Ack
-import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
@@ -17,8 +16,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.Future
 
-case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifest, historicManifestPax: ManifestPaxCount)
-                                    (implicit mat: Materializer) extends ManifestLookupLike {
+case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifest, historicManifestPax: ManifestPaxCount) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,

@@ -17,9 +17,20 @@ class ReCrunchSpec extends CrunchTestLike {
         val crunch = runCrunchGraph(TestConfig(now = () => minute, recrunchOnStart = true, initialPortState = Option(PortState(Seq(), Seq(crunchMinute), Seq()))))
 
         val minDesks = 1
-        val expected = CrunchMinute(T1, EeaDesk, minute.millisSinceEpoch, 0, 0, minDesks, 0, Option(0), Option(0))
+        val expected = CrunchMinute(
+          terminal = T1,
+          queue = EeaDesk,
+          minute = minute.millisSinceEpoch,
+          paxLoad = 0,
+          workLoad = 0,
+          deskRec = minDesks,
+          waitTime = 0,
+          maybePaxInQueue = Option(0),
+          deployedDesks = Option(0),
+          deployedWait = Option(0),
+        )
 
-        crunch.portStateTestProbe.fishForMessage(1 second) {
+        crunch.portStateTestProbe.fishForMessage(2.second) {
           case PortState(_, cms, _) =>
             val minute = cms(expected.key)
             minute.equals(expected)

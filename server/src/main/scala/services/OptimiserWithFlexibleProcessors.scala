@@ -5,11 +5,29 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
+
+trait ProcessedWorkLike {
+  val util: List[Double]
+  val waits: List[Int]
+  val residual: IndexedSeq[Double]
+  val totalWait: Double
+  val excessWait: Double
+  val queueByMinute: List[Double] = List()
+
+  def incrementTotalWait(toAdd: Double): ProcessedWorkLike
+
+  def incrementExcessWait(toAdd: Double): ProcessedWorkLike
+}
+
 case class ProcessedWork(util: List[Double],
                          waits: List[Int],
                          residual: IndexedSeq[Double],
                          totalWait: Double,
-                         excessWait: Double)
+                         excessWait: Double) extends ProcessedWorkLike {
+  override def incrementTotalWait(toAdd: Double): ProcessedWorkLike = this.copy(totalWait = totalWait + toAdd)
+
+  override def incrementExcessWait(toAdd: Double): ProcessedWorkLike = this.copy(excessWait = excessWait + toAdd)
+}
 
 case class Cost(paxPenalty: Double, slaPenalty: Double, staffPenalty: Double, churnPenalty: Int, totalPenalty: Double)
 
@@ -26,26 +44,35 @@ object OptimiserWithFlexibleProcessors {
   val targetWidth = 60
   val rollingBuffer = 120
 
-  def crunch(workloads: Iterable[Double],
-             minDesks: Iterable[Int],
-             maxDesks: Iterable[Int],
-             config: OptimiserConfig): Try[OptimizerCrunchResult] = {
+  def crunchWholePax(passengers: Iterable[Iterable[Double]],
+                     minDesks: Iterable[Int],
+                     maxDesks: Iterable[Int],
+                     config: OptimiserConfig): Try[OptimizerCrunchResult] = {
     val processorsCount = config.processors.processorsByMinute.length
-    assert(processorsCount == workloads.size, s"processors by minute ($processorsCount) needs to match workload length (${workloads.size})")
-    val indexedWork = workloads.toIndexedSeq
+    assert(processorsCount == passengers.size, s"processors by minute ($processorsCount) needs to match workload length (${passengers.size})")
+    val indexedWork = passengers.map(_.sum).toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
-    val bestMaxDesks = if (workloads.size >= 60) {
+    val bestMaxDesks = if (passengers.size >= 60) {
       val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processors)
       fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toIndexedSeq
 
     if (bestMaxDesks.exists(_ < 0)) log.warn(s"Max desks contains some negative numbers")
 
+    val start = SDate.now().millisSinceEpoch
     for {
       desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
-      processedWork <- tryProcessWork(indexedWork, desks, config.sla, IndexedSeq(), config.processors)
-    } yield OptimizerCrunchResult(desks.toIndexedSeq, processedWork.waits)
+    } yield {
+      val actualCapacity = desks.zipWithIndex.map {
+        case (c, idx) => config.processors.forMinute(idx).capacityForServers(c)
+      }
+      val optFinished = SDate.now().millisSinceEpoch
+      val queue = QueueCapacity(actualCapacity.toList).processPassengers(config.sla, passengers)
+      val queueTook = SDate.now().millisSinceEpoch - optFinished
+      log.info(s"Optimisation took ${optFinished - start}ms. Queue length & waits took ${queueTook}ms")
+      OptimizerCrunchResult(desks.toIndexedSeq, queue.waits, queue.queueByMinute.toIndexedSeq)
+    }
   }
 
   def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserConfig): Try[Seq[Int]] =
@@ -97,7 +124,19 @@ object OptimiserWithFlexibleProcessors {
                      capacity: IndexedSeq[Int],
                      sla: Int,
                      qstart: IndexedSeq[Double],
-                     processors: WorkloadProcessorsProvider): Try[ProcessedWork] = {
+                     processors: WorkloadProcessorsProvider): Try[ProcessedWorkLike] = {
+    val actualCapacity = capacity.zipWithIndex.map {
+      case (c, idx) => processors.forMinute(idx).capacityForServers(c)
+    }
+    Try(QueueCapacity(actualCapacity.to[List]).processMinutes(sla, work.to[List]))
+  }
+
+  def legacyTryProcessWork(work: IndexedSeq[Double],
+                           capacity: IndexedSeq[Int],
+                           sla: Int,
+                           qstart: IndexedSeq[Double],
+                           processors: WorkloadProcessorsProvider): Try[ProcessedWorkLike] = {
+
     if (capacity.length != work.length) {
       Failure(new Exception(s"capacity & work don't match: ${capacity.length} vs ${work.length}"))
     } else Try {
@@ -130,7 +169,8 @@ object OptimiserWithFlexibleProcessors {
             }
           }
           val nextUtil = if (totalResourceForMinute != 0) 1 - (resource / totalResourceForMinute) else 0
-          (q.size :: wait, nextUtil :: util)      }
+          (q.size :: wait, nextUtil :: util)
+      }
 
       val waitReversed = finalWait.reverse
       val utilReversed = finalUtil.reverse
@@ -176,7 +216,7 @@ object OptimiserWithFlexibleProcessors {
       else {
         do {
           val trialDesks = leftwardDesks(winWork, winXmin, IndexedSeq.fill(winXmin.size)(winXmax), blockSize, backlog, winProcessors)
-          val trialProcessExcessWait = tryProcessWork(winWork, trialDesks, sla, IndexedSeq(0), winProcessors) match {
+          val trialProcessExcessWait = legacyTryProcessWork(winWork, trialDesks, sla, IndexedSeq(0), winProcessors) match {
             case Success(pw) => pw.excessWait
             case Failure(t) => throw t
           }
@@ -241,7 +281,7 @@ object OptimiserWithFlexibleProcessors {
            previousDesksOpen: Int,
            processors: WorkloadProcessorsProvider)
           (capacity: IndexedSeq[Int]): Cost = {
-    var simRes = tryProcessWork(work, capacity, sla, qStart, processors) match {
+    var simRes = legacyTryProcessWork(work, capacity, sla, qStart, processors) match {
       case Success(pw) => pw
       case Failure(t) => throw t
     }
@@ -266,15 +306,16 @@ object OptimiserWithFlexibleProcessors {
         .map { case (x, y) => x + y }
 
       val excessFilter = meanWaits.map(_ > sla)
-      val newTotalWait = simRes.totalWait + backlog.zip(meanWaits).map { case (x, y) => x * y }.sum
-      val newExcessWait = simRes.excessWait + excessFilter
+
+      val totalWaitIncrease = backlog.zip(meanWaits).map { case (x, y) => x * y }.sum
+      val excessWaitIncrease = excessFilter
         .zip(backlog.zip(meanWaits))
         .map {
           case (true, (x, y)) => x * y
           case _ => 0
         }.sum
 
-      simRes = simRes.copy(totalWait = newTotalWait, excessWait = newExcessWait)
+      simRes = simRes.incrementTotalWait(totalWaitIncrease).incrementExcessWait(excessWaitIncrease)
     }
 
     val paxPenalty = simRes.totalWait
@@ -292,6 +333,7 @@ object OptimiserWithFlexibleProcessors {
 
   def neighbouringPoints(x0: Int, xmin: Int, xmax: Int): IndexedSeq[Int] = (xmin to xmax)
     .filterNot(_ == x0)
+    //    .sorted.reverse
     .sortBy(x => (x - x0).abs)
 
   def branchBound(startingX: IndexedSeq[Int],
@@ -328,6 +370,52 @@ object OptimiserWithFlexibleProcessors {
             bestSoFar = trialPenalty
           }
           if (cursor < minutes - 1) cursor = cursor + 1
+        }
+      }
+      candidates(cursor) = neighbouringPoints(incumbent(cursor), xmin(cursor), xmax(cursor))
+      desks(cursor) = incumbent(cursor)
+      cursor = cursor - 1
+    }
+    desks
+  }
+
+  def branchBoundBinarySearch(startingX: IndexedSeq[Int],
+                              cost: IndexedSeq[Int] => Cost,
+                              xmin: IndexedSeq[Int],
+                              xmax: IndexedSeq[Int],
+                              concavityLimit: Int): Iterable[Int] = {
+    val desks = startingX.to[mutable.IndexedSeq]
+    var incumbent = startingX
+    val minutes = desks.length
+    var bestSoFar = cost(incumbent.toIndexedSeq).totalPenalty
+    val candidates = (0 until minutes)
+      .map(i => neighbouringPoints(startingX(i), xmin(i), xmax(i)))
+      .to[mutable.IndexedSeq]
+
+    var cursor = minutes - 1
+
+    while (cursor >= 0) {
+      while (candidates(cursor).nonEmpty) {
+        val middle = ((candidates(cursor).length - 1) / 2).floor.toInt
+        desks(cursor) = candidates(cursor)(middle)
+        candidates(cursor) = candidates(cursor).filterNot(_ == desks(cursor))
+
+        val trialPenalty = cost(desks.toIndexedSeq).totalPenalty
+
+        val isBetter = trialPenalty <= bestSoFar + concavityLimit
+
+        if (isBetter) {
+          if (trialPenalty < bestSoFar) {
+            incumbent = desks.toIndexedSeq
+            bestSoFar = trialPenalty
+          }
+          if (cursor < minutes - 1) cursor = cursor + 1
+        } else {
+          if (desks(cursor) > incumbent(cursor)) {
+            candidates(cursor) = candidates(cursor).filter(_ < desks(cursor))
+          } else {
+            candidates(cursor) = candidates(cursor).filter(_ > desks(cursor))
+          }
         }
       }
       candidates(cursor) = neighbouringPoints(incumbent(cursor), xmin(cursor), xmax(cursor))
@@ -387,6 +475,7 @@ object OptimiserWithFlexibleProcessors {
         val xmaxCondensed = maxDesks.slice(winStart, winStop).grouped(blockWidth).map(_.head).toIndexedSeq
 
         val windowIndices = winStart until winStop
+        //        branchBoundBinarySearch(blockGuess, myCost(currentWork, qStart, lastDesksOpen, currentProcessors), xminCondensed, xmaxCondensed, concavityLimit)
         branchBound(blockGuess, myCost(currentWork, qStart, lastDesksOpen, currentProcessors), xminCondensed, xmaxCondensed, concavityLimit)
           .flatMap(o => List.fill(blockWidth)(o))
           .zip(windowIndices)
@@ -400,7 +489,7 @@ object OptimiserWithFlexibleProcessors {
           val stop = winStart + winStep
           val workToProcess = work.slice(winStart, stop)
           val desksToProcess = desks.slice(winStart, stop)
-          qStart = tryProcessWork(workToProcess.toIndexedSeq, desksToProcess.toIndexedSeq, sla, qStart.toIndexedSeq, processors.forWindow(winStart, stop)) match {
+          qStart = legacyTryProcessWork(workToProcess.toIndexedSeq, desksToProcess.toIndexedSeq, sla, qStart.toIndexedSeq, processors.forWindow(winStart, stop)) match {
             case Success(pw) => pw.residual
             case Failure(t) => throw t
           }

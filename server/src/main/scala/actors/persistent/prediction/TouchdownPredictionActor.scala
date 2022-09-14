@@ -22,8 +22,6 @@ class TouchdownPredictionActor(val now: () => SDateLike,
 
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override val recoveryStartMillis: Long = now().millisSinceEpoch
-
   var state: Option[ModelAndFeatures] = None
 
   val uniqueId = s"${terminal.toString}-${number.numeric}-${origin.iata}"
@@ -48,6 +46,5 @@ class TouchdownPredictionActor(val now: () => SDateLike,
     case GetState => sender ! state
   }
 
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = None
 }

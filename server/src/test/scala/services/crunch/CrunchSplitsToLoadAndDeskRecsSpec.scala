@@ -54,11 +54,11 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
           val expected = Map(T1 -> Map(
-            Queues.EeaDesk -> Seq(20 * edSplit, 1 * edSplit),
-            Queues.EGate -> Seq(20 * egSplit, 1 * egSplit)
+            Queues.EeaDesk -> Seq(20 * edSplit, 0),
+            Queues.EGate -> Seq(20 * egSplit, 1)
           ))
 
-          crunch.portStateTestProbe.fishForMessage(5.seconds) {
+          crunch.portStateTestProbe.fishForMessage(2.seconds) {
             case ps: PortState =>
               paxLoadsFromPortState(ps, 2) == expected
           }
@@ -92,7 +92,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0))
           )
 
-          crunch.portStateTestProbe.fishForMessage(5.seconds) {
+          crunch.portStateTestProbe.fishForMessage(2.seconds) {
             case ps: PortState =>
               paxLoadsFromPortState(ps, 5) == expected
           }
@@ -137,9 +137,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             Queues.NonEeaDesk -> List(0, 0, 0, 0, 0)
           ))
 
-          crunch.portStateTestProbe.fishForMessage(5.seconds) {
-            case ps: PortState =>
-              workLoadsFromPortState(ps, 5) == expected
+          crunch.portStateTestProbe.fishForMessage(2.seconds) {
+            case ps: PortState => workLoadsFromPortState(ps, 5) == expected
           }
 
           success
@@ -150,7 +149,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
     "CSV split ratios " >> {
       "Given a flight with 20 passengers and one CSV split of 25% to eea desk " >> {
         "When request a crunch " >> {
-          "Then I should see a pax load of 5 (20 * 0.25)" >> {
+          "Then I should see a pax load of 20 - ie 100% of the passengers as there is only one split" >> {
             val scheduled = "2017-01-01T00:00Z"
 
             val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(20))
@@ -174,14 +173,14 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
             val expected = Map(
               T1 -> Map(
-                Queues.EeaDesk -> Seq(5.0, 0.0, 0.0, 0.0, 0.0),
+                Queues.EeaDesk -> Seq(20.0, 0.0, 0.0, 0.0, 0.0),
                 Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)),
               T2 -> Map(
                 Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
                 Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)
               ))
 
-            crunch.portStateTestProbe.fishForMessage(5.seconds) {
+            crunch.portStateTestProbe.fishForMessage(2.seconds) {
               case ps: PortState =>
                 paxLoadsFromPortState(ps, 5) == expected
             }
@@ -231,7 +230,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               Queues.EGate -> Seq(8.0, 0.0, 0.0, 0.0, 0.0)
             ))
 
-            crunch.portStateTestProbe.fishForMessage(5.seconds) {
+            crunch.portStateTestProbe.fishForMessage(2.seconds) {
               case ps: PortState =>
                 paxLoadsFromPortState(ps, 5) == expected
             }
