@@ -246,19 +246,9 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       val replyTo = sender()
       askThenAck(queuesActor, someQueueUpdates, replyTo)
 
-    case someQueueUpdates: PortStateQueueMinutes =>
-      println(s"%%%%%%%% got PortStateQueueMinutes %%%%%%%%% - update test???")
-      val replyTo = sender()
-      askThenAck(queuesActor, someQueueUpdates.asContainer, replyTo)
-
     case someStaffUpdates: MinutesContainer[StaffMinute, TM] if containsStaffTypeMinutes(someStaffUpdates) =>
       val replyTo = sender()
       askThenAck(staffActor, someStaffUpdates, replyTo)
-
-    case someStaffUpdates: PortStateStaffMinutes =>
-      println(s"%%%%%%%% got PortStateStaffMinutes %%%%%%%%% - update test???")
-      val replyTo = sender()
-      askThenAck(staffActor, someStaffUpdates.asContainer, replyTo)
 
     case GetUpdatesSince(since, from, to) => replyWithUpdates(since, from, to, sender())
 

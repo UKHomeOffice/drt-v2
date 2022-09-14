@@ -169,8 +169,6 @@ trait RouterActorLike2[U <: Updates, P] extends Actor with ActorLogging {
 
   def receiveUnexpected: Receive = {
     case unexpected =>
-      println(s"unexpected!!! $unexpected")
-
       log.warning(s"Got an unexpected message: ${unexpected.getClass}")
   }
 }

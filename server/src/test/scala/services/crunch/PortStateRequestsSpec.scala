@@ -119,7 +119,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
     "When I send it a DeskRecMinute and then ask for its crunch minutes" >> {
       val lm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
 
-      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm)))
+      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm)).asContainer)
 
       "Then I should find a matching crunch minute" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
@@ -133,7 +133,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val lm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
 
       resetData(T1, myNow().getUtcLastMidnight)
-      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm)))
+      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm)).asContainer)
 
       "Then I should get the matching crunch minute in the updates" >> {
         val sinceMillis = myNow().addMinutes(-1).millisSinceEpoch
@@ -149,7 +149,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val lm1 = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
       val lm2 = DeskRecMinute(T1, EeaDesk, myNow().addMinutes(1).millisSinceEpoch, 2, 3, 4, 5, None)
 
-      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm1))).flatMap(_ => ps.ask(DeskRecMinutes(Seq(lm2))))
+      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm1)).asContainer).flatMap(_ => ps.ask(DeskRecMinutes(Seq(lm2)).asContainer))
 
       "Then I should find a matching crunch minute" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
@@ -164,7 +164,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
     "When I send it a StaffMinute and then ask for its staff minutes" >> {
       val sm = StaffMinute(T1, myNow().millisSinceEpoch, 1, 2, 3)
 
-      val eventualAck = ps.ask(StaffMinutes(Seq(sm)))
+      val eventualAck = ps.ask(StaffMinutes(Seq(sm)).asContainer)
 
       "Then I should find a matching staff minute" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
@@ -177,7 +177,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val sm1 = StaffMinute(T1, myNow().millisSinceEpoch, 1, 2, 3)
       val sm2 = StaffMinute(T1, myNow().addMinutes(1).millisSinceEpoch, 1, 2, 3)
 
-      val eventualAck = ps.ask(StaffMinutes(Seq(sm1))).flatMap(_ => ps.ask(StaffMinutes(Seq(sm2))))
+      val eventualAck = ps.ask(StaffMinutes(Seq(sm1)).asContainer).flatMap(_ => ps.ask(StaffMinutes(Seq(sm2)).asContainer))
 
       "Then I should find a matching staff minute" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
@@ -191,8 +191,8 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val drm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
       val sm1 = StaffMinute(T1, myNow().millisSinceEpoch, 1, 2, 3)
 
-      val eventualAck1 = ps.ask(StaffMinutes(Seq(sm1)))
-      val eventualAck2 = ps.ask(DeskRecMinutes(Seq(drm)))
+      val eventualAck1 = ps.ask(StaffMinutes(Seq(sm1)).asContainer)
+      val eventualAck2 = ps.ask(DeskRecMinutes(Seq(drm)).asContainer)
       val eventualAck3 = ps.ask(ArrivalsDiff(Seq(arrival), List()))
       val eventualAck = Future.sequence(Seq(eventualAck1, eventualAck2, eventualAck3))
 

@@ -285,7 +285,6 @@ object OptimiserWithFlexibleProcessors {
       case Success(pw) => pw
       case Failure(t) => throw t
     }
-    //    println(s"excessWait: ${simRes.excessWait}, totalWait: ${simRes.totalWait}, residual: ${simRes.residual}")
 
     var finalCapacity = capacity.takeRight(1).head
     val backlog = simRes.residual.reverse
