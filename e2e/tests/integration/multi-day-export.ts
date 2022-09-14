@@ -60,7 +60,7 @@ describe('Multi day export', () => {
       .then(() => {
         cy
           .get("#desksAndQueues")
-          .contains("38")
+          .contains("37")
           .then(() => {
             cy
               .contains('Multi Day Export')
@@ -75,7 +75,7 @@ describe('Multi day export', () => {
                       cy
                         .request(href)
                         .then((response) => {
-                          expect(response.body).to.contain(",38,14,1,,,13,0,1,,,1,0,1,,,0,0,0,3")
+                          expect(response.body).to.contain(",37,13,1,,,13,0,1,,,1,1,1,,,0,0,0,3")
                         });
                     }
                   });
