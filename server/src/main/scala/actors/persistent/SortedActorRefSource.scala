@@ -54,7 +54,6 @@ final class SortedActorRefSource(persistentActor: ActorRef,
         case (_, UpdatedMillis(millis)) =>
           val requests = millis.map(CrunchRequest(_, crunchOffsetMinutes, durationMinutes))
           if (requests.nonEmpty) {
-            log.info(s"[$graphName] Received updated millis: $requests")
             requests.foreach(persistentActor ! _)
             buffer ++= requests
             tryPushElement()
@@ -71,7 +70,6 @@ final class SortedActorRefSource(persistentActor: ActorRef,
           maybeNextElement.foreach { e =>
             persistentActor ! RemoveCrunchRequest(e)
             buffer -= e
-            log.info(s"[$graphName] Pushing element: $e")
             push(out, e)
             prioritiseForecast = !prioritiseForecast
           }

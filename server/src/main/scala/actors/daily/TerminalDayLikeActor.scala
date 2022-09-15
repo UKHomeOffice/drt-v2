@@ -26,11 +26,11 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   }
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
-  val typeForPersistenceId: String
+  val persistenceIdType: String
 
   var state: Map[INDEX, VAL] = Map()
 
-  override def persistenceId: String = f"terminal-$typeForPersistenceId-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
+  override def persistenceId: String = f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
@@ -81,10 +81,6 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
         val updatedMillis = if (shouldSendEffectsToSubscriber(container))
           UpdatedMillis(differences.map(_.minute).toSet)
         else UpdatedMillis.empty
-//        log.info(s"======updates: ${container.minutes}")
-//        log.info(s"======should send: ${shouldSendEffectsToSubscriber(container)}")
-//        log.info(s"======diff: $differences")
-//        log.info(s"======updatedMillis: $updatedMillis")
 
         val replyToAndMessage = List((sender(), updatedMillis))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)

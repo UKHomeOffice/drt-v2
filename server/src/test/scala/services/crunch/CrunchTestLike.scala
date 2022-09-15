@@ -307,7 +307,6 @@ class CrunchTestLike
           .filter {
             case (_, mins) => mins > 0
           }
-        println(s"found: $paxByQueue")
 
         paxByQueue == nonZerosToExpect
     }
