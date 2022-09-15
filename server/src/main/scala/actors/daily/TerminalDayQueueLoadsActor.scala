@@ -26,7 +26,7 @@ class TerminalDayQueueLoadsActor(year: Int,
                                  maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[PassengersMinute, TQM](year, month, day, terminal, now, maybePointInTime) {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override val typeForPersistenceId: String = "passengers"
+  override val persistenceIdType: String = "passengers"
 
   override val maybeSnapshotInterval: Option[Int] = Option(100)
 

@@ -17,7 +17,7 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 trait RouterActorLikeWithSubscriber[U <: Updates, P] extends RouterActorLike[U, P] {
-  var updatesSubscribers: List[ActorRef] = List()
+  var updatesSubscribers: List[ActorRef] = List.empty
 
   override def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[UpdatedMillis] =
     super.handleUpdatesAndAck(updates, replyTo).map { updatedMillis =>
@@ -48,7 +48,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
   implicit val mat: Materializer = Materializer.createMaterializer(context)
   implicit val timeout: Timeout = new Timeout(60 seconds)
 
-  var updateRequestsQueue: List[(ActorRef, U)] = List()
+  var updateRequestsQueue: List[(ActorRef, U)] = List.empty
 
   def partitionUpdates: PartialFunction[U, Map[P, U]]
 

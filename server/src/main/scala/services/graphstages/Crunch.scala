@@ -19,36 +19,10 @@ object Crunch {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   case class SplitMinutes(minutes: Map[TQM, LoadMinute]) {
-//    def ++(incoming: Iterable[FlightSplitMinute]): SplitMinutes = {
-//      incoming.foldLeft(this) {
-//        case (acc, fsm) =>
-//          acc + LoadMinute(fsm.terminalName, fsm.queueName, fsm.paxLoad, fsm.workLoad, fsm.minute)
-//      }
-//    }
-
-//    def +(incoming: LoadMinute): SplitMinutes = {
-//      val key = incoming.uniqueId
-//      minutes.get(key) match {
-//        case None => SplitMinutes(minutes + (key -> incoming))
-//        case Some(existingFsm) => SplitMinutes(minutes + (key -> (existingFsm + incoming)))
-//      }
-//    }
-
     def toLoads: Loads = Loads(SortedMap[TQM, LoadMinute]() ++ minutes)
   }
 
   case class Passenger(processingTime: Double)
-
-  case class FlightSplitMinute(flightId: CodeShareKeyOrderedBySchedule,
-                               paxType: PaxType,
-                               terminalName: Terminal,
-                               queueName: Queue,
-                               passengers: Iterable[Passenger],
-                               workLoad: Double,
-                               minute: MillisSinceEpoch) {
-    lazy val key: TQM = TQM(terminalName, queueName, minute)
-    lazy val paxLoad: Double = passengers.map(_.processingTime).sum
-  }
 
   case class FlightSplitDiff(flightId: CodeShareKeyOrderedBySchedule,
                              paxType: PaxType,

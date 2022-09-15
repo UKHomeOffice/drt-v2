@@ -21,7 +21,7 @@ object PcpArrival {
       case Success(walkTimes) => walkTimes
       case f =>
         log.warn(s"Failed to extract lines from walk times file '$walkTimesFileUrl': $f")
-        Seq()
+        Seq.empty
     }
   }
 
@@ -45,7 +45,7 @@ object PcpArrival {
     val walkTimes =
       if (walkTimesCsvFileUrl.nonEmpty)
         loadWalkTimesFromCsv(walkTimesCsvFileUrl).map(x => ((x.gateOrStand, x.terminal), x.walkTimeMillis)).toMap
-      else Map[(String, Terminal), MillisSinceEpoch]()
+      else Map.empty[(String, Terminal), MillisSinceEpoch]
 
     val tupleToLong = roundTimesToNearestMinute(walkTimes)
     walkTimeMillis(tupleToLong)

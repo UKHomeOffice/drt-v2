@@ -18,10 +18,9 @@ object SequentialAccessActor {
   case object RequestFinished
 }
 
-class SequentialAccessActor[RES, REQ, UPDATES <: Combinable[UPDATES]](
-                                                                                resourceRequest: (RES, REQ) => Future[UPDATES],
-                                                                                splitByResource: REQ => Iterable[(RES, REQ)],
-                                                                              ) extends Actor {
+class SequentialAccessActor[RES, REQ, UPDATES <: Combinable[UPDATES]](resourceRequest: (RES, REQ) => Future[UPDATES],
+                                                                      splitByResource: REQ => Iterable[(RES, REQ)],
+                                                                     ) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
 
   var updatesSubscribers: List[ActorRef] = List.empty

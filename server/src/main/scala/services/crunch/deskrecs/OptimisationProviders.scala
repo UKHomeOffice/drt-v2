@@ -95,18 +95,6 @@ object OptimisationProviders {
       .ask(GetStateForDateRange(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
       .mapTo[Source[VoyageManifests, NotUsed]]
 
-//  def loadsProvider(queuesActor: ActorRef)
-//                   (crunchRequest: ProcessingRequest)
-//                   (implicit timeout: Timeout, ec: ExecutionContext): Future[Map[TQM, LoadMinute]] =
-//    queuesActor
-//      .ask(GetStateForDateRange(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
-//      .mapTo[MinutesContainer[CrunchMinute, TQM]]
-//      .map(
-//        _.minutes.map(_.toMinute)
-//          .map { minute => (minute.key, LoadMinute(minute)) }
-//          .toMap
-//      )
-
   def passengersProvider(passengersActor: ActorRef)
                         (crunchRequest: ProcessingRequest)
                         (implicit timeout: Timeout, ec: ExecutionContext): Future[Map[TQM, PassengersMinute]] =

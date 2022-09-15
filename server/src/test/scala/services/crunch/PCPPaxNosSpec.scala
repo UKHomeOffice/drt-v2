@@ -52,8 +52,6 @@ class PCPPaxNosSpec extends CrunchTestLike {
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val resultSummary = paxLoadsFromPortState(ps, 15)
-        println(s"resultSummary: $resultSummary")
-
         resultSummary == expected
     }
 

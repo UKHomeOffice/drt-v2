@@ -135,11 +135,13 @@ case class Work(load: Double, createdAt: Int, processed: List[ProcessedLoad]) {
   lazy val completed: Boolean = load == 0
 
   def process(capacity: Capacity): (Work, Capacity) = {
-    val loadProcessed = Math.min(capacity.value, load)
-    val processedLoad = ProcessedLoad(loadProcessed, createdAt, capacity.availableAt)
-    val newWork = this.copy(load = load - loadProcessed, processed = processedLoad :: processed)
-    val newCapacity = capacity.remove(load)
-    (newWork, newCapacity)
+    if (load > 0) {
+      val loadProcessed = Math.min(capacity.value, load)
+      val processedLoad = ProcessedLoad(loadProcessed, createdAt, capacity.availableAt)
+      val newWork = this.copy(load = load - loadProcessed, processed = processedLoad :: processed)
+      val newCapacity = capacity.remove(load)
+      (newWork, newCapacity)
+    } else (this, capacity)
   }
 }
 
