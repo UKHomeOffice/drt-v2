@@ -4,6 +4,7 @@ import actors.persistent.staffing.GetState
 import actors.serializers.CrunchRequestMessageConversion.{crunchRequestToMessage, crunchRequestsFromMessages}
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.DataUpdates.Combinable
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.SDate
@@ -23,10 +24,10 @@ object QueueLikeActor {
   case object ReadyToEmit
 
   object UpdatedMillis {
-    val empty: UpdatedMillis = UpdatedMillis(Seq())
+    val empty: UpdatedMillis = UpdatedMillis(Set())
   }
 
-  case class UpdatedMillis(effects: Iterable[MillisSinceEpoch]) {
+  case class UpdatedMillis(effects: Set[MillisSinceEpoch]) extends Combinable[UpdatedMillis] {
     def ++(other: UpdatedMillis): UpdatedMillis = other match {
       case UpdatedMillis(toAdd) => UpdatedMillis(effects ++ toAdd)
       case _ => this
@@ -39,10 +40,6 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val maybeSnapshotInterval: Option[Int] = Option(500)
-
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
-
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 

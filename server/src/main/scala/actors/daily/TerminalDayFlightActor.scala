@@ -6,10 +6,10 @@ import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{flightWithSplitsFromMessage, uniqueArrivalsFromMessages}
 import akka.actor.Props
-import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
+import akka.persistence.SaveSnapshotSuccess
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, PaxForArrivals, RemoveSplits, SplitsForArrivals}
+import drt.shared.FlightsApi._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
@@ -37,7 +37,7 @@ class TerminalDayFlightActor(year: Int,
                              day: Int,
                              terminal: Terminal,
                              val now: () => SDateLike,
-                             maybePointInTime: Option[MillisSinceEpoch],
+                             override val maybePointInTime: Option[MillisSinceEpoch],
                              maybeRemovalMessageCutOff: Option[FiniteDuration],
                             ) extends RecoveryActorLike {
 
@@ -59,18 +59,8 @@ class TerminalDayFlightActor(year: Int,
 
   override def persistenceId: String = f"terminal-flights-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
-
-  override def recovery: Recovery = maybePointInTime match {
-    case None =>
-      Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
-    case Some(pointInTime) =>
-      val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-      Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
-  }
 
   override def postRecoveryComplete(): Unit = {
     state = state.copy(flights = restorer.arrivals)

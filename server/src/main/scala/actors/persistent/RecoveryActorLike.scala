@@ -1,11 +1,11 @@
 package actors.persistent
 
 import akka.actor.ActorRef
-import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
+import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.Logger
 import scalapb.GeneratedMessage
+import services.SDate
 
 import scala.util.{Failure, Try}
 
@@ -16,15 +16,23 @@ object Sizes {
 trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   val log: Logger
 
-  def now: () => SDateLike
-
-  val recoveryStartMillis: MillisSinceEpoch
-
-  val snapshotBytesThreshold: Int
+  val recoveryStartMillis: MillisSinceEpoch = SDate.now().millisSinceEpoch
+  val maybePointInTime: Option[Long] = None
+  val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   val maybeSnapshotInterval: Option[Int]
   var messagesPersistedSinceSnapshotCounter = 0
   var bytesSinceSnapshotCounter = 0
   var maybeAckAfterSnapshot: List[(ActorRef, Any)] = List()
+
+  def recoveryMethod(maybePointInTime: Option[MillisSinceEpoch], maxSnapshotInterval: Int): Recovery =
+    maybePointInTime match {
+      case None =>
+        Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
+      case Some(pointInTime) =>
+        val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
+        Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
+    }
+
 
   def ackIfRequired(): Unit = {
     maybeAckAfterSnapshot.foreach {
@@ -116,7 +124,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   }
 
   private def logRecoveryTime(): Unit = {
-    val tookMs: MillisSinceEpoch = now().millisSinceEpoch - recoveryStartMillis
+    val tookMs: MillisSinceEpoch = SDate.now().millisSinceEpoch - recoveryStartMillis
     val message = s"Recovery complete. $messagesPersistedSinceSnapshotCounter messages replayed. Took ${tookMs}ms. "
     if (tookMs < 250L)
       log.debug(message)

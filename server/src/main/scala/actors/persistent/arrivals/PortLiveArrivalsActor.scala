@@ -10,12 +10,10 @@ object PortLiveArrivalsActor {
   val persistenceId = "actors.LiveArrivalsActor-live"
 }
 
-class PortLiveArrivalsActor(initialSnapshotBytesThreshold: Int,
-                            val now: () => SDateLike,
+class PortLiveArrivalsActor(val now: () => SDateLike,
                             expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, LiveFeedSource) {
   override def persistenceId: String = PortLiveArrivalsActor.persistenceId
 
-  override val snapshotBytesThreshold: Int = initialSnapshotBytesThreshold
   override val maybeSnapshotInterval: Option[Int] = Option(500)
 
   val log: Logger = LoggerFactory.getLogger(getClass)

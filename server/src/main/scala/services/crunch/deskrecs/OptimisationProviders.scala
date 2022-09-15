@@ -6,7 +6,7 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute, StaffMinute}
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{TM, TQM}
 import manifests.ManifestLookupLike
@@ -95,15 +95,15 @@ object OptimisationProviders {
       .ask(GetStateForDateRange(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
       .mapTo[Source[VoyageManifests, NotUsed]]
 
-  def loadsProvider(queuesActor: ActorRef)
-                   (crunchRequest: ProcessingRequest)
-                   (implicit timeout: Timeout, ec: ExecutionContext): Future[Map[TQM, LoadMinute]] =
-    queuesActor
+  def passengersProvider(passengersActor: ActorRef)
+                        (crunchRequest: ProcessingRequest)
+                        (implicit timeout: Timeout, ec: ExecutionContext): Future[Map[TQM, PassengersMinute]] =
+    passengersActor
       .ask(GetStateForDateRange(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
-      .mapTo[MinutesContainer[CrunchMinute, TQM]]
+      .mapTo[MinutesContainer[PassengersMinute, TQM]]
       .map(
         _.minutes.map(_.toMinute)
-          .map { minute => (minute.key, LoadMinute(minute)) }
+          .map { minute => (minute.key, minute) }
           .toMap
       )
 

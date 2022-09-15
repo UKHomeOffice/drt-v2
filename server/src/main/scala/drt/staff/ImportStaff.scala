@@ -1,6 +1,6 @@
 package drt.staff
 
-import drt.shared.{MilliDate, ShiftAssignments, StaffAssignment}
+import drt.shared.{ShiftAssignments, StaffAssignment}
 import org.joda.time.DateTime
 import play.api.libs.json._
 import services.SDate.implicits._

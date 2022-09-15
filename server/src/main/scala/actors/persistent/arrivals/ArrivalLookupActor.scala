@@ -29,7 +29,6 @@ class ArrivalLookupActor(portCode: PortCode, pointInTime: SDateLike, arrivalToLo
 
   def now: () => SDateLike = () => pointInTime
 
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = Option(1000)
 
   val log: Logger = LoggerFactory.getLogger(getClass)

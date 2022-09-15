@@ -2,7 +2,7 @@ package actors.persistent.arrivals
 
 import actors.acking.AckingReceiver.StreamCompleted
 import actors.persistent.staffing.{GetFeedStatuses, GetState}
-import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
+import actors.persistent.{PersistentDrtActor, RecoveryActorLike, Sizes}
 import actors.serializers.FlightMessageConversion._
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -26,8 +26,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   val restorer = new ArrivalsRestorer[Arrival]
   var state: ArrivalsState = initialState
 
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
-
+  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override def initialState: ArrivalsState = ArrivalsState.empty(feedSource)
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {

@@ -178,7 +178,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
           )
         ),
         now = () => shiftStart,
-        cruncher = OptimiserWithFlexibleProcessors.crunch
+        cruncher = OptimiserWithFlexibleProcessors.crunchWholePax
       ))
 
       offerAndWait(crunch.shiftsInput, initialShifts)
@@ -232,6 +232,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
     workLoad = 0d,
     deskRec = deskRec,
     waitTime = 0,
+    maybePaxInQueue = Option(0),
     deployedDesks = simDesks
   )
 }

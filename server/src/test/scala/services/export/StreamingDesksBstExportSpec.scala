@@ -9,7 +9,7 @@ import services.SDate
 import services.`export`.CsvTestHelper.{dropHeadings, resultStreamToCSV, takeCSVLines}
 import services.crunch.CrunchTestLike
 import services.exports.StreamingDesksExport
-import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -42,32 +42,26 @@ class StreamingDesksBstExportSpec extends CrunchTestLike {
     val minute7 = SDate("2021-04-06T00:30")
     val minute8 = SDate("2021-04-06T00:45")
 
-    val crunchMinutesContainer = MinutesContainer[CrunchMinute, TQM](List(
-      CrunchMinute(T1, Queues.EeaDesk, minute1.millisSinceEpoch, firstHourPax, workload, eeaDeskRec, waitTime, Option(eeaDeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EeaDesk, minute2.millisSinceEpoch, firstHourPax, workload, eeaDeskRec, waitTime, Option(eeaDeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EeaDesk, minute3.millisSinceEpoch, firstHourPax, workload, eeaDeskRec, waitTime, Option(eeaDeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EeaDesk, minute4.millisSinceEpoch, firstHourPax, workload, eeaDeskRec, waitTime, Option(eeaDeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EeaDesk, minute5.millisSinceEpoch, secondHourPax, workload, eeaDeskRec, waitTime, Option(eeaDeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EeaDesk, minute6.millisSinceEpoch, secondHourPax, workload, eeaDeskRec, waitTime, Option(eeaDeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EeaDesk, minute7.millisSinceEpoch, secondHourPax, workload, eeaDeskRec, waitTime, Option(eeaDeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EeaDesk, minute8.millisSinceEpoch, secondHourPax, workload, eeaDeskRec, waitTime, Option(eeaDeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.NonEeaDesk, minute1.millisSinceEpoch, firstHourPax, workload, nonEEADeskRec, waitTime, Option(nonEEADeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.NonEeaDesk, minute2.millisSinceEpoch, firstHourPax, workload, nonEEADeskRec, waitTime, Option(nonEEADeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.NonEeaDesk, minute3.millisSinceEpoch, firstHourPax, workload, nonEEADeskRec, waitTime, Option(nonEEADeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.NonEeaDesk, minute4.millisSinceEpoch, firstHourPax, workload, nonEEADeskRec, waitTime, Option(nonEEADeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.NonEeaDesk, minute5.millisSinceEpoch, secondHourPax, workload, nonEEADeskRec, waitTime, Option(nonEEADeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.NonEeaDesk, minute6.millisSinceEpoch, secondHourPax, workload, nonEEADeskRec, waitTime, Option(nonEEADeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.NonEeaDesk, minute7.millisSinceEpoch, secondHourPax, workload, nonEEADeskRec, waitTime, Option(nonEEADeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.NonEeaDesk, minute8.millisSinceEpoch, secondHourPax, workload, nonEEADeskRec, waitTime, Option(nonEEADeskDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EGate, minute1.millisSinceEpoch, firstHourPax, workload, eGateRec, waitTime, Option(eGateDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EGate, minute2.millisSinceEpoch, firstHourPax, workload, eGateRec, waitTime, Option(eGateDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EGate, minute3.millisSinceEpoch, firstHourPax, workload, eGateRec, waitTime, Option(eGateDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EGate, minute4.millisSinceEpoch, firstHourPax, workload, eGateRec, waitTime, Option(eGateDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EGate, minute5.millisSinceEpoch, secondHourPax, workload, eGateRec, waitTime, Option(eGateDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EGate, minute6.millisSinceEpoch, secondHourPax, workload, eGateRec, waitTime, Option(eGateDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EGate, minute7.millisSinceEpoch, secondHourPax, workload, eGateRec, waitTime, Option(eGateDep), Option(depWait), Option(actDesk), Option(actWait)),
-      CrunchMinute(T1, Queues.EGate, minute8.millisSinceEpoch, secondHourPax, workload, eGateRec, waitTime, Option(eGateDep), Option(depWait), Option(actDesk), Option(actWait)),
-    ))
+    val crunchMinutesContainer = MinutesContainer[CrunchMinute, TQM](
+      for {
+        queue <- List(EeaDesk, NonEeaDesk, EGate)
+        minute <- List(minute1, minute2, minute3, minute4, minute5, minute6, minute7, minute8)
+      } yield CrunchMinute(
+        terminal = T1,
+        queue = queue,
+        minute = minute.millisSinceEpoch,
+        paxLoad = if (minute.getDate() == 5) firstHourPax else secondHourPax,
+        workLoad = workload,
+        deskRec = Map(EeaDesk -> eeaDeskRec, NonEeaDesk -> nonEEADeskRec, EGate -> eGateRec)(queue),
+        waitTime = waitTime,
+        maybePaxInQueue = None,
+        deployedDesks = Option(Map(EeaDesk -> eeaDeskDep, NonEeaDesk -> nonEEADeskDep, EGate -> eGateDep)(queue)),
+        deployedWait = Option(depWait),
+        maybeDeployedPaxInQueue = None,
+        actDesks = Option(actDesk),
+        actWait = Option(actWait)
+      )
+    )
 
     val shifts = 1
     val misc = 2
@@ -104,16 +98,16 @@ class StreamingDesksBstExportSpec extends CrunchTestLike {
 
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 8)
 
-            val expected =
-              s"""|2021-04-06,00:00,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
-                  |2021-04-06,00:15,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
-                  |2021-04-06,00:30,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
-                  |2021-04-06,00:45,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
-                  |2021-04-06,01:00,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14
-                  |2021-04-06,01:15,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14
-                  |2021-04-06,01:30,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14
-                  |2021-04-06,01:45,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14"""
-                .stripMargin
+      val expected =
+        s"""|2021-04-06,00:00,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
+            |2021-04-06,00:15,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
+            |2021-04-06,00:30,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
+            |2021-04-06,00:45,17,8,5,12,11,17,8,4,12,11,17,8,3,12,11,2,1,1,14
+            |2021-04-06,01:00,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14
+            |2021-04-06,01:15,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14
+            |2021-04-06,01:30,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14
+            |2021-04-06,01:45,16,8,5,12,11,16,8,4,12,11,16,8,3,12,11,2,1,1,14"""
+          .stripMargin
 
 
       result === expected

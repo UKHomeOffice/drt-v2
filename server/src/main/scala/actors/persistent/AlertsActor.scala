@@ -20,10 +20,7 @@ class AlertsActor(val now: () => SDateLike) extends RecoveryActorLike with Persi
 
   override def persistenceId: String = "alerts-store"
 
-  override val snapshotBytesThreshold: Int = oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = None
-
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case alert: ProtobufAlert => AlertMessageConversion.alertFromMessage(alert).foreach(a => updateState(Seq(a)))

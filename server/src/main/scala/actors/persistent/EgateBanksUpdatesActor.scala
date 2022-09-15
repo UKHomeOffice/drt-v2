@@ -1,6 +1,6 @@
 package actors.persistent
 
-import actors.SetCrunchRequestQueue
+import actors.AddUpdatesSubscriber
 import actors.acking.AckingReceiver.StreamCompleted
 import actors.persistent.EgateBanksUpdatesActor.{AddSubscriber, ReceivedSubscriberAck, SendToSubscriber}
 import actors.persistent.Sizes.oneMegaByte
@@ -50,10 +50,7 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
 
   override def persistenceId: String = "egate-banks-updates"
 
-  override val snapshotBytesThreshold: Int = oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = None
-
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case updates: SetEgateBanksUpdateMessage =>
@@ -90,7 +87,7 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
   override def initialState: PortEgateBanksUpdates = PortEgateBanksUpdates(defaults)
 
   override def receiveCommand: Receive = {
-    case SetCrunchRequestQueue(crunchRequestQueue) =>
+    case AddUpdatesSubscriber(crunchRequestQueue) =>
       log.info("Received crunch request actor")
       maybeCrunchRequestQueueActor = Option(crunchRequestQueue)
 

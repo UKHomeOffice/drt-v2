@@ -392,7 +392,7 @@ class CrunchTestLike
           .map {
             case (qn, qms) =>
               val sortedCms = qms.toList.sortBy(_.minute)
-              val workLoad = sortedCms.map(_.workLoad).take(minsToTake)
+              val workLoad = sortedCms.map(m => Math.round(m.workLoad * 100).toDouble / 100).take(minsToTake)
               (qn, workLoad)
           }
         (tn, terminalLoads)

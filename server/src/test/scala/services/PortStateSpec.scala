@@ -24,7 +24,7 @@ class PortStateSpec extends CrunchTestLike {
     "I should see the pax loads are unaffected" >> {
     val minute = "2019-01-02T08:00"
     val millis = SDate(minute).millisSinceEpoch
-    val cm = CrunchMinute(T1, Queues.EeaDesk, millis, 10, 50, 10, 50)
+    val cm = CrunchMinute(T1, Queues.EeaDesk, millis, 10, 50, 10, 50, None)
     val portState = PortState(List(), List(cm), List())
 
     val crunch = runCrunchGraph(TestConfig(initialPortState = Option(portState), now = () => SDate(minute).addMinutes(-60)))
@@ -59,7 +59,7 @@ class PortStateSpec extends CrunchTestLike {
       (terminal, queues) <- terminalQueues
       queue <- queues
       minute <- threeDayMillis
-    } yield CrunchMinute(terminal, queue, minute, 5, 10, 2, 15)
+    } yield CrunchMinute(terminal, queue, minute, 5, 10, 2, 15, None)
 
     val sms = for {
       terminal <- terminalQueues.keys
@@ -74,7 +74,7 @@ class PortStateSpec extends CrunchTestLike {
       (terminal, queues) <- terminalQueues
       queue <- queues
       minute <- oneDayMillis
-    } yield CrunchMinute(terminal, queue, minute, 5, 10, 2, 15)
+    } yield CrunchMinute(terminal, queue, minute, 5, 10, 2, 15, None)
 
     val expectedSms = for {
       terminal <- terminalQueues.keys

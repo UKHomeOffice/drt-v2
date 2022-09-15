@@ -52,7 +52,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
         airportConfig = airportConfig,
-        cruncher = OptimiserWithFlexibleProcessors.crunch
+        cruncher = OptimiserWithFlexibleProcessors.crunchWholePax
       ))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
@@ -82,7 +82,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
         airportConfig = airportConfig,
-        cruncher = OptimiserWithFlexibleProcessors.crunch,
+        cruncher = OptimiserWithFlexibleProcessors.crunchWholePax,
         maybeEgatesProvider = Option(egatesProvider),
       ))
 

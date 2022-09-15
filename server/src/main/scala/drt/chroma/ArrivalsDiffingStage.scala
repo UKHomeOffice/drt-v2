@@ -7,7 +7,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.metrics.StageTimer
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
-import uk.gov.homeoffice.drt.ports.FeedSource
 
 import scala.collection.immutable.SortedMap
 

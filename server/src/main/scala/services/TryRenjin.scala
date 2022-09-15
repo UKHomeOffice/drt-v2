@@ -1,17 +1,17 @@
 package services
 
-import java.io.InputStream
-import javax.script.{ScriptEngine, ScriptEngineManager}
-
 import org.renjin.sexp.{DoubleVector, IntVector}
 import org.slf4j.{Logger, LoggerFactory}
 
+import java.io.InputStream
+import javax.script.{ScriptEngine, ScriptEngineManager}
 import scala.collection.immutable.IndexedSeq
 import scala.util.Try
 
-case class OptimizerCrunchResult(
-                         recommendedDesks: IndexedSeq[Int],
-                         waitTimes: Seq[Int])
+case class OptimizerCrunchResult(recommendedDesks: IndexedSeq[Int],
+                                 waitTimes: Seq[Int],
+                                 paxInQueue: IndexedSeq[Double],
+                                )
 
 object TryRenjin {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -54,7 +54,7 @@ object TryRenjin {
 
         val deskRecs = engine.eval("optimised").asInstanceOf[DoubleVector]
         val deskRecsScala = (0 until deskRecs.length()) map deskRecs.getElementAsInt
-        OptimizerCrunchResult(deskRecsScala, runSimulation("optimised", config))
+        OptimizerCrunchResult(deskRecsScala, runSimulation("optimised", config), IndexedSeq())
       }
       tryCrunchRes
     }

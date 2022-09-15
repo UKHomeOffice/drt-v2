@@ -1,18 +1,19 @@
 package actors.routing.minutes
 
+import actors.MinuteLookups
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared.TQM
 import services.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -26,13 +27,53 @@ class QueueMinutesActorSpec extends CrunchTestLike {
   def lookupWithData(crunchMinutes: MinutesContainer[CrunchMinute, TQM]): MinutesLookup[CrunchMinute, TQM] = (_: (Terminal, UtcDate), _: Option[MillisSinceEpoch]) => Future(Option(crunchMinutes))
 
   val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
-  val minutesContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(Iterable(crunchMinute))
+  val minutesContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(Seq(crunchMinute))
 
   val noopUpdates: ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[UpdatedMillis] =
-    (_: (Terminal, UtcDate), _: MinutesContainer[CrunchMinute, TQM]) => Future(UpdatedMillis(Seq()))
+    (_: (Terminal, UtcDate), _: MinutesContainer[CrunchMinute, TQM]) => Future(UpdatedMillis(Set()))
+
+  "When I send some PassengerMinutes to a QueueMinutesActor and query it" >> {
+    "I should see the passenger minutes originally sent" >> {
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)))
+      val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
+      val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
+      val result = lookups.queueLoadsMinutesActor
+        .ask(MinutesContainer(Seq(passengers1, passengers2)))
+        .flatMap { _ =>
+          lookups.queueLoadsMinutesActor
+            .ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.addMinutes(1).millisSinceEpoch, terminal))
+            .mapTo[MinutesContainer[PassengersMinute, TQM]]
+        }
+
+      Await.result(result, 1.second) === MinutesContainer(List(passengers1, passengers2))
+    }
+  }
+
+  "When I send two sets of PassengerMinutes to a QueueMinutesActor and query it" >> {
+    "I should see the combined set of minutes" >> {
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)))
+      val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
+      val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
+      val newPassengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(2, 2), None)
+      val passengers3 = PassengersMinute(terminal, queue, date.addMinutes(2).millisSinceEpoch, Seq(5, 5, 4, 4), None)
+
+      val result = lookups.queueLoadsMinutesActor
+        .ask(MinutesContainer(Seq(passengers1, passengers2)))
+        .flatMap { _ =>
+          lookups.queueLoadsMinutesActor
+            .ask(MinutesContainer(Seq(newPassengers2, passengers3)))
+            .flatMap { _ =>
+              lookups.queueLoadsMinutesActor
+                .ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.addMinutes(2).millisSinceEpoch, terminal))
+                .mapTo[MinutesContainer[PassengersMinute, TQM]]
+            }
+        }
+
+      Await.result(result, 1.second) === MinutesContainer(List(passengers1, newPassengers2, passengers3))
+    }
+  }
 
   "When I ask for CrunchMinutes" >> {
-
     "Given a lookups with no data" >> {
       "I should get None" >> {
         val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates)))
@@ -62,7 +103,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
       val crunchMinuteOutSideRange2: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T11:00").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
       val crunchMinuteInsideRange1: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T10:00").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
       val crunchMinuteInsideRange2: CrunchMinute = CrunchMinute(terminal, queue, SDate("2020-01-01T10:59").millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
-      val minutes = Iterable(crunchMinuteInsideRange1, crunchMinuteInsideRange2, crunchMinuteOutSideRange1, crunchMinuteOutSideRange2)
+      val minutes = Seq(crunchMinuteInsideRange1, crunchMinuteInsideRange2, crunchMinuteOutSideRange1, crunchMinuteOutSideRange2)
       val minutesState: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
 
       "I should get the one minute back" >> {
@@ -70,7 +111,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(startMinute.millisSinceEpoch, endMinute.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1.second)
 
-        result === MinutesContainer(Iterable(crunchMinuteInsideRange1, crunchMinuteInsideRange2))
+        result === MinutesContainer(Seq(crunchMinuteInsideRange1, crunchMinuteInsideRange2))
       }
     }
   }

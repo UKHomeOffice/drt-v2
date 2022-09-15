@@ -3,20 +3,15 @@ package services.persistence
 import actors.persistent.RecoveryActorLike
 import akka.actor.{ActorRef, Props}
 import akka.testkit.TestProbe
-import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FlightMessage, FlightsDiffMessage}
-import services.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FlightMessage, FlightsDiffMessage}
 
 import scala.concurrent.duration._
 
 class TestSnapshottingActor(probe: ActorRef, snapshotMessage: GeneratedMessage, override val snapshotBytesThreshold: Int = 0, override val maybeSnapshotInterval: Option[Int] = None) extends RecoveryActorLike {
-  override val now: () => SDateLike = () => SDate.now()
   override val log: Logger = LoggerFactory.getLogger(getClass)
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case _ => Unit
@@ -67,7 +62,7 @@ class SnapshottingSpec extends CrunchTestLike {
 
     testActor ! new FlightMessage(iATA = Option("BA1010"))
 
-    probe.expectNoMessage(2 seconds)
+    probe.expectNoMessage(2.seconds)
 
     true
   }
@@ -85,7 +80,7 @@ class SnapshottingSpec extends CrunchTestLike {
 
     1 to 9 foreach (_ => testActor ! new FlightMessage(iATA = Option("BA1010")))
 
-    probe.expectNoMessage(2 seconds)
+    probe.expectNoMessage(2.seconds)
 
     true
   }

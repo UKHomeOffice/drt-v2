@@ -23,7 +23,7 @@ class TerminalDayStaffActor(year: Int,
                             terminal: Terminal,
                             val now: () => SDateLike,
                             maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[StaffMinute, TM](year, month, day, terminal, now, maybePointInTime) {
-  override val typeForPersistenceId: String = "staff"
+  override val persistenceIdType: String = "staff"
 
   import actors.serializers.PortStateMessageConversion._
 

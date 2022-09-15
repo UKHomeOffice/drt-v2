@@ -4,7 +4,7 @@ import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.SortedActorRefSource
 import akka.actor.{Actor, Props}
 import akka.testkit.TestProbe
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PassengersMinute}
 import drt.shared._
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
@@ -12,7 +12,7 @@ import services.crunch.deskrecs.OptimiserMocks.MockSinkActor
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
-import services.{SDate, TryCrunch}
+import services.{SDate, TryCrunchWholePax}
 import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
@@ -24,24 +24,24 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-class MockProviderActor(minutes: MinutesContainer[CrunchMinute, TQM]) extends Actor {
+class MockProviderActor(minutes: MinutesContainer[PassengersMinute, TQM]) extends Actor {
   override def receive: Receive = {
     case _: GetStateForDateRange => sender() ! minutes
   }
 }
 
-class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
+class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
   val airportConfig: AirportConfig = TestDefaults.airportConfigWithEgates
 
   val egatesProvider: Terminal => Future[EgateBanksUpdates] = MockEgatesProvider.terminalProvider(airportConfig)
 
   val maxDesksProvider: Map[Terminal, TerminalDeskLimitsLike] = PortDeskLimits.flexed(airportConfig, egatesProvider)
-  val mockCrunch: TryCrunch = CrunchMocks.mockCrunch
+  val mockCrunch: TryCrunchWholePax = CrunchMocks.mockCrunchWholePax
 
   val staffToDeskLimits: StaffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, egatesProvider)
   val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig))
 
-  def setupGraphAndCheckQueuePax(minutes: MinutesContainer[CrunchMinute, TQM],
+  def setupGraphAndCheckQueuePax(minutes: MinutesContainer[PassengersMinute, TQM],
                                  expectedQueuePax: PartialFunction[Any, Boolean]): Any = {
     val probe = TestProbe()
 
@@ -50,27 +50,27 @@ class RunnableDynamicDeploymentsSpec extends CrunchTestLike {
     val mockProvider = system.actorOf(Props(new MockProviderActor(minutes)))
 
     val deskRecs = DynamicRunnableDeployments.crunchRequestsToDeployments(
-      OptimisationProviders.loadsProvider(mockProvider),
+      OptimisationProviders.passengersProvider(mockProvider),
       OptimisationProviders.staffMinutesProvider(mockProvider, airportConfig.terminals),
       staffToDeskLimits,
       desksAndWaitsProvider.loadsToSimulations)
 
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet())
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "deployments")
 
-    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, deskRecs).run()
+    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, deskRecs, "deployments").run()
     queue ! request
 
-    probe.fishForMessage(1.second)(expectedQueuePax)
+    probe.fishForMessage(5.second)(expectedQueuePax)
   }
 
   "Given a mock workload provider returning no workloads" >> {
     "When I ask for deployments I should see 1440 minutes for each queue" >> {
       val expected: PartialFunction[Any, Boolean] = {
-        case SimulationMinutes(minutes) =>
-          val minuteCountByQueue: Map[Queue, Int] = minutes.groupBy(_.queue).mapValues(_.size)
+        case minutes: MinutesContainer[CrunchMinute, TQM] =>
+          val minuteCountByQueue: Map[Queue, Int] = minutes.minutes.groupBy(_.toMinute.queue).mapValues(_.size)
           minuteCountByQueue === Map(EeaDesk -> 1440, NonEeaDesk -> 1440, EGate -> 1440)
       }
-      val noLoads = MinutesContainer.empty[CrunchMinute, TQM]
+      val noLoads = MinutesContainer.empty[PassengersMinute, TQM]
 
       setupGraphAndCheckQueuePax(minutes = noLoads, expectedQueuePax = expected)
 

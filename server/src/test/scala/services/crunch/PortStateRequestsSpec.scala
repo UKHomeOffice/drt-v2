@@ -32,7 +32,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxDays = 10
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
-  val lookups: MinuteLookups = MinuteLookups(system, myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  val lookups: MinuteLookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
   val dummyLegacy1ActorProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
 
@@ -117,45 +117,45 @@ class PortStateRequestsSpec extends CrunchTestLike {
     }
 
     "When I send it a DeskRecMinute and then ask for its crunch minutes" >> {
-      val lm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
+      val lm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
 
-      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm)))
+      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm)).asContainer)
 
       "Then I should find a matching crunch minute" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
-        val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
+        val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
 
         result === PortState(Seq(), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), Seq())
       }
     }
 
     "When I send it a DeskRecMinute and then ask for updates since just before now" >> {
-      val lm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
+      val lm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
 
       resetData(T1, myNow().getUtcLastMidnight)
-      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm)))
+      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm)).asContainer)
 
       "Then I should get the matching crunch minute in the updates" >> {
         val sinceMillis = myNow().addMinutes(-1).millisSinceEpoch
         Thread.sleep(250)
         val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1.second)
-        val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
+        val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
 
         result === Option(PortStateUpdates(myNow().millisSinceEpoch, Seq(), Seq(), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), Seq()))
       }
     }
 
     "When I send it two DeskRecMinutes consecutively and then ask for its crunch minutes" >> {
-      val lm1 = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
-      val lm2 = DeskRecMinute(T1, EeaDesk, myNow().addMinutes(1).millisSinceEpoch, 2, 3, 4, 5)
+      val lm1 = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
+      val lm2 = DeskRecMinute(T1, EeaDesk, myNow().addMinutes(1).millisSinceEpoch, 2, 3, 4, 5, None)
 
-      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm1))).flatMap(_ => ps.ask(DeskRecMinutes(Seq(lm2))))
+      val eventualAck = ps.ask(DeskRecMinutes(Seq(lm1)).asContainer).flatMap(_ => ps.ask(DeskRecMinutes(Seq(lm2)).asContainer))
 
       "Then I should find a matching crunch minute" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
         val expectedCms = Seq(
-          CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4),
-          CrunchMinute(T1, EeaDesk, myNow().addMinutes(1).millisSinceEpoch, 2, 3, 4, 5))
+          CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None),
+          CrunchMinute(T1, EeaDesk, myNow().addMinutes(1).millisSinceEpoch, 2, 3, 4, 5, None))
 
         result === PortState(Seq(), setUpdatedCms(expectedCms, myNow().millisSinceEpoch), Seq())
       }
@@ -164,7 +164,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
     "When I send it a StaffMinute and then ask for its staff minutes" >> {
       val sm = StaffMinute(T1, myNow().millisSinceEpoch, 1, 2, 3)
 
-      val eventualAck = ps.ask(StaffMinutes(Seq(sm)))
+      val eventualAck = ps.ask(StaffMinutes(Seq(sm)).asContainer)
 
       "Then I should find a matching staff minute" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
@@ -177,7 +177,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
       val sm1 = StaffMinute(T1, myNow().millisSinceEpoch, 1, 2, 3)
       val sm2 = StaffMinute(T1, myNow().addMinutes(1).millisSinceEpoch, 1, 2, 3)
 
-      val eventualAck = ps.ask(StaffMinutes(Seq(sm1))).flatMap(_ => ps.ask(StaffMinutes(Seq(sm2))))
+      val eventualAck = ps.ask(StaffMinutes(Seq(sm1)).asContainer).flatMap(_ => ps.ask(StaffMinutes(Seq(sm2)).asContainer))
 
       "Then I should find a matching staff minute" >> {
         val result = Await.result(eventualPortState(eventualAck, myNow, ps), 1.second)
@@ -188,18 +188,18 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
     "When I send it a flight, a queue & a staff minute, and ask for the terminal state" >> {
       val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1)
-      val drm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
+      val drm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
       val sm1 = StaffMinute(T1, myNow().millisSinceEpoch, 1, 2, 3)
 
-      val eventualAck1 = ps.ask(StaffMinutes(Seq(sm1)))
-      val eventualAck2 = ps.ask(DeskRecMinutes(Seq(drm)))
+      val eventualAck1 = ps.ask(StaffMinutes(Seq(sm1)).asContainer)
+      val eventualAck2 = ps.ask(DeskRecMinutes(Seq(drm)).asContainer)
       val eventualAck3 = ps.ask(ArrivalsDiff(Seq(arrival), List()))
       val eventualAck = Future.sequence(Seq(eventualAck1, eventualAck2, eventualAck3))
 
       "Then I should see the flight, & corresponding crunch & staff minutes" >> {
         val result = Await.result(eventualTerminalState(eventualAck, myNow, ps), 1.second)
 
-        val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4)
+        val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
 
         result === PortState(setUpdatedFlights(Seq(ApiFlightWithSplits(arrival, Set())), myNow().millisSinceEpoch), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), setUpdatedSms(Seq(sm1), myNow().millisSinceEpoch))
       }

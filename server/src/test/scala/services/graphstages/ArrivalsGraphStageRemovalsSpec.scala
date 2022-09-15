@@ -3,10 +3,8 @@ package services.graphstages
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared._
+import services.SDate
 import services.crunch.CrunchTestLike
-import services.{PcpArrival, SDate}
-import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration._
@@ -17,12 +15,10 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
 
   val dayOfArrivals: SDateLike = SDate("2021-03-01T12:00Z")
 
-  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0, considerPredictions = true)(a, r)
-
   "Given an ACL feed with 2 arrivals, followed by another with only one of them, the other arrival should be removed" >> {
     val (aclSource, _, _, _, _) = TestableArrivalsGraphStage(
       probe,
-      TestableArrivalsGraphStage.buildArrivalsGraphStage(pcpTimeCalc, dayOfArrivals)
+      TestableArrivalsGraphStage.buildArrivalsGraphStage(dayOfArrivals)
     ).run
 
     val arrivalThatIsRemoved = ArrivalGenerator.arrival(schDt = dayOfArrivals.toISOString())
@@ -48,9 +44,7 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
   "Given an ACL feed with a flight removal on the day after that flight is scheduled, then we should ignore the removal" >> {
     val (aclSource, _, _, _, _) = TestableArrivalsGraphStage(
       probe,
-      TestableArrivalsGraphStage.buildArrivalsGraphStage(
-        pcpTimeCalc,
-        dayOfArrivals.getUtcLastMidnight.addDays(1))
+      TestableArrivalsGraphStage.buildArrivalsGraphStage(dayOfArrivals.getUtcLastMidnight.addDays(1))
     ).run
 
     val arrivalThatIsRemoved = ArrivalGenerator.arrival(schDt = dayOfArrivals.toISOString())
@@ -61,8 +55,7 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
     aclSource.offer(firstAclFeed)
 
     probe.fishForMessage(1.second) {
-      case ArrivalsDiff(updates, removals) =>
-        removals.isEmpty
+      case ArrivalsDiff(_, removals) => removals.isEmpty
     }
 
     val secondAclFeed = List(arrivalThatRemains, newArrival)

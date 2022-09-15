@@ -1,15 +1,13 @@
 package actors.debug
 
-import actors.persistent.{RecoveryActorLike, Sizes}
+import actors.persistent.RecoveryActorLike
 import actors.persistent.staffing.GetState
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchDiffMessage, FlightWithSplitsMessage, FlightsWithSplitsDiffMessage}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
-import services.SDate
 
 case class DebugState(lastSnapshot: Option[GeneratedMessage], messages: List[GeneratedMessage])
 
@@ -22,13 +20,9 @@ class DebugFlightsActor(lookupId: String, maybePointInTime: Option[MillisSinceEp
 
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override def now: () => SDateLike = () => SDate.now()
-
   var snapshot: Option[GeneratedMessage] = None
 
   var messages: List[GeneratedMessage] = List()
-
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
 
@@ -79,6 +73,5 @@ class DebugFlightsActor(lookupId: String, maybePointInTime: Option[MillisSinceEp
       Recovery(fromSnapshot = criteria, replayMax = 1000)
   }
 
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override val maybeSnapshotInterval: Option[Int] = Option(1000)
 }

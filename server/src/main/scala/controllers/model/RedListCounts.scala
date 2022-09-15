@@ -2,7 +2,7 @@ package controllers.model
 
 
 import drt.shared.DataUpdates.FlightUpdates
-import drt.shared.{RedListPassengers, _}
+import drt.shared.RedListPassengers
 import services.SDate
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsString, JsValue, RootJsonFormat, enrichAny}
 import uk.gov.homeoffice.drt.ports.PortCode

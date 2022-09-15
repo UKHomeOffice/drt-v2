@@ -88,7 +88,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
         val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, actPax = Option(100))
         val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
-          VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
+          VoyageManifest(EventTypes.DC, portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
             manifestPax(101, euPassport))
         )))
         val crunch = runCrunchGraph(TestConfig(
@@ -101,8 +101,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
               eeaMachineReadableToEGate -> 25d / 60
             )),
             terminalPaxTypeQueueAllocation = airportConfig.terminalPaxTypeQueueAllocation.updated(
-              T1, airportConfig.terminalPaxTypeQueueAllocation(T1).updated(EeaMachineReadable, List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2),
-              )
+              T1, airportConfig.terminalPaxTypeQueueAllocation(T1).updated(EeaMachineReadable, List(Queues.EGate -> 0.8, Queues.EeaDesk -> 0.2))
             ),
             queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk, EGate))
           )
@@ -113,14 +112,13 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
         val expected = Map(Queues.EeaDesk -> 4.0, Queues.EGate -> 16.0)
 
-        crunch.portStateTestProbe.fishForMessage(3 seconds) {
+        crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
             val queuePax = ps.crunchMinutes
               .values
               .filter(cm => cm.minute == SDate(scheduled).millisSinceEpoch)
               .map(cm => (cm.queue, cm.paxLoad))
               .toMap
-
             queuePax == expected
         }
 
@@ -285,9 +283,9 @@ class VoyageManifestsSpec extends CrunchTestLike {
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
         offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
-        val expected = Map(Queues.EeaDesk -> 1.2, Queues.EGate -> 0.8, Queues.NonEeaDesk -> 2.0)
+        val expected = Map(Queues.EeaDesk -> 1, Queues.EGate -> 1, Queues.NonEeaDesk -> 2.0)
 
-        crunch.portStateTestProbe.fishForMessage(10 seconds) {
+        crunch.portStateTestProbe.fishForMessage(2.seconds) {
           case ps: PortState =>
             val queuePax = ps.crunchMinutes
               .values

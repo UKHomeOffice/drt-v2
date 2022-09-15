@@ -14,7 +14,7 @@ import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSucc
 import services.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.{N, S}
 
 import java.io.{ByteArrayOutputStream, File, FileReader}

@@ -1,10 +1,10 @@
 package actors.daily
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.RecoveryActorLike
 import actors.persistent.staffing.GetState
-import actors.persistent.{RecoveryActorLike, Sizes}
-import akka.persistence.{Recovery, SaveSnapshotSuccess, SnapshotSelectionCriteria}
-import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, MinuteLike, MinutesContainer}
+import akka.persistence.SaveSnapshotSuccess
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.SDate
@@ -19,39 +19,29 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
                                                                                               day: Int,
                                                                                               terminal: Terminal,
                                                                                               now: () => SDateLike,
-                                                                                              maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
+                                                                                              override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
     case Some(pit) => f"@${SDate(pit).toISOString()}"
   }
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
-  val typeForPersistenceId: String
+  val persistenceIdType: String
 
   var state: Map[INDEX, VAL] = Map()
 
-  override def persistenceId: String = f"terminal-$typeForPersistenceId-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
+  override def persistenceId: String = f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
-  override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
-  override val recoveryStartMillis: MillisSinceEpoch = now().millisSinceEpoch
 
   val firstMinute: SDateLike = SDate(year, month, day, 0, 0, Crunch.utcTimeZone)
   val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
   val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
 
-  override def recovery: Recovery = maybePointInTime match {
-    case None =>
-      Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
-    case Some(pointInTime) =>
-      val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-      Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
-  }
-
   override def receiveCommand: Receive = {
     case container: MinutesContainer[VAL, INDEX] =>
-      log.debug(s"Received MinutesContainer for persistence")
+      log.info(s"Received MinutesContainer for persistence")
       updateAndPersistDiff(container)
 
     case GetState =>
@@ -65,7 +55,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   }
 
   private def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
-    if (state.nonEmpty) Option(MinutesContainer(state.values.toSet)) else None
+    if (state.nonEmpty) Option(MinutesContainer(state.values.toSeq)) else None
 
   def diffFromMinutes(state: Map[INDEX, VAL], minutes: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
     val nowMillis = now().millisSinceEpoch
@@ -89,7 +79,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
         state = updateStateFromDiff(state, differences)
         val messageToPersist = containerToMessage(differences)
         val updatedMillis = if (shouldSendEffectsToSubscriber(container))
-          UpdatedMillis(differences.map(_.minute))
+          UpdatedMillis(differences.map(_.minute).toSet)
         else UpdatedMillis.empty
 
         val replyToAndMessage = List((sender(), updatedMillis))
