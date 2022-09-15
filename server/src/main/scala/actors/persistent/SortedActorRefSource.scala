@@ -70,7 +70,6 @@ final class SortedActorRefSource(persistentActor: ActorRef,
           maybeNextElement.foreach { e =>
             persistentActor ! RemoveCrunchRequest(e)
             buffer -= e
-            log.info(s"[$graphName] Pushing element: $e")
             push(out, e)
             prioritiseForecast = !prioritiseForecast
           }

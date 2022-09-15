@@ -81,11 +81,6 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
         val updatedMillis = if (shouldSendEffectsToSubscriber(container))
           UpdatedMillis(differences.map(_.minute).toSet)
         else UpdatedMillis.empty
-//        log.info(s"======updates: ${container.minutes}")
-//        log.info(s"======should send: ${shouldSendEffectsToSubscriber(container)}")
-//        log.info(s"======diff: $differences")
-//        log.info(s"======updatedMillis: $updatedMillis")
-
         val replyToAndMessage = List((sender(), updatedMillis))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)
     }
