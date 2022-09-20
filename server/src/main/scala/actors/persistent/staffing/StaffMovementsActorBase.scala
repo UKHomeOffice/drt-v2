@@ -135,6 +135,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
       onUpdateDiff(StaffMovements(movementsToAdd))
 
     case RemoveStaffMovements(uuidToRemove) =>
+      val removed = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
       val updatedStaffMovements = state.staffMovements - Seq(uuidToRemove)
       purgeExpiredAndUpdateState(updatedStaffMovements)
 
@@ -142,9 +143,8 @@ class StaffMovementsActorBase(val now: () => SDateLike,
       val messagesToPersist: RemoveStaffMovementMessage = RemoveStaffMovementMessage(Option(uuidToRemove.toString), Option(now().millisSinceEpoch))
       persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), RemoveStaffMovementsAck(uuidToRemove))))
 
-      val updates = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
-      if (updates.nonEmpty) {
-        onUpdateDiff(StaffMovements(updates))
+      if (removed.nonEmpty) {
+        onUpdateDiff(StaffMovements(removed))
       }
 
     case SaveSnapshotSuccess(md) =>
