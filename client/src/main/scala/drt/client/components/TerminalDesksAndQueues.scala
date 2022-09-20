@@ -117,7 +117,7 @@ object TerminalDesksAndQueues {
 
       def subHeadingLevel2(queueNames: Seq[Queue], showWaitColumn: Boolean) = {
         val queueSubHeadings = queueNames.flatMap { queueName =>
-          <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName, showWaitColumn)
+          <.th(^.className := queueColour(queueName), "Incoming pax") :: staffDeploymentSubheadings(queueName, showWaitColumn)
         }.toTagMod
 
         List(queueSubHeadings,

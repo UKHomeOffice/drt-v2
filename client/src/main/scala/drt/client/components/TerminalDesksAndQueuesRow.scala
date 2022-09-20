@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.actions.Actions.UpdateStaffAdjustmentDialogueState
-import drt.client.components.TerminalDesksAndQueues.{Deployments, Ideal, DeskType, queueActualsColour, queueColour}
+import drt.client.components.TerminalDesksAndQueues.{Deployments, DeskType, Ideal, queueActualsColour, queueColour}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
@@ -19,8 +19,6 @@ import uk.gov.homeoffice.drt.auth.Roles.StaffMovementsEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-
-import scala.scalajs.js
 
 object TerminalDesksAndQueuesRow {
 
@@ -56,30 +54,16 @@ object TerminalDesksAndQueuesRow {
 
       val queueTds = crunchMinutesByQueue.flatMap {
         case (queue, cm) =>
-          val inQueue: String = cm.maybePaxInQueue.map(Math.round(_).toString).getOrElse("-")
-          val widthPct = Math.round(cm.maybePaxInQueue.getOrElse(0).toDouble / props.maxPaxInQueues(queue) * 100).toInt / 2
-          val joining = Math.round(cm.paxLoad)
-          val paxLoadTd = <.td(^.className := queueColour(queue),
-            Tippy.interactive(
-              <.div(^.style := js.Dictionary("textAlign" -> "left"),
-                s"$joining passengers joining. Maximum passengers in the queue: $inQueue"),
-              <.div(^.className := "queue-pax",
-                <.div(^.className := "queue-pax-joining", joining),
-                <.div(^.className := "queue-pax-waiting-graphic",
-                  <.div(^.className := "queue-pax-waiting-graphic-bar", ^.style := js.Dictionary("width" -> widthPct))
-                )
-              ),
-            )
-          )
+          val paxLoadTd = <.td(^.className := queueColour(queue), s"${Math.round(cm.paxLoad)}")
 
-          def deployDeskTd(ragClass: String): VdomTagOf[TableCell] = <.td(
-            ^.className := s"${queueColour(queue)} $ragClass",
+          def deployDeskTd: VdomTagOf[TableCell] = <.td(
+            ^.className := s"${queueColour(queue)}",
             Tippy.interactive(<.span(s"Suggested deployments with available staff: ${cm.deployedDesks.getOrElse("-")}"),
               s"${cm.deskRec}")
           )
 
-          def deployRecsDeskTd(ragClass: String): VdomTagOf[TableCell] = <.td(
-            ^.className := s"${queueColour(queue)} $ragClass",
+          def deployRecsDeskTd: VdomTagOf[TableCell] = <.td(
+            ^.className := s"${queueColour(queue)}",
             Tippy.interactive(
               <.span(s"Recommended for this time slot / queue: ${cm.deskRec}"),
               s"${cm.deployedDesks.getOrElse("-")}"
@@ -92,7 +76,7 @@ object TerminalDesksAndQueuesRow {
               if (props.showWaitColumn)
                 List(
                   paxLoadTd,
-                  deployRecsDeskTd(ragClass),
+                  deployRecsDeskTd,
                   <.td(
                     ^.className := s"${queueColour(queue)} $ragClass",
                     Tippy.interactive(
@@ -102,13 +86,13 @@ object TerminalDesksAndQueuesRow {
                   )
                 )
               else
-                List(paxLoadTd, deployRecsDeskTd(ragClass))
+                List(paxLoadTd, deployRecsDeskTd)
             case Ideal =>
               val ragClass: String = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(queue))
               if (props.showWaitColumn)
                 List(
                   paxLoadTd,
-                  deployDeskTd(ragClass),
+                  deployDeskTd,
                   <.td(
                     ^.className := s"${queueColour(queue)} $ragClass",
                     Tippy.interactive(<.span(s"Suggested deployments with available staff: ${cm.waitTime}"),
@@ -116,7 +100,7 @@ object TerminalDesksAndQueuesRow {
                   )
                 )
               else
-                List(paxLoadTd, deployDeskTd(ragClass))
+                List(paxLoadTd, deployDeskTd)
           }
 
           def queueActualsTd(actDesks: String) = <.td(^.className := queueActualsColour(queue), actDesks)
