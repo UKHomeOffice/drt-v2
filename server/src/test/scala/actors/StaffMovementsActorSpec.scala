@@ -36,8 +36,6 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val probe = TestProbe("movements-subscriber-test")
       actor ! probe.ref
 
-      Thread.sleep(100)
-
       actor ! AddStaffMovements(staffMovements.movements)
       probe.expectMsg(TerminalUpdateRequest(T1, LocalDate(2017, 1, 1), 0, 1440))
 
