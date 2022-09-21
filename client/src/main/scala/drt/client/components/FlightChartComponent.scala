@@ -6,6 +6,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.SPACircuit
 import drt.shared.ArrivalKey
 import io.kinoplan.scalajs.react.material.ui.core.MuiCircularProgress
+import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
@@ -83,56 +84,21 @@ object FlightChartComponent {
 
                       <.div(^.cls := "container arrivals__table__flight__chart-box",
                         <.div(^.cls := "row", ^.width := (chartWidth * 3).toString + "px",
-                          if (sortedNats.toMap.values.sum > 0)
+                          if (sortedNats.toMap.values.sum > 0) {
+                            val maxY = sortedNats.toMap.values.max + 5
                             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart nationality-chart",
-                              ChartJSComponent(
-                                ChartJsProps(
-                                  data = nationalityData,
-                                  width = Option(chartWidth),
-                                  height = Option(chartHeight),
-                                  options = ChartJsOptions("Nationality breakdown").copy(
-                                    scales = js.Dictionary[js.Any](
-                                      "y" -> js.Dictionary(
-                                        "suggestedMax" -> (sortedNats.toMap.values.max + 5),
-                                      ),
-                                    ))
-                                )
-                              ))
-                          else
-                            EmptyVdom,
-                          if (sortedPaxTypes.toMap.values.sum > 0 && sortedAges.toMap.values.sum > 0)
+                              chart("Nationality breakdown", nationalityData, maxY, chartWidth, chartHeight))
+                          } else EmptyVdom,
+                          if (sortedPaxTypes.toMap.values.sum > 0) {
+                            val maxY = sortedPaxTypes.toMap.values.max + 5
                             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart passenger-type-chart",
-                              ChartJSComponent(
-                                ChartJsProps(
-                                  data = paxTypeData,
-                                  width = Option(chartWidth),
-                                  height = Option(chartHeight),
-                                  options = ChartJsOptions("Passenger types").copy(
-                                    scales = js.Dictionary[js.Any](
-                                      "y" -> js.Dictionary(
-                                        "suggestedMax" -> (sortedPaxTypes.toMap.values.max + 5),
-                                      ),
-                                    ))
-                                )))
-                          else
-                            EmptyVdom,
-                          if (sortedAges.toMap.values.sum > 0)
+                              chart("Passenger types", paxTypeData, maxY, chartWidth, chartHeight))
+                          } else EmptyVdom,
+                          if (sortedAges.toMap.values.sum > 0) {
+                            val maxY = sortedAges.toMap.values.max + 5
                             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart age-breakdown-chart",
-                              ChartJSComponent(
-                                ChartJsProps(
-                                  data = ageData,
-                                  width = Option(chartWidth),
-                                  height = Option(chartHeight),
-                                  options = ChartJsOptions("Age breakdown").copy(
-                                    scales = js.Dictionary[js.Any](
-                                      "y" -> js.Dictionary(
-                                        "suggestedMax" -> (sortedAges.toMap.values.max + 5),
-                                      ),
-                                    ))
-                                ))
-                            )
-                          else
-                            EmptyVdom
+                              chart("Age breakdown", ageData, maxY, chartWidth, chartHeight))
+                          } else EmptyVdom
                         ),
                         if (info.nationalities.size > 10)
                           <.div(^.cls := s"arrivals__table__flight__chart__show__nationalities",
@@ -150,6 +116,21 @@ object FlightChartComponent {
             }
         ))
     }).build
+
+  private def chart(title: String, data: ChartJsData, maxY: Int, width: Int, height: Int): UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]] =
+    ChartJSComponent(
+      ChartJsProps(
+        data = data,
+        width = Option(width),
+        height = Option(height),
+        options = ChartJsOptions(title).copy(
+          scales = js.Dictionary[js.Any](
+            "y" -> js.Dictionary(
+              "suggestedMax" -> maxY,
+            ),
+          ))
+      )
+    )
 
   def summariseNationalities(nats: Map[Nationality, Int], numberToShow: Int): Map[Nationality, Int] =
     nats
