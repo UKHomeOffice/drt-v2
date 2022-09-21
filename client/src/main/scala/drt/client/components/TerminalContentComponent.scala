@@ -111,23 +111,23 @@ object TerminalContentComponent {
             <.div(^.className := "tabs-with-export",
               <.ul(^.className := "nav nav-tabs",
                 <.li(^.className := desksAndQueuesActive,
-                  <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues", ^.href := "JavaScript:void(0)"), ^.onClick --> {
+                  <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
                     GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
                   }),
                 <.li(^.className := arrivalsActive,
-                  <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals", ^.href := "JavaScript:void(0)"), ^.onClick --> {
+                  <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
                     GoogleEventTracker.sendEvent(terminalName, "Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
                   }),
                 <.li(^.className := staffingActive,
-                  <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", " ", staffMovementsTabTooltip, ^.href := "JavaScript:void(0)"), ^.onClick --> {
+                  <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", " ", staffMovementsTabTooltip), ^.onClick --> {
                     GoogleEventTracker.sendEvent(terminalName, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
                   }),
                 displayForRole(
                   <.li(^.className := simulationsActive,
-                    <.a(^.id := "simulationDayTab", VdomAttr("data-toggle") := "tab", "Simulate Day", ^.href := "JavaScript:void(0)"), ^.onClick --> {
+                    <.a(^.id := "simulationDayTab", VdomAttr("data-toggle") := "tab", "Simulate Day"), ^.onClick --> {
                       GoogleEventTracker.sendEvent(terminalName, "Simulate Day", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                       props.router.set(props.terminalPageTab.copy(subMode = "simulations"))
                     }),

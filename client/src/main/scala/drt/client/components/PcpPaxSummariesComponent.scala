@@ -65,7 +65,7 @@ object PcpPaxSummariesComponent {
   }
 
   def summaryBox(boxNumber: Int, label: String, now: SDateLike, queues: Seq[Queue], summary: PcpPaxSummary): TagOf[Div] = {
-    <.div(^.className := s"pcp-pax-summary b$boxNumber",
+    <.div(^.className := s"pcp-pax-summary b$boxNumber", ^.key := boxNumber,
       <.div(^.className := "total", s"${summary.totalPax}"),
       <.div(^.className := "queues",
         queues.map(qn => {

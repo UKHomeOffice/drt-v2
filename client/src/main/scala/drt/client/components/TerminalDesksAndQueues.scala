@@ -1,28 +1,26 @@
 package drt.client.components
 
 import diode.UseValueEq
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlViewType}
-import drt.client.actions.Actions.UpdateShowActualDesksAndQueues
-import drt.client.components.TerminalDesksAndQueues.{NodeListSeq, documentScrollHeight, documentScrollTop}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDisplayType, UrlViewType}
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
-import drt.client.services.{SPACircuit, ViewMode}
+import drt.client.services.JSDateConversions.SDate
+import drt.client.services.ViewMode
 import drt.shared.CrunchApi.StaffMinute
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue}
 import drt.shared._
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{BackendScope, Callback, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
-import org.scalajs.dom.html.Div
+import org.scalajs.dom.DOMList
+import org.scalajs.dom.html.{Div, TableCell}
 import org.scalajs.dom.raw.Node
-import org.scalajs.dom.{DOMList, Element, Event, NodeListOf}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
-
-import scala.util.{Success, Try}
 
 
 object TerminalDesksAndQueues {
@@ -47,22 +45,33 @@ object TerminalDesksAndQueues {
                    featureFlags: FeatureFlags
                   ) extends UseValueEq
 
-  sealed trait ViewType {
+  sealed trait DeskType {
     val queryParamsValue: String
   }
 
-  case object ViewRecs extends ViewType {
-    override val queryParamsValue: String = "recs"
+  case object Ideal extends DeskType {
+    override val queryParamsValue: String = "ideal"
   }
 
-  case object ViewDeps extends ViewType {
-    override val queryParamsValue: String = "deps"
+  case object Deployments extends DeskType {
+    override val queryParamsValue: String = "deployments"
   }
 
-  case class State(showActuals: Boolean, viewType: ViewType, showWaitColumn: Boolean)
+  sealed trait DisplayType {
+    val queryParamsValue: String
+  }
 
-  class Backend(backendScope: BackendScope[Props, State]) {
+  case object TableView extends DisplayType {
+    override val queryParamsValue: String = "table"
+  }
 
+  case object ChartsView extends DisplayType {
+    override val queryParamsValue: String = "charts"
+  }
+
+  case class State(showActuals: Boolean, deskType: DeskType, displayType: DisplayType, showWaitColumn: Boolean) extends UseValueEq
+
+  class Backend() {
     def render(props: Props, state: State): VdomTagOf[Div] = {
       val slotMinutes = 15
 
@@ -79,11 +88,11 @@ object TerminalDesksAndQueues {
         props.airportConfig.nonTransferQueues(terminal)
       }
 
-      def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean) = {
+      def staffDeploymentSubheadings(queueName: Queue, showWaitColumn: Boolean): List[VdomTagOf[TableCell]] = {
         val queueColumnClass = queueColour(queueName)
         val queueColumnActualsClass = queueActualsColour(queueName)
-        val headings = state.viewType match {
-          case ViewDeps =>
+        val headings = state.deskType match {
+          case Deployments =>
             val h = List(<.th(
               s"Dep ${deskUnitLabel(queueName)}", " ", depBanksOrDesksTip(queueName), ^.className := queueColumnClass)
             )
@@ -91,7 +100,7 @@ object TerminalDesksAndQueues {
               h :+ <.th("Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
             else
               h
-          case ViewRecs =>
+          case Ideal =>
             val h = List(<.th(s"Rec ${deskUnitLabel(queueName)} ", recBanksOrDesksTip(queueName), ^.className := queueColumnClass))
             if (showWaitColumn)
               h :+ <.th("Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
@@ -107,7 +116,9 @@ object TerminalDesksAndQueues {
       }
 
       def subHeadingLevel2(queueNames: Seq[Queue], showWaitColumn: Boolean) = {
-        val queueSubHeadings = queueNames.flatMap(queueName => <.th(^.className := queueColour(queueName), "Pax") :: staffDeploymentSubheadings(queueName, showWaitColumn)).toTagMod
+        val queueSubHeadings = queueNames.flatMap { queueName =>
+          <.th(^.className := queueColour(queueName), "Incoming pax") :: staffDeploymentSubheadings(queueName, showWaitColumn)
+        }.toTagMod
 
         List(queueSubHeadings,
           <.th(^.className := "non-pcp", "Misc", " ", miscTooltip),
@@ -139,51 +150,47 @@ object TerminalDesksAndQueues {
       val terminalStaffMinutes = props.portState.staffSummary(props.viewStart, props.hoursToView * 4, 15, terminal)
       val viewMinutes = props.viewStart.millisSinceEpoch until (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by 15 * 60000
 
-      val toggleShowActuals = (e: ReactEventFromInput) => {
-        val newValue: Boolean = e.target.checked
-
-        SPACircuit.dispatch(UpdateShowActualDesksAndQueues(newValue))
-
-        backendScope.modState(_.copy(showActuals = newValue))
-      }
-
-      val toggleWaitColumn = (e: ReactEventFromInput) => {
-        val newValue: Boolean = e.target.checked
-        backendScope.modState(_.copy(showWaitColumn = newValue))
-      }
-
-
-      def toggleViewType(newViewType: ViewType) = (_: ReactEventFromInput) => {
-        GoogleEventTracker.sendEvent(s"$terminal", "Desks & Queues", newViewType.toString)
+      def toggleDeskType(newDeskType: DeskType) = (e: ReactEventFromInput) => {
+        e.preventDefault()
+        GoogleEventTracker.sendEvent(s"$terminal", "Select desk type", newDeskType.toString)
         props.router.set(
-          props.terminalPageTab.withUrlParameters(UrlViewType(Option(newViewType)))
+          props.terminalPageTab.withUrlParameters(UrlViewType(Option(newDeskType)))
+        )
+      }
+
+      def toggleDisplayType(newDisplayType: DisplayType) = (e: ReactEventFromInput) => {
+        e.preventDefault()
+        GoogleEventTracker.sendEvent(s"$terminal", "Select display type", newDisplayType.toString)
+        props.router.set(
+          props.terminalPageTab.withUrlParameters(UrlDisplayType(Option(newDisplayType)))
         )
       }
 
       def viewTypeControls(displayWaitTimesToggle: Boolean): TagMod = {
-        val controls = List(
+        val deskTypeControls = List(
           <.div(^.className := s"controls-radio-wrapper",
-            <.input.radio(^.checked := state.viewType == ViewRecs, ^.onChange ==> toggleViewType(ViewRecs), ^.id := "show-recs"),
+            <.input.radio(^.checked := state.deskType == Ideal, ^.onChange ==> toggleDeskType(Ideal), ^.id := "show-recs"),
             <.label(^.`for` := "show-recs", "Ideal staff", " ", recommendationsTooltip)
           ),
           <.div(^.className := s"controls-radio-wrapper",
-            <.input.radio(^.checked := state.viewType == ViewDeps, ^.onChange ==> toggleViewType(ViewDeps), ^.id := "show-deps"),
+            <.input.radio(^.checked := state.deskType == Deployments, ^.onChange ==> toggleDeskType(Deployments), ^.id := "show-deps"),
             <.label(^.`for` := "show-deps", "Available staff", " ", availableStaffDeploymentsTooltip)
           ))
 
-        val allControls = if (displayWaitTimesToggle) controls :+ viewWaitTimeControls else controls
-
-        <.div(^.className := "selector-control2",
-          allControls.toTagMod
-        )
-      }
-
-      def viewWaitTimeControls: TagMod = {
-        List(
+        val displayTypeControls = List(
           <.div(^.className := s"controls-radio-wrapper",
-            <.input.checkbox(^.checked := state.showWaitColumn, ^.onChange ==> toggleWaitColumn, ^.id := "toggle-showWaitingTime"),
-            <.label(^.`for` := "toggle-showWaitingTime", "Display wait times")
-          )).toTagMod
+            <.input.radio(^.checked := state.displayType == TableView, ^.onChange ==> toggleDisplayType(TableView), ^.id := "display-table"),
+            <.label(^.`for` := "display-table", "Table view", " ", Tippy.infoHover("View queue data in a table"))
+          ),
+          <.div(^.className := s"controls-radio-wrapper",
+            <.input.radio(^.checked := state.displayType == ChartsView, ^.onChange ==> toggleDisplayType(ChartsView), ^.id := "display-charts"),
+            <.label(^.`for` := "display-charts", "Charts view", " ", Tippy.infoHover("View queue data in visual charts"))
+          ))
+
+        <.div(^.className := "view-controls",
+          <.div(^.className := "view-controls-selector", deskTypeControls.toTagMod),
+          <.div(^.className := "view-controls-selector", displayTypeControls.toTagMod),
+        )
       }
 
       val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
@@ -200,46 +207,77 @@ object TerminalDesksAndQueues {
           ))
       }
 
+      val maxPaxInQueues: Map[Queue, Int] = terminalCrunchMinutes
+        .toList
+        .flatMap {
+          case (minute, queuesAndMinutes) =>
+            queuesAndMinutes.map {
+              case (queue, cm) => (queue, cm.maybePaxInQueue.getOrElse(0))
+            }
+        }
+        .groupBy(_._1)
+        .map {
+          case (queue, queueMinutes) => (queue, queueMinutes)
+        }
+        .mapValues(_.map(_._2).max)
+
       <.div(
-        floatingHeader(state.showWaitColumn),
         <.div(^.className := "desks-and-queues-top",
           viewTypeControls(props.featureFlags.displayWaitTimesToggle),
           StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab)
         ),
-        <.table(
-          ^.id := "sticky",
-          classesAttr,
-          <.thead(
-            dataStickyAttr,
-            <.tr(<.th("") :: headings: _*),
-            <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames, state.showWaitColumn): _*)),
-          <.tbody(
-            ^.id := "sticky-body",
-            viewMinutes.map { millis =>
-              val rowProps = TerminalDesksAndQueuesRow.Props(
-                millis,
-                queues.map(q => terminalCrunchMinutes(millis)(q)),
-                terminalStaffMinutes.getOrElse(millis, StaffMinute.empty),
-                props.airportConfig,
-                terminal,
-                state.showActuals,
-                state.viewType,
-                props.airportConfig.hasActualDeskStats,
-                props.viewMode,
-                props.loggedInUser,
-                slotMinutes,
-                state.showWaitColumn
-              )
-              TerminalDesksAndQueuesRow(rowProps)
-            }.toTagMod))
+        if (state.displayType == ChartsView) {
+          props.airportConfig.queuesByTerminal(props.terminalPageTab.terminal).filterNot(_ == Transfer).map { queue =>
+            val dayStart = SDate(props.viewStart.getLocalLastMidnight.millisSinceEpoch)
+            val sortedCrunchMinuteSummaries: List[(Long, Map[Queue, CrunchApi.CrunchMinute])] = props.portState.crunchSummary(dayStart, 96, 15, terminal, queues).toList.sortBy(_._1)
+            val queueSla = props.airportConfig.slaByQueue(queue)
+            QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, queueSla, state.deskType))
+          }.toTagMod
+        } else {
+          <.div(
+            floatingHeader(state.showWaitColumn),
+            <.table(
+              ^.id := "sticky",
+              classesAttr,
+              <.thead(
+                dataStickyAttr,
+                <.tr(<.th("") :: headings: _*),
+                <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames, state.showWaitColumn): _*)),
+              <.tbody(
+                ^.id := "sticky-body",
+                viewMinutes.map { millis =>
+                  val rowProps = TerminalDesksAndQueuesRow.Props(
+                    minuteMillis = millis,
+                    queueMinutes = queues.map(q => terminalCrunchMinutes(millis)(q)),
+                    staffMinute = terminalStaffMinutes.getOrElse(millis, StaffMinute.empty),
+                    maxPaxInQueues = maxPaxInQueues,
+                    airportConfig = props.airportConfig,
+                    terminal = terminal,
+                    showActuals = state.showActuals,
+                    viewType = state.deskType,
+                    hasActualDeskStats = props.airportConfig.hasActualDeskStats,
+                    viewMode = props.viewMode,
+                    loggedInUser = props.loggedInUser,
+                    slotMinutes = slotMinutes,
+                    showWaitColumn = state.showWaitColumn
+                  )
+                  TerminalDesksAndQueuesRow(rowProps)
+                }.toTagMod)
+            )
+          )
+        }
       )
     }
-
-
   }
 
-  val component = ScalaComponent.builder[Props]("Loader")
-    .initialStateFromProps(p => State(showActuals = p.airportConfig.hasActualDeskStats && p.showActuals, p.terminalPageTab.viewType, showWaitColumn = !p.featureFlags.displayWaitTimesToggle))
+  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
+    .initialStateFromProps { p =>
+      State(
+        showActuals = p.airportConfig.hasActualDeskStats && p.showActuals,
+        deskType = p.terminalPageTab.deskType,
+        displayType = p.terminalPageTab.displayAs,
+        showWaitColumn = !p.featureFlags.displayWaitTimesToggle)
+    }
     .renderBackend[Backend]
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
@@ -260,55 +298,5 @@ object TerminalDesksAndQueues {
     override def length: Int = nodes.length
 
     override def apply(idx: Int): T = nodes(idx)
-  }
-
-}
-
-object StickyTableHeader {
-  def toIntOrElse(intString: String, stickyInitial: Int): Int = {
-    Try {
-      intString.toDouble.round.toInt
-    } match {
-      case Success(x) => x
-      case _ => stickyInitial
-    }
-  }
-
-  def handleStickyClass(top: Double,
-                        bottom: Double,
-                        elements: NodeListSeq[Element],
-                        toStick: Element): Unit = {
-    elements.foreach(sticky => {
-      val stickyEnter = toIntOrElse(sticky.getAttribute("data-sticky-initial"), 0)
-      val stickyExit = bottom.round.toInt
-
-      if (top >= stickyEnter && top <= stickyExit)
-        toStick.classList.add("sticky-show")
-      else toStick.classList.remove("sticky-show")
-    })
-  }
-
-  def setInitialHeights(elements: NodeListSeq[Element]): Unit = {
-    elements.foreach(element => {
-      val scrollTop = documentScrollTop
-      val relativeTop = element.getBoundingClientRect().top
-      val actualTop = relativeTop + scrollTop
-      element.setAttribute("data-sticky-initial", actualTop.toString)
-    })
-  }
-
-  def apply(selector: String): Callback = {
-
-    val stickies: NodeListSeq[Element] = dom.document.querySelectorAll(selector).asInstanceOf[NodeListOf[Element]]
-
-    dom.document.addEventListener("scroll", (_: Event) => {
-      val top = documentScrollTop
-      val bottom = documentScrollHeight
-      Option(dom.document.querySelector("#sticky-body")).foreach { _ =>
-        handleStickyClass(top, bottom, stickies, dom.document.querySelector("#toStick"))
-      }
-    })
-
-    Callback(setInitialHeights(stickies))
   }
 }
