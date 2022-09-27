@@ -1,11 +1,15 @@
 package controllers.application
 
+import akka.http.scaladsl.model.HttpResponse
 import controllers.Application
+import drt.http.ProdSendAndReceive
 import drt.shared.ErrorResponse
-import play.api.libs.json.{JsObject, Json, Writes}
-import play.api.mvc.{Action, AnyContent, Result}
+import drt.users.KeyCloakClient
+import play.api.libs.json.JsResult.Exception
+import play.api.libs.json.{JsError, JsObject, Json, Writes}
+import play.api.mvc.{Action, AnyContent, Headers, Result}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.auth.Roles.{ManageUsers, Role}
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -28,6 +32,38 @@ trait WithAuth {
 
     Ok(Json.toJson(user))
   }
+
+  def keyCloakClientWithHeader(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
+    val token = headers.get("X-Auth-Token")
+      .getOrElse(throw new Exception(JsError("X-Auth-Token missing from headers, we need this to query the Key Cloak API.")))
+    val keyCloakUrl = config.getOptional[String]("key-cloak.url")
+      .getOrElse(throw new Exception(JsError("Missing key-cloak.url config value, we need this to query the Key Cloak API")))
+    new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
+  }
+
+  def addUserToGroup(userId: String, group: String): Action[AnyContent] = Action.async { request =>
+    if (ctrl.getLoggedInUser(config, request.headers, request.session).roles.contains(ManageUsers)) {
+      val keyCloakClient = keyCloakClientWithHeader(request.headers)
+      val keyCloakGroup = keyCloakClient.getGroups.map(a => a.find(_.name == group))
+
+      keyCloakGroup.flatMap {
+        case Some(kcg) =>
+          val response: Future[HttpResponse] = keyCloakClient.addUserToGroup(userId, kcg.id)
+          response map { r =>
+            r.status.intValue match {
+              case s if s > 200 && s < 300 => log.info(s"Added group $group  to userId $userId , with response status: ${r.status}  $r")
+                Ok(s"Added group $group to userId $userId")
+              case _ => throw Exception(JsError(s"unable to add group $group to userId $userId response from keycloak $response"))
+            }
+          }
+
+        case _ => log.error(s"Unable to add $userId to $group")
+          Future.failed(new Exception(JsError(s"Unable to add $userId to $group")))
+      }
+    } else Future.successful(Unauthorized(write(ErrorResponse(s"Permission denied, do not have access"))))
+
+  }
+
 
   def getUserHasPortAccess(): Action[AnyContent] = auth {
     Action {
