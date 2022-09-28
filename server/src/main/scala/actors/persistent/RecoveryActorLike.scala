@@ -24,15 +24,13 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   var bytesSinceSnapshotCounter = 0
   var maybeAckAfterSnapshot: List[(ActorRef, Any)] = List()
 
-  def recoveryMethod(maybePointInTime: Option[MillisSinceEpoch], maxSnapshotInterval: Int): Recovery =
-    maybePointInTime match {
-      case None =>
-        Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
-      case Some(pointInTime) =>
-        val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-        Recovery(fromSnapshot = criteria, replayMax = maxSnapshotInterval)
-    }
-
+  override def recovery: Recovery = maybePointInTime match {
+    case None =>
+      Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
+    case Some(pointInTime) =>
+      val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
+      Recovery(fromSnapshot = criteria, replayMax = maybeSnapshotInterval.map(_.toLong).getOrElse(Long.MaxValue))
+  }
 
   def ackIfRequired(): Unit = {
     maybeAckAfterSnapshot.foreach {
