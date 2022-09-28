@@ -54,10 +54,6 @@ class TerminalDayFlightActor(year: Int,
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
-  if (maybePointInTime.nonEmpty) {
-    log.info(s"paxForDay: TerminalDayFlightActor $terminal-$year%04d-$month%02d-$day%02d @ ${SDate(maybePointInTime.get).toISOString()}")
-  }
-
   val restorer = new ArrivalsRestorer[ApiFlightWithSplits]
   var state: FlightsWithSplits = FlightsWithSplits.empty
 
