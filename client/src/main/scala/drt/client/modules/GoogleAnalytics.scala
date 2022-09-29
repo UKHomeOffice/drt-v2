@@ -28,29 +28,35 @@ object GoogleEventTracker {
   private def runCreateTracker(): Unit = {
     if (!hasCreateTrackerRun && userId.nonEmpty && port.nonEmpty && trackingCode.nonEmpty) {
       val userUUID = if (userId.contains("@")) UUID.randomUUID else userId
-      GoogleAnalytics.gtag("config", trackingCode, js.Dictionary("userId" -> userUUID, "anonymize_ip" -> true))
+      println(s"runCreateTracker $hasCreateTrackerRun $userUUID")
+      GoogleAnalytics.gtag("config", trackingCode, js.Dictionary("user_id" -> userUUID, "anonymize_ip" -> true))
       hasCreateTrackerRun = true
     }
   }
 
   def sendPageView(page: String): Unit = {
+    println(s"sendPageView $isScriptLoaded $page")
     if (isScriptLoaded) {
       runCreateTracker()
       if (hasCreateTrackerRun) {
-        GoogleAnalytics.gtag("event", "page_view", js.Dictionary("page" -> s"/$port/$page"))
+        println(s"sendPageView page_view $hasCreateTrackerRun $isScriptLoaded $page")
+      GoogleAnalytics.gtag("event", "page_view", js.Dictionary("page" -> s"/$port/$page"))
       }
     }
   }
 
   def sendEvent(category: String, action: String, label: String): Unit = {
+    println(s"sendEvent category=$category action=$action label=$label")
     if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.gtag("event", s"${port}_$category", js.Dictionary("action" -> action, "label" -> label))
   }
 
   def sendEvent(category: String, action: String, label: String, value: String): Unit = {
+    println(s"sendEvent category=$category action=$action label=$label")
     if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.gtag("event", s"${port}_$category", js.Dictionary("action" -> action, "label" -> label, "value" -> value))
   }
 
   def sendError(description: String, fatal: Boolean): Unit = {
+    println(s"sendError description=$description fatal=$fatal")
     if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.gtag("event", "exception", js.Dictionary("exDescription" -> description, "exFatal" -> fatal))
   }
 }
