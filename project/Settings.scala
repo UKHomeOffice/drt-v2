@@ -125,6 +125,7 @@ object Settings {
     "io.kinoplan" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
 
     "io.crashbox" %% "spray-json" % sprayJsonScalaJs,
+    "com.dedipresta" %%% "scala-crypto" % "1.0.0",
 
     "org.scalatest" %%% "scalatest" % scalaTestVersion % "test",
   ))
