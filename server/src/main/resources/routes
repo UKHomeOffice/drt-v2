@@ -78,7 +78,10 @@ GET           /data/user                                                        
 
 POST          /data/login                                                             controllers.Application.apiLogin()
 
-POST          /data/addUserToGroup/:userId/:group                                    controllers.Application.addUserToGroup(userId: String, group: String)
+
+GET           /data/userDetails/:email                                               controllers.Application.userDetails(email:String)
+
+POST          /data/addUserToGroup/:userId/:group                                     controllers.Application.addUserToGroup(userId: String, group: String)
 
 GET           /data/user/has-port-access                                              controllers.Application.getUserHasPortAccess()
 

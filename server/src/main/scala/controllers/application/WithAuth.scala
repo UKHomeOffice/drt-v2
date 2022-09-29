@@ -1,13 +1,18 @@
 package controllers.application
 
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import akka.http.scaladsl.model.HttpResponse
 import controllers.Application
 import drt.http.ProdSendAndReceive
 import drt.shared.ErrorResponse
+import drt.shared.KeyCloakApi.KeyCloakUser
 import drt.users.KeyCloakClient
+import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.JsResult.Exception
 import play.api.libs.json.{JsError, JsObject, Json, Writes}
 import play.api.mvc.{Action, AnyContent, Headers, Result}
+import spray.json.DefaultJsonProtocol.jsonFormat7
+import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ManageUsers, Role}
 import upickle.default.write
@@ -39,6 +44,17 @@ trait WithAuth {
     val keyCloakUrl = config.getOptional[String]("key-cloak.url")
       .getOrElse(throw new Exception(JsError("Missing key-cloak.url config value, we need this to query the Key Cloak API")))
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
+  }
+
+  def userDetails(email: String) = Action { request =>
+
+    if (ctrl.getLoggedInUser(config, request.headers, request.session).roles.contains(ManageUsers)) {
+      val keyCloakClient = keyCloakClientWithHeader(request.headers)
+      keyCloakClient.getAllUsers().find(_.email == email) match {
+        case Some(userDetails) => Ok(write(userDetails))
+        case _ => throw Exception(JsError(s"unable to get userdetails for email $email"))
+      }
+    } else Unauthorized(write(ErrorResponse(s"Permission denied, do not have access")))
   }
 
   def addUserToGroup(userId: String, group: String): Action[AnyContent] = Action.async { request =>
