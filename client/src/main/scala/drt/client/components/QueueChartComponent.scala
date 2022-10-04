@@ -1,11 +1,11 @@
 package drt.client.components
 
-import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsDataSet, ChartJsOptions, ChartJsProps, RGBA}
+import drt.client.components.ChartJSComponent._
 import drt.client.components.TerminalDesksAndQueues.{Deployments, DeskType, Ideal}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi
-import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 
 import scala.scalajs.js
@@ -86,6 +86,12 @@ object QueueChartComponent {
               responsive = true,
               aspectRatio = 5,
               scales = js.Dictionary[js.Any](
+                "xAxes" ->
+                  js.Dictionary(
+                    "ticks" -> js.Dictionary(
+                      "autoSkip" -> false,
+                    )
+                  ),
                 "y" ->
                   js.Dictionary(
                     "type" -> "linear",
