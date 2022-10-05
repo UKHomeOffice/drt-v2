@@ -77,6 +77,6 @@ case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTyp
         .getOrElse(terminal, Map.empty)
         .getOrElse(PaxTypeAndQueue(paxType, queue), fallbackProcessingTime)
 
-    SplitMinutes(WholePassengerQueueSplits.splits(relevantFlights, procTimes, terminalQueueStatuses, fallbacksProvider))
+    SplitMinutes(WholePassengerQueueSplits.splits(minuteMillis, relevantFlights, procTimes, terminalQueueStatuses, fallbacksProvider))
   }
 }
