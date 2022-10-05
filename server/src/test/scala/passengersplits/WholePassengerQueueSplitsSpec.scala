@@ -81,12 +81,13 @@ class WholePassengerQueueSplitsSpec extends Specification {
 
     val wholeSplits = wholePassengerSplits(totalPax, splits)
     val firstMinute = SDate("2022-08-01T00:00")
+    val minuteMilli = firstMinute.millisSinceEpoch
 
     val expected = Map(
       EeaDesk -> Map(firstMinute.millisSinceEpoch -> List(25.0, 30.0, 30.0, 30.0, 30.0, 30.0)),
       EGate -> Map(firstMinute.millisSinceEpoch -> List(20.0, 20.0, 20.0, 20.0)))
 
-    wholePaxPerQueuePerMinute(totalPax, wholeSplits, processingTime, (_, _) => Open, (_, _) => List(), firstMinute) should ===(expected)
+    wholePaxPerQueuePerMinute(minuteMilli to minuteMilli, totalPax, wholeSplits, processingTime, (_, _) => Open, (_, _) => List(), firstMinute) should ===(expected)
   }
 
   "Given some percentage splits and a total number of passengers I should get the breakdown of whole passenger loads by minute with no rounding errors" >> {
@@ -99,12 +100,25 @@ class WholePassengerQueueSplitsSpec extends Specification {
 
     val wholeSplits = wholePassengerSplits(totalPax, splits)
     val firstMinute = SDate("2022-08-01T00:00")
+    val minuteMilli = firstMinute.millisSinceEpoch
 
     val expected = Map(
       EeaDesk -> Map(firstMinute.millisSinceEpoch -> List(25.0, 25.0, 25.0, 30.0, 30.0, 30.0, 30.0)),
       EGate -> Map(firstMinute.millisSinceEpoch -> List(20.0, 20.0, 20.0)))
 
-    wholePaxPerQueuePerMinute(totalPax, wholeSplits, processingTime, (_, _) => Open, (_, _) => List(), firstMinute) should ===(expected)
+    wholePaxPerQueuePerMinute(minuteMilli to minuteMilli, totalPax, wholeSplits, processingTime, (_, _) => Open, (_, _) => List(), firstMinute) should ===(expected)
+  }
+
+  "Given some splits and a processing window outside of the pcp arrival time I should get no split minutes" >> {
+    val splits = Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 33.3d, None, None))
+    val totalPax = 10
+
+    val wholeSplits = wholePassengerSplits(totalPax, splits)
+    val firstMinute = SDate("2022-08-01T00:00")
+
+    val expected = Map()
+
+    wholePaxPerQueuePerMinute(0L to 1L, totalPax, wholeSplits, processingTime, (_, _) => Open, (_, _) => List(), firstMinute) should ===(expected)
   }
 
   private def processingTime(paxType: PaxType, queue: Queue): Double = (paxType, queue) match {
