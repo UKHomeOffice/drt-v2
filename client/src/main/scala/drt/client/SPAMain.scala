@@ -1,9 +1,9 @@
 package drt.client
 
 import diode.Action
-import drt.client.SPAMain.TerminalPageModes.{Current, Dashboard, Planning, Snapshot, Staffing}
+import drt.client.SPAMain.TerminalPageModes.{Current, Planning, Snapshot, Staffing}
 import drt.client.actions.Actions._
-import drt.client.components.TerminalDesksAndQueues.{ViewDeps, ViewRecs, ViewType}
+import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle}
 import drt.client.components.{ContactPage, EditKeyCloakUserPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
@@ -61,7 +61,16 @@ object SPAMain {
   object UrlViewType {
     val paramName = "viewType"
 
-    def apply(viewType: Option[ViewType]): UrlParameter = new UrlParameter {
+    def apply(viewType: Option[DeskType]): UrlParameter = new UrlParameter {
+      override val name: String = paramName
+      override val value: Option[String] = viewType.map(_.queryParamsValue)
+    }
+  }
+
+  object UrlDisplayType {
+    val paramName = "displayType"
+
+    def apply(viewType: Option[DisplayType]): UrlParameter = new UrlParameter {
       override val name: String = paramName
       override val value: Option[String] = viewType.map(_.queryParamsValue)
     }
@@ -122,7 +131,8 @@ object SPAMain {
     val date: Option[String] = queryParams.get(UrlDateParameter.paramName).filter(_.matches(".+"))
     val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+"))
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+"))
-    val viewType: ViewType = queryParams.get(UrlViewType.paramName).map(vt => if (ViewRecs.queryParamsValue == vt) ViewRecs else ViewDeps).getOrElse(ViewDeps)
+    val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
+    val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName).map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
 
     def viewMode: ViewMode = {

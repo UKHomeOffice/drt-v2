@@ -4,7 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.TerminalPageModes._
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlViewType}
-import drt.client.components.TerminalDesksAndQueues.ViewRecs
+import drt.client.components.TerminalDesksAndQueues.Ideal
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -205,7 +205,7 @@ object TerminalComponent {
 
     def viewTypeQueryParam =
       if (airportConfig.idealStaffAsDefault)
-        UrlViewType(Option(ViewRecs))
+        UrlViewType(Option(Ideal))
       else
         UrlViewType(None)
 

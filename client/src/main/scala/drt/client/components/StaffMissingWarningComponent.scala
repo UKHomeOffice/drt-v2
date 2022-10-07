@@ -25,8 +25,7 @@ object StaffMissingWarningComponent {
                   ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffMissingWarning")
-    .render_P(p => {
-
+    .render_P { p =>
       val hasStaff = p.terminalStaffMinutes.values.exists(_.available > 0)
 
       <.span(^.className := "has-alerts grow",
@@ -44,10 +43,7 @@ object StaffMissingWarningComponent {
           )
         else <.span()
       )
-
-    })
-
-
+    }
     .build
 
   def apply(

@@ -70,7 +70,7 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "186"
-    val drtLib = "v314"
+    val drtLib = "v315"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "2.0.0"
@@ -93,9 +93,9 @@ object Settings {
     "@handsontable/react" -> reactHandsontable,
     "handsontable" -> "6.2.2",
     "core-js" -> "3.6.5",
-    "chart.js" -> "2.5",
+    "chart.js" -> "^3.6.0",
     "@tippyjs/react" -> "4.1.0",
-    "react-chartjs-2" -> "2.10.0",
+    "react-chartjs-2" -> "^4.0.0",
     "react-markdown" -> "4.0.6",
     "@material-ui/core" -> "3.9.0",
     "@material-ui/icons" -> "3.0.2",
@@ -125,6 +125,7 @@ object Settings {
     "io.kinoplan" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
 
     "io.crashbox" %% "spray-json" % sprayJsonScalaJs,
+    "com.dedipresta" %%% "scala-crypto" % "1.0.0",
 
     "org.scalatest" %%% "scalatest" % scalaTestVersion % "test",
   ))

@@ -6,12 +6,16 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.SPACircuit
 import drt.shared.ArrivalKey
 import io.kinoplan.scalajs.react.material.ui.core.MuiCircularProgress
+import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.PaxTypes
+
+import scala.scalajs.js
 
 object FlightChartComponent {
   case class Props(flightWithSplits: ApiFlightWithSplits)
@@ -19,7 +23,7 @@ object FlightChartComponent {
   case class State(showAllNationalities: Boolean)
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
-  val component = ScalaComponent.builder[Props]("FlightChart")
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FlightChart")
     .initialState(State(false))
     .renderPS((scope, props, state) => {
       val proxy = SPACircuit.connect(_.passengerInfoSummariesByArrival)
@@ -43,10 +47,18 @@ object FlightChartComponent {
                           case (_, pax) => pax
                         }
 
-                      val nationalityData = ChartJsData(sortedNats.map(_._1.code), sortedNats.map(_._2.toDouble), "Live API")
+                      val nationalityData = ChartJsData(
+                        labels = sortedNats.map(_._1.code),
+                        data = sortedNats.map(_._2.toDouble),
+                        dataSetLabel = "Live API",
+                        `type` = "bar")
 
                       val sortedAges = info.ageRanges.toList.sortBy(_._1.title)
-                      val ageData: ChartJsData = ChartJsData(sortedAges.map(_._1.title), sortedAges.map(_._2.toDouble), "Live API")
+                      val ageData = ChartJsData(
+                        labels = sortedAges.map(_._1.title),
+                        data = sortedAges.map(_._2.toDouble),
+                        dataSetLabel = "Live API",
+                        `type` = "bar")
 
                       val sortedPaxTypes = info.paxTypes.toList.sortBy(_._1.cleanName)
 
@@ -59,51 +71,34 @@ object FlightChartComponent {
                       val widthFactor = if (info.nationalities.size > 10 && state.showAllNationalities) 5 else 0
                       val chartWidth: Int = if (dom.window.innerWidth > 800)
                         300 + widthFactor * info.nationalities.size
-                        else
+                      else
                         200 + widthFactor * info.nationalities.size
 
-
-                      val paxTypeData: ChartJsData = ChartJsData(sortedPaxTypes.map {
-                        case (pt, _) => PaxTypes.displayNameShort(pt)
-                      }, sortedPaxTypes.map(_._2.toDouble), "Live API")
+                      val paxTypeData: ChartJsData = ChartJsData(
+                        labels = sortedPaxTypes.map {
+                          case (pt, _) => PaxTypes.displayNameShort(pt)
+                        },
+                        data = sortedPaxTypes.map(_._2.toDouble),
+                        dataSetLabel = "Live API",
+                        `type` = "bar")
 
                       <.div(^.cls := "container arrivals__table__flight__chart-box",
                         <.div(^.cls := "row", ^.width := (chartWidth * 3).toString + "px",
-                          if (sortedNats.toMap.values.sum > 0)
+                          if (sortedNats.toMap.values.sum > 0) {
+                            val maxY = sortedNats.toMap.values.max + 5
                             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart nationality-chart",
-                              ChartJSComponent.Bar(
-                                ChartJsProps(
-                                  data = nationalityData,
-                                  chartWidth,
-                                  chartHeight,
-                                  options = ChartJsOptions.withSuggestedMax("Nationality breakdown", sortedNats.toMap.values.max + 5)
-                                )
-                              ))
-                          else
-                            EmptyVdom,
-                          if (sortedPaxTypes.toMap.values.sum > 0 && sortedAges.toMap.values.sum > 0)
+                              chart("Nationality breakdown", nationalityData, maxY, chartWidth, chartHeight))
+                          } else EmptyVdom,
+                          if (sortedPaxTypes.toMap.values.sum > 0) {
+                            val maxY = sortedPaxTypes.toMap.values.max + 5
                             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart passenger-type-chart",
-                              ChartJSComponent.Bar(
-                                ChartJsProps(
-                                  data = paxTypeData,
-                                  chartWidth,
-                                  chartHeight,
-                                  options = ChartJsOptions.withSuggestedMax("Passenger types", sortedPaxTypes.toMap.values.max + 5)
-                                )))
-                          else
-                            EmptyVdom,
-                          if (sortedAges.toMap.values.sum > 0)
+                              chart("Passenger types", paxTypeData, maxY, chartWidth, chartHeight))
+                          } else EmptyVdom,
+                          if (sortedAges.toMap.values.sum > 0) {
+                            val maxY = sortedAges.toMap.values.max + 5
                             <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart age-breakdown-chart",
-                              ChartJSComponent.Bar(
-                                ChartJsProps(
-                                  data = ageData,
-                                  chartWidth,
-                                  chartHeight,
-                                  options = ChartJsOptions.withSuggestedMax("Age breakdown", sortedAges.toMap.values.max + 5)
-                                ))
-                            )
-                          else
-                            EmptyVdom
+                              chart("Age breakdown", ageData, maxY, chartWidth, chartHeight))
+                          } else EmptyVdom
                         ),
                         if (info.nationalities.size > 10)
                           <.div(^.cls := s"arrivals__table__flight__chart__show__nationalities",
@@ -121,6 +116,26 @@ object FlightChartComponent {
             }
         ))
     }).build
+
+  private def chart(title: String, data: ChartJsData, maxY: Int, width: Int, height: Int): UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]] =
+    ChartJSComponent(
+      ChartJsProps(
+        data = data,
+        width = Option(width),
+        height = Option(height),
+        options = ChartJsOptions(title).copy(
+          scales = js.Dictionary[js.Any](
+            "xAxes" -> js.Dictionary(
+              "ticks" -> js.Dictionary(
+                "autoSkip" -> false,
+              )
+            ),
+            "y" -> js.Dictionary(
+              "suggestedMax" -> maxY,
+            ),
+          ))
+      )
+    )
 
   def summariseNationalities(nats: Map[Nationality, Int], numberToShow: Int): Map[Nationality, Int] =
     nats

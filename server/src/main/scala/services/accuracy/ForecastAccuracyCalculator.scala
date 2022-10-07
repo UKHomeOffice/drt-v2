@@ -21,8 +21,7 @@ object ForecastAccuracyCalculator {
       actualPaxNos(dateToCalculate).flatMap { actuals =>
         Source(daysToCalculate)
           .mapAsync(1) { daysAgo =>
-            val acc = AccuracyForDate(dateToCalculate, forecastPaxNos, actuals, today)
-            acc.accuracy(dateToCalculate, daysAgo) match {
+            AccuracyForDate(dateToCalculate, forecastPaxNos, actuals, today).accuracy(dateToCalculate, daysAgo) match {
               case Some(eventualAccuracies) => eventualAccuracies.map(terminalAccs => (daysAgo, terminalAccs))
               case None => Future.successful((daysAgo, Map[Terminal, Option[Double]]()))
             }

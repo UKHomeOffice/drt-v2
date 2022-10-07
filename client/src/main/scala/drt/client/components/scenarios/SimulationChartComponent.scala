@@ -18,6 +18,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, displayName}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
+import scala.collection.immutable
 import scala.scalajs.js.JSConverters.JSRichGenTraversableOnce
 
 object SimulationChartComponent extends ScalaCssReactImplicits {
@@ -93,7 +94,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
                          ): Map[Queue, UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]]] =
     simulationResult.queueToCrunchMinutes.map {
       case (q, simulationCrunchMinutes) =>
-        val labels = simulationCrunchMinutes.map(m => SDate(m.minute).toHoursAndMinutes)
+        val labels: immutable.Seq[String] = simulationCrunchMinutes.map(m => SDate(m.minute).toHoursAndMinutes)
 
         val dataSets: Seq[ChartJsDataSet] = List(
           ChartJsDataSet.bar(
@@ -117,18 +118,19 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
             RGBA.red3
           ),
           ChartJsDataSet.line(
-            "Queue SLA",
-            simulationCrunchMinutes.map(m => props.airportConfig.slaByQueue(q).toDouble),
-            RGBA.green1,
-            Option(0)
+            label = "Queue SLA",
+            data = simulationCrunchMinutes.map(m => props.airportConfig.slaByQueue(q).toDouble),
+            colour = RGBA.green1,
+            pointRadius = Option(0)
           ),
         )
-        q -> ChartJSComponent.Bar(
+        val maybeStrings: Option[immutable.Seq[String]] = Option(labels)
+        q -> ChartJSComponent(
           ChartJsProps(
-            data = ChartJsData(dataSets, Option(labels)),
-            300,
-            150,
-            ChartJsOptions.withMultipleDataSets(s"${displayName(q)} Simulation", 25)
+            data = ChartJsData(datasets = dataSets, labels = maybeStrings),
+            width = Option(300),
+            height = Option(150),
+            options = ChartJsOptions.withMultipleDataSets(s"${displayName(q)} Simulation", 25)
           )
         )
     }

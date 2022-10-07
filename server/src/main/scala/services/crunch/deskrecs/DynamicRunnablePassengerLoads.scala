@@ -150,16 +150,20 @@ object DynamicRunnablePassengerLoads {
   }
 
   private def queueStatusesProvider(statuses: Map[Terminal, Map[Queue, Map[MillisSinceEpoch, QueueStatus]]]): Terminal => (Queue, MillisSinceEpoch) => QueueStatus =
-    (terminal: Terminal) => (queue: Queue, time: MillisSinceEpoch) => statuses.getOrElse(terminal, {
-      log.error(s"terminal $terminal not found")
-      Map[Queue, Map[MillisSinceEpoch, QueueStatus]]()
-    }).getOrElse(queue, {
-      log.error(s"queue $queue not found")
-      Map[MillisSinceEpoch, QueueStatus]()
-    }).getOrElse(time, {
-      log.error(s"time $time not found")
-      Closed
-    })
+    (terminal: Terminal) => (queue: Queue, time: MillisSinceEpoch) => {
+      val terminalStatuses = statuses.getOrElse(terminal, {
+        log.error(s"terminal $terminal not found")
+        Map[Queue, Map[MillisSinceEpoch, QueueStatus]]()
+      })
+      val queueStatuses = terminalStatuses.getOrElse(queue, {
+        log.error(s"queue $queue not found")
+        Map[MillisSinceEpoch, QueueStatus]()
+      })
+      queueStatuses.getOrElse(time, {
+        log.error(s"time $time not found in ${queueStatuses.keys.min} to ${queueStatuses.keys.max}")
+        Closed
+      })
+    }
 
   private def addArrivals(flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]])
                          (implicit ec: ExecutionContext): Flow[ProcessingRequest, (ProcessingRequest, List[ApiFlightWithSplits]), NotUsed] =

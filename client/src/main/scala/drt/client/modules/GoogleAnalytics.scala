@@ -2,10 +2,10 @@ package drt.client.modules
 
 import org.scalajs.dom
 
-import java.util.UUID
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSGlobalScope
 import scala.util.Try
+import com.dedipresta.crypto.hash.sha256.Sha256
 
 object GoogleEventTracker {
 
@@ -27,8 +27,8 @@ object GoogleEventTracker {
 
   private def runCreateTracker(): Unit = {
     if (!hasCreateTrackerRun && userId.nonEmpty && port.nonEmpty && trackingCode.nonEmpty) {
-      val userUUID = if (userId.contains("@")) UUID.randomUUID else userId
-      GoogleAnalytics.gtag("config", trackingCode, js.Dictionary("userId" -> userUUID, "anonymize_ip" -> true))
+      val userUUID = if (userId.contains("@")) Sha256.hashString(userId) else userId
+      GoogleAnalytics.gtag("config", trackingCode, js.Dictionary("user_id" -> userUUID, "anonymize_ip" -> true))
       hasCreateTrackerRun = true
     }
   }
