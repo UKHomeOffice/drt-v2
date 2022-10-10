@@ -62,6 +62,8 @@ import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.FlightFilter
 import services.prediction.TouchdownPrediction
 import services.staffing.StaffMinutesChecker
+import uk.gov.homeoffice.drt.AppEnvironment
+import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, WithTimeAccessor}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -89,6 +91,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val manifestLookupService: ManifestLookupLike
 
   val config: Configuration = new Configuration(ConfigFactory.load)
+
+  val env: AppEnvironment = AppEnvironment(config.getOptional[String]("env").getOrElse("other"))
   val airportConfig: AirportConfig
   val params: DrtParameters
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)

@@ -58,18 +58,23 @@ trait WithAuth {
   def auth[A](action: Action[A]): Action[A] = Action.async(action.parser) { request =>
 
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
-    val allowedRole = airportConfig.role
+    val portRole = airportConfig.role
 
-    if (!loggedInUser.hasRole(allowedRole))
-      log.warning(
-        s"User missing port role: ${loggedInUser.email} is accessing ${airportConfig.portCode} " +
-          s"and has ${loggedInUser.roles.mkString(", ")} (needs $allowedRole)"
-      )
+    val noPortAccess = !loggedInUser.hasRole(portRole)
+    val noEnvironmentAccess = !loggedInUser.canAccessEnvironment(ctrl.env)
 
-    val preventAccess = !loggedInUser.hasRole(allowedRole)
+    val preventAccess = noPortAccess || noEnvironmentAccess
 
     if (preventAccess) {
-      Future(unauthorizedMessageJson(allowedRole))
+      if (noPortAccess)
+        log.warning(
+          s"User missing port role: ${loggedInUser.email} is accessing ${airportConfig.portCode} " +
+            s"and has ${loggedInUser.roles.mkString(", ")} (needs $portRole)")
+
+      if (noEnvironmentAccess)
+        log.warning(s"User is restricted to environments: ${loggedInUser.restrictToEnvironments}. This is ${ctrl.env}")
+
+      Future(unauthorizedMessageJson(portRole))
     } else {
       action(request)
     }
