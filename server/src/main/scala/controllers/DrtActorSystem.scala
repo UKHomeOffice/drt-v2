@@ -14,7 +14,7 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 object DrtActorSystem extends AirportConfProvider {
   val config: Configuration = new Configuration(ConfigFactory.load)
-  val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("live") == "test"
+  val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
   implicit val actorSystem: ActorSystem = if (isTestEnvironment) ActorSystem("DRT", PersistenceTestKitPlugin.config.withFallback(ConfigFactory.load())) else ActorSystem("DRT")
   implicit val mat: Materializer = Materializer.createMaterializer(actorSystem)
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
