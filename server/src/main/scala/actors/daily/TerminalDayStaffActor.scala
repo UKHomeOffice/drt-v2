@@ -27,26 +27,26 @@ class TerminalDayStaffActor(year: Int,
 
   import actors.serializers.PortStateMessageConversion._
 
+  val shouldApply: StaffMinuteMessage => Boolean = maybePointInTime match {
+    case None =>
+      (cmm: StaffMinuteMessage) => {
+        val m = cmm.minute.getOrElse(0L)
+        firstMinuteMillis <= m && m <= lastMinuteMillis
+      }
+    case Some(pit) =>
+      (cmm: StaffMinuteMessage) => {
+        val m = cmm.minute.getOrElse(0L)
+        cmm.lastUpdated.getOrElse(0L) <= pit && firstMinuteMillis <= m && m <= lastMinuteMillis
+      }
+  }
+
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case StaffMinutesMessage(minuteMessages) => state = minuteMessagesToKeysAndMinutes(minuteMessages).toMap
+    case StaffMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, staffMinuteFromMessage)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case StaffMinutesMessage(minuteMessages) =>
-      log.debug(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
-      state = state ++ updatesToApply(minuteMessagesToKeysAndMinutes(minuteMessages))
+    case StaffMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, staffMinuteFromMessage)
   }
-
-  private def minuteMessagesToKeysAndMinutes(messages: Seq[StaffMinuteMessage]): Iterable[(TM, StaffMinute)] =
-    messages
-      .filter { cmm =>
-        val minuteMillis = cmm.minute.getOrElse(0L)
-        firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
-      }
-      .map { cmm =>
-        val cm = staffMinuteFromMessage(cmm)
-        (cm.key, cm)
-      }
 
   override def stateToMessage: GeneratedMessage = StaffMinutesMessage(state.values.map(staffMinuteToMessage).toSeq)
 

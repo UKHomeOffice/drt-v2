@@ -337,7 +337,7 @@ object TestActors {
                                    day: Int,
                                    terminal: Terminal,
                                    now: () => SDateLike) extends TerminalDayQueuesActor(year, month, day, terminal, now, None) with Resettable {
-    override def resetState(): Unit = state = Map()
+    override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
@@ -347,7 +347,7 @@ object TestActors {
                                        day: Int,
                                        terminal: Terminal,
                                        now: () => SDateLike) extends TerminalDayQueueLoadsActor(year, month, day, terminal, now, None) with Resettable {
-    override def resetState(): Unit = state = Map()
+    override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
@@ -357,7 +357,7 @@ object TestActors {
                                   day: Int,
                                   terminal: Terminal,
                                   now: () => SDateLike) extends TerminalDayStaffActor(year, month, day, terminal, now, None) with Resettable {
-    override def resetState(): Unit = state = Map()
+    override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }

@@ -27,26 +27,26 @@ class TerminalDayQueuesActor(year: Int,
 
   import actors.serializers.PortStateMessageConversion._
 
+  val shouldApply: CrunchMinuteMessage => Boolean = maybePointInTime match {
+    case None =>
+      (cmm: CrunchMinuteMessage) => {
+        val m = cmm.minute.getOrElse(0L)
+        firstMinuteMillis <= m && m <= lastMinuteMillis
+      }
+    case Some(pit) =>
+      (cmm: CrunchMinuteMessage) => {
+        val m = cmm.minute.getOrElse(0L)
+        cmm.lastUpdated.getOrElse(0L) <= pit && firstMinuteMillis <= m && m <= lastMinuteMillis
+      }
+  }
+
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case CrunchMinutesMessage(minuteMessages) => state = minuteMessagesToKeysAndMinutes(minuteMessages).toMap
+    case CrunchMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, crunchMinuteFromMessage)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case CrunchMinutesMessage(minuteMessages) =>
-      log.debug(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
-      state = state ++ updatesToApply(minuteMessagesToKeysAndMinutes(minuteMessages))
+    case CrunchMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, crunchMinuteFromMessage)
   }
-
-  private def minuteMessagesToKeysAndMinutes(messages: Seq[CrunchMinuteMessage]): Iterable[(TQM, CrunchMinute)] =
-    messages
-      .filter { cmm =>
-        val minuteMillis = cmm.minute.getOrElse(0L)
-        firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
-      }
-      .map { cmm =>
-        val cm = crunchMinuteFromMessage(cmm)
-        (cm.key, cm)
-      }
 
   override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)
 

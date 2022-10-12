@@ -45,7 +45,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
             .mapTo[MinutesContainer[PassengersMinute, TQM]]
         }
 
-      Await.result(result, 1.second) === MinutesContainer(List(passengers1, passengers2))
+      Await.result(result, 1.second).minutes.toSet === Set(passengers1, passengers2)
     }
   }
 
@@ -69,7 +69,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
             }
         }
 
-      Await.result(result, 1.second) === MinutesContainer(List(passengers1, newPassengers2, passengers3))
+      Await.result(result, 1.second).minutes.toSet === Set(passengers1, newPassengers2, passengers3)
     }
   }
 

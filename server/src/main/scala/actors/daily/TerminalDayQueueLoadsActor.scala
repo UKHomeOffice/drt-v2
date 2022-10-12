@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.serializers.PassengersMinutesMessageConversion.{passengerMinutesFromMessage, passengerMinutesToMessage}
+import actors.serializers.PassengersMinutesMessageConversion.{passengerMinutesToMessage, passengersMinuteFromMessage}
 import akka.actor.Props
 import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
 import drt.shared.{CrunchApi, TQM}
@@ -32,6 +32,19 @@ class TerminalDayQueueLoadsActor(year: Int,
 
   override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[PassengersMinute, TQM]): Boolean = true
 
+  val shouldApply: PassengersMinuteMessage => Boolean = maybePointInTime match {
+    case None =>
+      (cmm: PassengersMinuteMessage) => {
+        val m = cmm.minute.getOrElse(0L)
+        firstMinuteMillis <= m && m <= lastMinuteMillis
+      }
+    case Some(pit) =>
+      (cmm: PassengersMinuteMessage) => {
+        val m = cmm.minute.getOrElse(0L)
+        cmm.lastUpdated.getOrElse(0L) <= pit && firstMinuteMillis <= m && m <= lastMinuteMillis
+      }
+  }
+
   override def containerToMessage(differences: Iterable[PassengersMinute]): GeneratedMessage = PassengersMinutesMessage(
     differences.map(pm => PassengersMinuteMessage(
       queueName = Option(pm.queue.toString),
@@ -40,16 +53,15 @@ class TerminalDayQueueLoadsActor(year: Int,
     )).toSeq
   )
 
+  val paxMinFromMessage: PassengersMinuteMessage => PassengersMinute =
+    (pm: PassengersMinuteMessage) => passengersMinuteFromMessage(terminal, pm)
+
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case pms: PassengersMinutesMessage =>
-      val updates = passengerMinutesFromMessage(terminal, pms)
-      state = state ++ updates.map(pm => (pm.key, pm))
+    case PassengersMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, paxMinFromMessage)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case pms: PassengersMinutesMessage =>
-      val updates = passengerMinutesFromMessage(terminal, pms)
-      state = updates.map(pm => (pm.key, pm)).toMap
+    case PassengersMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, paxMinFromMessage)
   }
 
   override def stateToMessage: GeneratedMessage = passengerMinutesToMessage(state.values.toSeq)

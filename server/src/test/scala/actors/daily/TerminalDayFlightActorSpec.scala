@@ -15,15 +15,14 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
+import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 
 class MockTerminalDayQueuesActor(day: SDateLike,
                                  terminal: Terminal,
-                                 initialState: Map[TQM, CrunchMinute]) extends TerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, None) {
-  state = initialState
-}
+                                 override val state: mutable.Map[TQM, CrunchMinute]) extends TerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, None)
 
 class TerminalDayFlightsActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1
