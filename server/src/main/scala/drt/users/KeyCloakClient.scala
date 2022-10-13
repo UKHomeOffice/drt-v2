@@ -45,6 +45,13 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
     }
   }
 
+  def getUsersForEmail(email: String): Future[Option[KeyCloakUser]] = {
+    val uri = keyCloakUrl + s"/users?email=$email"
+    log.info(s"Calling key cloak: $uri")
+    pipeline(HttpMethods.GET, uri, "getUsersForEmail")
+      .flatMap { r => Unmarshal(r).to[List[KeyCloakUser]] }.map(_.headOption)
+  }
+
   def getUsers(max: Int = 100, offset: Int = 0): Future[List[KeyCloakUser]] = {
     val uri = keyCloakUrl + s"/users?max=$max&first=$offset"
     log.info(s"Calling key cloak: $uri")
@@ -104,7 +111,6 @@ abstract case class KeyCloakClient(token: String, keyCloakUrl: String)(implicit 
     pipeline(HttpMethods.DELETE, uri, "removeUserFromGroup")
   }
 }
-
 
 trait KeyCloakUserParserProtocol extends DefaultJsonProtocol with SprayJsonSupport {
 
