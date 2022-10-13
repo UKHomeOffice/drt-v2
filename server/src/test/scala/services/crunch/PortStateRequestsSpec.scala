@@ -41,8 +41,8 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val legacyDataCutOff: SDateLike = SDate("2020-01-01")
   val maxReplyMessages = 1000
   val flightsActor: ActorRef = flightLookups.flightsActor
-  val queuesActor: ActorRef = lookups.queueMinutesActor
-  val staffActor: ActorRef = lookups.staffMinutesActor
+  val queuesActor: ActorRef = lookups.queueMinutesRouterActor
+  val staffActor: ActorRef = lookups.staffMinutesRouterActor
   val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-queues")
   val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-staff")
   val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-flight")

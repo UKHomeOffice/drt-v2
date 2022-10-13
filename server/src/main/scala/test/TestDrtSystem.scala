@@ -112,8 +112,8 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal)
   override val flightsRouterActor: ActorRef = flightLookups.flightsActor
   override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor
-  override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesActor
-  override val staffRouterActor: ActorRef = minuteLookups.staffMinutesActor
+  override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesRouterActor
+  override val staffRouterActor: ActorRef = minuteLookups.staffMinutesRouterActor
   override val queueUpdates: ActorRef = system.actorOf(Props(
     new QueueTestUpdatesSupervisor(
       now,

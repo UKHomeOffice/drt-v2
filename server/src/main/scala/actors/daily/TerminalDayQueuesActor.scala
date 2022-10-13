@@ -45,7 +45,15 @@ class TerminalDayQueuesActor(year: Int,
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case CrunchMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, crunchMinuteFromMessage)
+    case CrunchMinutesMessage(minuteMessages) =>
+      val apply = minuteMessages.nonEmpty && (maybePointInTime match {
+        case None => true
+        case Some(pit) =>
+          minuteMessages.map(_.lastUpdated.getOrElse(0L)).max <= pit
+      })
+      if (apply) {
+        applyMessages(minuteMessages, shouldApply, crunchMinuteFromMessage)
+      } else messagesPersistedSinceSnapshotCounter -= 1
   }
 
   override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)

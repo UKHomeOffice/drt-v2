@@ -192,9 +192,9 @@ trait PartitionedPortStateActorLike {
   val staffUpdatesSupervisor: ActorRef
 }
 
-class PartitionedPortStateActor(flightsActor: ActorRef,
-                                queuesActor: ActorRef,
-                                staffActor: ActorRef,
+class PartitionedPortStateActor(flightsRouterActor: ActorRef,
+                                queuesRouterActor: ActorRef,
+                                staffRouterActor: ActorRef,
                                 queueUpdatesActor: ActorRef,
                                 staffUpdatesActor: ActorRef,
                                 flightUpdatesActor: ActorRef,
@@ -214,9 +214,9 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
   val requestStaffMinuteUpdates: StaffMinutesRequester = requestStaffMinutesFn(staffUpdatesActor)
   val requestQueueMinuteUpdates: QueueMinutesRequester = requestQueueMinutesFn(queueUpdatesActor)
   val requestFlightUpdates: FlightUpdatesRequester = requestFlightUpdatesFn(flightUpdatesActor)
-  val requestStaffMinutes: StaffMinutesRequester = requestStaffMinutesFn(staffActor)
-  val requestQueueMinutes: QueueMinutesRequester = requestQueueMinutesFn(queuesActor)
-  val requestFlights: FlightsRequester = requestFlightsFn(flightsActor)
+  val requestStaffMinutes: StaffMinutesRequester = requestStaffMinutesFn(staffRouterActor)
+  val requestQueueMinutes: QueueMinutesRequester = requestQueueMinutesFn(queuesRouterActor)
+  val requestFlights: FlightsRequester = requestFlightsFn(flightsRouterActor)
   val replyWithUpdates: PortStateUpdatesRequester = replyWithUpdatesFn(requestFlightUpdates, requestQueueMinuteUpdates, requestStaffMinuteUpdates)
   val replyWithPortState: PortStateRequester = replyWithPortStateFn(requestFlights, requestQueueMinutes, requestStaffMinutes)
   val replyWithMinutesAsPortState: PortStateRequester = replyWithMinutesAsPortStateFn(requestQueueMinutes, requestStaffMinutes)
@@ -237,18 +237,18 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
 
     case updates: FlightUpdates =>
       val replyTo = sender()
-      askThenAck(flightsActor, updates, replyTo)
+      askThenAck(flightsRouterActor, updates, replyTo)
 
     case noUpdates: PortStateMinutes[_, _] if noUpdates.isEmpty =>
       sender() ! Ack
 
     case someQueueUpdates: MinutesContainer[CrunchMinute, TQM] if containsQueueTypeMinutes(someQueueUpdates) =>
       val replyTo = sender()
-      askThenAck(queuesActor, someQueueUpdates, replyTo)
+      askThenAck(queuesRouterActor, someQueueUpdates, replyTo)
 
     case someStaffUpdates: MinutesContainer[StaffMinute, TM] if containsStaffTypeMinutes(someStaffUpdates) =>
       val replyTo = sender()
-      askThenAck(staffActor, someStaffUpdates, replyTo)
+      askThenAck(staffRouterActor, someStaffUpdates, replyTo)
 
     case GetUpdatesSince(since, from, to) => replyWithUpdates(since, from, to, sender())
 
@@ -262,7 +262,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       replyWithMinutesAsPortState(sender(), pitRequest)
 
     case pitRequest@PointInTimeQuery(_, _: FlightsRequest) =>
-      flightsActor.ask(pitRequest).pipeTo(sender())
+      flightsRouterActor.ask(pitRequest).pipeTo(sender())
 
     case request: GetStateForDateRange =>
       replyWithPortState(sender(), request)
@@ -274,7 +274,7 @@ class PartitionedPortStateActor(flightsActor: ActorRef,
       replyWithMinutesAsPortState(sender(), request)
 
     case request: FlightsRequest =>
-      flightsActor.ask(request).pipeTo(sender())
+      flightsRouterActor.ask(request).pipeTo(sender())
   }
 
   override def receive: Receive = processMessage orElse {

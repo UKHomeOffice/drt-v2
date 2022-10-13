@@ -91,11 +91,15 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   def containerToMessage(differences: Iterable[VAL]): GeneratedMessage
 
-  def applyMessages[T](minuteMessages: Seq[T], shouldApply: T => Boolean, unwrap: T => VAL): Unit =
+  def applyMessages[T](minuteMessages: Seq[T], shouldApply: T => Boolean, unwrap: T => VAL): Int = {
+    var counter = 0
     minuteMessages.foreach { cmm =>
       if (shouldApply(cmm)) {
         val cm = unwrap(cmm)
         state += (cm.key -> cm)
+        counter += 1
       }
     }
+    counter
+  }
 }

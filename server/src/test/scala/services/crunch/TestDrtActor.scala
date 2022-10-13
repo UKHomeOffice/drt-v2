@@ -120,8 +120,8 @@ class TestDrtActor extends Actor {
       val flightsActor: ActorRef = flightLookups.flightsActor
       val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal)
       val queueLoadsActor = minuteLookups.queueLoadsMinutesActor
-      val queuesActor = minuteLookups.queueMinutesActor
-      val staffActor = minuteLookups.staffMinutesActor
+      val queuesActor = minuteLookups.queueMinutesRouterActor
+      val staffActor = minuteLookups.staffMinutesRouterActor
       val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
       val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
       val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
@@ -200,7 +200,7 @@ class TestDrtActor extends Actor {
 
         val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
           OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
-          OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, tc.airportConfig.terminals),
+          OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, tc.airportConfig.terminals),
           staffToDeskLimits,
           portDeskRecs.loadsToSimulations
         )
