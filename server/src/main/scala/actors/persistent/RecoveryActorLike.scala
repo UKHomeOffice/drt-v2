@@ -126,11 +126,10 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   private def logRecoveryTime(): Unit = {
     val tookMs: MillisSinceEpoch = SDate.now().millisSinceEpoch - recoveryStartMillis
     val message = s"Recovery complete. $messagesPersistedSinceSnapshotCounter messages replayed. Took ${tookMs}ms."
-    if (tookMs < 250L)
-      log.debug(message)
-    else if (tookMs < 5000L)
-      log.warn(s"$message")
+
+    if (250L <= tookMs && tookMs < 5000L)
+      log.warn(s"$message (slow)")
     else
-      log.error(s"$message")
+      log.error(s"$message (very slow)")
   }
 }
