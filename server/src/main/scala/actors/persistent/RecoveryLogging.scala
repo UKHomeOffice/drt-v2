@@ -12,7 +12,7 @@ trait RecoveryLogging {
 
   def snapshotOfferLogMessage(md: SnapshotMetadata): String = s"$prefix received SnapshotOffer from ${SDate(md.timestamp).toISOString()}, sequence number ${md.sequenceNr}"
 
-  def logSnapshotOffer(md: SnapshotMetadata): Unit = log.info(snapshotOfferLogMessage(md))
+  def logSnapshotOffer(md: SnapshotMetadata): Unit = log.debug(snapshotOfferLogMessage(md))
 
   def logRecoveryMessage(message: String): Unit = log.info(s"$prefix - $message")
 

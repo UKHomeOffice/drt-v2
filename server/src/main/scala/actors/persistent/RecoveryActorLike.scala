@@ -31,7 +31,6 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
     case Some(pointInTime) =>
       val replayMax = maybeSnapshotInterval.map(_.toLong).getOrElse(Long.MaxValue)
       val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-      println(s"\nRECOVERY pit ${SDate(pointInTime).toISOString()} & replayMax: $replayMax\n\n")
       Recovery(fromSnapshot = criteria, replayMax = replayMax)
   }
 
@@ -126,10 +125,9 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   private def logRecoveryTime(): Unit = {
     val tookMs: MillisSinceEpoch = SDate.now().millisSinceEpoch - recoveryStartMillis
-    val messageTook = messageRecoveryStartMillis.map(start => s"Messages took ${SDate.now().millisSinceEpoch - start}ms")
-    val message = s"Recovery complete. $messagesPersistedSinceSnapshotCounter messages replayed. Took ${tookMs}ms. ${messageTook.getOrElse("")}"
+    val message = s"Recovery complete. $messagesPersistedSinceSnapshotCounter messages replayed. Took ${tookMs}ms."
     if (tookMs < 250L)
-      log.info(message)
+      log.debug(message)
     else if (tookMs < 5000L)
       log.warn(s"$message")
     else
