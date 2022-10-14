@@ -23,7 +23,7 @@ class TerminalDayQueueLoadsActor(year: Int,
                                  day: Int,
                                  terminal: Terminal,
                                  val now: () => SDateLike,
-                                 maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[PassengersMinute, TQM](year, month, day, terminal, now, maybePointInTime) {
+                                 maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val persistenceIdType: String = "passengers"
@@ -31,19 +31,6 @@ class TerminalDayQueueLoadsActor(year: Int,
   override val maybeSnapshotInterval: Option[Int] = Option(100)
 
   override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[PassengersMinute, TQM]): Boolean = true
-
-  val shouldApply: PassengersMinuteMessage => Boolean = maybePointInTime match {
-    case None =>
-      (cmm: PassengersMinuteMessage) => {
-        val m = cmm.minute.getOrElse(0L)
-        firstMinuteMillis <= m && m <= lastMinuteMillis
-      }
-    case Some(pit) =>
-      (cmm: PassengersMinuteMessage) => {
-        val m = cmm.minute.getOrElse(0L)
-        cmm.lastUpdated.getOrElse(0L) <= pit && firstMinuteMillis <= m && m <= lastMinuteMillis
-      }
-  }
 
   override def containerToMessage(differences: Iterable[PassengersMinute]): GeneratedMessage = PassengersMinutesMessage(
     differences.map(pm => PassengersMinuteMessage(
@@ -53,16 +40,19 @@ class TerminalDayQueueLoadsActor(year: Int,
     )).toSeq
   )
 
-  val paxMinFromMessage: PassengersMinuteMessage => PassengersMinute =
+  override val valFromMessage: PassengersMinuteMessage => PassengersMinute =
     (pm: PassengersMinuteMessage) => passengersMinuteFromMessage(terminal, pm)
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case PassengersMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, paxMinFromMessage)
+    case PassengersMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case PassengersMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, paxMinFromMessage)
+    case PassengersMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
   }
+
+  override val msgMinute: PassengersMinuteMessage => MillisSinceEpoch = (msg: PassengersMinuteMessage) => msg.getMinute
+  override val msgLastUpdated: PassengersMinuteMessage => MillisSinceEpoch = (msg: PassengersMinuteMessage) => msg.getLastUpdated
 
   override def stateToMessage: GeneratedMessage = passengerMinutesToMessage(state.values.toSeq)
 }

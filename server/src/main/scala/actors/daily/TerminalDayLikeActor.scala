@@ -16,12 +16,12 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.collection.mutable
 
 
-abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor](year: Int,
-                                                                                              month: Int,
-                                                                                              day: Int,
-                                                                                              terminal: Terminal,
-                                                                                              now: () => SDateLike,
-                                                                                              override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
+abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor, M <: GeneratedMessage](year: Int,
+                                                                                                                     month: Int,
+                                                                                                                     day: Int,
+                                                                                                                     terminal: Terminal,
+                                                                                                                     now: () => SDateLike,
+                                                                                                                     override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
     case Some(pit) => f"@${SDate(pit).toISOString()}"
@@ -91,15 +91,23 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   def containerToMessage(differences: Iterable[VAL]): GeneratedMessage
 
-  def applyMessages[T](minuteMessages: Seq[T], shouldApply: T => Boolean, unwrap: T => VAL): Int = {
-    var counter = 0
-    minuteMessages.foreach { cmm =>
-      if (shouldApply(cmm)) {
-        val cm = unwrap(cmm)
+  val msgMinute: M => MillisSinceEpoch
+  val msgLastUpdated: M => MillisSinceEpoch
+  val valFromMessage: M => VAL
+
+  val withinWindow: M => Boolean = (msg: M) =>
+    firstMinuteMillis <= msgMinute(msg) && msgMinute(msg) <= lastMinuteMillis
+
+  val isApplicable: M => Boolean = maybePointInTime match {
+    case None => withinWindow
+    case Some(pit) => (msg: M) => (msgLastUpdated(msg) <= pit) && withinWindow(msg)
+  }
+
+  def applyMessages(minuteMessages: Seq[M]): Unit =
+    minuteMessages.foreach { msg =>
+      if (isApplicable(msg)) {
+        val cm = valFromMessage(msg)
         state += (cm.key -> cm)
-        counter += 1
       }
     }
-    counter
-  }
 }

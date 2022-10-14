@@ -22,40 +22,21 @@ class TerminalDayQueuesActor(year: Int,
                              day: Int,
                              terminal: Terminal,
                              val now: () => SDateLike,
-                             maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[CrunchMinute, TQM](year, month, day, terminal, now, maybePointInTime) {
+                             maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
   override val persistenceIdType: String = "queues"
 
   import actors.serializers.PortStateMessageConversion._
 
-  val shouldApply: CrunchMinuteMessage => Boolean = maybePointInTime match {
-    case None =>
-      (cmm: CrunchMinuteMessage) => {
-        val m = cmm.minute.getOrElse(0L)
-        firstMinuteMillis <= m && m <= lastMinuteMillis
-      }
-    case Some(pit) =>
-      (cmm: CrunchMinuteMessage) => {
-        val m = cmm.minute.getOrElse(0L)
-        cmm.lastUpdated.getOrElse(0L) <= pit && firstMinuteMillis <= m && m <= lastMinuteMillis
-      }
-  }
-
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case CrunchMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, crunchMinuteFromMessage)
+    case CrunchMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case CrunchMinutesMessage(minuteMessages) =>
-      if (messageRecoveryStartMillis.isEmpty) messageRecoveryStartMillis = Option(now().millisSinceEpoch)
-      val apply = minuteMessages.nonEmpty && (maybePointInTime match {
-        case None => true
-        case Some(pit) =>
-          minuteMessages.map(_.lastUpdated.getOrElse(0L)).max <= pit
-      })
-      if (apply) {
-        applyMessages(minuteMessages, shouldApply, crunchMinuteFromMessage)
-      } else messagesPersistedSinceSnapshotCounter -= 1
+    case CrunchMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
   }
+
+  override val msgMinute: CrunchMinuteMessage => MillisSinceEpoch = (msg: CrunchMinuteMessage) => msg.getMinute
+  override val msgLastUpdated: CrunchMinuteMessage => MillisSinceEpoch = (msg: CrunchMinuteMessage) => msg.getLastUpdated
 
   override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)
 
@@ -64,4 +45,6 @@ class TerminalDayQueuesActor(year: Int,
 
   override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[CrunchMinute, TQM]): Boolean =
     container.contains(classOf[DeskRecMinute])
+
+  override val valFromMessage: CrunchMinuteMessage => CrunchMinute = crunchMinuteFromMessage
 }

@@ -22,31 +22,23 @@ class TerminalDayStaffActor(year: Int,
                             day: Int,
                             terminal: Terminal,
                             val now: () => SDateLike,
-                            maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[StaffMinute, TM](year, month, day, terminal, now, maybePointInTime) {
+                            maybePointInTime: Option[MillisSinceEpoch])
+  extends TerminalDayLikeActor[StaffMinute, TM, StaffMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
+
   override val persistenceIdType: String = "staff"
 
   import actors.serializers.PortStateMessageConversion._
 
-  val shouldApply: StaffMinuteMessage => Boolean = maybePointInTime match {
-    case None =>
-      (cmm: StaffMinuteMessage) => {
-        val m = cmm.minute.getOrElse(0L)
-        firstMinuteMillis <= m && m <= lastMinuteMillis
-      }
-    case Some(pit) =>
-      (cmm: StaffMinuteMessage) => {
-        val m = cmm.minute.getOrElse(0L)
-        cmm.lastUpdated.getOrElse(0L) <= pit && firstMinuteMillis <= m && m <= lastMinuteMillis
-      }
-  }
-
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case StaffMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, staffMinuteFromMessage)
+    case StaffMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case StaffMinutesMessage(minuteMessages) => applyMessages(minuteMessages, shouldApply, staffMinuteFromMessage)
+    case StaffMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
   }
+
+  override val msgMinute: StaffMinuteMessage => MillisSinceEpoch = (msg: StaffMinuteMessage) => msg.getMinute
+  override val msgLastUpdated: StaffMinuteMessage => MillisSinceEpoch = (msg: StaffMinuteMessage) => msg.getLastUpdated
 
   override def stateToMessage: GeneratedMessage = StaffMinutesMessage(state.values.map(staffMinuteToMessage).toSeq)
 
@@ -55,4 +47,6 @@ class TerminalDayStaffActor(year: Int,
 
   override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[StaffMinute, TM]): Boolean =
     container.contains(classOf[StaffMinute])
+
+  override val valFromMessage: StaffMinuteMessage => StaffMinute = staffMinuteFromMessage
 }
