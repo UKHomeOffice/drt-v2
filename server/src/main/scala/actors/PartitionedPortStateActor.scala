@@ -207,7 +207,7 @@ class PartitionedPortStateActor(flightsRouterActor: ActorRef,
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val mat: Materializer = Materializer.createMaterializer(context)
-  implicit val timeout: Timeout = new Timeout(60 seconds)
+  implicit val timeout: Timeout = new Timeout(90 seconds)
 
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
 
