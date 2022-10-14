@@ -46,6 +46,7 @@ class TerminalDayQueuesActor(year: Int,
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case CrunchMinutesMessage(minuteMessages) =>
+      if (messageRecoveryStartMillis.isEmpty) messageRecoveryStartMillis = Option(now().millisSinceEpoch)
       val apply = minuteMessages.nonEmpty && (maybePointInTime match {
         case None => true
         case Some(pit) =>
