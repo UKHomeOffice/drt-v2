@@ -3,17 +3,16 @@ package test
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily._
-import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
-import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, DeskRecsQueueActor, ManifestRouterActor, StaffingUpdateQueueActor}
+import actors.persistent._
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike._
-import actors.routing.minutes.{MinutesActorLike, MinutesActorLike2, QueueLoadsMinutesActor, QueueMinutesRouterActor, StaffMinutesRouterActor}
+import actors.routing.minutes._
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute, StaffMinute}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.Logger

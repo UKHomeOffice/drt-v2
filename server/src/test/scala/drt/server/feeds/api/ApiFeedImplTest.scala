@@ -31,7 +31,7 @@ case class MockManifestProcessor(probe: ActorRef) extends ManifestProcessor {
     Future.successful(Done)
 
   override def process(uniqueArrivalKey: UniqueArrivalKey, processedAt: MillisSinceEpoch): Future[Done] = {
-    probe ! (uniqueArrivalKey, processedAt)
+    probe ! ((uniqueArrivalKey, processedAt))
     Future.successful(Done)
   }
 
@@ -42,14 +42,12 @@ class ApiFeedImplTest extends CrunchTestLike {
     "continue with a collect" in {
       val c = Source(List(1, 2, 3))
         .collect {
-          case 1 => "1 yes"
-          case 3 => "3 yes"
+          case 1 => 1
+          case 3 => 3
         }
-        .map { c => println(s"got: $c")}
-        .run()
+        .runWith(Sink.seq)
 
-      Await.ready(c, 1.second)
-      success
+      Await.result(c, 1.second) === Seq(1, 3)
     }
   }
   "An ApiFeed" should {

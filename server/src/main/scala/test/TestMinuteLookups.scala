@@ -1,7 +1,7 @@
 package test
 
 import actors.MinuteLookupsLike
-import actors.daily.RequestAndTerminateActor
+import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -23,19 +23,19 @@ case class TestMinuteLookups(system: ActorSystem,
   val resetQueuesData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
     val date = SDate(millis)
     val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)))
-    actor.ask(ResetData).map(_ => actor ! PoisonPill)
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 
   val resetQueueLoadsData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
     val date = SDate(millis)
     val actor = system.actorOf(Props(new TestTerminalDayQueueLoadsActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)))
-    actor.ask(ResetData).map(_ => actor ! PoisonPill)
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 
   val resetStaffData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
     val date = SDate(millis)
     val actor = system.actorOf(Props(new TestTerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)))
-    actor.ask(ResetData).map(_ => actor ! PoisonPill)
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 
   override val queueLoadsMinutesActor: ActorRef = system.actorOf(Props(new TestQueueLoadsMinutesActor(queuesByTerminal.keys, queuesLoadsLookup, updatePassengerMinutes, resetQueuesData)))
