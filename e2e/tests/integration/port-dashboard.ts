@@ -20,13 +20,6 @@ describe('Port dashboard', () => {
       "Status": "Cancelled"
     })
     .addFlight({
-      "ICAO": "TS0123",
-      "IATA": "TS0123",
-      "SchDT": todayAtString(10, 30),
-      "ActChoxDT": currentTimeString(),
-      "ActPax": 300
-    })
-    .addFlight({
       "ICAO": "TS0122",
       "IATA": "TS0122",
       "SchDT": todayAtString(10, 40),
@@ -37,7 +30,7 @@ describe('Port dashboard', () => {
       .navigateHome()
       .visit("/#portDashboard")
       .get('.flights-total')
-      .contains("2 Flights")
+      .contains("1 Flight")
 
   })
 
