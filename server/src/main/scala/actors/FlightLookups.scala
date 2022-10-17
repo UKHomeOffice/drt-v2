@@ -44,7 +44,7 @@ trait FlightLookupsLike {
       requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[FlightsWithSplits]
     }
 
-  def flightsActor: ActorRef
+  def flightsRouterActor: ActorRef
 
 }
 
@@ -55,7 +55,7 @@ case class FlightLookups(system: ActorSystem,
                         ) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
 
-  override val flightsActor: ActorRef = system.actorOf(
+  override val flightsRouterActor: ActorRef = system.actorOf(
     Props(new FlightsRouterActor(
       queuesByTerminal.keys,
       flightsByDayLookup(removalMessageCutOff),

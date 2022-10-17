@@ -263,7 +263,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
   "Concerning persistence of flights" >> {
     "Given a router, I should see updates sent to it are persisted" >> {
       val lookups = FlightLookups(system, myNow, queuesByTerminal = Map(T1 -> Seq(EeaDesk, NonEeaDesk, EGate)))
-      val router = lookups.flightsActor
+      val router = lookups.flightsRouterActor
 
       val scheduled = "2021-06-01T00:00"
       val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, terminal = T1)
@@ -312,7 +312,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val redListPassengers = RedListPassengers("BA0001", PortCode("LHR"), SDate(scheduled), redListPax)
         val neboArrivalActor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassengers, () => redListNow))
         val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
-        val flightsRouter = lookups.flightsActor
+        val flightsRouter = lookups.flightsRouterActor
 
         Await.ready(neboArrivalActor ? redListPassengers, 10.second)
         Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrival), Seq()), 1.second)
@@ -329,7 +329,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       "Add red list pax counts to the appropriate arrivals" in {
         val redListNow = SDate("2021-06-24T12:10:00")
         val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None)
-        val flightsRouter = lookups.flightsActor
+        val flightsRouter = lookups.flightsRouterActor
         val scheduled2 = "2021-06-24T15:05"
         val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
         val arrivalT2 = ArrivalGenerator.arrival(iata = "AB1234", terminal = T2, schDt = scheduled2)
@@ -359,7 +359,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       "Retain red list pax counts after updating an arrival" in {
         val redListNow = SDate("2021-06-24T12:10:00")
         val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()))
-        val flightsRouter = lookups.flightsActor
+        val flightsRouter = lookups.flightsRouterActor
         val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
         val redListPax = util.RandomString.getNRandomString(10, 10)
         val redListPassengers = RedListPassengers("BA0001", PortCode("LHR"), SDate(scheduled), redListPax)

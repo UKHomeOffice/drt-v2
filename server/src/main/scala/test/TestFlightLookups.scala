@@ -1,7 +1,7 @@
 package test
 
 import actors.FlightLookupsLike
-import actors.daily.RequestAndTerminateActor
+import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -17,15 +17,12 @@ case class TestFlightLookups(system: ActorSystem,
                              queuesByTerminal: Map[Terminal, Seq[Queue]]) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-flights-lookup-kill-actor")
 
-  val resetFlightsData: (Terminal, UtcDate) => Future[Unit] = (terminal: Terminal, date: UtcDate) => {
-
+  val resetFlightsData: (Terminal, UtcDate) => Future[Any] = (terminal: Terminal, date: UtcDate) => {
     val actor = system.actorOf(Props(new TestTerminalDayFlightActor(date.year, date.month, date.day, terminal, now)))
-    actor.ask(ResetData).map(_ => actor ! PoisonPill)
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 
-  private val dummyProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
-
-  override val flightsActor: ActorRef = system.actorOf(
+  override val flightsRouterActor: ActorRef = system.actorOf(
     Props(
       new TestFlightsRouterActor(
         queuesByTerminal.keys,

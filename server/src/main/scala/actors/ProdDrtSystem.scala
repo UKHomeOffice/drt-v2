@@ -90,7 +90,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
     params.maybeRemovalCutOffSeconds
   )
 
-  override val flightsRouterActor: ActorRef = flightLookups.flightsActor
+  override val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
   override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor
   override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesRouterActor
   override val staffRouterActor: ActorRef = minuteLookups.staffMinutesRouterActor

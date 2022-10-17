@@ -1,8 +1,8 @@
 package actors.daily
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.RecoveryActorLike
 import actors.persistent.staffing.GetState
-import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.FlightMessageConversion
 import actors.serializers.FlightMessageConversion.{flightWithSplitsFromMessage, uniqueArrivalsFromMessages}
 import akka.actor.Props
@@ -124,7 +124,8 @@ class TerminalDayFlightActor(year: Int,
     state = updatedState
 
     val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
-    persistAndMaybeSnapshotWithAck(FlightMessageConversion.flightWithSplitsDiffToMessage(diff), replyToAndMessage)
+    val message = FlightMessageConversion.flightWithSplitsDiffToMessage(diff)
+    persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
   }
 
   def isBeforeCutoff(timestamp: Long): Boolean = maybeRemovalsCutoffTimestamp match {
