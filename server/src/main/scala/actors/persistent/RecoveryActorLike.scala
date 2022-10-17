@@ -129,7 +129,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
     if (250L <= tookMs && tookMs < 5000L)
       log.warn(s"$message (slow)")
-    else
+    else if (tookMs >= 5000L)
       log.error(s"$message (very slow)")
   }
 }
