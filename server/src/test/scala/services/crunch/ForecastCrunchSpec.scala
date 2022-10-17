@@ -368,8 +368,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(flightsWithSplits, _, _) =>
-        val actPax = flightsWithSplits.values.head.apiFlight.ActPax
-        actPax == expectedActPax
+        if (flightsWithSplits.nonEmpty) {
+          val actPax = flightsWithSplits.values.head.apiFlight.ActPax
+          actPax == expectedActPax
+        } else false
     }
 
     success
