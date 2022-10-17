@@ -1,15 +1,16 @@
 package actors
 
-import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayQueueLoadsActor, TerminalDayQueuesActor, TerminalDayStaffActor}
+import actors.daily._
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.GetState
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
-import actors.routing.minutes.{QueueLoadsMinutesActor, QueueMinutesActor, StaffMinutesActor}
+import actors.routing.minutes.{QueueLoadsMinutesActor, QueueMinutesRouterActor, StaffMinutesRouterActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.util.Timeout
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute, StaffMinute}
+import drt.shared.CrunchApi._
 import drt.shared.{TM, TQM}
+import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
@@ -49,41 +50,28 @@ trait MinuteLookupsLike {
       requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[UpdatedMillis]
     }
 
-  val queuesLoadsLookup: MinutesLookup[PassengersMinute, TQM] = (terminalDate: (Terminal, UtcDate), maybePit: Option[MillisSinceEpoch]) => {
-    val (terminal, date) = terminalDate
-    val props = maybePit match {
-      case None => TerminalDayQueueLoadsActor.props(terminal, date, now)
-      case Some(pointInTime) => TerminalDayQueueLoadsActor.propsPointInTime(terminal, date, now, pointInTime)
-    }
-    val actor = system.actorOf(props)
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[PassengersMinute, TQM]]]
-  }
+  val queuesLoadsLookup: MinutesLookup[PassengersMinute, TQM] = lookup[PassengersMinute, TQM](TerminalDayQueueLoadsActor.props, TerminalDayQueueLoadsActor.propsPointInTime)
+  val queuesLookup: MinutesLookup[CrunchMinute, TQM] = lookup[CrunchMinute, TQM](TerminalDayQueuesActor.props, TerminalDayQueuesActor.propsPointInTime)
+  val staffLookup: MinutesLookup[StaffMinute, TM] = lookup[StaffMinute, TM](TerminalDayStaffActor.props, TerminalDayStaffActor.propsPointInTime)
 
-  val queuesLookup: MinutesLookup[CrunchMinute, TQM] = (terminalDate: (Terminal, UtcDate), maybePit: Option[MillisSinceEpoch]) => {
-    val (terminal, date) = terminalDate
-    val props = maybePit match {
-      case None => TerminalDayQueuesActor.props(terminal, date, now)
-      case Some(pointInTime) => TerminalDayQueuesActor.propsPointInTime(terminal, date, now, pointInTime)
+  def lookup[A, B <: WithTimeAccessor]: ((Terminal, UtcDate, () => SDateLike) => Props, (Terminal, UtcDate, () => SDateLike, MillisSinceEpoch) => Props) => MinutesLookup[A, B] = {
+    (nonPitProps: (Terminal, UtcDate, () => SDateLike) => Props, pitProps: (Terminal, UtcDate, () => SDateLike, MillisSinceEpoch) => Props) =>
+    (terminalDate: (Terminal, UtcDate), maybePit: Option[MillisSinceEpoch]) => {
+      val (terminal, date) = terminalDate
+      val props = maybePit match {
+        case None => nonPitProps(terminal, date, now)
+        case Some(pointInTime) => pitProps(terminal, date, now, pointInTime)
+      }
+      val actor = system.actorOf(props)
+      requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[A, B]]]
     }
-    val actor = system.actorOf(props)
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[CrunchMinute, TQM]]]
-  }
-
-  val staffLookup: MinutesLookup[StaffMinute, TM] = (terminalDate: (Terminal, UtcDate), maybePit: Option[MillisSinceEpoch]) => {
-    val (terminal, date) = terminalDate
-    val props = maybePit match {
-      case None => TerminalDayStaffActor.props(terminal, date, now)
-      case Some(pointInTime) => TerminalDayStaffActor.propsPointInTime(terminal, date, now, pointInTime)
-    }
-    val actor = system.actorOf(props)
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[Option[MinutesContainer[StaffMinute, TM]]]
   }
 
   def queueLoadsMinutesActor: ActorRef
 
-  def queueMinutesActor: ActorRef
+  def queueMinutesRouterActor: ActorRef
 
-  def staffMinutesActor: ActorRef
+  def staffMinutesRouterActor: ActorRef
 }
 
 case class MinuteLookups(now: () => SDateLike,
@@ -94,7 +82,7 @@ case class MinuteLookups(now: () => SDateLike,
 
   override val queueLoadsMinutesActor: ActorRef = system.actorOf(Props(new QueueLoadsMinutesActor(queuesByTerminal.keys, queuesLoadsLookup, updatePassengerMinutes)))
 
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes)))
+  override val queueMinutesRouterActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes)))
 
-  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes)))
+  override val staffMinutesRouterActor: ActorRef = system.actorOf(Props(new StaffMinutesRouterActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes)))
 }

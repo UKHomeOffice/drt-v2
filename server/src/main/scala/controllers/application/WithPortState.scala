@@ -2,6 +2,7 @@ package controllers.application
 
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince, PointInTimeQuery}
 import akka.pattern.ask
+import akka.util.Timeout
 import controllers.Application
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
@@ -11,6 +12,7 @@ import uk.gov.homeoffice.drt.auth.Roles.{DesksAndQueuesView, SuperAdmin}
 import upickle.default.write
 
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 
 
 trait WithPortState {
@@ -57,7 +59,7 @@ trait WithPortState {
       val endMillis = request.queryString.get("end").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
 
       val futureState = ctrl.portStateActor
-        .ask(PointInTimeQuery(pointInTime, GetStateForDateRange(startMillis, endMillis)))
+        .ask(PointInTimeQuery(pointInTime, GetStateForDateRange(startMillis, endMillis)))(new Timeout(90.seconds))
         .mapTo[PortState]
 
       futureState

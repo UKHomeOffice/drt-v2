@@ -286,17 +286,17 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       )
 
       val (deskRecsRequestQueueActor, deskRecsKillSwitch) =
-        startOptimisationGraph(deskRecsProducer, persistentDeskRecsQueueActor, deskRecsQueue, minuteLookups.queueMinutesActor, "desk-recs")
+        startOptimisationGraph(deskRecsProducer, persistentDeskRecsQueueActor, deskRecsQueue, minuteLookups.queueMinutesRouterActor, "desk-recs")
 
       val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
         loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
-        staffProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesActor, airportConfig.terminals),
+        staffProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, airportConfig.terminals),
         staffToDeskLimits = staffToDeskLimits,
         loadsToQueueMinutes = portDeskRecs.loadsToSimulations
       )
 
       val (deploymentRequestQueueActor, deploymentsKillSwitch) =
-        startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, deploymentQueue, minuteLookups.queueMinutesActor, "deployments")
+        startOptimisationGraph(deploymentsProducer, persistentDeploymentQueueActor, deploymentQueue, minuteLookups.queueMinutesRouterActor, "deployments")
 
       val shiftsProvider = (r: ProcessingRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
       val fixedPointsProvider = (r: ProcessingRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
@@ -304,7 +304,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
       val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now)
       val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
-        startOptimisationGraph(staffMinutesProducer, persistentStaffingUpdateQueueActor, staffQueue, minuteLookups.staffMinutesActor, "staffing")
+        startOptimisationGraph(staffMinutesProducer, persistentStaffingUpdateQueueActor, staffQueue, minuteLookups.staffMinutesRouterActor, "staffing")
       shiftsActor ! staffingUpdateRequestQueue
       fixedPointsActor ! staffingUpdateRequestQueue
       staffMovementsActor ! staffingUpdateRequestQueue

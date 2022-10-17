@@ -9,7 +9,7 @@ import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovements
 import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, DeskRecsQueueActor, ManifestRouterActor, StaffingUpdateQueueActor}
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike._
-import actors.routing.minutes.{MinutesActorLike, MinutesActorLike2, QueueLoadsMinutesActor, QueueMinutesActor, StaffMinutesActor}
+import actors.routing.minutes.{MinutesActorLike, MinutesActorLike2, QueueLoadsMinutesActor, QueueMinutesRouterActor, StaffMinutesRouterActor}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
@@ -226,19 +226,19 @@ object TestActors {
 
   }
 
-  class TestStaffMinutesActor(terminals: Iterable[Terminal],
-                              lookup: MinutesLookup[StaffMinute, TM],
-                              updateMinutes: MinutesUpdate[StaffMinute, TM],
-                              val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends StaffMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[StaffMinute, TM] {
+  class TestStaffMinutesRouterActor(terminals: Iterable[Terminal],
+                                    lookup: MinutesLookup[StaffMinute, TM],
+                                    updateMinutes: MinutesUpdate[StaffMinute, TM],
+                                    val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
+    extends StaffMinutesRouterActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[StaffMinute, TM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
-  class TestQueueMinutesActor(terminals: Iterable[Terminal],
-                              lookup: MinutesLookup[CrunchMinute, TQM],
-                              updateMinutes: MinutesUpdate[CrunchMinute, TQM],
-                              val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
-    extends QueueMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike2[CrunchMinute, TQM] {
+  class TestQueueMinutesRouterActor(terminals: Iterable[Terminal],
+                                    lookup: MinutesLookup[CrunchMinute, TQM],
+                                    updateMinutes: MinutesUpdate[CrunchMinute, TQM],
+                                    val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
+    extends QueueMinutesRouterActor(terminals, lookup, updateMinutes) with TestMinuteActorLike2[CrunchMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
   }
 
@@ -337,7 +337,7 @@ object TestActors {
                                    day: Int,
                                    terminal: Terminal,
                                    now: () => SDateLike) extends TerminalDayQueuesActor(year, month, day, terminal, now, None) with Resettable {
-    override def resetState(): Unit = state = Map()
+    override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
@@ -347,7 +347,7 @@ object TestActors {
                                        day: Int,
                                        terminal: Terminal,
                                        now: () => SDateLike) extends TerminalDayQueueLoadsActor(year, month, day, terminal, now, None) with Resettable {
-    override def resetState(): Unit = state = Map()
+    override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
@@ -357,7 +357,7 @@ object TestActors {
                                   day: Int,
                                   terminal: Terminal,
                                   now: () => SDateLike) extends TerminalDayStaffActor(year, month, day, terminal, now, None) with Resettable {
-    override def resetState(): Unit = state = Map()
+    override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }

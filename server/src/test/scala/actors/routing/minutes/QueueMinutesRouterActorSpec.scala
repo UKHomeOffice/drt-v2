@@ -18,7 +18,7 @@ import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike, UtcDate}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class QueueMinutesActorSpec extends CrunchTestLike {
+class QueueMinutesRouterActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1
   val queue: Queues.Queue = EeaDesk
   val date: SDateLike = SDate("2020-01-01T00:00")
@@ -45,7 +45,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
             .mapTo[MinutesContainer[PassengersMinute, TQM]]
         }
 
-      Await.result(result, 1.second) === MinutesContainer(List(passengers1, passengers2))
+      Await.result(result, 1.second).minutes.toSet === Set(passengers1, passengers2)
     }
   }
 
@@ -69,14 +69,14 @@ class QueueMinutesActorSpec extends CrunchTestLike {
             }
         }
 
-      Await.result(result, 1.second) === MinutesContainer(List(passengers1, newPassengers2, passengers3))
+      Await.result(result, 1.second).minutes.toSet === Set(passengers1, newPassengers2, passengers3)
     }
   }
 
   "When I ask for CrunchMinutes" >> {
     "Given a lookups with no data" >> {
       "I should get None" >> {
-        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates)))
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1.second)
 
@@ -86,7 +86,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
 
     "Given a lookup with some data" >> {
       "I should get the data from the source" >> {
-        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates)))
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(Seq(T1), lookupWithData(minutesContainer), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(date.millisSinceEpoch, date.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1.second)
 
@@ -107,7 +107,7 @@ class QueueMinutesActorSpec extends CrunchTestLike {
       val minutesState: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
 
       "I should get the one minute back" >> {
-        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesActor(Seq(T1), lookupWithData(minutesState), noopUpdates)))
+        val cmActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(Seq(T1), lookupWithData(minutesState), noopUpdates)))
         val eventualResult = cmActor.ask(GetStateForTerminalDateRange(startMinute.millisSinceEpoch, endMinute.millisSinceEpoch, terminal)).mapTo[MinutesContainer[CrunchMinute, TQM]]
         val result = Await.result(eventualResult, 1.second)
 

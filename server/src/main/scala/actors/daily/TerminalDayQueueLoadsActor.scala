@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.serializers.PassengersMinutesMessageConversion.{passengerMinutesFromMessage, passengerMinutesToMessage}
+import actors.serializers.PassengersMinutesMessageConversion.{passengerMinutesToMessage, passengersMinuteFromMessage}
 import akka.actor.Props
 import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
 import drt.shared.{CrunchApi, TQM}
@@ -23,7 +23,7 @@ class TerminalDayQueueLoadsActor(year: Int,
                                  day: Int,
                                  terminal: Terminal,
                                  val now: () => SDateLike,
-                                 maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[PassengersMinute, TQM](year, month, day, terminal, now, maybePointInTime) {
+                                 maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val persistenceIdType: String = "passengers"
@@ -40,17 +40,19 @@ class TerminalDayQueueLoadsActor(year: Int,
     )).toSeq
   )
 
+  override val valFromMessage: PassengersMinuteMessage => PassengersMinute =
+    (pm: PassengersMinuteMessage) => passengersMinuteFromMessage(terminal, pm)
+
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case pms: PassengersMinutesMessage =>
-      val updates = passengerMinutesFromMessage(terminal, pms)
-      state = state ++ updates.map(pm => (pm.key, pm))
+    case PassengersMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case pms: PassengersMinutesMessage =>
-      val updates = passengerMinutesFromMessage(terminal, pms)
-      state = updates.map(pm => (pm.key, pm)).toMap
+    case PassengersMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
   }
+
+  override val msgMinute: PassengersMinuteMessage => MillisSinceEpoch = (msg: PassengersMinuteMessage) => msg.getMinute
+  override val msgLastUpdated: PassengersMinuteMessage => MillisSinceEpoch = (msg: PassengersMinuteMessage) => msg.getLastUpdated
 
   override def stateToMessage: GeneratedMessage = passengerMinutesToMessage(state.values.toSeq)
 }

@@ -17,6 +17,7 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
   val log: Logger
 
   val recoveryStartMillis: MillisSinceEpoch = SDate.now().millisSinceEpoch
+  var messageRecoveryStartMillis: Option[MillisSinceEpoch] = None
   val maybePointInTime: Option[Long] = None
   val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   val maybeSnapshotInterval: Option[Int]
@@ -28,8 +29,9 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
     case None =>
       Recovery(SnapshotSelectionCriteria(Long.MaxValue, maxTimestamp = Long.MaxValue, 0L, 0L))
     case Some(pointInTime) =>
+      val replayMax = maybeSnapshotInterval.map(_.toLong).getOrElse(Long.MaxValue)
       val criteria = SnapshotSelectionCriteria(maxTimestamp = pointInTime)
-      Recovery(fromSnapshot = criteria, replayMax = maybeSnapshotInterval.map(_.toLong).getOrElse(Long.MaxValue))
+      Recovery(fromSnapshot = criteria, replayMax = replayMax)
   }
 
   def ackIfRequired(): Unit = {
@@ -123,12 +125,11 @@ trait RecoveryActorLike extends PersistentActor with RecoveryLogging {
 
   private def logRecoveryTime(): Unit = {
     val tookMs: MillisSinceEpoch = SDate.now().millisSinceEpoch - recoveryStartMillis
-    val message = s"Recovery complete. $messagesPersistedSinceSnapshotCounter messages replayed. Took ${tookMs}ms. "
-    if (tookMs < 250L)
-      log.debug(message)
-    else if (tookMs < 5000L)
-      log.warn(s"$message")
+    val message = s"Recovery complete. $messagesPersistedSinceSnapshotCounter messages replayed. Took ${tookMs}ms."
+
+    if (250L <= tookMs && tookMs < 5000L)
+      log.warn(s"$message (slow)")
     else
-      log.error(s"$message")
+      log.error(s"$message (very slow)")
   }
 }

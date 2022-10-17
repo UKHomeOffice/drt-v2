@@ -4,7 +4,7 @@ import actors.MinuteLookupsLike
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily.RequestAndTerminateActor
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
-import actors.routing.minutes.{QueueLoadsMinutesActor, QueueMinutesActor, StaffMinutesActor}
+import actors.routing.minutes.{QueueLoadsMinutesActor, QueueMinutesRouterActor, StaffMinutesRouterActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.CrunchMinute
@@ -40,11 +40,11 @@ class MockPortStateActorForDeployments(probe: TestProbe, responseDelayMillis: Lo
   }
 }
 
-class TestQueueMinutesActor(probe: ActorRef,
-                            terminals: Iterable[Terminal],
-                            lookup: MinutesLookup[CrunchMinute, TQM],
-                            updateMinutes: MinutesUpdate[CrunchMinute, TQM],
-                            updatesSubscriber: ActorRef) extends QueueMinutesActor(terminals, lookup, updateMinutes) {
+class TestQueueMinutesRouterActor(probe: ActorRef,
+                                  terminals: Iterable[Terminal],
+                                  lookup: MinutesLookup[CrunchMinute, TQM],
+                                  updateMinutes: MinutesUpdate[CrunchMinute, TQM],
+                                  updatesSubscriber: ActorRef) extends QueueMinutesRouterActor(terminals, lookup, updateMinutes) {
 
   override def receive: Receive = testReceives
 
@@ -66,9 +66,9 @@ case class TestMinuteLookups(queueProbe: ActorRef,
 
   override val queueLoadsMinutesActor: ActorRef = system.actorOf(Props(new QueueLoadsMinutesActor(queuesByTerminal.keys, queuesLoadsLookup, updatePassengerMinutes)))
 
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queueProbe, queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, deploymentsQueueSubscriber)))
+  override val queueMinutesRouterActor: ActorRef = system.actorOf(Props(new TestQueueMinutesRouterActor(queueProbe, queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, deploymentsQueueSubscriber)))
 
-  override val staffMinutesActor: ActorRef = system.actorOf(Props(new StaffMinutesActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes)))
+  override val staffMinutesRouterActor: ActorRef = system.actorOf(Props(new StaffMinutesRouterActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes)))
 }
 
 

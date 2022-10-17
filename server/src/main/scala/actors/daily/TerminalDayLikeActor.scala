@@ -13,13 +13,15 @@ import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.collection.mutable
 
-abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor](year: Int,
-                                                                                              month: Int,
-                                                                                              day: Int,
-                                                                                              terminal: Terminal,
-                                                                                              now: () => SDateLike,
-                                                                                              override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
+
+abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor, M <: GeneratedMessage](year: Int,
+                                                                                                                     month: Int,
+                                                                                                                     day: Int,
+                                                                                                                     terminal: Terminal,
+                                                                                                                     now: () => SDateLike,
+                                                                                                                     override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
     case Some(pit) => f"@${SDate(pit).toISOString()}"
@@ -28,7 +30,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   val persistenceIdType: String
 
-  var state: Map[INDEX, VAL] = Map()
+  val state: mutable.Map[INDEX, VAL] = mutable.Map[INDEX, VAL]()
 
   override def persistenceId: String = f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
@@ -57,7 +59,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   private def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
     if (state.nonEmpty) Option(MinutesContainer(state.values.toSeq)) else None
 
-  def diffFromMinutes(state: Map[INDEX, VAL], minutes: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
+  def diffFromMinutes(state: mutable.Map[INDEX, VAL], minutes: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
     val nowMillis = now().millisSinceEpoch
     minutes
       .map(cm => state.get(cm.key) match {
@@ -67,16 +69,16 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
       .collect { case Some(update) => update }
   }
 
-  def updateStateFromDiff(state: Map[INDEX, VAL], diff: Iterable[MinuteLike[VAL, INDEX]]): Map[INDEX, VAL] =
-    state ++ diff.collect {
-      case cm if firstMinuteMillis <= cm.minute && cm.minute < lastMinuteMillis => (cm.key, cm.toUpdatedMinute(cm.lastUpdated.getOrElse(0L)))
+  def updateStateFromDiff(diff: Iterable[MinuteLike[VAL, INDEX]]): Unit =
+    diff.foreach { cm =>
+      if (firstMinuteMillis <= cm.minute && cm.minute < lastMinuteMillis) state += (cm.key -> cm.toUpdatedMinute(cm.lastUpdated.getOrElse(0L)))
     }
 
   def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
     diffFromMinutes(state, container.minutes) match {
       case noDifferences if noDifferences.isEmpty => sender() ! UpdatedMillis.empty
       case differences =>
-        state = updateStateFromDiff(state, differences)
+        updateStateFromDiff(differences)
         val messageToPersist = containerToMessage(differences)
         val updatedMillis = if (shouldSendEffectsToSubscriber(container))
           UpdatedMillis(differences.map(_.minute).toSet)
@@ -89,11 +91,23 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   def containerToMessage(differences: Iterable[VAL]): GeneratedMessage
 
-  def updatesToApply(allUpdates: Iterable[(INDEX, VAL)]): Iterable[(INDEX, VAL)] =
-    maybePointInTime match {
-      case None => allUpdates
-      case Some(pit) => allUpdates.filter {
-        case (_, cm) => cm.lastUpdated.getOrElse(0L) <= pit
+  val msgMinute: M => MillisSinceEpoch
+  val msgLastUpdated: M => MillisSinceEpoch
+  val valFromMessage: M => VAL
+
+  val withinWindow: M => Boolean = (msg: M) =>
+    firstMinuteMillis <= msgMinute(msg) && msgMinute(msg) <= lastMinuteMillis
+
+  val isApplicable: M => Boolean = maybePointInTime match {
+    case None => withinWindow
+    case Some(pit) => (msg: M) => (msgLastUpdated(msg) <= pit) && withinWindow(msg)
+  }
+
+  def applyMessages(minuteMessages: Seq[M]): Unit =
+    minuteMessages.foreach { msg =>
+      if (isApplicable(msg)) {
+        val cm = valFromMessage(msg)
+        state += (cm.key -> cm)
       }
     }
 }

@@ -1,6 +1,6 @@
 package actors.serializers
 
-import drt.shared.CrunchApi.PassengersMinute
+import drt.shared.CrunchApi.{PassengersMinute, PassengersMinutes}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -12,7 +12,7 @@ class PassengersMinutesMessageConversionSpec extends Specification {
       PassengersMinute(T1, EGate, 2L, Seq(4, 5, 6), Option(3L)),
     )
     val serialised = PassengersMinutesMessageConversion.passengerMinutesToMessage(px)
-    val deserialised = PassengersMinutesMessageConversion.passengerMinutesFromMessage(T1, serialised)
+    val deserialised = serialised.minutes.map(m => PassengersMinutesMessageConversion.passengersMinuteFromMessage(T1, m))
 
     deserialised === px
   }

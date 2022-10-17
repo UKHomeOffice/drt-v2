@@ -10,19 +10,18 @@ import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object MockTerminalDayStaffActor {
   def props(day: SDateLike, terminal: Terminal, initialState: Map[TM, StaffMinute]): Props =
-    Props(new MockTerminalDayStaffActor(day, terminal, initialState))
+    Props(new MockTerminalDayStaffActor(day, terminal, mutable.Map() ++ initialState))
 }
 
 class MockTerminalDayStaffActor(day: SDateLike,
                                 terminal: Terminal,
-                                initialState: Map[TM, StaffMinute]) extends TerminalDayStaffActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, None) {
-  state = initialState
-}
+                                override val state: mutable.Map[TM, StaffMinute]) extends TerminalDayStaffActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, None)
 
 class TerminalDayStaffActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1

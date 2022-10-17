@@ -22,31 +22,21 @@ class TerminalDayQueuesActor(year: Int,
                              day: Int,
                              terminal: Terminal,
                              val now: () => SDateLike,
-                             maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[CrunchMinute, TQM](year, month, day, terminal, now, maybePointInTime) {
+                             maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
   override val persistenceIdType: String = "queues"
 
   import actors.serializers.PortStateMessageConversion._
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case CrunchMinutesMessage(minuteMessages) => state = minuteMessagesToKeysAndMinutes(minuteMessages).toMap
+    case CrunchMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case CrunchMinutesMessage(minuteMessages) =>
-      log.debug(s"Got a recovery message with ${minuteMessages.size} minutes. Updating state")
-      state = state ++ updatesToApply(minuteMessagesToKeysAndMinutes(minuteMessages))
+    case CrunchMinutesMessage(minuteMessages) => applyMessages(minuteMessages)
   }
 
-  private def minuteMessagesToKeysAndMinutes(messages: Seq[CrunchMinuteMessage]): Iterable[(TQM, CrunchMinute)] =
-    messages
-      .filter { cmm =>
-        val minuteMillis = cmm.minute.getOrElse(0L)
-        firstMinuteMillis <= minuteMillis && minuteMillis <= lastMinuteMillis
-      }
-      .map { cmm =>
-        val cm = crunchMinuteFromMessage(cmm)
-        (cm.key, cm)
-      }
+  override val msgMinute: CrunchMinuteMessage => MillisSinceEpoch = (msg: CrunchMinuteMessage) => msg.getMinute
+  override val msgLastUpdated: CrunchMinuteMessage => MillisSinceEpoch = (msg: CrunchMinuteMessage) => msg.getLastUpdated
 
   override def stateToMessage: GeneratedMessage = CrunchMinutesMessage(state.values.map(crunchMinuteToMessage).toSeq)
 
@@ -55,4 +45,6 @@ class TerminalDayQueuesActor(year: Int,
 
   override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[CrunchMinute, TQM]): Boolean =
     container.contains(classOf[DeskRecMinute])
+
+  override val valFromMessage: CrunchMinuteMessage => CrunchMinute = crunchMinuteFromMessage
 }

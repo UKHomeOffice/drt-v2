@@ -9,7 +9,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.time.SDateLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import services.SDate
-import test.TestActors.{ResetData, TestQueueLoadsMinutesActor, TestQueueMinutesActor, TestStaffMinutesActor, TestTerminalDayQueueLoadsActor, TestTerminalDayQueuesActor, TestTerminalDayStaffActor}
+import test.TestActors.{ResetData, TestQueueLoadsMinutesActor, TestQueueMinutesRouterActor, TestStaffMinutesRouterActor, TestTerminalDayQueueLoadsActor, TestTerminalDayQueuesActor, TestTerminalDayStaffActor}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,7 +40,7 @@ case class TestMinuteLookups(system: ActorSystem,
 
   override val queueLoadsMinutesActor: ActorRef = system.actorOf(Props(new TestQueueLoadsMinutesActor(queuesByTerminal.keys, queuesLoadsLookup, updatePassengerMinutes, resetQueuesData)))
 
-  override val queueMinutesActor: ActorRef = system.actorOf(Props(new TestQueueMinutesActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, resetQueuesData)))
+  override val queueMinutesRouterActor: ActorRef = system.actorOf(Props(new TestQueueMinutesRouterActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, resetQueuesData)))
 
-  override val staffMinutesActor: ActorRef = system.actorOf(Props(new TestStaffMinutesActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes, resetStaffData)))
+  override val staffMinutesRouterActor: ActorRef = system.actorOf(Props(new TestStaffMinutesRouterActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes, resetStaffData)))
 }

@@ -92,16 +92,16 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
   override val flightsRouterActor: ActorRef = flightLookups.flightsActor
   override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor
-  override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesActor
-  override val staffRouterActor: ActorRef = minuteLookups.staffMinutesActor
+  override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesRouterActor
+  override val staffRouterActor: ActorRef = minuteLookups.staffMinutesRouterActor
   override val queueUpdates: ActorRef = system.actorOf(Props(new QueueUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(now, journalType))), "updates-supervisor-queues")
   override val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(now, journalType))), "updates-supervisor-staff")
   override val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(now, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(now, journalType))), "updates-supervisor-flights")
 
   override val portStateActor: ActorRef = system.actorOf(Props(new PartitionedPortStateActor(
-    flightsActor = flightsRouterActor,
-    queuesActor = queuesRouterActor,
-    staffActor = staffRouterActor,
+    flightsRouterActor = flightsRouterActor,
+    queuesRouterActor = queuesRouterActor,
+    staffRouterActor = staffRouterActor,
     queueUpdatesActor = queueUpdates,
     staffUpdatesActor = staffUpdates,
     flightUpdatesActor = flightUpdates,
