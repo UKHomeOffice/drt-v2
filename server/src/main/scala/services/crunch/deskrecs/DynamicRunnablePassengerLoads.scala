@@ -197,6 +197,9 @@ object DynamicRunnablePassengerLoads {
         val startTime = SDate.now()
         Source(flights)
           .mapAsync(1) { flight =>
+            if (flight.apiFlight.flightCodeString == "WA0927") {
+              log.info(s"pax sources for ${flight.apiFlight.flightCodeString}@${SDate(flight.apiFlight.Scheduled).toISOString()}: ${flight.apiFlight.TotalPax.mkString(", ")}")
+            }
             if (hasNoPaxSources(flight)) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxCount) =>
@@ -217,7 +220,7 @@ object DynamicRunnablePassengerLoads {
           }
       }
 
-  private def hasNoPaxSources(f: ApiFlightWithSplits): Boolean = f.apiFlight.TotalPax.isEmpty
+  private def hasNoPaxSources(f: ApiFlightWithSplits): Boolean = f.apiFlight.TotalPax.count(_.pax.nonEmpty) > 0
 
   def addSplits(liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifests, NotUsed]],
                 historicManifestsProvider: Iterable[Arrival] => Source[ManifestLike, NotUsed],
