@@ -108,7 +108,6 @@ case class ManifestLookup(tables: Tables)
                                                 queries: List[(String, QueryFunction)])
                                                (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
     val startTime = SDate.now()
-    log.info(s"Looking for historic pax for ${uniqueArrivalKey.voyageNumber}-${uniqueArrivalKey.departurePort}@${uniqueArrivalKey.scheduled.toISOString()}")
     findFlights(uniqueArrivalKey, queries).flatMap { flightKeys =>
       manifestPaxForScheduled(flightKeys)
         .map(passengerCount => (uniqueArrivalKey, Option(maybeManifestPaxFromProfiles(uniqueArrivalKey, passengerCount))))
