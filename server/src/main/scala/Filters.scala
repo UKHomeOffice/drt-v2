@@ -13,7 +13,7 @@ class Filters @Inject()(env: Environment,
 
 object SecurityHeaders {
   val default = "default-src 'self'"
-  val javaScript = "script-src 'self' https://*.googletagmanager.com www.googletagmanager.com www.google-analytics.com ajax.googleapis.com"
+  val javaScript = "script-src 'self' 'nonce-Njg1Mjk1ZGYtNmUzOS00MTNiLWJmM2ItM2Q5NGFiYWYwNDVj' https://*.googletagmanager.com www.googletagmanager.com www.google-analytics.com ajax.googleapis.com"
   val styles = "style-src 'self' cdnjs.cloudflare.com 'unsafe-inline'"
   val fonts = "font-src 'self' cdnjs.cloudflare.com"
   val images = "img-src 'self' https://*.googletagmanager.com www.googletagmanager.com https://*.google-analytics.com www.google-analytics.com"
