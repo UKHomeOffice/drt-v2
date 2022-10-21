@@ -14,12 +14,10 @@
     @if(!googleTrackingCode.isEmpty){
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=@{googleTrackingCode}"></script>
-    <script>
+    <script nonce="Njg1Mjk1ZGYtNmUzOS00MTNiLWJmM2ItM2Q5NGFiYWYwNDVj">
           window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
+          function gtag(){dataLayer.push(arguments);};
           gtag('js', new Date());
-          gtag('config','@googleTrackingCode');
-
     </script>
     <!-- Google tag (gtag.js) -->
     }
