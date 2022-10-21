@@ -21,7 +21,7 @@ import services.{SDate, TimeLogger}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, HistoricApiFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
@@ -197,7 +197,7 @@ object DynamicRunnablePassengerLoads {
         val startTime = SDate.now()
         Source(flights)
           .mapAsync(1) { flight =>
-            if (hasNoPaxSources(flight)) {
+            if (flight.apiFlight.hasNoPaxSource) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxCount) =>
                   val totalPax: Set[TotalPaxSource] = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(manifestPaxLike.pax, HistoricApiFeedSource))
@@ -216,8 +216,6 @@ object DynamicRunnablePassengerLoads {
             (cr, updatedFlights.toList)
           }
       }
-
-  private def hasNoPaxSources(f: ApiFlightWithSplits): Boolean = f.apiFlight.TotalPax.isEmpty
 
   def addSplits(liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifests, NotUsed]],
                 historicManifestsProvider: Iterable[Arrival] => Source[ManifestLike, NotUsed],
