@@ -53,17 +53,17 @@ object RunnableOptimisation {
   case class RemoveCrunchRequest(crunchRequest: ProcessingRequest)
 
   def createGraph[A](crunchRequestSource: SortedActorRefSource,
-                                            minutesSinkActor: ActorRef,
-                                            crunchRequestsToQueueMinutes: Flow[ProcessingRequest, A, NotUsed],
-                                            graphName: String,
-                                           ): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
+                     minutesSinkActor: ActorRef,
+                     crunchRequestsToQueueMinutes: Flow[ProcessingRequest, A, NotUsed],
+                     graphName: String,
+                    ): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     val deskRecsSink = Sink.actorRefWithAck(minutesSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
     val ks = KillSwitches.single[A]
 
     val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {
       implicit builder =>
         (crunchRequests, killSwitch) =>
-          crunchRequests.out.map {cr =>
+          crunchRequests.out.map { cr =>
             log.info(s"[$graphName] Sending $cr to producer")
             cr
           } ~> crunchRequestsToQueueMinutes.map { minutes =>

@@ -24,4 +24,24 @@ class StaffMinuteSpec extends Specification {
       sm.maybeUpdated(existing, nowMillis) === Option(existing.copy(movements = movements + 1, lastUpdated = Option(nowMillis)))
     }
   }
+  val staffMinute: StaffMinute = StaffMinute(
+    terminal = T1,
+    minute = 0L,
+    shifts = 1,
+    fixedPoints = 2,
+    movements = 3)
+
+  "Given StaffMinutes" >> {
+    "When they have the same values `maybeUpdated` should return None" >> {
+      val staffMinute2 = staffMinute
+
+      staffMinute2.maybeUpdated(staffMinute, 0L) === None
+    }
+    "When they have different values `maybeUpdated` should return Option with the updated values" >> {
+      val updatedStaffMinute = staffMinute.copy(shifts = staffMinute.shifts + 1)
+
+      updatedStaffMinute.maybeUpdated(staffMinute, 1L) === Option(updatedStaffMinute.copy(lastUpdated = Option(1L)))
+    }
+  }
+
 }

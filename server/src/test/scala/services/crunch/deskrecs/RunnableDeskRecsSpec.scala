@@ -514,7 +514,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     daysQueueSource ! crunchRequest(SDate(scheduled), airportConfig)
 
     portStateProbe.fishForMessage(2.seconds) {
-      case mins: MinutesContainer[CrunchMinute, TQM] => mins.minutes.length === defaultAirportConfig.queuesByTerminal.flatMap(_._2).size * minsInADay
+      case mins: MinutesContainer[CrunchMinute, TQM] => mins.minutes.size === defaultAirportConfig.queuesByTerminal.flatMap(_._2).size * minsInADay
       case _ => false
     }
 
