@@ -176,6 +176,19 @@ object CrunchApi {
     val waitTime: Int
   }
 
+  object DeskRecMinute {
+    def from(crunchMinute: CrunchMinute): DeskRecMinute = DeskRecMinute(
+      terminal = crunchMinute.terminal,
+      queue = crunchMinute.queue,
+      minute = crunchMinute.minute,
+      paxLoad = crunchMinute.paxLoad,
+      workLoad = crunchMinute.workLoad,
+      deskRec = crunchMinute.deskRec,
+      waitTime = crunchMinute.waitTime,
+      maybePaxInQueue = crunchMinute.maybePaxInQueue,
+    )
+  }
+
   case class DeskRecMinute(terminal: Terminal,
                            queue: Queue,
                            minute: MillisSinceEpoch,
@@ -188,7 +201,7 @@ object CrunchApi {
     lazy val key: TQM = MinuteHelper.key(terminal, queue, minute)
 
     override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
-      if (toMinute.copy(lastUpdated = None) != existing.copy(lastUpdated = None))
+      if (this != DeskRecMinute.from(existing))
         Option(existing.copy(
           paxLoad = paxLoad,
           workLoad = workLoad,
@@ -207,7 +220,7 @@ object CrunchApi {
         terminal, queue, minute, paxLoad, workLoad, deskRec, waitTime, maybePaxInQueue, lastUpdated = None)
   }
 
-  case class DeskRecMinutes(minutes: Seq[DeskRecMinute]) extends PortStateQueueMinutes {
+  case class DeskRecMinutes(minutes: Iterable[DeskRecMinute]) extends PortStateQueueMinutes {
     override val asContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(minutes)
 
     override def isEmpty: Boolean = minutes.isEmpty
@@ -268,6 +281,15 @@ object CrunchApi {
     )
   }
 
+  object DeskStatMinute {
+    def from(crunchMinute: CrunchMinute): DeskStatMinute = DeskStatMinute(
+      terminal = crunchMinute.terminal,
+      queue = crunchMinute.queue,
+      minute = crunchMinute.minute,
+      deskStat = DeskStat(crunchMinute.actDesks, crunchMinute.actWait)
+    )
+  }
+
   case class ActualDeskStats(portDeskSlots: IMap[Terminal, IMap[Queue, IMap[MillisSinceEpoch, DeskStat]]]) extends PortStateQueueMinutes {
     override val asContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(deskStatMinutes)
 
@@ -292,7 +314,7 @@ object CrunchApi {
     def empty[A, B <: WithTimeAccessor]: MinutesContainer[A, B] = MinutesContainer[A, B](Seq())
   }
 
-  case class MinutesContainer[MINUTE, IDX <: WithTimeAccessor](minutes: Seq[MinuteLike[MINUTE, IDX]]) extends MinuteUpdates with Combinable[MinutesContainer[MINUTE, IDX]] {
+  case class MinutesContainer[MINUTE, IDX <: WithTimeAccessor](minutes: Iterable[MinuteLike[MINUTE, IDX]]) extends MinuteUpdates with Combinable[MinutesContainer[MINUTE, IDX]] {
     def latestUpdateMillis: MillisSinceEpoch = Try(minutes.map(_.lastUpdated.getOrElse(0L)).max).getOrElse(0L)
 
     def window(start: SDateLike, end: SDateLike): MinutesContainer[MINUTE, IDX] = {
@@ -313,7 +335,7 @@ object CrunchApi {
     lazy val indexed: IMap[IDX, MINUTE] = minutes.map(m => (m.key, m.toMinute)).toMap
   }
 
-  case class CrunchMinutes(minutes: Set[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
+  case class CrunchMinutes(minutes: Iterable[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
 
   case class PortStateUpdates(latest: MillisSinceEpoch,
                               flights: Iterable[ApiFlightWithSplits],

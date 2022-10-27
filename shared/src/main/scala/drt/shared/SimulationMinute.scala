@@ -5,6 +5,16 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 
+object SimulationMinute {
+  def from(crunchMinute: CrunchMinute): SimulationMinute = SimulationMinute(
+    terminal = crunchMinute.terminal,
+    queue = crunchMinute.queue,
+    minute = crunchMinute.minute,
+    desks = crunchMinute.deployedDesks.getOrElse(0),
+    waitTime = crunchMinute.deployedWait.getOrElse(0),
+  )
+}
+
 case class SimulationMinute(terminal: Terminal,
                             queue: Queue,
                             minute: MillisSinceEpoch,
