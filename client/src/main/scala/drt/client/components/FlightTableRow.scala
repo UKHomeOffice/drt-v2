@@ -162,7 +162,7 @@ object FlightTableRow {
       val noPcpPax = if (flight.Origin.isCta || outgoingDiversion) " arrival-cta" else ""
       val trClassName = s"${offScheduleClass(flight, props.airportConfig.timeToChoxMillis, props.airportConfig.useTimePredictions)} $timeIndicatorClass$cancelledClass$noPcpPax"
 
-      val queueTagMod = props.splitsQueueOrder.map { q =>
+      val queueSplits = props.splitsQueueOrder.map { q =>
         val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
         <.td(^.className := s"queue-split $paxClass right",
           <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax"))
@@ -175,7 +175,7 @@ object FlightTableRow {
           hasChangedStyle,
           timeLineTagMod,
           flightFields.toTagMod,
-          queueTagMod,
+          queueSplits,
           <.td(FlightComponents.paxTransferComponent(flight))
         )
       } else {
@@ -185,7 +185,7 @@ object FlightTableRow {
           hasChangedStyle,
           timeLineTagMod,
           flightFields.toTagMod,
-          queueTagMod
+          queueSplits
         )
       }
 
