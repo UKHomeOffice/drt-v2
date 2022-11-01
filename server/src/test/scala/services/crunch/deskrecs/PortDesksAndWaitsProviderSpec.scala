@@ -5,7 +5,6 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{ArrivalGenerator, CrunchApi, TQM}
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.graphstages.Crunch.LoadMinute
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
 import services.{OptimiserWithFlexibleProcessors, SDate, WorkloadProcessors, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
@@ -31,7 +30,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       val scheduled = SDate("2022-08-11T12:00")
       val pax = 2
       val flights = List(
-        (pax, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 100, None, None)))
+        (pax, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax, None, None)))
       )
       val loads = getFlightLoads(scheduled, flights, getProvider)
       val scheduledMillis = scheduled.millisSinceEpoch
@@ -45,8 +44,8 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       val pax1 = 1
       val pax2 = 2
       val flights = List(
-        (pax1, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 100, None, None))),
-        (pax2, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 100, None, None))),
+        (pax1, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax1, None, None))),
+        (pax2, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax2, None, None))),
       )
       val loads = getFlightLoads(scheduled, flights, getProvider)
       val scheduledMillis = scheduled.millisSinceEpoch
@@ -60,8 +59,8 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       val pax = 2
       val flights = List(
         (pax, Set(
-          ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 50, None, None),
-          ApiPaxTypeAndQueueCount(GBRNational, EGate, 50, None, None),
+          ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax / 2, None, None),
+          ApiPaxTypeAndQueueCount(GBRNational, EGate, pax / 2, None, None),
         )),
       )
       val loads = getFlightLoads(scheduled, flights, getProvider)
@@ -79,7 +78,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     "Given a single flight with 2 passengers and a single split" >> {
       val scheduled = SDate("2022-08-11T12:00")
       val pax = 2
-      val flights = List((pax, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 100, None, None))))
+      val flights = List((pax, Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax, None, None))))
       val loads = Await.result(getDeskRecs(scheduled, flights, getProvider), 1.second).minutes
         .filter(m => m.queue == EeaDesk && m.minute == scheduled.millisSinceEpoch)
 
@@ -120,8 +119,9 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     val end = scheduled.addMinutes(14).millisSinceEpoch
     val flights = flightParams.zipWithIndex.map {
       case ((pax, splits), idx) =>
+        val arrival = ArrivalGenerator.arrival(iata = s"BA${idx.toString}", origin = PortCode(idx.toString), terminal = T1, sch = scheduled.millisSinceEpoch, actPax = Option(pax), pcpTime = Option(scheduled.millisSinceEpoch))
         ApiFlightWithSplits(
-          ArrivalGenerator.arrival(iata = s"BA${idx.toString}", origin = PortCode(idx.toString), terminal = T1, sch = scheduled.millisSinceEpoch, actPax = Option(pax), pcpTime = Option(scheduled.millisSinceEpoch)),
+          arrival,
           Set(Splits(splits, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, None))
         )
     }
