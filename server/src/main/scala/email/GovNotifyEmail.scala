@@ -1,7 +1,6 @@
 package email
 
-
-import controllers.application.NegativeFeedbackData
+import drt.shared.NegativeFeedback
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.service.notify.NotificationClient
 
@@ -22,8 +21,9 @@ class GovNotifyEmail(apiKey: String) {
     ).asJava
   }
 
-  def negativePersonalisationData(feedbackData: NegativeFeedbackData): util.Map[String, String] = {
-    val contactMe = if (feedbackData.contactMe) s"The user ${feedbackData.feedbackUserEmail} is happy to be contacted." else s"The user ${feedbackData.feedbackUserEmail} would not like to be contacted."
+  def negativePersonalisationData(feedbackData: NegativeFeedback): util.Map[String, String] = {
+    val contactMe = s"Contact email: ${feedbackData.feedbackUserEmail}."
+
     Map(
     "url" -> feedbackData.url,
     "feedbackUserEmail" -> feedbackData.feedbackUserEmail,
@@ -34,7 +34,7 @@ class GovNotifyEmail(apiKey: String) {
     ).asJava
   }
 
-  def sendRequest(reference:String,emailAddress: String, templateId: String, personalisation: util.Map[String, String]) = {
+  def sendRequest(reference:String,emailAddress: String, templateId: String, personalisation: util.Map[String, String]): Try[Any] = {
     Try(
       client.sendEmail(templateId,
         emailAddress,

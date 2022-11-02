@@ -4,6 +4,7 @@ import diode.data.Ready
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.{DrtApi, SPACircuit}
+import drt.shared.PositiveFeedback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
@@ -23,7 +24,7 @@ object PositiveFeedbackComponent {
         <.button(Icon.thumbsOUp,
           ^.aria.label := "Positive feedback",
           ^.className := "btn btn-default btn-success",
-          ^.onClick --> (Callback(DrtApi.post("email/feedback/positive", write(props)))
+          ^.onClick --> (Callback(DrtApi.post("email/feedback/positive", write(PositiveFeedback(props.feedbackUserEmail, props.url))))
             >> Callback(SPACircuit.dispatch(SetSnackbarMessage(Ready("Thanks for your feedback. This helps us improve the service.")))))
         )
       )

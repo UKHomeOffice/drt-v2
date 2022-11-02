@@ -1,24 +1,14 @@
 package controllers.application
 
 import controllers.Application
+import drt.shared.{NegativeFeedback, PositiveFeedback}
 import email.GovNotifyEmail
 import play.api.mvc.{Action, AnyContent}
-import upickle.default.{macroRW, read, ReadWriter => RW}
+import upickle.default.read
 
-case class NegativeFeedbackData(feedbackUserEmail: String,
-                                whatUserDoing: String,
-                                whatWentWrong: String,
-                                whatToImprove: String,
-                                contactMe: Boolean,
-                                url: String)
-
-case class PositiveFeedbackData(feedbackUserEmail: String,
-                                url: String)
 
 trait WithEmailFeedback {
   self: Application =>
-  implicit val rwN: RW[NegativeFeedbackData] = macroRW
-  implicit val rwP: RW[PositiveFeedbackData] = macroRW
 
   val emailNotification = new GovNotifyEmail(govNotifyApiKey)
 
@@ -28,7 +18,7 @@ trait WithEmailFeedback {
         case "positive" =>
           request.body.asText match {
             case Some(json) =>
-              val personalisation = emailNotification.positivePersonalisationData(read(json)(rwP).url)
+              val personalisation = emailNotification.positivePersonalisationData(read(json)(PositiveFeedback.rw).url)
               emailNotification.sendRequest(govNotifyReference, contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), positiveFeedbackTemplateId, personalisation)
               Accepted
             case None =>
@@ -36,7 +26,7 @@ trait WithEmailFeedback {
           }
         case "negative" => request.body.asText match {
           case Some(json) =>
-            val personalisation = emailNotification.negativePersonalisationData(read(json)(rwN))
+            val personalisation = emailNotification.negativePersonalisationData(read(json)(NegativeFeedback.rw))
             emailNotification.sendRequest(govNotifyReference, contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), negativeFeedbackTemplateId, personalisation)
             Accepted
           case None =>
