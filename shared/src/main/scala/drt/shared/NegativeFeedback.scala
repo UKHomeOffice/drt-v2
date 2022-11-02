@@ -2,8 +2,9 @@ package drt.shared
 
 import upickle.default.{macroRW, ReadWriter => RW}
 
-case class NegativeFeedback(feedbackUserEmail: String,
-                            whatUserDoing: String,
+case class NegativeFeedback(portCode: String,
+                            username: String,
+                            whatUserWasDoing: String,
                             whatWentWrong: String,
                             whatToImprove: String,
                             url: String)

@@ -10,12 +10,13 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomTagOf, ^, _}
 import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
+import uk.gov.homeoffice.drt.ports.PortCode
 import upickle.default.write
 
 object NegativeFeedbackComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(url: String, userEmail: String) extends UseValueEq
+  case class Props(url: String, userEmail: String, port: PortCode) extends UseValueEq
 
   case class State(feedback: NegativeFeedback,
                    showDialogue: Boolean) extends UseValueEq
@@ -24,8 +25,9 @@ object NegativeFeedbackComponent {
     .initialStateFromProps(p => State(
       NegativeFeedback(
         url = p.url,
-        feedbackUserEmail = p.userEmail,
-        whatUserDoing = "",
+        portCode = p.port.iata,
+        username = p.userEmail,
+        whatUserWasDoing = "",
         whatWentWrong = "",
         whatToImprove = ""
       ),
@@ -35,7 +37,7 @@ object NegativeFeedbackComponent {
 
       val showClass = if (state.showDialogue) "show" else "fade"
 
-      def setWhatUserDoing(whatUserDoing: String): CallbackTo[Unit] = scope.modState(_.copy(feedback = state.feedback.copy(whatUserDoing = whatUserDoing)))
+      def setWhatUserDoing(whatUserDoing: String): CallbackTo[Unit] = scope.modState(_.copy(feedback = state.feedback.copy(whatUserWasDoing = whatUserDoing)))
 
       def setWhatWentWrong(whatWentWrong: String): CallbackTo[Unit] = scope.modState(_.copy(feedback = state.feedback.copy(whatWentWrong = whatWentWrong)))
 
@@ -59,7 +61,7 @@ object NegativeFeedbackComponent {
                     ^.id := "whatUserDoing-text",
                     ^.placeholder := "Please write your comments here ...",
                     ^.`class` := "col-md-7",
-                    ^.value := state.feedback.whatUserDoing,
+                    ^.value := state.feedback.whatUserWasDoing,
                     ^.onChange ==> ((e: ReactEventFromInput) => setWhatUserDoing(e.target.value))),
                 ),
                 <.br(),
@@ -127,5 +129,5 @@ object NegativeFeedbackComponent {
     .build
 
 
-  def apply(url: String, userEmail: String): VdomElement = component(Props(url, userEmail))
+  def apply(url: String, userEmail: String, port: PortCode): VdomElement = component(Props(url, userEmail, port))
 }

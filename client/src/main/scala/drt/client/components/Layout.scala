@@ -12,7 +12,7 @@ import org.scalajs.dom
 import org.scalajs.dom.console
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object Layout {
@@ -72,12 +72,12 @@ object Layout {
       }
     }).build
 
-  def feedBackNavBar(user: LoggedInUser): VdomTagOf[Div] =
+  def feedBackNavBar(user: LoggedInUser, port: PortCode): VdomTagOf[Div] =
     <.div(^.className := "feedback-widget",
       <.span(^.className := "feedback", "Is this page useful?"),
-      <.span(^.className := "feedback-negative", PositiveFeedbackComponent(dom.window.location.toString, user.email)),
-      <.span(^.className := "feedback-negative", NegativeFeedbackComponent(dom.window.location.toString, user.email)))
-
+      <.span(PositiveFeedbackComponent(dom.window.location.toString, user.email, port)),
+      <.span(NegativeFeedbackComponent(dom.window.location.toString, user.email, port)),
+    )
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]): VdomElement = component(Props(ctl, currentLoc))
 }

@@ -18,7 +18,7 @@ trait WithEmailFeedback {
         case "positive" =>
           request.body.asText match {
             case Some(json) =>
-              val personalisation = emailNotification.positivePersonalisationData(read(json)(PositiveFeedback.rw).url)
+              val personalisation = emailNotification.positivePersonalisationData(read(json)(PositiveFeedback.rw))
               emailNotification.sendRequest(govNotifyReference, contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), positiveFeedbackTemplateId, personalisation)
               Accepted
             case None =>
