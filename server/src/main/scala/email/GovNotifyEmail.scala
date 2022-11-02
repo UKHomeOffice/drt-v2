@@ -18,7 +18,7 @@ class GovNotifyEmail(apiKey: String) {
   def positivePersonalisationData(feedbackData: PositiveFeedback): util.Map[String, String] = {
     Map(
       "url" -> feedbackData.url,
-      "username" -> feedbackData.username,
+      "email" -> feedbackData.email,
       "portCode" -> feedbackData.portCode,
     ).asJava
   }
@@ -26,7 +26,7 @@ class GovNotifyEmail(apiKey: String) {
   def negativePersonalisationData(feedbackData: NegativeFeedback): util.Map[String, String] = {
     Map(
       "portCode" -> feedbackData.portCode,
-      "username" -> feedbackData.username,
+      "email" -> feedbackData.email,
       "url" -> feedbackData.url,
       "whatUserWasDoing" -> feedbackData.whatUserWasDoing,
       "whatWentWrong" -> feedbackData.whatWentWrong,

@@ -75,8 +75,8 @@ object Layout {
   def feedBackNavBar(user: LoggedInUser, port: PortCode): VdomTagOf[Div] =
     <.div(^.className := "feedback-widget",
       <.span(^.className := "feedback", "Is this page useful?"),
-      <.span(PositiveFeedbackComponent(dom.window.location.toString, user.email, port)),
-      <.span(NegativeFeedbackComponent(dom.window.location.toString, user.email, port)),
+      <.span(PositiveFeedbackComponent(dom.window.location.toString, user.email.replace("\"", ""), port)),
+      <.span(NegativeFeedbackComponent(dom.window.location.toString, user.email.replace("\"", ""), port)),
     )
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]): VdomElement = component(Props(ctl, currentLoc))

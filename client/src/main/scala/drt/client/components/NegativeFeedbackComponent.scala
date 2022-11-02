@@ -26,7 +26,7 @@ object NegativeFeedbackComponent {
       NegativeFeedback(
         url = p.url,
         portCode = p.port.iata,
-        username = p.userEmail,
+        email = p.userEmail,
         whatUserWasDoing = "",
         whatWentWrong = "",
         whatToImprove = ""
