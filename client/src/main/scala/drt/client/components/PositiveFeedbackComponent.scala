@@ -4,16 +4,18 @@ import diode.data.Ready
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.{DrtApi, SPACircuit}
+import drt.shared.PositiveFeedback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import uk.gov.homeoffice.drt.ports.PortCode
 import upickle.default.{macroRW, write, ReadWriter => RW}
 
 
 object PositiveFeedbackComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(url: String, feedbackUserEmail: String)
+  case class Props(url: String, userEmail: String, port: PortCode)
 
   implicit val rw: RW[Props] = macroRW
 
@@ -23,12 +25,12 @@ object PositiveFeedbackComponent {
         <.button(Icon.thumbsOUp,
           ^.aria.label := "Positive feedback",
           ^.className := "btn btn-default btn-success",
-          ^.onClick --> (Callback(DrtApi.post("email/feedback/positive", write(props)))
+          ^.onClick --> (Callback(DrtApi.post("email/feedback/positive", write(PositiveFeedback(props.userEmail, props.url, props.port.iata))))
             >> Callback(SPACircuit.dispatch(SetSnackbarMessage(Ready("Thanks for your feedback. This helps us improve the service.")))))
         )
       )
     })
     .build
 
-  def apply(url: String, userEmail: String): VdomElement = component(Props(url, userEmail))
+  def apply(url: String, userEmail: String, port: PortCode): VdomElement = component(Props(url, userEmail, port))
 }

@@ -5,51 +5,43 @@ import diode.data.Ready
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.{DrtApi, SPACircuit}
+import drt.shared.NegativeFeedback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomTagOf, ^, _}
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.{Anchor, Div}
-import upickle.default.{macroRW, write, ReadWriter => RW}
-
-import scala.scalajs.js
+import uk.gov.homeoffice.drt.ports.PortCode
+import upickle.default.write
 
 object NegativeFeedbackComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(url: String,
-                   userEmail: String) extends UseValueEq
+  case class Props(url: String, userEmail: String, port: PortCode) extends UseValueEq
 
-  case class State(url: String,
-                   feedbackUserEmail: String,
-                   whatUserDoing: String,
-                   whatWentWrong: String,
-                   whatToImprove: String,
-                   contactMe: Boolean,
+  case class State(feedback: NegativeFeedback,
                    showDialogue: Boolean) extends UseValueEq
-
-  implicit val rw: RW[State] = macroRW
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FeedbackComponent")
     .initialStateFromProps(p => State(
-      url = p.url,
-      feedbackUserEmail = p.userEmail,
-      whatUserDoing = "",
-      whatWentWrong = "",
-      whatToImprove = "",
-      contactMe = false,
+      NegativeFeedback(
+        url = p.url,
+        portCode = p.port.iata,
+        email = p.userEmail,
+        whatUserWasDoing = "",
+        whatWentWrong = "",
+        whatToImprove = ""
+      ),
       showDialogue = false,
     ))
     .renderS((scope, state) => {
 
       val showClass = if (state.showDialogue) "show" else "fade"
 
-      def setWhatUserDoing(whatUserDoing: String) = scope.modState(_.copy(whatUserDoing = whatUserDoing))
+      def setWhatUserDoing(whatUserDoing: String): CallbackTo[Unit] = scope.modState(_.copy(feedback = state.feedback.copy(whatUserWasDoing = whatUserDoing)))
 
-      def setWhatWentWrong(whatWentWrong: String) = scope.modState(_.copy(whatWentWrong = whatWentWrong))
+      def setWhatWentWrong(whatWentWrong: String): CallbackTo[Unit] = scope.modState(_.copy(feedback = state.feedback.copy(whatWentWrong = whatWentWrong)))
 
-      def setWhatToImprove(whatToImprove: String) = scope.modState(_.copy(whatToImprove = whatToImprove))
-
-      def setContactMe(contactMe: Boolean) = scope.modState(_.copy(contactMe = contactMe))
+      def setWhatToImprove(whatToImprove: String): CallbackTo[Unit] = scope.modState(_.copy(feedback = state.feedback.copy(whatToImprove = whatToImprove)))
 
       def negativeFeedbackDialog: VdomTagOf[Div] = {
         <.div(^.className := "modal " + showClass, ^.id := "#negativeFeedback", ^.tabIndex := -1, ^.role := "dialog",
@@ -65,26 +57,33 @@ object NegativeFeedbackComponent {
               <.div(^.className := "modal-body",
                 <.div(^.`class` := "row",
                   <.label(^.`for` := "whatUserDoing-text", "What were you doing?", ^.`class` := "col-md-4"),
-                  <.textarea(^.id := "whatUserDoing-text", ^.placeholder := "Please write your comments here ...", ^.`class` := "col-md-7", ^.value := state.whatUserDoing, ^.onChange ==> ((e: ReactEventFromInput) => setWhatUserDoing(e.target.value))),
+                  <.textarea(
+                    ^.id := "whatUserDoing-text",
+                    ^.placeholder := "Please write your comments here ...",
+                    ^.`class` := "col-md-7",
+                    ^.value := state.feedback.whatUserWasDoing,
+                    ^.onChange ==> ((e: ReactEventFromInput) => setWhatUserDoing(e.target.value))),
                 ),
                 <.br(),
                 <.div(^.`class` := "row",
                   <.label(^.`for` := "whatWentWrong-text", "What went wrong?", ^.`class` := "col-md-4"),
-                  <.textarea(^.id := "whatWentWrong-text", ^.placeholder := "Please write your comments here ...", ^.`class` := "col-md-7", ^.value := state.whatWentWrong, ^.onChange ==> ((e: ReactEventFromInput) => setWhatWentWrong(e.target.value))),
+                  <.textarea(
+                    ^.id := "whatWentWrong-text",
+                    ^.placeholder := "Please write your comments here ...",
+                    ^.`class` := "col-md-7",
+                    ^.value := state.feedback.whatWentWrong,
+                    ^.onChange ==> ((e: ReactEventFromInput) => setWhatWentWrong(e.target.value))),
                 ),
                 <.br(),
                 <.div(^.`class` := "row",
                   <.label(^.`for` := "whatToImprove-text", "What can we improve?", ^.`class` := "col-md-4"),
-                  <.textarea(^.id := "whatToImprove-text", ^.placeholder := "Please write your suggestion here ....", ^.`class` := "col-md-7", ^.value := state.whatToImprove, ^.onChange ==> ((e: ReactEventFromInput) => setWhatToImprove(e.target.value))),
+                  <.textarea(
+                    ^.id := "whatToImprove-text",
+                    ^.placeholder := "Please write your suggestion here ....",
+                    ^.`class` := "col-md-7",
+                    ^.value := state.feedback.whatToImprove,
+                    ^.onChange ==> ((e: ReactEventFromInput) => setWhatToImprove(e.target.value))),
                 ),
-                <.br(),
-                <.div(^.`class` := "row",
-                  <.div(^.`class` := "col-md-10 ml-auto",
-                    <.ul(^.className := "nav navbar-nav navbar-left",
-                      <.li(<.input.checkbox(^.checked := state.contactMe, ^.onChange ==> ((e: ReactEventFromInput) => setContactMe(e.target.checked)), ^.id := "check-contactMe")),
-                      <.li(<.label(^.style := js.Dictionary("marginLeft" -> "5px"), ^.`for` := "check-contactMe", "Are you happy for us to contact you regarding your feedback?"))
-                    ))
-                )
               ),
               <.br(),
               <.div(^.className := "modal-footer",
@@ -94,7 +93,7 @@ object NegativeFeedbackComponent {
                       ^.onClick --> {
                         scope.modState(
                           _.copy(showDialogue = false),
-                          Callback(DrtApi.post("email/feedback/negative", write(state))) >>
+                          Callback(DrtApi.post("email/feedback/negative", write(state.feedback))) >>
                             Callback(SPACircuit.dispatch(SetSnackbarMessage(Ready("Thanks for your feedback. This helps us improve the service.")))))
                       }
                     ),
@@ -122,7 +121,7 @@ object NegativeFeedbackComponent {
         )
       }
 
-      <.div( ^.className := "feedback",
+      <.div(^.className := "feedback",
         feedBackButton(Icon.thumbsODown, "negativeFeedback", "btn-danger"),
         negativeFeedbackDialog())
 
@@ -130,5 +129,5 @@ object NegativeFeedbackComponent {
     .build
 
 
-  def apply(url: String, userEmail: String): VdomElement = component(Props(url, userEmail))
+  def apply(url: String, userEmail: String, port: PortCode): VdomElement = component(Props(url, userEmail, port))
 }

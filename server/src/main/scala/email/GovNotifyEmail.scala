@@ -1,7 +1,6 @@
 package email
 
-
-import controllers.application.NegativeFeedbackData
+import drt.shared.{NegativeFeedback, PositiveFeedback}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.service.notify.NotificationClient
 
@@ -16,25 +15,26 @@ class GovNotifyEmail(apiKey: String) {
 
   val client = new NotificationClient(apiKey)
 
-  def positivePersonalisationData(url:String): util.Map[String, String] = {
+  def positivePersonalisationData(feedbackData: PositiveFeedback): util.Map[String, String] = {
     Map(
-      "url" -> url
+      "url" -> feedbackData.url,
+      "email" -> feedbackData.email,
+      "portCode" -> feedbackData.portCode,
     ).asJava
   }
 
-  def negativePersonalisationData(feedbackData: NegativeFeedbackData): util.Map[String, String] = {
-    val contactMe = if (feedbackData.contactMe) s"The user ${feedbackData.feedbackUserEmail} is happy to be contacted." else s"The user ${feedbackData.feedbackUserEmail} would not like to be contacted."
+  def negativePersonalisationData(feedbackData: NegativeFeedback): util.Map[String, String] = {
     Map(
-    "url" -> feedbackData.url,
-    "feedbackUserEmail" -> feedbackData.feedbackUserEmail,
-    "whatUserDoing" -> feedbackData.whatUserDoing,
-    "whatWentWrong" -> feedbackData.whatWentWrong,
-    "whatToImprove" -> feedbackData.whatToImprove,
-    "contactMe" -> contactMe
+      "portCode" -> feedbackData.portCode,
+      "email" -> feedbackData.email,
+      "url" -> feedbackData.url,
+      "whatUserWasDoing" -> feedbackData.whatUserWasDoing,
+      "whatWentWrong" -> feedbackData.whatWentWrong,
+      "whatToImprove" -> feedbackData.whatToImprove,
     ).asJava
   }
 
-  def sendRequest(reference:String,emailAddress: String, templateId: String, personalisation: util.Map[String, String]) = {
+  def sendRequest(reference: String, emailAddress: String, templateId: String, personalisation: util.Map[String, String]): Try[Any] = {
     Try(
       client.sendEmail(templateId,
         emailAddress,
