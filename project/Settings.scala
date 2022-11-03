@@ -97,6 +97,7 @@ object Settings {
     "@tippyjs/react" -> "4.1.0",
     "react-chartjs-2" -> "^4.0.0",
     "react-markdown" -> "4.0.6",
+    "moment" -> ">=2.29.4",
     "@material-ui/core" -> "3.9.0",
     "@material-ui/icons" -> "3.0.2",
     "@material-ui/lab" -> "3.0.0-alpha.30"
