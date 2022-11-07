@@ -75,7 +75,7 @@ object TimeRangeFilter {
       else ""
 
       <.div(^.className := "time-view-selector-container",
-        <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
+        <.div(^.className := "btn-group no-gutters date-time-buttons-container", VdomAttr("data-toggle") := "buttons",
           if (props.showNow)
             <.div(^.id := "now", ^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
               GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "now")

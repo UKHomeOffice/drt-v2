@@ -12,6 +12,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
+import io.kinoplan.scalajs.react.material.ui.core.MuiDivider
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -87,7 +88,7 @@ object TerminalComponent {
             val timeRangeHours = if (model.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
 
             val currentContentClass = if (props.terminalPageTab.mode == Current) "fade in " + activeClass else "fade out"
-            val snapshotContentClass = if (props.terminalPageTab.mode == Snapshot) "fade in " + activeClass else "fade out"
+//            val snapshotContentClass = if (props.terminalPageTab.mode == Snapshot) "fade in " + activeClass else "fade out"
             val planningContentClass = if (props.terminalPageTab.mode == Planning) "fade in " + activeClass else "fade out"
             val staffingContentClass = if (props.terminalPageTab.mode == Staffing) "fade in " + activeClass else "fade out"
             val dashboardContentClass = if (props.terminalPageTab.mode == Dashboard) "fade in " + activeClass else "fade out"
@@ -136,12 +137,6 @@ object TerminalComponent {
                         <.div(
                           ^.className := "current-view-header",
                           <.div(
-                            <.h2(props.terminalPageTab.dateFromUrlOrNow match {
-                              case date: SDateLike if date.ddMMyyString == SDate.now().ddMMyyString => "Live View"
-                              case date: SDateLike if date.millisSinceEpoch < SDate.now().millisSinceEpoch => "Historic View"
-                              case date: SDateLike if date.millisSinceEpoch > SDate.now().millisSinceEpoch => "Forecast View"
-                              case _ => "Live View"
-                            }),
                             DaySelectorComponent(DaySelectorComponent.Props(props.router,
                               props.terminalPageTab,
                               model.loadingState,
@@ -155,13 +150,13 @@ object TerminalComponent {
                         TerminalContentComponent(terminalContentProps)
                       ) else ""
                     }),
-                    <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
-                      if (props.terminalPageTab.mode == Snapshot) <.div(
-                        <.h2("Snapshot View"),
-                        SnapshotSelector(props.router, props.terminalPageTab, model.loadingState),
-                        TerminalContentComponent(terminalContentProps)
-                      ) else ""
-                    }),
+//                    <.div(^.id := "snapshot", ^.className := s"tab-pane $snapshotContentClass", {
+//                      if (props.terminalPageTab.mode == Snapshot) <.div(
+//                        <.h2("Snapshot View"),
+//                        SnapshotSelector(props.router, props.terminalPageTab, model.loadingState),
+//                        TerminalContentComponent(terminalContentProps)
+//                      ) else ""
+//                    }),
                     <.div(^.id := "planning", ^.className := s"tab-pane $planningContentClass", {
                       if (props.terminalPageTab.mode == Planning) {
                         <.div(
@@ -198,7 +193,7 @@ object TerminalComponent {
       props.terminalPageTab.subMode
 
     val currentClass = if (props.terminalPageTab.mode == Current) activeClass else ""
-    val snapshotDataClass = if (props.terminalPageTab.mode == Snapshot) activeClass else ""
+//    val snapshotDataClass = if (props.terminalPageTab.mode == Snapshot) activeClass else ""
     val planningClass = if (props.terminalPageTab.mode == Planning) activeClass else ""
     val staffingClass = if (props.terminalPageTab.mode == Staffing) activeClass else ""
     val terminalDashboardClass = if (props.terminalPageTab.mode == Dashboard) activeClass else ""
@@ -222,25 +217,25 @@ object TerminalComponent {
         }
       ),
       <.li(^.className := currentClass,
-        <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Current", " ", currentTooltip), ^.onClick --> {
-          GoogleEventTracker.sendEvent(terminalName, "click", "Current")
+        <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Desks & Arrivals"), ^.onClick --> {
+          GoogleEventTracker.sendEvent(terminalName, "click", "Desks & Arrivals")
           props.router.set(props.terminalPageTab.update(
             mode = Current,
             subMode = subMode,
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), viewTypeQueryParam).queryParams
           ))
         }),
-      <.li(^.className := snapshotDataClass,
-        <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot", " ", snapshotTooltip),
-        ^.onClick --> {
-          GoogleEventTracker.sendEvent(terminalName, "click", "Snapshot")
-          props.router.set(props.terminalPageTab.update(
-            mode = Snapshot,
-            subMode = subMode,
-            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), viewTypeQueryParam).queryParams
-          ))
-        }
-      ),
+//      <.li(^.className := snapshotDataClass,
+//        <.a(^.id := "snapshotTab", VdomAttr("data-toggle") := "tab", "Snapshot", " ", snapshotTooltip),
+//        ^.onClick --> {
+//          GoogleEventTracker.sendEvent(terminalName, "click", "Snapshot")
+//          props.router.set(props.terminalPageTab.update(
+//            mode = Snapshot,
+//            subMode = subMode,
+//            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), viewTypeQueryParam).queryParams
+//          ))
+//        }
+//      ),
       <.li(^.className := planningClass,
         <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"),
         ^.onClick --> {

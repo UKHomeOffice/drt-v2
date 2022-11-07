@@ -702,8 +702,11 @@ table.headlines tr:nth-child(odd) {
 }
 
 .current-view-header {
+  margin-top: 15px;
   display: flex;
   justify-content: space-between;
+  //flex-direction: column;
+  //gap: 5px;
 }
 
 .muiButton {
@@ -1270,7 +1273,7 @@ p {
   display: flex;
   align-content: flex-start;
   flex-direction: column;
-  gap: 10px;
+  gap: 15px;
 }
 
 .date-select-wrapper {
@@ -1280,8 +1283,47 @@ p {
   flex-wrap: wrap;
 }
 
+.date-time-buttons-container {
+  width: 350px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.time-machine-switch {
+  width: 350px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 15px;
+}
+
+.time-machine-switch-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.time-machine-switch-label {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
 .date-quick-days {
   white-space: nowrap;
+}
+
+.date-quick-days div {
+  flex-grow: 1;
+}
+
+.time-machine {
+  display: flex;
+  gap: 20px;
+}
+
+.time-machine-hint {
+  display: flex;
+  justify-content: flex-end;
 }
 
 .date-picker {
@@ -1307,7 +1349,6 @@ p {
 .pcp-pax-summaries {
   display: flex;
   justify-content: space-evenly;
-  margin: 20px 0;
   min-height: 228px;
   gap: 10px;
 }
