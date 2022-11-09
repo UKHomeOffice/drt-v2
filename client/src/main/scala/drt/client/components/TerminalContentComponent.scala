@@ -297,7 +297,7 @@ object TerminalContentComponent {
       Callback {
         val page = s"${p.props.terminalPageTab.terminal}/${p.props.terminalPageTab.mode}/${p.props.terminalPageTab.subMode}"
         val pageWithTime = s"$page/${timeRange(p.props).start}/${timeRange(p.props).end}"
-        val pageWithDate = p.props.terminalPageTab.date.map(s => s"$page/${p.props.terminalPageTab.parseDateString(s)}/${timeRange(p.props).start}/${timeRange(p.props).end}").getOrElse(pageWithTime)
+        val pageWithDate = p.props.terminalPageTab.viewDateString.map(s => s"$page/${p.props.terminalPageTab.parseDateString(s)}/${timeRange(p.props).start}/${timeRange(p.props).end}").getOrElse(pageWithTime)
         GoogleEventTracker.sendPageView(pageWithDate)
         log.info("terminal component didMount")
       }

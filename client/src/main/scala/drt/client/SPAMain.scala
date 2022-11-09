@@ -1,7 +1,7 @@
 package drt.client
 
 import diode.Action
-import drt.client.SPAMain.TerminalPageModes.{Current, Planning, Snapshot, Staffing}
+import drt.client.SPAMain.TerminalPageModes.{Current, Planning, Staffing}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle}
@@ -21,6 +21,7 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.Seq
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
+import scala.util.Try
 
 object SPAMain {
 
@@ -31,8 +32,8 @@ object SPAMain {
     val value: Option[String]
   }
 
-  object UrlDateParameter {
-    val paramName = "date"
+  trait UrlDateLikeParameter {
+    val paramName: String
 
     def apply(paramValue: Option[String]): UrlParameter = new UrlParameter {
       override val name: String = paramName
@@ -40,22 +41,20 @@ object SPAMain {
     }
   }
 
-  object UrlTimeRangeStart {
-    val paramName = "timeRangeStart"
-
-    def apply(paramValue: Option[String]): UrlParameter = new UrlParameter {
-      override val name: String = paramName
-      override val value: Option[String] = paramValue
-    }
+  object UrlDateParameter extends UrlDateLikeParameter {
+    override val paramName = "date"
   }
 
-  object UrlTimeRangeEnd {
-    val paramName = "timeRangeEnd"
+  object UrlTimeMachineDateParameter extends UrlDateLikeParameter {
+    override val paramName = "tm-date"
+  }
 
-    def apply(paramValue: Option[String]): UrlParameter = new UrlParameter {
-      override val name: String = paramName
-      override val value: Option[String] = paramValue
-    }
+  object UrlTimeRangeStart extends UrlDateLikeParameter {
+    override val paramName = "timeRangeStart"
+  }
+
+  object UrlTimeRangeEnd extends UrlDateLikeParameter {
+    override val paramName = "timeRangeEnd"
   }
 
   object UrlViewType {
@@ -128,7 +127,8 @@ object SPAMain {
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
     val terminal: Terminal = Terminal(terminalName)
-    val date: Option[String] = queryParams.get(UrlDateParameter.paramName).filter(_.matches(".+"))
+    val viewDateString: Option[String] = queryParams.get(UrlDateParameter.paramName).filter(_.matches(".+"))
+    val timeMachineDateString: Option[String] = queryParams.get(UrlTimeMachineDateParameter.paramName).filter(_.matches(".+"))
     val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+"))
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+"))
     val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
@@ -136,11 +136,13 @@ object SPAMain {
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
 
     def viewMode: ViewMode = {
-      (mode, date) match {
-        case (Current, Some(dateString)) => ViewDay(parseDateString(dateString))
-        case (Snapshot, dateStringOption) =>
-          val pointInTimeMillis = dateStringOption.map(parseDateString).getOrElse(SDate.midnightThisMorning())
-          ViewPointInTime(pointInTimeMillis)
+      (mode, viewDateString) match {
+        case (Current, Some(dateString)) =>
+          val maybeTmDate = Try(timeMachineDateString.map(parseDateString)).toOption.flatten
+          ViewDay(parseDateString(dateString), maybeTmDate)
+        case (Current, None) if timeMachineDateString.isDefined =>
+          val maybeTmDate = Try(timeMachineDateString.map(parseDateString)).toOption.flatten
+          ViewDay(SDate.now(), maybeTmDate)
         case _ => ViewLive
       }
     }
@@ -161,16 +163,16 @@ object SPAMain {
 
     def timeRangeEnd: Option[Int] = timeRangeEndString.map(_.toInt)
 
-    def dateFromUrlOrNow: SDateLike = date.flatMap(SDate.parse).getOrElse(SDate.now())
+    def dateFromUrlOrNow: SDateLike = viewDateString.flatMap(SDate.parse).getOrElse(SDate.now())
 
-    def updateRequired(p: TerminalPageTabLoc): Boolean = (terminal != p.terminal) || (date != p.date) || (mode != p.mode)
+    def updateRequired(p: TerminalPageTabLoc): Boolean =
+      (terminal != p.terminal) || (viewDateString != p.viewDateString) || (mode != p.mode) || (timeMachineDateString != p.timeMachineDateString)
 
     def loadAction: Action = mode match {
       case Planning =>
         GetForecastWeek(TerminalPlanningComponent.defaultStartDate(dateFromUrlOrNow), terminal)
       case Staffing =>
         GetShiftsForMonth(dateFromUrlOrNow, terminal)
-
       case _ => SetViewMode(viewMode)
     }
 

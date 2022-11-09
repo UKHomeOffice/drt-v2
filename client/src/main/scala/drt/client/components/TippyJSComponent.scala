@@ -123,16 +123,16 @@ object Tippy extends ScalaCssReactImplicits {
     apply(content, interactive = false, <.span(trigger))
 
   def interactiveInfo(content: VdomElement, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
-    apply(content, interactive = true, Icon.infoCircle, triggerCallback = triggerCallback)
+    apply(content, interactive = true, trigger = Icon.infoCircle, triggerCallback = triggerCallback)
 
   def info(content: VdomElement) =
-    apply(content, interactive = true, Icon.infoCircle)
+    apply(content, interactive = true, trigger = Icon.infoCircle)
 
   def info(content: String) =
-    apply(<.div(content), interactive = true, Icon.infoCircle)
+    apply(<.div(content), interactive = true, trigger = Icon.infoCircle)
 
   def infoHover(content: String) =
-    apply(<.div(content), interactive = true, Icon.infoCircle, TriggerEvents.focusAndHover)
+    apply(<.div(content), interactive = true, trigger = Icon.infoCircle, triggerEvent = TriggerEvents.focusAndHover)
 
 }
 

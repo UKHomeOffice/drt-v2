@@ -61,7 +61,7 @@ case class ViewPointInTime(time: SDateLike) extends ViewMode {
   override def isHistoric(now: SDateLike): Boolean = true
 }
 
-case class ViewDay(time: SDateLike) extends ViewMode {
+case class ViewDay(time: SDateLike, timeMachineDate: Option[SDateLike]) extends ViewMode {
   override val isLive: Boolean = false
 
   override def isHistoric(now: SDateLike): Boolean = time.isHistoricDate(now)
@@ -164,6 +164,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      egateBanksUpdates: Pot[PortEgateBanksUpdates] = Empty,
                      gateStandWalkTime: Pot[WalkTimes] = Empty,
                      passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
+                     maybeTimeMachineDate: Option[SDateLike] = None,
                     )
 
 object PollDelay {
@@ -230,6 +231,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new GateStandWalkTimePortsHandler(zoomRW(_.gateStandWalkTime)((m, v) => m.copy(gateStandWalkTime = v))),
       new CrunchHandler(zoomRW(identity)((m, _) => m)),
       new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
+//      new TimeMachineDateHandler(zoomRW(_.maybeTimeMachineDate)((m, v) => m.copy(maybeTimeMachineDate = v))),
     )
 
     composedHandlers

@@ -637,6 +637,12 @@ table.headlines tr:nth-child(odd) {
   }
 }
 
+.tab-content-style {
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  padding: 10px;
+}
+
 #snapshot-done {
   display: inline;
 }
@@ -1290,22 +1296,29 @@ p {
   grid-auto-columns: 1fr;
 }
 
+.time-machine-active {
+    background-color: #f5f5f5;
+}
+
 .time-machine-switch {
   width: 350px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: baseline;
   gap: 15px;
 }
 
 .time-machine-switch-buttons {
   display: flex;
-  gap: 10px;
+}
+
+.time-machine-switch-label i {
+  margin-left: 5px;
 }
 
 .time-machine-switch-label {
-  font-size: 1.5em;
-  font-weight: bold;
+  font-size: 1.25em;
+  //font-weight: bold;
 }
 
 .date-quick-days {
@@ -1324,6 +1337,17 @@ p {
 .time-machine-hint {
   display: flex;
   justify-content: flex-end;
+}
+
+.time-machine-hint-v2 {
+  width: 350px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 15px;
+  background-color: #c9dec9;
+  border-radius: 5px;
+  padding: 5px;
 }
 
 .date-picker {
@@ -1351,6 +1375,7 @@ p {
   justify-content: space-evenly;
   min-height: 228px;
   gap: 10px;
+  margin-bottom: 15px;
 }
 
 .pcp-pax-summary {

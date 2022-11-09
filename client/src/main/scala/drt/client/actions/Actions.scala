@@ -218,4 +218,6 @@ object Actions {
   case object ClearForecastAccuracy extends Action
 
   case class UpdateForecastAccuracy(forecastAccuracy: ForecastAccuracy) extends Action
+
+  case class SetTimeMachineDate(date: SDateLike) extends Action
 }
