@@ -21,7 +21,7 @@ trait WithAuth {
 
   def getLoggedInUser(): Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
-
+    ctrl.userTrackingService.insertOrUpdateArrival(user: LoggedInUser, None, None)
     implicit val userWrites: Writes[LoggedInUser] = new Writes[LoggedInUser] {
       def writes(user: LoggedInUser): JsObject = Json.obj(
         "userName" -> user.userName,

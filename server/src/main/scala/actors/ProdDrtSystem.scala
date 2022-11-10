@@ -27,7 +27,7 @@ import services.crunch.CrunchSystem
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.metrics.ApiValidityReporter
 import slick.dbio.{DBIOAction, NoStream}
-import slickdb.{ArrivalTable, Tables}
+import slickdb.{ArrivalTable, Tables, UserTrackingTable, UserTrackingTableLike}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
@@ -75,6 +75,8 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
   override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
   override val manifestLookupService: ManifestLookup = ManifestLookup(PostgresTables)
+
+  override val userTrackingService: UserTrackingTableLike = UserTrackingTable(PostgresTables)
 
   override val minuteLookups: MinuteLookups = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
