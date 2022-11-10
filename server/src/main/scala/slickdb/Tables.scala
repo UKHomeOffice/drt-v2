@@ -148,17 +148,17 @@ trait Tables {
     val index7 = index("scheduled_departure", scheduled_departure)
   }
 
-  class UserTracking(_tableTag: Tag) extends profile.api.Table[UserTrackingRow](_tableTag, maybeSchema, "user_tracking") {
-    def * = (userName, id, email, latest_login, inactive_email_sent, revoke_access) <> (UserTrackingRow.tupled, UserTrackingRow.unapply)
+  class User(_tableTag: Tag) extends profile.api.Table[UserRow](_tableTag, maybeSchema, "user") {
+    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access) <> (UserRow.tupled, UserRow.unapply)
 
-    val userName: Rep[String] = column[String]("username")
     val id: Rep[String] = column[String]("id")
+    val userName: Rep[String] = column[String]("username")
     val email: Rep[String] = column[String]("email")
     val latest_login: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("latest_login")
     val inactive_email_sent: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("inactive_email_sent")
-    val revoke_access: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("revoke_access")
-    val pk = primaryKey("user_tracking_pkey", (id))
-    val index1 = index("id", id)
+    val revoked_access: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("revoked_access")
+    val pk = primaryKey("user_pkey", (id))
+    val index1 = index("username", userName)
     val index2 = index("email", email)
     val index3 = index("latest_login", latest_login)
   }
@@ -168,5 +168,5 @@ trait Tables {
   lazy val ProcessedJson = new TableQuery(tag => new ProcessedJson(tag))
   lazy val ProcessedZip = new TableQuery(tag => new ProcessedZip(tag))
   lazy val Arrival = new TableQuery(tag => new Arrival(tag))
-  lazy val UserTracking = new TableQuery(tag => new UserTracking(tag))
+  lazy val User = new TableQuery(tag => new User(tag))
 }
