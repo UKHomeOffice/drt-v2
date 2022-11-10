@@ -39,7 +39,7 @@ case class UserTable(tables: Tables) extends UserTableLike {
   }
 
   def removeUser(id: String)(implicit ec: ExecutionContext): Future[Int] = {
-    tables.run(userTableQuery.filter(matchIndex(id)).delete)
+    tables.run(userTableQuery.filter(matchId(id)).delete)
       .recover {
         case throwable =>
           log.error(s"delete failed", throwable)
@@ -56,6 +56,6 @@ case class UserTable(tables: Tables) extends UserTableLike {
       }
   }
 
-  def matchIndex(email: String): tables.User => Rep[Boolean] = (userTracking: User) =>
-    userTracking.email == email
+  def matchId(id: String): tables.User => Rep[Boolean] = (userTracking: User) =>
+    userTracking.id == id
 }
