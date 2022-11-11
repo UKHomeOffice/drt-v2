@@ -1,10 +1,10 @@
 package drt.client.components
 
-import diode.UseValueEq
+import diode.{FastEq, FastEqLowPri, UseValueEq}
 import diode.data.Pot
 import drt.client.SPAMain
 import drt.client.SPAMain.TerminalPageModes._
-import drt.client.SPAMain.{Loc, TerminalPageMode, TerminalPageTabLoc, UrlDateParameter, UrlTimeMachineDateParameter, UrlViewType}
+import drt.client.SPAMain._
 import drt.client.components.TerminalDesksAndQueues.Ideal
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
@@ -29,7 +29,7 @@ object TerminalComponent {
 
   val log: Logger = LoggerFactory.getLogger("TerminalComponent")
 
-  case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc]) extends UseValueEq
+  case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc]) extends FastEqLowPri
 
   case class TerminalModel(portStatePot: Pot[PortState],
                            forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
@@ -43,7 +43,6 @@ object TerminalComponent {
                            loggedInUserPot: Pot[LoggedInUser],
                            viewMode: ViewMode,
                            minuteTicker: Int,
-                           maybeStaffAdjustmentsPopoverState: Option[StaffAdjustmentDialogueState],
                            featureFlags: Pot[FeatureFlags],
                            arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                            redListPorts: Pot[HashSet[PortCode]],
@@ -68,7 +67,6 @@ object TerminalComponent {
         model.loggedInUserPot,
         model.viewMode,
         model.minuteTicker,
-        model.maybeStaffDeploymentAdjustmentPopoverState,
         model.featureFlags,
         model.arrivalSources,
         model.redListPorts,
@@ -126,19 +124,12 @@ object TerminalComponent {
                         )
                       case Current =>
                         <.div(
-                          <.div(
-                            ^.className := "current-view-header",
-                            <.div(
-                              DaySelectorComponent(DaySelectorComponent.Props(props.router,
-                                props.terminalPageTab,
-                                model.loadingState,
-                                model.minuteTicker
-                              ))
-                            ),
-                            <.div(^.className := "content-head",
-                              PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
-                            )
-                          ),
+                          DaySelectorComponent(DaySelectorComponent.Props(props.router,
+                            props.terminalPageTab,
+                            model.loadingState,
+                            model.minuteTicker,
+                            PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
+                          )),
                           TerminalContentComponent(terminalContentProps)
                         )
                       case Planning =>
@@ -195,8 +186,8 @@ object TerminalComponent {
         }
       ),
       <.li(^.className := tabClass(Current) + " " + timeMachineClass,
-        <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Desks & Arrivals"), ^.onClick --> {
-          GoogleEventTracker.sendEvent(terminalName, "click", "Desks & Arrivals")
+        <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Queues & Arrivals"), ^.onClick --> {
+          GoogleEventTracker.sendEvent(terminalName, "click", "Queues & Arrivals")
           props.router.set(props.terminalPageTab.update(
             mode = Current,
             subMode = subMode,

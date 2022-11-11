@@ -8,13 +8,15 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{LoadingState, ViewDay}
 import drt.client.util.DateUtil.isNotValidDate
-import io.kinoplan.scalajs.react.material.ui.core.{MuiDivider, MuiTextField}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiCircularProgress, MuiDivider, MuiTextField}
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.extra.router.{RouterCtl, SetRouteVia}
 import japgolly.scalajs.react.vdom.html_<^.{^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+
+import scala.scalajs.js
 
 object DaySelectorComponent extends ScalaCssReactImplicits {
 
@@ -23,17 +25,20 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
   case class Props(router: RouterCtl[Loc],
                    terminalPageTab: TerminalPageTabLoc,
                    loadingState: LoadingState,
-                   minuteTicker: Int
+                   minuteTicker: Int,
+                   additionalContent: VdomElement,
                   ) extends UseValueEq
 
-  case class StateDate(date: LocalDate, isNotValid: Boolean = false)
+  case class DisplayDate(date: LocalDate, isNotValid: Boolean)
 
-  case class State(stateDate: StateDate, maybeTimeMachineDate: Option[SDateLike]) {
+  case class TimeMachineDate(date: SDateLike, isNotValid: Boolean)
+
+  case class State(stateDate: DisplayDate, maybeTimeMachineDate: Option[TimeMachineDate]) {
     def selectedDate: SDateLike = SDate(stateDate.date)
 
-    def update(d: LocalDate): State = copy(stateDate = StateDate(date = d))
+    def update(d: LocalDate): State = copy(stateDate = DisplayDate(date = d, isNotValid = false))
 
-    def updateValidity(isNotValid: Boolean): State = copy(stateDate = StateDate(date = stateDate.date, isNotValid = isNotValid))
+    def updateValidity(isNotValid: Boolean): State = copy(stateDate = DisplayDate(date = stateDate.date, isNotValid = isNotValid))
   }
 
   val today: SDateLike = SDate.now()
@@ -46,47 +51,56 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         case ViewDay(_, timeMachineDate) => timeMachineDate
         case _ => None
       }
-      State(StateDate(time.toLocalDate), tm)
+      State(DisplayDate(time.toLocalDate, isNotValid = false), tm.map(t => TimeMachineDate(t, isNotValid = false)))
     }
-    .renderPS(r = (scope, props, state) => {
+    .renderPS { (scope, props, state) =>
 
-      def isCurrentSelection = state.selectedDate.ddMMyyString == props.terminalPageTab.dateFromUrlOrNow.ddMMyyString
+      def tmDateIsChanged: Boolean =
+        (state.maybeTimeMachineDate.map(_.date.toISOString()), props.terminalPageTab.timeMachineDateString) match {
+          case (Some(_), None) => true
+          case (None, Some(_)) => true
+          case (Some(newTm), Some(oldTm)) => newTm != oldTm
+        }
 
       def updateDisplayDate(e: ReactEventFromInput): Callback = {
+        e.preventDefault()
         e.persist()
         if (isNotValidDate(e.target.value)) {
           scope.modState(_.updateValidity(true))
         } else {
-          scope.modState(_.update(LocalDate.parse(e.target.value).getOrElse(state.stateDate.date)))
+          val newDate = LocalDate.parse(e.target.value).getOrElse(state.stateDate.date)
+          scope.modState { s => s.update(newDate) }
+          GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Point In time", state.selectedDate.toISODateOnly)
+          updateUrlWithDateCallback(Option(SDate(newDate)), state.maybeTimeMachineDate)
         }
       }
 
       def updateTimeMachineDate(e: ReactEventFromInput): Callback = {
         e.persist()
         SDate.parse(e.target.value) match {
-          case Some(d) =>
-            scope.modState(_.copy(maybeTimeMachineDate = Option(d)))
-            updateUrlWithDateCallback(Option(state.selectedDate), Option(d))
+          case Some(d) => scope.modState(_.copy(maybeTimeMachineDate = Option(TimeMachineDate(d, isNotValid = false))))
           case _ => Callback.empty
         }
       }
 
-      def updateUrlWithDateCallback(date: Option[SDateLike], tmDate: Option[SDateLike]): Callback = {
+      def loadTimeMachineDate(e: ReactEventFromInput): Callback = {
+        e.preventDefault()
+        e.persist()
+        updateUrlWithDateCallback(Option(state.selectedDate), state.maybeTimeMachineDate)
+      }
+
+      def updateUrlWithDateCallback(date: Option[SDateLike], tmDate: Option[TimeMachineDate]): Callback = {
         val params = List(
           UrlDateParameter(date.map(_.toISODateOnly)),
           UrlTimeRangeStart(None),
           UrlTimeRangeEnd(None),
-          UrlTimeMachineDateParameter(tmDate.map(_.toISOString())),
+          UrlTimeMachineDateParameter(tmDate.map(_.date.toISOString())),
         )
 
         props.router.set(
-          props.terminalPageTab.withUrlParameters(params:_*)
+          props.terminalPageTab.withUrlParameters(params: _*),
+          SetRouteVia.WindowLocation
         )
-      }
-
-      def selectPointInTime: ReactEventFromInput => Callback = (_: ReactEventFromInput) => {
-        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Point In time", state.selectedDate.toISODateOnly)
-        updateUrlWithDateCallback(Option(state.selectedDate), state.maybeTimeMachineDate)
       }
 
       def selectYesterday: ReactEventFromInput => Callback = (_: ReactEventFromInput) => {
@@ -114,19 +128,18 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
       def selectTimeMachineView: ReactEventFromInput => Callback = (_: ReactEventFromInput) => {
         GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "View as of", "Time machine")
-        scope.modState(_.copy(maybeTimeMachineDate = Option(SDate.now())))
-        updateUrlWithDateCallback(Option(state.selectedDate), Option(SDate.now()))
+        val tmDate = TimeMachineDate(SDate.now(), isNotValid = true)
+        scope.modState(_.copy(maybeTimeMachineDate = Option(tmDate)))
+        updateUrlWithDateCallback(Option(state.selectedDate), Option(tmDate))
       }
 
-      def goButton(loading: Boolean, isCurrentSelection: Boolean, isNotValidDate: Boolean): TagMod = (loading, isCurrentSelection, isNotValidDate) match {
-        case (_, _, true) =>
-          <.div(^.id := "snapshot-error", <.div("Please enter valid date"))
-        case (true, true, _) =>
-          <.div(^.id := "snapshot-done", Icon.spinner)
-        case (false, true, _) =>
-          <.div(^.id := "snapshot-done", Icon.checkCircleO)
-        case _ =>
-          <.div(^.id := "snapshot-done", <.input.button(^.value := "Go", ^.className := "btn btn-primary", ^.onClick ==> selectPointInTime))
+      def goButton(loading: Boolean, dateIsUpdated: Boolean): TagMod = (loading, dateIsUpdated) match {
+        case (false, false) =>
+          <.div(^.className := "time-machine-action", Icon.checkCircleO)
+        case (true, _) =>
+          <.div(^.className := "time-machine-action", MuiCircularProgress()())
+        case (_, true) =>
+          <.div(^.className := "time-machine-action", <.div(Icon.refresh, ^.onClick ==> loadTimeMachineDate))
       }
 
       val yesterdayActive = if (state.selectedDate.ddMMyyString == SDate.now().addDays(-1).ddMMyyString) "active" else ""
@@ -141,67 +154,86 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
       val liveViewClass = if (state.maybeTimeMachineDate.isEmpty) "active" else ""
       val timeMachineViewClass = if (state.maybeTimeMachineDate.nonEmpty) "active" else ""
+      val headerClass = if (state.maybeTimeMachineDate.nonEmpty) "queues-and-arrivals-header__time-machine" else ""
 
-      <.div(
-        ^.className := "date-component-wrapper",
+      <.div(^.className := s"queues-and-arrivals-header $headerClass",
         <.div(
-          ^.className := "date-select-wrapper",
-          DefaultFormFieldsStyle.daySelector,
-          <.div(^.className := "btn-group no-gutters date-quick-days date-time-buttons-container", VdomAttr("data-toggle") := "buttons",
-            <.div(^.id := "yesterday", ^.className := s"btn btn-primary $yesterdayActive", "Yesterday", ^.onClick ==> selectYesterday),
-            <.div(^.id := "today", ^.className := s"btn btn-primary $todayActive", "Today", ^.onClick ==> selectToday),
-            <.div(^.id := "tomorrow", ^.className := s"btn btn-primary $tomorrowActive end-spacer", "Tomorrow", ^.onClick ==> selectTomorrow)
-          ),
+          ^.className := "date-component-wrapper",
           <.div(
-            ^.className := "date-picker",
-            MuiTextField()(
-              ^.width := "100%",
-              DefaultFormFieldsStyle.datePicker,
-              ^.`type` := "date",
-              ^.defaultValue := s"${state.stateDate.date.toISOString}",
-              ^.onChange ==> updateDisplayDate,
+            ^.className := "date-select-wrapper",
+            DefaultFormFieldsStyle.daySelector,
+            <.div(^.className := "btn-group no-gutters date-quick-days date-time-buttons-container", VdomAttr("data-toggle") := "buttons",
+              <.div(^.id := "yesterday", ^.className := s"btn btn-primary $yesterdayActive", "Yesterday", ^.onClick ==> selectYesterday),
+              <.div(^.id := "today", ^.className := s"btn btn-primary $todayActive", "Today", ^.onClick ==> selectToday),
+              <.div(^.id := "tomorrow", ^.className := s"btn btn-primary $tomorrowActive end-spacer", "Tomorrow", ^.onClick ==> selectTomorrow)
             ),
-            <.div(^.className := "date-go-button",
-              goButton(props.loadingState.isLoading, isCurrentSelection, state.stateDate.isNotValid),
-            )
-          )
-        ),
-        TimeRangeFilter(
-          TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isTodayActive, props.minuteTicker)
-        ),
-        MuiDivider()(),
-        <.div(^.className := "time-machine",
-          <.div(^.className := "time-machine-switch",
-            <.div(^.className := "time-machine-switch-label",
-              "Time machine",
-              Tippy(interactive = true, trigger = Icon.infoCircle,
-                content = <.div(
-                  <.p("See what DRT was showing for this day on a specific date & time in the past."),
-                  <.p("This can be useful to compare what DRT forecasted for a date compared to what ended up happening."),
-                )
+            <.div(
+              ^.className := "date-picker",
+              MuiTextField()(
+                ^.width := "100%",
+                DefaultFormFieldsStyle.datePicker,
+                ^.`type` := "date",
+                ^.defaultValue := s"${state.stateDate.date.toISOString}",
+                ^.onChange ==> updateDisplayDate,
               ),
-            ),
-            <.div(^.className := "btn-group no-gutters time-machine-switch-buttons",
-              <.div(^.id := "live-view", ^.className := s"btn btn-primary $liveViewClass", s"Off", ^.onClick ==> selectLatestView),
-              <.div(^.id := "time-machine-view", ^.className := s"btn btn-primary $timeMachineViewClass", "On", ^.onClick ==> selectTimeMachineView),
+            )
+          ),
+          TimeRangeFilter(
+            TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isTodayActive, props.minuteTicker)
+          ),
+          MuiDivider()(),
+          <.div(^.className := "time-machine",
+            <.div(^.className := "time-machine-switch",
+              <.div(^.className := "time-machine-switch-label",
+                "Time machine",
+                Tippy(interactive = true, trigger = Icon.infoCircle,
+                  content = <.div(
+                    <.p("See what DRT was showing for this day on a specific date & time in the past."),
+                    <.p("This can be useful to compare what DRT forecasted for a date compared to what ended up happening."),
+                  )
+                ),
+              ),
+              <.div(^.className := "btn-group no-gutters time-machine-switch-buttons",
+                <.div(^.id := "live-view", ^.className := s"btn btn-primary $liveViewClass", s"Off", ^.onClick ==> selectLatestView),
+                <.div(^.id := "time-machine-view", ^.className := s"btn btn-primary $timeMachineViewClass", "On", ^.onClick ==> selectTimeMachineView),
+              ),
             ),
           ),
         ),
         state.maybeTimeMachineDate match {
           case Some(tmDate) =>
-            <.div(^.className := "time-machine-hint-v2",
-              s"Go back in time to",
-              MuiTextField()(
-                DefaultFormFieldsStyle.dateTimePicker,
-                ^.`type` := "datetime-local",
-                ^.defaultValue := s"${tmDate.toISODateOnly}T${tmDate.prettyTime()}",
-                ^.onChange ==> updateTimeMachineDate
-              )
+            <.div(^.className := "time-machine-info",
+              <.div(^.className := "not-live-banner", "You are not viewing live data"),
+              <.div(^.className := "not-live-message",
+                s"Show",
+                <.div(^.className := "time-machine-display-date", state.stateDate.date.ddmmyyyy),
+                "as it was on",
+                MuiTextField(
+                  InputProps = js.Dynamic.literal(
+                    "style" -> js.Dictionary(
+                      "fontSize" -> "18px",
+                      "fontWeight" -> "bold",
+                    )
+                  ).asInstanceOf[js.Object]
+                )(
+                  ^.className := "time-machine-datetime-selector",
+                  ^.`type` := "datetime-local",
+                  ^.defaultValue := s"${tmDate.date.toISODateOnly}T${tmDate.date.prettyTime()}",
+                  ^.onChange ==> updateTimeMachineDate
+                ),
+                <.div(^.className := "date-go-button",
+                  goButton(
+                    loading = props.loadingState.isLoading,
+                    dateIsUpdated = tmDateIsChanged,
+                  ),
+                )
+              ),
             )
           case None => EmptyVdom
         },
+        props.additionalContent
       )
-    })
+    }
     .build
 
   def apply(props: Props): VdomElement = component(props)

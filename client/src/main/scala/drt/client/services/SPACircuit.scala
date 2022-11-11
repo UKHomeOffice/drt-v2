@@ -62,7 +62,9 @@ case class ViewPointInTime(time: SDateLike) extends ViewMode {
 }
 
 case class ViewDay(time: SDateLike, timeMachineDate: Option[SDateLike]) extends ViewMode {
-  override val isLive: Boolean = false
+  lazy private val liveToday: Boolean = time.toUtcDate == SDate.now().toUtcDate && timeMachineDate.isEmpty
+
+  override val isLive: Boolean = if (liveToday) true else false
 
   override def isHistoric(now: SDateLike): Boolean = time.isHistoricDate(now)
 }

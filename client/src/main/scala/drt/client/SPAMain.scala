@@ -173,7 +173,8 @@ object SPAMain {
         GetForecastWeek(TerminalPlanningComponent.defaultStartDate(dateFromUrlOrNow), terminal)
       case Staffing =>
         GetShiftsForMonth(dateFromUrlOrNow, terminal)
-      case _ => SetViewMode(viewMode)
+      case _ =>
+        SetViewMode(viewMode)
     }
 
     def update(mode: TerminalPageMode, subMode: String, queryParams: Map[String, String] = Map[String, String]()): TerminalPageTabLoc =

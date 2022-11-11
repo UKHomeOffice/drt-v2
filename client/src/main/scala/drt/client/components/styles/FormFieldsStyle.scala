@@ -8,11 +8,6 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
   import common.theme
   import dsl._
 
-  val container = style(
-    display.flex,
-    flexWrap.wrap
-  )
-
   val textField = style(
     marginLeft(theme.spacing.unit.px),
     marginRight(theme.spacing.unit.px),
@@ -29,22 +24,9 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
       fontSize(1.5.rem)
     )
   )
-  val dateTimePicker = style(
-    marginBottom(1.2.rem),
-    width(180.px),
-    unsafeChild("input")(
-      fontSize(1.5.rem)
-    )
-  )
-  val snapshotSelector = style(
-    maxWidth(850.px),
-  )
+
   val daySelector = style(
     maxWidth(820.px),
-  )
-
-  val goButton = style(
-    paddingTop(2.px)
   )
 
   val datePickerLabel = style(
@@ -80,10 +62,6 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
     )
   )
 
-  val dense = style(
-    marginTop(19.px)
-  )
-
   val labelWide = style(
     width(100.pc)
   )
@@ -91,15 +69,6 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
   val simulation = style(
     padding(15.px),
     minHeight(550.px),
-  )
-
-  val simulationButtons = style(
-    margin(5.px),
-    padding(5.px),
-  )
-
-  val simulationAccordion = style(
-    fontSize(1.rem)
   )
 
   val buttons = style(
