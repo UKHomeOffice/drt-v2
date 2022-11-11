@@ -16,14 +16,17 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import services.SDate
+import slickdb.{UserRow, UserTableLike}
 import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
+import java.sql.Timestamp
 import scala.collection.SortedSet
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
@@ -40,6 +43,14 @@ case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Mater
   override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
     Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
   }
+}
+
+case class MockUserTable()(implicit ec: ExecutionContext, mat: Materializer) extends UserTableLike {
+  override def insertOrUpdateUser(user: LoggedInUser, inactive_email_sent: Option[Timestamp], revoked_access: Option[Timestamp])(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def selectAll: Future[Seq[UserRow]] = Future.successful(Seq.empty)
+
+  override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 }
 
 case class MockDrtParameters() extends DrtParameters {
@@ -108,6 +119,7 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
   override val persistentStaffingUpdateQueueActor: ActorRef = system.actorOf(Props(new TestStaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
+  override val userService: UserTableLike = MockUserTable()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal)
   override val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor

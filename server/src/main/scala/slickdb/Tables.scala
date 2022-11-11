@@ -148,9 +148,25 @@ trait Tables {
     val index7 = index("scheduled_departure", scheduled_departure)
   }
 
+  class User(_tableTag: Tag) extends profile.api.Table[UserRow](_tableTag, maybeSchema, "user") {
+    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access) <> (UserRow.tupled, UserRow.unapply)
+
+    val id: Rep[String] = column[String]("id")
+    val userName: Rep[String] = column[String]("username")
+    val email: Rep[String] = column[String]("email")
+    val latest_login: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("latest_login")
+    val inactive_email_sent: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("inactive_email_sent")
+    val revoked_access: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("revoked_access")
+    val pk = primaryKey("user_pkey", (id))
+    val index1 = index("username", userName)
+    val index2 = index("email", email)
+    val index3 = index("latest_login", latest_login)
+  }
+
   /** Collection-like TableQuery object for table VoyageManifestPassengerInfo */
   lazy val VoyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfo(tag))
   lazy val ProcessedJson = new TableQuery(tag => new ProcessedJson(tag))
   lazy val ProcessedZip = new TableQuery(tag => new ProcessedZip(tag))
   lazy val Arrival = new TableQuery(tag => new Arrival(tag))
+  lazy val User = new TableQuery(tag => new User(tag))
 }
