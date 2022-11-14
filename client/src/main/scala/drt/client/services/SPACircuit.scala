@@ -47,26 +47,12 @@ case object ViewLive extends ViewMode {
   override def isHistoric(now: SDateLike): Boolean = false
 }
 
-case class NoViewMode() extends ViewMode {
-  def time: SDateLike = SDate(0L)
-
-  override val isLive: Boolean = false
-
-  override def isHistoric(now: SDateLike): Boolean = false
-}
-
-case class ViewPointInTime(time: SDateLike) extends ViewMode {
-  override val isLive: Boolean = true
-
-  override def isHistoric(now: SDateLike): Boolean = true
-}
-
 case class ViewDay(time: SDateLike, timeMachineDate: Option[SDateLike]) extends ViewMode {
   lazy private val liveToday: Boolean = time.toUtcDate == SDate.now().toUtcDate && timeMachineDate.isEmpty
 
   override val isLive: Boolean = if (liveToday) true else false
 
-  override def isHistoric(now: SDateLike): Boolean = time.isHistoricDate(now)
+  override def isHistoric(now: SDateLike): Boolean = timeMachineDate.nonEmpty || time.isHistoricDate(now)
 }
 
 sealed trait ExportType {
@@ -143,7 +129,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      monthOfShifts: Pot[MonthOfShifts] = Empty,
                      fixedPoints: Pot[FixedPointAssignments] = Empty,
                      staffMovements: Pot[StaffMovements] = Empty,
-                     viewMode: ViewMode = NoViewMode(),
+                     viewMode: ViewMode = ViewLive,
                      loadingState: LoadingState = LoadingState(),
                      showActualIfAvailable: Boolean = false,
                      loggedInUserPot: Pot[LoggedInUser] = Empty,
