@@ -21,7 +21,7 @@ class ViewModeHandler[M](now: () => SDateLike, viewModePortStateMP: ModelRW[M, (
       val (currentViewMode, _, _) = value
 
       (newViewMode, currentViewMode) match {
-        case (newVm, oldVm) if newVm.uUID != oldVm.uUID =>
+        case (newVm, oldVm) if newVm.uUID != oldVm.uUID || value._2.isEmpty =>
           updated((newViewMode, Pot.empty[PortState], 0L), initialRequests(currentViewMode, newViewMode))
         case _ =>
           noChange

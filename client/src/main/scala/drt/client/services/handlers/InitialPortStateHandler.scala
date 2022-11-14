@@ -59,6 +59,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       } else {
         viewMode match {
           case ViewDay(_, None) => actions + getCrunchUpdatesAfterDelay(viewMode)
+          case ViewLive => actions + getCrunchUpdatesAfterDelay(viewMode)
           case _ => actions
         }
       }
