@@ -170,8 +170,8 @@ trait WithSimulations {
 
       val fileName = CsvFileStreaming.makeFileName(s"simulation-${simulationParams.passengerWeighting}",
         simulationParams.terminal,
-        date,
-        date,
+        simulationParams.date,
+        simulationParams.date,
         airportConfig.portCode
       )
 

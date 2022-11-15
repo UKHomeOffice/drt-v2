@@ -127,8 +127,15 @@ object SPAMain {
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
     val terminal: Terminal = Terminal(terminalName)
-    val viewDateString: Option[String] = queryParams.get(UrlDateParameter.paramName).filter(_.matches(".+"))
-    val timeMachineDateString: Option[String] = queryParams.get(UrlTimeMachineDateParameter.paramName).filter(_.matches(".+"))
+    val maybeViewDate: Option[LocalDate] = queryParams.get(UrlDateParameter.paramName)
+      .filter(_.matches(".+"))
+      .flatMap(dateStr => Try {
+        val parts = dateStr.split("-")
+        LocalDate(parts(0).toInt, parts(1).toInt, parts(2).toInt)
+      }.toOption)
+    val maybeTimeMachineDate: Option[SDateLike] = queryParams.get(UrlTimeMachineDateParameter.paramName)
+      .filter(_.matches(".+"))
+      .flatMap(dateStr => Try(parseDateString(dateStr)).toOption)
     val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+"))
     val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+"))
     val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
@@ -136,14 +143,14 @@ object SPAMain {
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
 
     def viewMode: ViewMode = {
-      (mode, viewDateString) match {
-        case (Current, Some(dateString)) =>
-          val maybeTmDate = Try(timeMachineDateString.map(parseDateString)).toOption.flatten
-          ViewDay(parseDateString(dateString), maybeTmDate)
-        case (Current, None) if timeMachineDateString.isDefined =>
-          val maybeTmDate = Try(timeMachineDateString.map(parseDateString)).toOption.flatten
-          ViewDay(SDate.now(), maybeTmDate)
-        case _ => ViewLive
+      (mode, maybeViewDate) match {
+        case (Current, Some(viewDate)) =>
+          ViewDay(viewDate, maybeTimeMachineDate)
+        case (Current, None) if maybeTimeMachineDate.isDefined =>
+          ViewDay(SDate.now().toLocalDate, maybeTimeMachineDate)
+        case _ =>
+          println(s"mode: $mode, maybeViewDate: $maybeViewDate, maybeTimeMachineDate: $maybeTimeMachineDate")
+          ViewLive
       }
     }
 
@@ -163,10 +170,10 @@ object SPAMain {
 
     def timeRangeEnd: Option[Int] = timeRangeEndString.map(_.toInt)
 
-    def dateFromUrlOrNow: SDateLike = viewDateString.flatMap(SDate.parse).getOrElse(SDate.now())
+    def dateFromUrlOrNow: SDateLike = maybeViewDate.map(ld => SDate(ld)).getOrElse(SDate.now())
 
     def updateRequired(p: TerminalPageTabLoc): Boolean =
-      (terminal != p.terminal) || (viewDateString != p.viewDateString) || (mode != p.mode) || (timeMachineDateString != p.timeMachineDateString)
+      (terminal != p.terminal) || (maybeViewDate != p.maybeViewDate) || (mode != p.mode) || (maybeTimeMachineDate != p.maybeTimeMachineDate)
 
     def loadAction: Action = mode match {
       case Planning =>
@@ -353,8 +360,8 @@ object SPAMain {
   }
 
   def exportUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
-    case ViewDay(date, Some(tmDate)) =>
-      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/${date.toLocalDate}/${tmDate.millisSinceEpoch}/$terminal")
+    case ViewDay(localDate, Some(tmDate)) =>
+      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/${localDate}/${tmDate.millisSinceEpoch}/$terminal")
     case view =>
       SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.toLocalDate.toISOString}/${view.dayEnd.toLocalDate.toISOString}/$terminal")
   }

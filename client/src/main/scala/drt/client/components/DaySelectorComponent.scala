@@ -46,20 +46,19 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("DatePicker")
     .initialStateFromProps { p =>
       val viewMode = p.terminalPageTab.viewMode
-      val time = viewMode.time
       val tm = viewMode match {
         case ViewDay(_, timeMachineDate) => timeMachineDate
         case _ => None
       }
-      State(DisplayDate(time.toLocalDate, isNotValid = false), tm.map(t => TimeMachineDate(t, isNotValid = false)))
+      State(DisplayDate(viewMode.localDate, isNotValid = false), tm.map(t => TimeMachineDate(t, isNotValid = false)))
     }
     .renderPS { (scope, props, state) =>
 
       def tmDateIsChanged: Boolean =
-        (state.maybeTimeMachineDate.map(_.date.toISOString()), props.terminalPageTab.timeMachineDateString) match {
+        (state.maybeTimeMachineDate.map(_.date), props.terminalPageTab.maybeTimeMachineDate) match {
           case (Some(_), None) => true
           case (None, Some(_)) => true
-          case (Some(newTm), Some(oldTm)) => newTm != oldTm
+          case (Some(newTm), Some(oldTm)) => newTm.millisSinceEpoch != oldTm.millisSinceEpoch
         }
 
       def updateDisplayDate(e: ReactEventFromInput): Callback = {
@@ -139,7 +138,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         case (true, _) =>
           <.div(^.className := "time-machine-action", MuiCircularProgress()())
         case (_, true) =>
-          <.div(^.className := "time-machine-action", <.div(Icon.refresh, ^.onClick ==> loadTimeMachineDate))
+          <.div(^.className := "time-machine-action", <.div(Icon.arrowRight, ^.className := s"btn btn-primary", ^.onClick ==> loadTimeMachineDate))
       }
 
       val yesterdayActive = if (state.selectedDate.ddMMyyString == SDate.now().addDays(-1).ddMMyyString) "active" else ""

@@ -88,7 +88,7 @@ object FlightTableRow {
             ^.onClick --> Callback(SPACircuit.dispatch {
               props.viewMode match {
                 case vm: ViewDay if vm.isHistoric(SDate.now()) && vm.timeMachineDate.isEmpty =>
-                  GetArrivalSourcesForPointInTime(props.viewMode.time.addHours(28), props.flightWithSplits.unique)
+                  GetArrivalSourcesForPointInTime(SDate(props.viewMode.localDate).addHours(28), props.flightWithSplits.unique)
                 case ViewDay(_, Some(tmDate)) =>
                   GetArrivalSourcesForPointInTime(tmDate, props.flightWithSplits.unique)
                 case _ =>

@@ -1,8 +1,9 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions._
-import uk.gov.homeoffice.drt.ports.Terminals.T1
 import drt.shared.{StaffMovement, StaffMovements, UUID}
+import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.time.LocalDate
 import utest.{TestSuite, _}
 
 import scala.collection.immutable._
@@ -22,7 +23,7 @@ object TerminalStaffingTests extends TestSuite {
         ))
 
         val expected = Seq(today)
-        val result = sm.forDay(SDate(2017, 7, 21))
+        val result = sm.forDay(LocalDate(2017, 7, 21))(dl => SDate(dl))
 
         assert(expected == result)
       }
@@ -39,7 +40,7 @@ object TerminalStaffingTests extends TestSuite {
         val sm = StaffMovements(crossingLastMidnight ++ crossingNextMidnight)
 
         val expected = crossingLastMidnight ++ crossingNextMidnight
-        val result = sm.forDay(SDate(2017, 7, 22))
+        val result = sm.forDay(LocalDate(2017, 7, 22))(dl => SDate(dl))
 
         assert(expected.toSet == result.toSet)
       }
@@ -60,7 +61,7 @@ object TerminalStaffingTests extends TestSuite {
         val sm = StaffMovements(pairYesterday ++ pairToday ++ pairTomorrow)
 
         val expected = pairToday
-        val result = sm.forDay(SDate(2017, 7, 22))
+        val result = sm.forDay(LocalDate(2017, 7, 22))(dl => SDate(dl))
 
         assert(expected.toSet == result.toSet)
       }

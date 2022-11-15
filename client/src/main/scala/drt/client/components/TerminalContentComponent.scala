@@ -32,7 +32,7 @@ import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.HashSet
 
@@ -57,8 +57,8 @@ object TerminalContentComponent {
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
 
-  def viewStartAndEnd(day: SDateLike, range: TimeRangeHours): (SDateLike, SDateLike) = {
-    val startOfDay = SDate(day.getFullYear(), day.getMonth(), day.getDate())
+  def viewStartAndEnd(day: LocalDate, range: TimeRangeHours): (SDateLike, SDateLike) = {
+    val startOfDay = SDate(day)
     val startOfView = startOfDay.addHours(range.start)
     val endOfView = startOfDay.addHours(range.end)
     (startOfView, endOfView)
@@ -103,7 +103,7 @@ object TerminalContentComponent {
           case p if p.isEmpty => <.div(^.id := "terminal-data", "Nothing to show for this time period")
           case Ready(portState) =>
             val queues = props.airportConfig.queuesByTerminal.filterKeys(_ == terminal)
-            val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
+            val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeRangeHours)
             val terminalName = terminal.toString
             val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, viewStart)
             <.div(^.className := s"view-mode-content $viewModeStr",
@@ -167,7 +167,7 @@ object TerminalContentComponent {
               <.div(^.className := "tab-content",
                 <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
                   if (state.activeTab == "desksAndQueues") {
-                    val (viewStart, _) = viewStartAndEnd(props.terminalPageTab.viewMode.time, timeRangeHours)
+                    val (viewStart, _) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeRangeHours)
                     props.featureFlags.render(features =>
                       TerminalDesksAndQueues(
                         TerminalDesksAndQueues.Props(
@@ -298,7 +298,7 @@ object TerminalContentComponent {
       Callback {
         val page = s"${p.props.terminalPageTab.terminal}/${p.props.terminalPageTab.mode}/${p.props.terminalPageTab.subMode}"
         val pageWithTime = s"$page/${timeRange(p.props).start}/${timeRange(p.props).end}"
-        val pageWithDate = p.props.terminalPageTab.viewDateString.map(s => s"$page/${p.props.terminalPageTab.parseDateString(s)}/${timeRange(p.props).start}/${timeRange(p.props).end}").getOrElse(pageWithTime)
+        val pageWithDate = p.props.terminalPageTab.maybeViewDate.map(s => s"$page/$s/${timeRange(p.props).start}/${timeRange(p.props).end}").getOrElse(pageWithTime)
         GoogleEventTracker.sendPageView(pageWithDate)
         log.info("terminal component didMount")
       }

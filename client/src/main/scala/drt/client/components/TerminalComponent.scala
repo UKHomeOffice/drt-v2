@@ -81,6 +81,7 @@ object TerminalComponent {
         dialogueStateRCP(dialogueStateMP => <.div(dialogueStateMP().map(dialogueState => StaffAdjustmentDialogue(dialogueState)()).whenDefined)),
         modelRCP(modelMP => {
           val model = modelMP()
+
           <.div(model.airportConfig.render(airportConfig => {
 
             val timeRangeHours = if (model.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()

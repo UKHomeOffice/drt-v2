@@ -147,8 +147,8 @@ trait WithStaffing {
           CsvFileStreaming.makeFileName(
             "staff-movements",
             terminal,
-            date,
-            date,
+            date.toLocalDate,
+            date.toLocalDate,
             portCode
           ))
       }
@@ -162,7 +162,7 @@ trait WithStaffing {
       .map {
         case movements: StaffMovements =>
           staffMovementsReadActor ! PoisonPill
-          movements.forDay(date)
+          movements.forDay(date.toLocalDate)(ld => SDate(ld))
       }
       .recoverWith {
         case _ =>

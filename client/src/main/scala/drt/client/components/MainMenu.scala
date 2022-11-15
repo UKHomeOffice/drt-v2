@@ -62,7 +62,7 @@ object MainMenu {
           TerminalPageTabLoc(terminalName, tptl.mode, tptl.subMode, Map[String, String]())
         case tptl: TerminalPageTabLoc =>
           TerminalPageTabLoc(terminalName, tptl.mode, tptl.subMode,
-            tptl.withUrlParameters(UrlDateParameter(tptl.viewDateString),
+            tptl.withUrlParameters(UrlDateParameter(tptl.maybeViewDate.map(_.toISOString)),
               UrlTimeRangeStart(tptl.timeRangeStartString),
               UrlTimeRangeEnd(tptl.timeRangeEndString)).queryParams)
         case _ => TerminalPageTabLoc(terminalName)

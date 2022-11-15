@@ -123,7 +123,7 @@ trait WithDesksExport {
     val exportSource: Source[String, NotUsed] = exportSourceFn(start, end, Terminal(terminalName))
     log.info(s"Exporting between $start and $end")
 
-    val fileName = makeFileName(filePrefix, Terminal(terminalName), start, end, airportConfig.portCode)
+    val fileName = makeFileName(filePrefix, Terminal(terminalName), start.toLocalDate, end.toLocalDate, airportConfig.portCode)
 
     Try(sourceToCsvResponse(exportSource, fileName)) match {
       case Success(value) => Future(value)

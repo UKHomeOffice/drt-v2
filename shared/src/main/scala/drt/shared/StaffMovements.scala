@@ -2,7 +2,7 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 object StaffMovements {
   def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]): Seq[StaffMovement] = {
@@ -54,7 +54,7 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
     copy(movements = unexpiredPairsOfMovements)
   }
 
-  def forDay(day: SDateLike): Seq[StaffMovement] = {
+  def forDay(day: LocalDate)(implicit toSDate: LocalDate => SDateLike) : Seq[StaffMovement] = {
     val startOfDayMillis = day.getLocalLastMidnight.millisSinceEpoch
     val endOfDayMillis = day.getLocalNextMidnight.millisSinceEpoch
 

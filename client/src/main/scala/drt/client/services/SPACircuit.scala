@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.{HashSet, Map}
 import scala.concurrent.duration._
@@ -26,13 +26,15 @@ sealed trait ViewMode {
 
   def isDifferentTo(viewMode: ViewMode): Boolean = viewMode.uUID != uUID
 
-  def millis: MillisSinceEpoch = time.millisSinceEpoch
+  def localDate: LocalDate
 
-  def dayStart: SDateLike = SDate.midnightOf(time)
+  protected def dateTime: SDateLike = SDate(localDate)
+
+  lazy val millis: MillisSinceEpoch = dateTime.millisSinceEpoch
+
+  def dayStart: SDateLike = SDate.midnightOf(dateTime)
 
   def dayEnd: SDateLike = dayStart.addDays(1).addMinutes(-1)
-
-  def time: SDateLike
 
   def isLive: Boolean
 
@@ -40,19 +42,19 @@ sealed trait ViewMode {
 }
 
 case object ViewLive extends ViewMode {
-  def time: SDateLike = SDate.now()
+  def localDate: LocalDate = SDate.now().toLocalDate
 
   override val isLive: Boolean = true
 
   override def isHistoric(now: SDateLike): Boolean = false
 }
 
-case class ViewDay(time: SDateLike, timeMachineDate: Option[SDateLike]) extends ViewMode {
-  lazy private val liveToday: Boolean = time.toUtcDate == SDate.now().toUtcDate && timeMachineDate.isEmpty
+case class ViewDay(localDate: LocalDate, timeMachineDate: Option[SDateLike]) extends ViewMode {
+  lazy private val liveToday: Boolean = localDate == SDate.now().toLocalDate && timeMachineDate.isEmpty
 
   override val isLive: Boolean = if (liveToday) true else false
 
-  override def isHistoric(now: SDateLike): Boolean = timeMachineDate.nonEmpty || time.isHistoricDate(now)
+  override def isHistoric(now: SDateLike): Boolean = timeMachineDate.nonEmpty || dateTime.isHistoricDate(now)
 }
 
 sealed trait ExportType {
