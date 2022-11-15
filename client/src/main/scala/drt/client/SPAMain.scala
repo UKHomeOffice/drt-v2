@@ -149,7 +149,6 @@ object SPAMain {
         case (Current, None) if maybeTimeMachineDate.isDefined =>
           ViewDay(SDate.now().toLocalDate, maybeTimeMachineDate)
         case _ =>
-          println(s"mode: $mode, maybeViewDate: $maybeViewDate, maybeTimeMachineDate: $maybeTimeMachineDate")
           ViewLive
       }
     }
