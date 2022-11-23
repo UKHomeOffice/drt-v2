@@ -30,7 +30,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       val startMillis = viewMode.dayStart.millisSinceEpoch
       val endMillis = startMillis + thirtySixHoursInMillis
       val updateRequestFuture = viewMode match {
-        case ViewPointInTime(time) => DrtApi.get(s"crunch-snapshot/${time.millisSinceEpoch}?start=$startMillis&end=$endMillis")
+        case ViewDay(_, Some(time)) => DrtApi.get(s"crunch-snapshot/${time.millisSinceEpoch}?start=$startMillis&end=$endMillis")
         case _ => DrtApi.get(s"crunch?start=$startMillis&end=$endMillis")
       }
 
@@ -55,11 +55,13 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       val actions = hideLoader + fetchOrigins + fetchRedList
 
       val effects = if (getCurrentViewMode().isHistoric(SDate.now())) {
-        log.info(s"Setting historic flight paxinfo")
         actions + Effect(Future(GetPassengerInfoForFlights))
       } else {
-        log.info(s"Starting to poll for crunch updates")
-        actions + getCrunchUpdatesAfterDelay(viewMode)
+        viewMode match {
+          case ViewDay(_, None) => actions + getCrunchUpdatesAfterDelay(viewMode)
+          case ViewLive => actions + getCrunchUpdatesAfterDelay(viewMode)
+          case _ => actions
+        }
       }
 
       updated((Ready(portState), portState.latestUpdate, Pending()), effects)
@@ -76,5 +78,6 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       }
   }
 
-  def getCrunchUpdatesAfterDelay(viewMode: ViewMode): Effect = Effect(Future(GetPortStateUpdates(viewMode))).after(crunchUpdatesRequestFrequency)
+  def getCrunchUpdatesAfterDelay(viewMode: ViewMode): Effect =
+    Effect(Future(GetPortStateUpdates(viewMode))).after(crunchUpdatesRequestFrequency)
 }

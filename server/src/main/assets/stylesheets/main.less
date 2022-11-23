@@ -300,9 +300,8 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   display: inline-block;
 }
 
-.view-mode-content {
-  clear: left;
-  position: relative;
+.queues-and-arrivals {
+  margin-top: 15px;
 }
 
 a:hover {
@@ -405,16 +404,6 @@ div.planning-week {
   margin-left: 0px;
   margin-top: 20px;
   margin-bottom: 20px;
-}
-
-table.forecast thead {
-  display: block;
-}
-
-table.forecast tbody {
-  display: block;
-  height: 500px;
-  width: 100%;
 }
 
 table.headlines {
@@ -533,7 +522,7 @@ table.headlines tr:nth-child(odd) {
   /* round the corners */
   border-radius: 1.5em;
 
-  width: 650px;
+  width: 800px;
   z-index: 1000;
   left: 0;
   right: 0;
@@ -637,20 +626,14 @@ table.headlines tr:nth-child(odd) {
   }
 }
 
-#snapshot-done {
-  display: inline;
+.tab-content-style {
+  background-color: #f9f9f9;
+  border-radius: 5px;
+  padding: 10px;
 }
 
-#snapshot-error {
-  display: inline;
-  color: red;
-}
-
-#snapshot-done i {
-  font-size: 24px;
-  position: relative;
-  top: 2px;
-  left: 15px;
+.time-machine-action {
+  font-size: 28px;
   color: green;
 }
 
@@ -702,6 +685,7 @@ table.headlines tr:nth-child(odd) {
 }
 
 .current-view-header {
+  margin-top: 15px;
   display: flex;
   justify-content: space-between;
 }
@@ -837,8 +821,8 @@ table.headlines tr:nth-child(odd) {
   width: 4em;
 }
 
-div.scrollable-table-body {
-  overflow: scroll;
+table.user-desk-recs {
+  width: 100%;
 }
 
 table.user-desk-recs thead tr:nth-child(1) th {
@@ -1266,11 +1250,27 @@ p {
   color: #7E8588;
 }
 
+.terminal-content-header {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  flex-grow: 1;
+  border-radius: 5px;
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #eeeff0;
+}
+
+.terminal-content-header__time-machine {
+  background-color: #ffecec;
+}
+
 .date-component-wrapper {
   display: flex;
   align-content: flex-start;
   flex-direction: column;
-  gap: 10px;
+  gap: 15px;
 }
 
 .date-select-wrapper {
@@ -1280,13 +1280,99 @@ p {
   flex-wrap: wrap;
 }
 
+.date-time-buttons-container {
+  width: 250px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.time-machine-active {
+  background-color: #f5f5f5;
+}
+
+.time-machine-switch {
+  width: 250px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: baseline;
+  gap: 15px;
+}
+
+.time-machine-switch-buttons {
+  display: flex;
+}
+
+.time-machine-switch-label i {
+  margin-left: 5px;
+}
+
+.time-machine-switch-label {
+  font-size: 1.25em;
+}
+
 .date-quick-days {
   white-space: nowrap;
+}
+
+.date-quick-days div {
+  flex-grow: 1;
+}
+
+.time-machine {
+  display: flex;
+  gap: 20px;
+}
+
+.time-machine-info {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.not-live-banner {
+  background-color: #ffaaaa;
+  border-radius: 10px;
+  padding: 10px;
+  font-weight: bold;
+  text-align: center;
+  font-size: large;
+  display: inline-block;
+}
+
+.not-live-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 15px;
+  font-size: 18px;
+}
+
+.time-machine-display-date {
+  font-weight: bold;
+}
+
+.time-machine-hint-v2 {
+  width: 250px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 15px;
+  background-color: #c9dec9;
+  border-radius: 5px;
+  padding: 5px;
+}
+
+.time-machine-datetime-selector {
+  font-size: large;
+  line-height: normal;
 }
 
 .date-picker {
   display: flex;
   gap: 10px;
+  flex-grow: 1;
 }
 
 .time-view-selector-container {
@@ -1304,12 +1390,36 @@ p {
   gap: 5px;
 }
 
+.staffing-controls-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.staffing-controls-row {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.staffing-controls-label {
+  width: 200px;
+}
+
+.staffing-controls-select {
+  width: 200px;
+}
+
+.staffing-table {
+  margin-top: 15px;
+}
+
 .pcp-pax-summaries {
   display: flex;
   justify-content: space-evenly;
-  margin: 20px 0;
   min-height: 228px;
   gap: 10px;
+  margin-bottom: 15px;
 }
 
 .pcp-pax-summary {
@@ -1457,7 +1567,6 @@ p {
 
 .usage-table__type {
   color: #bf2a5c;
-  // color: darken(@app-primary, 15%);
 }
 
 .usage-table__description {
@@ -1772,6 +1881,10 @@ th h2 {
   background-color: purple;
 }
 
+.arrivals-table {
+  width: 100%
+}
+
 .arrivals__table__flight-code--clickable:hover {
   background-color: #CCCCCC;
   cursor: pointer;
@@ -1971,7 +2084,15 @@ body {
 .port-config {
   display: flex;
   flexWrap: wrap;
+}
 
+.terminal-spinner {
+  text-align: center;
+  min-height: 200px;
+  font-size: xxx-large;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .no-gutters {
@@ -1986,23 +2107,14 @@ body {
   }
 }
 
-.sticky {
-  display: none;
-  z-index: 1;
-  background-color: #fff;
-  position: fixed;
+.sticky-top {
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-  border-radius: 0;
+  z-index: 10;
 }
 
-.sticky-show {
-  display: block;
-}
-
-.sticky table {
-  margin: 0px
+.solid-background {
+  background-color: #fff;
 }
 
 a i.fa.fa-remove {
@@ -2230,7 +2342,6 @@ div.access-restricted {
   }
 }
 
-
 .dashboard-arrivals-popup {
   z-index: 1000;
   background-color: #d5e8fe;
@@ -2408,7 +2519,6 @@ div.access-restricted {
 .faqs {
   background-color: #eee;
 }
-
 
 /* Tooltip container */
 .tooltipFaq {

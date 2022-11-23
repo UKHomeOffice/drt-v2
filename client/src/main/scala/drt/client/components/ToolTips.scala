@@ -19,8 +19,6 @@ object ToolTips {
 
   val countryTooltip = Tippy.info(<.span("Countries on COVID-19 red list are now underlined in red. This is an interim change to quickly highlight this information. We welcome your feedback."))
 
-  val currentTooltip = Tippy.infoHover("The Current view uses the latest data available to provide information about the day being viewed.")
-
   val defaultProcessingTimesTooltip = Tippy.info("Processing times are unique to each port. If they don't look right contact us and we'll get them changed for you.")
 
   val depBanksTooltip = Tippy.info("The values under Dep banks represent the number of banks DRT is able to recommend given the maximum number of staff available for allocation to desks and queues.")

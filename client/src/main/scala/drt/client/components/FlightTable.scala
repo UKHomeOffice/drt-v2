@@ -23,7 +23,7 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.HashSet
 
-object FlightsWithSplitsTable {
+object FlightTable {
   case class Props(flightsWithSplits: List[ApiFlightWithSplits],
                    queueOrder: Seq[Queue],
                    hasEstChox: Boolean,
@@ -47,8 +47,7 @@ object FlightsWithSplitsTable {
                     originMapper: PortCode => VdomNode = portCode => portCode.toString,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
                    ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalsTable")
-    .render_P(props => {
-
+    .render_P { props =>
       val flightsWithSplits = props.flightsWithSplits
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits)
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
@@ -56,8 +55,6 @@ object FlightsWithSplitsTable {
       val timelineTh = (if (isTimeLineSupplied) <.th("Timeline") :: Nil else List[TagMod]()).toTagMod
 
       if (sortedFlights.nonEmpty) {
-        val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
-        val classesAttr = ^.className := "table table-flex table-responsive table-striped table-hover table-sm"
         val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
         val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
           "* Passengers from CTA & Red List origins do not contribute to PCP workload"
@@ -73,17 +70,8 @@ object FlightsWithSplitsTable {
               )
             case _ => <.div()
           },
-
-          <.div(^.id := "toStick", ^.className := "container sticky",
-            <.table(
-              ^.id := "sticky",
-              classesAttr,
-              tableHead(props, timelineTh, props.queueOrder, redListPaxExist)))
-          ,
           <.table(
-            ^.id := "sticky-body",
-            dataStickyAttr,
-            classesAttr,
+            ^.className := "arrivals-table table-striped",
             tableHead(props, timelineTh, props.queueOrder, redListPaxExist),
             <.tbody(
               sortedFlights.zipWithIndex.map {
@@ -115,9 +103,8 @@ object FlightsWithSplitsTable {
           excludedPaxNote
         )
       }
-      else
-        <.div("No flights to display")
-    })
+      else <.div("No flights to display")
+    }
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 
@@ -170,6 +157,7 @@ object FlightsWithSplitsTable {
     val transferPaxTh = <.th("Transfer Pax")
 
     <.thead(
+      ^.className := "sticky-top",
       if (props.hasTransfer) {
         <.tr(
           timelineTh,

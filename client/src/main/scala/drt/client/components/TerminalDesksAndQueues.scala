@@ -193,20 +193,6 @@ object TerminalDesksAndQueues {
         )
       }
 
-      val dataStickyAttr = VdomAttr("data-sticky") := "data-sticky"
-
-      val classesAttr = ^.cls := s"table table-striped table-hover table-sm user-desk-recs"
-
-      def floatingHeader(showWaitColumn: Boolean) = {
-        <.div(^.id := "toStick", ^.className := "container sticky",
-          <.table(classesAttr,
-            <.thead(
-              <.tr(<.th("") :: headings: _*),
-              <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames, showWaitColumn): _*)),
-            <.tbody()
-          ))
-      }
-
       val maxPaxInQueues: Map[Queue, Int] = terminalCrunchMinutes
         .toList
         .flatMap {
@@ -229,20 +215,19 @@ object TerminalDesksAndQueues {
         if (state.displayType == ChartsView) {
           props.airportConfig.queuesByTerminal(props.terminalPageTab.terminal).filterNot(_ == Transfer).map { queue =>
             val dayStart = SDate(props.viewStart.getLocalLastMidnight.millisSinceEpoch)
-            val sortedCrunchMinuteSummaries: List[(Long, Map[Queue, CrunchApi.CrunchMinute])] = props.portState.crunchSummary(dayStart, 96, 15, terminal, queues).toList.sortBy(_._1)
+            val sortedCrunchMinuteSummaries: List[(Long, Map[Queue, CrunchApi.CrunchMinute])] =
+              props.portState.crunchSummary(dayStart, 96, 15, terminal, queues).toList.sortBy(_._1)
             val queueSla = props.airportConfig.slaByQueue(queue)
             QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, queueSla, state.deskType))
           }.toTagMod
         } else {
           <.div(
-            floatingHeader(state.showWaitColumn),
             <.table(
-              ^.id := "sticky",
-              classesAttr,
+              ^.className := s"user-desk-recs table-striped",
               <.thead(
-                dataStickyAttr,
-                <.tr(<.th("") :: headings: _*),
-                <.tr(<.th("Time", ^.className := "time") :: subHeadingLevel2(queueNames, state.showWaitColumn): _*)),
+                ^.className := "sticky-top",
+                <.tr(<.th(^.className:= "solid-background", "") :: headings: _*),
+                <.tr(<.th("Time", ^.className := "solid-background") :: subHeadingLevel2(queueNames, state.showWaitColumn): _*)),
               <.tbody(
                 ^.id := "sticky-body",
                 viewMinutes.map { millis =>

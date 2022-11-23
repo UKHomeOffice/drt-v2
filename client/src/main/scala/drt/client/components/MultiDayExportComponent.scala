@@ -58,10 +58,12 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String, currentDate: LocalDate): html_<^.VdomElement = {
         MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
           MuiGrid(item = true, xs = 1)(
+            ^.key := "date-picker-label",
             DefaultFormFieldsStyle.datePickerLabel,
             MuiFormLabel()(label),
           ),
           MuiGrid(item = true, xs = 4)(
+            ^.key := "date-picker-date",
             MuiTextField()(
               DefaultFormFieldsStyle.datePicker,
               ^.`type` := "date",
@@ -70,6 +72,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
             )
           ),
           MuiGrid(item = true, xs = 6)(
+            ^.key := "date-picker-type",
             if (label == "From")
               validDateIndicator(state.startDate.isNotValid)
             else
@@ -183,7 +186,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
   private def exportLinksGroup(props: Props, state: State, gridXs: Int, exports: List[ExportType], title: String): VdomElement =
     MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
-      MuiGrid(item = true, xs = 12)(title),
+      MuiGrid(item = true, xs = 12)(title, ^.key := "export-group-title"),
       exports.map(export =>
         MuiGrid(item = true, xs = gridXs)(
           ^.key := export.toString,

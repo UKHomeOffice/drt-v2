@@ -5,9 +5,10 @@ import drt.client.SPAMain._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 
 sealed trait TimeRangeHours {
   def start: Int
@@ -30,7 +31,7 @@ case class CurrentWindow() extends TimeRangeHours {
 }
 
 object TimeRangeHours {
-  def apply(start: Int, end: Int) = {
+  def apply(start: Int, end: Int): CustomWindow = {
     CustomWindow(start, end)
   }
 }
@@ -46,9 +47,8 @@ object TimeRangeFilter {
                    minuteTicker: Int = 0
                   ) extends UseValueEq
 
-  val component = ScalaComponent.builder[Props]("TimeRangeFilter")
-    .render_P((props) => {
-
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TimeRangeFilter")
+    .render_P { props =>
       val wholeDayWindow = WholeDayWindow()
       val currentWindow = CurrentWindow()
 
@@ -57,11 +57,11 @@ object TimeRangeFilter {
         props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultWindow.end)
       )
 
-      def setStart(v: String) = props
+      def setStart(v: String): Callback = props
         .router
         .set(props.terminalPageTab.withUrlParameters(UrlTimeRangeStart(Option(v))))
 
-      def setEnd(v: String) = props
+      def setEnd(v: String): Callback = props
         .router
         .set(props.terminalPageTab.withUrlParameters(UrlTimeRangeEnd(Option(v))))
 
@@ -74,17 +74,18 @@ object TimeRangeFilter {
         "active"
       else ""
 
+      val viewDateLocal = props.terminalPageTab.maybeViewDate.map(_.toISOString)
       <.div(^.className := "time-view-selector-container",
-        <.div(^.className := "btn-group no-gutters", VdomAttr("data-toggle") := "buttons",
+        <.div(^.className := "btn-group no-gutters date-time-buttons-container", VdomAttr("data-toggle") := "buttons",
           if (props.showNow)
             <.div(^.id := "now", ^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
               GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "now")
-              props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(None), UrlTimeRangeEnd(None)))
+              props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(viewDateLocal), UrlTimeRangeStart(None), UrlTimeRangeEnd(None)))
             })) else "",
           <.div(^.id := "hours24", ^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
             GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "24 hours")
             props.router.set(props.terminalPageTab.withUrlParameters(
-              UrlDateParameter(props.terminalPageTab.date), UrlTimeRangeStart(Option(wholeDayWindow.start.toString)), UrlTimeRangeEnd(Option(wholeDayWindow.end.toString)))
+              UrlDateParameter(viewDateLocal), UrlTimeRangeStart(Option(wholeDayWindow.start.toString)), UrlTimeRangeEnd(Option(wholeDayWindow.end.toString)))
             )
           }))
         ),
@@ -108,7 +109,7 @@ object TimeRangeFilter {
             ).toTagMod)
         )
       )
-    })
+    }
     .build
 
   def apply(props: Props): VdomElement = component(props)

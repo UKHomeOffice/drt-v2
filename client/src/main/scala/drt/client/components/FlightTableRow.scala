@@ -87,10 +87,10 @@ object FlightTableRow {
             ^.cls := s"arrivals__table__flight-code-value $diversionClass",
             ^.onClick --> Callback(SPACircuit.dispatch {
               props.viewMode match {
-                case vm: ViewDay if vm.isHistoric(SDate.now()) =>
-                  GetArrivalSourcesForPointInTime(props.viewMode.time.addHours(28), props.flightWithSplits.unique)
-                case _: ViewPointInTime =>
-                  GetArrivalSourcesForPointInTime(props.viewMode.time, props.flightWithSplits.unique)
+                case vm: ViewDay if vm.isHistoric(SDate.now()) && vm.timeMachineDate.isEmpty =>
+                  GetArrivalSourcesForPointInTime(SDate(props.viewMode.localDate).addHours(28), props.flightWithSplits.unique)
+                case ViewDay(_, Some(tmDate)) =>
+                  GetArrivalSourcesForPointInTime(tmDate, props.flightWithSplits.unique)
                 case _ =>
                   GetArrivalSources(props.flightWithSplits.unique)
               }

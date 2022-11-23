@@ -6,7 +6,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.{PortState, TQM}
-import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, ScalaComponent}
 import org.scalajs.dom.html.Div
@@ -42,13 +42,13 @@ object PcpPaxSummariesComponent {
   case class Props(portStatePot: Pot[PortState], viewMode: ViewMode, terminalName: Terminal, minuteTicker: Int) extends UseValueEq
 
   class Backend {
-    def render(props: Props): TagOf[Div] = {
+    def render(props: Props): html_<^.VdomNode = {
       val now = SDate.now()
       val fiveMinutes = 5
       val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
-      <.div(
-        ^.className := "pcp-pax-summaries",
-        if (props.viewMode.isLive) {
+      if (props.viewMode.isLive) {
+        <.div(
+          ^.className := "pcp-pax-summaries",
           props.portStatePot.render { portState =>
             val boxes = Seq("next 5 minutes", "5-10 minutes", "10-15 minutes")
             boxes.zipWithIndex.map {
@@ -59,8 +59,8 @@ object PcpPaxSummariesComponent {
                 summaryBox(box, label, start, queues, summary)
             }.toVdomArray
           }
-        } else ""
-      )
+        )
+      } else EmptyVdom
     }
   }
 

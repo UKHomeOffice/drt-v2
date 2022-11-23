@@ -7,8 +7,8 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
 import drt.shared.{Forecast, MilliDate}
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiDivider}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.component.Scala.Component
@@ -59,32 +59,37 @@ object TerminalPlanningComponent {
         (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes
       )
       <.div(
-        <.div(^.className := "form-group row planning-week",
-          <.div(^.className := "col-sm-3 no-gutters", <.label(^.className := "col-form-label", "Select week start day")),
-          <.div(^.className := "col-sm-2 no-gutters",
-            drawSelect(
-              forecastWeeks.map(_.ddMMyyString),
-              forecastWeeks.map(_.toISOString()).toList,
-              defaultStartDate(props.page.dateFromUrlOrNow).toISOString())
-          )
-        ),
-        <.div(
-          <.span(
-          MuiButton(color = Color.default, variant = "outlined", size = "medium")(
-            MuiIcons(GetApp)(fontSize = "small"),
-            "Export Headlines",
-            ^.className := "btn btn-link muiButton",
-            ^.href := SPAMain.absoluteUrl(s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
-            ^.target := "_blank"
-          )),
-          <.span(^.className := "planning-export",
-            MuiButton(color = Color.default, variant = "outlined", size = "medium")(
-              MuiIcons(GetApp)(fontSize = "small"),
-              "Export Week",
-              ^.className := "btn btn-link muiButton",
-              ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
-              ^.target := "_blank"
-            ))
+        <.div(^.className := "terminal-content-header",
+          <.div(^.className := "staffing-controls-wrapper",
+            <.div(^.className := "staffing-controls-row",
+              <.label(^.className := "staffing-controls-label", "Select week start day"),
+              <.div(^.className := "staffing-controls-select",
+                drawSelect(
+                  forecastWeeks.map(_.ddMMyyString),
+                  forecastWeeks.map(_.toISOString()).toList,
+                  defaultStartDate(props.page.dateFromUrlOrNow).toISOString())
+              )
+            ),
+            MuiDivider()(),
+            <.div(^.className := "staffing-controls-row",
+              <.span(
+                MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+                  MuiIcons(GetApp)(fontSize = "small"),
+                  "Export Headlines",
+                  ^.className := "btn btn-link muiButton",
+                  ^.href := SPAMain.absoluteUrl(s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
+                  ^.target := "_blank"
+                )),
+              <.span(^.className := "planning-export",
+                MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+                  MuiIcons(GetApp)(fontSize = "small"),
+                  "Export Week",
+                  ^.className := "btn btn-link muiButton",
+                  ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
+                  ^.target := "_blank"
+                ))
+            )
+          ),
         ),
         <.h3("Headline Figures"),
         <.table(^.className := "headlines",
@@ -110,15 +115,15 @@ object TerminalPlanningComponent {
         ),
         <.h3("Total staff required at each hour of the day"),
         <.table(^.className := "forecast",
-          <.thead(
+          <.thead(^.className := "sticky-top",
             <.tr(
-              <.th(^.colSpan := 2, ^.className := "heading"), sortedDays.map {
+              <.th(^.className := "heading"), sortedDays.map {
                 case (day, _) =>
                   <.th(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}")
               }.toTagMod
             ),
             <.tr(
-              <.th(^.colSpan := 2, ^.className := "heading", "Time"), sortedDays.flatMap(_ => List(<.th(^.className := "sub-heading", "Avail"), <.th(^.className := "sub-heading", "Rec"))).toTagMod
+              <.th(^.className := "heading", "Time"), sortedDays.flatMap(_ => List(<.th(^.className := "sub-heading", "Avail"), <.th(^.className := "sub-heading", "Rec"))).toTagMod
             )),
           <.tbody(
             byTimeSlot.zip(slotStartTimes).map {

@@ -1,7 +1,8 @@
 package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
-import japgolly.scalajs.react.{Children, JsComponent}
+import japgolly.scalajs.react.component.Js.Component
+import japgolly.scalajs.react.{Children, CtorType, JsComponent}
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
@@ -66,5 +67,5 @@ object HotTable {
     props
   }
 
-  val component = JsComponent[Props, Children.None, Null](HotTableComponent)
+  val component: Component[Props, Null, CtorType.Props] = JsComponent[Props, Children.None, Null](HotTableComponent)
 }

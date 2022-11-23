@@ -186,6 +186,8 @@ object Icon {
   def envelopeO = apply("envelope-o")
   def envelopeSquare = apply("envelope-square")
   def eraser = apply("eraser")
+  def error = apply("error")
+  def errorOutline = apply("error-outline")
   def eur = apply("eur")
   def euro = apply("euro")
   def exchange = apply("exchange")

@@ -104,7 +104,7 @@ trait WithFlightsExport {
             .map(manifests => (fws, manifests))
         }
         val csvStream = export.csvStream(flightsAndManifestsStream)
-        val fileName = makeFileName("flights", export.terminal, export.start, export.end, airportConfig.portCode)
+        val fileName = makeFileName("flights", export.terminal, export.start.toLocalDate, export.end.toLocalDate, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>

@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.{HashSet, Map}
 import scala.concurrent.duration._
@@ -26,13 +26,15 @@ sealed trait ViewMode {
 
   def isDifferentTo(viewMode: ViewMode): Boolean = viewMode.uUID != uUID
 
-  def millis: MillisSinceEpoch = time.millisSinceEpoch
+  def localDate: LocalDate
 
-  def dayStart: SDateLike = SDate.midnightOf(time)
+  protected def dateTime: SDateLike = SDate(localDate)
+
+  lazy val millis: MillisSinceEpoch = dateTime.millisSinceEpoch
+
+  def dayStart: SDateLike = SDate.midnightOf(dateTime)
 
   def dayEnd: SDateLike = dayStart.addDays(1).addMinutes(-1)
-
-  def time: SDateLike
 
   def isLive: Boolean
 
@@ -40,31 +42,19 @@ sealed trait ViewMode {
 }
 
 case object ViewLive extends ViewMode {
-  def time: SDateLike = SDate.now()
+  def localDate: LocalDate = SDate.now().toLocalDate
 
   override val isLive: Boolean = true
 
   override def isHistoric(now: SDateLike): Boolean = false
 }
 
-case class NoViewMode() extends ViewMode {
-  def time: SDateLike = SDate(0L)
+case class ViewDay(localDate: LocalDate, timeMachineDate: Option[SDateLike]) extends ViewMode {
+  lazy private val liveToday: Boolean = localDate == SDate.now().toLocalDate && timeMachineDate.isEmpty
 
-  override val isLive: Boolean = false
+  override val isLive: Boolean = if (liveToday) true else false
 
-  override def isHistoric(now: SDateLike): Boolean = false
-}
-
-case class ViewPointInTime(time: SDateLike) extends ViewMode {
-  override val isLive: Boolean = true
-
-  override def isHistoric(now: SDateLike): Boolean = true
-}
-
-case class ViewDay(time: SDateLike) extends ViewMode {
-  override val isLive: Boolean = false
-
-  override def isHistoric(now: SDateLike): Boolean = time.isHistoricDate(now)
+  override def isHistoric(now: SDateLike): Boolean = timeMachineDate.nonEmpty || dateTime.isHistoricDate(now)
 }
 
 sealed trait ExportType {
@@ -141,7 +131,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      monthOfShifts: Pot[MonthOfShifts] = Empty,
                      fixedPoints: Pot[FixedPointAssignments] = Empty,
                      staffMovements: Pot[StaffMovements] = Empty,
-                     viewMode: ViewMode = NoViewMode(),
+                     viewMode: ViewMode = ViewLive,
                      loadingState: LoadingState = LoadingState(),
                      showActualIfAvailable: Boolean = false,
                      loggedInUserPot: Pot[LoggedInUser] = Empty,
@@ -164,6 +154,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      egateBanksUpdates: Pot[PortEgateBanksUpdates] = Empty,
                      gateStandWalkTime: Pot[WalkTimes] = Empty,
                      passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
+                     maybeTimeMachineDate: Option[SDateLike] = None,
                     )
 
 object PollDelay {
