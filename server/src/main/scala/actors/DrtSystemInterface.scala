@@ -62,6 +62,7 @@ import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.FlightFilter
 import services.prediction.TouchdownPrediction
 import services.staffing.StaffMinutesChecker
+import slickdb.UserTableLike
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, WithTimeAccessor}
@@ -89,6 +90,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val purgeOldForecastSnapshots = true
 
   val manifestLookupService: ManifestLookupLike
+
+  val userService: UserTableLike
 
   val config: Configuration = new Configuration(ConfigFactory.load)
 
