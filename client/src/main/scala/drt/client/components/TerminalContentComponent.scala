@@ -75,7 +75,7 @@ object TerminalContentComponent {
   }
 
   class Backend() {
-    val arrivalsTableComponent: Component[FlightsWithSplitsTable.Props, Unit, Unit, CtorType.Props] = FlightsWithSplitsTable.ArrivalsTable(
+    val arrivalsTableComponent: Component[FlightTable.Props, Unit, Unit, CtorType.Props] = FlightTable.ArrivalsTable(
       None,
       originMapper,
       splitsGraphComponentColoured)
@@ -106,6 +106,12 @@ object TerminalContentComponent {
             val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeRangeHours)
             val terminalName = terminal.toString
             val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, viewStart)
+            val movementsExportMillis = props.viewMode match {
+              case ViewLive => SDate.now().millisSinceEpoch
+              case ViewDay(localDate, _) => SDate(localDate).getLocalNextMidnight.millisSinceEpoch
+            }
+
+              //if (props.viewMode.isLive) SDate.now() else props.terminalPageTab.viewMode.millis
             <.div(^.className := s"view-mode-content $viewModeStr",
               <.div(^.className := "tabs-with-export",
                 <.ul(^.className := "nav nav-tabs",
@@ -157,7 +163,7 @@ object TerminalContentComponent {
                       terminalName,
                       ExportStaffMovements,
                       SPAMain.absoluteUrl(
-                        s"export/staff-movements/${props.terminalPageTab.viewMode.millis}/$terminal?pointInTime=${props.viewMode.millis}"
+                        s"export/staff-movements/$movementsExportMillis/$terminal"
                       )
                     ),
                     StaffMovementsExport,
@@ -200,7 +206,7 @@ object TerminalContentComponent {
                       val flights = portState.window(viewStart, viewEnd).flights.values
                       val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminalPageTab.terminal)
                       arrivalsTableComponent(
-                        FlightsWithSplitsTable.Props(
+                        FlightTable.Props(
                           flightsWithSplits = flightsForTerminal.toList,
                           queueOrder = queueOrder,
                           hasEstChox = props.airportConfig.hasEstChox,

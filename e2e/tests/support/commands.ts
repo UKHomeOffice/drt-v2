@@ -177,7 +177,7 @@ Cypress.Commands.add('findAndClick', (toFind) => {
 });
 
 Cypress.Commands.add('choose24Hours', () => {
-  cy.get('.date-time-buttons-container')
+  cy.get('.time-view-selector-container')
     .contains('24 hours')
     .click()
 });

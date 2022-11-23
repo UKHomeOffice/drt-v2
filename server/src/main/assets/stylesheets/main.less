@@ -406,16 +406,6 @@ div.planning-week {
   margin-bottom: 20px;
 }
 
-table.forecast thead {
-  display: block;
-}
-
-table.forecast tbody {
-  display: block;
-  height: 500px;
-  width: 100%;
-}
-
 table.headlines {
   display: block;
   width: 100%;
@@ -532,7 +522,7 @@ table.headlines tr:nth-child(odd) {
   /* round the corners */
   border-radius: 1.5em;
 
-  width: 650px;
+  width: 800px;
   z-index: 1000;
   left: 0;
   right: 0;
@@ -698,8 +688,6 @@ table.headlines tr:nth-child(odd) {
   margin-top: 15px;
   display: flex;
   justify-content: space-between;
-  //flex-direction: column;
-  //gap: 5px;
 }
 
 .muiButton {
@@ -833,8 +821,8 @@ table.headlines tr:nth-child(odd) {
   width: 4em;
 }
 
-div.scrollable-table-body {
-  overflow: scroll;
+table.user-desk-recs {
+  width: 100%;
 }
 
 table.user-desk-recs thead tr:nth-child(1) th {
@@ -1262,7 +1250,7 @@ p {
   color: #7E8588;
 }
 
-.queues-and-arrivals-header {
+.terminal-content-header {
   display: flex;
   gap: 15px;
   flex-wrap: wrap;
@@ -1274,7 +1262,7 @@ p {
   background-color: #eeeff0;
 }
 
-.queues-and-arrivals-header__time-machine {
+.terminal-content-header__time-machine {
   background-color: #ffecec;
 }
 
@@ -1400,6 +1388,30 @@ p {
   flex-wrap: nowrap;
   align-items: center;
   gap: 5px;
+}
+
+.staffing-controls-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.staffing-controls-row {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.staffing-controls-label {
+  width: 200px;
+}
+
+.staffing-controls-select {
+  width: 200px;
+}
+
+.staffing-table {
+  margin-top: 15px;
 }
 
 .pcp-pax-summaries {
@@ -1869,6 +1881,10 @@ th h2 {
   background-color: purple;
 }
 
+.arrivals-table {
+  width: 100%
+}
+
 .arrivals__table__flight-code--clickable:hover {
   background-color: #CCCCCC;
   cursor: pointer;
@@ -2091,23 +2107,14 @@ body {
   }
 }
 
-.sticky {
-  display: none;
-  z-index: 1;
-  background-color: #fff;
-  position: fixed;
+.sticky-top {
+  position: sticky;
   top: 0;
-  left: 0;
-  right: 0;
-  border-radius: 0;
+  z-index: 10;
 }
 
-.sticky-show {
-  display: block;
-}
-
-.sticky table {
-  margin: 0px
+.solid-background {
+  background-color: #fff;
 }
 
 a i.fa.fa-remove {
@@ -2512,7 +2519,6 @@ div.access-restricted {
 .faqs {
   background-color: #eee;
 }
-
 
 /* Tooltip container */
 .tooltipFaq {

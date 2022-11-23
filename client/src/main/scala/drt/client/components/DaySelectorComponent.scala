@@ -153,9 +153,9 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
       val liveViewClass = if (state.maybeTimeMachineDate.isEmpty) "active" else ""
       val timeMachineViewClass = if (state.maybeTimeMachineDate.nonEmpty) "active" else ""
-      val headerClass = if (state.maybeTimeMachineDate.nonEmpty) "queues-and-arrivals-header__time-machine" else ""
+      val headerClass = if (state.maybeTimeMachineDate.nonEmpty) "terminal-content-header__time-machine" else ""
 
-      <.div(^.className := s"queues-and-arrivals-header $headerClass",
+      <.div(^.className := s"terminal-content-header $headerClass",
         <.div(
           ^.className := "date-component-wrapper",
           <.div(

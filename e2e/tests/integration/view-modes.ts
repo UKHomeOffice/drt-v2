@@ -68,6 +68,7 @@ describe('View Modes', () => {
         })
         .asABorderForceOfficer()
         .visit('#terminal/T1/current/arrivals/?date=' + inDaysAtTimeUtcString(1, 22, 59))
+        .choose24Hours()
         .get("#arrivals")
         .contains("TS0123")
 

@@ -8,7 +8,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.MuiGrid
+import io.kinoplan.scalajs.react.material.ui.core.{MuiDivider, MuiGrid}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
@@ -139,13 +139,10 @@ object MonthlyStaffing {
   implicit val stateReuse: Reusability[State] = Reusability.always[State]
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
-    .initialStateFromProps(props => {
-      stateFromProps(props)
-    })
-    .renderPS((scope, props, state) => {
+    .initialStateFromProps(stateFromProps)
+    .renderPS { (scope, props, state) =>
       def confirmAndSave(startOfMonthMidnight: SDateLike): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
         Callback {
-
           val initialTimeSlots: Seq[Seq[Any]] = stateFromProps(props).timeSlots
           val changes = scope.state.changes
           val quarterHourlyChanges = getQuarterHourlySlotChanges(props.timeSlotMinutes, changes)
@@ -170,31 +167,42 @@ object MonthlyStaffing {
 
       val viewingDate = SDate.firstDayOfMonth(props.terminalPageTab.dateFromUrlOrNow)
       <.div(
-        <.div(^.className := "date-picker",
-          <.div(^.className := "row",
-            List(
-              <.div(<.label("Choose Month", ^.className := "text center")),
-              <.div(drawSelect(
-                values = monthOptions.map(_.toISOString()),
-                names = monthOptions.map(d => s"${d.getMonthString()} ${d.getFullYear()}"),
-                defaultValue = viewingDate.toISOString(),
-                callback = (e: ReactEventFromInput) => {
-                  props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
-                })),
-              <.div(<.label("Time Resolution", ^.className := "text center")),
-              <.div(drawSelect(
-                values = Seq("15", "60"),
-                names = Seq("Quarter Hourly", "Hourly"),
-                defaultValue = s"${props.timeSlotMinutes}",
-                callback = (e: ReactEventFromInput) =>
-                  props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
-              )),
+        <.div(
+          ^.className := "terminal-content-header",
+          <.div(^.className := "staffing-controls-wrapper",
+            <.div(^.className := "staffing-controls-row",
+              <.label("Choose Month", ^.className := "staffing-controls-label"),
+              <.div(^.className := "staffing-controls-select",
+                drawSelect(
+                  values = monthOptions.map(_.toISOString()),
+                  names = monthOptions.map(d => s"${d.getMonthString()} ${d.getFullYear()}"),
+                  defaultValue = viewingDate.toISOString(),
+                  callback = (e: ReactEventFromInput) => {
+                    props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
+                  })
+              ),
+            ),
+            <.div(^.className := "staffing-controls-row",
+              <.label("Time Resolution", ^.className := "staffing-controls-label"),
+              <.div(^.className := "staffing-controls-select",
+                drawSelect(
+                  values = Seq("15", "60"),
+                  names = Seq("Quarter Hourly", "Hourly"),
+                  defaultValue = s"${props.timeSlotMinutes}",
+                  callback = (e: ReactEventFromInput) =>
+                    props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
+                )
+              ),
+            ),
+            MuiDivider()(),
+            <.div(^.className := "staffing-controls-row",
               <.div(
                 <.input.button(^.value := "Save Changes",
                   ^.className := "btn btn-primary",
                   ^.onClick ==> confirmAndSave(viewingDate)
-                ))
-            ).toTagMod
+                )
+              )
+            )
           )
         ),
         maybeClockChangeDate(viewingDate).map { clockChangeDate =>
@@ -208,29 +216,28 @@ object MonthlyStaffing {
               "then the rest of the hours in 2 separate steps", ^.style := js.Dictionary("margin-bottom" -> "15px", "display" -> "block")))
           )
         },
-        HotTable.component(HotTable.props(
-          state.timeSlots,
-          colHeadings = state.colHeadings,
-          rowHeadings = state.rowHeadings,
-          changeCallback = (row, col, value) => {
-            scope.modState(state => state.copy(changes = state.changes.updated(TimeSlotDay(row, col).key, value))).runNow()
-          }
-        ))
-        ,
-        <.div(^.className := "row",
-          <.div(^.className := "col-sm-1 no-gutters",
-            <.input.button(^.value := "Save Changes",
-              ^.className := "btn btn-primary",
-              ^.onClick ==> confirmAndSave(viewingDate)
-            )
+        <.div(^.className := "staffing-table",
+          HotTable.component(HotTable.props(
+            state.timeSlots,
+            colHeadings = state.colHeadings,
+            rowHeadings = state.rowHeadings,
+            changeCallback = (row, col, value) => {
+              scope.modState(state => state.copy(changes = state.changes.updated(TimeSlotDay(row, col).key, value))).runNow()
+            }
+          ))
+        ),
+        <.div(^.className := "terminal-content-header",
+          <.input.button(^.value := "Save Changes",
+            ^.className := "btn btn-primary",
+            ^.onClick ==> confirmAndSave(viewingDate)
           )
         )
       )
-    })
+    }
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount(p => Callback {
-      GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}")
-    })
+    .componentDidMount { p =>
+      Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
+    }
     .build
 
   def updatedShiftAssignments(

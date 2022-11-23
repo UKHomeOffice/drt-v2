@@ -80,11 +80,11 @@ object TerminalDashboardComponent {
               <.div(^.className := "terminal-dashboard__arrivals_popup_table",
                 p.featureFlags.renderReady { featureFlags =>
                   p.redListPorts.renderReady { redListPorts =>
-                    FlightsWithSplitsTable.ArrivalsTable(
+                    FlightTable.ArrivalsTable(
                       None,
                       originMapper,
                       splitsGraphComponentColoured)(
-                      FlightsWithSplitsTable.Props(
+                      FlightTable.Props(
                         ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
                         p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
                         p.airportConfig.hasEstChox,

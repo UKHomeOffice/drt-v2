@@ -1,7 +1,7 @@
 package drt.client.components
 
-import diode.{FastEq, FastEqLowPri, UseValueEq}
 import diode.data.Pot
+import diode.{FastEqLowPri, UseValueEq}
 import drt.client.SPAMain
 import drt.client.SPAMain.TerminalPageModes._
 import drt.client.SPAMain._
@@ -15,7 +15,7 @@ import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -138,13 +138,9 @@ object TerminalComponent {
                           TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
                         }))
                       case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                        <.div(^.id := "staffing", ^.className := s"tab-pane terminal-staffing-container",
-                          if (props.terminalPageTab.mode == Staffing) {
-                            model.potMonthOfShifts.render(ms => {
-                              MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
-                            })
-                          } else EmptyVdom
-                        )
+                        model.potMonthOfShifts.render { ms =>
+                          MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
+                        }
                     }
                   )
                 )
@@ -187,7 +183,9 @@ object TerminalComponent {
         }
       ),
       <.li(^.className := tabClass(Current) + " " + timeMachineClass,
-        <.a(^.id := "currentTab", VdomAttr("data-toggle") := "tab", "Queues & Arrivals"), ^.onClick --> {
+        <.a(^.id := "currentTab", "Queues & Arrivals", VdomAttr("data-toggle") := "tab"),
+        ^.onClick ==> { e: ReactEventFromInput =>
+          e.preventDefault()
           GoogleEventTracker.sendEvent(terminalName, "click", "Queues & Arrivals")
           props.router.set(props.terminalPageTab.update(
             mode = Current,
@@ -197,7 +195,8 @@ object TerminalComponent {
         }),
       <.li(^.className := tabClass(Planning),
         <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"),
-        ^.onClick --> {
+        ^.onClick ==> { e: ReactEventFromInput =>
+          e.preventDefault()
           GoogleEventTracker.sendEvent(terminalName, "click", "Planning")
           props.router.set(props.terminalPageTab.update(
             mode = Planning,
@@ -209,7 +208,8 @@ object TerminalComponent {
       if (loggedInUser.roles.contains(StaffEdit))
         <.li(^.className := tabClass(Staffing),
           <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip),
-          ^.onClick --> {
+          ^.onClick ==> { e: ReactEventFromInput =>
+            e.preventDefault()
             GoogleEventTracker.sendEvent(terminalName, "click", "Monthly Staffing")
             props.router.set(props.terminalPageTab.update(
               mode = Staffing,
