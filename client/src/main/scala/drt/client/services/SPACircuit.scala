@@ -221,7 +221,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new GateStandWalkTimePortsHandler(zoomRW(_.gateStandWalkTime)((m, v) => m.copy(gateStandWalkTime = v))),
       new CrunchHandler(zoomRW(identity)((m, _) => m)),
       new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
-//      new TimeMachineDateHandler(zoomRW(_.maybeTimeMachineDate)((m, v) => m.copy(maybeTimeMachineDate = v))),
     )
 
     composedHandlers
