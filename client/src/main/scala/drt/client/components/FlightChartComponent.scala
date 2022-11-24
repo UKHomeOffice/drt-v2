@@ -35,7 +35,7 @@ object FlightChartComponent {
           content =
             proxy { rcp =>
               val infosPot = rcp()
-              <.div(^.cls := "container arrivals__table__flight__chart-box",
+              <.div(^.cls := "arrivals__table__flight__chart-box-wrapper",
                 infosPot.render { infos =>
                   infos.get(ArrivalKey(props.flightWithSplits.apiFlight)) match {
                     case None =>
@@ -84,21 +84,21 @@ object FlightChartComponent {
                         dataSetLabel = "Live API",
                         `type` = "bar")
 
-                      <.div(^.cls := "container arrivals__table__flight__chart-box",
-                        <.div(^.cls := "row", ^.width := (chartWidth * 3).toString + "px",
+                      <.div(^.cls := "arrivals__table__flight__chart-box",
+                        <.div(^.className := "arrivals__table__flight__chart-wrapper", ^.width := (chartWidth * 3).toString + "px",
                           if (sortedNats.toMap.values.sum > 0) {
                             val maxY = sortedNats.toMap.values.max + 5
-                            <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart nationality-chart",
+                            <.div(^.cls := "arrivals__table__flight__chart-box__chart",
                               chart("Nationality breakdown", nationalityData, maxY, chartWidth, chartHeight))
                           } else EmptyVdom,
                           if (sortedPaxTypes.toMap.values.sum > 0) {
                             val maxY = sortedPaxTypes.toMap.values.max + 5
-                            <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart passenger-type-chart",
+                            <.div(^.cls := "arrivals__table__flight__chart-box__chart",
                               chart("Passenger types", paxTypeData, maxY, chartWidth, chartHeight))
                           } else EmptyVdom,
                           if (sortedAges.toMap.values.sum > 0) {
                             val maxY = sortedAges.toMap.values.max + 5
-                            <.div(^.cls := "col-sm arrivals__table__flight__chart-box__chart age-breakdown-chart",
+                            <.div(^.cls := "arrivals__table__flight__chart-box__chart",
                               chart("Age breakdown", ageData, maxY, chartWidth, chartHeight))
                           } else EmptyVdom
                         ),

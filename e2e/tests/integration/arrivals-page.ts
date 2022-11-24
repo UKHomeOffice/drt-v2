@@ -79,8 +79,8 @@ describe('Arrivals page', () => {
       )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .get('.flight-origin > .tooltip-trigger')
-      .click({force: true})
+      .get('.flight-origin .tooltip-trigger-onclick')
+      .click()
       .get(".tippy-content")
       .contains("Schiphol, Amsterdam, Netherlands")
 

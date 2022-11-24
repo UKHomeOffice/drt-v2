@@ -61,7 +61,6 @@ describe('API splits', () => {
     ;
   });
 
-
   it('should count multiple entries with the same PassengerIdentifier as one passenger', () => {
     const apiManifest = manifest(
       ofPassengerProfile(ukAdultWithId("1"), 3).concat(
@@ -152,8 +151,8 @@ describe('API splits', () => {
       .then((resp) => {
         expect(resp.body).to.equal(JSON.stringify(expectedNationalitySummary), "Api splits incorrect for regular users")
       })
-      .get(".arrivals__table__flight__chart-box-wrapper .tooltip-trigger")
-      .click({force: true})
+      .get(".arrivals__table__flight__chart-box-wrapper .tooltip-trigger-onclick")
+      .click()
       .get(".nationality-chart")
       .should("be.visible")
       .get(".passenger-type-chart")
