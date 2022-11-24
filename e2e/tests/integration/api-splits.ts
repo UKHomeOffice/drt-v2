@@ -148,11 +148,11 @@ describe('API splits', () => {
       .request({
         method: 'GET',
         url: "/manifest/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
-      }).then((resp) => {
-      expect(resp.body).to.equal(JSON.stringify(expectedNationalitySummary), "Api splits incorrect for regular users")
-    })
-      .get("#charts-box > .tooltip-trigger")
-      .trigger("focus")
+      })
+      .then((resp) => {
+        expect(resp.body).to.equal(JSON.stringify(expectedNationalitySummary), "Api splits incorrect for regular users")
+      })
+      .get(".arrivals__table__flight__chart-box-wrapper .tooltip-trigger")
       .click()
       .get(".nationality-chart")
       .should("be.visible")

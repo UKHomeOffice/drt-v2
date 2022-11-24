@@ -27,7 +27,7 @@ object FlightChartComponent {
     .initialState(State(false))
     .renderPS((scope, props, state) => {
       val proxy = SPACircuit.connect(_.passengerInfoSummariesByArrival)
-      <.div(^.id := "charts-box",
+      <.div(^.className := "arrivals__table__flight__chart-box-wrapper",
         Tippy.interactiveInfo(
           triggerCallback = Option((_: ReactEventFromInput) => {
             Callback(SPACircuit.dispatch(GetPassengerInfoSummary(ArrivalKey(props.flightWithSplits.apiFlight))))
@@ -38,6 +38,8 @@ object FlightChartComponent {
               <.div(^.cls := "container arrivals__table__flight__chart-box",
                 infosPot.render { infos =>
                   infos.get(ArrivalKey(props.flightWithSplits.apiFlight)) match {
+                    case None =>
+                      <.div(MuiCircularProgress()(), ^.height := "282px", ^.display := "flex", ^.alignItems := "center", ^.justifyContent := "center")
                     case Some(info) =>
                       val nationalitiesCount = if (state.showAllNationalities) info.nationalities.size else 10
 
@@ -109,7 +111,6 @@ object FlightChartComponent {
                         else
                           EmptyVdom,
                       )
-                    case None => <.div(MuiCircularProgress()(), ^.height := "282px", ^.display := "flex", ^.alignItems := "center", ^.justifyContent := "center")
                   }
                 }
               )
