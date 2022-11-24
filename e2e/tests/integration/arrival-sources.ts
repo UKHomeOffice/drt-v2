@@ -23,7 +23,7 @@ describe('Arrival sources', () => {
             .asABorderForceOfficer()
             .waitForFlightToAppear("TS0123")
             .get('.arrivals__table__flight-code-value')
-            .click()
+            .click({force: true})
             .get('.dashboard-arrivals-popup')
             .should('not.exist');
     });
@@ -42,7 +42,7 @@ describe('Arrival sources', () => {
             .asABorderForceOfficerWithRoles(["arrival-source"])
             .waitForFlightToAppear("TS0123")
             .get('.arrivals__table__flight-code-value')
-            .click()
+            .click({force: true})
             .get('.dashboard-arrivals-popup')
             .contains('Port live');
     });

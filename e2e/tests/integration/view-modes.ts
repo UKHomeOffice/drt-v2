@@ -16,7 +16,7 @@ describe('View Modes', () => {
         .navigateToMenuItem('T1')
         .selectCurrentTab()
         .chooseArrivalsTab()
-        .get('#tomorrow').click()
+        .get('#tomorrow').click({force: true})
         .reload()
         .addFlight({
           "ICAO": "TS0123",
@@ -81,9 +81,9 @@ describe('View Modes', () => {
         .navigateToMenuItem('T1')
         .selectCurrentTab()
         .chooseArrivalsTab()
-        .get('#yesterday').click()
+        .get('#yesterday').click({force: true})
         .get('#arrivals').contains("No flights to display")
-        .get('#today').click()
+        .get('#today').click({force: true})
         .choose24Hours()
         .addFlight({
           "ICAO": "TS0123",

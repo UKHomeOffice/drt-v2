@@ -169,7 +169,7 @@ Cypress.Commands.add('navigateFaqs', () => {
 });
 
 Cypress.Commands.add('selectCurrentTab', () => {
-  cy.get('#currentTab').click()
+  cy.get('#currentTab').click({force: true})
 })
 
 Cypress.Commands.add('findAndClick', (toFind) => {
@@ -179,11 +179,11 @@ Cypress.Commands.add('findAndClick', (toFind) => {
 Cypress.Commands.add('choose24Hours', () => {
   cy.get('.time-view-selector-container')
     .contains('24 hours')
-    .click()
+    .click({force: true})
 });
 
 Cypress.Commands.add('chooseArrivalsTab', () => {
-  cy.get("#arrivalsTab").click()
+  cy.get("#arrivalsTab").click({force: true})
 });
 
 Cypress.Commands.add('addManifest', (manifest) => {
@@ -195,8 +195,8 @@ Cypress.Commands.add('navigateToArrivalsTab', () => {
     .navigateHome()
     .navigateToMenuItem('T1')
     .selectCurrentTab()
-    .get("#currentTab").click()
-    .get("#arrivalsTab").click()
+    .get("#currentTab").click({force: true})
+    .get("#arrivalsTab").click({force: true})
     .choose24Hours()
 });
 
@@ -205,8 +205,8 @@ Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
     .navigateHome()
     .navigateToMenuItem('T1')
     .selectCurrentTab()
-    .get("#currentTab").click()
-    .get("#arrivalsTab").click()
+    .get("#currentTab").click({force: true})
+    .get("#arrivalsTab").click({force: true})
     .choose24Hours()
     .get("#arrivals")
     .contains(flightCode);

@@ -17,12 +17,12 @@ describe('Multi day export', () => {
       .navigateToMenuItem('T1')
       .selectCurrentTab()
       .choose24Hours()
-      .get("#arrivalsTab").click().then(() => {
-        cy.contains('Multi Day Export').click().then(() => {
+      .get("#arrivalsTab").click({force: true}).then(() => {
+        cy.contains('Multi Day Export').click({force: true}).then(() => {
           cy.get('#multi-day-export-modal-body').contains("Recommendations")
             .get('#multi-day-export-modal-body').contains("Deployments")
             .get('#multi-day-export-modal-body').contains("Arrivals")
-            .get('#multi-day-export-modal-footer').contains("Close").click()
+            .get('#multi-day-export-modal-footer').contains("Close").click({force: true})
             .get('#multi-day-export-modal-body').should('not.be.visible');
         })
       });
@@ -37,9 +37,9 @@ describe('Multi day export', () => {
       .selectCurrentTab()
       .choose24Hours()
       .then(() => {
-        cy.contains('Multi Day Export').click().then(() => {
+        cy.contains('Multi Day Export').click({force: true}).then(() => {
           cy.wait(5000)
-            .get('#multi-day-export-modal-footer').contains("Close").click()
+            .get('#multi-day-export-modal-footer').contains("Close").click({force: true})
             .get('#multi-day-export-modal-body').should('not.be.visible');
         });
       });
@@ -64,7 +64,7 @@ describe('Multi day export', () => {
           .then(() => {
             cy
               .contains('Multi Day Export')
-              .click()
+              .click({force: true})
               .then(() => {
                 cy
                   .get('#multi-day-export-modal-body')

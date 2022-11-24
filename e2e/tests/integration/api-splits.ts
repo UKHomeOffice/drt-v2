@@ -153,7 +153,7 @@ describe('API splits', () => {
         expect(resp.body).to.equal(JSON.stringify(expectedNationalitySummary), "Api splits incorrect for regular users")
       })
       .get(".arrivals__table__flight__chart-box-wrapper .tooltip-trigger")
-      .click()
+      .click({force: true})
       .get(".nationality-chart")
       .should("be.visible")
       .get(".passenger-type-chart")

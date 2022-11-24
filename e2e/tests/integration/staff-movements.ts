@@ -139,7 +139,7 @@ Cypress.Commands.add('selectAdditionalReason', (reason) => {
 Cypress.Commands.add('incrementStaffInput', () => {
   cy
     .get('.staff-adjustment--num-staff__increase')
-    .click()
+    .click({force: true})
 });
 
 Cypress.Commands.add('staffDeployedAtRow', (row) => {
@@ -184,16 +184,16 @@ Cypress.Commands.add('checkStaffDeployedOnDesksAndQueuesTabAre', (numStaff) => {
 });
 
 Cypress.Commands.add('checkStaffNumbersOnMovementsTabAre', (numStaff) => {
-  cy.contains("Staff Movements").click().then(() => {
+  cy.contains("Staff Movements").click({force: true}).then(() => {
     [0, 1, 2, 3].map((slot) => { cy.staffOverTheDayAtSlot(slot).contains(numStaff) });
     cy.staffOverTheDayAtSlot(4).contains("0");
   });
 });
 
 Cypress.Commands.add('removeXMovements', (numToRemove) => {
-  cy.contains("Staff Movements").click().then(() => {
+  cy.contains("Staff Movements").click({force: true}).then(() => {
     for (let i = 1; i <= numToRemove; i++) {
-      cy.get('.fa-remove').first().click().end();
+      cy.get('.fa-remove').first().click({force: true}).end();
       cy.get('.fa-remove').should('have.length', numToRemove - i).end();
     }
   });
@@ -221,19 +221,19 @@ Cypress.Commands.add('openAdjustmentDialogueForHour', (addOrRemove, hour) => {
   cy
     .get('.staff-adjustments > :nth-child(' + (hour + 1) + ') > :nth-child(' + buttonNth + ')')
     .contains(buttonLabel)
-    .click();
+    .click({force: true});
 });
 
 Cypress.Commands.add('adjustStaffBy', (numStaff) => {
   const adjustmentSelector = numStaff > 0 ? '.staff-adjustment--adjustment-button__increase' : '.staff-adjustment--adjustment-button__decrease';
 
   for (let i = 1; i < numStaff; i++) {
-    cy.get(adjustmentSelector).click();
+    cy.get(adjustmentSelector).click({force: true});
   }
 
   cy
     .get('.btn-primary.staff-adjustment--save-cancel')
-    .click();
+    .click({force: true});
 });
 
 Cypress.Commands.add('adjustMinutes', (minutes) => {
