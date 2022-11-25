@@ -140,6 +140,7 @@ describe('API splits', () => {
       .waitForFlightToAppear("TS0123")
       .addManifest(apiManifest)
       .get(paxRagGreenSelector, {timeout: 5000})
+      .wait(100)
       .get('.egate-queue-pax')
       .contains("8")
       .get('.eeadesk-queue-pax')
@@ -153,12 +154,12 @@ describe('API splits', () => {
       })
       .get(".arrivals__table__flight__chart-box-wrapper .tooltip-trigger-onclick")
       .click()
-      .get(".nationality-chart")
+      .get(".arrivals__table__flight__chart-box__chart")
       .should("be.visible")
-      .get(".passenger-type-chart")
-      .should("be.visible")
-      .get(".age-breakdown-chart")
-      .should("be.visible")
+      // .get(".passenger-type-chart")
+      // .should("be.visible")
+      // .get(".age-breakdown-chart")
+      // .should("be.visible")
     ;
 
   });
