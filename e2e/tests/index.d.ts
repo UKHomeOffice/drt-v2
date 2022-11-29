@@ -17,7 +17,7 @@ declare namespace Cypress {
         asAPortOperator(): Chainable<Element>;
         asACedatStaffMember(): Chainable<Element>;
         asATestPortUser(): Chainable<Element>;
-        asATestSetupUser(): Chainable<Element>;
+        // asATestSetupUser(): Chainable<Element>;
         assertAccessRestricted(): Chainable<Element>;
         checkStaffAvailableOnDesksAndQueuesTabAre(desk: number): Chainable<Element>;
         checkStaffMovementsOnDesksAndQueuesTabAre(desk: number): Chainable<Element>;
@@ -28,11 +28,11 @@ declare namespace Cypress {
         chooseArrivalsTab(): Chainable<Element>;
         deleteAlerts(): Chainable<Element>;
         deleteData(): Chainable<Element>;
-        downloadCsv(type: string, year: number, month: number, day: number): Chainable<Response>;
+        // downloadCsv(type: string, year: number, month: number, day: number): Chainable<Response>;
         findAndClick(thing: string): Chainable<Element>;
         openAdjustmentDialogueForHour(direction: string, amount: number): Chainable<Element>;
         navigateHome(): Chainable<Element>;
-        navigateFaqs(): Chainable<Element>;
+        // navigateFaqs(): Chainable<Element>;
         navigateToMenuItem(id: string): Chainable<Element>;
         removeXMovements(count: number): Chainable<Element>;
         resetShifts(): Chainable<Element>;
@@ -47,6 +47,6 @@ declare namespace Cypress {
         staffDeployedAtRow(row: number): Chainable<Element>;
         staffMovementsAtRow(row: number): Chainable<Element>;
         waitForFlightToAppear(flight: string): Chainable<Element>;
-        navigateToArrivalsTab(): Chainable<Element>;
+        // navigateToArrivalsTab(): Chainable<Element>;
     }
 }

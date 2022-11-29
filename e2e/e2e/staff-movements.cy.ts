@@ -4,7 +4,6 @@ moment.locale("en-gb");
 describe('Staff movements', () => {
 
   beforeEach(function () {
-    // const schDT = new Date().toISOString().split("T")[0];
     cy.deleteData()
       .addFlight({});
   });
@@ -136,17 +135,6 @@ Cypress.Commands.add('selectAdditionalReason', (reason) => {
     .type(reason)
 });
 
-Cypress.Commands.add('incrementStaffInput', () => {
-  cy
-    .get('.staff-adjustment--num-staff__increase')
-    .click({force: true})
-});
-
-Cypress.Commands.add('staffDeployedAtRow', (row) => {
-  const selector = '#sticky-body > :nth-child(' + (row + 1) + ') > :nth-child(14)';
-  cy.get(selector);
-});
-
 Cypress.Commands.add('staffMovementsAtRow', (row) => {
   const selector = `td.non-pcp:nth(${row * 2 + 1})`
   cy.get(selector);
@@ -174,13 +162,6 @@ Cypress.Commands.add('checkStaffMovementsOnDesksAndQueuesTabAre', (numStaff) => 
     cy.staffMovementsAtRow(row).contains(numStaff);
   });
   cy.staffMovementsAtRow(4).contains(0);
-});
-
-Cypress.Commands.add('checkStaffDeployedOnDesksAndQueuesTabAre', (numStaff) => {
-  [0, 1, 2, 3].map((row) => {
-    cy.staffDeployedAtRow(row).contains(numStaff);
-  });
-  cy.staffDeployedAtRow(4).contains(0);
 });
 
 Cypress.Commands.add('checkStaffNumbersOnMovementsTabAre', (numStaff) => {

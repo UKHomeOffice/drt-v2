@@ -99,9 +99,9 @@ Cypress.Commands.add('asADrtSuperUser', () => {
   cy.request("POST", '/test/mock-roles', { "roles": superUserRoles.concat(bfRoles).concat(portRole) });
 });
 
-Cypress.Commands.add('asATestSetupUser', () => {
-  cy.request("POST", '/test/mock-roles', { "roles": superUserRoles.concat(bfRoles).concat(portRole) });
-});
+// Cypress.Commands.add('asATestSetupUser', () => {
+//   cy.request("POST", '/test/mock-roles', { "roles": superUserRoles.concat(bfRoles).concat(portRole) });
+// });
 
 Cypress.Commands.add('asAPortOperator', () => {
   cy.request("POST", '/test/mock-roles', { "roles": portOperatorRoles.concat(portRole) });
@@ -164,9 +164,9 @@ Cypress.Commands.add('navigateToMenuItem', (itemName) => {
     .click(5, 5, { force: true })
 });
 
-Cypress.Commands.add('navigateFaqs', () => {
-  cy.visit('/#faqs')
-});
+// Cypress.Commands.add('navigateFaqs', () => {
+//   cy.visit('/#faqs')
+// });
 
 Cypress.Commands.add('selectCurrentTab', () => {
   cy.get('#currentTab').click({force: true})
@@ -190,15 +190,15 @@ Cypress.Commands.add('addManifest', (manifest) => {
   cy.request('POST', '/test/manifest', manifest)
 });
 
-Cypress.Commands.add('navigateToArrivalsTab', () => {
-  cy
-    .navigateHome()
-    .navigateToMenuItem('T1')
-    .selectCurrentTab()
-    .get("#currentTab").click({force: true})
-    .get("#arrivalsTab").click({force: true})
-    .choose24Hours()
-});
+// Cypress.Commands.add('navigateToArrivalsTab', () => {
+//   cy
+//     .navigateHome()
+//     .navigateToMenuItem('T1')
+//     .selectCurrentTab()
+//     .get("#currentTab").click({force: true})
+//     .get("#arrivalsTab").click({force: true})
+//     .choose24Hours()
+// });
 
 Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
   cy
