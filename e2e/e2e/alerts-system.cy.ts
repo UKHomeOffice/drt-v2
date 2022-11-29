@@ -1,4 +1,4 @@
-import {todayAtUtc} from "../support/time-helpers";
+import {todayAtUtc} from "../tests/support/time-helpers";
 
 describe('Alerts system', () => {
 

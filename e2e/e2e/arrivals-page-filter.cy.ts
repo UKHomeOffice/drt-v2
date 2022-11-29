@@ -1,7 +1,7 @@
 import moment from "moment-timezone";
 moment.locale("en-gb");
 
-import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
+import {todayAtUtc, todayAtUtcString} from '../tests/support/time-helpers'
 
 describe('Arrivals page filter', () => {
 

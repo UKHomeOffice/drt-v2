@@ -1,7 +1,7 @@
 import moment from "moment-timezone";
 moment.locale("en-gb");
 
-import { todayAtUtcString, inDaysAtTimeUtcString } from '../support/time-helpers'
+import { todayAtUtcString, inDaysAtTimeUtcString } from '../tests/support/time-helpers'
 
 describe('View Modes', () => {
 

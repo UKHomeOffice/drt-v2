@@ -1,5 +1,5 @@
 import moment from "moment-timezone";
-import {todayAtUtcString} from '../support/time-helpers'
+import {todayAtUtcString} from '../tests/support/time-helpers'
 
 moment.locale("en-gb");
 
