@@ -1,5 +1,5 @@
 import {todayAtUtc} from "./support/time-helpers";
-
+hello
 describe('Alerts system', () => {
 
   const today = todayAtUtc(0, 0);
