@@ -1,6 +1,6 @@
 import moment from "moment-timezone";
-import {todayAtUtc, todayAtUtcString} from "../tests/support/time-helpers"
-import {eeaCellSelector, eGatesCellSelector, nonEeaCellSelector, paxRagGreenSelector} from "../tests/support/commands";
+import {todayAtUtc, todayAtUtcString} from "./support/time-helpers"
+import {eeaCellSelector, eGatesCellSelector, nonEeaCellSelector, paxRagGreenSelector} from "./support/commands";
 
 moment.locale("en-gb");
 

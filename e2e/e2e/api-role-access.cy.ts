@@ -1,5 +1,5 @@
 
-import { todayAtUtc } from '../tests/support/time-helpers'
+import { todayAtUtc } from './support/time-helpers'
 
 
 describe('API role access', () => {

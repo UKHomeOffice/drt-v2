@@ -1,7 +1,7 @@
 import moment from "moment-timezone";
-import {manifestForDateTime, passengerProfiles, ukAdultWithId} from '../tests/support/manifest-helpers'
-import {todayAtUtc} from '../tests/support/time-helpers'
-import {paxRagGreenSelector} from "../tests/support/commands";
+import {manifestForDateTime, passengerProfiles, ukAdultWithId} from './support/manifest-helpers'
+import {todayAtUtc} from './support/time-helpers'
+import {paxRagGreenSelector} from "./support/commands";
 
 moment.locale("en-gb");
 

@@ -1,6 +1,6 @@
-import {todayAtUtc, todayAtUtcString} from "../tests/support/time-helpers";
-import {manifestForDateTime, passengerList} from "../tests/support/manifest-helpers";
-import {paxRagGreenSelector} from "../tests/support/commands";
+import {todayAtUtc, todayAtUtcString} from "./support/time-helpers";
+import {manifestForDateTime, passengerList} from "./support/manifest-helpers";
+import {paxRagGreenSelector} from "./support/commands";
 
 
 describe("CEDAT arrival exports", () => {

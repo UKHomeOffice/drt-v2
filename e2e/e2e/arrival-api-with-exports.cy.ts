@@ -1,8 +1,8 @@
 import moment from "moment-timezone";
-import {manifestForDateTime, passengerList} from '../tests/support/manifest-helpers'
-import {todayAtUtc, todayAtUtcString} from '../tests/support/time-helpers'
+import {manifestForDateTime, passengerList} from './support/manifest-helpers'
+import {todayAtUtc, todayAtUtcString} from './support/time-helpers'
 import {Moment} from "moment/moment";
-import {paxRagGreenSelector} from "../tests/support/commands";
+import {paxRagGreenSelector} from "./support/commands";
 
 moment.locale("en-gb");
 
