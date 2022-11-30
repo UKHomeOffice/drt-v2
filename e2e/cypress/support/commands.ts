@@ -1,29 +1,3 @@
-// ***********************************************
-// This example commands.js shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
-//
-//
-// -- This is a parent command --
-// Cypress.Commands.add("login", (email, password) => { ... })
-//
-//
-// -- This is a child command --
-// Cypress.Commands.add("drag", { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add("dismiss", { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This is will overwrite an existing command --
-// Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
-
 import { todayAtUtcString as todayAtString } from './time-helpers'
 
 Cypress.Commands.add('setRoles', (roles = []) => {
@@ -99,10 +73,6 @@ Cypress.Commands.add('asADrtSuperUser', () => {
   cy.request("POST", '/test/mock-roles', { "roles": superUserRoles.concat(bfRoles).concat(portRole) });
 });
 
-// Cypress.Commands.add('asATestSetupUser', () => {
-//   cy.request("POST", '/test/mock-roles', { "roles": superUserRoles.concat(bfRoles).concat(portRole) });
-// });
-
 Cypress.Commands.add('asAPortOperator', () => {
   cy.request("POST", '/test/mock-roles', { "roles": portOperatorRoles.concat(portRole) });
 });
@@ -164,10 +134,6 @@ Cypress.Commands.add('navigateToMenuItem', (itemName) => {
     .click(5, 5, { force: true })
 });
 
-// Cypress.Commands.add('navigateFaqs', () => {
-//   cy.visit('/#faqs')
-// });
-
 Cypress.Commands.add('selectCurrentTab', () => {
   cy.get('#currentTab').click({force: true})
 })
@@ -189,16 +155,6 @@ Cypress.Commands.add('chooseArrivalsTab', () => {
 Cypress.Commands.add('addManifest', (manifest) => {
   cy.request('POST', '/test/manifest', manifest)
 });
-
-// Cypress.Commands.add('navigateToArrivalsTab', () => {
-//   cy
-//     .navigateHome()
-//     .navigateToMenuItem('T1')
-//     .selectCurrentTab()
-//     .get("#currentTab").click({force: true})
-//     .get("#arrivalsTab").click({force: true})
-//     .choose24Hours()
-// });
 
 Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
   cy
