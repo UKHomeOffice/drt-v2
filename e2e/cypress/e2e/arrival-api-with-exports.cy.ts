@@ -1,10 +1,7 @@
-import moment from "moment-timezone";
-import {manifestForDateTime, passengerList} from './support/manifest-helpers'
-import {todayAtUtc, todayAtUtcString} from './support/time-helpers'
+import {manifestForDateTime, passengerList} from '../support/manifest-helpers'
+import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
 import {Moment} from "moment/moment";
-import {paxRagGreenSelector} from "./support/commands";
-
-moment.locale("en-gb");
+import {paxRagGreenSelector} from "../support/commands";
 
 describe('Arrival API with exports', () => {
 

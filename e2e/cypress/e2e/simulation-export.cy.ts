@@ -1,10 +1,8 @@
-import moment from "moment"
-import papa from "papaparse"
-import {manifestForDateTime, passengerList} from './support/manifest-helpers'
-import {todayAtUtc, todayAtUtcString} from './support/time-helpers'
-import {paxRagGreenSelector} from "./support/commands";
+import {parse} from "papaparse"
+import {manifestForDateTime, passengerList} from '../support/manifest-helpers'
+import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
+import {paxRagGreenSelector} from "../support/commands";
 
-moment.locale("en-gb");
 
 describe('Simulation export', () => {
 
@@ -70,7 +68,7 @@ describe('Simulation export', () => {
                     method: 'GET',
                     url: href,
                 }).then((resp) => {
-                    const csvData = papa.parse(resp.body, {"header": false}).data;
+                    const csvData = parse(resp.body, {"header": false}).data;
 
                     const eeaDeskPxCount = sumColumn(csvData, eeaDeskPaxCsvIndex)
                     const nonEeaDeskPaxCount = sumColumn(csvData, nonEeaDeskPaxCsvIndex)
@@ -104,7 +102,7 @@ describe('Simulation export', () => {
                     method: 'GET',
                     url: href,
                 }).then((resp) => {
-                    const csvData = papa.parse(resp.body, {"header": false}).data;
+                    const csvData = parse(resp.body, {"header": false}).data;
 
                     const eeaDeskPxCount = sumColumn(csvData, eeaDeskPaxCsvIndex)
                     const nonEeaDeskPaxCount = sumColumn(csvData, nonEeaDeskPaxCsvIndex)

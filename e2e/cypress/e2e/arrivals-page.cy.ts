@@ -1,8 +1,5 @@
-import moment from "moment-timezone";
-import {todayAtUtc, todayAtUtcString} from "./support/time-helpers"
-import {eeaCellSelector, eGatesCellSelector, nonEeaCellSelector, paxRagGreenSelector} from "./support/commands";
-
-moment.locale("en-gb");
+import {todayAtUtc, todayAtUtcString} from "../support/time-helpers"
+import {eeaCellSelector, eGatesCellSelector, nonEeaCellSelector, paxRagGreenSelector} from "../support/commands";
 
 describe('Arrivals page', () => {
 

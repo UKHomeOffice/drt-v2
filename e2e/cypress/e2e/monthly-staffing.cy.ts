@@ -1,5 +1,4 @@
-import moment from "moment-timezone";
-moment.locale("en-gb");
+import {moment} from '../support/time-helpers'
 
 describe('Monthly Staffing', () => {
 

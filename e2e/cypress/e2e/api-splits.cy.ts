@@ -1,9 +1,6 @@
-import moment from "moment-timezone";
-import {manifestForDateTime, passengerProfiles, ukAdultWithId} from './support/manifest-helpers'
-import {todayAtUtc} from './support/time-helpers'
-import {paxRagGreenSelector} from "./support/commands";
-
-moment.locale("en-gb");
+import {manifestForDateTime, passengerProfiles, ukAdultWithId} from '../support/manifest-helpers'
+import {todayAtUtc} from '../support/time-helpers'
+import {paxRagGreenSelector} from "../support/commands";
 
 
 describe('API splits', () => {
