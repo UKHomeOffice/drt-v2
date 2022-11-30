@@ -103,8 +103,6 @@ describe('Staff movements', () => {
         .selectCurrentTab()
         .choose24Hours()
         .get('.staff-deployment-adjustment-container').should('exist')
-        .findAndClick('Recommendations')
-        .get('.staff-deployment-adjustment-container').should('exist')
     });
 
     it("BorderForceReadOnly should not be able to adjust the staff movement", () => {
@@ -114,8 +112,6 @@ describe('Staff movements', () => {
         .navigateToMenuItem('T1')
         .selectCurrentTab()
         .choose24Hours()
-        .get('.staff-deployment-adjustment-container').should('not.exist')
-        .findAndClick('Recommendations')
         .get('.staff-deployment-adjustment-container').should('not.exist')
     });
   });
