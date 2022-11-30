@@ -119,8 +119,8 @@ steps:
         from_secret: play
     commands:
       - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e ENABLE_STATSD=false -e CONTACT_EMAIL=support@test.com -e OOH_PHONE=012345 -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g -Dconfig.resource=application-inmemory.conf" -e USE_API_PAX_NOS=true -e ADJUST_EGATES_USE_BY_U12S=true -e PORT_CODE="test" -e ENV="test" -e FORECAST_MAX_DAYS=2 -e DISPLAY_RED_LIST_INFO=false -e BASE_DOMAIN=drt-test.homeoffice.gov.uk 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:B5292 $${PLAY}
-#      - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2-cypress:${DRONE_BUILD_NUMBER} /bin/bash -c "$(npm bin)/cypress run"
-      - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2-cypress:5292 /bin/bash -c "npm bin"
+      - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2-cypress:${DRONE_BUILD_NUMBER} /bin/bash -c "/app/node_modules/.bin/cypress run"
+#      - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2-cypress:5292 /bin/bash -c "npm bin"
     volumes:
       - name: dockerclientconfig
         path: /root/.docker
