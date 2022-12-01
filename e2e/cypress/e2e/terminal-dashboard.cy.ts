@@ -1,7 +1,5 @@
-import moment from "moment-timezone";
 import {todayAtUtc, todayAtUtcString as todayAtString} from '../support/time-helpers'
 
-moment.locale("en-gb");
 
 describe('Terminal dashboard', () => {
 

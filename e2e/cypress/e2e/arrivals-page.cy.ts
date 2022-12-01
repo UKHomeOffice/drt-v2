@@ -1,8 +1,5 @@
-import moment from "moment-timezone";
-import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
+import {todayAtUtc, todayAtUtcString} from "../support/time-helpers"
 import {eeaCellSelector, eGatesCellSelector, nonEeaCellSelector, paxRagGreenSelector} from "../support/commands";
-
-moment.locale("en-gb");
 
 describe('Arrivals page', () => {
 
@@ -79,7 +76,7 @@ describe('Arrivals page', () => {
       )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .get('.flight-origin .tooltip-trigger-onclick')
+      .get('.flight-origin .tooltip-trigger')
       .click()
       .get(".tippy-content")
       .contains("Schiphol, Amsterdam, Netherlands")

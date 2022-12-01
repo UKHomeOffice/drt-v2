@@ -1,4 +1,5 @@
-import moment from "moment-timezone";
+// import moment from "moment-timezone";
+const moment = require('moment-timezone');
 moment.locale("en-gb");
 
 const todayAtUtcString = (hours: number, minutes: number): string =>
@@ -33,6 +34,7 @@ const currentTimeString = (): string =>
         .format()
 
 export {
+    moment,
     todayAtUtc,
     todayAtUtcString,
     inDaysAtTimeUtcString,

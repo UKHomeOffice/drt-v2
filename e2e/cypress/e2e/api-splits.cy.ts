@@ -1,9 +1,6 @@
-import moment from "moment-timezone";
 import {manifestForDateTime, passengerProfiles, ukAdultWithId} from '../support/manifest-helpers'
 import {todayAtUtc} from '../support/time-helpers'
 import {paxRagGreenSelector} from "../support/commands";
-
-moment.locale("en-gb");
 
 
 describe('API splits', () => {
@@ -140,6 +137,7 @@ describe('API splits', () => {
       .waitForFlightToAppear("TS0123")
       .addManifest(apiManifest)
       .get(paxRagGreenSelector, {timeout: 5000})
+      .wait(100)
       .get('.egate-queue-pax')
       .contains("8")
       .get('.eeadesk-queue-pax')
@@ -153,11 +151,7 @@ describe('API splits', () => {
       })
       .get(".arrivals__table__flight__chart-box-wrapper .tooltip-trigger-onclick")
       .click()
-      .get(".nationality-chart")
-      .should("be.visible")
-      .get(".passenger-type-chart")
-      .should("be.visible")
-      .get(".age-breakdown-chart")
+      .get(".arrivals__table__flight__chart-box__chart")
       .should("be.visible")
     ;
 

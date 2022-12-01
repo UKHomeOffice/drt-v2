@@ -45,10 +45,4 @@ client/yarn.lock
 .ensime_cache/
 runsbt.sh
 
-# Cypress
-e2e/cypress/fixtures/example.json
-e2e/cypress/videos/*
-e2e/cypress/screenshots/*
-e2e/yarn.lock
-
 yarn.lock

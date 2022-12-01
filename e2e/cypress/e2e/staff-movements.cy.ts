@@ -1,10 +1,8 @@
-import moment from 'moment-timezone';
-moment.locale("en-gb");
+import {moment} from '../support/time-helpers'
 
 describe('Staff movements', () => {
 
   beforeEach(function () {
-    // const schDT = new Date().toISOString().split("T")[0];
     cy.deleteData()
       .addFlight({});
   });
@@ -105,8 +103,6 @@ describe('Staff movements', () => {
         .selectCurrentTab()
         .choose24Hours()
         .get('.staff-deployment-adjustment-container').should('exist')
-        .findAndClick('Recommendations')
-        .get('.staff-deployment-adjustment-container').should('exist')
     });
 
     it("BorderForceReadOnly should not be able to adjust the staff movement", () => {
@@ -116,8 +112,6 @@ describe('Staff movements', () => {
         .navigateToMenuItem('T1')
         .selectCurrentTab()
         .choose24Hours()
-        .get('.staff-deployment-adjustment-container').should('not.exist')
-        .findAndClick('Recommendations')
         .get('.staff-deployment-adjustment-container').should('not.exist')
     });
   });
@@ -134,17 +128,6 @@ Cypress.Commands.add('selectAdditionalReason', (reason) => {
   cy
     .get('.staff-adjustment--additional-info')
     .type(reason)
-});
-
-Cypress.Commands.add('incrementStaffInput', () => {
-  cy
-    .get('.staff-adjustment--num-staff__increase')
-    .click({force: true})
-});
-
-Cypress.Commands.add('staffDeployedAtRow', (row) => {
-  const selector = '#sticky-body > :nth-child(' + (row + 1) + ') > :nth-child(14)';
-  cy.get(selector);
 });
 
 Cypress.Commands.add('staffMovementsAtRow', (row) => {
@@ -174,13 +157,6 @@ Cypress.Commands.add('checkStaffMovementsOnDesksAndQueuesTabAre', (numStaff) => 
     cy.staffMovementsAtRow(row).contains(numStaff);
   });
   cy.staffMovementsAtRow(4).contains(0);
-});
-
-Cypress.Commands.add('checkStaffDeployedOnDesksAndQueuesTabAre', (numStaff) => {
-  [0, 1, 2, 3].map((row) => {
-    cy.staffDeployedAtRow(row).contains(numStaff);
-  });
-  cy.staffDeployedAtRow(4).contains(0);
 });
 
 Cypress.Commands.add('checkStaffNumbersOnMovementsTabAre', (numStaff) => {
