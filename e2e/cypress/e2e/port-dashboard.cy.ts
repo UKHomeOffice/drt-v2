@@ -27,7 +27,6 @@ describe('Port dashboard', () => {
       .asABorderForceOfficer()
       .navigateHome()
       .visit("/#portDashboard")
-      .wait(250)
       .get('.flights-total')
       .contains("1 Flight")
 

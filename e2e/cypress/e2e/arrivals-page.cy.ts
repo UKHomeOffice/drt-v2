@@ -76,7 +76,6 @@ describe('Arrivals page', () => {
       )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .wait(100)
       .get('.flight-origin .tooltip-trigger')
       .click()
       .get(".tippy-content")

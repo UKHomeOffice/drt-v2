@@ -153,10 +153,6 @@ describe('API splits', () => {
       .click()
       .get(".arrivals__table__flight__chart-box__chart")
       .should("be.visible")
-      // .get(".passenger-type-chart")
-      // .should("be.visible")
-      // .get(".age-breakdown-chart")
-      // .should("be.visible")
     ;
 
   });
