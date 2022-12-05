@@ -1,7 +1,7 @@
 FROM openjdk:8-jre-alpine
 WORKDIR /opt/docker
 ADD server/target/docker/stage/opt /opt
-RUN adduser -D -u 1000 drt-admin
+RUN adduser -D -u 1000 drt
 
 RUN ["chown", "-R", "1000:1000", "."]
 
@@ -14,10 +14,10 @@ RUN apk --update add openssh-client \
     pip --no-cache-dir install awscli && \
     rm -rf /var/cache/apk/*
 
-RUN mkdir /home/drt-admin/.ssh
-RUN ssh-keyscan -T 60 ftp.acl-uk.org >> /home/drt-admin/.ssh/known_hosts
-RUN ssh-keyscan -T 60 gateway.heathrow.com >> /home/drt-admin/.ssh/known_hosts
-RUN chown -R 1000:1000 /home/drt-admin/.ssh
+RUN mkdir /home/drt/.ssh
+RUN ssh-keyscan -T 60 ftp.acl-uk.org >> /home/drt/.ssh/known_hosts
+RUN ssh-keyscan -T 60 gateway.heathrow.com >> /home/drt/.ssh/known_hosts
+RUN chown -R 1000:1000 /home/drt/.ssh
 
 RUN mkdir -p /var/data
 RUN chown 1000:1000 -R /var/data
