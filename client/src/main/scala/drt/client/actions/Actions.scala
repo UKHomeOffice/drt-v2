@@ -6,7 +6,6 @@ import drt.client.components.scenarios.SimulationFormFields
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
-import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
 import drt.shared.api.{ForecastAccuracy, PassengerInfoSummary, WalkTimes}
 import org.scalajs.dom.FormData
@@ -154,18 +153,6 @@ object Actions {
   case class RetryActionAfter(action: Action, delay: FiniteDuration) extends Action
 
   case class DoNothing() extends Action
-
-  case object GetKeyCloakUsers extends Action
-
-  case class GetKeyCloakUser(userId: String) extends Action
-
-  case class SetKeyCloakUsers(users: List[KeyCloakUser]) extends Action
-
-  case class SaveUserGroups(userId: String, groupsToAdd: Set[String], groupsToRemove: Set[String]) extends Action
-
-  case class GetUserGroups(userId: String) extends Action
-
-  case class SetSelectedUserGroups(groups: Set[KeyCloakGroup]) extends Action
 
   case class GetAlerts(since: MillisSinceEpoch) extends Action
 
