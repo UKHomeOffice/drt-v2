@@ -32,10 +32,7 @@ const portOperatorRoles = ["port-operator-staff",
   "arrivals-and-splits:view",
   "api:view-port-arrivals"
 ]
-const cedatRoles = ["cedat-staff",
-  "arrivals-and-splits:view",
-  "api:view-port-arrivals"
-]
+
 export const paxRagGreenSelector = '.pax-rag-green'
 export const paxRagAmberSelector = '.pax-rag-amber'
 export const paxRagRedSelector = '.pax-rag-red'

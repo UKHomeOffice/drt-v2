@@ -5,7 +5,7 @@ import drt.client.SPAMain.TerminalPageModes.{Current, Planning, Staffing}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle}
-import drt.client.components.{ContactPage, EditKeyCloakUserPage, ForecastFileUploadPage, GlobalStyles, KeyCloakUsersPage, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
+import drt.client.components.{ContactPage, ForecastFileUploadPage, GlobalStyles, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -199,15 +199,11 @@ object SPAMain {
 
   case object PortConfigLoc extends Loc
 
-  case object KeyCloakUsersLoc extends Loc
-
   case object ForecastFileUploadLoc extends Loc
 
   case object FaqsLoc extends Loc
 
   case object DeskAndQueuesLoc extends Loc
-
-  case class KeyCloakUserEditLoc(userId: String) extends Loc
 
   case object AlertLoc extends Loc
 
@@ -241,8 +237,6 @@ object SPAMain {
         dashboardRoute(dsl) |
         terminalRoute(dsl) |
         statusRoute(dsl) |
-        keyCloakUsersRoute(dsl) |
-        keyCloakUserEditRoute(dsl) |
         contactRoute(dsl) |
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
@@ -259,10 +253,6 @@ object SPAMain {
             SPACircuit.dispatch(c.loadAction)
           case (_, UserDashboardLoc) =>
             SPACircuit.dispatch(GetUserDashboardState)
-          case (_, KeyCloakUsersLoc) =>
-            SPACircuit.dispatch(GetKeyCloakUsers)
-          case (_, KeyCloakUserEditLoc(userId)) =>
-            SPACircuit.dispatch(GetUserGroups(userId))
           case _ =>
         }
       )
@@ -284,21 +274,6 @@ object SPAMain {
     import dsl._
 
     staticRoute("#status", StatusLoc) ~> renderR((_: RouterCtl[Loc]) => StatusPage())
-  }
-
-  def keyCloakUsersRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#users", KeyCloakUsersLoc) ~> renderR((router: RouterCtl[Loc]) => KeyCloakUsersPage(router))
-  }
-
-  def keyCloakUserEditRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    dynamicRouteCT(("#editUser" / string(".+")).caseClass[KeyCloakUserEditLoc]) ~>
-      dynRenderR((page: KeyCloakUserEditLoc, _) => {
-        EditKeyCloakUserPage(page.userId)
-      })
   }
 
   def contactRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
@@ -360,7 +335,7 @@ object SPAMain {
 
   def exportUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
     case ViewDay(localDate, Some(tmDate)) =>
-      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/${localDate}/${tmDate.millisSinceEpoch}/$terminal")
+      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/$localDate/${tmDate.millisSinceEpoch}/$terminal")
     case view =>
       SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.toLocalDate.toISOString}/${view.dayEnd.toLocalDate.toISOString}/$terminal")
   }

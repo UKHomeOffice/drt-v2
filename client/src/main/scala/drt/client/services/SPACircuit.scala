@@ -206,8 +206,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new LoggedInUserHandler(zoomRW(_.loggedInUserPot)((m, v) => m.copy(loggedInUserPot = v))),
       new UserDashboardHandler(zoomRW(_.loggedInUserPot)((m, v) => m.copy(loggedInUserPot = v))),
       new UserHasPortAccessHandler(zoomRW(_.userHasPortAccess)((m, v) => m.copy(userHasPortAccess = v))),
-      new UsersHandler(zoomRW(_.keyCloakUsers)((m, v) => m.copy(keyCloakUsers = v))),
-      new EditUserHandler(zoomRW(_.selectedUserGroups)((m, v) => m.copy(selectedUserGroups = v))),
       new MinuteTickerHandler(zoomRW(_.minuteTicker)((m, v) => m.copy(minuteTicker = v))),
       new FeedsHandler(zoomRW(_.feedStatuses)((m, v) => m.copy(feedStatuses = v))),
       new AlertsHandler(zoomRW(_.alerts)((m, v) => m.copy(alerts = v))),
