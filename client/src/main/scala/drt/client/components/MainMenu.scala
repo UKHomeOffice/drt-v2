@@ -32,8 +32,6 @@ object MainMenu {
 
   val dashboardMenuItem: MenuItem = MenuItem(0, _ => "Dashboard", Icon.dashboard, UserDashboardLoc)
 
-  def usersMenuItem(position: Int): MenuItem = MenuItem(position, _ => "Users", Icon.users, KeyCloakUsersLoc)
-
   def statusMenuItem(position: Int, feeds: Seq[FeedSourceStatuses]): MenuItem = MenuItem(position, _ => s"Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
 
   val portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
@@ -70,9 +68,7 @@ object MainMenu {
       (BorderForceStaff, (offset: Int) => MenuItem(offset, _ => terminalName, Icon.calculator, targetLoc))
     }.toList
 
-    val restrictedMenuItems: List[(Role, Int => MenuItem)] = List(
-      (ManageUsers, usersMenuItem _),
-    ) ++ addFileUpload ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem))
+    val restrictedMenuItems: List[(Role, Int => MenuItem)] = addFileUpload ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem))
 
     val nonTerminalUnrestrictedMenuItems = dashboardMenuItem :: Nil
 
