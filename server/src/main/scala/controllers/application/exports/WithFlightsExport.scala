@@ -18,7 +18,7 @@ import services.SDate
 import services.exports.flights.ArrivalFeedExport
 import services.exports.flights.templates._
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, CedatStaff}
+import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -115,25 +115,21 @@ trait WithFlightsExport {
   }
 
   private val exportForUser: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport =
-    (user, portCode, _) =>
+    (user, _, _) =>
       (start, end, terminal) =>
-        (user.hasRole(CedatStaff), user.hasRole(ApiView), portCode) match {
-          case (true, _, _) => CedatFlightsExport(start, end, terminal)
-          case (false, true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
-          case (false, false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
-        }
+        if (user.hasRole(ApiView)) FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
+        else FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
 
   private val redListDiversionsExportForUser: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport =
     (user, portCode, redListUpdates) =>
       (start, end, terminal) =>
-        (user.hasRole(CedatStaff), user.hasRole(ApiView), portCode) match {
-          case (true, _, _) => CedatFlightsExport(start, end, terminal)
-          case (false, true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates)
-          case (false, false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates)
-          case (false, true, PortCode("BHX")) => BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals(start, end, terminal)
-          case (false, false, PortCode("BHX")) => BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals(start, end, terminal)
-          case (false, true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
-          case (false, false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
+        (user.hasRole(ApiView), portCode) match {
+          case (true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates)
+          case (false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates)
+          case (true, PortCode("BHX")) => BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals(start, end, terminal)
+          case (false, PortCode("BHX")) => BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals(start, end, terminal)
+          case (true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
+          case (false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
         }
 
   def exportArrivalsFromFeed(terminalString: String,

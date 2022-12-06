@@ -8,7 +8,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
-import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, CedatStaff, PortOperatorStaff}
+import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, PortOperatorStaff}
 
 object UserDashboardPage {
 
@@ -19,7 +19,7 @@ object UserDashboardPage {
       val loggedInUserRCP = SPACircuit.connect(_.loggedInUserPot)
       loggedInUserRCP(loggedInUserMP => {
         <.div(loggedInUserMP().renderReady(user => {
-          if (user.hasRole(PortOperatorStaff) || user.hasRole(CedatStaff))
+          if (user.hasRole(PortOperatorStaff))
             PortExportDashboardPage(user)
           else if (user.hasRole(BorderForceStaff))
             PortDashboardPage(p.router, PortDashboardLoc(None))
