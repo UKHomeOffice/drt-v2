@@ -27,8 +27,6 @@ declare global {
 
       asAPortOperator(): Chainable<Element>;
 
-      asACedatStaffMember(): Chainable<Element>;
-
       asATestPortUser(): Chainable<Element>;
 
       asATestSetupUser(): Chainable<Element>;
