@@ -8,7 +8,7 @@ import uk.gov.homeoffice.drt.ports.Queues._
 
 
 trait FlightsWithSplitsExport extends FlightsExport {
-  val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP,Total Pax"
+  val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled,Predicted Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP,Total Pax"
 
   val actualApiHeadings: Seq[String] = PaxTypesAndQueues.inOrder.map(heading => s"API Actual - ${heading.displayName}")
 
@@ -20,12 +20,14 @@ trait FlightsWithSplitsExport extends FlightsExport {
 
   def flightWithSplitsToCsvFields(fws: ApiFlightWithSplits,
                                   millisToLocalDateTimeString: MillisSinceEpoch => String): List[String] = {
-    List(fws.apiFlight.flightCodeString,
+    List(
+      fws.apiFlight.flightCodeString,
       fws.apiFlight.flightCodeString,
       fws.apiFlight.Origin.toString,
       fws.apiFlight.Gate.getOrElse("") + "/" + fws.apiFlight.Stand.getOrElse(""),
       fws.apiFlight.displayStatus.description,
       millisToLocalDateTimeString(fws.apiFlight.Scheduled),
+      fws.apiFlight.PredictedTouchdown.map(p => millisToLocalDateTimeString(p.value)).getOrElse(""),
       fws.apiFlight.Estimated.map(millisToLocalDateTimeString(_)).getOrElse(""),
       fws.apiFlight.Actual.map(millisToLocalDateTimeString(_)).getOrElse(""),
       fws.apiFlight.EstimatedChox.map(millisToLocalDateTimeString(_)).getOrElse(""),
