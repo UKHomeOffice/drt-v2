@@ -122,7 +122,8 @@ Cypress.Commands.add('navigateHome', () => {
 
 Cypress.Commands.add('navigateToMenuItem', (itemName) => {
   cy
-    .get('.main-menu-wrapper')
+    .get('.main-menu-content > :nth-child(1)')
+    .children()
     .contains(itemName)
     .click(5, 5, { force: true })
 });

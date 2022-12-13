@@ -6,7 +6,7 @@ describe('UI role access', () => {
       cy
         .asABorderForceOfficer()
         .navigateHome()
-        .get(".nav")
+        .get(".main-menu-content > :first-child")
         .should((nav) => {
           expect(nav).to.contain("Dashboard");
           expect(nav).to.contain("T1");
@@ -18,7 +18,7 @@ describe('UI role access', () => {
       cy
         .asAPortOperator()
         .navigateHome()
-        .get(".nav")
+        .get(".main-menu-content > :first-child")
         .should((nav) => {
           expect(nav).to.contain("Dashboard");
           expect(nav).not.to.contain("T1");

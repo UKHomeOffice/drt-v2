@@ -5,8 +5,8 @@ describe('Port switcher menu', () => {
     cy
       .asABorderForceOfficer()
       .navigateHome()
-      .get(".main-menu")
-      .find('li')
+      .get(".main-menu-content > :nth-child(1)")
+      .children()
       .should('have.length', 3)
   });
 
@@ -14,8 +14,8 @@ describe('Port switcher menu', () => {
     cy
       .asABorderForceOfficerWithRoles(["LHR"])
       .navigateHome()
-      .get(".main-menu")
-      .find('li')
+      .get(".main-menu-content > :nth-child(1)")
+      .children()
       .should('have.length', 4)
       .get(":nth-child(4) > a")
       .contains("LHR")
