@@ -11,8 +11,8 @@ import drt.shared._
 import japgolly.scalajs.react.component.Js
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, LI}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -28,15 +28,15 @@ object MainMenu {
                    airportConfig: AirportConfig,
                    user: LoggedInUser) extends UseValueEq
 
-  case class MenuItem(idx: Int, label: Props => VdomNode, icon: Icon, location: Loc, classes: List[String] = List())
+  case class MenuItem(idx: Int, label: String, icon: Icon, location: Loc, classes: List[String] = List())
 
-  val dashboardMenuItem: MenuItem = MenuItem(0, _ => "Dashboard", Icon.dashboard, UserDashboardLoc)
+  val dashboardMenuItem: MenuItem = MenuItem(0, "Dashboard", Icon.dashboard, UserDashboardLoc)
 
-  def statusMenuItem(position: Int, feeds: Seq[FeedSourceStatuses]): MenuItem = MenuItem(position, _ => s"Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
+  def statusMenuItem(position: Int, feeds: Seq[FeedSourceStatuses]): MenuItem = MenuItem(position, "Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
 
-  val portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, _ => s"Port Config", Icon.cogs, PortConfigLoc)
+  val portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, "Port Config", Icon.cogs, PortConfigLoc)
 
-  val forecastUploadFile: Int => MenuItem = (position: Int) => MenuItem(position, _ => "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
+  val forecastUploadFile: Int => MenuItem = (position: Int) => MenuItem(position, "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
 
   def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
     val statuses = feeds.map(f => FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, f.feedSource.maybeLastUpdateThreshold, f.feedStatuses))
@@ -65,7 +65,7 @@ object MainMenu {
               UrlTimeRangeEnd(tptl.timeRangeEndString)).queryParams)
         case _ => TerminalPageTabLoc(terminalName)
       }
-      (BorderForceStaff, (offset: Int) => MenuItem(offset, _ => terminalName, Icon.calculator, targetLoc))
+      (BorderForceStaff, (offset: Int) => MenuItem(offset, terminalName, Icon.calculator, targetLoc))
     }.toList
 
     val restrictedMenuItems: List[(Role, Int => MenuItem)] = addFileUpload ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem))
@@ -96,23 +96,24 @@ object MainMenu {
 
   private class Backend() {
     def render(props: Props): VdomTagOf[Div] = {
-      val children: Seq[TagOf[LI]] = for (item <- menuItems(props.airportConfig, props.currentLoc, props.user.roles, props.feeds)) yield {
+      val children = for (item <- menuItems(props.airportConfig, props.currentLoc, props.user.roles, props.feeds)) yield {
         val active = (props.currentLoc, item.location) match {
           case (TerminalPageTabLoc(tn, _, _, _), TerminalPageTabLoc(tni, _, _, _)) => tn == tni
           case (current, itemLoc) => current == itemLoc
         }
         val classes = List(("active", active))
-        <.li(^.key := item.idx, ^.classSet(classes: _*), ^.className := item.classes.mkString(" "),
-          props.router.link(item.location)(item.icon, " ", item.label(props))
+        <.div(^.key := item.idx, ^.classSet(classes: _*), ^.className := item.classes.mkString(" "),
+          props.router.link(item.location)(item.icon, " ", item.label)
         )
       }
 
-      val navItems: Seq[VdomTagOf[LI]] = if (props.user.portRoles.size > 1)
-        children :+ <.li(PortSwitcher(props.user, props.airportConfig.portCode))
+      val navItems = if (props.user.portRoles.size > 1)
+        children :+ <.div(PortSwitcher(props.user, props.airportConfig.portCode))
       else
         children
       <.div(
-        <.ul(^.classSet(bss.navbarClsSet.map(cn => (cn, true)): _*), ^.className := "main-menu")(navItems.toTagMod)
+        ^.className := "main-menu-items",
+        navItems.toTagMod
       )
     }
   }

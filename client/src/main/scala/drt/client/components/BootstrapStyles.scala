@@ -66,8 +66,6 @@ object BootstrapStyles extends StyleSheet.Inline {
 
   val labelAsBadgeCls = "label-as-badge"
   val labelAsBadge = style(addClassName(labelAsBadgeCls), borderRadius(1.em))
-  val navbarClsSet = Seq("nav", "navbar-nav")
-  val navbar = styleWrap("nav", "navbar-nav")
 
   val formGroup = styleWrap("form-group")
   val formControl = styleWrap("form-control")
