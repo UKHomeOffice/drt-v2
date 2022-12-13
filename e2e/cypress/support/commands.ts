@@ -122,7 +122,7 @@ Cypress.Commands.add('navigateHome', () => {
 
 Cypress.Commands.add('navigateToMenuItem', (itemName) => {
   cy
-    .get('.navbar-drt li')
+    .get('.main-menu-wrapper')
     .contains(itemName)
     .click(5, 5, { force: true })
 });

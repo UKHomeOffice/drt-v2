@@ -10,7 +10,7 @@ describe('Restrict access by port', () => {
     it("When I have the correct permission to view the port I see the app", () => {
       cy
         .asATestPortUser()
-        .navigateHome().then(() => cy.contains('.navbar-drt', 'DRT TEST'));
+        .navigateHome().then(() => cy.contains('.main-menu-wrapper', 'DRT TEST'));
     });
   });
 });
