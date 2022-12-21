@@ -39,7 +39,7 @@ object Settings {
     val uTest = "0.7.4"
     val h2 = "2.1.210"
 
-    val akka = "2.6.17"
+    val akka = "2.7.0"
     val akkaStreamContrib = "0.9"
 
     val specs2 = "4.6.0"
@@ -163,6 +163,16 @@ object Settings {
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
     "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
+    //"com.lightbend.akka" %% "akka-actor-typed" % akka force(),
+    "com.typesafe.akka" %%  "akka-slf4j" % akka force(),
+    "com.typesafe.akka" %%  "akka-persistence-typed" % akka force(),
+    "com.typesafe.akka" %%  "akka-remote" % akka force(),
+    "com.typesafe.akka" %%  "akka-persistence-testkit" % akka force(),
+    "com.typesafe.akka" %%  "akka-actor-testkit-typed" % akka force(),
+    "com.typesafe.akka" %%  "akka-testkit" % akka force(),
+    "com.typesafe.akka" %%  "akka-serialization-jackson" % akka force(),
+    "com.typesafe.akka" %%  "akka-pki" % akka force(),
+    "com.typesafe.akka" %%  "akka-stream-typed" % akka force(),
     "com.typesafe.akka" %% "akka-persistence-testkit" % akka force(),
     "com.typesafe.akka" %% "akka-testkit" % akka % "test" force(),
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test" force(),
@@ -191,7 +201,7 @@ object Settings {
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.0",
-
+    "com.fasterxml.jackson.core" % "jackson-core" % "2.10.0",
     "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
