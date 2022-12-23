@@ -2,20 +2,18 @@ package actors.persistent
 
 import actors.acking.AckingReceiver.StreamCompleted
 import actors.persistent.RedListUpdatesActor.{AddSubscriber, ReceivedSubscriberAck, SendToSubscriber}
-import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.staffing.GetState
 import actors.serializers.RedListUpdatesMessageConversion
 import akka.persistence._
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.util.Timeout
-import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.time.SDateLike
 import drt.shared.redlist._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.protobuf.messages.RedListUpdates.{RedListUpdatesMessage, RemoveUpdateMessage, SetRedListUpdateMessage}
 import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
@@ -43,7 +41,7 @@ class RedListUpdatesActor(val now: () => SDateLike) extends RecoveryActorLike wi
         .foreach(update => state = state.update(update))
 
     case delete: RemoveUpdateMessage =>
-      delete.date.map(effectiveFrom => state = state.remove(effectiveFrom))
+      delete.date.foreach(effectiveFrom => state = state.remove(effectiveFrom))
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
