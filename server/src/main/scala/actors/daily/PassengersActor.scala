@@ -1,16 +1,15 @@
 package actors.daily
 
-import actors.persistent.{RecoveryActorLike, Sizes}
+import actors.persistent.RecoveryActorLike
 import akka.actor.ActorRef
 import akka.persistence._
-import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
 import services.{PaxDeltas, SDate}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 
 case class PointInTimeOriginTerminalDay(pointInTime: Long, origin: String, terminal: String, day: Long)
@@ -59,7 +58,7 @@ class PassengersActor(maxDaysToConsider: Int, numDaysInAverage: Int, val now: ()
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case OriginTerminalPaxCountsMessages(messages) => messages.map { message =>
+    case OriginTerminalPaxCountsMessages(messages) => messages.foreach { message =>
       applyPaxCounts(message.getOrigin, message.getTerminal, message.counts)
     }
   }
