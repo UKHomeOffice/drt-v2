@@ -1,7 +1,5 @@
 package actors
 
-import actors.persistent.Sizes.oneMegaByte
-import com.amazonaws.auth.AWSCredentials
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 

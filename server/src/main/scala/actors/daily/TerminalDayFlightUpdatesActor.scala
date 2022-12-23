@@ -93,7 +93,7 @@ class TerminalDayFlightUpdatesActor(year: Int,
   override def receiveRecover: Receive = myReceiveRecover orElse streamingUpdatesReceiveRecover
 
   def myReceiveRecover: Receive = {
-    case SnapshotOffer(SnapshotMetadata(_, _, ts), m: FlightsWithSplitsMessage) =>
+    case SnapshotOffer(SnapshotMetadata(_, _, _), m: FlightsWithSplitsMessage) =>
       val flights = m.flightWithSplits.map(FlightMessageConversion.flightWithSplitsFromMessage)
       updatesAndRemovals = updatesAndRemovals ++ flights
 

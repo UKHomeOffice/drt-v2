@@ -159,7 +159,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
               case None => replyTo ! ManifestNotFound
             }
           case Failure(throwable) =>
-            log.error(s"Failed to look up manifest for $arrival")
+            log.error(s"Failed to look up manifest for $arrival", throwable.getMessage)
             replyTo ! ManifestNotFound
         }
 

@@ -1,12 +1,11 @@
 package actors.persistent.arrivals
 
-import actors.persistent.Sizes
 import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
-import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.ports.FeedSource
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object ArrivalsReadActor {
   def props(pointInTime: SDateLike, persistenceId: String, feedSource: FeedSource): Props = Props(

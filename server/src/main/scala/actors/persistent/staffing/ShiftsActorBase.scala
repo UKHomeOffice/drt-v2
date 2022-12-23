@@ -2,11 +2,9 @@ package actors.persistent.staffing
 
 import actors.ExpiryActorLike
 import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

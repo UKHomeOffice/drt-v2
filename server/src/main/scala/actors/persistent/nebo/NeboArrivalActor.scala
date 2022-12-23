@@ -2,7 +2,7 @@ package actors.persistent.nebo
 
 import actors.persistent.nebo.NeboArrivalActor.getRedListPassengerFlightKey
 import actors.persistent.staffing.GetState
-import actors.persistent.{PersistentDrtActor, RecoveryActorLike, Sizes}
+import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import actors.serializers.NeboArrivalMessageConversion._
 import akka.actor.Props
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}

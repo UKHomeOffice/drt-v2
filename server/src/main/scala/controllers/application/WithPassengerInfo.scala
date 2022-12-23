@@ -7,7 +7,6 @@ import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import controllers.Application
-import drt.shared.api.PassengerInfoSummary
 import drt.shared.{ArrivalKey, ErrorResponse}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests

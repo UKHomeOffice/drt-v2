@@ -26,6 +26,8 @@ object Settings {
 
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   object versions {
+    val drtLib = "v339"
+
     val scala = "2.12.13"
     val scalaDom = "1.1.0"
     val scalajsReact = "1.7.5"
@@ -70,7 +72,6 @@ object Settings {
     val openSaml = "2.6.1"
     val drtBirminghamSchema = "1.2.0"
     val drtCirium = "186"
-    val drtLib = "v335"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
     val uPickle = "2.0.0"

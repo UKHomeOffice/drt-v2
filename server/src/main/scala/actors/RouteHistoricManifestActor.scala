@@ -2,8 +2,8 @@ package actors
 
 import actors.acking.AckingReceiver
 import actors.acking.AckingReceiver.Ack
+import actors.persistent.RecoveryActorLike
 import actors.persistent.staffing.GetState
-import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.ManifestMessageConversion
 import akka.actor.{ActorSystem, PoisonPill, Props}
 import akka.pattern.ask

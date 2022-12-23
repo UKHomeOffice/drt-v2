@@ -10,7 +10,6 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PortCode, UnknownFeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage._
 import uk.gov.homeoffice.drt.protobuf.messages.Prediction.PredictionLongMessage
 

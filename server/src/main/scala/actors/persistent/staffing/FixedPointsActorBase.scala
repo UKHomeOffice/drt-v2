@@ -1,11 +1,9 @@
 package actors.persistent.staffing
 
 import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
 import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FixedPointAssignments, StaffAssignment, StaffAssignmentLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
@@ -27,7 +25,7 @@ class FixedPointsActor(val now: () => SDateLike, minutesToCrunch: Int, forecastL
   override def onUpdateDiff(fixedPoints: FixedPointAssignments): Unit = {
     log.info(s"Telling subscribers")
 
-    fixedPoints.assignments.groupBy(_.terminal).foreach { case (terminal, assignments) =>
+    fixedPoints.assignments.groupBy(_.terminal).foreach { case (terminal, _) =>
       if (fixedPoints.assignments.nonEmpty) {
         val earliest = now().millisSinceEpoch
         val latest = now().addDays(forecastLengthDays).millisSinceEpoch

@@ -357,8 +357,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode)
 
-    val simulator: TrySimulator = OptimiserWithFlexibleProcessors.runSimulationOfWork
-
     val tdModelProvider = TouchdownPrediction.modelAndFeaturesProvider(now, classOf[TouchdownPredictionActor])
 
     val addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {

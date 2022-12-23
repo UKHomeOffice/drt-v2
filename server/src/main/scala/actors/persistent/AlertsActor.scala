@@ -1,12 +1,10 @@
 package actors.persistent
 
 import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.Sizes.oneMegaByte
 import actors.persistent.staffing.GetState
 import actors.serializers.AlertMessageConversion
 import akka.persistence._
 import drt.shared.Alert
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

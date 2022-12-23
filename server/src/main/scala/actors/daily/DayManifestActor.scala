@@ -1,8 +1,8 @@
 package actors.daily
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.persistent.RecoveryActorLike
 import actors.persistent.staffing.GetState
-import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.ManifestMessageConversion
 import akka.actor.Props
 import akka.persistence.SaveSnapshotSuccess
