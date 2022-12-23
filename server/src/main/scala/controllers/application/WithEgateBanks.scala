@@ -20,8 +20,8 @@ trait WithEgateBanks {
 
   def getEgateBanksUpdates: Action[AnyContent] =
     Action.async { _ =>
-      implicit val banksUpdatesFormat = EgateBanksJsonFormats.egateBanksUpdatesJsonFormat
-      implicit val portBanksUpdatesFormat = EgateBanksJsonFormats.portEgateBanksUpdatesJsonFormat
+      implicit val banksUpdatesFormat: EgateBanksJsonFormats.egateBanksUpdatesJsonFormat.type = EgateBanksJsonFormats.egateBanksUpdatesJsonFormat
+      implicit val portBanksUpdatesFormat: EgateBanksJsonFormats.portEgateBanksUpdatesJsonFormat.type = EgateBanksJsonFormats.portEgateBanksUpdatesJsonFormat
       ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates].map(r => Ok(r.toJson.compactPrint))
     }
 
@@ -38,9 +38,7 @@ trait WithEgateBanks {
           case Some(text) =>
             import spray.json._
 
-            implicit val rdu = EgateBanksJsonFormats.egateBanksUpdateJsonFormat
-            implicit val rdus = EgateBanksJsonFormats.egateBanksUpdatesJsonFormat
-            implicit val srdu = EgateBanksJsonFormats.setEgateBanksUpdatesJsonFormat
+            import EgateBanksJsonFormats.setEgateBanksUpdatesJsonFormat
 
             val setUpdate = text.parseJson.convertTo[SetEgateBanksUpdate]
 
@@ -101,7 +99,7 @@ object EgateBanksJsonFormats extends DefaultJsonProtocol {
       case JsObject(fields) => fields.get("updates") match {
         case Some(JsObject(updates)) =>
           val egateBanksUpdates = updates.map {
-            case (effectiveFrom, egateBanksUpdateJson) => egateBanksUpdateJson.convertTo[EgateBanksUpdate]
+            case (_, egateBanksUpdateJson) => egateBanksUpdateJson.convertTo[EgateBanksUpdate]
           }
           EgateBanksUpdates(egateBanksUpdates.toList)
       }
@@ -131,7 +129,7 @@ object EgateBanksJsonFormats extends DefaultJsonProtocol {
           case Some(terminalName) => Terminal(terminalName)
           case None => throw new Exception(s"Didn't find a valid terminal name in $className")
         }
-        case unexpected => throw new Exception(s"Expected a JsString. None found")
+        case _ => throw new Exception(s"Expected a JsString. None found")
       }
       case unexpected => throw new Exception(s"Expected a JsObject. Found ${unexpected.getClass}")
     }
