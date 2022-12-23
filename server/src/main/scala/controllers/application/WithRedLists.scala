@@ -41,7 +41,6 @@ trait WithRedLists {
 
   def getRedListUpdatesLegacy: Action[AnyContent] =
     Action.async { _ =>
-      implicit val rluFormat: RedListJsonFormats.redListUpdatesJsonFormat.type = RedListJsonFormats.redListUpdatesJsonFormat
       ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(write(r)))
     }
 
@@ -52,9 +51,7 @@ trait WithRedLists {
           case Some(text) =>
             import spray.json._
 
-            implicit val rdu = RedListJsonFormats.redListUpdateJsonFormat
-            implicit val rdus = RedListJsonFormats.redListUpdatesJsonFormat
-            implicit val srdu = RedListJsonFormats.setRedListUpdatesJsonFormat
+            import RedListJsonFormats.setRedListUpdatesJsonFormat
 
             val setUpdate = text.parseJson.convertTo[SetRedListUpdate]
 
