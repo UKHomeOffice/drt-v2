@@ -4,12 +4,12 @@ import actors.PartitionedPortStateActor.GetUpdatesSince
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
-import akka.pattern.{AskTimeoutException, ask, pipe}
+import akka.pattern.{AskTimeoutException, ask}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
+import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import org.slf4j.{Logger, LoggerFactory}
 import services.SDate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -83,7 +83,7 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
       terminalsAndDaysUpdatesSource(terminalDays, sinceMillis)
         .log(getClass.getName)
         .runWith(Sink.fold(FlightsWithSplitsDiff.empty)(_ ++ _))
-        .pipeTo(replyTo)
+        .foreach(replyTo ! _)
 
     case UpdateLastRequest(terminal, day, lastRequestMillis) =>
       lastRequests = lastRequests + ((terminal, day) -> lastRequestMillis)
