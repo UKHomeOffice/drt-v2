@@ -101,7 +101,7 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
       terminalsAndDaysUpdatesSource(terminalDays, sinceMillis)
         .log(getClass.getName)
         .runWith(Sink.fold(MinutesContainer.empty[A, B])(_ ++ _))
-        .pipeTo(replyTo)
+        .foreach(replyTo ! _)
 
     case UpdateLastRequest(terminal, day, lastRequestMillis) =>
       lastRequests = lastRequests + ((terminal, day) -> lastRequestMillis)
