@@ -2,13 +2,14 @@ package actors.persistent.staffing
 
 import actors._
 import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
+import actors.persistent.PersistentDrtActor
 import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
 import drt.shared.{StaffMovement, StaffMovements}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}

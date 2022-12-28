@@ -2,7 +2,6 @@ package actors
 
 import actors.acking.AckingReceiver
 import actors.acking.AckingReceiver.Ack
-import actors.persistent.RecoveryActorLike
 import actors.persistent.staffing.GetState
 import actors.serializers.ManifestMessageConversion
 import akka.actor.{ActorSystem, PoisonPill, Props}
@@ -14,6 +13,7 @@ import manifests.UniqueArrivalKey
 import manifests.passengers.ManifestLike
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{ManifestLikeMessage, MaybeManifestLikeMessage}

@@ -8,6 +8,7 @@ import drt.shared.Alert
 import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.protobuf.messages.Alert.{AlertSnapshotMessage, Alert => ProtobufAlert}
 import uk.gov.homeoffice.drt.time.SDateLike
 

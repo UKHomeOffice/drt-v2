@@ -11,6 +11,7 @@ import akka.util.Timeout
 import drt.shared.redlist._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.protobuf.messages.RedListUpdates.{RedListUpdatesMessage, RemoveUpdateMessage, SetRedListUpdateMessage}
 import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdateCommand, RedListUpdates, SetRedListUpdate}
 import uk.gov.homeoffice.drt.time.SDateLike

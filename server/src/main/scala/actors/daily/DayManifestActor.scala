@@ -1,7 +1,6 @@
 package actors.daily
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.persistent.RecoveryActorLike
 import actors.persistent.staffing.GetState
 import actors.serializers.ManifestMessageConversion
 import akka.actor.Props
@@ -11,6 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.VoyageManifestsMessage
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 

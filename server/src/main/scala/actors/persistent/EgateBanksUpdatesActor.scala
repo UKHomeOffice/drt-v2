@@ -14,6 +14,7 @@ import akka.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.egates._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}

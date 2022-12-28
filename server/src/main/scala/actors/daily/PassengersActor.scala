@@ -1,11 +1,11 @@
 package actors.daily
 
-import actors.persistent.RecoveryActorLike
 import akka.actor.ActorRef
 import akka.persistence._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.PaxDeltas
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}

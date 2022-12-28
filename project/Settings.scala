@@ -41,7 +41,7 @@ object Settings {
     val uTest = "0.7.4"
     val h2 = "2.1.210"
 
-    val akka = "2.6.17"
+    val akka = "2.6.20"
     val akkaStreamContrib = "0.9"
 
     val specs2 = "4.6.0"
