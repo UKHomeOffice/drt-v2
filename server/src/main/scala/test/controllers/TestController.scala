@@ -13,7 +13,7 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 import play.api.Configuration
 import play.api.http.HeaderNames
 import play.api.mvc.{Action, AnyContent, InjectedController, Session}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import spray.json._
 import test.TestActors.ResetData
 import test.TestDrtSystem

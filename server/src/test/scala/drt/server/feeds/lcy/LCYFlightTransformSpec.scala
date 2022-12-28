@@ -3,7 +3,7 @@ package drt.server.feeds.lcy
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
 import uk.gov.homeoffice.drt.ports.Terminals.T1

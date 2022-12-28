@@ -5,17 +5,17 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorAttributes, Supervision}
 import com.box.sdk._
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.{N, S}
+import uk.gov.homeoffice.drt.time.SDate
 
 import java.io.{ByteArrayOutputStream, File, FileReader}
 import java.nio.file.FileSystems
@@ -63,7 +63,7 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
     if (rows.length <= 1) throw new Exception(s"The latest forecast file '$fileName' has no data.")
     val header = rows.head
     log.info(s"The header of the CSV file $fileName is: '$header'.")
-    if (header.split(",").size != TOTAL_COLUMNS) {
+    if (header.split(",").length != TOTAL_COLUMNS) {
       log.warn(s"The CSV file header has does not have $TOTAL_COLUMNS, This is the header [$header].")
     }
     val body = rows.tail.filterNot(row => StringUtils.isBlank(row.replaceAll(",", "")))

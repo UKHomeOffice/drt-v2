@@ -2,11 +2,10 @@ package manifests.passengers
 
 import manifests.UniqueArrivalKey
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import services.SDate
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumberLike}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 case class ManifestPaxCount(source: SplitSource,
                             arrivalPortCode: PortCode,

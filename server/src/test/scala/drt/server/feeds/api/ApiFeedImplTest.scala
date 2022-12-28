@@ -7,7 +7,7 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode

@@ -1,11 +1,11 @@
 package drt.server.feeds.lcy
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.server.feeds.common.ProdHttpClient
 import drt.shared.FlightsApi.Flights
 import org.specs2.mock.Mockito
 import org.specs2.specification.Scope
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._

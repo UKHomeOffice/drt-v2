@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Queues
 

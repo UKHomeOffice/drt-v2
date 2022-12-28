@@ -4,6 +4,7 @@ import actors.persistent.LiveManifestBookmarkActor.{GetMarker, SetMarker}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.protobuf.messages.Timestamp.Timestamp
 import uk.gov.homeoffice.drt.time.SDateLike
 

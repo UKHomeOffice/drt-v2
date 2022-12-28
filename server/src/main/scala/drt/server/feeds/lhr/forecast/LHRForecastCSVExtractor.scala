@@ -3,7 +3,7 @@ package drt.server.feeds.lhr.forecast
 import drt.server.feeds.lhr.LHRForecastFeed
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.LoggerFactory
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.time.SDateLike

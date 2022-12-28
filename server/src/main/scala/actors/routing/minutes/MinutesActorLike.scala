@@ -7,18 +7,16 @@ import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.routing.{RouterActorLike, RouterActorLike2, SequentialAccessActor}
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
-import akka.pattern.pipe
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi.FlightsWithSplits
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import services.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.collection.immutable
 import scala.concurrent.Future
@@ -55,19 +53,23 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
       sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), Option(pit))
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
-      handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).pipeTo(sender())
+      val replyTo = sender()
+      handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).foreach(replyTo ! _)
 
     case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
-      handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).pipeTo(sender())
+      val replyTo = sender()
+      handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).foreach(replyTo ! _)
 
     case GetStateForDateRange(startMillis, endMillis) =>
-      handleAllTerminalLookupsStream(startMillis, endMillis, None).pipeTo(sender())
+      val replyTo = sender()
+      handleAllTerminalLookupsStream(startMillis, endMillis, None).foreach(replyTo ! _)
 
     case GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis) =>
       sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), None)
 
     case request: DateRangeLike with TerminalRequest =>
-      handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).pipeTo(sender())
+      val replyTo = sender()
+      handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).foreach(replyTo ! _)
   }
 
   def handleAllTerminalLookupsStream(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, maybePit: Option[MillisSinceEpoch]): Future[MinutesContainer[A, B]] = {
@@ -163,19 +165,23 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[T
       sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), Option(pit))
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
-      handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).pipeTo(sender())
+      val replyTo = sender()
+      handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).foreach(replyTo ! _)
 
     case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
-      handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).pipeTo(sender())
+      val replyTo = sender()
+      handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).foreach(replyTo ! _)
 
     case GetStateForDateRange(startMillis, endMillis) =>
-      handleAllTerminalLookupsStream(startMillis, endMillis, None).pipeTo(sender())
+      val replyTo = sender()
+      handleAllTerminalLookupsStream(startMillis, endMillis, None).foreach(replyTo ! _)
 
     case GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis) =>
       sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), None)
 
     case request: DateRangeLike with TerminalRequest =>
-      handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).pipeTo(sender())
+      val replyTo = sender()
+      handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).foreach(replyTo ! _)
   }
 
   def handleAllTerminalLookupsStream(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, maybePit: Option[MillisSinceEpoch]): Future[MinutesContainer[A, B]] = {

@@ -5,7 +5,7 @@ import drt.shared.api.{AgeRange, PassengerInfoSummary, PaxAgeRange, UnknownAge}
 import manifests.passengers.PassengerInfo
 import manifests.paxinfo.ManifestBuilder._
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.{PaxTypes, PortCode}

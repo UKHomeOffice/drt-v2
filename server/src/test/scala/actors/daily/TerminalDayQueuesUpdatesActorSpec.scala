@@ -9,7 +9,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import uk.gov.homeoffice.drt.time.SDateLike
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.CrunchMinuteMessage
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import test.TestActors.TestTerminalDayQueuesActor
 import uk.gov.homeoffice.drt.ports.Queues

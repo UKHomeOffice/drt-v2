@@ -1,10 +1,9 @@
 package actors.persistent.arrivals
 
-import actors.persistent.Sizes
-import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.ports.ForecastFeedSource
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
+import uk.gov.homeoffice.drt.time.SDateLike
 
 
 object PortForecastArrivalsActor {

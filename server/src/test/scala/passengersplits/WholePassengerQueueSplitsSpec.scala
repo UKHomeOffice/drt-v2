@@ -2,7 +2,7 @@ package passengersplits
 
 import org.specs2.mutable.Specification
 import passengersplits.WholePassengerQueueSplits.{paxLoadsPerMinute, wholePassengerSplits, wholePaxPerQueuePerMinute}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, EeaNonMachineReadable}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Open, Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}

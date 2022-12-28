@@ -6,7 +6,7 @@ import akka.testkit.TestProbe
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.time.SDateLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import services.graphstages.Crunch
 

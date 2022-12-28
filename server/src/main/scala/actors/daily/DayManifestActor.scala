@@ -2,7 +2,6 @@ package actors.daily
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.GetState
-import actors.persistent.{RecoveryActorLike, Sizes}
 import actors.serializers.ManifestMessageConversion
 import akka.actor.Props
 import akka.persistence.SaveSnapshotSuccess
@@ -11,9 +10,9 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import scalapb.GeneratedMessage
-import services.SDate
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.VoyageManifestsMessage
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 object DayManifestActor {
   def props(date: UtcDate): Props =

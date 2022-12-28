@@ -3,6 +3,7 @@ package services
 import drt.shared.redlist.LhrRedListDatesImpl
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.time.SDate
 
 class LhrRedListDatesImplSpec extends Specification {
   "A LhrRedListDatesImpl should" >> {

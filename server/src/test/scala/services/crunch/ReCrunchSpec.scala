@@ -4,7 +4,7 @@ import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.PortState
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
 

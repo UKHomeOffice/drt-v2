@@ -5,6 +5,7 @@ import org.renjin.sexp.{DoubleVector, IntVector}
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.egates.{Desk, EgateBank}
+import uk.gov.homeoffice.drt.time.SDate
 
 import java.io.InputStream
 import javax.script.{ScriptEngine, ScriptEngineManager}

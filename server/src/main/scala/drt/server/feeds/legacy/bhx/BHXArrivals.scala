@@ -4,7 +4,7 @@ import drt.server.feeds.Implicits._
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import org.springframework.util.StringUtils
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

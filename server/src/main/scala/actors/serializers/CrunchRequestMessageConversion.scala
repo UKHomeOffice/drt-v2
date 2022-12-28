@@ -1,7 +1,6 @@
 package actors.serializers
 
 import org.slf4j.{Logger, LoggerFactory}
-import scalapb.GeneratedMessage
 import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchRequestMessage, RemoveCrunchRequestMessage}

@@ -9,7 +9,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.ShiftAssignments
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

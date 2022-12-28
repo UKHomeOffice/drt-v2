@@ -5,7 +5,7 @@ import org.joda.time.DateTimeZone
 import org.mockito.Mockito.verify
 import org.specs2.matcher.Scope
 import org.specs2.mock.Mockito
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.co.bhx.online.flightinformation._
 import uk.gov.homeoffice.drt.arrivals.Arrival

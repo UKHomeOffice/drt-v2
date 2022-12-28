@@ -4,10 +4,9 @@ import akka.actor.typed.ActorRef
 import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
-import drt.server.feeds.Feed
+import drt.server.feeds.{ArrivalsFeedFailure, Feed}
 import drt.server.feeds.ltn.{LtnFeedRequestLike, LtnLiveFeed}
 import org.joda.time.DateTimeZone
-import server.feeds.ArrivalsFeedFailure
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.duration._

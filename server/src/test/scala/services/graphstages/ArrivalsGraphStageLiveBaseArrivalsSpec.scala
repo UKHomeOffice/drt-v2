@@ -7,15 +7,15 @@ import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import org.specs2.specification.AfterEach
+import services.PcpArrival
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsNoop}
 import services.crunch.CrunchTestLike
-import services.{PcpArrival, SDate}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Prediction, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 import uk.gov.homeoffice.drt.time.MilliTimes.oneDayMillis
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._

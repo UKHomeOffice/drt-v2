@@ -3,8 +3,8 @@ package services.graphstages
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
-import services.SDate.implicits.sdateFromMillisLocal
+import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch.europeLondonTimeZone
 import uk.gov.homeoffice.drt.ports.Queues.Queue

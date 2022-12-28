@@ -1,17 +1,17 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
+import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
-import server.feeds.ArrivalsFeedSuccess
-import services.SDate
 import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.List
 import scala.concurrent.duration._
@@ -71,7 +71,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
             offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-            crunch.portStateTestProbe.fishForMessage(5 seconds) {
+            crunch.portStateTestProbe.fishForMessage(5.seconds) {
               case ps: PortState =>
                 val midnightBstEeaFiveDesks = ps.crunchMinutes.values.exists(cm => cm.minute == SDate("2017-05-31T23:00").millisSinceEpoch && cm.deskRec == 0)
                 val oneAmBstEeaZeroDesks = ps.crunchMinutes.values.exists(cm => cm.minute == SDate("2017-06-01T00:00").millisSinceEpoch && cm.deskRec == 5)

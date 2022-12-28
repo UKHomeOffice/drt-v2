@@ -5,7 +5,7 @@ import drt.server.feeds.lgw.LGWForecastFeed
 import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.S
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}

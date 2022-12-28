@@ -12,7 +12,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.exports.StaffMovementsExport
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -26,7 +26,7 @@ import scala.concurrent.Future
 trait WithStaffing {
   self: Application =>
 
-  import services.SDate.implicits.sdateFromMillisLocal
+  import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 
   def getFixedPoints: Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>

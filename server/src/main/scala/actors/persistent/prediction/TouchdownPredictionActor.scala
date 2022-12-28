@@ -1,17 +1,16 @@
 package actors.persistent.prediction
 
 import actors.persistent.staffing.GetState
-import actors.persistent.{RecoveryActorLike, Sizes}
-import uk.gov.homeoffice.drt.arrivals.VoyageNumber
-import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
-import uk.gov.homeoffice.drt.time.SDateLike
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.ModelAndFeatures.ModelAndFeaturesMessage
-import services.SDate
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
+import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
+import uk.gov.homeoffice.drt.protobuf.messages.ModelAndFeatures.ModelAndFeaturesMessage
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 class TouchdownPredictionActor(val now: () => SDateLike,
                                terminal: Terminal,

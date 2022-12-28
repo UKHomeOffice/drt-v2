@@ -2,7 +2,7 @@ package actors.serializers
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, SetRedListUpdate}
 
 class RedListUpdatesMessageConversionSpec extends Specification {

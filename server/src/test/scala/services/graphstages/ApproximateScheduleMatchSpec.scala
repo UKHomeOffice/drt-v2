@@ -1,7 +1,7 @@
 package services.graphstages
 
 import controllers.ArrivalGenerator
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import services.graphstages.ApproximateScheduleMatch._
 import uk.gov.homeoffice.drt.ports.PortCode

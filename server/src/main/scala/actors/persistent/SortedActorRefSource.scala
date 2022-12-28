@@ -1,10 +1,10 @@
 package actors.persistent
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.stage._
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, RemoveCrunchRequest}
 
 import scala.collection.{SortedSet, mutable}
@@ -21,7 +21,6 @@ final class SortedActorRefSource(persistentActor: ActorRef,
                                  initialQueue: SortedSet[ProcessingRequest],
                                  graphName: String,
                                 )
-                                (implicit system: ActorSystem)
   extends GraphStageWithMaterializedValue[SourceShape[ProcessingRequest], ActorRef] {
 
   import SortedActorRefSource._

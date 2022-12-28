@@ -11,7 +11,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FeedSourceStatuses, FeedStatuses}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.ports.FeedSource
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}

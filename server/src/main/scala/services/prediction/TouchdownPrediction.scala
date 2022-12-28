@@ -9,13 +9,12 @@ import akka.util.Timeout
 import drt.shared.ArrivalsDiff
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
-import services.SDate
 import services.prediction.TouchdownPrediction.MaybeModelAndFeaturesProvider
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Prediction, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.prediction.TouchdownModelAndFeatures
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration.DurationLong
 import scala.concurrent.{ExecutionContext, Future}

@@ -12,7 +12,7 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.AirportConfig

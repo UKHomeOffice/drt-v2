@@ -6,10 +6,11 @@ import services.crunch.CrunchTestLike
 import services.crunch.desklimits.EgatesCapacityProvider
 import services.crunch.desklimits.flexed.WorkloadProcessorsHelper.uniformDesksForHours
 import services.graphstages.Crunch
-import services.{SDate, WorkloadProcessors, WorkloadProcessorsProvider}
+import services.{WorkloadProcessors, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.egates.{Desk, EgateBank, EgateBanksUpdate, EgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.time.MilliTimes.oneHourMillis
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.Await

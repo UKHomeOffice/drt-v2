@@ -9,7 +9,7 @@ import drt.shared.splits.ApiSplitsToSplitRatio
 import drt.shared.{ArrivalKey, CodeShares}
 import org.joda.time.DateTimeZone
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.exports.Exports
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}

@@ -1,21 +1,16 @@
 package actors.persistent.arrivals
 
-import actors.persistent.Sizes
 import actors.persistent.staffing.GetState
 import actors.serializers.FlightMessageConversion
-import actors.serializers.FlightMessageConversion.{feedStatusesFromSnapshotMessage, restoreArrivalsFromSnapshot}
 import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
-import drt.shared.{FeedSourceArrival, FeedSourceStatuses}
+import drt.shared.FeedSourceArrival
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2, T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FlightMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
-
-import scala.collection.immutable.SortedMap
 
 object ArrivalLookupActor {
   def props(portCode: PortCode, pointInTime: SDateLike, arrivalToLookup: UniqueArrival, persistenceId: String, feedSource: FeedSource): Props = Props(

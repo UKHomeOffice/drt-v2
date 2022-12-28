@@ -9,10 +9,9 @@ import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.TQM
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
-import services.SDate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 
 class TerminalDayQueuesUpdatesActor(year: Int,

@@ -7,9 +7,9 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared.TM
 import org.slf4j.LoggerFactory
-import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.ExecutionContext
 

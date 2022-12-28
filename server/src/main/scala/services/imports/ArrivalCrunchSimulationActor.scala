@@ -8,7 +8,7 @@ import akka.pattern.pipe
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.FlightsApi.FlightsWithSplits
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.{ExecutionContextExecutor, Promise}
 import scala.util.Try

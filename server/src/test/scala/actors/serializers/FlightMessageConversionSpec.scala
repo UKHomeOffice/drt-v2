@@ -2,7 +2,7 @@ package actors.serializers
 
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
 import uk.gov.homeoffice.drt.arrivals._

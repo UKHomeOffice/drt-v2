@@ -8,10 +8,9 @@ import com.typesafe.config.{Config, ConfigFactory}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaLiveFlight, ChromaToken}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.http.WithSendAndReceive
-import drt.server.feeds.Feed
+import drt.server.feeds.{ArrivalsFeedFailure, Feed}
 import drt.server.feeds.chroma.ChromaLiveFeed
 import org.specs2.matcher.MatchResult
-import server.feeds.ArrivalsFeedFailure
 import services.crunch.CrunchTestLike
 
 import scala.collection.JavaConverters._

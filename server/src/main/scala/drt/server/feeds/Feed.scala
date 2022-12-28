@@ -4,7 +4,6 @@ import akka.actor.typed
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.Source
 import akka.stream.typed.scaladsl.ActorSource
-import server.feeds.ArrivalsFeedResponse
 
 import scala.concurrent.duration.FiniteDuration
 

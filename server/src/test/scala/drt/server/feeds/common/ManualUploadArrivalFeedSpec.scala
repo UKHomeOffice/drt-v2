@@ -2,7 +2,7 @@ package drt.server.feeds.common
 
 import akka.actor.{Actor, Props}
 import akka.util.Timeout
-import server.feeds.ArrivalsFeedFailure
+import drt.server.feeds.ArrivalsFeedFailure
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.Await

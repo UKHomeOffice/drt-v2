@@ -5,7 +5,7 @@ import drt.server.feeds.common.XlsExtractorUtil._
 import drt.server.feeds.lhr.LHRForecastFeed
 import org.apache.poi.ss.usermodel.DateUtil
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch.europeLondonId
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.time.SDateLike

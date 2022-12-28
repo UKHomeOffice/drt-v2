@@ -1,11 +1,11 @@
 package services.persistence
 
-import actors.persistent.RecoveryActorLike
 import akka.actor.{ActorRef, Props}
 import akka.testkit.TestProbe
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FlightMessage, FlightsDiffMessage}
 
 import scala.concurrent.duration._

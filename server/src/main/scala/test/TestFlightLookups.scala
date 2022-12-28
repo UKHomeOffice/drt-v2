@@ -2,13 +2,12 @@ package test
 
 import actors.FlightLookupsLike
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
-import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.time.SDateLike
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.UtcDate
 import test.TestActors.{ResetData, TestFlightsRouterActor, TestTerminalDayFlightActor}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.concurrent.Future
 

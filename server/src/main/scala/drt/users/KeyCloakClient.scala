@@ -12,7 +12,6 @@ import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import org.slf4j.{Logger, LoggerFactory}
 import spray.json.{DefaultJsonProtocol, JsObject, JsValue, RootJsonFormat}
 
-import java.util.UUID
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.language.postfixOps

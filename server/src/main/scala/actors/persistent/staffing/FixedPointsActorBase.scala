@@ -1,19 +1,17 @@
 package actors.persistent.staffing
 
 import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.Sizes.oneMegaByte
-import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
+import actors.persistent.PersistentDrtActor
 import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FixedPointAssignments, StaffAssignment, StaffAssignmentLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 
 case class SetFixedPoints(newFixedPoints: Seq[StaffAssignmentLike])
@@ -27,7 +25,7 @@ class FixedPointsActor(val now: () => SDateLike, minutesToCrunch: Int, forecastL
   override def onUpdateDiff(fixedPoints: FixedPointAssignments): Unit = {
     log.info(s"Telling subscribers")
 
-    fixedPoints.assignments.groupBy(_.terminal).foreach { case (terminal, assignments) =>
+    fixedPoints.assignments.groupBy(_.terminal).foreach { case (terminal, _) =>
       if (fixedPoints.assignments.nonEmpty) {
         val earliest = now().millisSinceEpoch
         val latest = now().addDays(forecastLengthDays).millisSinceEpoch
@@ -52,7 +50,7 @@ class FixedPointsActor(val now: () => SDateLike, minutesToCrunch: Int, forecastL
 
 abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[FixedPointAssignments] {
 
-  import services.SDate.implicits.sdateFromMillisLocal
+  import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 

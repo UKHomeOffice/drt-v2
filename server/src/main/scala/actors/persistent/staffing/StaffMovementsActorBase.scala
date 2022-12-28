@@ -2,20 +2,18 @@ package actors.persistent.staffing
 
 import actors._
 import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.Sizes.oneMegaByte
-import actors.persistent.{PersistentDrtActor, RecoveryActorLike}
+import actors.persistent.PersistentDrtActor
 import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{StaffMovement, StaffMovements}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 
 case class StaffMovementsState(staffMovements: StaffMovements) {

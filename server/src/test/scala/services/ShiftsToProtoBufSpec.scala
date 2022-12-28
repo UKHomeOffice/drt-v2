@@ -5,6 +5,7 @@ import drt.shared.{ShiftAssignments, StaffAssignment}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftsMessage}
+import uk.gov.homeoffice.drt.time.SDate
 
 class ShiftsToProtoBufSpec extends Specification {
 

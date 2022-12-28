@@ -1,5 +1,6 @@
 package services
 
+import uk.gov.homeoffice.drt.time.SDate
 import utest.{TestSuite, _}
 
 object ServerShiftDateTests extends TestSuite {

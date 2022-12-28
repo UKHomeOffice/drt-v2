@@ -3,7 +3,7 @@ package services.graphstages
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared._
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.time.SDateLike
 

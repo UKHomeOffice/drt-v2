@@ -1,6 +1,6 @@
 package services.crunch
 
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
 
 

@@ -5,7 +5,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.{TM, TQM}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.`export`.CsvTestHelper.{dropHeadings, resultStreamToCSV, takeCSVLines}
 import services.crunch.CrunchTestLike
 import services.exports.StreamingDesksExport

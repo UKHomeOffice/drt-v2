@@ -2,7 +2,7 @@ package services
 
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.concurrent.{ExecutionContext, Future}
 

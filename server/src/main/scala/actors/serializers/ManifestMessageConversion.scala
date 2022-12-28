@@ -3,7 +3,7 @@ package actors.serializers
 import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventType, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource

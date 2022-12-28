@@ -2,10 +2,9 @@ package services.prediction
 
 import actors.persistent.prediction.TouchdownPredictionActor
 import controllers.ArrivalGenerator
+import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.FlightsApi.Flights
 import drt.shared.{ArrivalsDiff, PortState}
-import server.feeds.ArrivalsFeedSuccess
-import services.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
 import services.prediction.TouchdownPrediction.MaybeModelAndFeaturesProvider
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
@@ -13,7 +12,7 @@ import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
 import uk.gov.homeoffice.drt.prediction.Feature.OneToMany
 import uk.gov.homeoffice.drt.prediction.{FeaturesWithOneToManyValues, RegressionModel, TouchdownModelAndFeatures}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt

@@ -9,7 +9,7 @@ import akka.testkit.{ImplicitSender, TestProbe}
 import com.typesafe.config.ConfigFactory
 import drt.shared.{NeboArrivals, RedListPassengers}
 import org.specs2.specification.BeforeEach
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.PortCode
 import util.RandomString

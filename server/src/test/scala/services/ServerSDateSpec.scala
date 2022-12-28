@@ -3,7 +3,7 @@ package services
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
 import services.graphstages.Crunch.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.concurrent.duration.DurationInt
 
