@@ -31,8 +31,7 @@ describe('Global error handler', () => {
     cy
       .asABorderForceOfficer()
       .visit('/')
-      .server()
-      .route("POST", "/logging", {}).as('postLog');
+      .intercept('POST', '/logging', {}).as('postLog');
     cy.on('window:confirm', () => true);
     cy.on("window:before:load", () => {
       pageLoadCount++;

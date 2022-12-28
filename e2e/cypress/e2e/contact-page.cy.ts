@@ -1,9 +1,14 @@
 describe('Contact page', () => {
 
   it("Clicking on the contact page out of hours should display the OOH support message", () => {
-    cy.server()
     cy
-      .route({ method: 'GET', url: 'ooh-status', status: 200, response: { "localTime": "2019-08-12 16:58", "isOoh": true }, delay: 100, })
+      .intercept('GET', 'ooh-status', {
+        statusCode: 200,
+          body: {
+            localTime: "2019-08-12 16:58",
+            isOoh: true
+          }
+      })
       .as('getSupportOOH')
       .asABorderForceOfficer()
       .navigateHome()
@@ -17,9 +22,14 @@ describe('Contact page', () => {
   });
 
   it("Clicking on the contact page during office hours should display the office hours support message", () => {
-    cy.server()
     cy
-      .route({ method: 'GET', url: 'ooh-status', status: 200, response: { "localTime": "2019-08-12 16:58", "isOoh": false }, delay: 100, })
+      .intercept('GET', 'ooh-status', {
+        statusCode: 200,
+          body: {
+            localTime: "2019-08-12 16:58",
+            isOoh: false
+          }
+      })
       .as('getSupportInHours')
       .asABorderForceOfficer()
       .navigateHome()
