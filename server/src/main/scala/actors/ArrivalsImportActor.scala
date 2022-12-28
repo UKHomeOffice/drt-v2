@@ -3,9 +3,9 @@ package actors
 import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.Actor
 import akka.persistence.SaveSnapshotFailure
+import drt.server.feeds.{GetFeedImportArrivals, StoreFeedImportArrivals}
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{GetFeedImportArrivals, StoreFeedImportArrivals}
 
 class ArrivalsImportActor() extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)

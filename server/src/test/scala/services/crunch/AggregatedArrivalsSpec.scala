@@ -7,16 +7,16 @@ import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
+import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.FlightsApi.Flights
 import org.specs2.specification.BeforeEach
-import server.feeds.ArrivalsFeedSuccess
-import uk.gov.homeoffice.drt.time.SDate
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
 import test.feeds.test.GetArrivals
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq}
 import scala.concurrent.duration._

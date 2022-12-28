@@ -3,9 +3,9 @@ package drt.server.feeds.legacy.bhx
 import akka.NotUsed
 import akka.actor.Cancellable
 import akka.stream.scaladsl.Source
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.util.{Failure, Success, Try}

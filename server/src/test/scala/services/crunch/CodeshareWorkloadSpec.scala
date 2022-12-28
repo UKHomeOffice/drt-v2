@@ -1,12 +1,12 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
+import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.FlightsApi.Flights
 import drt.shared.{PortState, TQM}
-import server.feeds.ArrivalsFeedSuccess
-import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
 
@@ -26,7 +26,7 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival1, arrival2))))
 
-    crunch.portStateTestProbe.fishForMessage(2 seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(_, crunchMinutes, _) =>
         crunchMinutes.get(TQM(T1, Queues.EeaDesk, schSdate.millisSinceEpoch)) match {
           case Some(minute) =>
@@ -39,7 +39,7 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(updatedArrival2))))
 
-    crunch.portStateTestProbe.fishForMessage(5 seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case PortState(a, crunchMinutes, _) =>
         val minute1paxCorrect = crunchMinutes.get(TQM(T1, Queues.EeaDesk, schSdate.millisSinceEpoch)) match {
           case Some(minute) =>

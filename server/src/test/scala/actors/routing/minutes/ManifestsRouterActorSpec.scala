@@ -11,17 +11,16 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
+import drt.server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
-import server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxAge, PortCode}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.collection.immutable.List
 import scala.concurrent.duration.DurationInt
@@ -57,7 +56,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
 
       "Then it should be sent to the actor for the correct day" >> {
 
-        Await.result(manifestRouterActor.ask(manifestFeedSuccess), 1 second)
+        Await.result(manifestRouterActor.ask(manifestFeedSuccess), 1.second)
         val expected = List((UtcDate(2020, 11, 20), VoyageManifests(Set(manifest))))
         mockLookup.paramsUpdate === expected
       }
@@ -73,17 +72,17 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val manifestFeedSuccess = ManifestsFeedSuccess(DqManifests(0, Set(manifest)), creationDate)
 
       "Then it should update the last processed marker" >> {
-        Await.result(manifestRouterActor.ask(manifestFeedSuccess), 1 second)
+        Await.result(manifestRouterActor.ask(manifestFeedSuccess), 1.second)
 
-        val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 1 second)
+        val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 1.second)
 
         result.lastProcessedMarker === 0
       }
 
       "Then it should record the successful response" >> {
-        Await.result(manifestRouterActor.ask(manifestFeedSuccess), 1 second)
+        Await.result(manifestRouterActor.ask(manifestFeedSuccess), 1.second)
 
-        val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 1 second)
+        val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 1.second)
 
         result.maybeSourceStatuses === Option(
           FeedSourceStatuses(
@@ -108,9 +107,9 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val manifestFeedFailure = ManifestsFeedFailure("Failed", creationDate)
 
       "Then it should record the failure response" >> {
-        Await.result(manifestRouterActor.ask(manifestFeedFailure), 1 second)
+        Await.result(manifestRouterActor.ask(manifestFeedFailure), 1.second)
 
-        val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 2 seconds)
+        val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 2.seconds)
 
         result.maybeSourceStatuses === Option(
           FeedSourceStatuses(
@@ -125,9 +124,9 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
         )
       }
       "Then it should respond with the feed statuses when asked" >> {
-        Await.result(manifestRouterActor.ask(manifestFeedFailure), 1 second)
+        Await.result(manifestRouterActor.ask(manifestFeedFailure), 1.second)
 
-        val result: Option[FeedSourceStatuses] = Await.result(manifestRouterActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]], 1 second)
+        val result: Option[FeedSourceStatuses] = Await.result(manifestRouterActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]], 1.second)
 
         result === Option(
           FeedSourceStatuses(
@@ -151,7 +150,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
 
       val result = Await.result(manifestRouterActor.ask(
         GetStateForDateRange(SDate("2020-11-01T00:00Z").millisSinceEpoch, SDate("2020-11-02T23:59Z").millisSinceEpoch)
-      ).mapTo[Source[VoyageManifests, NotUsed]], 1 second)
+      ).mapTo[Source[VoyageManifests, NotUsed]], 1.second)
 
       result.runWith(Sink.seq)
 
@@ -173,7 +172,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
           GetStateForDateRange(SDate("2020-11-01T00:00Z").millisSinceEpoch, SDate("2020-11-02T23:59Z").millisSinceEpoch)
         )
 
-      ).mapTo[Source[VoyageManifests, NotUsed]], 1 second)
+      ).mapTo[Source[VoyageManifests, NotUsed]], 1.second)
 
       result.runWith(Sink.seq)
 
@@ -204,7 +203,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
         )
       ).mapTo[Source[VoyageManifests, NotUsed]]
 
-      val result = Await.result(ManifestRouterActor.runAndCombine(resultSource), 1 second)
+      val result = Await.result(ManifestRouterActor.runAndCombine(resultSource), 1.second)
 
       val expected = VoyageManifests(Set(manifest1, manifest2))
 

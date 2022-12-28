@@ -6,14 +6,12 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResp
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
-import drt.server.feeds.Feed
 import drt.server.feeds.common.HttpClient
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
 import drt.shared.FlightsApi.Flights
 import org.mockito.Mockito.{times, verify}
 import org.specs2.mock.Mockito
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -27,7 +25,7 @@ case class MockHttpClient(probeActor: ActorRef)
 }
 
 class LCYFeedSpec extends CrunchTestLike with Mockito {
-  def createMockHttpClient(probeActor: ActorRef): HttpClient = new MockHttpClient(probeActor)
+  def createMockHttpClient(probeActor: ActorRef): HttpClient = MockHttpClient(probeActor)
 
   "Given a request for a full refresh of all flights success, match result according to polling count" in {
     val callProbe = TestProbe()

@@ -3,13 +3,13 @@ package feeds.mag
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import com.typesafe.config.{Config, ConfigFactory}
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.server.feeds.mag.{FeedRequesterLike, MagFeed, ProdFeedRequester}
 import drt.shared.FlightsApi.Flights
 import pdi.jwt.JwtAlgorithm
-import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
@@ -67,7 +67,7 @@ class MagFeedSpec extends CrunchTestLike {
     "I should get a single flights " >> {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrival))
 
-    val result = Await.result(feed.requestArrivals(SDate.now()), 1 second) match {
+    val result = Await.result(feed.requestArrivals(SDate.now()), 1.second) match {
       case ArrivalsFeedSuccess(Flights(arrivals), _) => arrivals
       case _ => List()
     }
@@ -79,7 +79,7 @@ class MagFeedSpec extends CrunchTestLike {
     "I should see those values in the arrival " >> {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrivalWith0Pax))
 
-    val actMax = Await.result(feed.requestArrivals(SDate.now()), 1 second) match {
+    val actMax = Await.result(feed.requestArrivals(SDate.now()), 1.second) match {
       case ArrivalsFeedSuccess(Flights(arrivals),_) => (arrivals.head.ActPax, arrivals.head.MaxPax)
       case _ => List()
     }
@@ -94,7 +94,7 @@ class MagFeedSpec extends CrunchTestLike {
     "I should get an ArrivalsFeedFailure" >> {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "bad json"))
 
-    val result = Await.result(feed.requestArrivals(SDate.now()), 1 second) match {
+    val result = Await.result(feed.requestArrivals(SDate.now()), 1.second) match {
       case _: ArrivalsFeedFailure => true
       case _ => false
     }
@@ -106,7 +106,7 @@ class MagFeedSpec extends CrunchTestLike {
     "I should get an ArrivalsFeedFailure response" >> {
     val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockExceptionThrowingFeedRequester(() => new Exception("I'm throwing an exception")))
 
-    val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1 second) match {
+    val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1.second) match {
       case ArrivalsFeedFailure(_, _) => true
       case _ => false
     }
@@ -118,7 +118,7 @@ class MagFeedSpec extends CrunchTestLike {
     "I should get an ArrivalsFeedFailure response" >> {
     val exceptionFeed = MagFeed("", "", "", "", () => SDate.now(), PortCode("MAN"), ProdFeedRequester)
 
-    val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1 second) match {
+    val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1.second) match {
       case ArrivalsFeedFailure(_, _) => true
       case _ => false
     }

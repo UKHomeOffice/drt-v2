@@ -4,11 +4,11 @@ import akka.stream.scaladsl.Source
 import akka.stream.testkit.scaladsl.TestSink
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
+import drt.server.feeds.{ArrivalsFeedSuccess, FeedResponse}
 import drt.shared.FlightsApi.Flights
-import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import spray.json._
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{Seq, SortedMap}
 
@@ -113,7 +113,7 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
     }
   }
 
-  val response0: String =
+  def response0: String =
     """
       |[
       |  {
@@ -141,7 +141,7 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
       |  ]
     """.stripMargin
 
-  val response1: String =
+  def response1: String =
     """
       |[
       |  {

@@ -10,13 +10,13 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import dispatch.Future
+import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MinutesContainer, PassengersMinute}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits, PaxForArrivals, SplitsForArrivals}
 import drt.shared._
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
-import server.feeds.ArrivalsFeedSuccess
 import services.TryCrunchWholePax
 import services.crunch.VoyageManifestGenerator.{euPassport, visa}
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
@@ -336,7 +336,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
           case _ => false
         }
         zeroAtNoon && nonZeroAtOne
-      case unexpected => false
+      case _ => false
     }
 
     success
