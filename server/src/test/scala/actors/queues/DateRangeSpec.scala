@@ -2,7 +2,7 @@ package actors.queues
 
 import actors.DateRange
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, UtcDate}
 

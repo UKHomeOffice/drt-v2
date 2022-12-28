@@ -5,7 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaChildToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}

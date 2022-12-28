@@ -16,7 +16,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.Logger
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

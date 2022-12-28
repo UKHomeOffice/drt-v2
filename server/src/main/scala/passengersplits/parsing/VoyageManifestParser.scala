@@ -5,8 +5,8 @@ import manifests.passengers.{ManifestLike, ManifestPassengerProfile}
 import org.joda.time.DateTime
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType.Passport
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
-import services.SDate
-import services.SDate.JodaSDate
+import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.SDate.JodaSDate
 import spray.json.{DefaultJsonProtocol, JsNumber, JsString, JsValue, RootJsonFormat}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.InvalidEventType

@@ -1,7 +1,7 @@
 package queueus
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues._

@@ -6,8 +6,8 @@ import akka.testkit.TestProbe
 import dispatch.Future
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared._
-import services.SDate
-import services.SDate.implicits.sdateFromMillisLocal
+import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.{ProcessingRequest, TerminalUpdateRequest}
 import services.graphstages.Crunch

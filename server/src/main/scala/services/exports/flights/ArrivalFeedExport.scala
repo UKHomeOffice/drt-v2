@@ -8,7 +8,7 @@ import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.exports.Exports
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.FeedSource

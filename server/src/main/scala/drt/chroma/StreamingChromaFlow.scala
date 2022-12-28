@@ -10,7 +10,7 @@ import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Operator}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource}

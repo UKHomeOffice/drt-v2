@@ -11,7 +11,7 @@ import drt.shared.{ArrivalKey, ErrorResponse}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.mvc.{Action, AnyContent, Result}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.auth.Roles.EnhancedApiView
 import uk.gov.homeoffice.drt.ports.PortCode

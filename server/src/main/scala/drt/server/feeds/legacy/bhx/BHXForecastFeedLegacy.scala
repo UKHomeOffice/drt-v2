@@ -6,7 +6,7 @@ import drt.server.feeds.Feed.FeedTick
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.util.{Failure, Success, Try}
 

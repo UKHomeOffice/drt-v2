@@ -7,7 +7,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.time.SDateLike
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
 

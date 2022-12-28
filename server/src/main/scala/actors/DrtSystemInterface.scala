@@ -70,7 +70,7 @@ import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpda
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
-import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike, UtcDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -357,10 +357,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode)
 
-    val tdModelProvider = TouchdownPrediction.modelAndFeaturesProvider(now, classOf[TouchdownPredictionActor])
-
     val addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
       log.info(s"Touchdown predictions enabled")
+      val tdModelProvider = TouchdownPrediction.modelAndFeaturesProvider(now, classOf[TouchdownPredictionActor])
       TouchdownPrediction(tdModelProvider, 45, 15).addTouchdownPredictions
     } else {
       log.info(s"Touchdown predictions disabled. Using noop lookup")

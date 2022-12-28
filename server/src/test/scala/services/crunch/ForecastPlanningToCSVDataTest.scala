@@ -3,9 +3,9 @@ package services.crunch
 import drt.shared.CrunchApi._
 import drt.shared.Forecast
 import org.specs2.mutable.Specification
-import services.{CSVData, SDate}
+import services.CSVData
 import uk.gov.homeoffice.drt.ports.Queues
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 class ForecastPlanningToCSVDataTest extends Specification {
 

@@ -2,7 +2,7 @@ package actors
 
 import drt.shared.ArrivalGenerator
 import manifests.passengers.BestAvailableManifest
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.{CrunchTestLike, VoyageManifestGenerator}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.T1

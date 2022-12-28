@@ -2,7 +2,7 @@ package services.crunch
 
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}

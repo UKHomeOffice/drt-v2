@@ -13,12 +13,11 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import uk.gov.homeoffice.drt.egates._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}

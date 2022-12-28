@@ -3,7 +3,7 @@ package services.crunch
 import actors.DrtStaticParameters
 import akka.actor.{ActorRef, Props}
 import drt.shared._
-import services.SDate.implicits.sdateFromMillisLocal
+import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
 import services.{TryCrunchWholePax, TrySimulator}

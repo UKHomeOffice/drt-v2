@@ -12,7 +12,7 @@ import drt.server.feeds.Feed
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
 import uk.gov.homeoffice.drt.ports.Terminals.T1

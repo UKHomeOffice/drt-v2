@@ -3,7 +3,7 @@ package actors.persistent
 import akka.persistence.SnapshotMetadata
 import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.Logger
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 trait RecoveryLogging {
   val log: Logger

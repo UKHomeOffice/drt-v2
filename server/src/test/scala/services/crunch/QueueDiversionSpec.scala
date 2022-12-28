@@ -3,7 +3,7 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import server.feeds.ArrivalsFeedSuccess
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.TestDefaults.airportConfigForSplits
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable

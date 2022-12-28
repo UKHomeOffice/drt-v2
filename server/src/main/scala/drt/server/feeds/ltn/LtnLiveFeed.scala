@@ -14,7 +14,7 @@ import drt.shared.FlightsApi.Flights
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.LiveFeedSource

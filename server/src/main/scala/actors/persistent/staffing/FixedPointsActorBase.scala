@@ -7,7 +7,7 @@ import akka.persistence._
 import drt.shared.{FixedPointAssignments, StaffAssignment, StaffAssignmentLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointMessage, FixedPointsMessage, FixedPointsStateSnapshotMessage}
@@ -50,7 +50,7 @@ class FixedPointsActor(val now: () => SDateLike, minutesToCrunch: Int, forecastL
 
 abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[FixedPointAssignments] {
 
-  import services.SDate.implicits.sdateFromMillisLocal
+  import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 

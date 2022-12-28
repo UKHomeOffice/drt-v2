@@ -7,11 +7,10 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.DataUpdates.Combinable
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.SDate
 import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, RemoveCrunchRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchRequestsMessage, DaysMessage, RemoveCrunchRequestMessage, RemoveDayMessage}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor

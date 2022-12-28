@@ -1,7 +1,7 @@
 package drt.server.feeds.stn
 
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

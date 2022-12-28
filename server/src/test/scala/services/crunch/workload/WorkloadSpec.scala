@@ -4,7 +4,7 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers

@@ -5,7 +5,7 @@ import akka.{Done, NotUsed}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
 import org.slf4j.LoggerFactory
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}

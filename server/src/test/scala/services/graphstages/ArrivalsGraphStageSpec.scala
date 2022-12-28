@@ -7,7 +7,7 @@ import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds._
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.VoyageManifestGenerator.{euIdCard, xOfPaxType}
 import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.Nationality

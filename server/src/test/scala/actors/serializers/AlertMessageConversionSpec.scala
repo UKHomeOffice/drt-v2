@@ -2,7 +2,7 @@ package actors.serializers
 
 import drt.shared.Alert
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 class AlertMessageConversionSpec extends Specification{
 

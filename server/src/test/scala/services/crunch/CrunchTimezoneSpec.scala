@@ -5,7 +5,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk

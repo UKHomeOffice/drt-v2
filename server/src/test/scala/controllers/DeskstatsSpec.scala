@@ -6,7 +6,7 @@ import drt.shared.CrunchApi.DeskStat
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.T2
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.JavaConverters._
 import scala.io.Source

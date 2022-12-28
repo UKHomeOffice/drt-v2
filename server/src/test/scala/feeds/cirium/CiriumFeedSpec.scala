@@ -7,7 +7,7 @@ import drt.server.feeds.Feed
 import drt.server.feeds.cirium.CiriumFeed
 import org.specs2.mock.Mockito
 import server.feeds.ArrivalsFeedSuccess
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.cirium.services.entities._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}

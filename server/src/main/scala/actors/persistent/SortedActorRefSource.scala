@@ -4,7 +4,7 @@ import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.stage._
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, RemoveCrunchRequest}
 
 import scala.collection.{SortedSet, mutable}

@@ -7,7 +7,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.ApiFeedSource
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}

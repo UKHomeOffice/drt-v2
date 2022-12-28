@@ -10,6 +10,7 @@ import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
+import uk.gov.homeoffice.drt.time.SDate
 
 class PcpArrivalSpec extends SpecificationLike {
 

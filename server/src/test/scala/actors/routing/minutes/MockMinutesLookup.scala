@@ -5,7 +5,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, S
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import uk.gov.homeoffice.drt.time.UtcDate
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 

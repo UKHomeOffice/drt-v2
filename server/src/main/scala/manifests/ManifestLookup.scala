@@ -5,7 +5,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile, ManifestPaxCount}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import services.{SDate, StreamSupervision}
+import services.StreamSupervision
 import slick.jdbc.SQLActionBuilder
 import slick.sql.SqlStreamingAction
 import slickdb.Tables
@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.sql.Timestamp
 import scala.collection.immutable

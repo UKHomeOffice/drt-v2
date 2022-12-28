@@ -5,7 +5,7 @@ import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
 import passengersplits.parsing.VoyageManifestParser._
 import queueus._
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC

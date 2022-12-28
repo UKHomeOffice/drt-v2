@@ -7,7 +7,7 @@ import drt.server.feeds.mag.{FeedRequesterLike, MagFeed, ProdFeedRequester}
 import drt.shared.FlightsApi.Flights
 import pdi.jwt.JwtAlgorithm
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.PortCode
 

@@ -8,7 +8,7 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser
 import passengersplits.parsing.VoyageManifestParser._
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.VoyageManifestGenerator._
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.{CI, DC}

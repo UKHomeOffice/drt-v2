@@ -9,7 +9,7 @@ import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinuteLike, MinutesContainer, PassengersMinute}
 import drt.shared.DataUpdates.Combinable
 import drt.shared.TQM
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Queues

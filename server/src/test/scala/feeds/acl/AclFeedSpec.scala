@@ -7,7 +7,7 @@ import drt.server.feeds.acl.AclFeed.{arrivalsFromCsvContent, delayUntilNextAclCh
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals._

@@ -4,7 +4,7 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import server.feeds.ArrivalsFeedSuccess
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.ArrivalStatus
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues

@@ -1,7 +1,7 @@
 package services.datetime
 
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
 
 class UtcDateRangeSpec extends Specification {

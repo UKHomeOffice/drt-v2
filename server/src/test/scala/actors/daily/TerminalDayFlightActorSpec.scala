@@ -7,7 +7,7 @@ import controllers.ArrivalGenerator.arrivalForDayAndTerminal
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.{FlightsWithSplits, RemoveSplits, SplitsForArrivals}
 import drt.shared.{ArrivalsDiff, TQM}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}

@@ -7,7 +7,7 @@ import drt.server.feeds.api.DbHelper.addPaxRecord
 import manifests.UniqueArrivalKey
 import org.specs2.specification.BeforeEach
 import server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.{CrunchTestLike, H2Tables}
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit

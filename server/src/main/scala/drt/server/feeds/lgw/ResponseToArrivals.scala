@@ -7,6 +7,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, Operator, TotalPaxSource, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Terminals}
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
@@ -54,7 +55,7 @@ case class ResponseToArrivals(data: String) {
       VoyageNumber = VoyageNumber(parseFlightNumber(n)),
       FlightCodeSuffix = None,
       Origin = parseOrigin(n),
-      Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => services.SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
+      Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None,
@@ -124,7 +125,7 @@ case class ResponseToArrivals(data: String) {
   }
 
   def parseDateTime(n: Node, operationQualifier: String, timeType: String): Option[MillisSinceEpoch] = {
-    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals(operationQualifier) && (n \ "@TimeType" text).equals(timeType)).map(n => services.SDate.parseString(n text).millisSinceEpoch)
+    (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals(operationQualifier) && (n \ "@TimeType" text).equals(timeType)).map(n => SDate.parseString(n text).millisSinceEpoch)
   }
 
 }

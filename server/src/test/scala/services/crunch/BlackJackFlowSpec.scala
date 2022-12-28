@@ -5,7 +5,7 @@ import drt.shared.CrunchApi.{ActualDeskStats, DeskStat}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PortState
 import server.feeds.ArrivalsFeedSuccess
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.TotalPaxSource
 import uk.gov.homeoffice.drt.ports.AclFeedSource
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate}

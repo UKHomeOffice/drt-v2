@@ -5,11 +5,11 @@ import akka.actor.ActorRef
 import akka.persistence._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.{PaxDeltas, SDate}
+import services.PaxDeltas
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.PaxMessage.{OriginTerminalPaxCountsMessage, OriginTerminalPaxCountsMessages, PaxCountMessage}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 
 case class PointInTimeOriginTerminalDay(pointInTime: Long, origin: String, terminal: String, day: Long)

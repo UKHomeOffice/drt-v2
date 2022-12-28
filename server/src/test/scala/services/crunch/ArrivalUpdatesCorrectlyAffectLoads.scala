@@ -5,7 +5,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.VoyageManifestGenerator._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, EventTypes}
 import uk.gov.homeoffice.drt.ports.Queues.Queue

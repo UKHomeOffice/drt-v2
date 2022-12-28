@@ -16,7 +16,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.{AfterAll, AfterEach}
-import services._
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.JdbcProfile
 import slickdb.Tables
@@ -28,7 +27,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable
 import scala.collection.immutable.{Map, SortedMap}
@@ -281,7 +280,7 @@ class CrunchTestLike
     }
 
   def expectFeedSources(sourcesToExpect: Set[FeedSource])(implicit crunch: CrunchGraphInputsAndProbes): Unit =
-    crunch.portStateTestProbe.fishForMessage(1.seconds, s"Expected ${sourcesToExpect}") {
+    crunch.portStateTestProbe.fishForMessage(1.seconds, s"Expected $sourcesToExpect") {
       case ps: PortState =>
         ps.flights.values.flatMap(_.apiFlight.FeedSources).toSet == sourcesToExpect
     }

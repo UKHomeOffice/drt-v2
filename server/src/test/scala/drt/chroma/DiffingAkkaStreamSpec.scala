@@ -6,7 +6,7 @@ import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.shared.FlightsApi.Flights
 import server.feeds.{ArrivalsFeedSuccess, FeedResponse}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import spray.json._
 

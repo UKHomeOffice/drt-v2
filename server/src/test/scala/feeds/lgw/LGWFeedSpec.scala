@@ -7,7 +7,7 @@ import drt.server.feeds.Feed
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
 import org.specs2.mock.Mockito
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.{Arrival, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.N

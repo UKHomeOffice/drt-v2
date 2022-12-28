@@ -7,7 +7,7 @@ import akka.pattern._
 import akka.testkit.TestKit
 import drt.shared.Alert
 import org.joda.time.DateTime
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 
 import scala.concurrent.Await

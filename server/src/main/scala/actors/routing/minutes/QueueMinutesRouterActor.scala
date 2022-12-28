@@ -4,9 +4,8 @@ import actors.routing.RouterActorLikeWithSubscriber2
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
 import drt.shared.TQM
-import services.SDate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.UtcDate
+import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 object QueueMinutesRouterActor {
   def splitByResource(request: MinutesContainer[CrunchMinute, TQM]): Map[(Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]] = {

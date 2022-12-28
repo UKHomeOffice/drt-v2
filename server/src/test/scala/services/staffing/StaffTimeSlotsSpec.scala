@@ -3,7 +3,7 @@ package services.staffing
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import drt.shared._
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 class StaffTimeSlotsSpec extends Specification {
 

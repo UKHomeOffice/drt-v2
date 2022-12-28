@@ -1,7 +1,7 @@
 package services.arrivals
 
-import services.SDate
 import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.time.SDate
 
 object LiveArrivalsUtil {
 

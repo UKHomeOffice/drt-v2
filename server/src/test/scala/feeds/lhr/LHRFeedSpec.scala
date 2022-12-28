@@ -6,7 +6,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T4}

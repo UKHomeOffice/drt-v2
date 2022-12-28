@@ -9,7 +9,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import scalapb.GeneratedMessage
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.FeedSource

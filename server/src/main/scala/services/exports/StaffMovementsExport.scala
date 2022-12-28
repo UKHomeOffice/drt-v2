@@ -2,7 +2,7 @@ package services.exports
 
 import drt.shared.StaffMovement
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 object StaffMovementsExport {
 

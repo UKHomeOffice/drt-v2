@@ -4,7 +4,8 @@ import controllers.Application
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
 import services.graphstages.Crunch
-import services.{BankHolidayApiClient, OOHChecker, SDate}
+import services.{BankHolidayApiClient, OOHChecker}
+import uk.gov.homeoffice.drt.time.SDate
 
 
 trait WithContactDetails {

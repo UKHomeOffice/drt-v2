@@ -5,7 +5,7 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import drt.shared.{ArrivalsDiff, PortState}
 import server.feeds.ArrivalsFeedSuccess
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.{CrunchTestLike, TestConfig}
 import services.prediction.TouchdownPrediction.MaybeModelAndFeaturesProvider
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber

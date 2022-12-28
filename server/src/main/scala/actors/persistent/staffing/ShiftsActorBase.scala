@@ -8,7 +8,7 @@ import akka.persistence._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

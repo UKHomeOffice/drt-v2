@@ -18,7 +18,7 @@ import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import manifests.queues.SplitsCalculator
 import play.api.mvc._
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.deskrecs.OptimisationProviders
 import services.exports.StreamingDesksExport
 import services.imports.ArrivalCrunchSimulationActor

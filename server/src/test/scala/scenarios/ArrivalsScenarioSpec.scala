@@ -12,7 +12,7 @@ import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.{B5JPlusTypeAllocator, ChildEGateAdjustments, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.imports.ArrivalCrunchSimulationActor

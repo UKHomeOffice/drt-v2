@@ -2,7 +2,7 @@ package drt.shared
 
 import drt.shared.FlightsApi.FlightsWithSplits
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 class FlightsWithSplitsSpec extends Specification{
   "When filtering flights by Scheduled date" >> {

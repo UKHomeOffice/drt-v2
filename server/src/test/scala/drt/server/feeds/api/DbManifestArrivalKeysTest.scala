@@ -4,7 +4,7 @@ import drt.server.feeds.api.DbHelper.{addJsonRecord, addPaxRecord, addZipRecord}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
 import org.specs2.specification.BeforeEach
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.{CrunchTestLike, H2Tables}
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit

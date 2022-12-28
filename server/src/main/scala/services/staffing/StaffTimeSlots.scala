@@ -2,9 +2,8 @@ package services.staffing
 
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.util.{Success, Try}
 
@@ -26,7 +25,7 @@ object StaffTimeSlots {
   def isDateInMonth(dateString: String, month: SDateLike): Boolean = {
     val ymd = dateString.split("/").toList
 
-    Try((ymd(0).toInt, ymd(1).toInt, ymd(2).toInt)) match {
+    Try((ymd.head.toInt, ymd(1).toInt, ymd(2).toInt)) match {
       case Success((_, m, y)) if month.getMonth == m && month.getFullYear() == y =>
         true
       case Success((_, m, y)) if month.getMonth == m && month.getFullYear() - 2000 == y =>

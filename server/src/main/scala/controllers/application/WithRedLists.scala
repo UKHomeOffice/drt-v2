@@ -6,12 +6,13 @@ import controllers.Application
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
+import services.AirportToCountry
 import services.graphstages.Crunch
-import services.{AirportToCountry, SDate}
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, enrichAny}
 import uk.gov.homeoffice.drt.auth.Roles.RedListsEdit
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdate, RedListUpdates, SetRedListUpdate}
+import uk.gov.homeoffice.drt.time.SDate
 import upickle.default._
 
 import scala.concurrent.Future
@@ -49,9 +50,8 @@ trait WithRedLists {
       implicit request =>
         request.body.asText match {
           case Some(text) =>
-            import spray.json._
-
             import RedListJsonFormats.setRedListUpdatesJsonFormat
+            import spray.json._
 
             val setUpdate = text.parseJson.convertTo[SetRedListUpdate]
 

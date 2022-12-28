@@ -15,7 +15,7 @@ import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import slickdb.{UserRow, UserTableLike}
 import test.TestActors._
 import test.feeds.test._

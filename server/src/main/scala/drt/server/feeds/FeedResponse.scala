@@ -4,7 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import manifests.passengers.BestAvailableManifest
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.SDateLike
 
 sealed trait FeedResponse {

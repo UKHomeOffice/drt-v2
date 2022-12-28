@@ -5,7 +5,7 @@ import com.typesafe.config.ConfigFactory
 import drt.shared.CrunchApi.MillisSinceEpoch
 import github.gphat.censorinus.StatsDClient
 import org.slf4j.{Logger, LoggerFactory}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 trait MetricsCollectorLike {
   def timer(name: String, milliseconds: Double): Unit

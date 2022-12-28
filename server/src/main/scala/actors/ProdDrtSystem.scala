@@ -21,7 +21,7 @@ import manifests.ManifestLookup
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import server.feeds.ManifestsFeedResponse
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchSystem
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.metrics.ApiValidityReporter

@@ -5,7 +5,7 @@ import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.Logger
 import scalapb.GeneratedMessage
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.util.{Failure, Try}
 

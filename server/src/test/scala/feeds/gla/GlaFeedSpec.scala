@@ -9,7 +9,7 @@ import drt.server.feeds.Feed
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
 import drt.shared.FlightsApi.Flights
 import server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.T1

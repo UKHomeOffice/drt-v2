@@ -2,7 +2,7 @@ package controllers.model
 
 import drt.shared.RedListPassengers
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import spray.json._
 import uk.gov.homeoffice.drt.ports.PortCode
 

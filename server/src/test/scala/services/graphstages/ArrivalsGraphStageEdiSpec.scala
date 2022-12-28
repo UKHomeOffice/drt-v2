@@ -5,7 +5,7 @@ import controllers.{ArrivalGenerator, PaxFlow}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import server.feeds._
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import services.arrivals.EdiArrivalsTerminalAdjustments
 import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage

@@ -3,7 +3,7 @@ package actors
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.MillisSinceEpoch
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time._
 
 object DateRange {

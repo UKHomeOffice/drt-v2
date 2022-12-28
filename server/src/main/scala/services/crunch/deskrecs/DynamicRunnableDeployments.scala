@@ -5,12 +5,12 @@ import akka.stream.scaladsl.Flow
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.{SDate, TimeLogger}
+import services.TimeLogger
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.crunch.desklimits.flexed.FlexedTerminalDeskLimitsFromAvailableStaff
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}

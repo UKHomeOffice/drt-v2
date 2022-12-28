@@ -2,14 +2,13 @@ package test
 
 import actors.MinuteLookupsLike
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
-import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.MillisSinceEpoch
+import test.TestActors._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.time.SDateLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import services.SDate
-import test.TestActors.{ResetData, TestQueueLoadsMinutesActor, TestQueueMinutesRouterActor, TestStaffMinutesRouterActor, TestTerminalDayQueueLoadsActor, TestTerminalDayQueuesActor, TestTerminalDayStaffActor}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.{ExecutionContext, Future}
 

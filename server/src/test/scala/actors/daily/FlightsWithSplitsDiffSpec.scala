@@ -3,7 +3,7 @@ package actors.daily
 import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import org.specs2.mutable.Specification
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.time.SDateLike

@@ -5,6 +5,7 @@ import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Prediction}
 import uk.gov.homeoffice.drt.ports.Terminals.T2
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDate
 
 class ApiFlightsToProtoBufSpec extends Specification {
   "apiFlightToFlightMessage" should {

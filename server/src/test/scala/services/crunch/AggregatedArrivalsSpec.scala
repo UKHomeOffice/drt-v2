@@ -10,7 +10,7 @@ import controllers.ArrivalGenerator
 import drt.shared.FlightsApi.Flights
 import org.specs2.specification.BeforeEach
 import server.feeds.ArrivalsFeedSuccess
-import services.SDate
+import uk.gov.homeoffice.drt.time.SDate
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
