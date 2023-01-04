@@ -22,6 +22,7 @@ import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc._
 import play.api.{Configuration, Environment}
+import play.filters.csp.CSP
 import services.PcpArrival._
 import services._
 import services.graphstages.Crunch
@@ -344,10 +345,11 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     eventualThing
   }
 
-  def index: Action[AnyContent] = Action { request =>
+  @CSP
+  def index: Action[AnyContent] = Action { implicit request: Request[AnyContent]  =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
     if (user.hasRole(airportConfig.role))
-      Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
+      Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id) )
     else {
       val baseDomain = config.get[String]("drt.domain")
       val isSecure = config.get[Boolean]("drt.use-https")

@@ -3,6 +3,8 @@
 # ~~~~
 
 # Home page
+ +nocsrf
+POST          /report-to                                                              controllers.CSPReportController.report
 GET           /                                                                       controllers.Application.index
 GET           /health-check                                                           controllers.Application.healthCheck
 
@@ -72,12 +74,12 @@ GET           /assets/images/*file                                              
 GET           /assets/*file                                                           controllers.Assets.versioned(path="/public", file: Asset)
 
 # Autowire calls
+ +nocsrf
 POST          /api/*path                                                              controllers.Application.autowireApi(path: String)
 
 GET           /data/user                                                              controllers.Application.getLoggedInUser()
 
 POST          /data/login                                                             controllers.Application.apiLogin()
-
 
 GET           /data/userDetails/:email                                               controllers.Application.userDetails(email:String)
 
