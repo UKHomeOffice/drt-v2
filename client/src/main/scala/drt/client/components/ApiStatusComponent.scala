@@ -18,10 +18,9 @@ case class ApiFeedStatus(totalLanded: Int, withApi: Int, withValidApi: Int) {
 object ApiFeedStatus {
   def apply(flights: Iterable[ApiFlightWithSplits],
             nowMillis: MillisSinceEpoch,
-            timeToChox: Int,
             considerPredictions: Boolean,
             hasLiveFeed: Boolean): ApiFeedStatus = {
-    val landed = flights.filter(fws => fws.apiFlight.bestArrivalTime(timeToChox, considerPredictions) <= nowMillis)
+    val landed = flights.filter(fws => fws.apiFlight.bestArrivalTime(considerPredictions) <= nowMillis)
     val international = landed.filterNot(fws => fws.apiFlight.Origin.isDomesticOrCta)
     val withNonZeroPax = international.filter(fws => fws.apiFlight.ActPax.exists(_ > 0) || !hasLiveFeed)
     val apiFlightCount = withNonZeroPax.count(_.hasApi)
@@ -34,7 +33,7 @@ object ApiStatusComponent {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(canValidate: Boolean, timeToChox: Int, considerPredictions: Boolean, terminal: Terminal)
+  case class Props(canValidate: Boolean, considerPredictions: Boolean, terminal: Terminal)
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ApiStatus")
     .render_P { props =>
@@ -44,7 +43,7 @@ object ApiStatusComponent {
         <.div(
           terminalFlightsPot().renderReady { flights =>
 
-            val apiFeedStatus = ApiFeedStatus(flights, SDate.now().millisSinceEpoch, props.timeToChox, props.considerPredictions, props.canValidate)
+            val apiFeedStatus = ApiFeedStatus(flights, SDate.now().millisSinceEpoch, props.considerPredictions, props.canValidate)
 
             def ragClass(pct: Option[Double]): String = pct match {
               case Some(red) if red < 80 => "red"

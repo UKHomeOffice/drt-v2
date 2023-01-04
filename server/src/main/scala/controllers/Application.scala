@@ -56,11 +56,11 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 object PaxFlow {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def pcpArrivalTimeForFlight(timeToChoxMillis: MillisSinceEpoch, firstPaxOffMillis: MillisSinceEpoch, considerPredictions: Boolean)
+  def pcpArrivalTimeForFlight(firstPaxOffMillis: MillisSinceEpoch, considerPredictions: Boolean)
                              (walkTimeProvider: FlightWalkTime)
                              (redListUpdates: RedListUpdates)
                              (flight: Arrival): MilliDate =
-    pcpFrom(timeToChoxMillis, firstPaxOffMillis, walkTimeProvider, considerPredictions)(flight, redListUpdates)
+    pcpFrom(firstPaxOffMillis, walkTimeProvider, considerPredictions)(flight, redListUpdates)
 }
 
 trait AirportConfiguration {

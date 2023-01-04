@@ -5,7 +5,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
@@ -29,7 +29,7 @@ class LCYFlightTransformSpec extends CrunchTestLike {
       )
     )
 
-    val result = Await.result(Unmarshal[HttpResponse](resp).to[LCYFlightsResponse], 5 seconds)
+    val result = Await.result(Unmarshal[HttpResponse](resp).to[LCYFlightsResponse], 5.seconds)
       .asInstanceOf[LCYFlightsResponseSuccess]
       .flights
     val expected = List(
@@ -65,7 +65,7 @@ class LCYFlightTransformSpec extends CrunchTestLike {
       )
     )
 
-    val result = Await.result(Unmarshal[HttpResponse](resp).to[LCYFlightsResponse], 5 seconds)
+    val result = Await.result(Unmarshal[HttpResponse](resp).to[LCYFlightsResponse], 5.seconds)
       .asInstanceOf[LCYFlightsResponseSuccess]
       .flights
 
@@ -216,7 +216,7 @@ class LCYFlightTransformSpec extends CrunchTestLike {
       Operator = Option(Operator("SA")),
       Status = ArrivalStatus("ARRIVED ON STAND"),
       Estimated = Option(SDate(estimatedTouchDownTimeString).millisSinceEpoch),
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = Option(SDate(actualTouchDownTimeString).millisSinceEpoch),
       EstimatedChox = None,
       ActualChox = Option(SDate(actualOnBlocksTimeString).millisSinceEpoch),
@@ -240,7 +240,7 @@ class LCYFlightTransformSpec extends CrunchTestLike {
     result === expected
   }
 
-  val lcySoapResponseOneFlightXml: String =
+  def lcySoapResponseOneFlightXml: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |   <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
       |      <IATA_AIDX_FlightLegRS TimeStamp="2020-07-03T10:59:35.1977952+01:00" Version="13.2" xmlns="http://www.iata.org/IATA/2007/00">
@@ -293,7 +293,7 @@ class LCYFlightTransformSpec extends CrunchTestLike {
       |</s:Envelope>
     """.stripMargin
 
-  val lcySoapResponseTwoFlightXml: String =
+  def lcySoapResponseTwoFlightXml: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |   <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
       |      <IATA_AIDX_FlightLegRS TimeStamp="2020-07-03T10:59:35.1977952+01:00" Version="13.2" xmlns="http://www.iata.org/IATA/2007/00">

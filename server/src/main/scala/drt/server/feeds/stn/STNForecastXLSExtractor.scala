@@ -5,7 +5,7 @@ import org.apache.poi.ss.usermodel.{Cell, DateUtil}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -87,7 +87,7 @@ object STNForecastXLSExtractor {
         Operator = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

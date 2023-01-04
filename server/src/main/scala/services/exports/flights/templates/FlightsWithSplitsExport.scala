@@ -27,7 +27,7 @@ trait FlightsWithSplitsExport extends FlightsExport {
       fws.apiFlight.Gate.getOrElse("") + "/" + fws.apiFlight.Stand.getOrElse(""),
       fws.apiFlight.displayStatus.description,
       millisToLocalDateTimeString(fws.apiFlight.Scheduled),
-      fws.apiFlight.PredictedTouchdown.map(p => millisToLocalDateTimeString(p.value)).getOrElse(""),
+      fws.apiFlight.predictedTouchdown.map(p => millisToLocalDateTimeString(p)).getOrElse(""),
       fws.apiFlight.Estimated.map(millisToLocalDateTimeString(_)).getOrElse(""),
       fws.apiFlight.Actual.map(millisToLocalDateTimeString(_)).getOrElse(""),
       fws.apiFlight.EstimatedChox.map(millisToLocalDateTimeString(_)).getOrElse(""),

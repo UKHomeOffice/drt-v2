@@ -6,7 +6,6 @@ import actors.daily.PassengersActor
 import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
-import actors.persistent.prediction.TouchdownPredictionActor
 import actors.persistent.staffing._
 import actors.routing.FlightsRouterActor
 import actors.supervised.RestartOnStop
@@ -38,7 +37,7 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
-import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed, FeedPoller, ManifestsFeedResponse}
+import drt.server.feeds._
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
 import drt.shared._
@@ -59,7 +58,7 @@ import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.FlightFilter
-import services.prediction.TouchdownPrediction
+import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
 import slickdb.UserTableLike
 import uk.gov.homeoffice.drt.AppEnvironment
@@ -68,6 +67,8 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArriv
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.prediction.{OffScheduleModelAndFeatures, ToChoxModelAndFeatures}
+import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 import uk.gov.homeoffice.drt.time.{MilliDate => _, _}
 
@@ -168,7 +169,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
           case (_, flights) =>
             flights.flights
               .filter { case (_, ApiFlightWithSplits(apiFlight, _, _)) =>
-                SDate(apiFlight.bestArrivalTime(airportConfig.timeToChoxMillis, airportConfig.useTimePredictions)).toLocalDate == date
+                SDate(apiFlight.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date
               }
               .values
               .groupBy(fws => fws.apiFlight.Terminal)
@@ -242,7 +243,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   }
 
   val pcpArrivalTimeCalculator: RedListUpdates => Arrival => MilliDate =
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)(walkTimeProvider)
+    PaxFlow.pcpArrivalTimeForFlight(airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)(walkTimeProvider)
 
   val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff => {
     redListUpdatesActor.ask(GetState).mapTo[RedListUpdates]
@@ -358,8 +359,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
       log.info(s"Touchdown predictions enabled")
-      val tdModelProvider = TouchdownPrediction.modelAndFeaturesProvider(now, classOf[TouchdownPredictionActor])
-      TouchdownPrediction(tdModelProvider, 45, 15).addTouchdownPredictions
+      ArrivalPredictions(Flight().getModels, Map(OffScheduleModelAndFeatures.targetName -> 45, ToChoxModelAndFeatures.targetName -> 20), 15).addPredictions
     } else {
       log.info(s"Touchdown predictions disabled. Using noop lookup")
       diff => Future.successful(diff)

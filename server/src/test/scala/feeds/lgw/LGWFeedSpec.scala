@@ -7,7 +7,7 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, Feed}
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.N
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
@@ -33,7 +33,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       Operator = None,
       Status = "Landed",
       Estimated = Some(SDate("2018-06-03T19:28:00Z").millisSinceEpoch),
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = Some(SDate("2018-06-03T19:30:00Z").millisSinceEpoch),
       EstimatedChox = Some(SDate("2018-06-03T19:37:00Z").millisSinceEpoch),
       ActualChox = Some(SDate("2018-06-03T19:36:00Z").millisSinceEpoch),
@@ -66,7 +66,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       Operator = None,
       Status = "Landed",
       Estimated = Some(SDate("2018-06-03T19:28:00Z").millisSinceEpoch),
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = Some(SDate("2018-06-03T19:30:00Z").millisSinceEpoch),
       EstimatedChox = Some(SDate("2018-06-03T19:37:00Z").millisSinceEpoch),
       ActualChox = Some(SDate("2018-06-03T19:36:00Z").millisSinceEpoch),

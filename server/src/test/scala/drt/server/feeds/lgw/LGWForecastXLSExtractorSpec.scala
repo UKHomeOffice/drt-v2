@@ -2,7 +2,7 @@ package drt.server.feeds.lgw
 
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, Predictions, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
@@ -38,7 +38,7 @@ class LGWForecastXLSExtractorSpec extends Specification {
         FlightCodeSuffix = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,
@@ -67,7 +67,7 @@ class LGWForecastXLSExtractorSpec extends Specification {
         FlightCodeSuffix = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,
@@ -96,7 +96,7 @@ class LGWForecastXLSExtractorSpec extends Specification {
         FlightCodeSuffix = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

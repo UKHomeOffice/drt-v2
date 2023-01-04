@@ -1,7 +1,7 @@
 package controllers
 
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Prediction, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Prediction, Predictions, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -17,7 +17,7 @@ object ArrivalGenerator {
               operator: Option[Operator] = None,
               status: ArrivalStatus = ArrivalStatus(""),
               estDt: String = "",
-              predTouchdownDt: String = "",
+              predictions: Predictions = Predictions(0L, Map()),
               actDt: String = "",
               estChoxDt: String = "",
               actChoxDt: String = "",
@@ -43,7 +43,7 @@ object ArrivalGenerator {
       Operator = operator,
       Status = status,
       Estimated = if (estDt.nonEmpty) Option(SDate.parseString(estDt).millisSinceEpoch) else None,
-      PredictedTouchdown = if (predTouchdownDt.nonEmpty) Option(Prediction(SDate.now().millisSinceEpoch, SDate.parseString(predTouchdownDt).millisSinceEpoch)) else None,
+      Predictions = predictions,
       Actual = if (actDt.nonEmpty) Option(SDate.parseString(actDt).millisSinceEpoch) else None,
       EstimatedChox = if (estChoxDt.nonEmpty) Option(SDate.parseString(estChoxDt).millisSinceEpoch) else None,
       ActualChox = if (actChoxDt.nonEmpty) Option(SDate.parseString(actChoxDt).millisSinceEpoch) else None,

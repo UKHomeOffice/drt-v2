@@ -10,7 +10,6 @@ import scala.util.matching.Regex
 
 case class WalkTime(gateOrStand: String, terminal: Terminal, walkTimeMillis: Long) {
   val inMinutes: Int = millisToMinutes(walkTimeMillis)
-
 }
 
 case class TerminalWalkTimes(gateWalktimes: Map[String, WalkTime], standWalkTimes: Map[String, WalkTime])
@@ -35,8 +34,7 @@ case class WalkTimes(byTerminal: Map[Terminal, TerminalWalkTimes]) {
     maybeWalkTime.getOrElse(defaultString)
   }
 
-  def isEmpty = byTerminal.isEmpty
-
+  def isEmpty: Boolean = byTerminal.isEmpty
 }
 
 object WalkTimes {

@@ -6,7 +6,7 @@ import org.joda.time.{DateTime, DateTimeZone}
 import org.springframework.util.StringUtils
 import uk.gov.homeoffice.drt.time.SDate
 import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
 
@@ -44,7 +44,7 @@ trait BHXLiveArrivals extends BHXArrivals {
     Arrival(
       Operator = None,
       Status = flightRecord.getFlightStatus,
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Estimated = convertToUTC(flightRecord.getEstimatedTime).map(SDate(_).millisSinceEpoch),
       Actual = convertToUTC(flightRecord.getTouchdownTime).map(SDate(_).millisSinceEpoch),
       EstimatedChox = convertToUTC(flightRecord.getEstimatedChoxTime).map(SDate(_).millisSinceEpoch),
@@ -78,7 +78,7 @@ trait BHXForecastArrivals extends BHXArrivals {
       Operator = None,
       Status = "Port Forecast",
       Estimated = None,
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = None,
       EstimatedChox = None,
       ActualChox = None,

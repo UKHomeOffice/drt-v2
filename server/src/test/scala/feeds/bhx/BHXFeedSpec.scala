@@ -12,7 +12,7 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeed
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
@@ -390,7 +390,7 @@ class BHXFeedSpec extends CrunchTestLike {
       Operator = Option(Operator("SA")),
       Status = ArrivalStatus("ARRIVED ON STAND"),
       Estimated = Option(SDate(estimatedTouchDownTimeString).millisSinceEpoch),
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = Option(SDate(actualTouchDownTimeString).millisSinceEpoch),
       EstimatedChox = None,
       ActualChox = Option(SDate(actualOnBlocksTimeString).millisSinceEpoch),

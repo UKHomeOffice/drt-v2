@@ -2,14 +2,14 @@ package services.arrivals
 
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Prediction}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Prediction, Predictions}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 class LiveArrivalsUtilSpec extends Specification {
 
   def arrival(estimated: Option[Long] = None,
-              predTouchdown: Option[Prediction[Long]] = None,
+              predictions: Predictions = Predictions(0L, Map()),
               actual: Option[Long] = None,
               estChox: Option[Long] = None,
               actChox: Option[Long] = None,
@@ -21,7 +21,7 @@ class LiveArrivalsUtilSpec extends Specification {
       Operator = None,
       Status = status,
       Estimated = estimated,
-      PredictedTouchdown = predTouchdown,
+      Predictions = predictions,
       Actual = actual,
       EstimatedChox = estChox,
       ActualChox = actChox,

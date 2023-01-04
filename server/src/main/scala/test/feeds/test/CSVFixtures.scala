@@ -3,7 +3,7 @@ package test.feeds.test
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Terminals}
 
 import scala.collection.immutable.Seq
@@ -44,7 +44,7 @@ object CSVFixtures {
         Operator = None,
         Status = ArrivalStatus("Unk"),
         Estimated = timeToSDate(fields(Estimated)),
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = timeToSDate(fields(Actual)),
         EstimatedChox = timeToSDate(fields(EstimatedChox)),
         ActualChox = timeToSDate(fields(ActualChox)),

@@ -17,6 +17,7 @@ import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, T3}
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.prediction.OffScheduleModelAndFeatures
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -41,7 +42,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     useTimePredictions = true,
   )
   val defaultWalkTime = 300000L
-  val pcpCalc: Arrival => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)((_, _) => defaultWalkTime)(RedListUpdates.empty)
+  val pcpCalc: Arrival => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)((_, _) => defaultWalkTime)(RedListUpdates.empty)
 
   val setPcpTime: ArrivalsDiff => Future[ArrivalsDiff] =
     diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.mapValues(arrival => arrival.copy(PcpTime = Option(pcpCalc(arrival).millisSinceEpoch)))))
@@ -57,13 +58,15 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     ))
 
     "set the correct pcp time given an arrival with a predicted touchdown time" >> {
-      val predicted = SDate(scheduled).addMinutes(10)
-      val arrival = ArrivalGenerator.arrival(iata = "BA1111", schDt = scheduled, predTouchdownDt = predicted.toISOString(), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
+      val offScheduleMinutes = 10
+      val predictions = Predictions(0L, Map(OffScheduleModelAndFeatures.targetName -> offScheduleMinutes))
+      val arrival = ArrivalGenerator.arrival(iata = "BA1111", schDt = scheduled, predictions = predictions, origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival))))
 
-      val expectedPcp = predicted
-        .addMillis(airportConfig.timeToChoxMillis)
+      val expectedPcp = SDate(scheduled)
+        .addMinutes(offScheduleMinutes)
+        .addMinutes(Arrival.defaultMinutesToChox)
         .addMillis(airportConfig.firstPaxOffMillis)
         .addMillis(defaultWalkTime)
 

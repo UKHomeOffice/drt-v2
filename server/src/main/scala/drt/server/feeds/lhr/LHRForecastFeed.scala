@@ -4,7 +4,7 @@ package drt.server.feeds.lhr
 import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.forecast.LHRForecastFlightRow
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -20,7 +20,7 @@ object LHRForecastFeed {
         Operator = None,
         Status = "Port Forecast",
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

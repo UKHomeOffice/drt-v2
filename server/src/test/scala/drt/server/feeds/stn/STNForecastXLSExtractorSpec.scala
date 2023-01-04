@@ -1,11 +1,10 @@
 package drt.server.feeds.stn
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.SDate
-import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDate
 
 class STNForecastXLSExtractorSpec extends Specification {
 
@@ -43,7 +42,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         FlightCodeSuffix = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,
@@ -72,7 +71,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         FlightCodeSuffix = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,
@@ -101,7 +100,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         FlightCodeSuffix = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,
@@ -130,7 +129,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         FlightCodeSuffix = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

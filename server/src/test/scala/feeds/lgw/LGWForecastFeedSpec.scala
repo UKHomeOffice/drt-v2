@@ -6,7 +6,7 @@ import org.specs2.mock.Mockito
 import org.specs2.mutable.Specification
 import org.specs2.specification.Scope
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.S
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
@@ -54,7 +54,7 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         Operator = None,
         Status = "Port Forecast",
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,
@@ -88,7 +88,7 @@ class LGWForecastFeedSpec extends Specification with Mockito {
         Operator = None,
         Status = "Port Forecast",
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

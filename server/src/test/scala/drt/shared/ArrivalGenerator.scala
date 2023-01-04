@@ -1,7 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Prediction, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Prediction, Predictions, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -18,7 +18,7 @@ object ArrivalGenerator {
                operator: Option[Operator] = None,
                status: ArrivalStatus = ArrivalStatus(""),
                est: MillisSinceEpoch = 0L,
-               predTd: MillisSinceEpoch = 0L,
+               predictions: Predictions = Predictions(0L, Map()),
                act: MillisSinceEpoch = 0L,
                estChox: MillisSinceEpoch = 0L,
                actChox: MillisSinceEpoch = 0L,
@@ -36,7 +36,7 @@ object ArrivalGenerator {
       Operator = operator,
       Status = status,
       Estimated = if (est != 0L) Some(est) else None,
-      PredictedTouchdown = if (predTd != 0L) Some(Prediction(0L, predTd)) else None,
+      Predictions = predictions,
       Actual = if (act != 0L) Some(act) else None,
       EstimatedChox = if (estChox != 0L) Some(estChox) else None,
       ActualChox = if (actChox != 0L) Some(actChox) else None,

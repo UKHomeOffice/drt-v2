@@ -40,7 +40,7 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
     useTimePredictions = true,
   )
   val defaultWalkTime = 300000L
-  val pcpCalc: Arrival => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)((_, _) => defaultWalkTime)(RedListUpdates.empty)
+  val pcpCalc: Arrival => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)((_, _) => defaultWalkTime)(RedListUpdates.empty)
 
   val setPcpTime: ArrivalsDiff => Future[ArrivalsDiff] =
     diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.mapValues(arrival => arrival.copy(PcpTime = Option(pcpCalc(arrival).millisSinceEpoch)))))

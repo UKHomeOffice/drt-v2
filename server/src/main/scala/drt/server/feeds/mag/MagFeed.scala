@@ -17,7 +17,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
 import uk.gov.homeoffice.drt.time.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -179,7 +179,7 @@ object MagFeed {
     Operator = ma.operatingAirline.iata,
     Status = if (ma.onBlockTime.actual.isDefined) "On Chocks" else if (ma.touchDownTime.actual.isDefined) "Landed" else ma.flightStatus,
     Estimated = ma.arrival.estimated.map(str => SDate(str).millisSinceEpoch),
-    PredictedTouchdown = None,
+    Predictions = Predictions(0L, Map()),
     Actual = ma.arrival.actual.map(str => SDate(str).millisSinceEpoch),
     EstimatedChox = ma.onBlockTime.estimated.map(str => SDate(str).millisSinceEpoch),
     ActualChox = ma.onBlockTime.actual.map(str => SDate(str).millisSinceEpoch),

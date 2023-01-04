@@ -11,7 +11,7 @@ import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
@@ -99,7 +99,7 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
         Operator = flight.operator,
         Status = "UNK",
         Estimated = flight.estimated.map(_.toDate.getTime),
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = flight.touchdown.map(_.toDate.getTime),
         EstimatedChox = flight.estChox.map(_.toDate.getTime),
         ActualChox = flight.actChox.map(_.toDate.getTime),

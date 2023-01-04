@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PortCode, UnknownFeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage._
-import uk.gov.homeoffice.drt.protobuf.messages.Prediction.PredictionLongMessage
+import uk.gov.homeoffice.drt.protobuf.messages.Prediction.{PredictionIntMessage, PredictionLongMessage, PredictionsMessage}
 
 object FlightMessageConversion {
   val log: Logger = LoggerFactory.getLogger(getClass.toString)
@@ -119,6 +119,11 @@ object FlightMessageConversion {
   }
 
   def apiFlightToFlightMessage(apiFlight: Arrival): FlightMessage = {
+    val maybePredictionsMessage = Option(PredictionsMessage(
+      Option(apiFlight.Predictions.lastChecked),
+      apiFlight.Predictions.predictions.map(p => PredictionIntMessage(Option(p._1), Option(p._2))).toList
+    ))
+
     FlightMessage(
       operator = apiFlight.Operator.map(_.code),
       gate = apiFlight.Gate,
@@ -138,7 +143,7 @@ object FlightMessageConversion {
       feedSources = apiFlight.FeedSources.map(_.toString).toSeq,
       scheduled = Option(apiFlight.Scheduled),
       estimated = apiFlight.Estimated,
-      predictedTouchdown = predictionToMessage(apiFlight.PredictedTouchdown),
+      predictions = maybePredictionsMessage,
       touchdown = apiFlight.Actual,
       estimatedChox = apiFlight.EstimatedChox,
       actualChox = apiFlight.ActualChox,
@@ -155,7 +160,16 @@ object FlightMessageConversion {
       TotalPaxSourceMessage(pax = tp.pax, feedSource = Option(tp.feedSource.name))
     ).toSeq
 
-  def predictionToMessage(maybePred: Option[Prediction[Long]]): Option[PredictionLongMessage] =
+  def predictionsToMessage(predictions: Predictions): PredictionsMessage =
+    PredictionsMessage(
+      updatedAt = Option(predictions.lastChecked),
+      predictions = predictions.predictions.map(predictionIntToMessage).toList
+    )
+
+  def predictionIntToMessage(maybePred: (String, Int)): PredictionIntMessage =
+    PredictionIntMessage(Option(maybePred._1), Option(maybePred._2))
+
+  def predictionLongToMessage(maybePred: Option[Prediction[Long]]): Option[PredictionLongMessage] =
     maybePred.map(pred => PredictionLongMessage(Option(pred.updatedAt), Option(pred.value)))
 
   def predictionFromMessage(maybePredMessage: Option[PredictionLongMessage]): Option[Prediction[Long]] =
@@ -165,11 +179,19 @@ object FlightMessageConversion {
       value <- predMsg.value
     } yield Prediction(updatedAt, value)
 
+  def predictionsFromMessage(maybePredictionsMessage: Option[PredictionsMessage]): Predictions =
+    maybePredictionsMessage match {
+      case None => Predictions(0L, Map())
+      case Some(predictions) =>
+        val modelPredictions = predictions.predictions.map(msg => (msg.getModelName, msg.getValue))
+        Predictions(predictions.updatedAt.getOrElse(0L), modelPredictions.toMap)
+    }
+
   def flightMessageToApiFlight(flightMessage: FlightMessage): Arrival = Arrival(
     Operator = flightMessage.operator.map(Operator),
     Status = ArrivalStatus(flightMessage.status.getOrElse("")),
     Estimated = flightMessage.estimated,
-    PredictedTouchdown = predictionFromMessage(flightMessage.predictedTouchdown),
+    Predictions = predictionsFromMessage(flightMessage.predictions),
     Actual = flightMessage.touchdown,
     EstimatedChox = flightMessage.estimatedChox,
     ActualChox = flightMessage.actualChox,

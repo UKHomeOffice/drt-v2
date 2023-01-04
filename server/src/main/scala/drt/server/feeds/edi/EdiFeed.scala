@@ -120,7 +120,7 @@ case class EdiFeed(ediClient: EdiClient)
         FlightCodeSuffix = flightCodeSuffix,
         Status = flight.FlightStatus.map(s => ArrivalStatus(getStatusDescription(s))).getOrElse(ArrivalStatus("")),
         Estimated = if (est == 0) None else Option(est),
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = if (act == 0) None else Option(act),
         EstimatedChox = None,
         ActualChox = if (actChox == 0) None else Option(actChox),

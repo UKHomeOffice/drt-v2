@@ -77,9 +77,9 @@ object PcpArrival {
 
   type FlightWalkTime = (Arrival, RedListUpdates) => Long
 
-  def pcpFrom(timeToChoxMillis: Long, firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime, considerPredictions: Boolean)
+  def pcpFrom(firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime, considerPredictions: Boolean)
              (flight: Arrival, redListUpdates: RedListUpdates): MilliDate = {
-    val bestChoxTimeMillis: Long = flight.bestArrivalTime(timeToChoxMillis, considerPredictions)
+    val bestChoxTimeMillis: Long = flight.bestArrivalTime(considerPredictions)
     val walkTimeMillis = walkTimeForFlight(flight, redListUpdates)
     MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
   }

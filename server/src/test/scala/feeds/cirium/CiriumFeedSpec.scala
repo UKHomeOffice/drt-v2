@@ -8,7 +8,7 @@ import drt.server.feeds.cirium.CiriumFeed
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.cirium.services.entities._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
@@ -117,7 +117,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       Operator = Option(Operator("TST")),
       Status = ArrivalStatus("Active"),
       Estimated = Option(SDate(estRunwayArrival).millisSinceEpoch),
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = Option(SDate(actRunwayArrival).millisSinceEpoch),
       EstimatedChox = Option(SDate(estGateArrivalTime).millisSinceEpoch),
       ActualChox = Option(SDate(actGateArrivalTime).millisSinceEpoch),
