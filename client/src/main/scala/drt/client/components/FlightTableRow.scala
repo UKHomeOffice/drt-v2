@@ -147,7 +147,7 @@ object FlightTableRow {
       val estCell = List(<.td(maybeLocalTimeWithPopup(flight.EstimatedChox)))
       val lastCells = List[TagMod](
         <.td(maybeLocalTimeWithPopup(flight.ActualChox)),
-        <.td(pcpTimeRange(flightWithSplits), ^.className := "arrivals__table__flight-est-pcp"),
+        <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis), ^.className := "arrivals__table__flight-est-pcp"),
         <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.pcpPaxEstimate)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
       )
       val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells

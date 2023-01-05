@@ -26,7 +26,7 @@ object Settings {
 
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   object versions {
-    val drtLib = "v350"
+    val drtLib = "v352"
 
     val scala = "2.12.13"
     val scalaDom = "1.1.0"
@@ -41,7 +41,7 @@ object Settings {
     val uTest = "0.7.4"
     val h2 = "2.1.210"
 
-    val akka = "2.6.20"
+    val akka = "2.7.0"
     val akkaStreamContrib = "0.9"
 
     val specs2 = "4.6.0"
@@ -58,7 +58,7 @@ object Settings {
     val csvCommons = "1.4"
     val pprint = "0.5.6"
     val scalaCheck = "1.13.4"
-    val akkaPersistenceJdbc = "5.0.4"
+    val akkaPersistenceJdbc = "5.2.0"
     val bluebus = "0.3.3-DRT"
     val postgres = "42.2.2"
     val sshJ = "0.24.0"
@@ -169,7 +169,6 @@ object Settings {
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test" force(),
     "com.typesafe.akka" %% "akka-persistence" % akka force(),
     "com.typesafe.akka" %% "akka-persistence-query" % akka force(),
-    "com.typesafe.akka" %% "akka-stream-contrib" % akkaStreamContrib,
     "com.typesafe.akka" %% "akka-slf4j" % akka force(),
     "com.typesafe.akka" %% "akka-http" % akkaHttp force(),
     "com.typesafe.akka" %% "akka-http-caching" % akkaHttp force(),
