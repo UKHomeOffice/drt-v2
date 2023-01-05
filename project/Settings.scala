@@ -163,7 +163,6 @@ object Settings {
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
     "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
-    //"com.lightbend.akka" %% "akka-actor-typed" % akka force(),
     "com.typesafe.akka" %%  "akka-slf4j" % akka force(),
     "com.typesafe.akka" %%  "akka-persistence-typed" % akka force(),
     "com.typesafe.akka" %%  "akka-remote" % akka force(),
