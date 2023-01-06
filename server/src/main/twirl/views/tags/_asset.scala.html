@@ -1,2 +1,1 @@
-@import drt.server.feeds.Implicits.maybeOperatorFromString
 @(path: String)(implicit config: play.api.Configuration)@{config.get[String]("application.cdn") + routes.Assets.versioned(path)}

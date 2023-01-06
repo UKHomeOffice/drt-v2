@@ -18,35 +18,44 @@ GET           /airport-info                                                     
 GET           /walk-times                                                             controllers.Application.getWalkTimes
 
 GET           /alerts/:createdAfter                                                   controllers.Application.getAlerts(createdAfter: Long)
+ +nocsrf
 POST          /alerts                                                                 controllers.Application.addAlert
+ +nocsrf
 DELETE        /alerts                                                                 controllers.Application.deleteAlerts
 
 GET           /version                                                                controllers.Application.getApplicationVersion
 
 GET           /crunch                                                                 controllers.Application.getCrunch
+ +nocsrf
 POST          /crunch/recalculate                                                     controllers.Application.reCrunch
 GET           /crunch-snapshot/:pit                                                   controllers.Application.getCrunchSnapshot(pit: Long)
 
 GET           /feed-statuses                                                          controllers.Application.getFeedStatuses
 GET           /feeds/statuses                                                         controllers.Application.getFeedStatuses
+ +nocsrf
 POST          /feeds/check                                                            controllers.Application.checkFeed
 GET           /arrival/:number/:terminal/:scheduled/:origin                           controllers.Application.getArrival(number: Int, terminal: String, scheduled: Long, origin: String)
 GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin              controllers.Application.getArrivalAtPointInTime(pointInTime: Long, number: Int, terminal: String, scheduled: Long, origin: String)
 GET           /manifest/:utcDate/summary                                              controllers.Application.getPassengerInfoForDay(utcDate: String)
 GET           /manifest/:origin/:voyageNumber/:scheduled                              controllers.Application.getPassengerInfoArrival(origin: String, voyageNumber: Int, scheduled: Long)
 GET           /red-list/ports/:date                                                   controllers.Application.getRedListPorts(date: String)
+ +nocsrf
 POST          /red-list/updates                                                       controllers.Application.updateRedListUpdates()
 GET           /red-list/updates                                                       controllers.Application.getRedListUpdates
+ +nocsrf
 DELETE        /red-list/updates/:effectiveFrom                                        controllers.Application.deleteRedListUpdates(effectiveFrom: Long)
 GET           /red-list/updates-legacy                                                controllers.Application.getRedListUpdatesLegacy
+ +nocsrf
 POST          /egate-banks/updates                                                    controllers.Application.updateEgateBanksUpdates()
 GET           /egate-banks/updates                                                    controllers.Application.getEgateBanksUpdates
+ +nocsrf
 DELETE        /egate-banks/updates/:terminal/:effectiveFrom                           controllers.Application.deleteEgateBanksUpdates(terminal: String, effectiveFrom: Long)
 GET           /egate-banks/updates-legacy                                             controllers.Application.getEgateBanksUpdatesLegacy
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 
 GET           /fixed-points                                                           controllers.Application.getFixedPoints
+ +nocsrf
 POST          /fixed-points                                                           controllers.Application.saveFixedPoints
 
 GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.Application.exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
@@ -78,42 +87,46 @@ GET           /assets/*file                                                     
 POST          /api/*path                                                              controllers.Application.autowireApi(path: String)
 
 GET           /data/user                                                              controllers.Application.getLoggedInUser()
-
+ +nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin()
 
 GET           /data/userDetails/:email                                               controllers.Application.userDetails(email:String)
-
+ +nocsrf
 POST          /data/addUserToGroup/:userId/:group                                     controllers.Application.addUserToGroup(userId: String, group: String)
 
 GET           /data/user/has-port-access                                              controllers.Application.getUserHasPortAccess()
 
 GET           /data/actor-tree                                                        controllers.Application.getActorTree()
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.Application.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
-
+ +nocsrf
 POST          /email/feedback/:feedback                                               controllers.Application.feedBack(feedback: String)
-
+ +nocsrf
 # Logging
 POST          /logging                                                                controllers.Application.logging
 
-
+ +nocsrf
 POST          /data/staff                                                             controllers.Application.saveStaff
 GET           /staff-movements                                                        controllers.Application.getStaffMovements(pointInTime: Option[Long])
+ +nocsrf
 POST          /staff-movements                                                        controllers.Application.addStaffMovements()
+ +nocsrf
 DELETE        /staff-movements/:uuid                                                  controllers.Application.removeStaffMovements(uuid: String)
 
 # Feed import
+ +nocsrf
 POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts()
-
+ +nocsrf
 POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
 
 # Test related
+ +nocsrf
 POST          /test/arrival                                                           test.controllers.TestController.addArrival
-
+ +nocsrf
 POST          /test/arrivals/:forDate                                                 test.controllers.TestController.addArrivals(forDate)
-
+ +nocsrf
 POST          /test/manifest                                                          test.controllers.TestController.addManifest
-
+ +nocsrf
 POST          /test/mock-roles                                                        test.controllers.TestController.setMockRoles()
 GET           /test/mock-roles-set                                                    test.controllers.TestController.setMockRolesByQueryString()
-
+ +nocsrf
 DELETE        /test/data                                                              test.controllers.TestController.deleteAllData()

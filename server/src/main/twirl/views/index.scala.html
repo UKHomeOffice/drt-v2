@@ -13,8 +13,8 @@
     <link rel="shortcut icon" type="image/png" href=@_asset("images/favicon.png")>
     @if(googleTrackingCode.nonEmpty){
     <!-- Google tag (gtag.js) -->
-   <script async @{CSPNonce.attr} src="https://www.googletagmanager.com/gtag/js?id=@{googleTrackingCode}"></script>
-   <script @{CSPNonce.attr}>
+    <script async @{CSPNonce.attr} src="https://www.googletagmanager.com/gtag/js?id=@{googleTrackingCode}"></script>
+    <script @{CSPNonce.attr}>
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);};
           gtag('js', new Date());
