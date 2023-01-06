@@ -345,7 +345,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     eventualThing
   }
 
-  @CSP
   def index: Action[AnyContent] = Action { implicit request: Request[AnyContent]  =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
     if (user.hasRole(airportConfig.role))
