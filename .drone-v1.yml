@@ -127,6 +127,7 @@ steps:
       event:
         - push
     depends_on:
+      - unit-test
       - publish-drt
       - publish-cypress
 
