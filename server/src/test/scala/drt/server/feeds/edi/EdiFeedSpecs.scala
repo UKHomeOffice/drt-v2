@@ -93,7 +93,7 @@ class EdiFeedSpecs extends CrunchTestLike {
         FlightCodeSuffix = None,
         Status = ArrivalStatus("Arrival is on block at a stand"),
         Estimated = Some(1630450800000L),
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = Some(1630450380000L),
         EstimatedChox = None,
         ActualChox = Some(1630450680000L),

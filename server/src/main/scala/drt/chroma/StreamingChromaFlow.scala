@@ -11,7 +11,7 @@ import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.util.StringUtils
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Operator}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Operator, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource}
 
@@ -50,7 +50,7 @@ object StreamingChromaFlow {
         Operator = if (flight.Operator.isEmpty) None else Option(Operator(flight.Operator)),
         Status = flight.Status,
         Estimated = if (est == 0) None else Option(est),
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = if (act == 0) None else Option(act),
         EstimatedChox = if (estChox == 0) None else Option(estChox),
         ActualChox = if (actChox == 0) None else Option(actChox),
@@ -81,7 +81,7 @@ object StreamingChromaFlow {
         Operator = None,
         Status = "Port Forecast",
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

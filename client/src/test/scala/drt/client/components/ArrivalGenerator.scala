@@ -2,7 +2,7 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Prediction, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Prediction, Predictions, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 
@@ -18,7 +18,7 @@ object ArrivalGenerator {
                  operator: Option[Operator] = None,
                  status: ArrivalStatus = ArrivalStatus(""),
                  estDt: String = "",
-                 predTouchdownDt: String = "",
+                 predictions: Predictions = Predictions(0L, Map()),
                  actDt: String = "",
                  estChoxDt: String = "",
                  actChoxDt: String = "",
@@ -36,7 +36,7 @@ object ArrivalGenerator {
       Operator = operator,
       Status = status,
       Estimated = if (estDt.nonEmpty) Option(SDate(estDt).millisSinceEpoch) else None,
-      PredictedTouchdown = if (predTouchdownDt.nonEmpty) Option(Prediction(SDate.now().millisSinceEpoch, SDate(predTouchdownDt).millisSinceEpoch)) else None,
+      Predictions = predictions,
       Actual = if (actDt.nonEmpty) Option(SDate(actDt).millisSinceEpoch) else None,
       EstimatedChox = if (estChoxDt.nonEmpty) Option(SDate(estChoxDt).millisSinceEpoch) else None,
       ActualChox = if (actChoxDt.nonEmpty) Option(SDate(actChoxDt).millisSinceEpoch) else None,

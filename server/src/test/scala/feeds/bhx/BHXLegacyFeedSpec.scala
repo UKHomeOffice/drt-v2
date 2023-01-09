@@ -8,7 +8,7 @@ import org.specs2.mock.Mockito
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.co.bhx.online.flightinformation._
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
 
@@ -96,7 +96,7 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         Operator = None,
         Status = "Arrived",
         Estimated = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
         EstimatedChox = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
         ActualChox = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
@@ -130,7 +130,7 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         Operator = None,
         Status = "Port Forecast",
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

@@ -3,7 +3,7 @@ package feeds.lhr.forecast
 import drt.server.feeds.lhr.forecast.{LHRForecastCSVExtractor, LHRForecastFlightRow}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T2
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
@@ -122,7 +122,7 @@ class LHRForecastCSVSpec extends Specification {
         Operator = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,
@@ -147,7 +147,7 @@ class LHRForecastCSVSpec extends Specification {
         Operator = None,
         Status = ArrivalStatus("Port Forecast"),
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

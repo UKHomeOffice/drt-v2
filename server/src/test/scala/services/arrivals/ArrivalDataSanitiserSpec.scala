@@ -2,7 +2,7 @@ package services.arrivals
 
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Prediction}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Prediction, Predictions}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -22,7 +22,7 @@ class ArrivalDataSanitiserSpec extends Specification {
       Operator = None,
       Status = status,
       Estimated = estimated,
-      PredictedTouchdown = predTouchdown,
+      Predictions = Predictions(0L, Map()),
       Actual = actual,
       EstimatedChox = estChox,
       ActualChox = actChox,

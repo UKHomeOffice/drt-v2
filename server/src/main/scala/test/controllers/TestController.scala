@@ -20,7 +20,7 @@ import test.TestDrtSystem
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -73,7 +73,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
             Estimated = Option(SDate(flight.EstDT).millisSinceEpoch),
             Actual = Option(SDate(flight.ActDT).millisSinceEpoch),
             EstimatedChox = Option(SDate(flight.EstChoxDT).millisSinceEpoch),
-            PredictedTouchdown = None,
+            Predictions = Predictions(0L, Map()),
             ActualChox = Option(SDate(flight.ActChoxDT).millisSinceEpoch),
             Gate = Option(flight.Gate),
             Stand = Option(flight.Stand),

@@ -10,7 +10,7 @@ import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -223,7 +223,7 @@ object AclFeed {
         Operator = operator,
         Status = "ACL Forecast",
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

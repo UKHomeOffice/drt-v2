@@ -16,7 +16,7 @@ import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -108,7 +108,7 @@ object GlaFeed {
     None,
     Status = ga.FlightStatusDesc,
     Estimated = ga.AODBProbableDateTime.map(SDate(_).millisSinceEpoch),
-    PredictedTouchdown = None,
+    Predictions = Predictions(0L, Map()),
     Actual = ga.ALDT.map(SDate(_).millisSinceEpoch),
     EstimatedChox = ga.EIBT.map(SDate(_).millisSinceEpoch),
     ActualChox = ga.AIBT.map(SDate(_).millisSinceEpoch),

@@ -9,7 +9,7 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, Feed}
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
 import drt.shared.FlightsApi.Flights
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
@@ -125,7 +125,7 @@ class GlaFeedSpec extends CrunchTestLike {
       Operator = None,
       Status = ArrivalStatus("Flight is on schedule"),
       Estimated = Some(SDate("2019-11-13T13:32:00Z").millisSinceEpoch),
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = Some(SDate("2019-11-13T13:31:00Z").millisSinceEpoch),
       EstimatedChox = Some(SDate("2019-11-13T12:33:00Z").millisSinceEpoch),
       ActualChox = Some(SDate("2019-11-13T13:30:00Z").millisSinceEpoch),
@@ -186,7 +186,7 @@ class GlaFeedSpec extends CrunchTestLike {
       Operator = None,
       Status = ArrivalStatus("Flight is cancelled"),
       Estimated = None,
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = Some(SDate("2019-11-14T14:41:00Z").millisSinceEpoch),
       EstimatedChox = Some(SDate("2019-11-14T12:44:00Z").millisSinceEpoch),
       ActualChox = Some(SDate("2019-11-14T14:40:00Z").millisSinceEpoch),
@@ -285,7 +285,7 @@ class GlaFeedSpec extends CrunchTestLike {
       Operator = None,
       Status = ArrivalStatus("Flight is cancelled"),
       Estimated = None,
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = None,
       EstimatedChox = None,
       ActualChox = None,

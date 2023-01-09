@@ -18,7 +18,7 @@ import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, Span}
 import scalacss.ScalaCssReact
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Prediction}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -107,8 +107,8 @@ object FlightTableRow {
       val ctaOrRedListMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
       val flightCodes = s"${allCodes.mkString(" - ")}$ctaOrRedListMarker"
 
-      val estimatedContent = (flight.Estimated, flight.PredictedTouchdown, props.airportConfig.useTimePredictions) match {
-        case (None, Some(Prediction(_, value)), true) => maybeLocalTimeWithPopup(Option(value), Option("Predicted touchdown based on recent patterns"))
+      val estimatedContent = (flight.Estimated, flight.predictedTouchdown, props.airportConfig.useTimePredictions) match {
+        case (None, Some(value), true) => maybeLocalTimeWithPopup(Option(value), Option("Predicted touchdown based on recent patterns"))
         case _ => maybeLocalTimeWithPopup(flight.Estimated)
       }
       val firstCells = List[TagMod](
@@ -147,7 +147,7 @@ object FlightTableRow {
       val estCell = List(<.td(maybeLocalTimeWithPopup(flight.EstimatedChox)))
       val lastCells = List[TagMod](
         <.td(maybeLocalTimeWithPopup(flight.ActualChox)),
-        <.td(pcpTimeRange(flightWithSplits), ^.className := "arrivals__table__flight-est-pcp"),
+        <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis), ^.className := "arrivals__table__flight-est-pcp"),
         <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.pcpPaxEstimate)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
       )
       val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells
@@ -160,7 +160,7 @@ object FlightTableRow {
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
       val noPcpPax = if (flight.Origin.isCta || outgoingDiversion) " arrival-cta" else ""
-      val trClassName = s"${offScheduleClass(flight, props.airportConfig.timeToChoxMillis, props.airportConfig.useTimePredictions)} $timeIndicatorClass$cancelledClass$noPcpPax"
+      val trClassName = s"${offScheduleClass(flight, props.airportConfig.useTimePredictions)} $timeIndicatorClass$cancelledClass$noPcpPax"
 
       val queueSplits = props.splitsQueueOrder.map { q =>
         val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
@@ -194,7 +194,7 @@ object FlightTableRow {
 
   private def gateOrStand(arrival: Arrival, airportConfig: AirportConfig, paxAreDiverted: Boolean): VdomTagOf[Span] = {
     val gateOrStand = <.span(^.className := "no-wrap", s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
-    arrival.walkTime(airportConfig.timeToChoxMillis, airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions).map { wt =>
+    arrival.walkTime(airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions).map { wt =>
       val description = (paxAreDiverted, arrival.Stand.isDefined, arrival.Gate.isDefined) match {
         case (true, _, _) => "walk time including transfer bus"
         case (false, true, _) => "walk time from stand"
@@ -206,8 +206,8 @@ object FlightTableRow {
     }.getOrElse(gateOrStand)
   }
 
-  def offScheduleClass(arrival: Arrival, timeToChoxMillis: Long, considerPredictions: Boolean): String = {
-    val eta = arrival.bestArrivalTime(timeToChoxMillis, considerPredictions)
+  def offScheduleClass(arrival: Arrival, considerPredictions: Boolean): String = {
+    val eta = arrival.bestArrivalTime(considerPredictions)
     val differenceFromScheduled = eta - arrival.Scheduled
     val hourInMillis = 3600000
     val offScheduleClass = if (differenceFromScheduled > hourInMillis || differenceFromScheduled < -1 * hourInMillis)

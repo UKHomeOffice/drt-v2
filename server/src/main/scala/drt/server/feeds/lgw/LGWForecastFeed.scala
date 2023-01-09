@@ -5,14 +5,14 @@ import akka.actor.{ActorSystem, Cancellable}
 import akka.stream.scaladsl.Source
 import akka.stream.{ActorAttributes, Supervision}
 import com.box.sdk._
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.server.feeds.Implicits._
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.FlightsApi.Flights
 import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.{N, S}
 import uk.gov.homeoffice.drt.time.SDate
@@ -87,7 +87,7 @@ class LGWForecastFeed(boxConfigFilePath: String, userId: String, ukBfGalForecast
       Operator = None,
       Status = PORT_FORECAST,
       Estimated = None,
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = None,
       EstimatedChox = None,
       ActualChox = None,

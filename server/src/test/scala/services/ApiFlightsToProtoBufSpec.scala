@@ -2,9 +2,10 @@ package services
 
 import actors.serializers.FlightMessageConversion._
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Prediction}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T2
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PortCode}
+import uk.gov.homeoffice.drt.prediction.OffScheduleModelAndFeatures
 import uk.gov.homeoffice.drt.time.SDate
 
 class ApiFlightsToProtoBufSpec extends Specification {
@@ -14,7 +15,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
         Operator = Option(Operator("Op")),
         Status = ArrivalStatus("scheduled"),
         Estimated = Option(SDate("2016-01-01T13:05:00Z").millisSinceEpoch),
-        PredictedTouchdown = Option(Prediction(SDate.now().millisSinceEpoch, SDate("2016-01-01T13:55:00Z").millisSinceEpoch)),
+        Predictions = Predictions(SDate.now().millisSinceEpoch, Map(OffScheduleModelAndFeatures.targetName -> 55)),
         Actual = Option(SDate("2016-01-01T13:10:00Z").millisSinceEpoch),
         EstimatedChox = Option(SDate("2016-01-01T13:15:00Z").millisSinceEpoch),
         ActualChox = Option(SDate("2016-01-01T13:20:00Z").millisSinceEpoch),

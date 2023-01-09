@@ -10,6 +10,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.prediction.OffScheduleModelAndFeatures
 
 class FlightMessageConversionSpec extends Specification {
 
@@ -20,7 +21,7 @@ class FlightMessageConversionSpec extends Specification {
     FlightCodeSuffix = Option(FlightCodeSuffix("G")),
     Status = ArrivalStatus("Delayed"),
     Estimated = Option(1L),
-    PredictedTouchdown = Option(Prediction(SDate.now().millisSinceEpoch, 5L)),
+    Predictions = Predictions(SDate.now().millisSinceEpoch, Map(OffScheduleModelAndFeatures.targetName -> 5)),
     Actual = Option(2L),
     EstimatedChox = Option(3L),
     ActualChox = Option(4L),

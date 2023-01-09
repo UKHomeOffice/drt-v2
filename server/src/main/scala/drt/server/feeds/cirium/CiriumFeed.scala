@@ -13,7 +13,7 @@ import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.{A2, InvalidTerminal, T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -72,7 +72,7 @@ object CiriumFeed {
     Arrival(
       Operator = f.carrierFsCode,
       Status = ciriumStatusCodeToStatus(f.status),
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Estimated = f.estimated,
       Actual = f.actualTouchdown,
       EstimatedChox = f.estimatedChox,

@@ -5,7 +5,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch.europeLondonTimeZone
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -32,7 +32,7 @@ object LhrForecastArrivals {
 object LhrForecastArrival {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def terminal(fields: Seq[String]): Terminal = Terminal(s"T${fields(0)}")
+  def terminal(fields: Seq[String]): Terminal = Terminal(s"T${fields.head}")
 
   def isArrival(fields: Seq[String]): Boolean = fields(1) == "A"
 
@@ -70,7 +70,7 @@ object LhrForecastArrival {
         Operator = operator,
         Status = "Forecast",
         Estimated = None,
-        PredictedTouchdown = None,
+        Predictions = Predictions(0L, Map()),
         Actual = None,
         EstimatedChox = None,
         ActualChox = None,

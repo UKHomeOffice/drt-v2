@@ -16,7 +16,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -291,7 +291,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
     Arrival(
       Operator = f.airline,
       Status = FlightStatus(f.status),
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
       Actual = maybeTimeStringToMaybeMillis(f.actualTouchDown),
       EstimatedChox = None,

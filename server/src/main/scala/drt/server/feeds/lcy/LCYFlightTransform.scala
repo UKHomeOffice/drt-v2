@@ -7,7 +7,7 @@ import drt.server.feeds.common.FlightStatus
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -140,7 +140,7 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
       val seats: immutable.Seq[Option[Int]] = cpn.flatMap(p => {
         (p \ seatingField).map(seatingNode =>
 
-          if (seatingNode.text.length == 0)
+          if (seatingNode.text.isEmpty)
             None
           else
             maybeNodeText(seatingNode).map(_.toInt)
@@ -164,11 +164,11 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
     case _ => None
   }
 
-  def lcyFlightToArrival(f: LCYFlight) = Arrival(
+  def lcyFlightToArrival(f: LCYFlight): Arrival = Arrival(
     Operator = f.airline,
     Status = FlightStatus(f.status),
     Estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
-    PredictedTouchdown = None,
+    Predictions = Predictions(0L, Map()),
     Actual = maybeTimeStringToMaybeMillis(f.actualTouchDown),
     EstimatedChox = None,
     ActualChox = maybeTimeStringToMaybeMillis(f.actualOnBlocks),

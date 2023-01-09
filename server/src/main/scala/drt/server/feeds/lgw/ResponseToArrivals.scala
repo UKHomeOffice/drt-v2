@@ -4,7 +4,7 @@ import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, Operator, TotalPaxSource, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, Operator, Predictions, TotalPaxSource, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Terminals}
 import uk.gov.homeoffice.drt.time.SDate
@@ -38,7 +38,7 @@ case class ResponseToArrivals(data: String) {
       Operator = if (operator.isEmpty) None else Option(Operator(operator)),
       Status = parseStatus(n),
       Estimated = parseDateTime(n, operationQualifier = "TDN", timeType = "EST"),
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),
       EstimatedChox = parseDateTime(n, operationQualifier = "ONB", timeType = "EST"),
       ActualChox = parseDateTime(n, operationQualifier = "ONB", timeType = "ACT"),

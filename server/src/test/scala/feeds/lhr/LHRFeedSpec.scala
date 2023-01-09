@@ -8,7 +8,7 @@ import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T4}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
@@ -43,7 +43,7 @@ class LHRFeedSpec extends CrunchTestLike {
             Operator = Option(Operator("Qatar Airways")),
             Status = ArrivalStatus("UNK"),
             Estimated = Option(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
-            PredictedTouchdown = None,
+            Predictions = Predictions(0L, Map()),
             Actual = Option(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
             EstimatedChox = Option(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
             ActualChox = Option(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
@@ -79,7 +79,7 @@ class LHRFeedSpec extends CrunchTestLike {
             Operator = Option(Operator("Qatar Airways")),
             Status = ArrivalStatus("UNK"),
             Estimated = Option(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
-            PredictedTouchdown = None,
+            Predictions = Predictions(0L, Map()),
             Actual = Option(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
             EstimatedChox = Option(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
             ActualChox = Option(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),

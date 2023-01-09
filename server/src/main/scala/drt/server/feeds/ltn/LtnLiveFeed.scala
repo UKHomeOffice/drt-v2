@@ -16,7 +16,7 @@ import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -92,7 +92,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       Operator = operator,
       Status = status,
       Estimated = ltnFeedFlight.EstimatedDateTime.map(sdateWithTimeZoneApplied),
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = ltnFeedFlight.ALDT.map(sdateWithTimeZoneApplied),
       EstimatedChox = None,
       ActualChox = ltnFeedFlight.AIBT.map(sdateWithTimeZoneApplied),

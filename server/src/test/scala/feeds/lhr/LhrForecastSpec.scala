@@ -3,7 +3,7 @@ package feeds.lhr
 import drt.server.feeds.lhr.forecast.{LhrForecastArrival, LhrForecastArrivals}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T3
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
@@ -28,7 +28,7 @@ class LhrForecastSpec extends Specification {
       Operator = Option(Operator("BA")),
       Status = ArrivalStatus("Forecast"),
       Estimated = None,
-      PredictedTouchdown = None,
+      Predictions = Predictions(0L, Map()),
       Actual = None,
       EstimatedChox = None,
       ActualChox = None,

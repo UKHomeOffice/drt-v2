@@ -84,7 +84,6 @@ object TestDefaults {
       T1 -> Iterable(10, 10),
       T2 -> Iterable(10, 10),
     ),
-    timeToChoxMillis = 120000L,
     role = STN,
     terminalPaxTypeQueueAllocation = Map(
       T1 -> Map(

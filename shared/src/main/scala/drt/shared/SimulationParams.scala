@@ -51,16 +51,15 @@ case class SimulationParams(
   def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits): FlightsWithSplits =
     FlightsWithSplits(flightsWithSplits.flights.map {
       case (ua, fws) =>
-        val actualPax = fws.apiFlight.ActPax.map(n => (n * passengerWeighting).toInt)
-        val tranPax = fws.apiFlight.TranPax.map(n => (n * passengerWeighting).toInt)
-        ua -> fws.copy(
-          apiFlight = fws
-            .apiFlight.copy(
-            ActPax = actualPax,
-            TranPax = tranPax,
-            FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource,
-            TotalPax = Set(TotalPaxSource(actualPax, ScenarioSimulationSource))
-          ))
+        val actualPax: Option[Int] = fws.apiFlight.ActPax.map(n => (n * passengerWeighting).toInt)
+        val tranPax: Option[Int] = fws.apiFlight.TranPax.map(n => (n * passengerWeighting).toInt)
+        val updatedArrival = fws.apiFlight.copy(
+          ActPax = actualPax,
+          TranPax = tranPax,
+          FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource,
+          TotalPax = Set(TotalPaxSource(actualPax, ScenarioSimulationSource))
+        )
+        ua -> fws.copy(apiFlight = updatedArrival)
     })
 }
 

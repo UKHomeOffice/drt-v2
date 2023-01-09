@@ -10,7 +10,7 @@ import org.specs2.specification.AfterEach
 import services.PcpArrival
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsNoop}
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Prediction, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
@@ -297,10 +297,10 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     success
   }
 
-  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, 0, (_, _) => 0, considerPredictions = true)(a, r)
+  def pcpTimeCalc(a: Arrival, r: RedListUpdates): MilliDate = PcpArrival.pcpFrom(0, (_, _) => 0, considerPredictions = true)(a, r)
 
   def arrival(estimated: Option[Long] = None,
-              predTouchdown: Option[Prediction[Long]] = None,
+              predictions: Predictions = Predictions(0L, Map()),
               actual: Option[Long] = None,
               estChox: Option[Long] = None,
               actChox: Option[Long] = None,
@@ -314,7 +314,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
       Operator = None,
       Status = status,
       Estimated = estimated,
-      PredictedTouchdown = predTouchdown,
+      Predictions = predictions,
       Actual = actual,
       EstimatedChox = estChox,
       ActualChox = actChox,
