@@ -40,7 +40,7 @@ object FlightTableComponents {
     fws.apiFlight.PcpTime.map { pcpTime: MillisSinceEpoch =>
       val sdateFrom = SDate(MilliDate(pcpTime))
       val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(fws.pcpPaxEstimate.pax.getOrElse(0))))
-      val choxTimes = <.span(
+      val postTouchdownTimes = <.span(
         <.h3("Minutes to chox from touchdown"),
         s"DRT predicted: ${fws.apiFlight.Predictions.predictions.get(ToChoxModelAndFeatures.targetName).map(c => s"${c.toString}m").getOrElse("-")}", <.br(),
         s"Feed estimated: ${estMinutesToChox(fws.apiFlight).map(c => s"${c.toString}m").getOrElse("-")}", <.br(),
@@ -49,12 +49,12 @@ object FlightTableComponents {
         s"Chox to doors open: ${firstPaxOffMillis / oneMinuteMillis}m", <.br(),
         s"Walk time from gate to arrivals hall: ${fws.apiFlight.walkTime(firstPaxOffMillis, considerPredictions = true).map(ms => s"${(ms / oneMinuteMillis).toString}m").getOrElse("-")}", <.br(),
       )
-      val content = <.div(^.display := "flex",
-        sdateLocalTimePopup(sdateFrom),
+      val content = <.div(^.display := "grid", ^.whiteSpace := "nowrap",
+        sdateFrom.toHoursAndMinutes,
         " \u2192 ",
-        sdateLocalTimePopup(sdateTo),
+        sdateTo.toHoursAndMinutes,
       )
-      Tippy.describe(choxTimes, content).vdomElement
+      Tippy.describe(postTouchdownTimes, content).vdomElement
     } getOrElse {
       <.div()
     }
