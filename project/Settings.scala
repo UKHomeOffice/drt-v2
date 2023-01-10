@@ -19,20 +19,18 @@ object Settings {
     "-feature",
     "-Ywarn-dead-code",
     "-Ywarn-unused",
-    "-Ywarn-unused-import",
+//    "-Ywarn-unused-import",
     "-Ywarn-value-discard",
-    "-Ywarn-inaccessible"
+//    "-Ywarn-inaccessible"
   )
 
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   object versions {
     val drtLib = "v352"
 
-    val scala = "2.12.13"
+    val scala = "2.13.10"
     val scalaDom = "1.1.0"
-    val scalajsReact = "1.7.5"
-    val scalajsReactComponents = "1.0.0-M2"
-    val scalaJsScripts = "1.0.0"
+    val scalajsReact = "2.1.1"
     val scalaCSS = "0.6.1"
     val scalaJsMomentJs = "0.10.4"
     val autowire = "0.3.2"
@@ -45,7 +43,7 @@ object Settings {
     val akkaStreamContrib = "0.9"
 
     val specs2 = "4.6.0"
-    val react = "16.13"
+    val react = "17.02"
 
     val bootstrap = "3.3.6"
 
@@ -57,9 +55,9 @@ object Settings {
     val awsSdk = "1.11.89"
     val csvCommons = "1.4"
     val pprint = "0.5.6"
-    val scalaCheck = "1.13.4"
+//    val scalaCheck = "1.13.4"
     val akkaPersistenceJdbc = "5.2.0"
-    val bluebus = "0.3.3-DRT"
+    val bluebus = "0.5.0-DRT"
     val postgres = "42.2.2"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
@@ -77,7 +75,7 @@ object Settings {
     val uPickle = "2.0.0"
     val akkaHttp = "10.2.6"
     val slick = "3.3.3"
-    val censorinus = "2.1.13"
+    val censorinus = "2.1.16"
     val janinoVersion = "3.1.6"
     val scalaJsReactMaterialUi = "0.2.1"
     val sprayJsonScalaJs = "1.3.5-7"
@@ -148,22 +146,31 @@ object Settings {
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
-    "com.github.gphat" % "censorinus_2.12" % censorinus,
+    "com.github.gphat" %% "censorinus" % censorinus,
     "com.pauldijou" %% "jwt-core" % "4.0.0",
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
 
     "javax.mail" % "mail" % "1.4.7",
-    "javax.xml.ws" % "jaxws-api" % "2.3.1",
-    "info.folone" %% "poi-scala" % "0.19",
-    "net.liftweb" %% "lift-json" % "3.1.0",
+//    "javax.xml.ws" % "jaxws-api" % "2.3.1",
+//    "info.folone" %% "poi-scala" % "0.19",
+//    "net.liftweb" %% "lift-json" % "3.1.0",
 
-    "net.databinder.dispatch" %% "dispatch-core" % "0.13.4",
+//    "net.databinder.dispatch" %% "dispatch-core" % "0.13.4",
 
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
     "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
+    "com.typesafe.akka" %%  "akka-slf4j" % akka force(),
+    "com.typesafe.akka" %%  "akka-persistence-typed" % akka force(),
+    "com.typesafe.akka" %%  "akka-remote" % akka force(),
+    "com.typesafe.akka" %%  "akka-persistence-testkit" % akka force(),
+    "com.typesafe.akka" %%  "akka-actor-testkit-typed" % akka force(),
+    "com.typesafe.akka" %%  "akka-testkit" % akka force(),
+    "com.typesafe.akka" %%  "akka-serialization-jackson" % akka force(),
+    "com.typesafe.akka" %%  "akka-pki" % akka force(),
+    "com.typesafe.akka" %%  "akka-stream-typed" % akka force(),
     "com.typesafe.akka" %% "akka-persistence-testkit" % akka force(),
     "com.typesafe.akka" %% "akka-testkit" % akka % "test" force(),
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test" force(),
@@ -176,10 +183,10 @@ object Settings {
     "com.typesafe.akka" %% "akka-http-xml" % akkaHttp force(),
     "com.typesafe.akka" %% "akka-stream" % akka force(),
 
-    "com.typesafe.play" %% "play-json" % playJson,
-    "com.typesafe.play" %% "play-iteratees" % playIteratees,
-    "com.typesafe.play" %% "play-iteratees-reactive-streams" % playIteratees,
-    "com.typesafe.play" %% "play-json-joda" % playJsonJoda,
+//    "com.typesafe.play" %% "play-json" % playJson,
+//    "com.typesafe.play" %% "play-iteratees" % playIteratees,
+//    "com.typesafe.play" %% "play-iteratees-reactive-streams" % playIteratees,
+//    "com.typesafe.play" %% "play-json-joda" % playJsonJoda,
 
     "com.typesafe.slick" %% "slick" % slick,
     "com.typesafe.slick" %% "slick-hikaricp" % slick,
@@ -191,7 +198,7 @@ object Settings {
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.0",
-
+    "com.fasterxml.jackson.core" % "jackson-core" % "2.10.0",
     "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
@@ -201,12 +208,12 @@ object Settings {
     "org.postgresql" % "postgresql" % postgres,
 
     "org.renjin" % "renjin-script-engine" % renjin,
-    "org.scalacheck" %% "scalacheck" % scalaCheck % "test",
+//    "org.scalacheck" %% "scalacheck" % scalaCheck % "test",
 
     "org.specs2" %% "specs2-core" % specs2 % Test,
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
-    "org.specs2" %% "specs2-scalacheck" % specs2 % Test,
+//    "org.specs2" %% "specs2-scalacheck" % specs2 % Test,
 
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
@@ -217,7 +224,7 @@ object Settings {
 
     "io.netty" % "netty-all" % "4.0.56.Final",
 
-    "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
+//    "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus,

@@ -30,7 +30,7 @@ object Bootstrap {
   object Panel {
     case class Props(heading: String, style: CommonStyle.Value = CommonStyle.default) extends UseValueEq
 
-    val component: Component[Props, Unit, Unit, CtorType.PropsAndChildren] = ScalaComponent.builder[Props](displayName = "Panel")
+    val component: Component[Props, Unit, Unit, CtorType.PropsAndChildren] = ScalaComponent.builder[Props]("Panel")
       .renderPC((_, p, c) =>
         <.div(^.className := Styles.panelDefaultStr, //todo style cleanup bss.panelOpt(p.style),
           <.div(^.className := bss.panelHeadingStr, p.heading),

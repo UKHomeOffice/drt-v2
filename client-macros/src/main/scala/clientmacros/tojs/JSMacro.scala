@@ -1,7 +1,8 @@
 package clientmacros.tojs
 
 import japgolly.scalajs.react.vdom.{TagOf, VdomElement, VdomNode}
-import japgolly.scalajs.react.{CallbackTo, raw}
+import japgolly.scalajs.react.CallbackTo
+import japgolly.scalajs.react.facade.ChildrenArray
 
 import scala.collection.{GenMap, GenTraversableOnce}
 import scala.language.existentials
@@ -92,7 +93,7 @@ object JSMacro {
         q"""$target.render.rawElement.asInstanceOf[js.Any]"""
 
       //this is to make raw.React.Node work
-      else if (rt <:< typeOf[raw.recursiveTypeAliases.ChildrenArray[_]])
+      else if (rt <:< typeOf[ChildrenArray[_]])
         q"""$target.asInstanceOf[js.Any]"""
 
       /* Other values. Keep AnyVal below at least CallbackTo */

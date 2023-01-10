@@ -35,29 +35,28 @@ object Forecast {
 
     }
 
-  def rangeContainsBSTToUTCChange[A](daysOfForecastTimesSlots: Seq[(MillisSinceEpoch, Seq[A])]) =
+  def rangeContainsBSTToUTCChange[A](daysOfForecastTimesSlots: Seq[(MillisSinceEpoch, Seq[A])]): Boolean =
     daysOfForecastTimesSlots.exists(_._2.size == timeslotsOnBSTToUTCChangeDay)
 
 
-  def handleBSTToUTC(forecastPeriodDays: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]]) = {
-    val epochToMaybeSlots: Map[MillisSinceEpoch, Seq[Option[ForecastTimeSlot]]] = forecastPeriodDays.mapValues(_.map(Option(_)))
+  def handleBSTToUTC(forecastPeriodDays: Map[MillisSinceEpoch, Seq[ForecastTimeSlot]]): Map[MillisSinceEpoch, Seq[Option[ForecastTimeSlot]]] = {
+    val epochToMaybeSlots: Map[MillisSinceEpoch, Seq[Option[ForecastTimeSlot]]] = forecastPeriodDays.mapValues(_.map(Option(_))).toMap
     if (rangeContainsBSTToUTCChange(epochToMaybeSlots.toList)) {
       epochToMaybeSlots.mapValues {
         case maybeTimeSlots if maybeTimeSlots.length == timeslotsOnRegualarDay =>
           maybeTimeSlots.take(8).toList ::: List(None, None, None, None) ::: maybeTimeSlots.drop(8).toList
         case m => m
-      }
+      }.toMap
     } else epochToMaybeSlots
   }
 
-  def rangeContainsUTCToBSTChange[A](daysOfForecastTimesSlots: Seq[(MillisSinceEpoch, Seq[A])]) =
+  def rangeContainsUTCToBSTChange[A](daysOfForecastTimesSlots: Seq[(MillisSinceEpoch, Seq[A])]): Boolean =
     daysOfForecastTimesSlots.exists(_._2.size == timeslotsOnUTCToBSTChangeDay)
 
-  def handleUTCToBST(epochToMaybeSlots: Map[MillisSinceEpoch, Seq[Option[ForecastTimeSlot]]]) = {
+  def handleUTCToBST(epochToMaybeSlots: Map[MillisSinceEpoch, Seq[Option[ForecastTimeSlot]]]): Map[MillisSinceEpoch, Seq[Option[ForecastTimeSlot]]] = {
     if (rangeContainsUTCToBSTChange(epochToMaybeSlots.toList)) {
       epochToMaybeSlots.map {
         case (m, maybeTimeSlots) if maybeTimeSlots.length == timeslotsOnUTCToBSTChangeDay =>
-
           (m, maybeTimeSlots.take(4).toList ::: List(None, None, None, None) ::: maybeTimeSlots.drop(4).toList)
         case m => m
       }

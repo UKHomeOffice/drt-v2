@@ -15,8 +15,8 @@ object ArrivalInfo {
 
   case class Props(arrivalSources: Pot[List[Option[FeedSourceArrival]]], airportConfig: AirportConfig) extends UseValueEq
 
-  def SourcesTable: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "ArrivalSourcesTable")
-    .render_P(props => {
+  def SourcesTable: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalSourcesTable")
+    .render_P { props =>
       props.arrivalSources match {
         case Ready(sources) =>
           <.div(
@@ -31,7 +31,7 @@ object ArrivalInfo {
         case Pending(_) => <.div("Waiting for sources")
         case _ => <.div("No feed sources display")
       }
-    })
+    }
     .build
 
   def tableHead: TagOf[TableSection] = {
@@ -66,11 +66,11 @@ object FeedSourceRow {
 
   case class Props(feedSourceArrival: FeedSourceArrival, airportConfig: AirportConfig) extends UseValueEq
 
-  def feedDisplayName(isCiriumAsPortLive: Boolean, feedSource: FeedSource) = if (isCiriumAsPortLive)
+  def feedDisplayName(isCiriumAsPortLive: Boolean, feedSource: FeedSource): String = if (isCiriumAsPortLive)
     feedSource.displayName(Option("Live arrival")) else feedSource.displayName(None)
 
-  val component = ScalaComponent.builder[Props](displayName = "TableRow")
-    .render_P(props => {
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
+    .render_P { props =>
       val feedSource = props.feedSourceArrival.feedSource
       val arrival = props.feedSourceArrival.arrival
       val isCiriumAsPortLive = props.airportConfig.noLivePortFeed && props.airportConfig.aclDisabled
@@ -93,7 +93,7 @@ object FeedSourceRow {
       )
 
       <.tr(flightFields.toTagMod)
-    })
+    }
     .build
 
   def apply(props: Props): Unmounted[Props, Unit, Unit] = component(props)

@@ -69,16 +69,24 @@ object DashboardTerminalSummary {
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,
       groupedCrunchMinutes.getOrElse(h.millisSinceEpoch, List())
         .groupBy(_.queue)
-        .mapValues(q => q.map(cm => cm.paxLoad).sum))
+        .map { case (q, cm) =>
+          (q, cm.map(cm => cm.paxLoad).sum)
+        })
     )
   }
 
   def groupFlightsByHour(flights: List[ApiFlightWithSplits], startMin: SDateLike): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
     val hourInMillis = 3600000
-    flights.filter { f => f.apiFlight.PcpTime.isDefined }.sortBy(_.apiFlight.PcpTime.getOrElse(0L)).groupBy(fws => {
-      val hoursSinceStart = ((fws.apiFlight.PcpTime.getOrElse(0L) - startMin.millisSinceEpoch) / hourInMillis).toInt
-      startMin.addHours(hoursSinceStart).millisSinceEpoch
-    }).mapValues(_.toSet).toList.sortBy(_._1)
+    flights
+      .filter { f => f.apiFlight.PcpTime.isDefined }
+      .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
+      .groupBy(fws => {
+        val hoursSinceStart = ((fws.apiFlight.PcpTime.getOrElse(0L) - startMin.millisSinceEpoch) / hourInMillis).toInt
+        startMin.addHours(hoursSinceStart).millisSinceEpoch
+      })
+      .map {
+        case (time, flights) => (time, flights.toSet)
+      }.toList.sortBy(_._1)
   }
 
   def groupCrunchMinutesByHour(cms: List[CrunchMinute], startMin: SDateLike): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
@@ -217,8 +225,10 @@ object DashboardTerminalSummary {
       case DashboardSummary(_, _, byQ) => byQ
     }
     .flatMap(h => h.toList)
-    .groupBy { case (queueName, _) => queueName }
-    .mapValues(queueTotalsByQ => queueTotalsByQ.map { case (_, queuePax) => Math.round(queuePax) }.sum)
+    .groupBy { case (queue, _) => queue }
+    .map { case (queue, queueTotalsByQ) =>
+      (queue, queueTotalsByQ.map { case (_, queuePax) => Math.round(queuePax) }.sum)
+    }
 
   def apply(props: Props): Unmounted[Props, Unit, Unit] = component(props)
 }

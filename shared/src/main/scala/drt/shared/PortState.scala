@@ -49,14 +49,14 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
     .range(TQM.atTime(startMillis), TQM.atTime(endMillis))
 
   def crunchMinuteRangeWithTerminals(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, portQueues: IMap[Terminal, Seq[Queue]]): ISortedMap[TQM, CrunchMinute] =
-    crunchMinuteRange(startMillis, endMillis)
+    ISortedMap[TQM, CrunchMinute]() ++ crunchMinuteRange(startMillis, endMillis)
       .filterKeys { tqm => portQueues.contains(tqm.terminal) && portQueues(tqm.terminal).contains(tqm.queue) }
 
   def staffMinuteRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): ISortedMap[TM, StaffMinute] = staffMinutes
     .range(TM.atTime(startMillis), TM.atTime(endMillis))
 
   def staffMinuteRangeWithTerminals(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch, terminals: Seq[Terminal]): ISortedMap[TM, StaffMinute] =
-    staffMinuteRange(startMillis, endMillis)
+    ISortedMap[TM, StaffMinute]() ++ staffMinuteRange(startMillis, endMillis)
       .filterKeys { tm => terminals.contains(tm.terminal) }
 
   def crunchSummary(start: SDateLike, periods: Long, periodSize: Long, terminal: Terminal, queues: List[Queue]): ISortedMap[Long, IMap[Queue, CrunchMinute]] = {

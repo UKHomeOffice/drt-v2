@@ -322,7 +322,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
     val (colour, callback) = if (form.isValid)
       (MuiButton.Color.primary, showCharts)
     else
-      (MuiButton.Color.default, Callback(() => Unit))
+      (MuiButton.Color.default, Callback.empty)
 
     MuiButton(
       variant = MuiButton.Variant.contained,

@@ -8,8 +8,8 @@ case class ArrivalsPageStyles(common: CommonStyle = DefaultCommonStyle) extends 
   import dsl._
 
   val redListCountryField: StyleA = style(
-    borderBottom(solid, c"#ff9999", 3 px),
-    paddingBottom(5 px),
+    borderBottom(solid, c"#ff9999", 3.px),
+    paddingBottom(5.px),
     display.block,
     whiteSpace.nowrap,
     overflow.hidden,
