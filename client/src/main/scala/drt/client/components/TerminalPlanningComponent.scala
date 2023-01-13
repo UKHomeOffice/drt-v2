@@ -47,7 +47,7 @@ object TerminalPlanningComponent {
       def drawSelect(names: Seq[String], values: List[String], value: String): VdomTagOf[Select] = {
         <.select(^.className := "form-control", ^.value := value,
           ^.onChange ==> ((e: ReactEventFromInput) => {
-            props.router.set(props.page.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toLocalDateTimeString()))))
+            props.router.set(props.page.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toLocalDate.toISOString))))
           }),
           values.zip(names).map {
             case (value, name) => <.option(^.value := value, name)
