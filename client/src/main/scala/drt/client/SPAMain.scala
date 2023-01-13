@@ -169,10 +169,7 @@ object SPAMain {
 
     def timeRangeEnd: Option[Int] = timeRangeEndString.map(_.toInt)
 
-    def dateFromUrlOrNow: SDateLike = {
-      println(s"view date: $maybeViewDate")
-      maybeViewDate.map(ld => SDate(ld)).getOrElse(SDate.now())
-    }
+    def dateFromUrlOrNow: SDateLike = maybeViewDate.map(ld => SDate(ld)).getOrElse(SDate.now())
 
     def updateRequired(p: TerminalPageTabLoc): Boolean =
       (terminal != p.terminal) || (maybeViewDate != p.maybeViewDate) || (mode != p.mode) || (maybeTimeMachineDate != p.maybeTimeMachineDate)
