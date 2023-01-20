@@ -19,8 +19,8 @@ object DeskRecs {
   def desksByMinuteForQueues(queueDesks24Hrs: Map[Queue, IndexedSeq[Int]],
                              minuteMillis: NumericRange[Long],
                              queues: Set[Queue]): Map[Queue, IndexedSeq[Int]] = queueDesks24Hrs
-    .filterKeys(queues.contains)
-    .mapValues { mds => desksForMillis(minuteMillis, mds) }
+    .view.filterKeys(queues.contains)
+    .mapValues(mds => desksForMillis(minuteMillis, mds)).toMap
 
   def desksForMillis(millisRange: NumericRange[Long], desks24Hrs: IndexedSeq[Int]): IndexedSeq[Int] = millisRange
     .map(m => DeskRecs.desksForHourOfDayInUKLocalTime(m, desks24Hrs))

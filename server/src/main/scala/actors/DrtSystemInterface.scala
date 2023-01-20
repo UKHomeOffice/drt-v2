@@ -107,10 +107,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   private val maxBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.maximum-seconds")
   val restartOnStop: RestartOnStop = RestartOnStop(minBackoffSeconds seconds, maxBackoffSeconds seconds)
 
-  val defaultEgates: Map[Terminal, EgateBanksUpdates] = airportConfig.eGateBankSizes.mapValues { banks =>
+  val defaultEgates: Map[Terminal, EgateBanksUpdates] = airportConfig.eGateBankSizes.view.mapValues { banks =>
     val effectiveFrom = SDate("2020-01-01T00:00").millisSinceEpoch
     EgateBanksUpdates(List(EgateBanksUpdate(effectiveFrom, EgateBank.fromAirportConfig(banks))))
-  }
+  }.toMap
 
   val alertsActor: ActorRef = restartOnStop.actorOf(Props(new AlertsActor(now)), "alerts-actor")
   val redListUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new RedListUpdatesActor(now)), "red-list-updates-actor")
@@ -249,7 +249,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     redListUpdatesActor.ask(GetState).mapTo[RedListUpdates]
       .map { redListUpdates =>
         val calc = pcpArrivalTimeCalculator(redListUpdates)
-        diff.copy(toUpdate = diff.toUpdate.mapValues(arrival => arrival.copy(PcpTime = Option(calc(arrival).millisSinceEpoch))))
+        val updates = SortedMap[UniqueArrival, Arrival]() ++ diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(calc(arrival).millisSinceEpoch)))
+        diff.copy(toUpdate = updates)
       }
   }
 

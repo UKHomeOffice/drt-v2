@@ -1,14 +1,13 @@
 package drt.server.feeds.stn
 
 import drt.server.feeds.common.XlsExtractorUtil._
-import org.apache.poi.ss.usermodel.{Cell, DateUtil}
+import org.apache.poi.ss.usermodel.{CellType, DateUtil}
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.util.TimeZone
 import scala.util.{Failure, Success, Try}
@@ -44,7 +43,7 @@ object STNForecastXLSExtractor {
     val arrivalRowsTry: Seq[Try[STNForecastFlightRow]] = for {
       rowNumber <- 2 to sheet.getLastRowNum
       row = sheet.getRow(rowNumber)
-      if row.getCell(1) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
+      if row.getCell(1) != null && row.getCell(1).getCellType != CellType.BLANK
     } yield {
       Try {
         val scheduledCell = tryNumericThenStringCellDoubleOption(headingIndexByNameMap("SCHEDULED TIME& DATE"), row)

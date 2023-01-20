@@ -31,11 +31,11 @@ object Settings {
     val scala = "2.13.10"
     val scalaDom = "1.1.0"
     val scalajsReact = "2.1.1"
-    val scalaCSS = "0.6.1"
+    val scalaCSS = "1.0.0"
     val scalaJsMomentJs = "0.10.4"
     val autowire = "0.3.2"
     val booPickle = "1.3.3"
-    val diode = "1.1.13"
+    val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
     val h2 = "2.1.210"
 
@@ -43,7 +43,7 @@ object Settings {
     val akkaStreamContrib = "0.9"
 
     val specs2 = "4.6.0"
-    val react = "17.02"
+    val react = "17.0.2"
 
     val bootstrap = "3.3.6"
 
@@ -68,7 +68,7 @@ object Settings {
     val reactHandsontable = "3.1.2"
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
-    val drtBirminghamSchema = "1.2.0"
+    val drtBirminghamSchema = "37"
     val drtCirium = "186"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
@@ -77,7 +77,7 @@ object Settings {
     val slick = "3.3.3"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.6"
-    val scalaJsReactMaterialUi = "0.2.1"
+    val scalaJsReactMaterialUi = "0.3.1"
     val sprayJsonScalaJs = "1.3.5-7"
     val scalaTestVersion = "3.2.12"
   }
@@ -97,7 +97,7 @@ object Settings {
     "react-chartjs-2" -> "^4.0.0",
     "react-markdown" -> "4.0.6",
     "moment" -> ">=2.29.4",
-    "@material-ui/core" -> "3.9.0",
+    "@material-ui/core" -> "3.9.4",
     "@material-ui/icons" -> "3.0.2",
     "@material-ui/lab" -> "3.0.0-alpha.30"
   )
@@ -153,6 +153,8 @@ object Settings {
     "com.lihaoyi" %%% "utest" % uTest % Test,
 
     "javax.mail" % "mail" % "1.4.7",
+//    "javax.jws" % "javax.jws-api" % "1.1",
+//    "javax.xml.ws" % "jaxws-api" % "2.3.1",
 //    "javax.xml.ws" % "jaxws-api" % "2.3.1",
 //    "info.folone" %% "poi-scala" % "0.19",
 //    "net.liftweb" %% "lift-json" % "3.1.0",
@@ -202,6 +204,8 @@ object Settings {
     "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
+    "org.apache.poi" % "poi" % "5.2.3",
+    "org.apache.poi" % "poi-ooxml" % "5.2.3",
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
@@ -224,7 +228,7 @@ object Settings {
 
     "io.netty" % "netty-all" % "4.0.56.Final",
 
-//    "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
+    "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus,

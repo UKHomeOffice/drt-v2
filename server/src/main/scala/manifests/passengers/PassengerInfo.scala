@@ -49,7 +49,7 @@ object PassengerInfo {
 
   def manifestToPaxTypes(manifest: ManifestLike): Map[PaxType, Int] = {
     manifest.uniquePassengers.map(p => B5JPlusWithTransitTypeAllocator(p))
-      .groupBy(identity).mapValues(_.size)
+      .groupBy(identity).view.mapValues(_.size).toMap
   }
 
   def manifestToPassengerInfoSummary(manifest: VoyageManifest): Option[PassengerInfoSummary] =

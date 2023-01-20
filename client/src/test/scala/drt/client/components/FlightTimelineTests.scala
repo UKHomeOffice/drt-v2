@@ -17,7 +17,7 @@ object ExampleReactScalaJsTest extends TestSuite {
     def render(p: String): VdomTagOf[Div] = <.div(s"$prev → $p")
   }
 
-  val CP: Component[String, Unit, CP, CtorType.Props] = ScalaComponent.builder[String](displayName = "asd")
+  val CP: Component[String, Unit, CP, CtorType.Props] = ScalaComponent.builder[String]("asd")
     .backend(_ => new CP)
     .renderBackend
     .componentWillReceiveProps(i => Callback(i.backend.prev = i.currentProps))

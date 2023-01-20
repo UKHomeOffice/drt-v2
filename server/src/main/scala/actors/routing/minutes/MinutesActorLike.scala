@@ -127,7 +127,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
   override def partitionUpdates: PartialFunction[MinutesContainer[A, B], Map[(Terminal, UtcDate), MinutesContainer[A, B]]] = {
     case container: MinutesContainer[A, B] => container.minutes
       .groupBy(minuteLike => (minuteLike.terminal, SDate(minuteLike.minute).toUtcDate))
-      .mapValues(MinutesContainer(_))
+      .view.mapValues(MinutesContainer(_)).toMap
   }
 
   private def combineContainerStream(containerStream: Source[MinutesContainer[A, B], NotUsed]): Future[MinutesContainer[A, B]] = {
@@ -239,7 +239,7 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[T
   override def partitionUpdates: PartialFunction[MinutesContainer[A, B], Map[(Terminal, UtcDate), MinutesContainer[A, B]]] = {
     case container: MinutesContainer[A, B] => container.minutes
       .groupBy(minuteLike => (minuteLike.terminal, SDate(minuteLike.minute).toUtcDate))
-      .mapValues(MinutesContainer(_))
+      .view.mapValues(MinutesContainer(_)).toMap
   }
 
   private def combineContainerStream(containerStream: Source[MinutesContainer[A, B], NotUsed]): Future[MinutesContainer[A, B]] = {
