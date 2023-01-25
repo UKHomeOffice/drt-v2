@@ -313,7 +313,11 @@ class TestDrtActor extends Actor {
         forecastArrivalsTestProbe = forecastArrivalsProbe,
         liveArrivalsTestProbe = liveArrivalsProbe,
         aggregatedArrivalsActor = aggregatedArrivalsActor,
-        portStateActor = portStateActor
+        portStateActor = portStateActor,
+        staffActor = staffActor,
+        shiftsActor = shiftsActor,
+        fixedPointsActor = fixedPointsActor,
+        staffMovementsActor = staffMovementsActor
       )
   }
 }
