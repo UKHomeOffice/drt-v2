@@ -21,10 +21,7 @@ case class CrunchGraphInputsAndProbes(aclArrivalsInput: SourceQueueWithComplete[
                                       liveArrivalsTestProbe: TestProbe,
                                       aggregatedArrivalsActor: ActorRef,
                                       portStateActor: ActorRef,
-                                      staffActor: ActorRef,
-                                      shiftsActor: ActorRef,
-                                      fixedPointsActor: ActorRef,
-                                      staffMovementsActor: ActorRef) {
+                                     ) {
   def shutdown(): Unit = {
     aclArrivalsInput.complete()
     forecastArrivalsInput.complete()
