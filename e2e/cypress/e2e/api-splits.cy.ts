@@ -117,11 +117,13 @@ describe('API splits', () => {
         ],
 
         "nationalities": [
-          [{"code": "FRA"}, 10], [{"code": "ITA"}, 1]
+          [{"code": "ITA"}, 1],
+          [{"code": "FRA"}, 10],
         ],
 
         "paxTypes": [
-          ["EeaMachineReadable", 10], ["EeaBelowEGateAge", 1]
+          ["EeaBelowEGateAge", 1],
+          ["EeaMachineReadable", 10],
         ]
       }
     ]
