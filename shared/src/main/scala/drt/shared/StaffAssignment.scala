@@ -116,4 +116,10 @@ case class FixedPointAssignments(assignments: Seq[StaffAssignmentLike]) extends 
       .map(_.numberOfStaff)
       .sum
   }
+
+  def diff(other: FixedPointAssignments): FixedPointAssignments = {
+    val diffSet = other.assignments.toSet.diff(assignments.toSet) ++
+      assignments.toSet.diff(other.assignments.toSet)
+    FixedPointAssignments(diffSet.toList)
+  }
 }

@@ -315,7 +315,7 @@ class TestDrtActor extends Actor {
         forecastArrivalsTestProbe = forecastArrivalsProbe,
         liveArrivalsTestProbe = liveArrivalsProbe,
         aggregatedArrivalsActor = aggregatedArrivalsActor,
-        portStateActor = portStateActor
+        portStateActor = portStateActor,
       )
   }
 }

@@ -316,7 +316,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
       log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString()}")
 
-      val staffChecker = StaffMinutesChecker(staffRouterActor, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig)
+      val staffChecker = StaffMinutesChecker(now, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig)
 
       staffChecker.calculateForecastStaffMinutes()
       system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())

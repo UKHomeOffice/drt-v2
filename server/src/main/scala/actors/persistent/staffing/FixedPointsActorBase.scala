@@ -99,13 +99,14 @@ abstract class FixedPointsActorBase(now: () => SDateLike) extends RecoveryActorL
     case SetFixedPoints(fixedPointStaffAssignments) =>
       if (fixedPointStaffAssignments != state) {
         log.info(s"Replacing fixed points state")
+        val diff = state.diff(FixedPointAssignments(fixedPointStaffAssignments))
         updateState(FixedPointAssignments(fixedPointStaffAssignments))
 
         val createdAt = now()
         val fixedPointsMessage = FixedPointsMessage(fixedPointsToFixedPointsMessages(state, createdAt), Option(createdAt.millisSinceEpoch))
         persistAndMaybeSnapshotWithAck(fixedPointsMessage, List((sender(), SetFixedPointsAck(fixedPointStaffAssignments))))
 
-        onUpdateDiff(FixedPointAssignments(fixedPointStaffAssignments))
+        onUpdateDiff(diff)
       } else {
         log.info(s"No change. Nothing to persist")
         sender() ! SetFixedPointsAck(fixedPointStaffAssignments)
