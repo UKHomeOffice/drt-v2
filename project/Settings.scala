@@ -55,7 +55,6 @@ object Settings {
     val awsSdk = "1.11.89"
     val csvCommons = "1.4"
     val pprint = "0.5.6"
-//    val scalaCheck = "1.13.4"
     val akkaPersistenceJdbc = "5.2.0"
     val bluebus = "0.5.0-DRT"
     val postgres = "42.2.2"
