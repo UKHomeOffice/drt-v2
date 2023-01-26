@@ -69,7 +69,9 @@ object MockEgatesProvider {
   }
 
   def portProvider(airportConfig: AirportConfig): () => Future[PortEgateBanksUpdates] = () => {
-    val portUpdates = PortEgateBanksUpdates(airportConfig.eGateBankSizes.mapValues(banks => EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks))))))
+    val portUpdates = PortEgateBanksUpdates(
+      airportConfig.eGateBankSizes.view.mapValues(banks => EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks))))).toMap
+    )
     Future.successful(portUpdates)
   }
 }

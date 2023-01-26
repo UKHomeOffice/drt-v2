@@ -479,7 +479,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
     val range = forecastStart.millisSinceEpoch until forecastEnd.millisSinceEpoch by (15 * 60 * 1000)
     val days = range.toList.groupBy(m => SDate(m).getLocalLastMidnight.millisSinceEpoch)
 
-    ForecastPeriod(days.mapValues(_.map(ts => ForecastTimeSlot(ts, 1, 1))))
+    ForecastPeriod(days.view.mapValues(_.map(ts => ForecastTimeSlot(ts, 1, 1))).toMap)
   }
 
   "Forecast Headline Export" >> {
