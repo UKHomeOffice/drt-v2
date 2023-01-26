@@ -150,6 +150,7 @@ steps:
         - push
     depends_on:
       - e2e-tests
+      - unit-test
 
 services:
   - name: docker

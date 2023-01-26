@@ -58,7 +58,7 @@ lazy val client: Project = (project in file("client"))
     scalaJSUseMainModuleInitializer := true,
     mainClass in Compile := Some("drt.client.SPAMain"),
     webpackBundlingMode := BundlingMode.LibraryOnly(),
-    version in webpack := "4.8.1",
+    version in webpack := "5.75.0",
     // by default we do development build, no eliding
     elideOptions := Seq(),
     scalacOptions ++= elideOptions.value,
@@ -102,8 +102,6 @@ lazy val server = (project in file("server"))
     version := Settings.version,
     scalaVersion := Settings.versions.scala,
     scalacOptions ++= Settings.scalacOptions,
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
-    buildInfoPackage := "buildinfo",
     javaOptions in Test += "-Duser.timezone=UTC",
     javaOptions in Test += "-Xmx1750m",
     javaOptions in Runtime += "-Duser.timezone=UTC",

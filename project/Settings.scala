@@ -29,7 +29,7 @@ object Settings {
     val drtLib = "v359"
 
     val scala = "2.13.10"
-    val scalaDom = "1.1.0"
+    val scalaDom = "2.0.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
     val scalaJsMomentJs = "0.10.4"
@@ -73,7 +73,7 @@ object Settings {
     val playIteratees = "2.6.1"
     val uPickle = "2.0.0"
     val akkaHttp = "10.2.6"
-    val slick = "3.3.3"
+    val slick = "3.4.1"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.6"
     val scalaJsReactMaterialUi = "0.3.1"
@@ -94,7 +94,7 @@ object Settings {
     "chart.js" -> "^3.6.0",
     "@tippyjs/react" -> "4.1.0",
     "react-chartjs-2" -> "^4.0.0",
-    "react-markdown" -> "4.0.6",
+    "react-markdown" -> "8.0.5",
     "moment" -> ">=2.29.4",
     "@material-ui/core" -> "3.9.4",
     "@material-ui/icons" -> "3.0.2",
