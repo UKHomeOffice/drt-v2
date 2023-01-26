@@ -71,7 +71,7 @@ class RunnableStaffingTest extends CrunchTestLike {
 
     val staffFlow = RunnableStaffing.staffMinutesFlow(someShifts, someFixedPoints, someMovements, () => updateDate)
     val source = Source.queue[TerminalUpdateRequest](1, OverflowStrategy.fail)
-    val queue = staffFlow.to(Sink.actorRef(probe.ref, "Done", t => Unit)).runWith(source)
+    val queue = staffFlow.to(Sink.actorRef(probe.ref, "Done", _ => ())).runWith(source)
     queue
   }
 }
