@@ -1,4 +1,4 @@
-FROM openjdk:11-jre-alpine
+FROM openjdk:11-jre-slim
 WORKDIR /opt/docker
 ADD server/target/docker/stage/opt /opt
 RUN adduser -D -u 1000 drt
