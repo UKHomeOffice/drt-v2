@@ -19,9 +19,7 @@ object Settings {
     "-feature",
     "-Ywarn-dead-code",
     "-Ywarn-unused",
-//    "-Ywarn-unused-import",
     "-Ywarn-value-discard",
-//    "-Ywarn-inaccessible"
   )
 
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
@@ -152,13 +150,6 @@ object Settings {
     "com.lihaoyi" %%% "utest" % uTest % Test,
 
     "javax.mail" % "mail" % "1.4.7",
-//    "javax.jws" % "javax.jws-api" % "1.1",
-//    "javax.xml.ws" % "jaxws-api" % "2.3.1",
-//    "javax.xml.ws" % "jaxws-api" % "2.3.1",
-//    "info.folone" %% "poi-scala" % "0.19",
-//    "net.liftweb" %% "lift-json" % "3.1.0",
-
-//    "net.databinder.dispatch" %% "dispatch-core" % "0.13.4",
 
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
@@ -184,11 +175,6 @@ object Settings {
     "com.typesafe.akka" %% "akka-http-xml" % akkaHttp force(),
     "com.typesafe.akka" %% "akka-stream" % akka force(),
 
-//    "com.typesafe.play" %% "play-json" % playJson,
-//    "com.typesafe.play" %% "play-iteratees" % playIteratees,
-//    "com.typesafe.play" %% "play-iteratees-reactive-streams" % playIteratees,
-//    "com.typesafe.play" %% "play-json-joda" % playJsonJoda,
-
     "com.typesafe.slick" %% "slick" % slick,
     "com.typesafe.slick" %% "slick-hikaricp" % slick,
     "com.typesafe.slick" %% "slick-codegen" % slick,
@@ -211,12 +197,10 @@ object Settings {
     "org.postgresql" % "postgresql" % postgres,
 
     "org.renjin" % "renjin-script-engine" % renjin,
-//    "org.scalacheck" %% "scalacheck" % scalaCheck % "test",
 
     "org.specs2" %% "specs2-core" % specs2 % Test,
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
-//    "org.specs2" %% "specs2-scalacheck" % specs2 % Test,
 
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
