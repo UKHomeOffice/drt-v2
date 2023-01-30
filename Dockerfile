@@ -1,4 +1,4 @@
-FROM openjdk:11-jre-slim as stage0
+FROM openjdk:11-jre-slim-buster as stage0
 LABEL snp-multi-stage="intermediate"
 LABEL snp-multi-stage-id="1b9d58c2-d90d-45d5-825f-be1cd93f3935"
 WORKDIR /opt/docker
@@ -11,7 +11,7 @@ RUN ["chmod", "-R", "u=rX,g=rX", "/2/opt/docker"]
 RUN ["chmod", "-R", "u=rX,g=rX", "/4/opt/docker"]
 RUN ["chmod", "u+x,g+x", "/4/opt/docker/bin/drt"]
 
-FROM openjdk:11-jre-slim as mainstage
+FROM openjdk:11-jre-slim-buster as mainstage
 USER root
 RUN id -u demiourgos728 1>/dev/null 2>&1 || (( getent group 0 1>/dev/null 2>&1 || ( type groupadd 1>/dev/null 2>&1 && groupadd -g 0 root || addgroup -g 0 -S root )) && ( type useradd 1>/dev/null 2>&1 && useradd --system --create-home --uid 1001 --gid 0 demiourgos728 || adduser -S -u 1001 -G root demiourgos728 ))
 WORKDIR /opt/docker
@@ -22,13 +22,13 @@ COPY --from=stage0 --chown=demiourgos728:root /4/opt/docker /opt/docker
 RUN mkdir /var/lib/drt-v2
 RUN mkdir -p /var/run/drt && chown 1001 /var/run/drt
 RUN mkdir -p /var/log/drt && chown 1001 /var/log/drt
-RUN apk --update add openssh-client \
+RUN apt-get update
+RUN apt-get install -y openssh-client \
     bash && \
-    apk --no-cache add python py-pip py-setuptools ca-certificates groff less && \
-    pip --no-cache-dir install awscli && \
-    rm -rf /var/cache/apk/*
+    apt-get install -y awscli ca-certificates groff less && \
+    rm -rf /var/cache/apt/*
 
-RUN mkdir /home/drt/.ssh
+RUN mkdir -p /home/drt/.ssh
 RUN ssh-keyscan -T 60 ftp.acl-uk.org >> /home/drt/.ssh/known_hosts
 RUN ssh-keyscan -T 60 gateway.heathrow.com >> /home/drt/.ssh/known_hosts
 RUN chown -R 1000:1000 /home/drt/.ssh
