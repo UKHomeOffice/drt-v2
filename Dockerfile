@@ -23,10 +23,8 @@ RUN mkdir /var/lib/drt-v2
 RUN mkdir -p /var/run/drt && chown 1001 /var/run/drt
 RUN mkdir -p /var/log/drt && chown 1001 /var/log/drt
 RUN apt-get update
-RUN apt-get install -y openssh-client \
-    bash && \
-    apt-get install -y awscli ca-certificates groff less && \
-    rm -rf /var/cache/apt/*
+RUN apt-get install -y openssh-client ca-certificates
+RUN rm -rf /var/cache/apt/*
 
 RUN mkdir -p /home/drt/.ssh
 RUN ssh-keyscan -T 60 ftp.acl-uk.org >> /home/drt/.ssh/known_hosts
