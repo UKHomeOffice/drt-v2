@@ -2,9 +2,9 @@ FROM openjdk:11-jre-slim as stage0
 LABEL snp-multi-stage="intermediate"
 LABEL snp-multi-stage-id="1b9d58c2-d90d-45d5-825f-be1cd93f3935"
 WORKDIR /opt/docker
-COPY 1/opt /1/opt
-COPY 2/opt /2/opt
-COPY 4/opt /4/opt
+COPY server/target/docker/stage/1/opt /1/opt
+COPY server/target/docker/stage/2/opt /2/opt
+COPY server/target/docker/stage/4/opt /4/opt
 USER root
 RUN ["chmod", "-R", "u=rX,g=rX", "/1/opt/docker"]
 RUN ["chmod", "-R", "u=rX,g=rX", "/2/opt/docker"]
