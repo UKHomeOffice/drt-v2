@@ -55,60 +55,60 @@ steps:
       event:
         - push
 
-#  - name: build
-#    pull: if-not-exists
-#    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-#    commands:
-#      - /root/entrypoint.sh
-#      - sbt --error compile docker:stage
-#    environment:
-#      ARTIFACTORY_PASSWORD:
-#        from_secret: ARTIFACTORY_PASSWORD
-#      ARTIFACTORY_USERNAME: drt_ci
-#      ENV_LOG_LEVEL: ERROR
-#      KEYTOOL_PASSWORD:
-#        from_secret: KEYTOOL_PASSWORD
-#    when:
-#      event:
-#        - push
+  - name: build
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error compile docker:stage
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
 
-#  - name: unit-test
-#    pull: if-not-exists
-#    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-#    commands:
-#      - /root/entrypoint.sh
-#      - sbt --error test
-#    environment:
-#      ARTIFACTORY_PASSWORD:
-#        from_secret: ARTIFACTORY_PASSWORD
-#      ARTIFACTORY_USERNAME: drt_ci
-#      ENV_LOG_LEVEL: ERROR
-#      KEYTOOL_PASSWORD:
-#        from_secret: KEYTOOL_PASSWORD
-#    when:
-#      event:
-#        - push
-#    depends_on:
-#      - build
+  - name: unit-test
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error test
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+    depends_on:
+      - build
 
-#  - name: publish-drt
-#    image: plugins/ecr
-#    environment:
-#      AWS_REGION: eu-west-2
-#    settings:
-#      access_key:
-#        from_secret: aws_access_key_id
-#      secret_key:
-#        from_secret: aws_secret_access_key
-#      repo: drt/drt-v2
-#      registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
-#      tags:
-#        - B${DRONE_BUILD_NUMBER}
-#    when:
-#      event:
-#        - push
-#    depends_on:
-#      - build
+  - name: publish-drt
+    image: plugins/ecr
+    environment:
+      AWS_REGION: eu-west-2
+    settings:
+      access_key:
+        from_secret: aws_access_key_id
+      secret_key:
+        from_secret: aws_secret_access_key
+      repo: drt/drt-v2
+      registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+      tags:
+        - B${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+    depends_on:
+      - build
 
   - name: e2e-tests
     pull: if-not-exists
@@ -129,7 +129,7 @@ steps:
       event:
         - push
     depends_on:
-#      - publish-drt
+      - publish-drt
       - publish-cypress
 
   - name: slack_notification
@@ -150,7 +150,7 @@ steps:
         - push
     depends_on:
       - e2e-tests
-#      - unit-test
+      - unit-test
 
 services:
   - name: docker
