@@ -1,5 +1,5 @@
 # use Cypress provided image with all dependencies included
-FROM cypress/base:12
+FROM cypress/base
 RUN node --version
 RUN npm --version
 # copy our test page and test files
@@ -14,7 +14,7 @@ ENV TZ=Europe/London
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # install NPM dependencies and Cypress binary
-RUN npm install --save-dev cypress
+RUN npm install --save-dev cypress typescript
 # check if the binary was installed successfully
 RUN $(npm bin)/cypress verify
 
