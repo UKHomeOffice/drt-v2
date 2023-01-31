@@ -22,6 +22,7 @@ COPY --from=stage0 --chown=demiourgos728:root /4/opt/docker /opt/docker
 RUN mkdir /var/lib/drt-v2
 RUN mkdir -p /var/run/drt && chown 1001 /var/run/drt
 RUN mkdir -p /var/log/drt && chown 1001 /var/log/drt
+RUN mkdir -p /opt/docker/target && chown 1001 /opt/docker/target
 RUN apt-get update
 RUN apt-get install -y openssh-client ca-certificates
 RUN rm -rf /var/cache/apt/*
@@ -29,10 +30,10 @@ RUN rm -rf /var/cache/apt/*
 RUN mkdir -p /home/drt/.ssh
 RUN ssh-keyscan -T 60 ftp.acl-uk.org >> /home/drt/.ssh/known_hosts
 RUN ssh-keyscan -T 60 gateway.heathrow.com >> /home/drt/.ssh/known_hosts
-RUN chown -R 1000:1000 /home/drt/.ssh
+RUN chown -R 1001:1001 /home/drt/.ssh
 
 RUN mkdir -p /var/data
-RUN chown 1000:1000 -R /var/data
+RUN chown 1001:1001 -R /var/data
 
 COPY certs/rds-combined-ca-bundle.der /etc/drt/rds-combined-ca-bundle.der
 COPY certs/rds-ca-2019-root.der /etc/drt/rds-ca-2019-root.der
