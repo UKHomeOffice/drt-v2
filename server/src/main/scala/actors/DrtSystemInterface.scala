@@ -512,7 +512,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   def forecastArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] =
     portCode match {
       case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
-      case PortCode("BHX") => Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 5.seconds, 30.seconds)
+      case PortCode("BHX") =>
+        Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 5.seconds, 30.seconds)
       case PortCode("EDI") =>
         Feed(EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), ProdHttpClient())).ediForecastFeedSource(Feed.actorRefSource), 5.seconds, 10.minutes)
       case _ => system.log.info(s"No Forecast Feed defined.")
