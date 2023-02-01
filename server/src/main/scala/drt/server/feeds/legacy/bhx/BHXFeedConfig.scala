@@ -23,7 +23,7 @@ trait BHXFeedConfig {
         case binder: BindingProvider =>
           binder.getRequestContext.put("javax.xml.ws.client.connectionTimeout", connectionTimeout.toString)
           binder.getRequestContext.put("javax.xml.ws.client.receiveTimeout", receiveTimeout.toString)
-          if (!endPointUrl.isEmpty)
+          if (endPointUrl.nonEmpty)
             binder.getRequestContext.put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, endPointUrl)
           binder
         case flightInformationSoap => flightInformationSoap
