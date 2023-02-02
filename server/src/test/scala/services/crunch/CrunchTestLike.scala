@@ -426,7 +426,6 @@ class CrunchTestLike
     source ! offering
   }
 
-  def offerAndWait[T](source: ActorRef, offering: T): Unit = {
-    source ! offering
-  }
+  def offerAndWait[T](source: ActorRef, offering: T): Unit =
+    Await.ready(source.ask(offering), 1.second)
 }
